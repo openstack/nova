@@ -1,0 +1,7 @@
+{
+    "remote_console": {
+        "protocol": "mks",
+        "type": "webmks",
+        "url": "http://example.com:6090/mks.html?token=b60bcfc3-5fd4-4d21-986c-e83379107819"
+    }
+}

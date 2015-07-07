@@ -573,6 +573,30 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
                           self.req, fakes.FAKE_UUID, body=body)
 
 
+class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
+    def setUp(self):
+        super(ConsolesExtensionTestV28, self).setUp()
+        self.req = fakes.HTTPRequest.blank('')
+        self.context = self.req.environ['nova.context']
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.8')
+        self.controller = console_v21.RemoteConsolesController()
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_mks_console(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': "http://fake"}
+        self.controller.handlers['mks'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'mks', 'type': 'webmks'}}
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({'remote_console': {'protocol': 'mks',
+                                             'type': 'webmks',
+                                             'url': 'http://fake'}}, output)
+        mock_handler.assert_called_once_with(self.context, 'fake_instance',
+                                             'webmks')
+
+
 class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
     controller_class = console_v2.ConsolesController
     validation_error = webob.exc.HTTPBadRequest
