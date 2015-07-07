@@ -343,6 +343,8 @@ class MonitorMetricType(Enum):
     CPU_IDLE_PERCENT = "cpu.idle.percent"
     CPU_IOWAIT_PERCENT = "cpu.iowait.percent"
     CPU_PERCENT = "cpu.percent"
+    NUMA_MEM_BW_MAX = "numa.membw.max"
+    NUMA_MEM_BW_CURRENT = "numa.membw.current"
 
     ALL = (
         CPU_FREQUENCY,
@@ -355,6 +357,8 @@ class MonitorMetricType(Enum):
         CPU_IDLE_PERCENT,
         CPU_IOWAIT_PERCENT,
         CPU_PERCENT,
+        NUMA_MEM_BW_MAX,
+        NUMA_MEM_BW_CURRENT,
     )
 
     def __init__(self):
