@@ -739,7 +739,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIsInstance(shadow_services.c.last_seen_up.type,
                               sqlalchemy.types.DateTime)
 
-    def _pre_upgrade_294(self, engine):
+    def _pre_upgrade_295(self, engine):
         self.assertIndexNotExists(engine, 'virtual_interfaces',
                                   'virtual_interfaces_uuid_idx')
 
