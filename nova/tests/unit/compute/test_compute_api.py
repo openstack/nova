@@ -1988,6 +1988,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                        'image_bdm_v2': 'True',
                                        'image_block_device_mapping': '[]',
                                        'image_mappings': '[]',
+                                       'image_cache_in_nova': 'True',
                                        })
         instance = self._create_instance_obj(params=params)
         instance['root_device_name'] = 'vda'

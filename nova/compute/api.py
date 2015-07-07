@@ -2252,32 +2252,41 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        if extra_properties is None:
-            extra_properties = {}
-        instance_uuid = instance.uuid
-
         properties = {
-            'instance_uuid': instance_uuid,
+            'instance_uuid': instance.uuid,
             'user_id': str(context.user_id),
             'image_type': image_type,
         }
-        sent_meta = utils.get_image_from_system_metadata(
+        properties.update(extra_properties or {})
+
+        image_meta = self._initialize_instance_snapshot_metadata(
+            instance, name, properties)
+        return self.image_api.create(context, image_meta)
+
+    def _initialize_instance_snapshot_metadata(self, instance, name,
+                                               extra_properties=None):
+        """Initialize new metadata for a snapshot of the given instance.
+
+        :param instance: nova.objects.instance.Instance object
+        :param name: string for name of the snapshot
+        :param extra_properties: dict of extra metadata properties to include
+
+        :returns: the new instance snapshot metadata
+        """
+        image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
+        image_meta.update({'name': name,
+                           'is_public': False})
 
         # Delete properties that are non-inheritable
-        image_props = sent_meta.get("properties", {})
-        for key in image_props.keys():
-            if key in CONF.non_inheritable_image_properties:
-                del image_props[key]
+        properties = image_meta['properties']
+        for key in CONF.non_inheritable_image_properties:
+            properties.pop(key, None)
 
-        sent_meta['name'] = name
-        sent_meta['is_public'] = False
-
-        # The properties set up above and in extra_properties have precedence
+        # The properties in extra_properties have precedence
         properties.update(extra_properties or {})
-        sent_meta['properties'].update(properties)
 
-        return self.image_api.create(context, sent_meta)
+        return image_meta
 
     # NOTE(melwitt): We don't check instance lock for snapshot because lock is
     #                intended to prevent accidental change/delete of instances
@@ -2292,14 +2301,12 @@ class API(base.Base):
 
         :returns: the new image metadata
         """
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = self._initialize_instance_snapshot_metadata(
+            instance, name, extra_properties)
         # the new image is simply a bucket of properties (particularly the
         # block device mapping, kernel and ramdisk IDs) with no image data,
         # hence the zero size
-        image_meta.update({'size': 0,
-                           'name': name,
-                           'is_public': False})
+        image_meta['size'] = 0
         for attr in ('container_format', 'disk_format'):
             image_meta.pop(attr, None)
         properties = image_meta['properties']
@@ -2308,7 +2315,6 @@ class API(base.Base):
             properties.pop(key, None)
         if instance.root_device_name:
             properties['root_device_name'] = instance.root_device_name
-        properties.update(extra_properties or {})
 
         quiesced = False
         if instance.vm_state == vm_states.ACTIVE:
