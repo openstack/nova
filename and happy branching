@@ -1,0 +1,56 @@
+http://blog.bitbucket.org/2015/05/06/bitbuckets-ssl-certificate-is-changing-for-sha-2/#comments
+</comments>
+<pubDate>Wed, 06 May 2015 19:00:28 +0000</pubDate>
+<dc:creator>
+<![CDATA[ Raj Sarkar ]]>
+</dc:creator>
+<category>
+<![CDATA[ bitbucket ]]>
+</category>
+<category>
+<![CDATA[ ssl ]]>
+</category>
+<guid isPermaLink="false">https://blog.bitbucket.org/?p=2485</guid>
+<description>
+<![CDATA[
+We’ll be replacing our main bitbucket.org SSL certificate on May 8 at 00:00 UTC. The new certificate is signed with SHA-2, so Chrome and Firefox users will no longer see certificate warnings when they load any Bitbucket page. Most users won&#8217;t notice the change, and won&#8217;t have to take any action. However, if you’re using Mercurial over HTTPS, you may see this error message: abort: certificate for bitbucket.org has unexpected fingerprint 46:de:34:e7:9b:18:cd:7f:ae:fd:8b:e3:bc:f4:1a:5e:38:d7:ac:24 (check hostfingerprint configuration) &#160; If you see this error, you’ll need to update the host fingerprint for bitbucket.org in your ~/.hgrc or Mercurial.ini configuration file: [hostfingerprints] bitbucket.org = 46:de:34:e7:9b:18:cd:7f:ae:fd:8b:e3:bc:f4:1a:5e:38:d7:ac:24 &#160; Thanks, and happy branching!
+]]>
+</description>
+<content:encoded>
+<![CDATA[
+<div id="main-content" class="wiki-content"> <div class="wiki-content"> <p class="line number1 index0 alt2">We’ll be replacing our main bitbucket.org SSL certificate on May 8 at 00:00 UTC. The new certificate is signed with SHA-2, so Chrome and Firefox users will no longer see certificate warnings when they load any Bitbucket page.</p> <p class="line number1 index0 alt2">Most users won&#8217;t notice the change, and won&#8217;t have to take any action. However, if you’re using Mercurial over HTTPS, you may see this error message:</p> <pre class="line number3 index2 alt2">abort: certificate for bitbucket.org has unexpected fingerprint</pre> <pre class="line number3 index2 alt2">46:de:34:e7:9b:18:cd:7f:ae:fd:8b:e3:bc:f4:1a:5e:38:d7:ac:24</pre> <pre class="line number5 index4 alt2">(check hostfingerprint configuration)</pre> <p>&nbsp;<br /> If you see this error, you’ll need to update the host fingerprint for bitbucket.org in your ~/.hgrc or Mercurial.ini configuration file:</p> <pre class="line number11 index10 alt2">[hostfingerprints]</pre> <pre>bitbucket.org = 46:de:34:e7:9b:18:cd:7f:ae:fd:8b:e3:bc:f4:1a:5e:38:d7:ac:24</pre> <p>&nbsp;<br /> Thanks, and happy branching!</p> </div> </div>
+]]>
+</content:encoded>
+<wfw:commentRss>
+http://blog.bitbucket.org/2015/05/06/bitbuckets-ssl-certificate-is-changing-for-sha-2/feed/
+</wfw:commentRss>
+<slash:comments>0</slash:comments>
+</item>
+<item>
+<title>Mercurial: Onward and upward</title>
+<link>
+http://blog.bitbucket.org/2015/04/30/mercurial-onward-and-upward/
+</link>
+<comments>
+http://blog.bitbucket.org/2015/04/30/mercurial-onward-and-upward/#comments
+</comments>
+<pubDate>Thu, 30 Apr 2015 14:00:18 +0000</pubDate>
+<dc:creator>
+<![CDATA[ Sean Farley ]]>
+</dc:creator>
+<category>
+<![CDATA[ bitbucket ]]>
+</category>
+<category>
+<![CDATA[ hg ]]>
+</category>
+<category>
+<![CDATA[ mercurial ]]>
+</category>
+<guid isPermaLink="false">http://blog.bitbucket.org/?p=2473</guid>
+<description>
+<![CDATA[
+Hi, I&#8217;m Sean, the newest member on the Bitbucket team. I currently work on Mercurial but come from a scientific background with the PETSc team. My responsibilities here are working on the backend but what I&#8217;m most excited about is improving Mercurial support. I&#8217;ve been a contrib
+]]>
+<![CDATA[
+utor to Mercurial for about three years and have loved Mercurial for its human-friendly user interface and supportive community. Some of my work for Mercurial includes the addition of namespaces and improving the in-memory context object. I also wrote the experimental remotenames extension (to be added to core Mercurial in the future) and the most fun smb extension. The future of Mercurial In my time with Mercurial,
