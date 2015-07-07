@@ -742,7 +742,7 @@ class Migration(BASE, NovaBase):
     # TODO(_cerberus_): enum
     status = Column(String(255))
     migration_type = Column(Enum('migration', 'resize', 'live-migration',
-                                 'evacuate'),
+                                 'evacuation'),
                             nullable=True)
     hidden = Column(Boolean, default=False)
 

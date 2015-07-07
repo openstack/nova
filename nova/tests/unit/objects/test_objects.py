@@ -1099,7 +1099,7 @@ object_data = {
     'InstancePCIRequests': '1.1-fc8d179960869c9af038205a80af2541',
     'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
     'KeyPairList': '1.2-60f984184dc5a8eba6e34e20cbabef04',
-    'Migration': '1.2-331b1f37d0b20b932614181b9832c860',
+    'Migration': '1.2-8784125bedcea0a9227318511904e853',
     'MigrationList': '1.2-5e79c0693d7ebe4e9ac03b5db11ab243',
     'MonitorMetric': '1.0-4fe7f3fb1777567883ac842120ec5800',
     'MonitorMetricList': '1.0-1b54e51ad0fc1f3a8878f5010e7e16dc',
