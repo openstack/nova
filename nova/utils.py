@@ -110,7 +110,9 @@ workarounds_opts = [
                      'https://bugs.launchpad.net/nova/+bug/1334398'),
     cfg.BoolOpt('destroy_after_evacuate',
                 default=True,
-                help='Whether to destroy instances on startup when we suspect '
+                deprecated_for_removal=True,
+                help='DEPRECATED: Whether to destroy '
+                     'instances on startup when we suspect '
                      'they have previously been evacuated. This can result in '
                       'data loss if undesired. See '
                       'https://launchpad.net/bugs/1419785'),

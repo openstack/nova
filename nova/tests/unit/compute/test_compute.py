@@ -6522,7 +6522,10 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params)
         self.compute._instance_update(self.context, instance.uuid, vcpus=4)
 
-    def test_destroy_evacuated_instance_on_shared_storage(self):
+    @mock.patch('nova.objects.MigrationList.get_by_filters')
+    @mock.patch('nova.objects.Migration.save')
+    def test_destroy_evacuated_instance_on_shared_storage(self, mock_save,
+                                                          mock_get):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6539,6 +6542,9 @@ class ComputeTestCase(BaseTestCase):
         # those are already been evacuated to other host
         evacuated_instance = self._create_fake_instance_obj(
             {'host': 'otherhost'})
+
+        migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        mock_get.return_value = [migration]
 
         instances.append(evacuated_instance)
 
@@ -6567,8 +6573,15 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
+        mock_get.assert_called_once_with(fake_context,
+                                         {'source_compute': self.compute.host,
+                                          'status': 'accepted',
+                                          'migration_type': 'evacuation'})
 
-    def test_destroy_evacuated_instance_with_disks(self):
+    @mock.patch('nova.objects.MigrationList.get_by_filters')
+    @mock.patch('nova.objects.Migration.save')
+    def test_destroy_evacuated_instance_with_disks(self, mock_save,
+                                                   mock_get):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6585,6 +6598,9 @@ class ComputeTestCase(BaseTestCase):
         # those are already been evacuated to other host
         evacuated_instance = self._create_fake_instance_obj(
             {'host': 'otherhost'})
+
+        migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        mock_get.return_value = [migration]
 
         instances.append(evacuated_instance)
 
@@ -6623,7 +6639,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
 
-    def test_destroy_evacuated_instance_not_implemented(self):
+    @mock.patch('nova.objects.MigrationList.get_by_filters')
+    @mock.patch('nova.objects.Migration.save')
+    def test_destroy_evacuated_instance_not_implemented(self, mock_save,
+                                                        mock_get):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6640,6 +6659,9 @@ class ComputeTestCase(BaseTestCase):
         # those are already been evacuated to other host
         evacuated_instance = self._create_fake_instance_obj(
             {'host': 'otherhost'})
+
+        migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        mock_get.return_value = [migration]
 
         instances.append(evacuated_instance)
 
@@ -9793,6 +9815,11 @@ class ComputeAPITestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance.task_state, task_states.REBUILDING)
         self.assertEqual(instance.host, 'fake_dest_host')
+        migs = objects.MigrationList.get_by_filters(
+            self.context, {'source_host': 'fake_host'})
+        self.assertEqual(1, len(migs))
+        self.assertEqual('fake_host', migs[0].source_compute)
+        self.assertEqual('accepted', migs[0].status)
 
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}

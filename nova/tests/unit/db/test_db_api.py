@@ -1248,7 +1248,7 @@ class MigrationTestCase(test.TestCase):
 
     def _create(self, status='migrating', source_compute='host1',
                 source_node='a', dest_compute='host2', dest_node='b',
-                system_metadata=None):
+                system_metadata=None, migration_type=None):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
@@ -1258,7 +1258,8 @@ class MigrationTestCase(test.TestCase):
 
         values = {'status': status, 'source_compute': source_compute,
                   'source_node': source_node, 'dest_compute': dest_compute,
-                  'dest_node': dest_node, 'instance_uuid': instance['uuid']}
+                  'dest_node': dest_node, 'instance_uuid': instance['uuid'],
+                  'migration_type': migration_type}
         db.migration_create(self.ctxt, values)
 
     def _assert_in_progress(self, migrations):
@@ -1311,6 +1312,16 @@ class MigrationTestCase(test.TestCase):
             self.assertEqual(filters["status"], migration['status'])
             hosts = [migration['source_compute'], migration['dest_compute']]
             self.assertIn(filters["host"], hosts)
+
+    def test_get_migrations_by_filters_with_type(self):
+        self._create(status="special", source_compute="host9",
+                     migration_type="evacuation")
+        self._create(status="special", source_compute="host9",
+                     migration_type="live-migration")
+        filters = {"status": "special", "host": "host9",
+                   "migration_type": "evacuation", "hidden": False}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        self.assertEqual(1, len(migrations))
 
     def test_get_migrations_by_filters_source_compute(self):
         filters = {'source_compute': 'host2'}
