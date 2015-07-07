@@ -465,6 +465,23 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
 
+    def test_volume_attach_update_size(self):
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        test_bdm.volume_size = None
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached',
+                  'size': 42}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver)
+        self.assertEqual(expected_conn_info, test_bdm['connection_info'])
+        self.assertEqual(42, test_bdm.volume_size)
+
     def test_volume_attach_check_attach_fails(self):
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)

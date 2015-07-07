@@ -365,7 +365,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
         self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
-                       {'id': self.volume_id,
+                       {'id': self.volume_id, 'size': 4,
                         'attach_status': 'detached'})
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda *a, **kw: None)
@@ -530,6 +530,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'snapshot_id': None,
                 'volume_id': self.volume_id,
                 'device_name': '/dev/vdb',
+                'volume_size': 55,
                 'delete_on_termination': False,
             })]
             prepped_bdm = self.compute._prep_block_device(
@@ -736,6 +737,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                                          no_device=False,
                                          disk_bus='foo',
                                          device_type='disk',
+                                         volume_size=1,
                                          volume_id=1)
         host_volume_bdms = {'id': 1, 'device_name': '/dev/vdb',
                'connection_info': '{}', 'instance_uuid': instance['uuid'],
@@ -867,7 +869,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_validate_bdm(self):
         def fake_get(self, context, res_id):
-            return {'id': res_id}
+            return {'id': res_id, 'size': 4}
 
         def fake_check_attach(*args, **kwargs):
             pass
@@ -901,7 +903,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'volume_id': volume_id,
                 'guest_format': None,
                 'boot_index': 1,
-                'volume_size': 6
             }, anon=True),
             fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda2',
@@ -910,8 +911,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'snapshot_id': snapshot_id,
                 'device_type': 'disk',
                 'guest_format': None,
+                'volume_size': 6,
                 'boot_index': 0,
-                'volume_size': 4
             }, anon=True),
             fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda3',
@@ -929,6 +930,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         # Make sure it passes at first
         self.compute_api._validate_bdm(self.context, instance,
                                        instance_type, mappings)
+        self.assertEqual(4, mappings[1].volume_size)
+        self.assertEqual(6, mappings[2].volume_size)
 
         # Boot sequence
         mappings[2].boot_index = 2
@@ -950,7 +953,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'source_type': 'blank',
                 'destination_type': 'local',
                 'device_type': 'disk',
-                'volume_id': volume_id,
                 'guest_format': None,
                 'boot_index': -1,
                 'volume_size': 1
@@ -960,7 +962,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'source_type': 'blank',
                 'destination_type': 'local',
                 'device_type': 'disk',
-                'volume_id': volume_id,
                 'guest_format': None,
                 'boot_index': -1,
                 'volume_size': 1
@@ -4496,6 +4497,7 @@ class ComputeTestCase(BaseTestCase):
         volume = {'instance_uuid': None,
                   'device_name': None,
                   'id': volume_id,
+                  'size': 200,
                   'attach_status': 'detached'}
         bdm = objects.BlockDeviceMapping(
                         **{'context': self.context,
