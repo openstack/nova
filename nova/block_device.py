@@ -241,7 +241,7 @@ class BlockDeviceDict(dict):
         return legacy_block_device
 
     def get_image_mapping(self):
-        drop_fields = (set(['connection_info', 'device_name']) |
+        drop_fields = (set(['connection_info']) |
                        self._db_only_fields)
         mapping_dict = dict(self)
         for fld in drop_fields:
@@ -292,7 +292,8 @@ def snapshot_from_bdm(snapshot_id, template):
     """Create a basic volume snapshot BDM from a given template bdm."""
 
     copy_from_template = ('disk_bus', 'device_type', 'boot_index',
-                          'delete_on_termination', 'volume_size')
+                          'delete_on_termination', 'volume_size',
+                          'device_name')
     snapshot_dict = {'source_type': 'snapshot',
                      'destination_type': 'volume',
                      'snapshot_id': snapshot_id}
