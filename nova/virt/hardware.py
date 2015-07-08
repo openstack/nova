@@ -884,7 +884,7 @@ def _numa_get_constraints_manual(nodes, flavor, image_meta):
     cells = []
     totalmem = 0
 
-    availcpus = set(range(flavor['vcpus']))
+    availcpus = set(range(flavor.vcpus))
 
     for node in range(nodes):
         cpus = _numa_get_flavor_or_image_prop(
@@ -901,9 +901,9 @@ def _numa_get_constraints_manual(nodes, flavor, image_meta):
         cpuset = parse_cpu_spec(cpus)
 
         for cpu in cpuset:
-            if cpu > (flavor['vcpus'] - 1):
+            if cpu > (flavor.vcpus - 1):
                 raise exception.ImageNUMATopologyCPUOutOfRange(
-                    cpunum=cpu, cpumax=(flavor['vcpus'] - 1))
+                    cpunum=cpu, cpumax=(flavor.vcpus - 1))
 
             if cpu not in availcpus:
                 raise exception.ImageNUMATopologyCPUDuplicates(
@@ -919,17 +919,17 @@ def _numa_get_constraints_manual(nodes, flavor, image_meta):
         raise exception.ImageNUMATopologyCPUsUnassigned(
             cpuset=str(availcpus))
 
-    if totalmem != flavor['memory_mb']:
+    if totalmem != flavor.memory_mb:
         raise exception.ImageNUMATopologyMemoryOutOfRange(
             memsize=totalmem,
-            memtotal=flavor['memory_mb'])
+            memtotal=flavor.memory_mb)
 
     return objects.InstanceNUMATopology(cells=cells)
 
 
 def _numa_get_constraints_auto(nodes, flavor, image_meta):
-    if ((flavor['vcpus'] % nodes) > 0 or
-        (flavor['memory_mb'] % nodes) > 0):
+    if ((flavor.vcpus % nodes) > 0 or
+        (flavor.memory_mb % nodes) > 0):
         raise exception.ImageNUMATopologyAsymmetric()
 
     cells = []
@@ -944,8 +944,8 @@ def _numa_get_constraints_auto(nodes, flavor, image_meta):
         if cpus is not None or mem is not None:
             raise exception.ImageNUMATopologyIncomplete()
 
-        ncpus = int(flavor['vcpus'] / nodes)
-        mem = int(flavor['memory_mb'] / nodes)
+        ncpus = int(flavor.vcpus / nodes)
+        mem = int(flavor.memory_mb / nodes)
         start = node * ncpus
         cpuset = set(range(start, start + ncpus))
 
@@ -979,8 +979,8 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     else:
         single_cell = objects.InstanceNUMACell(
                 id=0,
-                cpuset=set(range(flavor['vcpus'])),
-                memory=flavor['memory_mb'],
+                cpuset=set(range(flavor.vcpus)),
+                memory=flavor.memory_mb,
                 cpu_pinning={})
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
         return numa_topology
