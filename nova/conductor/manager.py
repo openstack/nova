@@ -17,6 +17,7 @@
 import copy
 import itertools
 
+from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -43,11 +44,13 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as nova_object
 from nova import quota
+from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 # Instead of having a huge list of arguments to instance_update(), we just
 # accept a dict of fields to update and use this whitelist to validate it.
@@ -488,6 +491,7 @@ class ComputeTaskManager(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.image_api = image.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.notifier = rpc.get_notifier('compute', CONF.host)
 
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,
@@ -852,6 +856,9 @@ class ComputeTaskManager(base.Base):
                         LOG.warning(_LW("Server with unsupported policy "
                                         "cannot be rebuilt"),
                                     instance=instance)
+
+            compute_utils.notify_about_instance_usage(
+                self.notifier, context, instance, "rebuild.scheduled")
 
             self.compute_rpcapi.rebuild_instance(context,
                     instance=instance,

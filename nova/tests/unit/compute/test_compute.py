@@ -9820,6 +9820,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(1, len(migs))
         self.assertEqual('fake_host', migs[0].source_compute)
         self.assertEqual('accepted', migs[0].status)
+        self.assertEqual('compute.instance.evacuate',
+                         fake_notifier.NOTIFICATIONS[0].event_type)
 
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}
