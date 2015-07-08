@@ -1449,6 +1449,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                              instance, mountpoint, resize_to):
             self.assertEqual(resize_to, 2)
 
+        def fake_block_device_mapping_update(ctxt, id, updates, legacy):
+            self.assertEqual(2, updates['volume_size'])
+            return fake_bdm
+
         self.stubs.Set(self.compute.volume_api, 'roll_detaching',
                        fake_vol_api_roll_detaching)
         self.stubs.Set(self.compute.volume_api, 'get', fake_vol_get)
@@ -1467,7 +1471,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
                       fake_vol_migrate_volume_completion)
         self.stubs.Set(db, 'block_device_mapping_update',
-                       lambda *a, **k: fake_bdm)
+                       fake_block_device_mapping_update)
         self.stubs.Set(db,
                        'instance_fault_create',
                        lambda x, y:

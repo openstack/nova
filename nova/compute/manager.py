@@ -4505,12 +4505,11 @@ class ComputeManager(manager.Manager):
         new_cinfo['serial'] = old_cinfo['serial']
         return (old_cinfo, new_cinfo)
 
-    def _swap_volume(self, context, instance, bdm, connector, old_volume_id,
-                                                              new_volume_id):
+    def _swap_volume(self, context, instance, bdm, connector,
+                     old_volume_id, new_volume_id, resize_to):
         mountpoint = bdm['device_name']
         failed = False
         new_cinfo = None
-        resize_to = 0
         try:
             old_cinfo, new_cinfo = self._init_volume_connection(context,
                                                                 new_volume_id,
@@ -4523,10 +4522,6 @@ class ComputeManager(manager.Manager):
                       "old: %(old_cinfo)s",
                       {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo},
                       contex=context, instance=instance)
-            old_vol_size = self.volume_api.get(context, old_volume_id)['size']
-            new_vol_size = self.volume_api.get(context, new_volume_id)['size']
-            if new_vol_size > old_vol_size:
-                resize_to = new_vol_size
             self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
                                     resize_to)
         except Exception:
@@ -4580,6 +4575,13 @@ class ComputeManager(manager.Manager):
         bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, old_volume_id, instance_uuid=instance.uuid)
         connector = self.driver.get_volume_connector(instance)
+
+        resize_to = 0
+        old_vol_size = self.volume_api.get(context, old_volume_id)['size']
+        new_vol_size = self.volume_api.get(context, new_volume_id)['size']
+        if new_vol_size > old_vol_size:
+            resize_to = new_vol_size
+
         LOG.info(_LI('Swapping volume %(old_volume)s for %(new_volume)s'),
                   {'old_volume': old_volume_id, 'new_volume': new_volume_id},
                   context=context, instance=instance)
@@ -4587,7 +4589,8 @@ class ComputeManager(manager.Manager):
                                                          bdm,
                                                          connector,
                                                          old_volume_id,
-                                                         new_volume_id)
+                                                         new_volume_id,
+                                                         resize_to)
 
         save_volume_id = comp_ret['save_volume_id']
 
@@ -4599,8 +4602,11 @@ class ComputeManager(manager.Manager):
             'destination_type': 'volume',
             'snapshot_id': None,
             'volume_id': save_volume_id,
-            'volume_size': None,
             'no_device': None}
+
+        if resize_to:
+            values['volume_size'] = resize_to
+
         LOG.debug("swap_volume: Updating volume %(volume_id)s BDM record with "
                   "%(updates)s", {'volume_id': bdm.volume_id,
                                   'updates': values},
