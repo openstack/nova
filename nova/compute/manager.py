@@ -3689,7 +3689,10 @@ class ComputeManager(manager.Manager):
         if old_instance_type_id != new_instance_type_id:
             instance_type = instance.get_flavor('new')
             self._set_instance_info(instance, instance_type)
-            resize_instance = True
+            for key in ('root_gb', 'swap', 'ephemeral_gb'):
+                if old_instance_type[key] != instance_type[key]:
+                    resize_instance = True
+                    break
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -3724,7 +3727,7 @@ class ComputeManager(manager.Manager):
                                          block_device_info, power_on)
         except Exception:
             with excutils.save_and_reraise_exception():
-                if resize_instance:
+                if old_instance_type_id != new_instance_type_id:
                     self._set_instance_info(instance,
                                             old_instance_type)
 

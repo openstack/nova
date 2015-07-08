@@ -4350,7 +4350,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(network_api.API, 'migrate_instance_start', fake)
         self.stubs.Set(network_api.API, 'migrate_instance_finish', fake)
 
-    def _test_finish_resize(self, power_on):
+    def _test_finish_resize(self, power_on, resize_instance=True):
         # Contrived test to ensure finish_resize doesn't raise anything and
         # also tests resize from ACTIVE or STOPPED state which determines
         # if the resized instance is powered on or not.
@@ -4364,6 +4364,13 @@ class ComputeTestCase(BaseTestCase):
         image = 'fake-image'
         disk_info = 'fake-disk-info'
         instance_type = flavors.get_default_flavor()
+
+        if not resize_instance:
+            old_instance_type = flavors.get_flavor_by_name('m1.tiny')
+            instance_type['root_gb'] = old_instance_type['root_gb']
+            instance_type['swap'] = old_instance_type['swap']
+            instance_type['ephemeral_gb'] = old_instance_type['ephemeral_gb']
+
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
@@ -4463,7 +4470,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.finish_migration(self.context, migration,
                                              instance, disk_info,
                                              'fake-nwinfo1',
-                                             image, True,
+                                             image, resize_instance,
                                              'fake-bdminfo', power_on)
         # Ensure instance status updates is after the migration finish
         migration.save().WithSideEffects(_mig_save)
@@ -4485,6 +4492,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_finish_resize_from_stopped(self):
         self._test_finish_resize(power_on=False)
+
+    def test_finish_resize_without_resize_instance(self):
+        self._test_finish_resize(power_on=True, resize_instance=False)
 
     def test_finish_resize_with_volumes(self):
         """Contrived test to ensure finish_resize doesn't raise anything."""
