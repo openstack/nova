@@ -21,6 +21,7 @@ import six
 from nova import block_device
 from nova import context
 from nova import exception
+from nova.objects import fields
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
@@ -241,7 +242,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
             for fld, alias in six.iteritems(test_bdm._update_on_save):
-                test_bdm[alias or fld] = 'fake_changed_value'
+                # We can't set fake values on enums, like device_type,
+                # so skip those.
+                if not isinstance(test_bdm._bdm_obj.fields[fld],
+                                  fields.BaseEnumField):
+                    test_bdm[alias or fld] = 'fake_changed_value'
             test_bdm.save()
             for fld, alias in six.iteritems(test_bdm._update_on_save):
                 self.assertEqual(test_bdm[alias or fld],

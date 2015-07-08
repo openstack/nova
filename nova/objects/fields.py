@@ -112,6 +112,22 @@ class BlockDeviceSourceType(Enum):
             valid_values=BlockDeviceSourceType.ALL)
 
 
+class BlockDeviceType(Enum):
+    """Represents possible device_type values for a BlockDeviceMapping."""
+
+    CDROM = 'cdrom'
+    DISK = 'disk'
+    FLOPPY = 'floppy'
+    FS = 'fs'
+    LUN = 'lun'
+
+    ALL = (CDROM, DISK, FLOPPY, FS, LUN)
+
+    def __init__(self):
+        super(BlockDeviceType, self).__init__(
+            valid_values=BlockDeviceType.ALL)
+
+
 class CPUAllocationPolicy(Enum):
 
     DEDICATED = "dedicated"
@@ -551,6 +567,10 @@ class BlockDeviceDestinationTypeField(BaseEnumField):
 
 class BlockDeviceSourceTypeField(BaseEnumField):
     AUTO_TYPE = BlockDeviceSourceType()
+
+
+class BlockDeviceTypeField(BaseEnumField):
+    AUTO_TYPE = BlockDeviceType()
 
 
 class CPUAllocationPolicyField(BaseEnumField):
