@@ -30,11 +30,11 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import fileutils
 
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils

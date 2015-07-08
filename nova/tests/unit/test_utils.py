@@ -24,7 +24,6 @@ import tempfile
 
 import eventlet
 import mock
-from mox3 import mox
 import netaddr
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -94,35 +93,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
     def test_hostname_translate(self):
         hostname = "<}\x1fh\x10e\x08l\x02l\x05o\x12!{>"
         self.assertEqual("hello", utils.sanitize_hostname(hostname))
-
-    def test_read_cached_file(self):
-        self.mox.StubOutWithMock(os.path, "getmtime")
-        os.path.getmtime(mox.IgnoreArg()).AndReturn(1)
-        self.mox.ReplayAll()
-
-        cache_data = {"data": 1123, "mtime": 1}
-        data = utils.read_cached_file("/this/is/a/fake", cache_data)
-        self.assertEqual(cache_data["data"], data)
-
-    def test_read_modified_cached_file(self):
-        self.mox.StubOutWithMock(os.path, "getmtime")
-        os.path.getmtime(mox.IgnoreArg()).AndReturn(2)
-        self.mox.ReplayAll()
-
-        fake_contents = "lorem ipsum"
-        m = mock.mock_open(read_data=fake_contents)
-        with mock.patch("six.moves.builtins.open", m, create=True):
-            cache_data = {"data": 1123, "mtime": 1}
-            self.reload_called = False
-
-            def test_reload(reloaded_data):
-                self.assertEqual(reloaded_data, fake_contents)
-                self.reload_called = True
-
-            data = utils.read_cached_file("/this/is/a/fake", cache_data,
-                                                    reload_func=test_reload)
-            self.assertEqual(data, fake_contents)
-            self.assertTrue(self.reload_called)
 
     def test_generate_password(self):
         password = utils.generate_password()
@@ -233,6 +203,49 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         with mock.patch('nova.utils.execute') as mock_method:
             utils.ssh_execute('remotehost', 'ls', '-l')
         mock_method.assert_called_once_with(*expected_args)
+
+
+class TestCachedFile(test.NoDBTestCase):
+    @mock.patch('os.path.getmtime', return_value=1)
+    def test_read_cached_file(self, getmtime):
+        utils._FILE_CACHE = {
+            '/this/is/a/fake': {"data": 1123, "mtime": 1}
+        }
+        fresh, data = utils.read_cached_file("/this/is/a/fake")
+        fdata = utils._FILE_CACHE['/this/is/a/fake']["data"]
+        self.assertEqual(fdata, data)
+
+    @mock.patch('os.path.getmtime', return_value=2)
+    def test_read_modified_cached_file(self, getmtime):
+
+        utils._FILE_CACHE = {
+            '/this/is/a/fake': {"data": 1123, "mtime": 1}
+        }
+
+        fake_contents = "lorem ipsum"
+
+        with mock.patch('six.moves.builtins.open',
+                        mock.mock_open(read_data=fake_contents)):
+            fresh, data = utils.read_cached_file("/this/is/a/fake")
+
+        self.assertEqual(data, fake_contents)
+        self.assertTrue(fresh)
+
+    def test_delete_cached_file(self):
+        filename = '/this/is/a/fake/deletion/of/cached/file'
+        utils._FILE_CACHE = {
+            filename: {"data": 1123, "mtime": 1}
+        }
+        self.assertIn(filename, utils._FILE_CACHE)
+        utils.delete_cached_file(filename)
+        self.assertNotIn(filename, utils._FILE_CACHE)
+
+    def test_delete_cached_file_not_exist(self):
+        # We expect that if cached file does not exist no Exception raised.
+        filename = '/this/is/a/fake/deletion/attempt/of/not/cached/file'
+        self.assertNotIn(filename, utils._FILE_CACHE)
+        utils.delete_cached_file(filename)
+        self.assertNotIn(filename, utils._FILE_CACHE)
 
 
 class VPNPingTestCase(test.NoDBTestCase):

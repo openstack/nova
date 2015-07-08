@@ -39,6 +39,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import encodeutils
+from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import units
@@ -59,7 +60,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import fileutils
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -3126,7 +3126,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.disk.api.teardown_container')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
-    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
     def test_unmount_fs_if_error_during_lxc_create_domain(self,
             mock_get_inst_path, mock_ensure_tree, mock_setup_container,
@@ -8145,7 +8145,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._hard_reboot(self.context, instance, network_info,
                           block_device_info)
 
-    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
     @mock.patch('nova.pci.manager.get_instance_pci_devs')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
@@ -9972,7 +9972,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
-    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
     def test_create_domain_lxc(self, mock_get_inst_path, mock_ensure_tree,
                            mock_setup_container, mock_get_info, mock_clean):
@@ -10025,7 +10025,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch.object(fake_libvirt_utils, 'chown_for_id_maps')
     @mock.patch('nova.virt.disk.api.setup_container')
-    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
     def test_create_domain_lxc_id_maps(self, mock_get_inst_path,
                                        mock_ensure_tree, mock_setup_container,
@@ -10092,7 +10092,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.disk.api.teardown_container')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
-    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
     def test_create_domain_lxc_not_running(self, mock_get_inst_path,
                                            mock_ensure_tree,

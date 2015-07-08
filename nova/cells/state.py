@@ -36,7 +36,6 @@ from nova.db import base
 from nova import exception
 from nova.i18n import _LE
 from nova import objects
-from nova.openstack.common import fileutils
 from nova import rpc
 from nova import utils
 
@@ -484,8 +483,8 @@ class CellStateManagerFile(CellStateManager):
         :param force: If True, cell status will be updated regardless
                       of whether it's time to do so.
         """
-        reloaded, data = fileutils.read_cached_file(self.cells_config_path,
-                                                    force_reload=force)
+        reloaded, data = utils.read_cached_file(self.cells_config_path,
+                                                force_reload=force)
 
         if reloaded:
             LOG.debug("Updating cell cache from config file.")

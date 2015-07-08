@@ -173,6 +173,8 @@ SM_SKIP_KEYS = (
     'img_mappings', 'img_block_device_mapping',
 )
 
+_FILE_CACHE = {}
+
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
@@ -632,27 +634,6 @@ def sanitize_hostname(hostname):
     hostname = hostname.strip('.-')
 
     return hostname
-
-
-def read_cached_file(filename, cache_info, reload_func=None):
-    """Read from a file if it has been modified.
-
-    :param cache_info: dictionary to hold opaque cache.
-    :param reload_func: optional function to be called with data when
-                        file is reloaded due to a modification.
-
-    :returns: data from file
-
-    """
-    mtime = os.path.getmtime(filename)
-    if not cache_info or mtime != cache_info.get('mtime'):
-        LOG.debug("Reloading cached file %s", filename)
-        with open(filename) as fap:
-            cache_info['data'] = fap.read()
-        cache_info['mtime'] = mtime
-        if reload_func:
-            reload_func(cache_info['data'])
-    return cache_info['data']
 
 
 @contextlib.contextmanager
@@ -1345,3 +1326,39 @@ def safe_truncate(value, length):
         except UnicodeDecodeError:
             b_value = b_value[:-1]
     return u_value
+
+
+def read_cached_file(filename, force_reload=False):
+    """Read from a file if it has been modified.
+
+    :param force_reload: Whether to reload the file.
+    :returns: A tuple with a boolean specifying if the data is fresh
+              or not.
+    """
+    global _FILE_CACHE
+
+    if force_reload:
+        delete_cached_file(filename)
+
+    reloaded = False
+    mtime = os.path.getmtime(filename)
+    cache_info = _FILE_CACHE.setdefault(filename, {})
+
+    if not cache_info or mtime > cache_info.get('mtime', 0):
+        LOG.debug("Reloading cached file %s", filename)
+        with open(filename) as fap:
+            cache_info['data'] = fap.read()
+        cache_info['mtime'] = mtime
+        reloaded = True
+    return (reloaded, cache_info['data'])
+
+
+def delete_cached_file(filename):
+    """Delete cached file if present.
+
+    :param filename: filename to delete
+    """
+    global _FILE_CACHE
+
+    if filename in _FILE_CACHE:
+        del _FILE_CACHE[filename]

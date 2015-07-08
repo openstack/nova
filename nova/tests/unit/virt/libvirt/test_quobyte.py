@@ -18,9 +18,9 @@ import mock
 import os
 
 from oslo_concurrency import processutils
+from oslo_utils import fileutils
 
 from nova import exception
-from nova.openstack.common import fileutils
 from nova import test
 from nova import utils
 from nova.virt.libvirt import quobyte

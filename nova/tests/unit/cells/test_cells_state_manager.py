@@ -28,8 +28,8 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
-from nova.openstack.common import fileutils
 from nova import test
+from nova import utils
 
 FAKE_COMPUTES = [
     ('host1', 1024, 100, 0, 0),
@@ -114,7 +114,7 @@ class TestCellsStateManager(test.NoDBTestCase):
         self.assertEqual(['no_such_file_exists.conf'], e.config_files)
 
     @mock.patch.object(cfg.ConfigOpts, 'find_file')
-    @mock.patch.object(fileutils, 'read_cached_file')
+    @mock.patch.object(utils, 'read_cached_file')
     def test_filemanager_returned(self, mock_read_cached_file, mock_find_file):
         mock_find_file.return_value = "/etc/nova/cells.json"
         mock_read_cached_file.return_value = (False, six.StringIO({}))

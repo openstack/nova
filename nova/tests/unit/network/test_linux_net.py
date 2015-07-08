@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import fileutils
 from oslo_utils import timeutils
 
 from nova import context
@@ -33,7 +34,6 @@ from nova import exception
 from nova.network import driver
 from nova.network import linux_net
 from nova import objects
-from nova.openstack.common import fileutils
 from nova import test
 from nova import utils
 
