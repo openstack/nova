@@ -684,6 +684,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param block_device_info: Instance block device
             information. Ignored by this driver.
         """
+        LOG.debug('Spawn called for instance', instance=instance)
         # The compute manager is meant to know the node uuid, so missing uuid
         # is a significant issue. It may mean we've been passed the wrong data.
         node_uuid = instance.get('node')
@@ -765,6 +766,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                                                      instance)
         try:
             timer.start(interval=CONF.ironic.api_retry_interval).wait()
+            LOG.info(_LI('Successfully provisioned Ironic node %s'),
+                     node.uuid, instance=instance)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Error deploying instance %(instance)s on "
@@ -836,6 +839,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param migrate_data: implementation specific params.
             Ignored by this driver.
         """
+        LOG.debug('Destroy called for instance', instance=instance)
         try:
             node = _validate_instance_and_node(self.ironicclient, instance)
         except exception.InstanceNotFound:
@@ -854,6 +858,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             self._unprovision(self.ironicclient, instance, node)
 
         self._cleanup_deploy(context, node, instance, network_info)
+        LOG.info(_LI('Successfully unprovisioned Ironic node %s'),
+                 node.uuid, instance=instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
@@ -876,6 +882,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             encountered. Ignored by this driver.
 
         """
+        LOG.debug('Reboot called for instance', instance=instance)
         node = _validate_instance_and_node(self.ironicclient, instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'reboot')
 
@@ -883,6 +890,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                     self._wait_for_power_state,
                     self.ironicclient, instance, 'reboot')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info(_LI('Successfully rebooted Ironic node %s'),
+                 node.uuid, instance=instance)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.
@@ -898,6 +907,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param retry_interval: How often to signal node while waiting
             for it to shutdown. Ignored by this driver.
         """
+        LOG.debug('Power off called for instance', instance=instance)
         node = _validate_instance_and_node(self.ironicclient, instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'off')
 
@@ -905,6 +915,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                     self._wait_for_power_state,
                     self.ironicclient, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info(_LI('Successfully powered off Ironic node %s'),
+                 node.uuid, instance=instance)
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
@@ -921,6 +933,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             information. Ignored by this driver.
 
         """
+        LOG.debug('Power on called for instance', instance=instance)
         node = _validate_instance_and_node(self.ironicclient, instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'on')
 
@@ -928,6 +941,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                     self._wait_for_power_state,
                     self.ironicclient, instance, 'power on')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info(_LI('Successfully powered on Ironic node %s'),
+                 node.uuid, instance=instance)
 
     def refresh_security_group_rules(self, security_group_id):
         """Refresh security group rules from data store.
@@ -1101,6 +1116,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             must be preserved on rebuild.
 
         """
+        LOG.debug('Rebuild called for instance', instance=instance)
         instance.task_state = task_states.REBUILD_SPAWNING
         instance.save(expected_task_state=[task_states.REBUILDING])
 
@@ -1128,3 +1144,4 @@ class IronicDriver(virt_driver.ComputeDriver):
                                                      self.ironicclient,
                                                      instance)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        LOG.info(_LI('Instance was successfully rebuilt'), instance=instance)
