@@ -1,20 +1,25 @@
 Virtual Machine States and Transitions
 =======================================
 
-Preconditions for commands
+The following diagrams and tables show the required virtual machine (VM)
+states and task states for various commands issued by the user.
+
+Allowed State Transitions
 --------------------------
-
-
-The following diagrams show the required virtual machine (VM) states and
-task states for various commands issued by the user:
 
 .. graphviz::
 
   digraph states {
-    node [fontsize=10 fontname="Monospace"]
+    graph [pad=".35", ranksep="0.65", nodesep="0.55", concentrate=true];
+    node [fontsize=10 fontname="Monospace"];
+    edge [arrowhead="normal", arrowsize="0.8"];
+    label="All states are allowed to transition to DELETED and ERROR.";
+    forcelabels=true;
+    labelloc=bottom;
+    labeljust=left;
+
     /* states */
     building [label="BUILDING"]
-
     active [label="ACTIVE"]
     paused [label="PAUSED"]
     suspended [label="SUSPENDED"]
@@ -22,166 +27,143 @@ task states for various commands issued by the user:
     rescued [label="RESCUED"]
     resized [label="RESIZED"]
     soft_deleted [label="SOFT_DELETED"]
-    deleted [label="DELETED"]
-    error [label="ERROR"]
     shelved [label="SHELVED"]
     shelved_offloaded [label="SHELVED_OFFLOADED"]
-        
-    /* apis */
-    create [shape="rectangle"]
-    create -> active
-    create -> error
-    building -> create
+    deleted [label="DELETED", color="red"]
+    error [label="ERROR", color="red"]
 
-    delete [shape="rectangle"]
-    delete -> deleted
-    building -> delete
-    paused -> delete
-    suspended -> delete
-    stopped -> delete
-    rescued -> delete
-    soft_deleted -> delete
-    error -> delete
+    /* transitions [action] */
+    building -> active
 
-    soft_delete [shape="rectangle"]
-    soft_delete -> soft_deleted
-    soft_delete -> error
-    active -> soft_delete
-    stopped -> soft_delete
+    active -> active [headport=nw, tailport=ne]  // manual layout
+    active -> soft_deleted [tailport=e]  // prevent arrowhead overlap
+    active -> suspended
+    active -> paused [tailport=w]  // prevent arrowhead overlap
+    active -> stopped
+    active -> shelved
+    active -> shelved_offloaded
+    active -> rescued
+    active -> resized
 
-    restore [shape="rectangle"]
-    restore -> active
-    restore -> error
-    soft_deleted -> restore
+    soft_deleted -> active [headport=e]  // prevent arrowhead overlap
 
-    pause [shape="rectangle"]
-    pause -> paused
-    pause -> error
-    active -> pause
+    suspended -> active
+    suspended -> shelved
+    suspended -> shelved_offloaded
 
-    unpause [shape="rectangle"]
-    unpause -> active
-    unpause -> error
-    paused -> unpause
+    paused -> active
+    paused -> shelved
+    paused -> shelved_offloaded
 
-    suspend [shape="rectangle"]
-    suspend -> suspended
-    suspend -> error
-    active -> suspend
+    stopped -> active
+    stopped -> stopped [headport=nw, tailport=ne]  // manual layout
+    stopped -> resized
+    stopped -> rescued
+    stopped -> shelved
+    stopped -> shelved_offloaded
 
-    resume [shape="rectangle"]
-    resume -> active
-    resume -> error
-    suspended -> resume
+    resized -> active
 
-    start [shape="rectangle"]
-    start -> active
-    start -> error
-    stopped -> start
+    rescued -> active
 
-    stop [shape="rectangle"]
-    stop -> stopped
-    stop -> error
-    active -> stop
-    error -> stop
+    shelved -> shelved_offloaded
+    shelved ->  active
 
-    rescue [shape="rectangle"]
-    rescue -> rescued
-    rescue -> error
-    active -> rescue
-    stopped -> rescue
-    error -> rescue
-
-    unrescue [shape="rectangle"]
-    unrescue -> active
-    rescued -> unrescue
-
-    resize [shape="rectangle"]
-    resize -> resized
-    resize -> error
-    active -> resize
-    stopped -> resize
-
-    confirm_resize [shape="rectangle"]
-    confirm_resize -> active
-    confirm_resize -> error
-    resized -> confirm_resize
-    confirm_resize [shape="rectangle"]
-
-    revert_resize -> active
-    revert_resize -> error
-    resized -> revert_resize
-
-    snapshot [shape="rectangle"]
-    snapshot -> active
-    snapshot -> stopped
-    snapshot -> error
-    active -> snapshot
-    stopped -> snapshot
-
-    backup [shape="rectangle"]
-    backup -> active
-    backup -> stopped
-    backup -> error
-    active -> backup
-    stopped -> backup
-
-    rebuild [shape="rectangle"]
-    rebuild -> active
-    rebuild -> error
-    active -> rebuild
-    stopped -> rebuild
-
-    set_admin_password [shape="rectangle"]
-    set_admin_password -> active
-    set_admin_password -> error
-    active -> set_admin_password
-
-    reboot [shape="rectangle"]
-    reboot -> active
-    reboot -> error
-    active -> reboot
-    stopped -> reboot
-    paused -> reboot
-    suspended -> reboot
-    error -> reboot
-
-    live_migrate [shape="rectangle"]
-    live_migrate -> active
-    live_migrate -> error
-    active -> live_migrate
-
-    shelve [shape="rectangle"]
-    shelve -> shelved
-    shelve -> shelved_offloaded
-    shelve -> error
-    active -> shelve
-    stopped -> shelve
-    paused -> shelve
-    suspended -> shelve
-
-    shelve_offload [shape="rectangle"]
-    shelve_offload -> shelved_offloaded
-    shelve_offload -> error
-    shelved -> shelve_offload
-
-    unshelve [shape="rectangle"]
-    unshelve -> active
-    unshelve -> error
-    shelved -> unshelve
-    shelved_offloaded -> unshelve
+    shelved_offloaded -> active
   }
 
-.. image:: ./images/PowerStates1.png
 
-.. image:: ./images/PowerStates2.png
+Requirements for Commands
+-------------------------
+
+==================  ==================  ====================  ================
+Command             Req'd VM States     Req'd Task States     Target State
+==================  ==================  ====================  ================
+pause               Active, Shutoff,    Resize Verify, unset  Paused
+                    Rescued
+unpause             Paused              N/A                   Active
+suspend             Active, Shutoff     N/A                   Suspended
+resume              Suspended           N/A                   Active
+rescue              Active, Shutoff     Resize Verify, unset  Rescued
+unrescue            Rescued             N/A                   Active
+set admin password  Active              N/A                   Active
+rebuild             Active, Shutoff     Resize Verify, unset  Active
+force delete        Soft Deleted        N/A                   Deleted
+restore             Soft Deleted        N/A                   Active
+soft delete         Active, Shutoff,    N/A                   Soft Deleted
+                    Error
+delete              Active, Shutoff,    N/A                   Deleted
+                    Building, Rescued,
+                    Error
+backup              Active, Shutoff     N/A                   Active, Shutoff
+snapshot            Active, Shutoff     N/A                   Active, Shutoff
+start               Shutoff, Stopped    N/A                   Active
+stop                Active, Shutoff,    Resize Verify, unset  Stopped
+                    Rescued
+reboot              Active, Shutoff,    Resize Verify, unset  Active
+                    Rescued
+resize              Active, Shutoff     Resize Verify, unset  Resized
+revert resize       Active, Shutoff     Resize Verify, unset  Active
+confirm resize      Active, Shutoff     Resize Verify, unset  Active
+==================  ==================  ====================  ================
+
+VM states and Possible Commands
+-------------------------------
+
+============  =================================================================
+VM State      Commands
+============  =================================================================
+Paused        unpause
+Suspended     resume
+Active        set admin password, suspend, pause, rescue, rebuild, soft delete,
+              delete, backup, snapshot, stop, reboot, resize, revert resize,
+              confirm resize
+Shutoff       suspend, pause, rescue, rebuild, soft delete, delete, backup,
+              start, snapshot, stop, reboot, resize, revert resize,
+              confirm resize
+Rescued       unrescue, pause
+Stopped       rescue, delete, start
+Soft Deleted  force delete, restore
+Error         soft delete, delete
+Building      delete
+Rescued       delete, stop, reboot
+============  =================================================================
 
 
-Create instance states
+Create Instance States
 ----------------------
 
 The following diagram shows the sequence of VM states, task states, and
 power states when a new VM instance is created.
 
 
-.. image:: ./images/run_instance_walkthrough.png
+.. seqdiag::
+
+    seqdiag {
+      edge_length = 250;
+      span_height = 40;
+      node_width=200;
+      default_note_color = lightblue;
+
+      // Use note (put note on rightside)
+      api [label="Compute.api"];
+      manager [label="Compute.manager"];
+      api -> manager [label = "create_db_entry_for_new_instance",
+                      note = "VM: Building
+                             Task: Scheduling
+                             Power: No State"];
+      manager -> manager [label="_start_building",
+                          note ="VM: Building
+                                Task: None"];
+      manager -> manager [label="_allocate_network",
+                          note ="VM: Building
+                                Task: Networking"];
+      manager -> manager [label="_prep_block_device",
+                          note ="VM: Building
+                                Task: Block_Device_Mapping"];
+      manager -> manager [label="_spawn",
+                          note ="VM: Building
+                                Task: Spawning"];
+      api <-- manager [note ="VM: Active
+                             Task: None"];
+    }
