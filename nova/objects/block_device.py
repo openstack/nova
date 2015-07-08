@@ -51,13 +51,14 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.7: Add update_or_create method
     # Version 1.8: Instance version 1.19
     # Version 1.9: Instance version 1.20
-    VERSION = '1.9'
+    # Version 1.10: Changed source_type field to BlockDeviceSourceTypeField.
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'instance': fields.ObjectField('Instance', nullable=True),
-        'source_type': fields.StringField(nullable=True),
+        'source_type': fields.BlockDeviceSourceTypeField(nullable=True),
         'destination_type': fields.StringField(nullable=True),
         'guest_format': fields.StringField(nullable=True),
         'device_type': fields.StringField(nullable=True),
@@ -213,7 +214,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
 
     @property
     def is_image(self):
-        return self.source_type == 'image'
+        return self.source_type == fields.BlockDeviceSourceType.IMAGE
 
     def get_image_mapping(self):
         return block_device.BlockDeviceDict(self).get_image_mapping()
@@ -250,7 +251,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.8: BlockDeviceMapping <= version 1.7
     # Version 1.9: BlockDeviceMapping <= version 1.8
     # Version 1.10: BlockDeviceMapping <= version 1.9
-    VERSION = '1.10'
+    # Version 1.11: BlockDeviceMapping <= version 1.10
+    VERSION = '1.11'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -267,6 +269,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         '1.8': '1.7',
         '1.9': '1.8',
         '1.10': '1.9',
+        '1.11': '1.10',
     }
 
     @base.remotable_classmethod

@@ -197,6 +197,25 @@ class TestArchitecture(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'ppc42')
 
 
+class TestBlockDeviceSourceType(TestField):
+    def setUp(self):
+        super(TestBlockDeviceSourceType, self).setUp()
+        self.field = fields.BlockDeviceSourceTypeField()
+        self.coerce_good_values = [('blank', 'blank'),
+                                   ('image', 'image'),
+                                   ('snapshot', 'snapshot'),
+                                   ('volume', 'volume')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'image'", self.field.stringify('image'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestCPUMode(TestField):
     def setUp(self):
         super(TestCPUMode, self).setUp()
