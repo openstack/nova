@@ -232,6 +232,8 @@ policy_data = """
     "os_compute_api:os-flavor-manage": "",
     "compute_extension:floating_ip_dns": "",
     "os_compute_api:os-floating-ip-dns": "",
+    "os_compute_api:os-floating-ip-dns:domain:update": "",
+    "os_compute_api:os-floating-ip-dns:domain:delete": "",
     "compute_extension:floating_ip_pools": "",
     "os_compute_api:os-floating-ip-pools": "",
     "compute_extension:floating_ips": "",
