@@ -1349,6 +1349,23 @@ class ComputeDriver(object):
         """Default the missing device names in the block device mapping."""
         raise NotImplementedError()
 
+    def get_device_name_for_instance(self, instance,
+                                     bdms, block_device_obj):
+        """Get the next device name based on the block device mapping.
+
+        :param instance: nova.objects.instance.Instance that volume is
+                         requesting a device name
+        :param bdms: a nova.objects.BlockDeviceMappingList for the instance
+        :param block_device_obj: A nova.objects.BlockDeviceMapping instance
+                                 with all info about the requested block
+                                 device. device_name does not need to be set,
+                                 and should be decided by the driver
+                                 implementation if not set.
+
+        :returns: The chosen device name.
+        """
+        raise NotImplementedError()
+
     def is_supported_fs_format(self, fs_type):
         """Check whether the file format is supported by this driver
 

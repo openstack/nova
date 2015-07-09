@@ -769,6 +769,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.get_instance_disk_info(instance_ref,
                                                block_device_info={})
 
+    @catch_notimplementederror
+    def test_get_device_name_for_instance(self):
+        instance, _ = self._get_running_instance()
+        self.connection.get_device_name_for_instance(
+            instance, [], mock.Mock(spec=objects.BlockDeviceMapping))
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
