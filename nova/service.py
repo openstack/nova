@@ -125,7 +125,7 @@ class Service(service.Service):
 
     A service takes a manager and enables rpc by listening to queues based
     on topic. It also periodically runs tasks on the manager and reports
-    it state to the database services table.
+    its state to the database services table.
     """
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
