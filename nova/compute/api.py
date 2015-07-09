@@ -1434,8 +1434,14 @@ class API(base.Base):
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)
 
-        if requested_networks and len(requested_networks) > 1:
-            raise exception.COLOMultipleInterfacesNotSupported()
+        # TODO(ORBIT): Since the create instance is cast and not call we need
+        #              throw this exception at the api level so that it is
+        #              clear for the user why it fails.
+        #              Check if there is some better way to handle this where
+        #              the rest of COLO is managed though.
+        if 'ft:enabled' in instance_type['extra_specs']:
+            if requested_networks and len(requested_networks) > 1:
+                raise exception.COLOMultipleInterfacesNotSupported()
 
         if requested_networks and max_count > 1:
             self._check_multiple_instances_and_specified_ip(requested_networks)
