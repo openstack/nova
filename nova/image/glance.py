@@ -28,6 +28,7 @@ import glanceclient.exc
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
 import six
@@ -370,6 +371,10 @@ class GlanceImageService(object):
             try:
                 for chunk in image_chunks:
                     data.write(chunk)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE("Error writing to %(path)s: %(exception)s"),
+                              {'path': dst_path, 'exception': ex})
             finally:
                 if close_file:
                     data.close()
