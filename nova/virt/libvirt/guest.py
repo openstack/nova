@@ -152,12 +152,12 @@ class Guest(object):
     def get_vcpus_info(self):
         """Returns virtual cpus information of guest.
 
-        :returns: objects.VirtVCPUInfo
+        :returns: guest.VCPUInfo
         """
         vcpus = self._domain.vcpus()
         if vcpus is not None:
             for vcpu in vcpus[0]:
-                yield GuestVCPUInfo(
+                yield VCPUInfo(
                     id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
     def delete_configuration(self):
@@ -247,7 +247,7 @@ class Guest(object):
         self._domain.managedSave(0)
 
 
-class GuestVCPUInfo(object):
+class VCPUInfo(object):
     def __init__(self, id, cpu, state, time):
         """Structure for information about guest vcpus.
 
