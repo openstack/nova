@@ -93,6 +93,7 @@ actually does, and why.
 .. toctree::
    :maxdepth: 1
 
+   how_to_get_involved
    architecture
    project_scope
    development.environment
@@ -117,6 +118,7 @@ community, while keeping users happy and keeping developers productive.
 .. toctree::
    :maxdepth: 1
 
+   process
    blueprints
    policies
 
