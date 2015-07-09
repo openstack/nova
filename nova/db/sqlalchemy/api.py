@@ -3686,7 +3686,6 @@ def quota_destroy_all_by_project(context, project_id):
                 soft_delete(synchronize_session=False)
 
 
-@require_admin_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def reservation_expire(context):
     session = get_session()
