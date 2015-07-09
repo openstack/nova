@@ -162,8 +162,8 @@ interval_opts = [
     cfg.IntOpt('shelved_offload_time',
                default=0,
                help='Time in seconds before a shelved instance is eligible '
-                    'for removing from a host.  -1 never offload, 0 offload '
-                    'when shelved'),
+                    'for removing from a host. -1 never offload, 0 offload '
+                    'immediately when shelved'),
     cfg.IntOpt('instance_delete_interval',
                default=300,
                help='Interval in seconds for retrying failed instance file '
@@ -5789,6 +5789,9 @@ class ComputeManager(manager.Manager):
 
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
     def _poll_shelved_instances(self, context):
+
+        if CONF.shelved_offload_time <= 0:
+            return
 
         filters = {'vm_state': vm_states.SHELVED,
                    'host': self.host}

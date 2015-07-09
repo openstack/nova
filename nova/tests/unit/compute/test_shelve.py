@@ -19,6 +19,7 @@ from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
+from nova import objects
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
 
@@ -327,6 +328,13 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_save.side_effect = check_save
             self.compute.unshelve_instance(self.context, instance, image=None,
                     filter_properties=filter_properties, node=node)
+
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    def test_shelved_poll_none_offloaded(self, mock_get_by_filters):
+        # Test instances are not offloaded when shelved_offload_time is -1
+        CONF.set_override('shelved_offload_time', -1)
+        self.compute._poll_shelved_instances(self.context)
+        self.assertEqual(0, mock_get_by_filters.call_count)
 
     def test_shelved_poll_none_exist(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
