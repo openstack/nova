@@ -1381,7 +1381,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._detach_pci_devices(guest,
                     pci_manager.get_instance_pci_devs(instance))
                 self._detach_sriov_ports(context, instance, guest)
-                virt_dom.managedSave(0)
+                guest.save_memory_state()
 
         snapshot_backend = self.image_backend.snapshot(instance,
                 disk_path,
@@ -2290,15 +2290,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """Suspend the specified instance."""
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove dom at the end.
-        dom = guest._domain
-
         self._detach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
         self._detach_sriov_ports(context, instance, guest)
-        dom.managedSave(0)
+        guest.save_memory_state()
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""

@@ -319,3 +319,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertTrue(
             guest.has_persistent_configuration())
         domain.isPersistent.assert_called_once_with()
+
+    def test_save_memory_state(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.save_memory_state()
+
+        domain.managedSave.assert_called_once_with(0)
