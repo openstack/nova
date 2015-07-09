@@ -131,7 +131,7 @@ class _TestInstanceObject(object):
         exp_cols.remove('pci_requests')
         exp_cols.remove('vcpu_model')
         exp_cols.remove('ec2_ids')
-        exp_cols = filter(lambda x: 'flavor' not in x, exp_cols)
+        exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model'])
 
@@ -473,7 +473,7 @@ class _TestInstanceObject(object):
         actual_args = mock_update.call_args
         self.assertEqual(self.context, actual_args[0][0])
         self.assertEqual(inst.uuid, actual_args[0][1])
-        self.assertEqual(actual_args[0][2].keys(), ['vcpu_model'])
+        self.assertEqual(list(actual_args[0][2].keys()), ['vcpu_model'])
         self.assertJsonEqual(jsonutils.dumps(
                 test_vcpu_model.fake_vcpumodel.obj_to_primitive()),
                              actual_args[0][2]['vcpu_model'])
@@ -1003,9 +1003,9 @@ class _TestInstanceObject(object):
         expected = {}
         for key in unicode_attributes:
             inst[key] = u'\u2603'
-            expected[key] = '?'
+            expected[key] = b'?'
         primitive = inst.obj_to_primitive(target_version='1.6')
-        self.assertEqual(expected, primitive['nova_object.data'])
+        self.assertJsonEqual(expected, primitive['nova_object.data'])
         self.assertEqual('1.6', primitive['nova_object.version'])
 
     def test_compat_pci_devices(self):
@@ -1652,7 +1652,7 @@ class _TestInstanceListObject(object):
         inst_list._context = self.context
         inst_list.objects = insts
         faulty = inst_list.fill_faults()
-        self.assertEqual(faulty, ['uuid1'])
+        self.assertEqual(list(faulty), ['uuid1'])
         self.assertEqual(inst_list[0].fault.message,
                          db_faults['uuid1'][0]['message'])
         self.assertIsNone(inst_list[1].fault)

@@ -91,7 +91,7 @@ class InstanceNUMACell(base.NovaObject,
         if threads == 1:
             threads = 0
 
-        return map(set, zip(*[iter(cpu_list)] * threads))
+        return list(map(set, zip(*[iter(cpu_list)] * threads)))
 
     @property
     def cpu_pinning_requested(self):

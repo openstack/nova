@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import mock
 import six
 
@@ -53,7 +51,7 @@ class _TestBlockDeviceMappingObject(object):
             self.flags(enable=False, group='cells')
 
         fake_bdm = self.fake_bdm()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(
                 db, 'block_device_mapping_update', return_value=fake_bdm),
             mock.patch.object(
@@ -149,7 +147,7 @@ class _TestBlockDeviceMappingObject(object):
             values['device_name'] = device_name
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(values)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(
                     db, 'block_device_mapping_create', return_value=fake_bdm),
             mock.patch.object(
@@ -247,7 +245,7 @@ class _TestBlockDeviceMappingObject(object):
             self.flags(enable=True, cell_type=cell_type, group='cells')
         else:
             self.flags(enable=False, group='cells')
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(db, 'block_device_mapping_destroy'),
             mock.patch.object(cells_rpcapi.CellsAPI, 'bdm_destroy_at_top')
         ) as (bdm_del, cells_destroy):

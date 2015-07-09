@@ -352,7 +352,7 @@ def delete_flavor_info(metadata, *prefixes):
     # NUMA-related ones that we need to avoid an uglier alternative. This
     # should be replaced by a general split-out of flavor information from
     # system_metadata very soon.
-    for key in metadata.keys():
+    for key in list(metadata.keys()):
         for prefix in prefixes:
             if key.startswith('%sinstance_type_extra_' % prefix):
                 del metadata[key]

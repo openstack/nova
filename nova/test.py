@@ -20,6 +20,8 @@ Allows overriding of flags for use of fakes, and some black magic for
 inline callbacks.
 
 """
+import contextlib
+
 import datetime
 import eventlet
 eventlet.monkey_patch(os=False)
@@ -66,6 +68,14 @@ logging.setup(CONF, 'nova')
 objects.register_all()
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
+
+if six.PY3:
+    @contextlib.contextmanager
+    def nested(*contexts):
+        with contextlib.ExitStack() as stack:
+            yield [stack.enter_context(c) for c in contexts]
+else:
+    nested = contextlib.nested
 
 
 class SampleNetworks(fixtures.Fixture):
@@ -285,24 +295,25 @@ class TestCase(testtools.TestCase):
             observed = jsonutils.loads(observed)
 
         def sort(what):
-            return sorted(what,
-                          key=lambda x: str(x) if isinstance(
-                              x, set) or isinstance(x,
-                                                    datetime.datetime) else x)
+            def get_key(item):
+                if isinstance(item, (datetime.datetime, set)):
+                    return str(item)
+                if six.PY3 and isinstance(item, dict):
+                    return str(sort(list(six.iterkeys(item)) +
+                                         list(six.itervalues(item))))
+                return str(item) if six.PY3 else item
+
+            return sorted(what, key=get_key)
 
         def inner(expected, observed):
             if isinstance(expected, dict) and isinstance(observed, dict):
                 self.assertEqual(len(expected), len(observed))
                 expected_keys = sorted(expected)
-                observed_keys = sorted(expected)
+                observed_keys = sorted(observed)
                 self.assertEqual(expected_keys, observed_keys)
 
-                expected_values_iter = iter(sort(expected.values()))
-                observed_values_iter = iter(sort(observed.values()))
-
-                for i in range(len(expected)):
-                    inner(next(expected_values_iter),
-                          next(observed_values_iter))
+                for key in list(six.iterkeys(expected)):
+                    inner(expected[key], observed[key])
             elif (isinstance(expected, (list, tuple, set)) and
                       isinstance(observed, (list, tuple, set))):
                 self.assertEqual(len(expected), len(observed))

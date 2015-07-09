@@ -71,7 +71,7 @@ def _build_metadata_by_host(aggregates, hosts=None):
         for host in aggregate.hosts:
             if hosts and host not in hosts:
                 continue
-            metadata[host].add(aggregate.metadata.values()[0])
+            metadata[host].add(list(aggregate.metadata.values())[0])
     return metadata
 
 
