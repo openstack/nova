@@ -348,14 +348,17 @@ class ResourceTracker(object):
         """Get the metrics from monitors and
         notify information to message bus.
         """
-        metrics = []
+        metrics = objects.MonitorMetricList()
         metrics_info = {}
         for monitor in self.monitors:
             try:
-                metrics += monitor.get_metrics(nodename=nodename)
+                monitor.add_metrics_to_list(metrics)
             except Exception:
                 LOG.warning(_LW("Cannot get the metrics from %s."), monitor)
-        if metrics:
+        # TODO(jaypipes): Remove this when compute_node.metrics doesn't need
+        # to be populated as a JSON-ified string.
+        metrics = metrics.to_list()
+        if len(metrics):
             metrics_info['nodename'] = nodename
             metrics_info['metrics'] = metrics
             metrics_info['host'] = self.host

@@ -15,7 +15,8 @@
 
 """Tests for Compute Driver CPU resource monitor."""
 
-from nova.compute.monitors import virt
+from nova.compute.monitors.cpu import virt_driver
+from nova import objects
 from nova import test
 
 
@@ -34,7 +35,7 @@ class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
         class FakeComputeManager(object):
             driver = FakeDriver()
 
-        self.monitor = virt.ComputeDriverCPUMonitor(FakeComputeManager())
+        self.monitor = virt_driver.Monitor(FakeComputeManager())
 
     def test_get_metric_names(self):
         names = self.monitor.get_metric_names()
@@ -51,13 +52,14 @@ class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
         self.assertIn("cpu.percent", names)
 
     def test_get_metrics(self):
-        metrics_raw = self.monitor.get_metrics()
+        metrics = objects.MonitorMetricList()
+        self.monitor.add_metrics_to_list(metrics)
         names = self.monitor.get_metric_names()
-        metrics = {}
-        for metric in metrics_raw:
-            self.assertIn(metric['name'], names)
-            metrics[metric['name']] = metric['value']
+        for metric in metrics.objects:
+            self.assertIn(metric.name, names)
 
+        # Some conversion to a dict to ease testing...
+        metrics = {m.name: m.value for m in metrics.objects}
         self.assertEqual(metrics["cpu.frequency"], 800)
         self.assertEqual(metrics["cpu.user.time"], 26728850000000)
         self.assertEqual(metrics["cpu.kernel.time"], 5664160000000)

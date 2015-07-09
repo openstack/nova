@@ -22,6 +22,7 @@ import uuid
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.compute import resource_tracker
 from nova.compute import resources
@@ -1276,8 +1277,8 @@ class ComputeMonitorTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeMonitorTestCase, self).setUp()
         fake_monitors = [
-            'nova.tests.unit.compute.monitors.test_monitors.FakeMonitorClass1',
-            'nova.tests.unit.compute.monitors.test_monitors.FakeMonitorClass2']
+            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor1',
+            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor2']
         self.flags(compute_available_monitors=fake_monitors)
         self.tracker = self._tracker()
         self.node_name = 'nodename'
@@ -1288,39 +1289,26 @@ class ComputeMonitorTestCase(BaseTestCase):
                                               self.project_id)
 
     def test_get_host_metrics_none(self):
-        self.flags(compute_monitors=['FakeMontorClass1', 'FakeMonitorClass4'])
+        self.flags(compute_monitors=[])
         self.tracker.monitors = []
         metrics = self.tracker._get_host_metrics(self.context,
                                                  self.node_name)
         self.assertEqual(len(metrics), 0)
 
-    def test_get_host_metrics_one_failed(self):
-        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass4'])
-        class1 = test_monitors.FakeMonitorClass1(self.tracker)
-        class4 = test_monitors.FakeMonitorClass4(self.tracker)
-        self.tracker.monitors = [class1, class4]
-        metrics = self.tracker._get_host_metrics(self.context,
-                                                 self.node_name)
-        self.assertTrue(len(metrics) > 0)
-
     @mock.patch.object(resource_tracker.LOG, 'warning')
     def test_get_host_metrics_exception(self, mock_LOG_warning):
-        self.flags(compute_monitors=['FakeMontorClass1'])
-        class1 = test_monitors.FakeMonitorClass1(self.tracker)
-        self.tracker.monitors = [class1]
-        with mock.patch.object(class1, 'get_metrics',
-                               side_effect=test.TestingException()):
-            metrics = self.tracker._get_host_metrics(self.context,
-                                                     self.node_name)
-            mock_LOG_warning.assert_called_once_with(
-                u'Cannot get the metrics from %s.', class1)
-            self.assertEqual(0, len(metrics))
+        monitor = mock.MagicMock()
+        monitor.add_metrics_to_list.side_effect = Exception
+        self.tracker.monitors = [monitor]
+        metrics = self.tracker._get_host_metrics(self.context,
+                                                 self.node_name)
+        mock_LOG_warning.assert_called_once_with(
+            u'Cannot get the metrics from %s.', mock.ANY)
+        self.assertEqual(0, len(metrics))
 
     def test_get_host_metrics(self):
-        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass2'])
-        class1 = test_monitors.FakeMonitorClass1(self.tracker)
-        class2 = test_monitors.FakeMonitorClass2(self.tracker)
-        self.tracker.monitors = [class1, class2]
+        class1 = test_monitors.CPUMonitor1(self.tracker)
+        self.tracker.monitors = [class1]
 
         mock_notifier = mock.Mock()
 
@@ -1331,17 +1319,15 @@ class ComputeMonitorTestCase(BaseTestCase):
             mock_get.assert_called_once_with(service='compute',
                                              host=self.node_name)
 
-        expected_metrics = [{
-                    'timestamp': 1232,
-                    'name': 'key1',
-                    'value': 2600,
-                    'source': 'libvirt'
-                }, {
-                    'name': 'key2',
-                    'source': 'libvirt',
-                    'timestamp': 123,
-                    'value': 1600
-                }]
+        expected_metrics = [
+            {
+                'timestamp': timeutils.strtime(
+                    test_monitors.CPUMonitor1.NOW_TS),
+                'name': 'cpu.frequency',
+                'value': 100,
+                'source': 'CPUMonitor1'
+            },
+        ]
 
         payload = {
             'metrics': expected_metrics,
