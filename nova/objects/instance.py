@@ -120,7 +120,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.18: Added flavor, old_flavor, new_flavor
     # Version 1.19: Added vcpu_model
     # Version 1.20: Added ec2_ids
-    VERSION = '1.20'
+    # Version 1.21: TagList 1.1
+    VERSION = '1.21'
 
     fields = {
         'id': fields.IntegerField(),
@@ -227,7 +228,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'pci_devices': [('1.6', '1.0'), ('1.15', '1.1')],
         'numa_topology': [('1.14', '1.0'), ('1.16', '1.1')],
         'pci_requests': [('1.16', '1.1')],
-        'tags': [('1.17', '1.0')],
+        'tags': [('1.17', '1.0'), ('1.21', '1.1')],
         'flavor': [('1.18', '1.1')],
         'old_flavor': [('1.18', '1.1')],
         'new_flavor': [('1.18', '1.1')],
@@ -1164,7 +1165,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.15: Instance <= version 1.19
     # Version 1.16: Added get_all() method
     # Version 1.17: Instance <= version 1.20
-    VERSION = '1.17'
+    # Version 1.18: Instance <= version 1.21
+    VERSION = '1.18'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1188,6 +1190,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.15': '1.19',
         '1.16': '1.19',
         '1.17': '1.20',
+        '1.18': '1.21',
         }
 
     @base.remotable_classmethod

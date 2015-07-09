@@ -19,7 +19,8 @@ from nova.objects import fields
 @base.NovaObjectRegistry.register
 class Tag(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added method exists()
+    VERSION = '1.1'
 
     fields = {
         'resource_id': fields.StringField(),
@@ -43,17 +44,23 @@ class Tag(base.NovaObject):
     def destroy(cls, context, resource_id, name):
         db.instance_tag_delete(context, resource_id, name)
 
+    @base.remotable_classmethod
+    def exists(cls, context, resource_id, name):
+        return db.instance_tag_exists(context, resource_id, name)
+
 
 @base.NovaObjectRegistry.register
 class TagList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Tag <= version 1.1
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Tag'),
         }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
 
     @base.remotable_classmethod

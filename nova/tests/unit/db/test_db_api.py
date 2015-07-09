@@ -8917,6 +8917,19 @@ class TestDBInstanceTags(test.TestCase):
         tags = self._get_tags_from_resp(tag_refs)
         self.assertEqual([], tags)
 
+    def test_instance_tag_exists(self):
+        uuid = self._create_instance()
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+
+        db.instance_tag_add(self.context, uuid, tag1)
+
+        # NOTE(snikitin): Make sure it's actually a bool
+        self.assertEqual(True, db.instance_tag_exists(self.context, uuid,
+                                                        tag1))
+        self.assertEqual(False, db.instance_tag_exists(self.context, uuid,
+                                                         tag2))
+
     def test_instance_tag_add_to_non_existing_instance(self):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound, db.instance_tag_add,
@@ -8943,3 +8956,9 @@ class TestDBInstanceTags(test.TestCase):
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_tag_delete_all,
                           self.context, 'fake_uuid')
+
+    def test_instance_tag_exists_non_existing_instance(self):
+        self._create_instance()
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_tag_exists,
+                          self.context, 'fake_uuid', 'tag')
