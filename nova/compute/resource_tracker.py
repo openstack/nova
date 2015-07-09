@@ -175,9 +175,9 @@ class ResourceTracker(object):
                   "MB", {'flavor': instance_type['memory_mb'],
                           'overhead': overhead['memory_mb']})
 
-        claim = claims.ResizeClaim(context, instance, instance_type,
-                                   image_meta, self, self.compute_node,
-                                   overhead=overhead, limits=limits)
+        claim = claims.MoveClaim(context, instance, instance_type,
+                                 image_meta, self, self.compute_node,
+                                 overhead=overhead, limits=limits)
 
         migration = self._create_migration(context, instance,
                                            instance_type)
@@ -234,8 +234,8 @@ class ResourceTracker(object):
         self._update(context.elevated())
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def drop_resize_claim(self, context, instance, instance_type=None,
-                          image_meta=None, prefix='new_'):
+    def drop_move_claim(self, context, instance, instance_type=None,
+                        image_meta=None, prefix='new_'):
         """Remove usage for an incoming/outgoing migration."""
         if instance['uuid'] in self.tracked_migrations:
             migration, itype = self.tracked_migrations.pop(instance['uuid'])

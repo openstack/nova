@@ -1144,9 +1144,9 @@ class TestInstanceClaim(BaseTestCase):
 @mock.patch('nova.objects.Instance.get_by_uuid')
 @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
 @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-class TestResizeClaim(BaseTestCase):
+class TestMoveClaim(BaseTestCase):
     def setUp(self):
-        super(TestResizeClaim, self).setUp()
+        super(TestMoveClaim, self).setUp()
 
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -1188,7 +1188,7 @@ class TestResizeClaim(BaseTestCase):
 
     def assertEqual(self, expected, actual):
         if type(expected) != dict or type(actual) != dict:
-            super(TestResizeClaim, self).assertEqual(expected, actual)
+            super(TestMoveClaim, self).assertEqual(expected, actual)
             return
         fail = False
         for k, e in expected.items():
@@ -1226,7 +1226,7 @@ class TestResizeClaim(BaseTestCase):
             claim = self.rt.resize_claim(
                 self.ctx, self.instance, self.flavor, None)
 
-        self.assertIsInstance(claim, claims.ResizeClaim)
+        self.assertIsInstance(claim, claims.MoveClaim)
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  self.rt.compute_node))
 

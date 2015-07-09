@@ -3279,7 +3279,7 @@ class ComputeManager(manager.Manager):
                 migration.save()
 
             rt = self._get_resource_tracker(migration.source_node)
-            rt.drop_resize_claim(context, instance, old_instance_type)
+            rt.drop_move_claim(context, instance, old_instance_type)
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
             # might have manually powered up the instance to confirm the
@@ -3358,7 +3358,7 @@ class ComputeManager(manager.Manager):
                 migration.save()
 
             rt = self._get_resource_tracker(instance.node)
-            rt.drop_resize_claim(context, instance)
+            rt.drop_move_claim(context, instance)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration.source_compute,
