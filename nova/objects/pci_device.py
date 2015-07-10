@@ -41,10 +41,8 @@ def compare_pci_device_attributes(obj_a, obj_b):
     return True
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class PciDevice(base.NovaPersistentObject, base.NovaObject,
-                base.NovaObjectDictCompat):
+class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     """Object to represent a PCI device on a compute node.
 
@@ -130,7 +128,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
 
         for k, v in dev_dict.items():
             if k in self.fields.keys():
-                self[k] = v
+                setattr(self, k, v)
             else:
                 # Note (yjiang5) extra_info.update does not update
                 # obj_what_changed, set it explicitely
@@ -153,7 +151,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
     def _from_db_object(context, pci_device, db_dev):
         for key in pci_device.fields:
             if key != 'extra_info':
-                pci_device[key] = db_dev[key]
+                setattr(pci_device, key, db_dev[key])
             else:
                 extra_info = db_dev.get("extra_info")
                 pci_device.extra_info = jsonutils.loads(extra_info)

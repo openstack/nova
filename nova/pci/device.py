@@ -28,7 +28,7 @@ def check_device_status(dev_status=None):
     def outer(f):
         @functools.wraps(f)
         def inner(devobj, instance=None):
-            if devobj['status'] not in dev_status:
+            if devobj.status not in dev_status:
                 raise exception.PciDeviceInvalidStatus(
                     compute_node_id=devobj.compute_node_id,
                     address=devobj.address, status=devobj.status,
