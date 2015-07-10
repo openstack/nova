@@ -207,9 +207,6 @@ class API(object):
         volume['instance_uuid'] = instance_uuid
         volume['attach_time'] = timeutils.utcnow()
 
-    def fake_set_snapshot_id(self, context, volume, snapshot_id):
-        volume['snapshot_id'] = snapshot_id
-
     def reset_fake_api(self, context):
         del self.volume_list[:]
         del self.snapshot_list[:]
