@@ -66,12 +66,21 @@ DevStack installs a complete OpenStack environment.  Alternatively,
 you can explicitly install and clone just what you need for Nova
 development.
 
-The first step of this process is to install the system (not Python)
-packages that are required.  Following are instructions on how to do
-this on Linux and on the Mac.
+Getting the code
+````````````````
+
+Grab the code from git::
+
+    git clone https://git.openstack.org/openstack/nova
+    cd nova
+
 
 Linux Systems
 `````````````
+
+The first step of this process is to install the system (not Python)
+packages that are required. Following are instructions on how to do
+this on Linux and on the Mac.
 
 .. note::
 
@@ -79,20 +88,29 @@ Linux Systems
   Fedora-based (RHEL 6.1) distributions. Feel free to add notes and
   change according to your experiences or operating system.
 
-Install the prerequisite packages.
+Install the prerequisite packages listed in the ``bindep.txt``
+file.
 
-On Ubuntu::
+On Debian-based distributions (e.g., Debian/Mint/Ubuntu)::
 
-  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev graphviz libsqlite3-dev python-tox python3-dev python3 gettext
+  sudo apt-get install python-pip
+  sudo pip install tox
+  tox -e bindep
+  sudo apt-get install <indicated missing package names>
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel libvirt-devel graphviz sqlite-devel python3-devel python3 gettext
-  sudo pip-python install tox
+  sudo yum install python-pip
+  sudo pip install tox
+  tox -e bindep
+  sudo yum install <indicated missing package names>
 
 On openSUSE-based distributions (SLES 12, openSUSE Leap 42.1 or Tumbleweed)::
 
-  sudo zypper in gcc git libffi-devel libmysqlclient-devel libvirt-devel libxslt-devel postgresql-devel python-devel python-pip python-tox python-virtualenv python3-devel python3 gettext-runtime
+  sudo zypper in python-pip
+  sudo pip install tox
+  tox -e bindep
+  sudo zypper in <indicated missing package names>
 
 
 Mac OS X Systems
@@ -110,18 +128,6 @@ The stock version of OpenSSL that ships with Mac OS X 10.6 (OpenSSL 0.9.8l)
 or Mac OS X 10.7 (OpenSSL 0.9.8r) or Mac OS X  10.10.3 (OpenSSL 0.9.8zc) works
 fine with nova. OpenSSL versions from brew like OpenSSL 1.0.1k work fine
 as well.
-
-
-Getting the code
-````````````````
-
-Once you have the prerequisite system packages installed, the next
-step is to clone the code.
-
-Grab the code from git::
-
-    git clone https://git.openstack.org/openstack/nova
-    cd nova
 
 
 Building the Documentation
