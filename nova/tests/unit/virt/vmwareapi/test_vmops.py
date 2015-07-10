@@ -33,12 +33,14 @@ from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova import utils
 from nova import version
 from nova.virt import hardware
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import images
+from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -2048,3 +2050,48 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
                     "package:%s\n" % version.version_string_with_package())
         self.assertEqual(expected, metadata)
+
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_network_attach_config_spec',
+                       return_value='fake-attach-spec')
+    @mock.patch.object(vm_util, 'get_attach_port_index', return_value=1)
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    def test_attach_interface(self, mock_get_vm_ref,
+                              mock_get_attach_port_index,
+                              mock_get_network_attach_config_spec,
+                              mock_reconfigure_vm):
+        vif_info = vif.get_vif_dict(self._session, self._cluster,
+                                    'VirtualE1000',
+                                    utils.is_neutron(),
+                                    self._network_values)
+        self._vmops.attach_interface(self._instance, self._image_meta,
+                                     self._network_values)
+        mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
+        mock_get_attach_port_index(self._session, 'fake-ref')
+        mock_get_network_attach_config_spec.assert_called_once_with(
+            self._session.vim.client.factory, vif_info, 1)
+        mock_reconfigure_vm.assert_called_once_with(self._session,
+                                                    'fake-ref',
+                                                    'fake-attach-spec')
+
+    @mock.patch.object(vif, 'get_network_device', return_value='device')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_network_detach_config_spec',
+                       return_value='fake-detach-spec')
+    @mock.patch.object(vm_util, 'get_vm_detach_port_index', return_value=1)
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    def test_detach_interface(self, mock_get_vm_ref,
+                              mock_get_detach_port_index,
+                              mock_get_network_detach_config_spec,
+                              mock_reconfigure_vm,
+                              mock_get_network_device):
+        with mock.patch.object(self._session, '_call_method',
+                               return_value='hardware-devices'):
+            self._vmops.detach_interface(self._instance, self._network_values)
+        mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
+        mock_get_detach_port_index(self._session, 'fake-ref')
+        mock_get_network_detach_config_spec.assert_called_once_with(
+            self._session.vim.client.factory, 'device', 1)
+        mock_reconfigure_vm.assert_called_once_with(self._session,
+                                                    'fake-ref',
+                                                    'fake-detach-spec')
