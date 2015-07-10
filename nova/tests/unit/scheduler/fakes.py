@@ -23,13 +23,24 @@ from nova.scheduler import driver
 from nova.scheduler import host_manager
 
 NUMA_TOPOLOGY = objects.NUMATopology(
-                           cells=[objects.NUMACell(
-                                      id=0, cpuset=set([1, 2]), memory=512,
-                               cpu_usage=0, memory_usage=0, mempages=[],
+                           cells=[
+                             objects.NUMACell(
+                               id=0, cpuset=set([1, 2]), memory=512,
+                               cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(size_kb=16,
+                                                           total=387184,
+                                                           used=0),
+                                 objects.NUMAPagesTopology(size_kb=2048,
+                                                           total=512, used=0)],
                                siblings=[], pinned_cpus=set([])),
-                                  objects.NUMACell(
-                                      id=1, cpuset=set([3, 4]), memory=512,
-                                cpu_usage=0, memory_usage=0, mempages=[],
+                             objects.NUMACell(
+                               id=1, cpuset=set([3, 4]), memory=512,
+                               cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(size_kb=4,
+                                                           total=1548736,
+                                                           used=0),
+                                 objects.NUMAPagesTopology(size_kb=2048,
+                                                           total=512, used=0)],
                                siblings=[], pinned_cpus=set([]))])
 
 NUMA_TOPOLOGY_W_HT = objects.NUMATopology(cells=[
