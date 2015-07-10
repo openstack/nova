@@ -4301,7 +4301,6 @@ def security_group_default_rule_list(context):
 ###################
 
 
-@require_admin_context
 def provider_fw_rule_create(context, rule):
     fw_rule_ref = models.ProviderFirewallRule()
     fw_rule_ref.update(rule)
@@ -4309,12 +4308,10 @@ def provider_fw_rule_create(context, rule):
     return fw_rule_ref
 
 
-@require_admin_context
 def provider_fw_rule_get_all(context):
     return model_query(context, models.ProviderFirewallRule).all()
 
 
-@require_admin_context
 def provider_fw_rule_destroy(context, rule_id):
     session = get_session()
     with session.begin():
