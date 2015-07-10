@@ -70,7 +70,7 @@ def validate_image_path(val):
     if val[0] == '/':
         return False
 
-    # make sure the image path if rfc3986 compliant
+    # make sure the image path is rfc3986 compliant
     # prepend '/' to make input validate
     if not validate_url_path('/' + val):
         return False
