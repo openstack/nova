@@ -1372,9 +1372,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               self.compute.attach_interface,
                               self.context, f_instance, 'net_id', 'port_id',
                               None)
-            add_fault.assert_has_calls(
+            add_fault.assert_has_calls([
                     mock.call(self.context, f_instance, e,
-                              mock.ANY))
+                              mock.ANY)])
 
         do_test()
 
@@ -1393,7 +1393,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               self.compute.detach_interface,
                               self.context, f_instance, 'port_id')
             add_fault.assert_has_calls(
-                    mock.call(self.context, f_instance, mock.ANY, mock.ANY))
+                   [mock.call(self.context, f_instance, mock.ANY, mock.ANY)])
 
         do_test()
 
@@ -3064,8 +3064,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             _validate_instance_group_policy.assert_called_once_with(
                     self.context, self.instance, self.filter_properties)
             _build_networks_for_instance.assert_has_calls(
-                    mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups))
+                    [mock.call(self.context, self.instance,
+                        self.requested_networks, self.security_groups)])
 
             _notify_about_instance_usage.assert_has_calls([
                 mock.call(self.context, self.instance, 'create.start',
@@ -3079,10 +3079,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.call(
                     expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
 
-            spawn.assert_has_calls(mock.call(self.context, self.instance,
+            spawn.assert_has_calls([mock.call(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 network_info=self.network_info,
-                block_device_info=self.block_device_info))
+                block_device_info=self.block_device_info)])
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,
@@ -3190,10 +3190,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     exception.UnexpectedDeletingTaskStateError)
 
             _build_networks_for_instance.assert_has_calls(
-                    mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups))
+                    [mock.call(self.context, self.instance,
+                        self.requested_networks, self.security_groups)])
 
-            save.assert_has_calls(mock.call())
+            save.assert_has_calls([mock.call()])
 
     def test_build_resources_aborts_on_failed_network_alloc(self):
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
@@ -3227,8 +3227,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.assertIsInstance(e, exc)
 
             _build_networks.assert_has_calls(
-                    mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups))
+                    [mock.call(self.context, self.instance,
+                        self.requested_networks, self.security_groups)])
 
     def test_build_resources_with_network_info_obj_on_spawn_failure(self):
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')

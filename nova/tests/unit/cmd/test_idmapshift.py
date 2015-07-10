@@ -190,7 +190,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
 
     @mock.patch('os.lstat')
@@ -202,7 +202,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
 
     @mock.patch('os.lstat')
@@ -214,7 +214,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertFalse(result)
 
     @mock.patch('os.lstat')
@@ -226,7 +226,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertFalse(result)
 
     @mock.patch('os.lstat')
@@ -238,7 +238,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
 
     @mock.patch('os.lstat')
@@ -250,7 +250,7 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
                                          50000)
 
-        mock_lstat.assert_has_calls(mock.call('/test/path'))
+        mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
 
 

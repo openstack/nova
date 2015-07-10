@@ -974,7 +974,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_PATH, mock.sentinel.FAKE_PATH_ARCHIVED)
 
         with mock.patch('nova.virt.hyperv.vmops.open',
-                        mock.mock_open(read_data=self.FAKE_LOG), create=True):
+                        mock.mock_open(read_data=self.FAKE_LOG * 2),
+                        create=True):
             instance_log = self._vmops.get_console_output(mock_instance)
             # get_vm_console_log_paths returns 2 paths.
             self.assertEqual(self.FAKE_LOG * 2, instance_log)

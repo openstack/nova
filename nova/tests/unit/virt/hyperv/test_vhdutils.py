@@ -14,6 +14,7 @@
 
 import mock
 from oslo_utils import units
+import testtools
 
 from nova import test
 from nova.virt.hyperv import constants
@@ -242,6 +243,7 @@ class VHDUtilsTestCase(VHDUtilsBaseTestCase):
             self.assertEqual(constants.DISK_FORMAT_VHDX, format)
 
     def test_get_vhd_format_vhd(self):
+        raise testtools.TestCase.skipException("Bug 1473401")
         with mock.patch('nova.virt.hyperv.vhdutils.open',
                         mock.mock_open(read_data=vhdutils.VHD_SIGNATURE),
                         create=True) as mock_open:
