@@ -69,10 +69,13 @@ VERSIONS = [
 FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
 HAVANA = '2013-10-17'
+LIBERTY = '2015-10-15'
+
 OPENSTACK_VERSIONS = [
     FOLSOM,
     GRIZZLY,
     HAVANA,
+    LIBERTY,
 ]
 
 VERSION = "version"
@@ -80,6 +83,7 @@ CONTENT = "content"
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
 VD_JSON_NAME = "vendor_data.json"
+NW_JSON_NAME = "network_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
 MIME_TYPE_TEXT_PLAIN = "text/plain"
@@ -100,7 +104,7 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 network_info=None, vd_driver=None):
+                 network_info=None, vd_driver=None, network_metadata=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -147,6 +151,12 @@ class InstanceMetadata(object):
         if network_info is None:
             network_info = instance.info_cache.network_info
 
+        # expose network metadata
+        if network_metadata is None:
+            self.network_metadata = netutils.get_network_metadata(network_info)
+        else:
+            self.network_metadata = network_metadata
+
         self.ip_info = \
                 ec2utils.get_ip_info_for_instance_from_nw_info(network_info)
 
@@ -187,6 +197,7 @@ class InstanceMetadata(object):
                          PASS_NAME: self._password,
                          VD_JSON_NAME: self._vendor_data,
                          MD_JSON_NAME: self._metadata_as_json,
+                         NW_JSON_NAME: self._network_data,
                          VERSION: self._handle_version,
                          CONTENT: self._handle_content}
 
@@ -338,6 +349,8 @@ class InstanceMetadata(object):
             ret.append(PASS_NAME)
         if self._check_os_version(HAVANA, version):
             ret.append(VD_JSON_NAME)
+        if self._check_os_version(LIBERTY, version):
+            ret.append(NW_JSON_NAME)
 
         return ret
 
@@ -345,6 +358,11 @@ class InstanceMetadata(object):
         if self.userdata_raw is None:
             raise KeyError(path)
         return self.userdata_raw
+
+    def _network_data(self, version, path):
+        if self.network_metadata is None:
+            return jsonutils.dumps({})
+        return jsonutils.dumps(self.network_metadata)
 
     def _password(self, version, path):
         if self._check_os_version(GRIZZLY, version):
@@ -449,6 +467,10 @@ class InstanceMetadata(object):
                 yield (path, self.lookup(path))
 
         for (cid, content) in six.iteritems(self.content):
+            if self._check_version(LIBERTY, version, ALL_OPENSTACK_VERSIONS):
+                path = 'openstack/%s/%s' % (version, NW_JSON_NAME)
+                yield (path, self.lookup(path))
+
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 

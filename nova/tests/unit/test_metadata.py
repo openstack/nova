@@ -98,7 +98,8 @@ def return_non_existing_address(*args, **kwarg):
 
 def fake_InstanceMetadata(stubs, inst_data, address=None,
                           sgroups=None, content=None, extra_md=None,
-                          vd_driver=None, network_info=None):
+                          vd_driver=None, network_info=None,
+                          network_metadata=None):
     content = content or []
     extra_md = extra_md or {}
     if sgroups is None:
@@ -111,7 +112,8 @@ def fake_InstanceMetadata(stubs, inst_data, address=None,
     stubs.Set(api, 'security_group_get_by_instance', sg_get)
     return base.InstanceMetadata(inst_data, address=address,
         content=content, extra_md=extra_md,
-        vd_driver=vd_driver, network_info=network_info)
+        vd_driver=vd_driver, network_info=network_info,
+        network_metadata=network_metadata)
 
 
 def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
@@ -305,6 +307,14 @@ class MetadataTestCase(test.TestCase):
         base.InstanceMetadata(fake_inst_obj(self.context),
                               network_info=network_info)
 
+    @mock.patch.object(netutils, "get_network_metadata", autospec=True)
+    def test_InstanceMetadata_gets_network_metadata(self, mock_netutils):
+        network_data = {'links': [], 'networks': [], 'services': []}
+        mock_netutils.return_value = network_data
+
+        md = base.InstanceMetadata(fake_inst_obj(self.context))
+        self.assertEqual(network_data, md.network_metadata)
+
     def test_InstanceMetadata_invoke_metadata_for_config_drive(self):
         fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
@@ -380,6 +390,14 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         listing = mdinst.lookup("/openstack/2012-08-10")
         self.assertIn("meta_data.json", listing)
+
+    def test_returns_apis_supported_in_liberty_version(self):
+        mdinst = fake_InstanceMetadata(self.stubs, self.instance)
+        liberty_supported_apis = mdinst.lookup("/openstack/2015-10-15")
+
+        self.assertEqual([base.MD_JSON_NAME, base.UD_NAME, base.PASS_NAME,
+                          base.VD_JSON_NAME, base.NW_JSON_NAME],
+                         liberty_supported_apis)
 
     def test_returns_apis_supported_in_havana_version(self):
         mdinst = fake_InstanceMetadata(self.stubs, self.instance)
@@ -561,6 +579,43 @@ class OpenStackMetadataTestCase(test.TestCase):
         # check the other expected values
         for k, v in mydata.items():
             self.assertEqual(vd[k], v)
+
+    def test_network_data_presence(self):
+        inst = self.instance.obj_clone()
+        mdinst = fake_InstanceMetadata(self.stubs, inst)
+
+        # verify that 2015-10-15 has the network_data.json file
+        result = mdinst.lookup("/openstack/2015-10-15")
+        self.assertIn('network_data.json', result)
+
+        # verify that older version do not have it
+        result = mdinst.lookup("/openstack/2013-10-17")
+        self.assertNotIn('network_data.json', result)
+
+    def test_network_data_response(self):
+        inst = self.instance.obj_clone()
+
+        nw_data = {
+            "links": [{"ethernet_mac_address": "aa:aa:aa:aa:aa:aa",
+                       "id": "nic0", "type": "ethernet", "vif_id": 1,
+                       "mtu": 1500}],
+            "networks": [{"id": "network0", "ip_address": "10.10.0.2",
+                          "link": "nic0", "netmask": "255.255.255.0",
+                          "network_id":
+                          "00000000-0000-0000-0000-000000000000",
+                          "routes": [], "type": "ipv4"}],
+            "services": [{'address': '1.2.3.4', 'type': 'dns'}]}
+
+        mdinst = fake_InstanceMetadata(self.stubs, inst,
+                                       network_metadata=nw_data)
+
+        # verify that 2015-10-15 has the network_data.json file
+        nwpath = "/openstack/2015-10-15/network_data.json"
+        nw = jsonutils.loads(mdinst.lookup(nwpath))
+
+        # check the other expected values
+        for k, v in nw_data.items():
+            self.assertEqual(nw[k], v)
 
 
 class MetadataHandlerTestCase(test.TestCase):
