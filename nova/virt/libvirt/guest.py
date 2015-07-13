@@ -246,6 +246,77 @@ class Guest(object):
         """
         self._domain.managedSave(0)
 
+    def get_block_device(self, disk):
+        """Returns a block device wrapper for disk."""
+        return BlockDevice(self, disk)
+
+
+class BlockDevice(object):
+    """Wrapper around block device API"""
+
+    REBASE_DEFAULT_BANDWIDTH = 0  # in MiB/s - 0 unlimited
+    COMMIT_DEFAULT_BANDWIDTH = 0  # in MiB/s - 0 unlimited
+
+    def __init__(self, guest, disk):
+        self._guest = guest
+        self._disk = disk
+
+    def abort_job(self, async=False, pivot=False):
+        """Request to cancel any job currently running on the block.
+
+        :param async: Request only, do not wait for completion
+        :param pivot: Pivot to new file when ending a copy or
+                      active commit job
+        """
+        flags = async and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC or 0
+        flags |= pivot and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT or 0
+        self._guest._domain.blockJobAbort(self._disk, flags=flags)
+
+    def get_job_info(self):
+        """Returns information about job currently running
+
+        :returns: BlockDeviceJobInfo or None
+        """
+        status = self._guest._domain.blockJobInfo(self._disk, flags=0)
+        if status != -1:
+            return BlockDeviceJobInfo(
+                job=status.get("type", 0),
+                bandwidth=status.get("bandwidth", 0),
+                cur=status.get("cur", 0),
+                end=status.get("end", 0))
+
+    def rebase(self, base, shallow=False, reuse_ext=False,
+               copy=False, relative=False):
+        """Rebases block to new base
+
+        :param shallow: Limit copy to top of source backing chain
+        :param reuse_ext: Reuse existing external file of a copy
+        :param copy: Start a copy job
+        :param relative: Keep backing chain referenced using relative names
+        """
+        flags = shallow and libvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW or 0
+        flags |= reuse_ext and libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT or 0
+        flags |= copy and libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY or 0
+        flags |= relative and libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE or 0
+        return self._guest._domain.blockRebase(
+            self._disk, base, self.REBASE_DEFAULT_BANDWIDTH, flags=flags)
+
+    def commit(self, base, top, relative=False):
+        """Commit on block device
+
+        For performance during live snapshot it will reduces the disk chain
+        to a single disk.
+
+        :param relative: Keep backing chain referenced using relative names
+        """
+        flags = relative and libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE or 0
+        return self._guest._domain.blockCommit(
+            self._disk, base, top, self.COMMIT_DEFAULT_BANDWIDTH, flags=flags)
+
+    def resize(self, size_kb):
+        """Resizes block device to Kib size."""
+        self._guest._domain.blockResize(self._disk, size_kb)
+
 
 class VCPUInfo(object):
     def __init__(self, id, cpu, state, time):
@@ -261,3 +332,19 @@ class VCPUInfo(object):
         self.cpu = cpu
         self.state = state
         self.time = time
+
+
+class BlockDeviceJobInfo(object):
+    def __init__(self, job, bandwidth, cur, end):
+        """Structure for information about running job.
+
+        :param job: The running job (0 placeholder, 1 pull,
+                      2 copy, 3 commit, 4 active commit)
+        :param bandwidth: Used in MiB/s
+        :param cur: Indicates the position between 0 and 'end'
+        :param end: Indicates the position for this operation
+        """
+        self.job = job
+        self.bandwidth = bandwidth
+        self.cur = cur
+        self.end = end
