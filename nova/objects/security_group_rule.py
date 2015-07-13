@@ -21,10 +21,8 @@ from nova.objects import fields
 OPTIONAL_ATTRS = ['parent_group', 'grantee_group']
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added create() and set id as read_only
     VERSION = '1.1'
@@ -52,9 +50,10 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
             expected_attrs = []
         for field in rule.fields:
             if field in expected_attrs:
-                rule[field] = rule._from_db_subgroup(context, db_rule[field])
+                setattr(rule, field,
+                        rule._from_db_subgroup(context, db_rule[field]))
             elif field not in OPTIONAL_ATTRS:
-                rule[field] = db_rule[field]
+                setattr(rule, field, db_rule[field])
         rule._context = context
         rule.obj_reset_changes()
         return rule
