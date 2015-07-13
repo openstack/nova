@@ -15,12 +15,14 @@
 import copy
 
 from nova.api.validation import parameter_types
+from nova import db
 
 common_quota = {
     'type': ['integer', 'string'],
     'pattern': '^-?[0-9]+$',
     # -1 is a flag value for unlimited
-    'minimum': -1
+    'minimum': -1,
+    'maximum': db.MAX_INT
 }
 
 quota_resources = {

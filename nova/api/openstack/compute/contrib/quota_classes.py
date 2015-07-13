@@ -84,7 +84,8 @@ class QuotaClassSetsController(wsgi.Controller):
                 bad_keys.append(key)
                 continue
             try:
-                utils.validate_integer(body['quota_class_set'][key], key)
+                body['quota_class_set'][key] = utils.validate_integer(
+                    body['quota_class_set'][key], key, max_value=db.MAX_INT)
             except exception.InvalidInput as e:
                 raise webob.exc.HTTPBadRequest(
                     explanation=e.format_message())
@@ -93,9 +94,7 @@ class QuotaClassSetsController(wsgi.Controller):
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        for key in quota_class_set.keys():
-            value = utils.validate_integer(
-                        body['quota_class_set'][key], key)
+        for key, value in quota_class_set.items():
             try:
                 db.quota_class_update(context, quota_class, key, value)
             except exception.QuotaClassNotFound:
