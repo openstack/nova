@@ -332,7 +332,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertFalse(quota_usages.c.resource.nullable)
 
         pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        self.assertTrue(pci_devices.c.deleted.nullable)
+        if engine.name == 'ibm_db_sa':
+            self.assertFalse(pci_devices.c.deleted.nullable)
+        else:
+            self.assertTrue(pci_devices.c.deleted.nullable)
         self.assertFalse(pci_devices.c.product_id.nullable)
         self.assertFalse(pci_devices.c.vendor_id.nullable)
         self.assertFalse(pci_devices.c.dev_type.nullable)
@@ -746,6 +749,14 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_295(self, engine, data):
         self.assertIndexMembers(engine, 'virtual_interfaces',
                                 'virtual_interfaces_uuid_idx', ['uuid'])
+
+    def _check_296(self, engine, data):
+        if engine.name == 'ibm_db_sa':
+            # Make sure the last FK in the list was created.
+            inspector = reflection.Inspector.from_engine(engine)
+            fkeys = inspector.get_foreign_keys('instance_extra')
+            fkey_names = [fkey['name'] for fkey in fkeys]
+            self.assertIn('fk_instance_extra_instance_uuid', fkey_names)
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,

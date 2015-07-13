@@ -35,11 +35,17 @@ def upgrade(migrate_engine):
         Column('project_id', String(length=255), nullable=False),
         UniqueConstraint('instance_uuid',
             name='uniq_instance_mappings0instance_uuid'),
-        Index('instance_uuid_idx', 'instance_uuid'),
         Index('project_id_idx', 'project_id'),
         ForeignKeyConstraint(columns=['cell_id'],
             refcolumns=[cell_mappings.c.id]),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
+
+    # NOTE(mriedem): DB2 creates an index when a unique constraint is created
+    # so trying to add a second index on the instance_uuid column will fail
+    # with error SQL0605W, so omit the index in the case of DB2.
+    if migrate_engine.name != 'ibm_db_sa':
+        Index('instance_uuid_idx', instance_mappings.c.instance_uuid)
+
     instance_mappings.create(checkfirst=True)
