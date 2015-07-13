@@ -2,15 +2,15 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-pbr>=0.6,!=0.7,<1.0
-SQLAlchemy>=0.9.7,<=0.9.99
+pbr!=0.7,<1.0,>=0.6
+SQLAlchemy<=0.9.99,>=0.9.7
 boto>=2.32.1
 decorator>=3.4.0
-eventlet>=0.16.1,!=0.17.0
-Jinja2>=2.6  # BSD License (3 clause)
-keystonemiddleware>=1.5.0,<1.6.0
+eventlet!=0.17.0,>=0.16.1
+Jinja2>=2.6 # BSD License (3 clause)
+keystonemiddleware<1.6.0,>=1.5.0
 lxml>=2.3
-Routes>=1.12.3,!=2.0
+Routes!=2.0,>=1.12.3
 WebOb>=1.2.3
 greenlet>=0.3.2
 PasteDeploy>=1.5.0
@@ -21,23 +21,23 @@ paramiko>=1.13.0
 pyasn1
 Babel>=1.3
 iso8601>=0.1.9
-jsonschema>=2.0.0,<3.0.0
-python-cinderclient>=1.1.0,<1.2.0
-python-neutronclient>=2.3.11,<2.5.0
-python-glanceclient>=0.15.0,<0.18.0
+jsonschema<3.0.0,>=2.0.0
+python-cinderclient<1.2.0,>=1.1.0
+python-neutronclient<2.5.0,>=2.3.11
+python-glanceclient<0.18.0,>=0.15.0
 six>=1.9.0
-stevedore>=1.3.0,<1.4.0  # Apache-2.0
-websockify>=0.6.0,<0.7
-oslo.concurrency>=1.8.0,<1.9.0         # Apache-2.0
-oslo.config>=1.9.3,<1.10.0  # Apache-2.0
-oslo.context>=0.2.0,<0.3.0                     # Apache-2.0
-oslo.log>=1.0.0,<1.1.0  # Apache-2.0
-oslo.serialization>=1.4.0,<1.5.0               # Apache-2.0
-oslo.utils>=1.4.0,<1.5.0                       # Apache-2.0
-oslo.db>=1.7.0,<1.8.0  # Apache-2.0
-oslo.rootwrap>=1.6.0,<1.7.0  # Apache-2.0
-oslo.messaging>=1.8.0,<1.9.0  # Apache-2.0
-oslo.i18n>=1.5.0,<1.6.0  # Apache-2.0
-rfc3986>=0.2.0  # Apache-2.0
-oslo.middleware>=1.0.0,<1.1.0                  # Apache-2.0
-psutil>=1.1.1,<2.0.0
+stevedore<1.4.0,>=1.3.0 # Apache-2.0
+websockify<0.7,>=0.6.0
+oslo.concurrency<1.9.0,>=1.8.0 # Apache-2.0
+oslo.config<1.10.0,>=1.9.3 # Apache-2.0
+oslo.context<0.3.0,>=0.2.0 # Apache-2.0
+oslo.log<1.1.0,>=1.0.0 # Apache-2.0
+oslo.serialization<1.5.0,>=1.4.0 # Apache-2.0
+oslo.utils<1.5.0,>=1.4.0 # Apache-2.0
+oslo.db<1.8.0,>=1.7.0 # Apache-2.0
+oslo.rootwrap<1.7.0,>=1.6.0 # Apache-2.0
+oslo.messaging<1.9.0,>=1.8.0 # Apache-2.0
+oslo.i18n<1.6.0,>=1.5.0 # Apache-2.0
+rfc3986>=0.2.0 # Apache-2.0
+oslo.middleware<1.1.0,>=1.0.0 # Apache-2.0
+psutil<2.0.0,>=1.1.1
