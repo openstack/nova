@@ -100,6 +100,30 @@ class _TestNUMA(object):
         numacell.unpin_cpus(set([1, 2, 3]))
         self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
 
+    def test_pinning_with_siblings(self):
+        numacell = objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4]), memory=512,
+                                    cpu_usage=2, memory_usage=256,
+                                    pinned_cpus=set([]),
+                                    siblings=[set([1, 3]), set([2, 4])],
+                                    mempages=[])
+
+        numacell.pin_cpus_with_siblings(set([1, 2]))
+        self.assertEqual(set(), numacell.free_cpus)
+        numacell.unpin_cpus_with_siblings(set([1]))
+        self.assertEqual(set([1, 3]), numacell.free_cpus)
+        self.assertRaises(exception.CPUPinningInvalid,
+                          numacell.unpin_cpus_with_siblings,
+                          set([3]))
+        self.assertRaises(exception.CPUPinningInvalid,
+                          numacell.pin_cpus_with_siblings,
+                          set([4]))
+        self.assertRaises(exception.CPUPinningInvalid,
+                          numacell.unpin_cpus_with_siblings,
+                          set([3, 4]))
+        self.assertEqual(set([1, 3]), numacell.free_cpus)
+        numacell.unpin_cpus_with_siblings(set([4]))
+        self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
+
     def test_pages_topology_wipe(self):
         pages_topology = objects.NUMAPagesTopology(
             size_kb=2048, total=1024, used=512)

@@ -653,13 +653,17 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
         return verify_pagesizes(host_cell, inst_cell, [inst_cell.pagesize])
 
 
-def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
+def _pack_instance_onto_cores(available_siblings,
+                              instance_cell,
+                              host_cell_id,
+                              threads_per_core=1):
     """Pack an instance onto a set of siblings
 
     :param available_siblings: list of sets of CPU id's - available
                                siblings per core
     :param instance_cell: An instance of objects.InstanceNUMACell describing
                           the pinning requirements of the instance
+    :param threads_per_core: number of threads per core in host's cell
 
     :returns: An instance of objects.InstanceNUMACell containing the pinning
               information, and potentially a new topology to be exposed to the
@@ -729,6 +733,16 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
         return fractions.gcd(threads_per_core, _orphans(instance_cell,
                                                         threads_per_core))
 
+    def _get_pinning(threads_no, sibling_set, instance_cores):
+        """Generate a CPU-vCPU pin mapping."""
+        if threads_no * len(sibling_set) < len(instance_cores):
+            return
+
+        usable_cores = map(lambda s: list(s)[:threads_no], sibling_set)
+
+        return zip(sorted(instance_cores),
+                   itertools.chain(*usable_cores))
+
     if (instance_cell.cpu_thread_policy ==
             fields.CPUThreadAllocationPolicy.REQUIRE):
         LOG.debug("Requested 'require' thread policy for %d cores",
@@ -741,36 +755,41 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
             fields.CPUThreadAllocationPolicy.ISOLATE):
         LOG.debug("Requested 'isolate' thread policy for %d cores",
                   len(instance_cell))
-        raise NotImplementedError("The 'isolate' policy is not supported.")
     else:
         LOG.debug("User did not specify a thread policy. Using default "
                   "for %d cores", len(instance_cell))
 
-    # NOTE(ndipanov): We iterate over the sibling sets in descending order
-    # of cores that can be packed. This is an attempt to evenly distribute
-    # instances among physical cores
-    for threads_no, sibling_set in sorted(
-            (t for t in sibling_sets.items()), reverse=True):
-        if threads_no * len(sibling_set) < len(instance_cell):
-            continue
+    if (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.ISOLATE):
+        # make sure we have at least one fully free core
+        if threads_per_core not in sibling_sets:
+            return
 
-        usable_cores = map(lambda s: list(s)[:threads_no], sibling_set)
+        pinning = _get_pinning(1,  # we only want to "use" one thread per core
+                               sibling_sets[threads_per_core],
+                               instance_cell.cpuset)
+    else:
+        # NOTE(ndipanov): We iterate over the sibling sets in descending order
+        # of cores that can be packed. This is an attempt to evenly distribute
+        # instances among physical cores
+        for threads_no, sibling_set in sorted(
+                (t for t in sibling_sets.items()), reverse=True):
+
+            # NOTE(sfinucan): The key difference between the require and
+            # prefer policies is that require will not settle for non-siblings
+            # if this is all that is available. Enforce this by ensuring we're
+            # using sibling sets that contain at least one sibling
+            if (instance_cell.cpu_thread_policy ==
+                    fields.CPUThreadAllocationPolicy.REQUIRE):
+                if threads_no <= 1:
+                    continue
+
+            pinning = _get_pinning(threads_no, sibling_set,
+                                   instance_cell.cpuset)
+            if pinning:
+                break
 
         threads_no = _threads(instance_cell, threads_no)
-
-        # NOTE(sfinucan): The key difference between the require and
-        # prefer policies is that require will not settle for non-siblings
-        # if this is all that is available. Enforce this by ensuring we're
-        # using sibling sets that contain at least one sibling
-        if (instance_cell.cpu_thread_policy ==
-                fields.CPUThreadAllocationPolicy.REQUIRE):
-            if threads_no <= 1:
-                continue
-
-        pinning = zip(sorted(instance_cell.cpuset),
-                      itertools.chain(*usable_cores))
-
-        break
 
     if not pinning:
         return
@@ -804,7 +823,8 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
     if host_cell.siblings:
         # Try to pack the instance cell onto cores
         return _pack_instance_onto_cores(
-            host_cell.free_siblings, instance_cell, host_cell.id)
+            host_cell.free_siblings, instance_cell, host_cell.id,
+            max(map(len, host_cell.siblings)))
     else:
         # Straightforward to pin to available cpus when there is no
         # hyperthreading on the host
@@ -1253,16 +1273,30 @@ def numa_usage_from_instances(host, instances, free=False):
                 if instancecell.id == hostcell.id:
                     memory_usage = (
                             memory_usage + sign * instancecell.memory)
-                    cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
+                    cpu_usage_diff = len(instancecell.cpuset)
+                    if (instancecell.cpu_thread_policy ==
+                            fields.CPUThreadAllocationPolicy.ISOLATE and
+                            hostcell.siblings):
+                        cpu_usage_diff *= max(map(len, hostcell.siblings))
+                    cpu_usage += sign * cpu_usage_diff
+
                     if instancecell.pagesize and instancecell.pagesize > 0:
                         newcell.mempages = _numa_pagesize_usage_from_cell(
                             hostcell, instancecell, sign)
                     if instance.cpu_pinning_requested:
                         pinned_cpus = set(instancecell.cpu_pinning.values())
                         if free:
-                            newcell.unpin_cpus(pinned_cpus)
+                            if (instancecell.cpu_thread_policy ==
+                                    fields.CPUThreadAllocationPolicy.ISOLATE):
+                                newcell.unpin_cpus_with_siblings(pinned_cpus)
+                            else:
+                                newcell.unpin_cpus(pinned_cpus)
                         else:
-                            newcell.pin_cpus(pinned_cpus)
+                            if (instancecell.cpu_thread_policy ==
+                                    fields.CPUThreadAllocationPolicy.ISOLATE):
+                                newcell.pin_cpus_with_siblings(pinned_cpus)
+                            else:
+                                newcell.pin_cpus(pinned_cpus)
 
             newcell.cpu_usage = max(0, cpu_usage)
             newcell.memory_usage = max(0, memory_usage)
