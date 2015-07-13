@@ -1876,3 +1876,7 @@ class UnsupportedImageModel(Invalid):
 
 class DatabaseMigrationError(NovaException):
     msg_fmt = _("Database migration failed: %(reason)s")
+
+
+class HostMappingNotFound(Invalid):
+    msg_fmt = _("Host '%(name)s' is not mapped to any cell")
