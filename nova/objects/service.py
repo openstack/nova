@@ -44,7 +44,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.11: Added get_by_host_and_binary
     # Version 1.12: ComputeNode version 1.11
     # Version 1.13: Added last_seen_up
-    VERSION = '1.13'
+    # Version 1.14: Added forced_down
+    VERSION = '1.14'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -57,6 +58,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         'availability_zone': fields.StringField(nullable=True),
         'compute_node': fields.ObjectField('ComputeNode'),
         'last_seen_up': fields.DateTimeField(nullable=True),
+        'forced_down': fields.BooleanField(),
     }
 
     obj_relationships = {
@@ -67,6 +69,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     def obj_make_compatible(self, primitive, target_version):
         _target_version = utils.convert_version_to_tuple(target_version)
+        if _target_version < (1, 14) and 'forced_down' in primitive:
+            del primitive['forced_down']
         if _target_version < (1, 13) and 'last_seen_up' in primitive:
             del primitive['last_seen_up']
         if _target_version < (1, 10):
@@ -199,7 +203,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.9: Added get_by_binary() and Service version 1.11
     # Version 1.10: Service version 1.12
     # Version 1.11: Service version 1.13
-    VERSION = '1.11'
+    # Version 1.12: Service version 1.14
+    VERSION = '1.12'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -218,6 +223,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.9': '1.11',
         '1.10': '1.12',
         '1.11': '1.13',
+        '1.12': '1.14',
         }
 
     @base.remotable_classmethod

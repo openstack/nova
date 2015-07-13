@@ -2822,7 +2822,8 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'binary': 'fake_binary',
             'topic': 'fake_topic',
             'report_count': 3,
-            'disabled': False
+            'disabled': False,
+            'forced_down': False
         }
 
     def _create_service(self, values):
@@ -2868,6 +2869,18 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_service_update_not_found_exception(self):
         self.assertRaises(exception.ServiceNotFound,
                           db.service_update, self.ctxt, 100500, {})
+
+    def test_service_update_with_set_forced_down(self):
+        service = self._create_service({})
+        db.service_update(self.ctxt, service['id'], {'forced_down': True})
+        updated_service = db.service_get(self.ctxt, service['id'])
+        self.assertTrue(updated_service['forced_down'])
+
+    def test_service_update_with_unset_forced_down(self):
+        service = self._create_service({'forced_down': True})
+        db.service_update(self.ctxt, service['id'], {'forced_down': False})
+        updated_service = db.service_get(self.ctxt, service['id'])
+        self.assertFalse(updated_service['forced_down'])
 
     def test_service_get(self):
         service1 = self._create_service({})

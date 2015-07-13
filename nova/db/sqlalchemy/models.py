@@ -101,6 +101,7 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
     disabled_reason = Column(String(255))
     last_seen_up = Column(DateTime, nullable=True)
+    forced_down = Column(Boolean, default=False)
 
 
 class ComputeNode(BASE, NovaBase):
