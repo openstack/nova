@@ -455,8 +455,19 @@ class _TestInstanceObject(object):
             context=self.context, id=123, uuid='fake-uuid')
         inst.numa_topology = fake_obj_numa_topology
         inst.save()
+
+        # NOTE(sdague): the json representation of nova object for
+        # NUMA isn't stable from a string comparison
+        # perspective. There are sets which get converted to lists,
+        # and based on platform differences may show up in different
+        # orders. So we can't have mock do the comparison. Instead
+        # manually compare the final parameter using our json equality
+        # operator which does the right thing here.
         mock_extra_update.assert_called_once_with(
-            self.context, inst.uuid, {'numa_topology': jsonified})
+            self.context, inst.uuid, mock.ANY)
+        called_arg = mock_extra_update.call_args_list[0][0][2]['numa_topology']
+        self.assertJsonEqual(called_arg, jsonified)
+
         mock_extra_update.reset_mock()
         inst.numa_topology = None
         inst.save()
