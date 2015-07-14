@@ -294,7 +294,8 @@ class BaseTestCase(test.TestCase):
             'deleted_at': None,
             'deleted': False,
             'last_seen_up': None,
-            'forced_down': False
+            'forced_down': False,
+            'version': 0,
         }
         return service
 
