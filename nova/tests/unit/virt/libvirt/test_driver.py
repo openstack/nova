@@ -3491,6 +3491,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          cfg.system_serial)
         self.assertEqual(instance_ref['uuid'],
                          cfg.system_uuid)
+        self.assertEqual("Virtual Machine",
+                         cfg.system_family)
 
     def test_get_guest_config_sysinfo_serial_none(self):
         self.flags(sysinfo_serial="none", group="libvirt")

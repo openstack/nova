@@ -496,6 +496,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         obj.system_version = "6.6.6"
         obj.system_serial = "123456"
         obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+        obj.system_family = "Anvils"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -506,6 +507,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
                 <entry name="version">6.6.6</entry>
                 <entry name="serial">123456</entry>
                 <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+                <entry name="family">Anvils</entry>
               </system>
             </sysinfo>
         """)
@@ -516,6 +518,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         obj.system_manufacturer = "Acme"
         obj.system_product = "Wile Coyote"
         obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+        obj.system_family = "Anvils"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -527,6 +530,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
                 <entry name="manufacturer">Acme</entry>
                 <entry name="product">Wile Coyote</entry>
                 <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+                <entry name="family">Anvils</entry>
               </system>
             </sysinfo>
         """)
