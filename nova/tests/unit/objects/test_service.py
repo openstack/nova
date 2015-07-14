@@ -35,6 +35,7 @@ fake_service = {
     'binary': 'fake-service',
     'topic': 'fake-service-topic',
     'report_count': 1,
+    'forced_down': False,
     'disabled': False,
     'disabled_reason': None,
     'last_seen_up': None,

@@ -758,6 +758,9 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             fkey_names = [fkey['name'] for fkey in fkeys]
             self.assertIn('fk_instance_extra_instance_uuid', fkey_names)
 
+    def _check_297(self, engine, data):
+        self.assertColumnExists(engine, 'services', 'forced_down')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
