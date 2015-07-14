@@ -56,13 +56,6 @@ class _TestNetworkRequestObject(object):
         self.assertEqual('1.2.3.4', str(request.address))
         self.assertEqual(FAKE_UUID, request.port_id)
 
-    def test_from_tuple_neutron_without_pci_request_id(self):
-        request = objects.NetworkRequest.from_tuple(
-            ('123', '1.2.3.4', FAKE_UUID))
-        self.assertEqual('123', request.network_id)
-        self.assertEqual('1.2.3.4', str(request.address))
-        self.assertEqual(FAKE_UUID, request.port_id)
-
     def test_from_tuple_nova(self):
         request = objects.NetworkRequest.from_tuple(
             ('123', '1.2.3.4'))
