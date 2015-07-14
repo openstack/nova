@@ -30,8 +30,18 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
+from oslo_config import cfg
 
 LOG = logging.getLogger(__name__)
+
+CONF = cfg.CONF
+console_origin_opts = [
+    cfg.ListOpt('console_allowed_origins',
+                default=[],
+                help='Allowed Origin header hostnames for access to console '
+                     'proxy servers'),
+]
+CONF.register_opts(console_origin_opts)
 
 
 class NovaProxyRequestHandlerBase(object):
@@ -104,6 +114,8 @@ class NovaProxyRequestHandlerBase(object):
                 expected_origin_hostname = e.split(']')[0][1:]
             else:
                 expected_origin_hostname = e.split(':')[0]
+        expected_origin_hostnames = CONF.console_allowed_origins
+        expected_origin_hostnames.append(expected_origin_hostname)
         origin_url = self.headers.getheader('Origin')
         # missing origin header indicates non-browser client which is OK
         if origin_url is not None:
@@ -113,7 +125,7 @@ class NovaProxyRequestHandlerBase(object):
             if origin_hostname == '' or origin_scheme == '':
                 detail = _("Origin header not valid.")
                 raise exception.ValidationError(detail=detail)
-            if expected_origin_hostname != origin_hostname:
+            if origin_hostname not in expected_origin_hostnames:
                 detail = _("Origin header does not match this host.")
                 raise exception.ValidationError(detail=detail)
             if not self.verify_origin_proto(connect_info, origin_scheme):
