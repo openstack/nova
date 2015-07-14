@@ -1003,27 +1003,28 @@ def _numa_get_constraints_auto(nodes, flavor):
 
 
 def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
-    flavor_pinning = flavor.get('extra_specs', {}).get("hw:cpu_policy")
-    image_pinning = image_meta.properties.get("hw_cpu_policy")
-    if flavor_pinning == "dedicated":
-        requested = True
-    elif flavor_pinning == "shared":
-        if image_pinning == "dedicated":
+    flavor_policy = flavor.get('extra_specs', {}).get('hw:cpu_policy')
+    image_policy = image_meta.properties.get('hw_cpu_policy')
+    if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = flavor_policy
+    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
+        if image_policy == fields.CPUAllocationPolicy.DEDICATED:
             raise exception.ImageCPUPinningForbidden()
-        requested = False
+        cpu_policy = flavor_policy
+    elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = image_policy
     else:
-        requested = image_pinning == "dedicated"
+        cpu_policy = fields.CPUAllocationPolicy.SHARED
 
-    rt = is_realtime_enabled(flavor)
-    pi = image_pinning or flavor_pinning
-    if rt and pi != "dedicated":
+    if (is_realtime_enabled(flavor) and
+        cpu_policy != fields.CPUAllocationPolicy.DEDICATED):
         raise exception.RealtimeConfigurationInvalid()
 
     flavor_thread_policy = flavor.get('extra_specs', {}).get(
         'hw:cpu_thread_policy')
     image_thread_policy = image_meta.properties.get('hw_cpu_thread_policy')
 
-    if not requested:
+    if cpu_policy == fields.CPUAllocationPolicy.SHARED:
         if flavor_thread_policy or image_thread_policy:
             raise exception.CPUThreadPolicyConfigurationInvalid()
         return numa_topology
@@ -1036,12 +1037,8 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
         cpu_thread_policy = flavor_thread_policy
 
     if numa_topology:
-        # NOTE(ndipanov) Setting the cpu_pinning attribute to a non-None value
-        # means CPU pinning was requested
-        # TODO(sfinucan) Instead of using the "magic" described above, make use
-        # of the 'InstanceNUMACell.cpu_policy' parameter
         for cell in numa_topology.cells:
-            cell.cpu_pinning = {}
+            cell.cpu_policy = cpu_policy
             cell.cpu_thread_policy = cpu_thread_policy
         return numa_topology
     else:
@@ -1049,7 +1046,7 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
                 id=0,
                 cpuset=set(range(flavor.vcpus)),
                 memory=flavor.memory_mb,
-                cpu_pinning={},
+                cpu_policy=cpu_policy,
                 cpu_thread_policy=cpu_thread_policy)
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
         return numa_topology
@@ -1273,6 +1270,7 @@ def instance_topology_from_instance(instance):
                     memory=cell['memory'],
                     pagesize=cell.get('pagesize'),
                     cpu_pinning=cell.get('cpu_pinning_raw'),
+                    cpu_policy=cell.get('cpu_policy'),
                     cpu_thread_policy=cell.get('cpu_thread_policy'))
                          for cell in dict_cells]
                 instance_numa_topology = objects.InstanceNUMATopology(

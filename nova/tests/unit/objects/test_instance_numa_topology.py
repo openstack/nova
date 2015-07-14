@@ -18,6 +18,7 @@ from oslo_serialization import jsonutils
 
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.tests.unit.objects import test_objects
 
 fake_instance_uuid = str(uuid.uuid4())
@@ -149,14 +150,14 @@ class _TestInstanceNUMATopology(object):
         inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
                                              cpu_pinning=None)
         self.assertFalse(inst_cell.cpu_pinning_requested)
-        inst_cell.cpu_pinning = {}
+        inst_cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
         self.assertTrue(inst_cell.cpu_pinning_requested)
 
     def test_cpu_pinning_requested(self):
         fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
         self.assertFalse(fake_topo_obj.cpu_pinning_requested)
         for cell in fake_topo_obj.cells:
-            cell.cpu_pinning = dict(zip(*map(list, [cell.cpuset] * 2)))
+            cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
         self.assertTrue(fake_topo_obj.cpu_pinning_requested)
 
 
