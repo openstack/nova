@@ -76,13 +76,13 @@ testr arguments that are needed to tox. For example, you can run:
 --analyze-isolation to its argument list.
 
 Python packages may also have dependencies that are outside of tox's ability
-to install. Please refer to doc/source/devref/development.environment.rst for
+to install. Please refer to ``doc/source/development.environment.rst`` for
 a list of those packages on Ubuntu, Fedora and Mac OS X.
 
 To run a single or restricted set of tests, pass a regex that matches
 the class name containing the tests as an extra ``tox`` argument;
 e.g. ``tox -- TestWSGIServer`` (note the double-hypen) will test all
-WSGI server tests from ``nova/tests/test_wsgi.py``; ``--
+WSGI server tests from ``nova/tests/unit/test_wsgi.py``; ``--
 TestWSGIServer.test_uri_length_limit`` would run just that test, and
 ``-- TestWSGIServer|TestWSGIServerWithSSL`` would run tests from both
 classes.
@@ -98,7 +98,7 @@ http://wiki.openstack.org/testr
 Building Docs
 -------------
 Normal Sphinx docs can be built via the setuptools ``build_sphinx`` command. To
-do this via ``tox``, simply run ``tox -evenv -- python setup.py build_sphinx``,
+do this via ``tox``, simply run ``tox -e docs``,
 which will cause a virtualenv with all of the needed dependencies to be
 created and then inside of the virtualenv, the docs will be created and
 put into doc/build/html.
