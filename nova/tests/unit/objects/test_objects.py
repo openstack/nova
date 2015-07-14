@@ -1116,7 +1116,7 @@ object_data = {
     'Instance': '1.21-260d385315d4868b6397c61a13109841',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
-    'InstanceActionEventList': '1.0-13d92fb953030cdbfee56481756e02be',
+    'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
     'InstanceActionList': '1.0-4a53826625cc280e15fae64a575e0879',
     'InstanceExternalEvent': '1.0-33cc4a1bbd0655f68c0ee791b95da7e6',
     'InstanceFault': '1.2-7ef01f16f1084ad1304a513d6d410a38',
@@ -1554,6 +1554,51 @@ class TestObjectVersions(test.NoDBTestCase):
                               and obj_class.child_versions),
                               'Object %s should be using obj_relationships, '
                               'not child_versions.' % obj_name)
+
+    def test_obj_relationships_not_past_current_parent_version(self):
+        # Iterate all object classes to verify that all versions of the parent
+        # held in obj_relationships are at or before the current version
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
+            cur_version = utils.convert_version_to_tuple(obj_class.VERSION)
+            for field, versions in obj_class.obj_relationships.items():
+                for my_version, child_version in versions:
+                    tup_version = utils.convert_version_to_tuple(my_version)
+                    self.assertTrue(tup_version <= cur_version,
+                                    "Field '%(field)s' of %(obj)s contains a "
+                                    "relationship that is past the current "
+                                    "version. Relationship version is %(ov)s."
+                                    " Current version is %(cv)s." %
+                                    {'field': field, 'obj': obj_name,
+                                     'ov': my_version,
+                                     'cv': obj_class.VERSION})
+
+    def test_obj_relationships_not_past_current_child_version(self):
+        # Iterate all object classes to verify that all versions of subobjects
+        # held in obj_relationships are at or before the current version
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
+            for field, versions in obj_class.obj_relationships.items():
+                obj_field = obj_class.fields[field]
+                child_name = self._get_object_field_name(obj_field)
+                child_class = obj_classes[child_name][0]
+                curr_child_ver = child_class.VERSION
+                tup_curr_child_ver = utils.convert_version_to_tuple(
+                                        curr_child_ver)
+
+                for parent_ver, child_ver in versions:
+                    tup_version = utils.convert_version_to_tuple(child_ver)
+                    self.assertTrue(tup_version <= tup_curr_child_ver,
+                                    "Field '%(field)s' of %(obj)s contains a "
+                                    "relationship that is past the current "
+                                    "version of %(child_obj)s. Relationship "
+                                    "version is %(ov)s. Current version is "
+                                    "%(cv)s." %
+                                    {'field': field, 'obj': obj_name,
+                                     'child_obj': child_name,
+                                     'ov': child_ver, 'cv': curr_child_ver})
 
 
 class TestObjEqualPrims(_BaseTestCase):
