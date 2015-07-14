@@ -2416,22 +2416,6 @@ def instance_floating_address_get_all(context, instance_uuid):
     return [floating_ip.address for floating_ip in floating_ips]
 
 
-# NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
-@require_admin_context
-def instance_get_all_hung_in_rebooting(context, reboot_window):
-    reboot_window = (timeutils.utcnow() -
-                     datetime.timedelta(seconds=reboot_window))
-
-    # NOTE(danms): this is only used in the _poll_rebooting_instances()
-    # call in compute/manager, so we can avoid the metadata lookups
-    # explicitly
-    return _instances_fill_metadata(context,
-        model_query(context, models.Instance).
-            filter(models.Instance.updated_at <= reboot_window).
-            filter_by(task_state=task_states.REBOOTING).all(),
-        manual_joins=[])
-
-
 @require_context
 def instance_update(context, instance_uuid, values):
     instance_ref = _instance_update(context, instance_uuid, values)[1]

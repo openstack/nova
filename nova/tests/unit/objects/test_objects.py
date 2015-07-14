@@ -1091,7 +1091,7 @@ object_data = {
     'InstanceGroup': '1.9-a413a4ec0ff391e3ef0faa4e3e2a96d0',
     'InstanceGroupList': '1.6-1e383df73d9bd224714df83d9a9983bb',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
-    'InstanceList': '1.18-592dca17aa22feacae9f1ff854e17c79',
+    'InstanceList': '1.19-f5832b018649c2bd8bb00df788df0aad',
     'InstanceMapping': '1.0-47ef26034dfcbea78427565d9177fe50',
     'InstanceMappingList': '1.0-b7b108f6a56bd100c20a3ebd5f3801a1',
     'InstanceNUMACell': '1.2-535ef30e0de2d6a0d26a71bd58ecafc4',
