@@ -385,7 +385,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 .AndRaise(exception.DestinationHypervisorTooOld)
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.NoValidHost, self.task._find_destination)
+        self.assertRaises(exception.MaxRetriesExceeded,
+                          self.task._find_destination)
 
     def test_find_destination_when_runs_out_of_hosts(self):
         self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')

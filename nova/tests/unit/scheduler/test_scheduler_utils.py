@@ -193,7 +193,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         msg = 'The exception text was preserved!'
         filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
                                             exc=[msg]))
-        nvh = self.assertRaises(exception.NoValidHost,
+        nvh = self.assertRaises(exception.MaxRetriesExceeded,
                                 scheduler_utils.populate_retry,
                                 filter_properties, 'fake-uuid')
         # make sure 'msg' is a substring of the complete exception text
