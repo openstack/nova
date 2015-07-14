@@ -24,6 +24,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
+from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
 from nova.compute import resources
 from nova.compute import task_states
@@ -36,7 +37,6 @@ from nova.objects import base as obj_base
 from nova.objects import pci_device_pool
 from nova import rpc
 from nova import test
-from nova.tests.unit.compute.monitors import test_monitors
 from nova.tests.unit.pci import fakes as pci_fakes
 from nova.virt import driver
 
@@ -201,7 +201,8 @@ class FakeVirtDriver(driver.ComputeDriver):
 
 class BaseTestCase(test.TestCase):
 
-    def setUp(self):
+    @mock.patch('stevedore.enabled.EnabledExtensionManager')
+    def setUp(self, _mock_ext_mgr):
         super(BaseTestCase, self).setUp()
 
         self.flags(reserved_host_disk_mb=0,
@@ -1277,10 +1278,6 @@ class OrphanTestCase(BaseTrackerTestCase):
 class ComputeMonitorTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeMonitorTestCase, self).setUp()
-        fake_monitors = [
-            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor1',
-            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor2']
-        self.flags(compute_available_monitors=fake_monitors)
         self.tracker = self._tracker()
         self.node_name = 'nodename'
         self.user_id = 'fake'
@@ -1290,7 +1287,6 @@ class ComputeMonitorTestCase(BaseTestCase):
                                               self.project_id)
 
     def test_get_host_metrics_none(self):
-        self.flags(compute_monitors=[])
         self.tracker.monitors = []
         metrics = self.tracker._get_host_metrics(self.context,
                                                  self.node_name)
@@ -1308,9 +1304,21 @@ class ComputeMonitorTestCase(BaseTestCase):
         self.assertEqual(0, len(metrics))
 
     def test_get_host_metrics(self):
-        class1 = test_monitors.CPUMonitor1(self.tracker)
-        self.tracker.monitors = [class1]
+        class FakeCPUMonitor(monitor_base.MonitorBase):
 
+            NOW_TS = timeutils.utcnow()
+
+            def __init__(self, *args):
+                super(FakeCPUMonitor, self).__init__(*args)
+                self.source = 'FakeCPUMonitor'
+
+            def get_metric_names(self):
+                return set(["cpu.frequency"])
+
+            def get_metric(self, name):
+                return 100, self.NOW_TS
+
+        self.tracker.monitors = [FakeCPUMonitor(None)]
         mock_notifier = mock.Mock()
 
         with mock.patch.object(rpc, 'get_notifier',
@@ -1323,10 +1331,10 @@ class ComputeMonitorTestCase(BaseTestCase):
         expected_metrics = [
             {
                 'timestamp': timeutils.strtime(
-                    test_monitors.CPUMonitor1.NOW_TS),
+                    FakeCPUMonitor.NOW_TS),
                 'name': 'cpu.frequency',
                 'value': 100,
-                'source': 'CPUMonitor1'
+                'source': 'FakeCPUMonitor'
             },
         ]
 

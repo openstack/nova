@@ -15,66 +15,25 @@
 
 """Tests for resource monitors."""
 
-from oslo_utils import timeutils
+import mock
 
 from nova.compute import monitors
-from nova.compute.monitors import base
-from nova.objects import fields
 from nova import test
 
 
-class CPUMonitor1(base.MonitorBase):
-
-    NOW_TS = timeutils.utcnow()
-
-    def __init__(self, *args):
-        super(CPUMonitor1, self).__init__(*args)
-        self.source = 'CPUMonitor1'
-
-    def get_metric_names(self):
-        return set([
-            fields.MonitorMetricType.CPU_FREQUENCY
-        ])
-
-    def get_metric(self, name):
-        return 100, CPUMonitor1.NOW_TS
-
-
-class CPUMonitor2(base.MonitorBase):
-
-    def get_metric_names(self):
-        return set([
-            fields.MonitorMetricType.CPU_FREQUENCY
-        ])
-
-    def get_metric(self, name):
-        # This should never be called since the CPU metrics overlap
-        # with the ones in the CPUMonitor1.
-        pass
-
-
-class ResourceMonitorsTestCase(test.NoDBTestCase):
+class MonitorsTestCase(test.NoDBTestCase):
     """Test case for monitors."""
 
-    def setUp(self):
-        super(ResourceMonitorsTestCase, self).setUp()
-        self.monitor_handler = monitors.ResourceMonitorHandler()
-        fake_monitors = [
-            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor1',
-            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor2']
-        self.flags(compute_available_monitors=fake_monitors)
+    @mock.patch('stevedore.enabled.EnabledExtensionManager')
+    def test_check_enabled_cpu_monitor(self, _mock_ext_manager):
+        class FakeExt(object):
+            def __init__(self, name):
+                self.name = name
 
-    def test_choose_monitors_not_found(self):
-        self.flags(compute_monitors=['CPUMonitor1', 'CPUMonitorb'])
-        monitor_classes = self.monitor_handler.choose_monitors(self)
-        self.assertEqual(len(monitor_classes), 1)
-
-    def test_choose_monitors_bad(self):
-        self.flags(compute_monitors=['CPUMonitor1', 'CPUMonitor2'])
-        monitor_classes = self.monitor_handler.choose_monitors(self)
-        self.assertEqual(len(monitor_classes), 1)
-
-    def test_choose_monitors_none(self):
-        self.flags(compute_monitors=[])
-        monitor_classes = self.monitor_handler.choose_monitors(self)
-        self.assertEqual(len(monitor_classes), 0)
+        # We check to ensure only one CPU monitor is loaded...
+        self.flags(compute_monitors=['cpu_mon1', 'cpu_mon2'])
+        handler = monitors.MonitorHandler(None)
+        ext_cpu_mon1 = FakeExt('cpu_mon1')
+        ext_cpu_mon2 = FakeExt('cpu_mon2')
+        self.assertTrue(handler.check_enabled_cpu_monitor(ext_cpu_mon1))
+        self.assertFalse(handler.check_enabled_cpu_monitor(ext_cpu_mon2))
