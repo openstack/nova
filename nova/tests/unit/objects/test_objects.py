@@ -408,7 +408,7 @@ class _TestObject(object):
                      'nova_object.namespace': 'foo',
                      'nova_object.version': '1.5',
                      'nova_object.data': {'foo': 1}}
-        self.assertRaises(exception.UnsupportedObjectError,
+        self.assertRaises(ovo_exc.UnsupportedObjectError,
                           MyObj.obj_from_primitive, primitive)
 
     def test_hydration_additional_unexpected_stuff(self):
@@ -491,14 +491,14 @@ class _TestObject(object):
         self.assertEqual('1.6', obj.VERSION)
 
     def test_unknown_objtype(self):
-        self.assertRaises(exception.UnsupportedObjectError,
+        self.assertRaises(ovo_exc.UnsupportedObjectError,
                           base.NovaObject.obj_class_from_name, 'foo', '1.0')
 
     def test_obj_class_from_name_supported_version(self):
         error = None
         try:
             base.NovaObject.obj_class_from_name('MyObj', '1.25')
-        except exception.IncompatibleObjectVersion as ex:
+        except ovo_exc.IncompatibleObjectVersion as ex:
             error = ex
 
         self.assertIsNotNone(error)
@@ -872,7 +872,7 @@ class TestObject(_LocalTest, _TestObject):
 
     def test_set_defaults_no_default(self):
         obj = MyObj()
-        self.assertRaises(exception.ObjectActionError,
+        self.assertRaises(ovo_exc.ObjectActionError,
                           obj.obj_set_defaults, 'bar')
 
     def test_set_all_defaults(self):
@@ -894,12 +894,12 @@ class TestObject(_LocalTest, _TestObject):
 class TestRemoteObject(_RemoteTest, _TestObject):
     def test_major_version_mismatch(self):
         MyObj2.VERSION = '2.0'
-        self.assertRaises(exception.IncompatibleObjectVersion,
+        self.assertRaises(ovo_exc.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
     def test_minor_version_greater(self):
         MyObj2.VERSION = '1.7'
-        self.assertRaises(exception.IncompatibleObjectVersion,
+        self.assertRaises(ovo_exc.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
     def test_minor_version_less(self):

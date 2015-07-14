@@ -1505,25 +1505,16 @@ class InstanceFaultRollback(NovaException):
         super(InstanceFaultRollback, self).__init__(message % inner_exception)
 
 
-class UnsupportedObjectError(NovaException):
-    msg_fmt = _('Unsupported object type %(objtype)s')
+class InstanceUpdateConflict(NovaException):
+    msg_fmt = _('Conflict updating instance %(instance_uuid)s')
 
 
 class OrphanedObjectError(NovaException):
     msg_fmt = _('Cannot call %(method)s on orphaned %(objtype)s object')
 
 
-class IncompatibleObjectVersion(NovaException):
-    msg_fmt = _('Version %(objver)s of %(objname)s is not supported. The '
-                'maximum supported version is: %(supported)s')
-
-
 class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
-
-
-class ObjectFieldInvalid(NovaException):
-    msg_fmt = _('Field %(field)s of %(objname)s is not an instance of Field')
 
 
 class CoreAPIMissing(NovaException):
