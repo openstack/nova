@@ -1517,10 +1517,6 @@ class InstanceFaultRollback(NovaException):
         super(InstanceFaultRollback, self).__init__(message % inner_exception)
 
 
-class InstanceUpdateConflict(NovaException):
-    msg_fmt = _('Conflict updating instance %(instance_uuid)s')
-
-
 class UnsupportedObjectError(NovaException):
     msg_fmt = _('Unsupported object type %(objtype)s')
 
