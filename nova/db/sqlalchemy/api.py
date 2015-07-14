@@ -30,6 +30,7 @@ from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db import options as oslo_db_options
 from oslo_db.sqlalchemy import session as db_session
+from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -2417,12 +2418,15 @@ def instance_floating_address_get_all(context, instance_uuid):
 
 
 @require_context
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def instance_update(context, instance_uuid, values):
-    instance_ref = _instance_update(context, instance_uuid, values)[1]
-    return instance_ref
+    session = get_session()
+    with session.begin():
+        return _instance_update(context, session, instance_uuid, values)
 
 
 @require_context
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def instance_update_and_get_original(context, instance_uuid, values,
                                      columns_to_join=None):
     """Set the given properties on an instance and update it. Return
@@ -2441,9 +2445,14 @@ def instance_update_and_get_original(context, instance_uuid, values,
 
     Raises NotFound if instance does not exist.
     """
-    return _instance_update(context, instance_uuid, values,
-                            copy_old_instance=True,
-                            columns_to_join=columns_to_join)
+    session = get_session()
+    with session.begin():
+        instance_ref = _instance_get_by_uuid(context, instance_uuid,
+                                             columns_to_join=columns_to_join,
+                                             session=session)
+        return (copy.copy(instance_ref),
+                _instance_update(context, session, instance_uuid, values,
+                                 original=instance_ref))
 
 
 # NOTE(danms): This updates the instance's metadata list in-place and in
@@ -2480,73 +2489,113 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         instance[metadata_type].append(newitem)
 
 
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-def _instance_update(context, instance_uuid, values, copy_old_instance=False,
-                     columns_to_join=None):
-    session = get_session()
-
+def _instance_update(context, session, instance_uuid, values, original=None):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
-    with session.begin():
-        instance_ref = _instance_get_by_uuid(context, instance_uuid,
-                                             session=session,
-                                             columns_to_join=columns_to_join)
-        if "expected_task_state" in values:
-            # it is not a db column so always pop out
-            expected = values.pop("expected_task_state")
-            if not isinstance(expected, (tuple, list, set)):
-                expected = (expected,)
-            actual_state = instance_ref["task_state"]
-            if actual_state not in expected:
-                if actual_state == task_states.DELETING:
+    # Extract 'expected' values, which aren't updates
+    expected = {}
+    if 'expected_task_state' in values:
+        expected['task_state'] = values.pop('expected_task_state')
+
+    if 'expected_vm_state' in values:
+        expected['vm_state'] = values.pop('expected_vm_state')
+
+    # Values which need to be updated separately
+    metadata = values.pop('metadata', None)
+    system_metadata = values.pop('system_metadata', None)
+
+    _handle_objects_related_type_conversions(values)
+
+    compare = models.Instance(uuid=instance_uuid, **expected)
+
+    # Hostname is potentially unique, but this is enforced in code rather
+    # than the DB. The query below races, but the number of users of
+    # osapi_compute_unique_server_name_scope is small, and a robust fix
+    # will be complex. This is intentionally left as is for the moment.
+    if 'hostname' in values:
+        _validate_unique_server_name(context, session, values['hostname'])
+
+    try:
+        instance_ref = model_query(context, models.Instance,
+                                   project_only=True, session=session).\
+                       update_on_match(compare, 'uuid', values)
+    except update_match.NoRowsMatched:
+        # Update failed. Try to find why and raise a specific error.
+
+        # We should get here only because our expected values were not current
+        # when update_on_match executed. Having failed, we now have a hint that
+        # the values are out of date and should check them.
+
+        # If we were called from instance_update_and_get_original, in by far
+        # the most probable race scenario the original object we fetched was
+        # already out of date. This means we can check it here to work out why
+        # and raise the most specific exception possible. However, note that
+        # there is also a much less likely race between _instance_get_by_uuid
+        # called by instance_update_and_get_original and update_on_match called
+        # by this function. In this case, though, the original call to
+        # _instance_get_by_uuid will have created a MySQL read view, which
+        # means that fetching it again here will continue to return old data
+        # despite update_on_match having failed due to new data we can't see.
+        # Consequently, fetching it again here in the same db session is
+        # pointless. We could fetch it in a separate db transaction, but as
+        # that would also have the possibility of racing we would just be
+        # chasing our tail. Instead, we handle the less likely race by falling
+        # through below.
+
+        # If we were called from instance_update, again the most likely race is
+        # that the object was already out of date. There will be no existing
+        # MySQL read view as there is no prior select, so _instance_get_by_uuid
+        # will always return current data, and we can raise a specific
+        # exception. However, there is the exceptionally unlikely possibility
+        # of a race between update_on_match and _instance_get_by_uuid below,
+        # where additionally the intervening update creates the expected
+        # conditions which previously failed. Again, we handle this safely by
+        # falling through below.
+        if original is None:
+            original = _instance_get_by_uuid(context, instance_uuid,
+                                             session=session)
+
+        if 'task_state' in expected:
+            task_state = original['task_state']
+            expected_task_states = sqlalchemyutils.to_list(
+                    expected['task_state'])
+            if task_state not in expected_task_states:
+                if task_state == task_states.DELETING:
                     raise exception.UnexpectedDeletingTaskStateError(
-                            actual=actual_state, expected=expected)
+                            actual=task_state,
+                            expected=expected_task_states)
                 else:
                     raise exception.UnexpectedTaskStateError(
-                            actual=actual_state, expected=expected)
-        if "expected_vm_state" in values:
-            expected = values.pop("expected_vm_state")
-            if not isinstance(expected, (tuple, list, set)):
-                expected = (expected,)
-            actual_state = instance_ref["vm_state"]
-            if actual_state not in expected:
-                raise exception.UnexpectedVMStateError(actual=actual_state,
-                                                       expected=expected)
+                            actual=task_state,
+                            expected=expected_task_states)
 
-        instance_hostname = instance_ref['hostname'] or ''
-        if ("hostname" in values and
-                values["hostname"].lower() != instance_hostname.lower()):
-                _validate_unique_server_name(context,
-                                             session,
-                                             values['hostname'])
+        if 'vm_state' in expected:
+            vm_state = original['vm_state']
+            expected_vm_states = sqlalchemyutils.to_list(
+                    expected['vm_state'])
+            if vm_state not in expected_vm_states:
+                raise exception.UnexpectedVMStateError(
+                    actual=vm_state, expected=expected_vm_states)
 
-        if copy_old_instance:
-            old_instance_ref = copy.copy(instance_ref)
-        else:
-            old_instance_ref = None
+        # We got here because we raced between fetching and updating the
+        # instance in this transaction as described above. Consequently we
+        # don't know what the conflict was, only that there was one.
+        raise exception.InstanceUpdateConflict(instance_uuid=instance_uuid)
 
-        metadata = values.get('metadata')
-        if metadata is not None:
-            _instance_metadata_update_in_place(context, instance_ref,
-                                               'metadata',
-                                               models.InstanceMetadata,
-                                               values.pop('metadata'),
-                                               session)
+    if metadata is not None:
+        _instance_metadata_update_in_place(context, instance_ref,
+                                           'metadata',
+                                           models.InstanceMetadata,
+                                           metadata, session)
 
-        system_metadata = values.get('system_metadata')
-        if system_metadata is not None:
-            _instance_metadata_update_in_place(context, instance_ref,
-                                               'system_metadata',
-                                               models.InstanceSystemMetadata,
-                                               values.pop('system_metadata'),
-                                               session)
+    if system_metadata is not None:
+        _instance_metadata_update_in_place(context, instance_ref,
+                                           'system_metadata',
+                                           models.InstanceSystemMetadata,
+                                           system_metadata, session)
 
-        _handle_objects_related_type_conversions(values)
-        instance_ref.update(values)
-        session.add(instance_ref)
-
-    return (old_instance_ref, instance_ref)
+    return instance_ref
 
 
 def instance_add_security_group(context, instance_uuid, security_group_id):
