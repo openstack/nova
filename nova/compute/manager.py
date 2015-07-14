@@ -2550,7 +2550,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
-                         bdms, recreate, on_shared_storage,
+                         bdms, recreate, on_shared_storage=None,
                          preserve_ephemeral=False):
         """Destroy and re-make this instance.
 
@@ -2568,7 +2568,10 @@ class ComputeManager(manager.Manager):
         :param recreate: True if the instance is being recreated (e.g. the
             hypervisor it was on failed) - cleanup of old state will be
             skipped.
-        :param on_shared_storage: True if instance files on shared storage
+        :param on_shared_storage: True if instance files on shared storage.
+                                  If not provided then information from the
+                                  driver will be used to decide if the instance
+                                  files are available or not on the target host
         :param preserve_ephemeral: True if the default ephemeral storage
                                    partition must be preserved on rebuild
         """
@@ -2585,9 +2588,16 @@ class ComputeManager(manager.Manager):
 
                 self._check_instance_exists(context, instance)
 
-                # To cover case when admin expects that instance files are on
-                # shared storage, but not accessible and vice versa
-                if on_shared_storage != self.driver.instance_on_disk(instance):
+                if on_shared_storage is None:
+                    LOG.debug('on_shared_storage is not provided, using driver'
+                              'information to decide if the instance needs to'
+                              'be recreated')
+                    on_shared_storage = self.driver.instance_on_disk(instance)
+
+                elif (on_shared_storage !=
+                        self.driver.instance_on_disk(instance)):
+                    # To cover case when admin expects that instance files are
+                    # on shared storage, but not accessible and vice versa
                     raise exception.InvalidSharedStorage(
                             _("Invalid state of instance files on shared"
                               " storage"))
