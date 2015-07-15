@@ -16,23 +16,18 @@
 """
 Exception classes specific for the VMware driver.
 """
-from oslo_vmware import exceptions as vexc
 
+from nova import exception
 from nova.i18n import _
 
-# Most VMware-specific exception classes are now centrally defined in
-# oslo.vmware.
-# Note(vui):
-# - map back to NovaException?
 
-
-class NoRootDiskDefined(vexc.VMwareDriverException):
+class NoRootDiskDefined(exception.NovaException):
     msg_fmt = _("No root disk defined.")
 
 
-class PbmDefaultPolicyUnspecified(vexc.VMwareDriverConfigurationException):
+class PbmDefaultPolicyUnspecified(exception.Invalid):
     msg_fmt = _("Default PBM policy is required if PBM is enabled.")
 
 
-class PbmDefaultPolicyDoesNotExist(vexc.VMwareDriverConfigurationException):
+class PbmDefaultPolicyDoesNotExist(exception.NovaException):
     msg_fmt = _("The default PBM policy doesn't exist on the backend.")
