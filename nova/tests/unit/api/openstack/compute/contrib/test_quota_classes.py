@@ -105,20 +105,6 @@ class QuotaClassSetsTestV21(test.TestCase):
 
         self.assertEqual(res_dict, body)
 
-    def test_quotas_update_as_user(self):
-        body = {'quota_class_set': {'instances': 50, 'cores': 50,
-                                    'ram': 51200, 'floating_ips': 10,
-                                    'fixed_ips': -1, 'metadata_items': 128,
-                                    'injected_files': 5,
-                                    'injected_file_content_bytes': 10240,
-                                    'security_groups': 10,
-                                    'security_group_rules': 20,
-                                    'key_pairs': 100,
-                                    }}
-
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          self.req, 'test_class', body=body)
-
     def test_quotas_update_with_empty_body(self):
         body = {}
         self.assertRaises(self.validation_error, self.controller.update,
@@ -162,6 +148,11 @@ class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           self.req, 'test_class')
 
+    def test_quotas_update_as_user(self):
+        body = {'quota_class_set': {}}
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
+                          self.req, 'test_class', body=body)
+
 
 class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
 
@@ -178,6 +169,17 @@ class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_update_policy_failed(self):
+        rule_name = "os_compute_api:os-quota-class-sets:update"
+        self.policy.set_rules({rule_name: "quota_class:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.update, self.req, fakes.FAKE_UUID,
+            body={'quota_class_set': {}})
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())

@@ -14,7 +14,6 @@
 #    under the License.
 
 import six
-import webob
 
 from nova.api.openstack.compute.schemas.v3 import quota_classes
 from nova.api.openstack import extensions
@@ -68,11 +67,11 @@ class QuotaClassSetsController(wsgi.Controller):
         values = QUOTAS.get_class_quotas(context, id)
         return self._format_quota_set(id, values)
 
-    @extensions.expected_errors((403))
+    @extensions.expected_errors(())
     @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='update', target={'quota_class': id})
         quota_class = id
 
         for key, value in six.iteritems(body['quota_class_set']):
@@ -80,8 +79,6 @@ class QuotaClassSetsController(wsgi.Controller):
                 db.quota_class_update(context, quota_class, key, value)
             except exception.QuotaClassNotFound:
                 db.quota_class_create(context, quota_class, key, value)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values)

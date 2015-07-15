@@ -3163,7 +3163,6 @@ def quota_class_get_all_by_name(context, class_name):
     return result
 
 
-@require_admin_context
 def quota_class_create(context, class_name, resource, limit):
     quota_class_ref = models.QuotaClass()
     quota_class_ref.class_name = class_name
@@ -3173,7 +3172,6 @@ def quota_class_create(context, class_name, resource, limit):
     return quota_class_ref
 
 
-@require_admin_context
 def quota_class_update(context, class_name, resource, limit):
     result = model_query(context, models.QuotaClass, read_deleted="no").\
                      filter_by(class_name=class_name).\
