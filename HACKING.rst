@@ -103,16 +103,18 @@ which will cause a virtualenv with all of the needed dependencies to be
 created and then inside of the virtualenv, the docs will be created and
 put into doc/build/html.
 
-If you'd like a PDF of the documentation, you'll need LaTeX installed, and
-additionally some fonts. On Ubuntu systems, you can get what you need with::
+Building a PDF of the Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you'd like a PDF of the documentation, you'll need LaTeX and ImageMagick
+installed, and additionally some fonts. On Ubuntu systems, you can get what you
+need with::
 
-    apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+    apt-get install texlive-full imagemagick
 
-Then run ``build_sphinx_latex``, change to the build dir and run ``make``.
-Like so::
+Then you can then use the ``build_latex_pdf.sh`` script in toos/ to take care
+of both the the sphinx latex generation and the latex compilation. For example::
 
-    tox -evenv -- python setup.py build_sphinx_latex
-    cd build/sphinx/latex
-    make
+    tools/build_latex_pdf.sh
 
-You should wind up with a PDF - Nova.pdf.
+The script must be run from the root of the Nova repository and it'll copy the
+output pdf to Nova.pdf in that directory.
