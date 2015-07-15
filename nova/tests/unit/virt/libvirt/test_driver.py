@@ -291,6 +291,9 @@ class FakeVirtDomain(object):
     def fsThaw(self, disks=None, flags=0):
         pass
 
+    def isActive(self):
+        return True
+
 
 class CacheConcurrencyTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -14438,6 +14441,97 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           snapshot_id, self.delete_info_1)
 
         self.mox.VerifyAll()
+
+    def _setup_block_rebase_domain_and_guest_mocks(self, dom_xml):
+        mock_domain = mock.Mock(spec=fakelibvirt.virDomain)
+        mock_domain.XMLDesc.return_value = dom_xml
+        guest = libvirt_guest.Guest(mock_domain)
+
+        exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, 'virDomainBlockRebase() failed',
+            error_code=fakelibvirt.VIR_ERR_OPERATION_INVALID)
+        mock_domain.blockRebase.side_effect = exc
+
+        return mock_domain, guest
+
+    @mock.patch.object(host.Host, "has_min_version",
+                       mock.Mock(return_value=True))
+    @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
+                 mock.Mock(return_value=False))
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type',
+                return_value="fake_fmt")
+    @mock.patch('nova.utils.execute')
+    def test_volume_snapshot_delete_when_dom_not_running(self, mock_execute,
+                                                         mock_get_disk_type):
+        """Deleting newest snapshot of a file-based image when the domain is
+        not running should trigger a blockRebase using qemu-img not libvirt.
+        In this test, we rebase the image with another image as backing file.
+        """
+        mock_domain, guest = self._setup_block_rebase_domain_and_guest_mocks(
+                                self.dom_xml)
+
+        instance = objects.Instance(**self.inst)
+        snapshot_id = 'snapshot-1234'
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=guest):
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid, snapshot_id,
+                                              self.delete_info_1)
+
+        mock_get_disk_type.assert_called_once_with("snap.img")
+        mock_execute.assert_called_once_with('qemu-img', 'rebase',
+                                             '-b', 'snap.img', '-F',
+                                             'fake_fmt', 'disk1_file')
+
+    @mock.patch.object(host.Host, "has_min_version",
+                       mock.Mock(return_value=True))
+    @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
+                 mock.Mock(return_value=False))
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type',
+                return_value="fake_fmt")
+    @mock.patch('nova.utils.execute')
+    def test_volume_snapshot_delete_when_dom_not_running_and_no_rebase_base(
+        self, mock_execute, mock_get_disk_type):
+        """Deleting newest snapshot of a file-based image when the domain is
+        not running should trigger a blockRebase using qemu-img not libvirt.
+        In this test, the image is rebased onto no backing file (i.e.
+        it will exist independently of any backing file)
+        """
+        mock_domain, mock_guest = (
+            self._setup_block_rebase_domain_and_guest_mocks(self.dom_xml))
+
+        instance = objects.Instance(**self.inst)
+        snapshot_id = 'snapshot-1234'
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid, snapshot_id,
+                                              self.delete_info_3)
+
+        self.assertEqual(0, mock_get_disk_type.call_count)
+        mock_execute.assert_called_once_with('qemu-img', 'rebase',
+                                             '-b', '', 'disk1_file')
+
+    @mock.patch.object(host.Host, "has_min_version",
+                       mock.Mock(return_value=True))
+    @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
+                 mock.Mock(return_value=False))
+    def test_volume_snapshot_delete_when_dom_with_nw_disk_not_running(self):
+        """Deleting newest snapshot of a network disk when the domain is not
+        running should raise a NovaException.
+        """
+        mock_domain, mock_guest = (
+            self._setup_block_rebase_domain_and_guest_mocks(
+                self.dom_netdisk_xml))
+        instance = objects.Instance(**self.inst)
+        snapshot_id = 'snapshot-1234'
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            ex = self.assertRaises(exception.NovaException,
+                                   self.drvr._volume_snapshot_delete,
+                                   self.c, instance, self.volume_uuid,
+                                   snapshot_id, self.delete_info_1)
+            self.assertIn('has not been fully tested', six.text_type(ex))
 
     def test_volume_snapshot_delete_2(self):
         """Deleting older snapshot -- blockCommit."""
