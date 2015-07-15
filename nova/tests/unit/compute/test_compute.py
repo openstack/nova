@@ -4203,6 +4203,7 @@ class ComputeTestCase(BaseTestCase):
         migration = objects.Migration(context=self.context.elevated())
         migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
         migration.new_instance_type_id = '1'
+        instance_type = objects.Flavor()
 
         actions = [
             ("reboot_instance", task_states.REBOOTING,
@@ -4239,7 +4240,7 @@ class ComputeTestCase(BaseTestCase):
                                'reservations': []}),
             ("prep_resize", task_states.RESIZE_PREP,
                             {'image': {},
-                             'instance_type': {},
+                             'instance_type': instance_type,
                              'reservations': [],
                              'request_spec': {},
                              'filter_properties': {},
