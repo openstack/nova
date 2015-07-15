@@ -2436,6 +2436,28 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(sorted(['metadata', 'system_metadata']),
                          sorted(mock_fill.call_args[1]['manual_joins']))
 
+    def test_instance_get_all_hung_in_rebooting(self):
+        # Ensure no instances are returned.
+        results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
+        self.assertEqual([], results)
+
+        # Ensure one rebooting instance with updated_at older than 10 seconds
+        # is returned.
+        instance = self.create_instance_with_args(task_state="rebooting",
+                updated_at=datetime.datetime(2000, 1, 1, 12, 0, 0))
+        results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
+        self._assertEqualListsOfObjects([instance], results,
+            ignored_keys=['task_state', 'info_cache', 'security_groups',
+                          'metadata', 'system_metadata', 'pci_devices',
+                          'extra'])
+        db.instance_update(self.ctxt, instance['uuid'], {"task_state": None})
+
+        # Ensure the newly rebooted instance is not returned.
+        self.create_instance_with_args(task_state="rebooting",
+                                       updated_at=timeutils.utcnow())
+        results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
+        self.assertEqual([], results)
+
     def test_instance_update_with_expected_vm_state(self):
         instance = self.create_instance_with_args(vm_state='foo')
         db.instance_update(self.ctxt, instance['uuid'], {'host': 'h1',

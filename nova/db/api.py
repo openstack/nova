@@ -724,6 +724,12 @@ def instance_floating_address_get_all(context, instance_uuid):
     return IMPL.instance_floating_address_get_all(context, instance_uuid)
 
 
+# NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
+def instance_get_all_hung_in_rebooting(context, reboot_window):
+    """Get all instances stuck in a rebooting state."""
+    return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window)
+
+
 def instance_update(context, instance_uuid, values):
     """Set the given properties on an instance and update it.
 

@@ -1570,6 +1570,20 @@ class _TestInstanceListObject(object):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
 
+    def test_get_hung_in_rebooting(self):
+        fakes = [self.fake_instance(1),
+                 self.fake_instance(2)]
+        dt = timeutils.isotime()
+        self.mox.StubOutWithMock(db, 'instance_get_all_hung_in_rebooting')
+        db.instance_get_all_hung_in_rebooting(self.context, dt).AndReturn(
+            fakes)
+        self.mox.ReplayAll()
+        inst_list = instance.InstanceList.get_hung_in_rebooting(self.context,
+                                                                dt)
+        for i in range(0, len(fakes)):
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
+            self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
+
     def test_get_active_by_window_joined(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
         # NOTE(mriedem): Send in a timezone-naive datetime since the

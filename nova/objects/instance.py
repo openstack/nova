@@ -1166,7 +1166,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.16: Added get_all() method
     # Version 1.17: Instance <= version 1.20
     # Version 1.18: Instance <= version 1.21
-    # Version 1.19: Removed get_hung_in_rebooting()
+    # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
     VERSION = '1.19'
 
     fields = {
@@ -1243,6 +1243,14 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         db_instances = db.instance_get_all(
                 context, columns_to_join=_expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_instances,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_hung_in_rebooting(cls, context, reboot_window,
+                              expected_attrs=None):
+        db_inst_list = db.instance_get_all_hung_in_rebooting(context,
+                                                             reboot_window)
+        return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
     @base.remotable_classmethod
