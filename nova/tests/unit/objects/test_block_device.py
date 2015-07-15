@@ -84,10 +84,10 @@ class _TestBlockDeviceMappingObject(object):
         self._test_save(cell_type='compute')
 
     def test_save_instance_changed(self):
-        bdm_object = objects.BlockDeviceMapping()
+        bdm_object = objects.BlockDeviceMapping(context=self.context)
         bdm_object.instance = objects.Instance()
         self.assertRaises(exception.ObjectActionError,
-                          bdm_object.save, self.context)
+                          bdm_object.save)
 
     @mock.patch.object(db, 'block_device_mapping_update', return_value=None)
     def test_save_not_found(self, bdm_update):
@@ -226,16 +226,16 @@ class _TestBlockDeviceMappingObject(object):
         bdm.create()
 
         self.assertRaises(exception.ObjectActionError,
-                          bdm.create, self.context)
+                          bdm.create)
 
     def test_create_fails_instance(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance',
                   'instance': objects.Instance()}
-        bdm = objects.BlockDeviceMapping(**values)
+        bdm = objects.BlockDeviceMapping(context=self.context, **values)
         self.assertRaises(exception.ObjectActionError,
-                          bdm.create, self.context)
+                          bdm.create)
 
     def _test_destroy_mocked(self, cell_type=None):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',

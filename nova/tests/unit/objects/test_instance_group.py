@@ -159,8 +159,7 @@ class _TestInstanceGroupObjects(object):
     def test_recreate_fails(self):
         group = instance_group.InstanceGroup(context=self.context)
         group.create()
-        self.assertRaises(exception.ObjectActionError, group.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, group.create)
 
     def test_destroy(self):
         values = self._get_default_values()
