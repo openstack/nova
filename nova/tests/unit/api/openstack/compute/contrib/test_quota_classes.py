@@ -41,7 +41,6 @@ class QuotaClassSetsTestV21(test.TestCase):
 
     def setUp(self):
         super(QuotaClassSetsTestV21, self).setUp()
-        self.req_admin = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.req = fakes.HTTPRequest.blank('')
         self._setup()
 
@@ -84,12 +83,12 @@ class QuotaClassSetsTestV21(test.TestCase):
         self.assertEqual(qs['security_group_rules'], 20)
         self.assertEqual(qs['key_pairs'], 100)
 
-    def test_quotas_show_as_admin(self):
-        res_dict = self.controller.show(self.req_admin, 'test_class')
+    def test_quotas_show(self):
+        res_dict = self.controller.show(self.req, 'test_class')
 
         self.assertEqual(res_dict, quota_set('test_class'))
 
-    def test_quotas_update_as_admin(self):
+    def test_quotas_update(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
                                     'fixed_ips': -1, 'metadata_items': 128,
@@ -100,7 +99,7 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     'security_group_rules': 20,
                                     'key_pairs': 100}}
 
-        res_dict = self.controller.update(self.req_admin, 'test_class',
+        res_dict = self.controller.update(self.req, 'test_class',
                                           body=body)
 
         self.assertEqual(res_dict, body)
@@ -108,32 +107,32 @@ class QuotaClassSetsTestV21(test.TestCase):
     def test_quotas_update_with_empty_body(self):
         body = {}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
     def test_quotas_update_with_invalid_integer(self):
         body = {'quota_class_set': {'instances': 2 ** 31 + 1}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
         body = {'quota_class_set': {'instances': 50.5}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
         body = {'quota_class_set': {
                 'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
     def test_quotas_update_with_unsupported_quota_class(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'unsupported': 12}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req_admin, 'test_class', body=body)
+                          self.req, 'test_class', body=body)
 
 
 class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
@@ -142,16 +141,18 @@ class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
     def _setup(self):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {}
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.non_admin_req = fakes.HTTPRequest.blank('')
         self.controller = quota_classes.QuotaClassSetsController(ext_mgr)
 
     def test_quotas_show_as_unauthorized_user(self):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
-                          self.req, 'test_class')
+                          self.non_admin_req, 'test_class')
 
     def test_quotas_update_as_user(self):
         body = {'quota_class_set': {}}
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.non_admin_req, 'test_class', body=body)
 
 
 class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
