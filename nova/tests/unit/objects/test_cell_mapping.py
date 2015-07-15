@@ -59,33 +59,33 @@ class _TestCellMappingObject(object):
     def test_create(self, create_in_db):
         uuid = uuidutils.generate_uuid()
         db_mapping = get_db_mapping(uuid=uuid, name='test',
-                database_connection='mysql:///')
+                database_connection='mysql+pymysql:///')
         create_in_db.return_value = db_mapping
         mapping_obj = objects.CellMapping(self.context)
         mapping_obj.uuid = uuid
         mapping_obj.name = 'test'
-        mapping_obj.database_connection = 'mysql:///'
+        mapping_obj.database_connection = 'mysql+pymysql:///'
 
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'uuid': uuid,
                  'name': 'test',
-                 'database_connection': 'mysql:///'})
+                 'database_connection': 'mysql+pymysql:///'})
         self.compare_obj(mapping_obj, db_mapping)
 
     @mock.patch.object(cell_mapping.CellMapping, '_save_in_db')
     def test_save(self, save_in_db):
         uuid = uuidutils.generate_uuid()
-        db_mapping = get_db_mapping(database_connection='mysql:///')
+        db_mapping = get_db_mapping(database_connection='mysql+pymysql:///')
         save_in_db.return_value = db_mapping
         mapping_obj = objects.CellMapping(self.context)
         mapping_obj.uuid = uuid
-        mapping_obj.database_connection = 'mysql:///'
+        mapping_obj.database_connection = 'mysql+pymysql:///'
 
         mapping_obj.save()
         save_in_db.assert_called_once_with(self.context, uuid,
                 {'uuid': uuid,
-                 'database_connection': 'mysql:///'})
+                 'database_connection': 'mysql+pymysql:///'})
         self.compare_obj(mapping_obj, db_mapping)
 
     @mock.patch.object(cell_mapping.CellMapping, '_destroy_in_db')
