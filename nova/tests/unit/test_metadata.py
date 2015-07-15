@@ -528,6 +528,21 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
         self.assertNotIn("random_seed", jsonutils.loads(mdjson))
 
+    def test_project_id(self):
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        mdinst = fake_InstanceMetadata(self.stubs, self.instance)
+
+        # verify that 2015-10-15 has the 'project_id' field
+        mdjson = mdinst.lookup("/openstack/2015-10-15/meta_data.json")
+        mddict = jsonutils.loads(mdjson)
+
+        self.assertIn("project_id", mddict)
+        self.assertEqual(mddict["project_id"], self.instance.project_id)
+
+        # verify that older version do not have it
+        mdjson = mdinst.lookup("/openstack/2013-10-17/meta_data.json")
+        self.assertNotIn("project_id", jsonutils.loads(mdjson))
+
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
         fakes.stub_out_key_pair_funcs(self.stubs)

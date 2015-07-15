@@ -330,6 +330,9 @@ class InstanceMetadata(object):
         if self._check_os_version(GRIZZLY, version):
             metadata['random_seed'] = base64.b64encode(os.urandom(512))
 
+        if self._check_os_version(LIBERTY, version):
+            metadata['project_id'] = self.instance.project_id
+
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return jsonutils.dumps(metadata)
 
