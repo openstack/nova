@@ -6066,7 +6066,7 @@ def _load_missing_flavor(instance, flavor_cache):
 
 
 @require_admin_context
-def migrate_flavor_data(context, max_count, flavor_cache):
+def migrate_flavor_data(context, max_count, flavor_cache, force=False):
     # NOTE(danms): This is only ever run in nova-manage, and we need to avoid
     # a circular import
     from nova import objects
@@ -6093,10 +6093,11 @@ def migrate_flavor_data(context, max_count, flavor_cache):
         # middle of some other operation. This is just a guess and not
         # a lock. There is still a race here, although it's the same
         # race as the normal code, since we use expected_task_state below.
-        if instance.task_state is not None:
-            continue
-        if instance.vm_state in [vm_states.RESCUED, vm_states.RESIZED]:
-            continue
+        if not force:
+            if instance.task_state is not None:
+                continue
+            if instance.vm_state in [vm_states.RESCUED, vm_states.RESIZED]:
+                continue
 
         # NOTE(danms): If we have a really old instance with no flavor
         # information at all, flavor will not have been set during load.
@@ -6120,7 +6121,8 @@ def migrate_flavor_data(context, max_count, flavor_cache):
                                        {'instance_uuid': db_instance['uuid']})
                 LOG.debug(
                     'Created instance_extra for %s' % db_instance['uuid'])
-            instance.save(expected_task_state=[None])
+            instance.save(expected_task_state=[instance.task_state],
+                          expected_vm_state=[instance.vm_state])
             count_hit += 1
 
     return count_all, count_hit
