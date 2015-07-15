@@ -89,10 +89,6 @@ class QuotaClassSetsTestV21(test.TestCase):
 
         self.assertEqual(res_dict, quota_set('test_class'))
 
-    def test_quotas_show_as_unauthorized_user(self):
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
-                          self.req, 'test_class')
-
     def test_quotas_update_as_admin(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
@@ -161,3 +157,27 @@ class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {}
         self.controller = quota_classes.QuotaClassSetsController(ext_mgr)
+
+    def test_quotas_show_as_unauthorized_user(self):
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
+                          self.req, 'test_class')
+
+
+class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(QuotaClassesPolicyEnforcementV21, self).setUp()
+        ext_info = plugins.LoadedExtensionInfo()
+        self.controller = quota_classes_v21.QuotaClassSetsController(
+            extension_info=ext_info)
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_show_policy_failed(self):
+        rule_name = "os_compute_api:os-quota-class-sets:show"
+        self.policy.set_rules({rule_name: "quota_class:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
