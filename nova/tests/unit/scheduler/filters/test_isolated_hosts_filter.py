@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import objects
 from nova.scheduler.filters import isolated_hosts_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -31,13 +32,9 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
                        restrict_isolated_hosts_to_isolated_images)
         host_name = 'isolated_host' if host_in_list else 'free_host'
         image_ref = 'isolated_image' if image_in_list else 'free_image'
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': {'image_ref': image_ref}
-            }
-        }
+        spec_obj = objects.RequestSpec(image=objects.ImageMeta(id=image_ref))
         host = fakes.FakeHostState(host_name, 'node', {})
-        return self.filt_cls.host_passes(host, filter_properties)
+        return self.filt_cls.host_passes(host, spec_obj)
 
     def test_isolated_hosts_fails_isolated_on_non_isolated(self):
         self.assertFalse(self._do_test_isolated_hosts(False, True))

@@ -241,10 +241,10 @@ class TrustedFilter(filters.BaseHostFilter):
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
-        instance_type = filter_properties.get('instance_type', {})
-        extra = instance_type.get('extra_specs', {})
+    def host_passes(self, host_state, spec_obj):
+        instance_type = spec_obj.flavor
+        extra = (instance_type.extra_specs
+                 if 'extra_specs' in instance_type else {})
         trust = extra.get('trust:trusted_host')
         host = host_state.nodename
         if trust:
