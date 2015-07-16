@@ -327,7 +327,7 @@ def _build_shadow_vm_config_spec(session, name, size_kb, disk_type, ds_name):
 
     create_spec = cf.create('ns0:VirtualMachineConfigSpec')
     create_spec.name = name
-    create_spec.guestId = 'otherGuest'
+    create_spec.guestId = constants.DEFAULT_OS_TYPE
     create_spec.numCPUs = 1
     create_spec.memoryMB = 128
     create_spec.deviceChange = [controller_spec, disk_spec]
@@ -479,11 +479,11 @@ def upload_image_stream_optimized(context, image_id, instance, session,
     # Otherwise, the image service client will use the VM's disk capacity
     # which will not be the image size after upload, since it is converted
     # to a stream-optimized sparse disk.
-    image_metadata = {'disk_format': 'vmdk',
+    image_metadata = {'disk_format': constants.DISK_FORMAT_VMDK,
                       'is_public': metadata['is_public'],
                       'name': metadata['name'],
                       'status': 'active',
-                      'container_format': 'bare',
+                      'container_format': constants.CONTAINER_FORMAT_BARE,
                       'size': 0,
                       'properties': {'vmware_image_version': 1,
                                      'vmware_disktype': 'streamOptimized',

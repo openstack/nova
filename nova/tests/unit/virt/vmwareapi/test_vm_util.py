@@ -203,14 +203,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_lsilogic_controller_spec(self):
         # Test controller spec returned for lsiLogic sas adapter type
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
-                          adapter_type="lsiLogicsas")
+                          adapter_type=constants.ADAPTER_TYPE_LSILOGICSAS)
         self.assertEqual("ns0:VirtualLsiLogicSASController",
                          config_spec.device.obj_name)
 
     def test_paravirtual_controller_spec(self):
         # Test controller spec returned for paraVirtual adapter type
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
-                          adapter_type="paraVirtual")
+                          adapter_type=constants.ADAPTER_TYPE_PARAVIRTUAL)
         self.assertEqual("ns0:ParaVirtualSCSIController",
                          config_spec.device.obj_name)
 
@@ -243,7 +243,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', return_value=devices):
             vmdk = vm_util.get_vmdk_info(session, None)
-            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(constants.ADAPTER_TYPE_LSILOGICSAS,
+                             vmdk.adapter_type)
             self.assertEqual('[test_datastore] uuid/ephemeral_0.vmdk',
                              vmdk.path)
             self.assertEqual(512, vmdk.capacity_in_bytes)
@@ -255,7 +256,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', return_value=devices):
             vmdk = vm_util.get_vmdk_info(session, None, uuid='uuid')
-            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(constants.ADAPTER_TYPE_LSILOGICSAS,
+                             vmdk.adapter_type)
             self.assertEqual(n_filename, vmdk.path)
             self.assertEqual(1024, vmdk.capacity_in_bytes)
             self.assertEqual(devices[0], vmdk.device)
@@ -275,12 +277,15 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         # Test for the adapter_type to be used in vmdk descriptor
         # Adapter type in vmdk descriptor is same for LSI-SAS, LSILogic
         # and ParaVirtual
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogic")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogicsas")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("paraVirtual")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.DEFAULT_ADAPTER_TYPE)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.ADAPTER_TYPE_LSILOGICSAS)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.ADAPTER_TYPE_PARAVIRTUAL)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("dummyAdapter")
         self.assertEqual("dummyAdapter", vmdk_adapter_type)
 
@@ -374,9 +379,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         factory = fake.FakeFactory()
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
-                                                            factory,
-                                                            devices,
-                                                            'lsiLogic')
+                                                factory,
+                                                devices,
+                                                constants.DEFAULT_ADAPTER_TYPE)
         self.assertEqual(1000, controller_key)
         self.assertEqual(8, unit_number)
         self.assertIsNone(controller_spec)
@@ -513,7 +518,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         expected.version = None
         expected.memoryMB = 2048
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.extraConfig = []
 
         extra_config = fake_factory.create("ns0:OptionValue")
@@ -547,7 +552,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         expected.deviceChange = []
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.instanceUuid = self._instance.uuid
         expected.memoryMB = self._instance.memory_mb
         expected.name = self._instance.uuid
@@ -611,7 +616,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.type = 'instance'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
 
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.afterPowerOn = True
@@ -661,7 +666,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.extensionKey = 'org.openstack.compute'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
 
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.beforeGuestStandby = True
@@ -709,7 +714,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.type = 'instance'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.beforeGuestStandby = True
         expected.tools.beforeGuestReboot = True

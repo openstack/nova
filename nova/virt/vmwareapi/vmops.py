@@ -732,9 +732,9 @@ class VMwareVMOps(object):
                                     "VirtualMachine", "config.hardware.device")
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
-                                                              client_factory,
-                                                              devices,
-                                                              'ide')
+                                                    client_factory,
+                                                    devices,
+                                                    constants.ADAPTER_TYPE_IDE)
         cdrom_attach_config_spec = vm_util.get_cdrom_attach_config_spec(
                                     client_factory, datastore, file_path,
                                     controller_key, unit_number)

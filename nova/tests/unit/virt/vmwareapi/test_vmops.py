@@ -1339,7 +1339,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake_ds',
                     [],
                     extra_specs,
-                    'otherGuest',
+                    constants.DEFAULT_OS_TYPE,
                     profile_spec=None,
                     metadata='fake-metadata')
             mock_create_vm.assert_called_once_with(
@@ -1559,7 +1559,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                           vi.ii.adapter_type)
             mock_caa.assert_called_once_with(
                 self._instance, 'fake-vm-ref',
-                vi.dc_info, 1 * units.Mi, 'lsiLogic',
+                vi.dc_info, 1 * units.Mi, constants.DEFAULT_ADAPTER_TYPE,
                 '[fake_ds] fake_uuid/ephemeral_0.vmdk')
 
     def test_create_ephemeral_with_bdi_but_no_ephemerals(self):
