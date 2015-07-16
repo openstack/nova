@@ -16,13 +16,14 @@
 Tests for Crypto module.
 """
 
+import base64
 import os
-import StringIO
 
 import mock
 from mox3 import mox
 from oslo_concurrency import processutils
 import paramiko
+import six
 
 from nova import crypto
 from nova import db
@@ -57,18 +58,26 @@ class X509Test(test.TestCase):
             self.flags(ca_path=tmpdir)
             project_id = "fake"
             crypto.ensure_ca_filesystem()
+
             cert = crypto.fetch_ca(project_id)
             public_key = os.path.join(tmpdir, "public.pem")
             with open(public_key, 'w') as keyfile:
                 keyfile.write(cert)
+
             text = "some @#!%^* test text"
+            process_input = text.encode("ascii") if six.PY3 else text
             enc, _err = utils.execute('openssl',
                                      'rsautl',
                                      '-certin',
                                      '-encrypt',
                                      '-inkey', '%s' % public_key,
-                                     process_input=text)
+                                     process_input=process_input,
+                                     binary=True)
+
             dec = crypto.decrypt_text(project_id, enc)
+            self.assertIsInstance(dec, bytes)
+            if six.PY3:
+                dec = dec.decode('ascii')
             self.assertEqual(text, dec)
 
     @mock.patch.object(utils, 'execute',
@@ -224,15 +233,23 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
                                           'rsautl',
                                           '-decrypt',
                                           '-inkey', sshkey,
-                                          process_input=text)
+                                          process_input=text,
+                                          binary=True)
                 return dec
             except processutils.ProcessExecutionError as exc:
                 raise exception.DecryptionFailure(reason=exc.stderr)
 
     def test_ssh_encrypt_decrypt_text(self):
         enc = crypto.ssh_encrypt_text(self.pubkey, self.text)
-        self.assertNotEqual(enc, self.text)
+        self.assertIsInstance(enc, bytes)
+        # Comparison between bytes and str raises a TypeError
+        # when using python3 -bb
+        if six.PY2:
+            self.assertNotEqual(enc, self.text)
         result = self._ssh_decrypt_text(self.prikey, enc)
+        self.assertIsInstance(result, bytes)
+        if six.PY3:
+            result = result.decode('utf-8')
         self.assertEqual(result, self.text)
 
     def test_ssh_encrypt_failure(self):
@@ -346,19 +363,22 @@ class KeyPairTest(test.TestCase):
 
     def test_generate_key_pair_2048_bits(self):
         (private_key, public_key, fingerprint) = crypto.generate_key_pair()
-        raw_pub = public_key.split(' ')[1].decode('base64')
+        raw_pub = public_key.split(' ')[1]
+        if six.PY3:
+            raw_pub = raw_pub.encode('ascii')
+        raw_pub = base64.b64decode(raw_pub)
         pkey = paramiko.rsakey.RSAKey(None, raw_pub)
         self.assertEqual(2048, pkey.get_bits())
 
     def test_generate_key_pair_1024_bits(self):
         bits = 1024
         (private_key, public_key, fingerprint) = crypto.generate_key_pair(bits)
-        raw_pub = public_key.split(' ')[1].decode('base64')
+        raw_pub = base64.b64decode(public_key.split(' ')[1])
         pkey = paramiko.rsakey.RSAKey(None, raw_pub)
         self.assertEqual(bits, pkey.get_bits())
 
     def test_generate_key_pair_mocked_private_key(self):
-        keyin = StringIO.StringIO()
+        keyin = six.StringIO()
         keyin.write(self.rsa_prv)
         keyin.seek(0)
         key = paramiko.RSAKey.from_private_key(keyin)
