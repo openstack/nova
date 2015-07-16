@@ -14,7 +14,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.objects import base
-from nova.objects import CellMapping
+from nova.objects import cell_mapping
 from nova.objects import fields
 
 
@@ -47,8 +47,8 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
                         .filter(api_models.HostMapping.host == self.host)
                         .first())
             if cell_map is not None:
-                return CellMapping._from_db_object(
-                    self._context, CellMapping(), cell_map)
+                return cell_mapping.CellMapping._from_db_object(
+                    self._context, cell_mapping.CellMapping(), cell_map)
 
     def _load_cell_mapping(self):
         self.cell_mapping = self._get_cell_mapping()
@@ -67,8 +67,9 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
                 # when .cell_mapping is accessd later
                 if not db_value:
                     continue
-                db_value = CellMapping._from_db_object(
-                    host_mapping._context, CellMapping(), db_value)
+                db_value = cell_mapping.CellMapping._from_db_object(
+                    host_mapping._context, cell_mapping.CellMapping(),
+                    db_value)
             setattr(host_mapping, key, db_value)
         host_mapping.obj_reset_changes()
         host_mapping._context = context
