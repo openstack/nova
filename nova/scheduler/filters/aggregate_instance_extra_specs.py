@@ -33,22 +33,22 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return a list of hosts that can create instance_type
 
         Check that the extra specs associated with the instance type match
         the metadata provided by aggregates.  If not present return False.
         """
-        instance_type = filter_properties.get('instance_type')
+        instance_type = spec_obj.flavor
         # If 'extra_specs' is not present or extra_specs are empty then we
         # need not proceed further
-        if not instance_type.get('extra_specs'):
+        if (not instance_type.obj_attr_is_set('extra_specs')
+                or not instance_type.extra_specs):
             return True
 
         metadata = utils.aggregate_metadata_get_by_host(host_state)
 
-        for key, req in six.iteritems(instance_type['extra_specs']):
+        for key, req in six.iteritems(instance_type.extra_specs):
             # Either not scope format, or aggregate_instance_extra_specs scope
             scope = key.split(':', 1)
             if len(scope) > 1:

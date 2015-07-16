@@ -12,6 +12,7 @@
 
 import mock
 
+from nova import objects
 from nova.scheduler.filters import aggregate_instance_extra_specs as agg_specs
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -27,28 +28,31 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
     def test_aggregate_filter_passes_no_extra_specs(self, agg_mock):
         capabilities = {'opt1': 1, 'opt2': 2}
 
-        filter_properties = {'context': mock.sentinel.ctx, 'instance_type':
-                {'memory_mb': 1024}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            flavor=objects.Flavor(memory_mb=1024))
         host = fakes.FakeHostState('host1', 'node1', capabilities)
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         self.assertFalse(agg_mock.called)
 
     def test_aggregate_filter_passes_empty_extra_specs(self, agg_mock):
         capabilities = {'opt1': 1, 'opt2': 2}
 
-        filter_properties = {'context': mock.sentinel.ctx, 'instance_type':
-                {'memory_mb': 1024, 'extra_specs': {}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            flavor=objects.Flavor(memory_mb=1024, extra_specs={}))
         host = fakes.FakeHostState('host1', 'node1', capabilities)
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         self.assertFalse(agg_mock.called)
 
     def _do_test_aggregate_filter_extra_specs(self, especs, passes):
-        filter_properties = {'context': mock.sentinel.ctx,
-            'instance_type': {'memory_mb': 1024, 'extra_specs': especs}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            flavor=objects.Flavor(memory_mb=1024, extra_specs=especs))
         host = fakes.FakeHostState('host1', 'node1',
                                    {'free_ram_mb': 1024})
         assertion = self.assertTrue if passes else self.assertFalse
-        assertion(self.filt_cls.host_passes(host, filter_properties))
+        assertion(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_filter_passes_extra_specs_simple(self, agg_mock):
         agg_mock.return_value = {'opt1': '1', 'opt2': '2'}

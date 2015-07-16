@@ -40,16 +40,14 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Checks a host in an aggregate that metadata key/value match
         with image properties.
         """
         cfg_namespace = CONF.aggregate_image_properties_isolation_namespace
         cfg_separator = CONF.aggregate_image_properties_isolation_separator
 
-        spec = filter_properties.get('request_spec', {})
-        image_props = spec.get('image', {}).get('properties', {})
+        image_props = spec_obj.image.properties if spec_obj.image else {}
         metadata = utils.aggregate_metadata_get_by_host(host_state)
 
         for key, options in six.iteritems(metadata):
@@ -57,7 +55,10 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
                     not key.startswith(cfg_namespace + cfg_separator)):
                 continue
             prop = image_props.get(key)
-            if prop and prop not in options:
+            # NOTE(sbauza): Aggregate metadata is only strings, we need to
+            # stringify the property to match with the option
+            # TODO(sbauza): Fix that very ugly pattern matching
+            if prop and str(prop) not in options:
                 LOG.debug("%(host_state)s fails image aggregate properties "
                             "requirements. Property %(prop)s does not "
                             "match %(options)s.",
