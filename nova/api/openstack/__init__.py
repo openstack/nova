@@ -42,8 +42,10 @@ from nova import wsgi as base_wsgi
 
 api_opts = [
         cfg.BoolOpt('enabled',
-                    default=False,
-                    help='Whether the V3 API is enabled or not'),
+                    default=True,
+                    help='DEPRECATED: Whether the V3 API is enabled or not. '
+                    'This option will be removed in the 14.0.0 "N" release.',
+                    deprecated_for_removal=True),
         cfg.ListOpt('extensions_blacklist',
                     default=[],
                     help='A list of v3 API extensions to never load. '
