@@ -366,6 +366,11 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.power_on(self.ctxt, instance_ref, network_info, None)
 
     @catch_notimplementederror
+    def test_inject_nmi(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.inject_nmi(instance_ref)
+
+    @catch_notimplementederror
     def test_soft_delete(self):
         instance_ref, network_info = self._get_running_instance(obj=True)
         self.connection.soft_delete(instance_ref)

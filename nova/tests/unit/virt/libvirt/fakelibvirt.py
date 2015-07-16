@@ -751,6 +751,9 @@ class Domain(object):
     def jobStats(self, flags=0):
         return {}
 
+    def injectNMI(self, flags=0):
+        return 0
+
 
 class DomainSnapshot(object):
     def __init__(self, name, domain):

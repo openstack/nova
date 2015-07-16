@@ -114,6 +114,10 @@ class Guest(object):
         """Stops a running guest."""
         self._domain.destroy()
 
+    def inject_nmi(self):
+        """Injects an NMI to a guest."""
+        self._domain.injectNMI()
+
     def resume(self):
         """Resumes a suspended guest."""
         self._domain.resume()
