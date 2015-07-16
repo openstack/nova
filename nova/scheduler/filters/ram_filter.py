@@ -25,14 +25,12 @@ LOG = logging.getLogger(__name__)
 
 class BaseRamFilter(filters.BaseHostFilter):
 
-    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+    def _get_ram_allocation_ratio(self, host_state, spec_obj):
         raise NotImplementedError
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Only return hosts with sufficient available RAM."""
-        instance_type = filter_properties.get('instance_type')
-        requested_ram = instance_type['memory_mb']
+        requested_ram = spec_obj.memory_mb
         free_ram_mb = host_state.free_ram_mb
         total_usable_ram_mb = host_state.total_usable_ram_mb
 
@@ -48,7 +46,7 @@ class BaseRamFilter(filters.BaseHostFilter):
             return False
 
         ram_allocation_ratio = self._get_ram_allocation_ratio(host_state,
-                                                          filter_properties)
+                                                              spec_obj)
 
         memory_mb_limit = total_usable_ram_mb * ram_allocation_ratio
         used_ram_mb = total_usable_ram_mb - free_ram_mb
@@ -69,7 +67,7 @@ class BaseRamFilter(filters.BaseHostFilter):
 class RamFilter(BaseRamFilter):
     """Ram Filter with over subscription flag."""
 
-    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+    def _get_ram_allocation_ratio(self, host_state, spec_obj):
         return host_state.ram_allocation_ratio
 
 
@@ -79,7 +77,7 @@ class AggregateRamFilter(BaseRamFilter):
     Fall back to global ram_allocation_ratio if no per-aggregate setting found.
     """
 
-    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+    def _get_ram_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'ram_allocation_ratio')

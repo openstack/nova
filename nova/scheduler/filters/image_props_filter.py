@@ -43,9 +43,9 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
 
     def _instance_supported(self, host_state, image_props,
                             hypervisor_version):
-        img_arch = image_props.get('architecture', None)
-        img_h_type = image_props.get('hypervisor_type', None)
-        img_vm_mode = image_props.get('vm_mode', None)
+        img_arch = image_props.get('hw_architecture')
+        img_h_type = image_props.get('img_hv_type')
+        img_vm_mode = image_props.get('hw_vm_mode')
         checked_img_props = (
             arch.canonicalize(img_arch),
             hv_type.canonicalize(img_h_type),
@@ -73,7 +73,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
             return True
 
         def _compare_product_version(hyper_version, image_props):
-            version_required = image_props.get('hypervisor_version_requires')
+            version_required = image_props.get('img_hv_requested_version')
             if not(hypervisor_version and version_required):
                 return True
             img_prop_predicate = versionpredicate.VersionPredicate(
@@ -95,15 +95,13 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
                    'hypervisor_version': hypervisor_version})
         return False
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Check if host passes specified image properties.
 
         Returns True for compute nodes that satisfy image properties
         contained in the request_spec.
         """
-        spec = filter_properties.get('request_spec', {})
-        image_props = spec.get('image', {}).get('properties', {})
+        image_props = spec_obj.image.properties if spec_obj.image else {}
 
         if not self._instance_supported(host_state, image_props,
                                         host_state.hypervisor_version):

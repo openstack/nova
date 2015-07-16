@@ -12,6 +12,7 @@
 
 import six
 
+from nova import objects
 from nova.scheduler.filters import compute_capabilities_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -28,25 +29,26 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         # value may be number, so we should use number to do unit test.
         capabilities = {}
         capabilities.update(ecaps)
-        filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': especs}}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=1024, extra_specs=especs))
         host_state = {'free_ram_mb': 1024}
         host_state.update(capabilities)
         host = fakes.FakeHostState('host1', 'node1', host_state)
         assertion = self.assertTrue if passes else self.assertFalse
-        assertion(self.filt_cls.host_passes(host, filter_properties))
+        assertion(self.filt_cls.host_passes(host, spec_obj))
 
     def test_compute_filter_passes_without_extra_specs(self):
-        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=1024))
         host_state = {'free_ram_mb': 1024}
         host = fakes.FakeHostState('host1', 'node1', host_state)
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_compute_filter_fails_without_host_state(self):
         especs = {'capabilities': '1'}
-        filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': especs}}
-        self.assertFalse(self.filt_cls.host_passes(None, filter_properties))
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=1024, extra_specs=especs))
+        self.assertFalse(self.filt_cls.host_passes(None, spec_obj))
 
     def test_compute_filter_fails_without_capabilites(self):
         cpu_info = """ { } """

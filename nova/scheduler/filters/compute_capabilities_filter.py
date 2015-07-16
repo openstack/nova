@@ -71,7 +71,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if 'extra_specs' not in instance_type:
             return True
 
-        for key, req in six.iteritems(instance_type['extra_specs']):
+        for key, req in six.iteritems(instance_type.extra_specs):
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
             if len(scope) > 1:
@@ -92,10 +92,9 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 return False
         return True
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return a list of hosts that can create instance_type."""
-        instance_type = filter_properties.get('instance_type')
+        instance_type = spec_obj.flavor
         if not self._satisfies_extra_specs(host_state,
                 instance_type):
             LOG.debug("%(host_state)s fails instance_type extra_specs "
