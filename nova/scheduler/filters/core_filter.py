@@ -29,6 +29,7 @@ class BaseCoreFilter(filters.BaseHostFilter):
     def _get_cpu_allocation_ratio(self, host_state, filter_properties):
         raise NotImplementedError
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return True if host has sufficient CPU cores."""
         instance_type = filter_properties.get('instance_type')

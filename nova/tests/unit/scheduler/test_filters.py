@@ -23,6 +23,7 @@ from six.moves import range
 
 from nova import filters
 from nova import loadables
+from nova import objects
 from nova import test
 
 
@@ -46,18 +47,18 @@ class FiltersTestCase(test.NoDBTestCase):
 
     def test_filter_all(self):
         filter_obj_list = ['obj1', 'obj2', 'obj3']
-        filter_properties = 'fake_filter_properties'
+        spec_obj = objects.RequestSpec()
         base_filter = filters.BaseFilter()
 
         self.mox.StubOutWithMock(base_filter, '_filter_one')
 
-        base_filter._filter_one('obj1', filter_properties).AndReturn(True)
-        base_filter._filter_one('obj2', filter_properties).AndReturn(False)
-        base_filter._filter_one('obj3', filter_properties).AndReturn(True)
+        base_filter._filter_one('obj1', spec_obj).AndReturn(True)
+        base_filter._filter_one('obj2', spec_obj).AndReturn(False)
+        base_filter._filter_one('obj3', spec_obj).AndReturn(True)
 
         self.mox.ReplayAll()
 
-        result = base_filter.filter_all(filter_obj_list, filter_properties)
+        result = base_filter.filter_all(filter_obj_list, spec_obj)
         self.assertTrue(inspect.isgenerator(result))
         self.assertEqual(['obj1', 'obj3'], list(result))
 
@@ -67,7 +68,7 @@ class FiltersTestCase(test.NoDBTestCase):
         # call filter_all() with generators returned from previous calls
         # to filter_all().
         filter_obj_list = ['obj1', 'obj2', 'obj3']
-        filter_properties = 'fake_filter_properties'
+        spec_obj = objects.RequestSpec()
         base_filter = filters.BaseFilter()
 
         self.mox.StubOutWithMock(base_filter, '_filter_one')
@@ -83,16 +84,16 @@ class FiltersTestCase(test.NoDBTestCase):
         # After that, 'obj3' gets yielded 'total_iterations' number of
         # times.
         for x in range(total_iterations):
-            base_filter._filter_one('obj1', filter_properties).AndReturn(True)
-        base_filter._filter_one('obj2', filter_properties).AndReturn(False)
+            base_filter._filter_one('obj1', spec_obj).AndReturn(True)
+        base_filter._filter_one('obj2', spec_obj).AndReturn(False)
         for x in range(total_iterations):
-            base_filter._filter_one('obj3', filter_properties).AndReturn(True)
+            base_filter._filter_one('obj3', spec_obj).AndReturn(True)
         self.mox.ReplayAll()
 
         objs = iter(filter_obj_list)
         for x in range(total_iterations):
             # Pass in generators returned from previous calls.
-            objs = base_filter.filter_all(objs, filter_properties)
+            objs = base_filter.filter_all(objs, spec_obj)
         self.assertTrue(inspect.isgenerator(objs))
         self.assertEqual(['obj1', 'obj3'], list(objs))
 
@@ -100,7 +101,7 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_objs_initial = ['initial', 'filter1', 'objects1']
         filter_objs_second = ['second', 'filter2', 'objects2']
         filter_objs_last = ['last', 'filter3', 'objects3']
-        filter_properties = 'fake_filter_properties'
+        spec_obj = objects.RequestSpec()
 
         def _fake_base_loader_init(*args, **kwargs):
             pass
@@ -122,10 +123,10 @@ class FiltersTestCase(test.NoDBTestCase):
 
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
-                              filter_properties).AndReturn(filter_objs_second)
+                              spec_obj).AndReturn(filter_objs_second)
         filt2_mock.run_filter_for_index(0).AndReturn(True)
         filt2_mock.filter_all(filter_objs_second,
-                              filter_properties).AndReturn(filter_objs_last)
+                              spec_obj).AndReturn(filter_objs_last)
 
         self.mox.ReplayAll()
 
@@ -133,7 +134,7 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_mocks = [filt1_mock, filt2_mock]
         result = filter_handler.get_filtered_objects(filter_mocks,
                                                      filter_objs_initial,
-                                                     filter_properties)
+                                                     spec_obj)
         self.assertEqual(filter_objs_last, result)
 
     def test_get_filtered_objects_for_index(self):
@@ -142,7 +143,7 @@ class FiltersTestCase(test.NoDBTestCase):
         """
         filter_objs_initial = ['initial', 'filter1', 'objects1']
         filter_objs_second = ['second', 'filter2', 'objects2']
-        filter_properties = 'fake_filter_properties'
+        spec_obj = objects.RequestSpec()
 
         def _fake_base_loader_init(*args, **kwargs):
             pass
@@ -164,7 +165,7 @@ class FiltersTestCase(test.NoDBTestCase):
 
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
-                              filter_properties).AndReturn(filter_objs_second)
+                              spec_obj).AndReturn(filter_objs_second)
         # return false so filter_all will not be called
         filt2_mock.run_filter_for_index(0).AndReturn(False)
 
@@ -174,11 +175,11 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_mocks = [filt1_mock, filt2_mock]
         filter_handler.get_filtered_objects(filter_mocks,
                                             filter_objs_initial,
-                                            filter_properties)
+                                            spec_obj)
 
     def test_get_filtered_objects_none_response(self):
         filter_objs_initial = ['initial', 'filter1', 'objects1']
-        filter_properties = 'fake_filter_properties'
+        spec_obj = objects.RequestSpec()
 
         def _fake_base_loader_init(*args, **kwargs):
             pass
@@ -200,26 +201,86 @@ class FiltersTestCase(test.NoDBTestCase):
 
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
-                              filter_properties).AndReturn(None)
+                              spec_obj).AndReturn(None)
         self.mox.ReplayAll()
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
         filter_mocks = [filt1_mock, filt2_mock]
         result = filter_handler.get_filtered_objects(filter_mocks,
                                                      filter_objs_initial,
-                                                     filter_properties)
+                                                     spec_obj)
         self.assertIsNone(result)
 
     def test_get_filtered_objects_info_log_none_returned(self):
         LOG = filters.LOG
 
         class FilterA(filters.BaseFilter):
-            def filter_all(self, list_objs, filter_properties):
+            def filter_all(self, list_objs, spec_obj):
                 # return all but the first object
                 return list_objs[1:]
 
         class FilterB(filters.BaseFilter):
-            def filter_all(self, list_objs, filter_properties):
+            def filter_all(self, list_objs, spec_obj):
+                # return an empty list
+                return []
+
+        filter_a = FilterA()
+        filter_b = FilterB()
+        all_filters = [filter_a, filter_b]
+        hosts = ["Host0", "Host1", "Host2"]
+        fake_uuid = "uuid"
+        spec_obj = objects.RequestSpec(instance_uuid=fake_uuid)
+        with mock.patch.object(LOG, "info") as mock_log:
+            result = self.filter_handler.get_filtered_objects(
+                    all_filters, hosts, spec_obj)
+            self.assertFalse(result)
+            # FilterA should leave Host1 and Host2; FilterB should leave None.
+            exp_output = ("['FilterA: (start: 3, end: 2)', "
+                          "'FilterB: (start: 2, end: 0)']")
+            cargs = mock_log.call_args[0][0]
+            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn(exp_output, cargs)
+
+    def test_get_filtered_objects_debug_log_none_returned(self):
+        LOG = filters.LOG
+
+        class FilterA(filters.BaseFilter):
+            def filter_all(self, list_objs, spec_obj):
+                # return all but the first object
+                return list_objs[1:]
+
+        class FilterB(filters.BaseFilter):
+            def filter_all(self, list_objs, spec_obj):
+                # return an empty list
+                return []
+
+        filter_a = FilterA()
+        filter_b = FilterB()
+        all_filters = [filter_a, filter_b]
+        hosts = ["Host0", "Host1", "Host2"]
+        fake_uuid = "uuid"
+        spec_obj = objects.RequestSpec(instance_uuid=fake_uuid)
+        with mock.patch.object(LOG, "debug") as mock_log:
+            result = self.filter_handler.get_filtered_objects(
+                    all_filters, hosts, spec_obj)
+            self.assertFalse(result)
+            # FilterA should leave Host1 and Host2; FilterB should leave None.
+            exp_output = ("[('FilterA', [('Host1', ''), ('Host2', '')]), " +
+                          "('FilterB', None)]")
+            cargs = mock_log.call_args[0][0]
+            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn(exp_output, cargs)
+
+    def test_get_filtered_objects_compatible_with_filt_props_dicts(self):
+        LOG = filters.LOG
+
+        class FilterA(filters.BaseFilter):
+            def filter_all(self, list_objs, spec_obj):
+                # return all but the first object
+                return list_objs[1:]
+
+        class FilterB(filters.BaseFilter):
+            def filter_all(self, list_objs, spec_obj):
                 # return an empty list
                 return []
 
@@ -237,37 +298,6 @@ class FiltersTestCase(test.NoDBTestCase):
             # FilterA should leave Host1 and Host2; FilterB should leave None.
             exp_output = ("['FilterA: (start: 3, end: 2)', "
                           "'FilterB: (start: 2, end: 0)']")
-            cargs = mock_log.call_args[0][0]
-            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
-            self.assertIn(exp_output, cargs)
-
-    def test_get_filtered_objects_debug_log_none_returned(self):
-        LOG = filters.LOG
-
-        class FilterA(filters.BaseFilter):
-            def filter_all(self, list_objs, filter_properties):
-                # return all but the first object
-                return list_objs[1:]
-
-        class FilterB(filters.BaseFilter):
-            def filter_all(self, list_objs, filter_properties):
-                # return an empty list
-                return []
-
-        filter_a = FilterA()
-        filter_b = FilterB()
-        all_filters = [filter_a, filter_b]
-        hosts = ["Host0", "Host1", "Host2"]
-        fake_uuid = "uuid"
-        filt_props = {"request_spec": {"instance_properties": {
-                      "uuid": fake_uuid}}}
-        with mock.patch.object(LOG, "debug") as mock_log:
-            result = self.filter_handler.get_filtered_objects(
-                    all_filters, hosts, filt_props)
-            self.assertFalse(result)
-            # FilterA should leave Host1 and Host2; FilterB should leave None.
-            exp_output = ("[('FilterA', [('Host1', ''), ('Host2', '')]), " +
-                          "('FilterB', None)]")
             cargs = mock_log.call_args[0][0]
             self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
             self.assertIn(exp_output, cargs)

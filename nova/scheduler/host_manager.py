@@ -449,7 +449,7 @@ class HostManager(object):
             raise exception.SchedulerHostFilterNotFound(filter_name=msg)
         return good_filters
 
-    def get_filtered_hosts(self, hosts, filter_properties,
+    def get_filtered_hosts(self, hosts, spec_obj,
             filter_class_names=None, index=0):
         """Filter hosts and return only ones passing all filters."""
 
@@ -499,9 +499,9 @@ class HostManager(object):
             filters = self.default_filters
         else:
             filters = self._choose_host_filters(filter_class_names)
-        ignore_hosts = filter_properties.get('ignore_hosts', [])
-        force_hosts = filter_properties.get('force_hosts', [])
-        force_nodes = filter_properties.get('force_nodes', [])
+        ignore_hosts = spec_obj.ignore_hosts or []
+        force_hosts = spec_obj.force_hosts or []
+        force_nodes = spec_obj.force_nodes or []
 
         if ignore_hosts or force_hosts or force_nodes:
             # NOTE(deva): we can't assume "host" is unique because
@@ -523,12 +523,12 @@ class HostManager(object):
             hosts = six.itervalues(name_to_cls_map)
 
         return self.filter_handler.get_filtered_objects(filters,
-                hosts, filter_properties, index)
+                hosts, spec_obj, index)
 
-    def get_weighed_hosts(self, hosts, weight_properties):
+    def get_weighed_hosts(self, hosts, spec_obj):
         """Weigh the hosts."""
         return self.weight_handler.get_weighed_objects(self.weighers,
-                hosts, weight_properties)
+                hosts, spec_obj)
 
     def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts

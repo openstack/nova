@@ -25,6 +25,7 @@ LOG = logging.getLogger(__name__)
 class ExactCoreFilter(filters.BaseHostFilter):
     """Exact Core Filter."""
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return True if host has the exact number of CPU cores."""
         instance_type = filter_properties.get('instance_type')

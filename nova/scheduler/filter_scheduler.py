@@ -127,23 +127,12 @@ class FilterScheduler(driver.Scheduler):
 
         selected_hosts = []
         num_instances = spec_obj.num_instances
-        # TODO(sbauza): Modify the interfaces for HostManager and filters to
-        # accept the RequestSpec object directly (in a later patch hopefully)
-        filter_properties = spec_obj.to_legacy_filter_properties_dict()
-        # NOTE(sbauza): Adding temporarly some keys since filters are
-        # directly using it - until we provide directly RequestSpec
-        filter_properties.update(
-            {'request_spec': spec_obj.to_legacy_request_spec_dict(),
-             'instance_type': spec_obj.flavor})
-        # TODO(sbauza): Adding two keys not used in-tree but which will be
-        # provided as non-fields for the RequestSpec once we provide it to the
-        # filters
-        filter_properties.update({'context': context,
-                                  'config_options': config_options})
+        # NOTE(sbauza): Adding one field for any out-of-tree need
+        spec_obj.config_options = config_options
         for num in range(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,
-                    filter_properties, index=num)
+                    spec_obj, index=num)
             if not hosts:
                 # Can't get any more locally.
                 break
@@ -151,7 +140,7 @@ class FilterScheduler(driver.Scheduler):
             LOG.debug("Filtered %(hosts)s", {'hosts': hosts})
 
             weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
-                    filter_properties)
+                    spec_obj)
 
             LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
@@ -169,8 +158,10 @@ class FilterScheduler(driver.Scheduler):
             # Now consume the resources so the filter/weights
             # will change for the next instance.
             chosen_host.obj.consume_from_request(spec_obj)
-            if filter_properties.get('group_updated') is True:
-                filter_properties['group_hosts'].add(chosen_host.obj.host)
+            if spec_obj.instance_group is not None:
+                spec_obj.instance_group.hosts.append(chosen_host.obj.host)
+                # hosts has to be not part of the updates when saving
+                spec_obj.instance_group.obj_reset_changes(['hosts'])
         return selected_hosts
 
     def _get_all_host_states(self, context):

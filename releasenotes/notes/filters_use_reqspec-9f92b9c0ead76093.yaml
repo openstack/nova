@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    Filters internal interface changed using now the RequestSpec NovaObject
+    instead of an old filter_properties dictionary.
+    In case you run out-of-tree filters, you need to modify the host_passes()
+    method to accept a new RequestSpec object and modify the filter internals
+    to use that new object. You can see other in-tree filters for getting the
+    logic or ask for help in #openstack-nova IRC channel.

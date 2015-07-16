@@ -35,6 +35,7 @@ class DiskFilter(filters.BaseHostFilter):
     def _get_disk_allocation_ratio(self, host_state, filter_properties):
         return CONF.disk_allocation_ratio
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Filter based on disk usage."""
         instance_type = filter_properties.get('instance_type')

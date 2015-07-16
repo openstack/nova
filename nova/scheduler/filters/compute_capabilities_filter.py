@@ -92,6 +92,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 return False
         return True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can create instance_type."""
         instance_type = filter_properties.get('instance_type')

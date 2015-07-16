@@ -25,6 +25,7 @@ class RetryFilter(filters.BaseHostFilter):
     purposes
     """
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Skip nodes that have already been attempted."""
         retry = filter_properties.get('retry', None)

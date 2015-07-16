@@ -25,6 +25,7 @@ class TypeAffinityFilter(filters.BaseHostFilter):
     (spread) set to 1 (default).
     """
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Dynamically limits hosts to one instance type
 
@@ -48,6 +49,7 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
     # Aggregate data does not change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         instance_type = filter_properties.get('instance_type')
 

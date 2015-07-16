@@ -23,6 +23,7 @@ LOG = logging.getLogger(__name__)
 class ExactRamFilter(filters.BaseHostFilter):
     """Exact RAM Filter."""
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return True if host has the exact amount of RAM available."""
         instance_type = filter_properties.get('instance_type')
