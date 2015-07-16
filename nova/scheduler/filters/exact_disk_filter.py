@@ -23,13 +23,11 @@ LOG = logging.getLogger(__name__)
 class ExactDiskFilter(filters.BaseHostFilter):
     """Exact Disk Filter."""
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact amount of disk available."""
-        instance_type = filter_properties.get('instance_type')
-        requested_disk = (1024 * (instance_type['root_gb'] +
-                                  instance_type['ephemeral_gb']) +
-                          instance_type['swap'])
+        requested_disk = (1024 * (spec_obj.root_gb +
+                                  spec_obj.ephemeral_gb) +
+                          spec_obj.swap)
 
         if requested_disk != host_state.free_disk_mb:
             LOG.debug("%(host_state)s does not have exactly "

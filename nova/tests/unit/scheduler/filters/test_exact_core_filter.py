@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import objects
 from nova.scheduler.filters import exact_core_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -22,24 +23,22 @@ class TestExactCoreFilter(test.NoDBTestCase):
         self.filt_cls = exact_core_filter.ExactCoreFilter()
 
     def test_exact_core_filter_passes(self):
-        filter_properties = {'instance_type': {'vcpus': 1}}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(vcpus=1))
         host = self._get_host({'vcpus_total': 3, 'vcpus_used': 2})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_exact_core_filter_fails(self):
-        filter_properties = {'instance_type': {'vcpus': 2}}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(vcpus=2))
         host = self._get_host({'vcpus_total': 3, 'vcpus_used': 2})
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-
-    def test_exact_core_filter_passes_no_instance_type(self):
-        filter_properties = {}
-        host = self._get_host({'vcpus_total': 3, 'vcpus_used': 2})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_exact_core_filter_fails_host_vcpus_not_set(self):
-        filter_properties = {'instance_type': {'vcpus': 1}}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(vcpus=1))
         host = self._get_host({})
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def _get_host(self, host_attributes):
         return fakes.FakeHostState('host1', 'node1', host_attributes)

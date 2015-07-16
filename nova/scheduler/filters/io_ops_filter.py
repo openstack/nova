@@ -36,17 +36,16 @@ CONF.register_opt(max_io_ops_per_host_opt)
 class IoOpsFilter(filters.BaseHostFilter):
     """Filter out hosts with too many concurrent I/O operations."""
 
-    def _get_max_io_ops_per_host(self, host_state, filter_properties):
+    def _get_max_io_ops_per_host(self, host_state, spec_obj):
         return CONF.max_io_ops_per_host
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Use information about current vm and task states collected from
         compute node statistics to decide whether to filter.
         """
         num_io_ops = host_state.num_io_ops
         max_io_ops = self._get_max_io_ops_per_host(
-            host_state, filter_properties)
+            host_state, spec_obj)
         passes = num_io_ops < max_io_ops
         if not passes:
             LOG.debug("%(host_state)s fails I/O ops check: Max IOs per host "
@@ -62,7 +61,7 @@ class AggregateIoOpsFilter(IoOpsFilter):
     Fall back to global max_io_ops_per_host if no per-aggregate setting found.
     """
 
-    def _get_max_io_ops_per_host(self, host_state, filter_properties):
+    def _get_max_io_ops_per_host(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_io_ops_per_host')

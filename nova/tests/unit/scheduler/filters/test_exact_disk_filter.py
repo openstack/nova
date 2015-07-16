@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import objects
 from nova.scheduler.filters import exact_disk_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -22,26 +23,16 @@ class TestExactDiskFilter(test.NoDBTestCase):
         self.filt_cls = exact_disk_filter.ExactDiskFilter()
 
     def test_exact_disk_filter_passes(self):
-        filter_properties = {
-            'instance_type': {
-                'root_gb': 1,
-                'ephemeral_gb': 1,
-                'swap': 1024
-            }
-        }
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(root_gb=1, ephemeral_gb=1, swap=1024))
         host = self._get_host({'free_disk_mb': 3 * 1024})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_exact_disk_filter_fails(self):
-        filter_properties = {
-            'instance_type': {
-                'root_gb': 1,
-                'ephemeral_gb': 1,
-                'swap': 1024
-            }
-        }
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(root_gb=1, ephemeral_gb=1, swap=1024))
         host = self._get_host({'free_disk_mb': 2 * 1024})
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def _get_host(self, host_attributes):
         return fakes.FakeHostState('host1', 'node1', host_attributes)
