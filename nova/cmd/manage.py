@@ -62,6 +62,7 @@ import urllib
 import decorator
 import netaddr
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
@@ -1251,11 +1252,64 @@ class CellCommands(object):
                 '-' * 5, '-' * 10))
 
 
+class CellV2Commands(object):
+    """Commands for managing cells v2."""
+
+    @args('--cell_uuid', metavar='<cell_uuid>', help='The cell uuid')
+    @args('--limit', metavar='<limit>',
+          help='Maximum number of instances to map')
+    @args('--marker', metavar='<marker',
+          help='The last updated instance UUID')
+    @args('--verbose', metavar='<verbose>',
+          help='Provide output for the registration')
+    def map_instances(self, cell_uuid=None, limit=None,
+                      marker=None, verbose=0):
+        if limit is not None:
+            limit = int(limit)
+            if limit < 0:
+                print('Must supply a positive value for limit')
+                return(1)
+        ctxt = context.get_admin_context(read_deleted='yes')
+        if cell_uuid is None:
+            raise Exception(_("cell_uuid must be set"))
+        else:
+            # Validate the the cell exists
+            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        filters = {}
+        instances = objects.InstanceList.get_by_filters(
+                ctxt, filters, sort_key='created_at', sort_dir='asc',
+                limit=limit, marker=marker)
+        if verbose:
+            fmt = "%s instances retrieved to be mapped to cell %s"
+            print(fmt % (len(instances), cell_uuid))
+
+        mapped = 0
+        for instance in instances:
+            try:
+                mapping = objects.InstanceMapping(ctxt)
+                mapping.instance_uuid = instance.uuid
+                mapping.cell_id = cell_mapping.id
+                mapping.project_id = instance.project_id
+                mapping.create()
+            except db_exc.DBDuplicateEntry:
+                if verbose:
+                    print("%s already mapped to cell" % instance.uuid)
+                continue
+            mapped += 1
+
+        fmt = "%s instances registered to cell %s"
+        print(fmt % (mapped, cell_mapping.uuid))
+        if instances:
+            instance = instances[-1]
+            print('Next marker: - %s' % instance.uuid)
+
+
 CATEGORIES = {
     'account': AccountCommands,
     'agent': AgentBuildCommands,
     'api_db': ApiDbCommands,
     'cell': CellCommands,
+    'cell_v2': CellV2Commands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
     'floating': FloatingIpCommands,
