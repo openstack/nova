@@ -22,7 +22,7 @@
                 }
             ],
             "status": "CURRENT",
-            "version": "2.8",
+            "version": "2.9",
             "min_version": "2.1",
             "updated": "2013-07-23T11:33:21Z"
         }

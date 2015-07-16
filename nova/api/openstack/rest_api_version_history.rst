@@ -100,3 +100,9 @@ user documentation.
 2.8
 ---
   Add 'mks' protocol and 'webmks' type for remote consoles.
+
+2.9
+---
+
+  Show instance lock information in new response attribute 'locked'
+  in server details. Returned value will be True or False.

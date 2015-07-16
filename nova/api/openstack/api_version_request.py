@@ -47,6 +47,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.6 - Consolidate the APIs for getting remote consoles
     * 2.7 - Check flavor type before add tenant access.
     * 2.8 - Add new protocol for VM console (mks)
+    * 2.9 - Exposes lock information in server details.
 """
 
 # The minimum and maximum versions of the API supported
@@ -55,7 +56,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.8"
+_MAX_API_VERSION = "2.9"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 
