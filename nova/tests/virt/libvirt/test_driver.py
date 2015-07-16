@@ -6284,10 +6284,22 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_post_live_migration(self):
         vol = {'block_device_mapping': [
-                  {'connection_info': 'dummy1', 'mount_device': '/dev/sda'},
-                  {'connection_info': 'dummy2', 'mount_device': '/dev/sdb'}]}
+                  {'connection_info': {
+                       'data': {'multipath_id': 'dummy1'},
+                       'serial': 'fake_serial1'},
+                    'mount_device': '/dev/sda',
+                   },
+                  {'connection_info': {
+                       'data': {},
+                       'serial': 'fake_serial2'},
+                    'mount_device': '/dev/sdb', }]}
+
+        def fake_initialize_connection(context, volume_id, connector):
+            return {'data': {}}
+
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
+        fake_connector = {'host': 'fake'}
         inst_ref = {'id': 'foo'}
         cntx = context.get_admin_context()
 
@@ -6295,16 +6307,22 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
             mock.patch.object(driver, 'block_device_info_get_mapping',
                               return_value=vol['block_device_mapping']),
+            mock.patch.object(conn, "get_volume_connector",
+                              return_value=fake_connector),
+            mock.patch.object(conn._volume_api, "initialize_connection",
+                              side_effect=fake_initialize_connection),
             mock.patch.object(conn, '_disconnect_volume')
-        ) as (block_device_info_get_mapping, _disconnect_volume):
+        ) as (block_device_info_get_mapping, get_volume_connector,
+              initialize_connection, _disconnect_volume):
             conn.post_live_migration(cntx, inst_ref, vol)
 
             block_device_info_get_mapping.assert_has_calls([
                 mock.call(vol)])
+            get_volume_connector.assert_has_calls([
+                mock.call(inst_ref)])
             _disconnect_volume.assert_has_calls([
-                mock.call(v['connection_info'],
-                          v['mount_device'].rpartition("/")[2])
-                for v in vol['block_device_mapping']])
+                mock.call({'data': {'multipath_id': 'dummy1'}}, 'sda'),
+                mock.call({'data': {}}, 'sdb')])
 
     def test_get_instance_disk_info_excludes_volumes(self):
         # Test data
