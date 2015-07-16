@@ -33,35 +33,28 @@ class TestDifferentHostFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', {})
         inst1 = objects.Instance(uuid='different')
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                'different_host': ['same'], }}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-
-    def test_affinity_different_filter_no_list_passes(self):
-        host = fakes.FakeHostState('host1', 'node1', {})
-        host.instances = {}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                 'different_host': 'same'}}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(different_host=['same']))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_different_filter_fails(self):
         inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                'different_host': ['same'], }}
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(different_host=['same']))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_different_filter_handles_none(self):
         inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': None}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=None)
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
 
 class TestSameHostFilter(test.NoDBTestCase):
@@ -74,35 +67,28 @@ class TestSameHostFilter(test.NoDBTestCase):
         inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                'same_host': ['same'], }}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-
-    def test_affinity_same_filter_no_list_passes(self):
-        host = fakes.FakeHostState('host1', 'node1', {})
-        host.instances = {}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                 'same_host': 'same'}}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(same_host=['same']))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_same_filter_fails(self):
         inst1 = objects.Instance(uuid='different')
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                'same_host': ['same'], }}
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(same_host=['same']))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_same_filter_handles_none(self):
         inst1 = objects.Instance(uuid='different')
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': None}
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=None)
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
 
 class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
@@ -117,12 +103,13 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
 
         affinity_ip = "10.8.1.100"
 
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                 'cidr': '/24',
-                                 'build_near_host_ip': affinity_ip}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(
+                cidr=['/24'],
+                build_near_host_ip=[affinity_ip]))
 
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_simple_cidr_filter_fails(self):
         host = fakes.FakeHostState('host1', 'node1', {})
@@ -130,12 +117,13 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
 
         affinity_ip = "10.8.1.100"
 
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': {
-                                 'cidr': '/32',
-                                 'build_near_host_ip': affinity_ip}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(
+                cidr=['/32'],
+                build_near_host_ip=[affinity_ip]))
 
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_simple_cidr_filter_handles_none(self):
         host = fakes.FakeHostState('host1', 'node1', {})
@@ -144,25 +132,28 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
         affinity_ip.append('100')
         affinity_ip = str.join('.', affinity_ip)
 
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'scheduler_hints': None}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=None)
 
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
 
 class TestGroupAffinityFilter(test.NoDBTestCase):
 
     def _test_group_anti_affinity_filter_passes(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties = {'group_policies': ['affinity']}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties = {'group_policies': [policy]}
-        filter_properties['group_hosts'] = []
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties['group_hosts'] = ['host2']
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(instance_group=None)
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=['affinity']))
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=[policy]))
+        spec_obj.instance_group.hosts = []
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
+        spec_obj.instance_group.hosts = ['host2']
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
 
     def test_group_anti_affinity_filter_passes(self):
         self._test_group_anti_affinity_filter_passes(
@@ -171,9 +162,10 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
 
     def _test_group_anti_affinity_filter_fails(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_policies': [policy],
-                             'group_hosts': ['host1']}
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=[policy],
+            hosts=['host1']))
+        self.assertFalse(filt_cls.host_passes(host, spec_obj))
 
     def test_group_anti_affinity_filter_fails(self):
         self._test_group_anti_affinity_filter_fails(
@@ -182,13 +174,15 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
 
     def _test_group_affinity_filter_passes(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties = {'group_policies': ['anti-affinity']}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties = {'group_policies': ['affinity'],
-                             'group_hosts': ['host1']}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(instance_group=None)
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=['anti-affinity']))
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=['affinity'],
+            hosts=['host1']))
+        self.assertTrue(filt_cls.host_passes(host, spec_obj))
 
     def test_group_affinity_filter_passes(self):
         self._test_group_affinity_filter_passes(
@@ -196,9 +190,10 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
 
     def _test_group_affinity_filter_fails(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_policies': [policy],
-                             'group_hosts': ['host2']}
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=[policy],
+            hosts=['host2']))
+        self.assertFalse(filt_cls.host_passes(host, spec_obj))
 
     def test_group_affinity_filter_fails(self):
         self._test_group_affinity_filter_fails(
