@@ -346,20 +346,20 @@ class LibvirtQuobyteVolumeDriverTestCase(
                               connection_info,
                               self.disk_info)
 
-    def test_libvirt_quobyte_driver_normalize_url_with_protocol(self):
+    def test_libvirt_quobyte_driver_normalize_export_with_protocol(self):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
         export_string = 'quobyte://192.168.1.1/volume-00001'
-        self.assertEqual(libvirt_driver._normalize_url(export_string),
+        self.assertEqual(libvirt_driver._normalize_export(export_string),
                          "192.168.1.1/volume-00001")
 
-    def test_libvirt_quobyte_driver_normalize_url_without_protocol(self):
+    def test_libvirt_quobyte_driver_normalize_export_without_protocol(self):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1/volume-00001'
-        self.assertEqual(libvirt_driver._normalize_url(export_string),
+        self.assertEqual(libvirt_driver._normalize_export(export_string),
                          "192.168.1.1/volume-00001")
