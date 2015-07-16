@@ -806,8 +806,11 @@ class TestUpdateAvailableResources(BaseTestCase):
 
 class TestInitComputeNode(BaseTestCase):
 
+    @mock.patch('nova.objects.ComputeNode.create')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_no_op_init_compute_node(self, get_mock):
+    def test_no_op_init_compute_node(self, get_mock, service_mock,
+                                     create_mock):
         self._setup_rt()
 
         capi = self.cond_api_mock
@@ -836,9 +839,10 @@ class TestInitComputeNode(BaseTestCase):
         self.assertTrue(self.rt.disabled)
         self.assertIsNone(self.rt.compute_node)
 
+    @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_compute_node_loaded(self, get_mock, service_mock):
+    def test_compute_node_loaded(self, get_mock, service_mock, create_mock):
         self._setup_rt()
 
         def fake_get_node(_ctx, host, node):
