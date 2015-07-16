@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -20,7 +18,7 @@ from nova.i18n import _LE, _LW
 from nova import paths
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
-from nova.virt.libvirt.volume import volume as libvirt_volume
+from nova.virt.libvirt.volume import fs
 
 CONF = cfg.CONF
 CONF.import_opt('qemu_allowed_storage_drivers',
@@ -39,19 +37,11 @@ CONF.register_opts(volume_opts, 'libvirt')
 LOG = logging.getLogger(__name__)
 
 
-class LibvirtGlusterfsVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
+class LibvirtGlusterfsVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for GlusterFS."""
 
-    def __init__(self, connection):
-        """Create back-end to glusterfs."""
-        super(LibvirtGlusterfsVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
-
-    def _get_device_path(self, connection_info):
-        path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-            utils.get_hash_str(connection_info['data']['export']))
-        path = os.path.join(path, connection_info['data']['name'])
-        return path
+    def _get_mount_point_base(self):
+        return CONF.libvirt.glusterfs_mount_point_base
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
@@ -78,10 +68,8 @@ class LibvirtGlusterfsVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         return conf
 
     def connect_volume(self, connection_info, mount_device):
-        data = connection_info['data']
-
         if 'gluster' not in CONF.libvirt.qemu_allowed_storage_drivers:
-            self._ensure_mounted(data['export'], data.get('options'))
+            self._ensure_mounted(connection_info)
             connection_info['data']['device_path'] = \
                 self._get_device_path(connection_info)
 
@@ -91,26 +79,25 @@ class LibvirtGlusterfsVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:
             return
 
-        export = connection_info['data']['export']
-        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  utils.get_hash_str(export))
+        mount_path = self._get_mount_path(connection_info)
 
         try:
             utils.execute('umount', mount_path, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
+            export = connection_info['data']['export']
             if 'target is busy' in exc.message:
                 LOG.debug("The GlusterFS share %s is still in use.", export)
             else:
                 LOG.exception(_LE("Couldn't unmount the GlusterFS share %s"),
                               export)
 
-    def _ensure_mounted(self, glusterfs_export, options=None):
-        """@type glusterfs_export: string
-           @type options: string
+    def _ensure_mounted(self, connection_info):
+        """@type connection_info: dict
         """
-        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  utils.get_hash_str(glusterfs_export))
+        glusterfs_export = connection_info['data']['export']
+        mount_path = self._get_mount_path(connection_info)
         if not libvirt_utils.is_mounted(mount_path, glusterfs_export):
+            options = connection_info['data'].get('options')
             self._mount_glusterfs(mount_path, glusterfs_export,
                                   options, ensure=True)
         return mount_path
