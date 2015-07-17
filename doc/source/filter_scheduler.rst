@@ -301,7 +301,7 @@ The default values for these settings in nova.conf are:
 
 ::
 
-    --scheduler_available_filters=nova.scheduler.filters.standard_filters
+    --scheduler_available_filters=nova.scheduler.filters.all_filters
     --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter'
 
 With this configuration, all filters in ``nova.scheduler.filters``
@@ -322,7 +322,7 @@ settings:
 ::
 
     --scheduler_driver=nova.scheduler.FilterScheduler
-    --scheduler_available_filters=nova.scheduler.filters.standard_filters
+    --scheduler_available_filters=nova.scheduler.filters.all_filters
     --scheduler_available_filters=myfilter.MyFilter
     --scheduler_default_filters=RamFilter,ComputeFilter,MyFilter
 
