@@ -2347,7 +2347,7 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
             <hugepages>
               <page size="2048" unit="KiB" nodeset="2-3"/>
             </hugepages>
-            <nosharedpages/>
+            <nosharepages/>
             <locked/>
           </memoryBacking>""")
 

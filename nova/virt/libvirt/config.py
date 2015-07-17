@@ -1619,7 +1619,7 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
                 hugepages.append(item.format_dom())
             root.append(hugepages)
         if not self.sharedpages:
-            root.append(etree.Element("nosharedpages"))
+            root.append(etree.Element("nosharepages"))
         if self.locked:
             root.append(etree.Element("locked"))
 
