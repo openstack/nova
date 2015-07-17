@@ -463,6 +463,13 @@ def get_machine_ips():
     return addresses
 
 
+def remove_shelved_keys_from_system_metadata(instance):
+    # Delete system_metadata for a shelved instance
+    for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
+        if key in instance.system_metadata:
+            del (instance.system_metadata[key])
+
+
 class EventReporter(object):
     """Context manager to report instance action events."""
 
