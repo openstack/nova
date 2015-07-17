@@ -55,12 +55,15 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     @mock.patch.object(objects.Quotas, 'from_reservations')
     def test_execute(self, quotas_mock, prep_resize_mock,
-                     sel_dest_mock, sig_mock, brs_mock):
+                     sel_dest_mock, spec_fp_mock, sig_mock, brs_mock):
         brs_mock.return_value = self.request_spec
+        fake_spec = objects.RequestSpec()
+        spec_fp_mock.return_value = fake_spec
         sel_dest_mock.return_value = self.hosts
         task = self._generate_task()
 
@@ -71,7 +74,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         sig_mock.assert_called_once_with(self.context, self.request_spec,
                                          self.filter_properties)
         task.scheduler_client.select_destinations.assert_called_once_with(
-            self.context, self.request_spec, self.filter_properties)
+            self.context, fake_spec)
         prep_resize_mock.assert_called_once_with(
             self.context, 'image', self.instance, self.flavor,
             self.hosts[0]['host'], self.reservations,

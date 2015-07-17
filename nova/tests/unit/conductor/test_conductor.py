@@ -818,12 +818,14 @@ class _BaseTaskTestCase(object):
             {'host': None, 'node': expected_node, 'limits': expected_limits})
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
-
+        fake_spec = objects.RequestSpec()
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
+            mock.patch.object(objects.RequestSpec, 'from_primitives',
+                              return_value=fake_spec),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
                               return_value=[{'host': expected_host,
@@ -831,13 +833,13 @@ class _BaseTaskTestCase(object):
                                              'limits': expected_limits}]),
             mock.patch('nova.scheduler.utils.build_request_spec',
                        return_value=request_spec)
-        ) as (rebuild_mock, sig_mock, select_dest_mock, bs_mock):
+        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, bs_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            select_dest_mock.assert_called_once_with(self.context,
-                                                     request_spec,
-                                                     filter_properties)
+            fp_mock.assert_called_once_with(self.context, request_spec,
+                                            filter_properties)
+            select_dest_mock.assert_called_once_with(self.context, fake_spec)
             compute_args['host'] = expected_host
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
@@ -851,25 +853,28 @@ class _BaseTaskTestCase(object):
         rebuild_args, _ = self._prepare_rebuild_args({'host': None})
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
+        fake_spec = objects.RequestSpec()
 
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
+            mock.patch.object(objects.RequestSpec, 'from_primitives',
+                              return_value=fake_spec),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason='')),
             mock.patch('nova.scheduler.utils.build_request_spec',
                        return_value=request_spec)
-        ) as (rebuild_mock, sig_mock, select_dest_mock, bs_mock):
+        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, bs_mock):
             self.assertRaises(exc.NoValidHost,
                               self.conductor_manager.rebuild_instance,
                               context=self.context, instance=inst_obj,
                               **rebuild_args)
-            select_dest_mock.assert_called_once_with(self.context,
-                                                     request_spec,
-                                                     filter_properties)
+            fp_mock.assert_called_once_with(self.context, request_spec,
+                                            filter_properties)
+            select_dest_mock.assert_called_once_with(self.context, fake_spec)
             self.assertFalse(rebuild_mock.called)
 
     @mock.patch('nova.utils.spawn_n')
@@ -1087,6 +1092,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
@@ -1095,7 +1101,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_active_state(
             self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
-            metadata_mock, sig_mock, brs_mock):
+            metadata_mock, spec_fp_mock, sig_mock, brs_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -1109,8 +1115,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
+        fake_spec = objects.RequestSpec()
         metadata_mock.return_value = image
         brs_mock.return_value = request_spec
+        spec_fp_mock.return_value = fake_spec
         exc_info = exc.NoValidHost(reason="")
         select_dest_mock.side_effect = exc_info
         updates = {'vm_state': vm_states.ACTIVE,
@@ -1135,6 +1143,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
@@ -1143,7 +1152,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     def test_cold_migrate_no_valid_host_back_in_stopped_state(
             self, rollback_mock, notify_mock, select_dest_mock, quotas_mock,
-            metadata_mock, sig_mock, brs_mock):
+            metadata_mock, spec_fp_mock, sig_mock, brs_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -1158,9 +1167,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                             image=image)
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
+        fake_spec = objects.RequestSpec()
 
         metadata_mock.return_value = image
         brs_mock.return_value = request_spec
+        spec_fp_mock.return_value = fake_spec
         exc_info = exc.NoValidHost(reason="")
         select_dest_mock.side_effect = exc_info
         updates = {'vm_state': vm_states.STOPPED,
@@ -1259,6 +1270,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(objects.Quotas, 'from_reservations')
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
@@ -1268,7 +1280,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_cold_migrate_exception_host_in_error_state_and_raise(
             self, prep_resize_mock, rollback_mock, notify_mock,
-            select_dest_mock, quotas_mock, metadata_mock, sig_mock, brs_mock):
+            select_dest_mock, quotas_mock, metadata_mock, spec_fp_mock,
+            sig_mock, brs_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -1283,10 +1296,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                             image=image)
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
+        fake_spec = objects.RequestSpec()
 
         hosts = [dict(host='host1', nodename=None, limits={})]
         metadata_mock.return_value = image
         brs_mock.return_value = request_spec
+        spec_fp_mock.return_value = fake_spec
         exc_info = test.TestingException('something happened')
         select_dest_mock.return_value = hosts
 
@@ -1308,7 +1323,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         sig_mock.assert_called_once_with(self.context, request_spec,
                                          filter_props)
         select_dest_mock.assert_called_once_with(
-            self.context, request_spec, filter_props)
+            self.context, fake_spec)
         prep_resize_mock.assert_called_once_with(
             self.context, image, inst_obj, flavor,
             hosts[0]['host'], [resvs],
@@ -1424,11 +1439,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     side_effect=exc.InstanceInfoCacheNotFound(
                         instance_uuid=instances[0].uuid)),
                 mock.patch.object(instances[1], 'refresh'),
+                mock.patch.object(objects.RequestSpec, 'from_primitives'),
                 mock.patch.object(self.conductor_manager.scheduler_client,
                     'select_destinations', return_value=destinations),
                 mock.patch.object(self.conductor_manager.compute_rpcapi,
                     'build_and_run_instance')
-                ) as (inst1_refresh, inst2_refresh, select_destinations,
+                ) as (inst1_refresh, inst2_refresh, from_primitives,
+                        select_destinations,
                         build_and_run_instance):
 
             # build_instances() is a cast, we need to wait for it to complete

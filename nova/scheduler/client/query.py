@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
 
 from nova.scheduler import rpcapi as scheduler_rpcapi
 
@@ -23,15 +24,27 @@ class SchedulerQueryClient(object):
     def __init__(self):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Returns destinations(s) best suited for this request_spec and
         filter_properties.
 
         The result should be a list of dicts with 'host', 'nodename' and
         'limits' as keys.
         """
-        return self.scheduler_rpcapi.select_destinations(
-            context, request_spec, filter_properties)
+        # TODO(sbauza): Provide directly the RequestSpec object as an arg
+        # once the RPC API is modified for that.
+        request_spec = spec_obj.to_legacy_request_spec_dict()
+        filter_properties = spec_obj.to_legacy_filter_properties_dict()
+        # FIXME(sbauza): Serialize/Unserialize the legacy dict because of
+        # oslo.messaging #1529084 to transform datetime values into strings.
+        # tl;dr: datetimes in dicts are not accepted as correct values by the
+        # rpc fake driver.
+        # will be removed in the next patch of that series.
+        # Yeah, that's an ugly hack I know, but that's only for not squashing
+        # both commits.
+        request_spec = jsonutils.loads(jsonutils.dumps(request_spec))
+        return self.scheduler_rpcapi.select_destinations(context, request_spec,
+                                                         filter_properties)
 
     def update_aggregates(self, context, aggregates):
         """Updates HostManager internal aggregates information.

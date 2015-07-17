@@ -398,8 +398,11 @@ class ComputeTaskManager(base.Base):
     def _schedule_instances(self, context, request_spec, filter_properties):
         scheduler_utils.setup_instance_group(context, request_spec,
                                              filter_properties)
-        hosts = self.scheduler_client.select_destinations(context,
-                request_spec, filter_properties)
+        # TODO(sbauza): Hydrate here the object until we modify the
+        # scheduler.utils methods to directly use the RequestSpec object
+        spec_obj = objects.RequestSpec.from_primitives(
+            context, request_spec, filter_properties)
+        hosts = self.scheduler_client.select_destinations(context, spec_obj)
         return hosts
 
     def unshelve_instance(self, context, instance):
