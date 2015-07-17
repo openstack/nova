@@ -433,6 +433,16 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_mks_console(self, context, instance):
+        """Get connection info for a MKS console.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+
+        :returns an instance of console.type.ConsoleMKS
+        """
+        raise NotImplementedError()
+
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics.
 

@@ -299,6 +299,7 @@ class ComputeAPI(object):
         * 4.0  - Remove 3.x compatibility
         * 4.1  - Make prep_resize() and resize_instance() send Flavor object
         * 4.2  - Add migration argument to live_migration()
+        * 4.3  - Added get_mks_console method
     '''
 
     VERSION_ALIASES = {
@@ -489,6 +490,13 @@ class ComputeAPI(object):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_rdp_console',
+                          instance=instance, console_type=console_type)
+
+    def get_mks_console(self, ctxt, instance, console_type):
+        version = '4.3'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.call(ctxt, 'get_mks_console',
                           instance=instance, console_type=console_type)
 
     def get_serial_console(self, ctxt, instance, console_type):

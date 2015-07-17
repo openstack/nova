@@ -254,6 +254,8 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('image_cache_manager_interval', 'nova.virt.imagecache')
 CONF.import_opt('enabled', 'nova.rdp', group='rdp')
 CONF.import_opt('html5_proxy_base_url', 'nova.rdp', group='rdp')
+CONF.import_opt('enabled', 'nova.mks', group='mks')
+CONF.import_opt('mksproxy_base_url', 'nova.mks', group='mks')
 CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
 CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 CONF.import_opt('destroy_after_evacuate', 'nova.utils', group='workarounds')
@@ -648,7 +650,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.2')
+    target = messaging.Target(version='4.3')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -4321,6 +4323,40 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
+    @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
+                                   exception.InstanceNotReady,
+                                   exception.InstanceNotFound,
+                                   exception.ConsoleTypeUnavailable,
+                                   NotImplementedError)
+    @wrap_exception()
+    @wrap_instance_fault
+    def get_mks_console(self, context, console_type, instance):
+        """Return connection information for a MKS console."""
+        context = context.elevated()
+        LOG.debug("Getting MKS console", instance=instance)
+        token = str(uuid.uuid4())
+
+        if not CONF.mks.enabled:
+            raise exception.ConsoleTypeUnavailable(console_type=console_type)
+
+        if console_type == 'webmks':
+            access_url = '%s?token=%s' % (CONF.mks.mksproxy_base_url,
+                                          token)
+        else:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
+        try:
+            # Retrieve connect info from driver, and then decorate with our
+            # access info token
+            console = self.driver.get_mks_console(context, instance)
+            connect_info = console.get_connection_info(token, access_url)
+        except exception.InstanceNotFound:
+            if instance.vm_state != vm_states.BUILDING:
+                raise
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
+
+        return connect_info
+
     @messaging.expected_exceptions(
         exception.ConsoleTypeInvalid,
         exception.InstanceNotReady,
@@ -4369,6 +4405,8 @@ class ComputeManager(manager.Manager):
             console_info = self.driver.get_rdp_console(ctxt, instance)
         elif console_type == "serial":
             console_info = self.driver.get_serial_console(ctxt, instance)
+        elif console_type == "webmks":
+            console_info = self.driver.get_mks_console(ctxt, instance)
         else:
             console_info = self.driver.get_vnc_console(ctxt, instance)
 
@@ -5080,7 +5118,8 @@ class ComputeManager(manager.Manager):
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
         return (CONF.vnc.enabled or CONF.spice.enabled or
-                CONF.rdp.enabled or CONF.serial_console.enabled)
+                CONF.rdp.enabled or CONF.serial_console.enabled or
+                CONF.mks.enabled)
 
     def _clean_instance_console_tokens(self, ctxt, instance):
         """Clean console tokens stored for an instance."""

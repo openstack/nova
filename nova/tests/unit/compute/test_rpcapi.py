@@ -215,6 +215,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, console_type='serial',
                 version='4.0')
 
+    def test_get_mks_console(self):
+        self._test_compute_api('get_mks_console', 'call',
+                instance=self.fake_instance_obj, console_type='webmks',
+                version='4.3')
+
     def test_validate_console_port(self):
         self._test_compute_api('validate_console_port', 'call',
                 instance=self.fake_instance_obj, port="5900",
