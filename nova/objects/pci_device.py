@@ -206,7 +206,8 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1
     # Version 1.1: PciDevice 1.2
-    VERSION = '1.1'
+    # Version 1.2: PciDevice 1.3
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
