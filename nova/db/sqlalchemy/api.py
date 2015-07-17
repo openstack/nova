@@ -1585,9 +1585,9 @@ def _handle_objects_related_type_conversions(values):
     convert_objects_related_datetimes(values, *datetime_keys)
 
 
-def _check_instance_exists(context, session, instance_uuid):
+def _check_instance_exists_in_project(context, session, instance_uuid):
     if not model_query(context, models.Instance, session=session,
-                       read_deleted="no").filter_by(
+                       read_deleted="no", project_only=True).filter_by(
                        uuid=instance_uuid).first():
         raise exception.InstanceNotFound(instance_id=instance_uuid)
 
@@ -6332,7 +6332,7 @@ def instance_tag_add(context, instance_uuid, tag):
 
     try:
         with session.begin(subtransactions=True):
-            _check_instance_exists(context, session, instance_uuid)
+            _check_instance_exists_in_project(context, session, instance_uuid)
             session.add(tag_ref)
     except db_exc.DBDuplicateEntry:
         # NOTE(snikitin): We should ignore tags duplicates
@@ -6345,7 +6345,7 @@ def instance_tag_set(context, instance_uuid, tags):
     session = get_session()
 
     with session.begin(subtransactions=True):
-        _check_instance_exists(context, session, instance_uuid)
+        _check_instance_exists_in_project(context, session, instance_uuid)
 
         existing = session.query(models.Tag.tag).filter_by(
             resource_id=instance_uuid).all()
@@ -6369,7 +6369,7 @@ def instance_tag_get_by_instance_uuid(context, instance_uuid):
     session = get_session()
 
     with session.begin(subtransactions=True):
-        _check_instance_exists(context, session, instance_uuid)
+        _check_instance_exists_in_project(context, session, instance_uuid)
         return session.query(models.Tag).filter_by(
             resource_id=instance_uuid).all()
 
@@ -6378,7 +6378,7 @@ def instance_tag_delete(context, instance_uuid, tag):
     session = get_session()
 
     with session.begin(subtransactions=True):
-        _check_instance_exists(context, session, instance_uuid)
+        _check_instance_exists_in_project(context, session, instance_uuid)
         result = session.query(models.Tag).filter_by(
             resource_id=instance_uuid, tag=tag).delete()
 
@@ -6391,7 +6391,7 @@ def instance_tag_delete_all(context, instance_uuid):
     session = get_session()
 
     with session.begin(subtransactions=True):
-        _check_instance_exists(context, session, instance_uuid)
+        _check_instance_exists_in_project(context, session, instance_uuid)
         session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()
 
 
@@ -6399,7 +6399,7 @@ def instance_tag_exists(context, instance_uuid, tag):
     session = get_session()
 
     with session.begin(subtransactions=True):
-        _check_instance_exists(context, session, instance_uuid)
+        _check_instance_exists_in_project(context, session, instance_uuid)
         q = session.query(models.Tag).filter_by(
             resource_id=instance_uuid, tag=tag)
         return session.query(q.exists()).scalar()
