@@ -151,7 +151,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.15: PciDeviceList 1.1
     # Version 1.16: Added pci_requests
     # Version 1.17: Added tags
-    # Version 1.18: Added flavor, old_flavor, new_flavor
+    # Version 1.18: Added flavor, old_flavor, new_flavor, will use
+    #               PciDeviceList version 1.2
     # Version 1.19: Added vcpu_model
     VERSION = '1.19'
 
@@ -256,7 +257,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'fault': [('1.0', '1.0')],
         'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
         'security_groups': [('1.2', '1.0')],
-        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1')],
+        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
         'numa_topology': [('1.14', '1.0')],
         'pci_requests': [('1.16', '1.1')],
         'tags': [('1.17', '1.0')],
