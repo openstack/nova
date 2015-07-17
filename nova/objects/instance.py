@@ -257,7 +257,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'fault': [('1.0', '1.0')],
         'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
         'security_groups': [('1.2', '1.0')],
-        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
+        # NOTE(danms): We need to continue sending v1.1 whenever we're
+        # asked to backport a thing because our PciDeviceList was broken
+        # in kilo. That way we won't send a newer version than original
+        # kilo nodes can tolerate. See bug:
+        # https://bugs.launchpad.net/nova/+bug/1474074
+        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1')],
         'numa_topology': [('1.14', '1.0')],
         'pci_requests': [('1.16', '1.1')],
         'tags': [('1.17', '1.0')],
