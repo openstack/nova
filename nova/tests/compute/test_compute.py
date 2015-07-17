@@ -2793,6 +2793,7 @@ class ComputeTestCase(BaseTestCase):
             expected = {
                 'swap': None,
                 'ephemerals': [],
+                'root_device_name': None,
                 'block_device_mapping': [{
                     'connection_info': {
                         'driver_volume_type': 'rbd'
@@ -2824,6 +2825,7 @@ class ComputeTestCase(BaseTestCase):
             expected = {
                 'swap': None,
                 'ephemerals': [],
+                'root_device_name': None,
                 'block_device_mapping': [{
                     'connection_info': {
                         'driver_volume_type': 'rbd'
@@ -2888,7 +2890,8 @@ class ComputeTestCase(BaseTestCase):
                                 'virtual_name': 'ephemeral0'},
                                {'device_name': '/dev/vdc', 'num': 1, 'size': 2,
                                 'virtual_name': 'ephemeral1'}],
-                'block_device_mapping': []
+                'block_device_mapping': [],
+                'root_device_name': None
             }
 
             block_device_info = (
@@ -5423,6 +5426,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
         self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
                                                {'swap': None, 'ephemerals': [],
+                                                'root_device_name': None,
                                                 'block_device_mapping': []},
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
@@ -5492,7 +5496,8 @@ class ComputeTestCase(BaseTestCase):
                                  'rollback_live_migration_at_destination')
 
         block_device_info = {
-                'swap': None, 'ephemerals': [], 'block_device_mapping': []}
+                'swap': None, 'ephemerals': [], 'block_device_mapping': [],
+                'root_device_name': None}
         self.compute.driver.get_instance_disk_info(
                 instance.name,
                 block_device_info=block_device_info).AndReturn('fake_disk')
@@ -5668,6 +5673,7 @@ class ComputeTestCase(BaseTestCase):
 
             post_live_migration.assert_has_calls([
                 mock.call(c, instance, {'swap': None, 'ephemerals': [],
+                                        'root_device_name': None,
                                         'block_device_mapping': []}, None)])
             unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
@@ -5826,6 +5832,7 @@ class ComputeTestCase(BaseTestCase):
                                  'rollback_live_migration_at_destination')
         self.compute.driver.rollback_live_migration_at_destination(c,
                 instance, [], {'swap': None, 'ephemerals': [],
+                               'root_device_name': None,
                                'block_device_mapping': []},
                 destroy_disks=True, migrate_data=None)
 
