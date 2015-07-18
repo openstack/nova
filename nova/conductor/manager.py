@@ -343,11 +343,13 @@ class ConductorManager(manager.Manager):
         svc = self.db.service_update(context, service['id'], values)
         return jsonutils.to_primitive(svc)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def task_log_get(self, context, task_name, begin, end, host, state):
         result = self.db.task_log_get(context, task_name, begin, end, host,
                                       state)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def task_log_begin_task(self, context, task_name, begin, end, host,
                             task_items, message):
         result = self.db.task_log_begin_task(context.elevated(), task_name,
@@ -355,6 +357,7 @@ class ConductorManager(manager.Manager):
                                              message)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def task_log_end_task(self, context, task_name, begin, end, host,
                           errors, message):
         result = self.db.task_log_end_task(context.elevated(), task_name,
