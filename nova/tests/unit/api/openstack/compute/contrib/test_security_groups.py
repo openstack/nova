@@ -164,7 +164,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, sg)
+                          self.controller.create, req, {'security_group': sg})
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
