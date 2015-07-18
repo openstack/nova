@@ -1044,7 +1044,7 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
         # 2. Attach VDI to compute worker (VBD hotplug)
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
             # 3. Create partition
-            partition_start = "0"
+            partition_start = "2048s"
             partition_end = "-0"
 
             partition_path = _make_partition(session, dev,
