@@ -327,6 +327,7 @@ class ConductorManager(manager.Manager):
     def service_destroy(self, context, service_id):
         self.db.service_destroy(context, service_id)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     def compute_node_create(self, context, values):
         result = self.db.compute_node_create(context, values)
         return jsonutils.to_primitive(result)

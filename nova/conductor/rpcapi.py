@@ -187,6 +187,7 @@ class ConductorAPI(object):
 
     * 2.2 - Add object_backport_versions()
     * 2.3 - Add object_class_action_versions()
+    * Remove compute_node_create()
     """
 
     VERSION_ALIASES = {
@@ -210,10 +211,6 @@ class ConductorAPI(object):
     def provider_fw_rule_get_all(self, context):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'provider_fw_rule_get_all')
-
-    def compute_node_create(self, context, values):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'compute_node_create', values=values)
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
