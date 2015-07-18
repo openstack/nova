@@ -5465,12 +5465,11 @@ class ComputeManager(manager.Manager):
         if not CONF.instance_usage_audit:
             return
 
-        if compute_utils.has_audit_been_run(context,
-                                            self.conductor_api,
-                                            self.host):
+        begin, end = utils.last_completed_audit_period()
+        if objects.TaskLog.get(context, 'instance_usage_audit', begin, end,
+                               self.host):
             return
 
-        begin, end = utils.last_completed_audit_period()
         instances = objects.InstanceList.get_active_by_window_joined(
             context, begin, end, host=self.host,
             expected_attrs=['system_metadata', 'info_cache', 'metadata'],
@@ -5487,10 +5486,14 @@ class ComputeManager(manager.Manager):
                   'end_time': end,
                   'number_instances': num_instances})
         start_time = time.time()
-        compute_utils.start_instance_usage_audit(context,
-                                      self.conductor_api,
-                                      begin, end,
-                                      self.host, num_instances)
+        task_log = objects.TaskLog(context)
+        task_log.task_name = 'instance_usage_audit'
+        task_log.period_beginning = begin
+        task_log.period_ending = end
+        task_log.host = self.host
+        task_log.task_items = num_instances
+        task_log.message = 'Instance usage audit started...'
+        task_log.begin_task()
         for instance in instances:
             try:
                 compute_utils.notify_usage_exists(
@@ -5503,16 +5506,11 @@ class ComputeManager(manager.Manager):
                                   'on host %s'), self.host,
                               instance=instance)
                 errors += 1
-        compute_utils.finish_instance_usage_audit(context,
-                                      self.conductor_api,
-                                      begin, end,
-                                      self.host, errors,
-                                      "Instance usage audit ran "
-                                      "for host %s, %s instances "
-                                      "in %s seconds." % (
-                                      self.host,
-                                      num_instances,
-                                      time.time() - start_time))
+        task_log.errors = errors
+        task_log.message = (
+            'Instance usage audit ran for host %s, %s instances in %s seconds.'
+            % (self.host, num_instances, time.time() - start_time))
+        task_log.end_task()
 
     @periodic_task.periodic_task(spacing=CONF.bandwidth_poll_interval)
     def _poll_bandwidth_usage(self, context):
