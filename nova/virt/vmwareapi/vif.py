@@ -17,12 +17,12 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import versionutils
 from oslo_vmware import vim_util
 
 from nova import exception
 from nova.i18n import _, _LW
 from nova.network import model
-from nova import utils
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vm_util
@@ -105,9 +105,9 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
 
 def _check_ovs_supported_version(session):
     # The port type 'ovs' is only support by the VC version 5.5 onwards
-    min_version = utils.convert_version_to_int(
+    min_version = versionutils.convert_version_to_int(
         constants.MIN_VC_OVS_VERSION)
-    vc_version = utils.convert_version_to_int(
+    vc_version = versionutils.convert_version_to_int(
         vim_util.get_vc_version(session))
     if vc_version < min_version:
         LOG.warning(_LW('VMware vCenter version less than %(version)s '

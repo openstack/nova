@@ -42,6 +42,7 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import units
+from oslo_utils import versionutils
 import six
 
 from nova import context as nova_context
@@ -561,13 +562,14 @@ class Host(object):
         try:
             if lv_ver is not None:
                 libvirt_version = conn.getLibVersion()
-                if op(libvirt_version, utils.convert_version_to_int(lv_ver)):
+                if op(libvirt_version,
+                      versionutils.convert_version_to_int(lv_ver)):
                     return False
 
             if hv_ver is not None:
                 hypervisor_version = conn.getVersion()
                 if op(hypervisor_version,
-                      utils.convert_version_to_int(hv_ver)):
+                      versionutils.convert_version_to_int(hv_ver)):
                     return False
 
             if hv_type is not None:

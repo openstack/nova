@@ -10,13 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova.scheduler.filters import image_props_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
-from nova import utils
 
 
 class TestImagePropsFilter(test.NoDBTestCase):
@@ -32,7 +33,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
                                     'hypervisor_version_requires': '>=6.0,<6.2'
         }}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -44,7 +45,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
                                     'hypervisor_type': hv_type.QEMU,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -57,7 +58,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
                                     'vm_mode': vm_mode.HVM,
                                     'hypervisor_version_requires': '>=6.2'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'enabled': True,
                         'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
@@ -69,7 +70,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         img_props = {'properties': {'architecture': arch.X86_64,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -80,7 +81,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         img_props = {'properties': {'architecture': arch.X86_64,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.XEN, vm_mode.XEN)],
                         'hypervisor_version': hypervisor_version}
@@ -89,7 +90,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
 
     def test_image_properties_filter_passes_without_inst_props(self):
         filter_properties = {'request_spec': {}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -101,7 +102,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
                                     'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'enabled': True,
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
@@ -136,7 +137,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         # if an old image has 'pv' for a vm_mode it should be treated as xen
         img_props = {'properties': {'vm_mode': 'pv'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.XEN, vm_mode.XEN)],
                         'hypervisor_version': hypervisor_version}
@@ -147,7 +148,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         # if an old image has 'hv' for a vm_mode it should be treated as xen
         img_props = {'properties': {'vm_mode': 'hv'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -158,7 +159,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         # if an old image has 'x86_32' for arch it should be treated as i686
         img_props = {'properties': {'architecture': 'x86_32'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.I686, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -169,7 +170,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         # if an old image has 'xapi' for hv_type it should be treated as xen
         img_props = {'properties': {'hypervisor_type': 'xapi'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.I686, hv_type.XEN, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
@@ -181,7 +182,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         # treated as hvm
         img_props = {'properties': {'vm_mode': 'baremetal'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
                         [(arch.I686, hv_type.BAREMETAL, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}

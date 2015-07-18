@@ -11,11 +11,11 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova.objects import base
 from nova.objects import fields
-from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -47,7 +47,7 @@ class InstancePCIRequest(base.NovaObject,
         return self.is_new
 
     def obj_make_compatible(self, primitive, target_version):
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'request_id' in primitive:
             del primitive['request_id']
 
@@ -66,7 +66,7 @@ class InstancePCIRequests(base.NovaObject,
     }
 
     def obj_make_compatible(self, primitive, target_version):
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'requests' in primitive:
             for index, request in enumerate(self.requests):
                 request.obj_make_compatible(

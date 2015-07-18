@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_utils import timeutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova import exception
@@ -70,7 +71,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
 
     def obj_make_compatible(self, primitive, target_version):
         super(FixedIP, self).obj_make_compatible(primitive, target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 4) and 'default_route' in primitive:
             del primitive['default_route']
 

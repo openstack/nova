@@ -18,12 +18,12 @@ Management class for host-related functions (start, reboot, etc).
 """
 
 from oslo_utils import units
+from oslo_utils import versionutils
 
 from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova import exception
-from nova import utils
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -76,7 +76,7 @@ class VCState(object):
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']
         data["hypervisor_type"] = about_info.name
-        data["hypervisor_version"] = utils.convert_version_to_int(
+        data["hypervisor_version"] = versionutils.convert_version_to_int(
                 str(about_info.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [

@@ -22,6 +22,7 @@ import traceback
 import netaddr
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
 from oslo_versionedobjects import exception as ovoo_exc
 import six
@@ -47,11 +48,11 @@ class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
         # NOTE(danms): This is called when an object is registered,
         # and is responsible for maintaining nova.objects.$OBJECT
         # as the highest-versioned implementation of a given object.
-        version = utils.convert_version_to_tuple(cls.VERSION)
+        version = versionutils.convert_version_to_tuple(cls.VERSION)
         if not hasattr(objects, cls.obj_name()):
             setattr(objects, cls.obj_name(), cls)
         else:
-            cur_version = utils.convert_version_to_tuple(
+            cur_version = versionutils.convert_version_to_tuple(
                 getattr(objects, cls.obj_name()).VERSION)
             if version >= cur_version:
                 setattr(objects, cls.obj_name(), cls)

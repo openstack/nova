@@ -14,6 +14,7 @@
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 import six
 
 from nova import db
@@ -22,7 +23,6 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import pci_device_pool
-from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
@@ -86,7 +86,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
 
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 14):
             if 'ram_allocation_ratio' in primitive:
                 del primitive['ram_allocation_ratio']

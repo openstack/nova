@@ -29,12 +29,12 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
+from oslo_utils import versionutils
 import six
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
@@ -446,7 +446,8 @@ class XenAPIDriver(driver.ComputeDriver):
         total_disk_gb = host_stats['disk_total'] / units.Gi
         used_disk_gb = host_stats['disk_used'] / units.Gi
         allocated_disk_gb = host_stats['disk_allocated'] / units.Gi
-        hyper_ver = utils.convert_version_to_int(self._session.product_version)
+        hyper_ver = versionutils.convert_version_to_int(
+                                                self._session.product_version)
         dic = {'vcpus': host_stats['host_cpu_info']['cpu_count'],
                'memory_mb': total_ram_mb,
                'local_gb': total_disk_gb,
