@@ -6,7 +6,8 @@ hacking<0.11,>=0.10.0
 coverage>=3.6
 discover
 fixtures>=1.3.1
-mock>=1.0
+mock!=1.1.4,>=1.1;python_version!='2.6'
+mock==1.0.1;python_version=='2.6'
 mox3>=0.7.0
 psycopg2
 PyMySQL>=0.6.2 # MIT License
@@ -17,7 +18,7 @@ requests-mock>=0.6.0 # Apache-2.0
 sphinx!=1.2.0,!=1.3b1,<1.3,>=1.1.2
 sphinxcontrib-seqdiag
 oslosphinx>=2.5.0 # Apache-2.0
-oslotest>=1.5.1 # Apache-2.0
+oslotest>=1.7.0 # Apache-2.0
 testrepository>=0.0.18
 testtools>=1.4.0
 tempest-lib>=0.6.1
