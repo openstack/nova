@@ -204,6 +204,11 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if (not self._bdm_obj.source_type == self._valid_source
                 or not self._bdm_obj.destination_type ==
                 self._valid_destination):
+            LOG.error(_LE("Failed to transform: source_type: %(source)s, "
+                      "destination_type: %(dest)s"),
+                      {'source': self._bdm_obj.source_type,
+                       'dest': self._bdm_obj.destination_type}
+                     )
             raise _InvalidType
 
         self.update(
