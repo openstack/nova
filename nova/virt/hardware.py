@@ -570,13 +570,13 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                "threads": allow_threads})
 
     preferred, maximum = _get_cpu_topology_constraints(flavor, image_meta)
-    LOG.debug("Topology preferred %(preferred)s, maximum %(maximum)s" %
+    LOG.debug("Topology preferred %(preferred)s, maximum %(maximum)s",
               {"preferred": preferred, "maximum": maximum})
 
     possible = _get_possible_cpu_topologies(flavor.vcpus,
                                             maximum,
                                             allow_threads)
-    LOG.debug("Possible topologies %s" % possible)
+    LOG.debug("Possible topologies %s", possible)
 
     if numa_topology:
         min_requested_threads = None
@@ -592,16 +592,16 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                                             min_requested_threads)
 
             specified_threads = max(1, min_requested_threads)
-            LOG.debug("Filtering topologies best for %d threads" %
+            LOG.debug("Filtering topologies best for %d threads",
                       specified_threads)
 
             possible = _filter_for_numa_threads(possible,
                                                 specified_threads)
-            LOG.debug("Remaining possible topologies %s" %
+            LOG.debug("Remaining possible topologies %s",
                       possible)
 
     desired = _sort_possible_cpu_topologies(possible, preferred)
-    LOG.debug("Sorted desired topologies %s" % desired)
+    LOG.debug("Sorted desired topologies %s", desired)
     return desired
 
 
