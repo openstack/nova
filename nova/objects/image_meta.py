@@ -25,7 +25,8 @@ from nova.virt import hardware
 class ImageMeta(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: updated ImageMetaProps
-    VERSION = '1.1'
+    # Version 1.2: ImageMetaProps version 1.2
+    VERSION = '1.2'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -59,7 +60,9 @@ class ImageMeta(base.NovaObject):
 
     obj_relationships = {
         'properties': [('1.0', '1.0'),
-                       ('1.1', '1.1')],
+                       ('1.1', '1.1'),
+                       ('1.2', '1.2'),
+                       ],
     }
 
     @classmethod
@@ -106,6 +109,7 @@ class ImageMeta(base.NovaObject):
 class ImageMetaProps(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: added os_require_quiesce field
+    # Version 1.2: added img_hv_type and img_hv_requested_version fields
     VERSION = ImageMeta.VERSION
 
     # Maximum number of NUMA nodes permitted for the guest topology
@@ -242,6 +246,12 @@ class ImageMetaProps(base.NovaObject):
         # Compression level for images. (1-9)
         'img_compression_level': fields.IntegerField(),
 
+        # hypervisor supported version, eg. '>=2.6'
+        'img_hv_requested_version': fields.VersionPredicateField(),
+
+        # type of the hypervisor, eg kvm, ironic, xen
+        'img_hv_type': fields.HVTypeField(),
+
         # boolean flag to set space-saving or performance behavior on the
         # Datastore
         'img_linked_clone': fields.FlexibleBooleanField(),
@@ -318,6 +328,7 @@ class ImageMetaProps(base.NovaObject):
         'block_device_mapping': 'img_block_device_mapping',
         'bdm_v2': 'img_bdm_v2',
         'root_device_name': 'img_root_device_name',
+        'hypervisor_version_requires': 'img_hv_requested_version',
     }
 
     # TODO(berrange): Need to run this from a data migration
