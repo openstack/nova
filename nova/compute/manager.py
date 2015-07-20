@@ -2970,7 +2970,7 @@ class ComputeManager(manager.Manager):
 
         :param context: security context
         :param instance: Instance dict
-        :param backup_type: daily | weekly
+        :param backup_type: a user-defined type, like "daily" or "weekly" etc.
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
