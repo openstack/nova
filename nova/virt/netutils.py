@@ -226,7 +226,7 @@ def get_network_metadata(network_info, use_ipv6=None):
             links.append(link)
 
         # Add IPv4 and IPv6 networks if they exist
-        if subnet_v4.get('ips'):
+        if subnet_v4 and subnet_v4.get('ips'):
             net_num += 1
             nets.append(_get_nets(vif, subnet_v4, 4, net_num, link['id']))
             services += [dns for dns in _get_dns_services(subnet_v4)
