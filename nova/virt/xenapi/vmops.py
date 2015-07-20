@@ -394,6 +394,11 @@ class VMOps(object):
 
         return vdis
 
+    def _update_last_dom_id(self, vm_ref):
+        other_config = self._session.VM.get_other_config(vm_ref)
+        other_config['last_dom_id'] = self._session.VM.get_domid(vm_ref)
+        self._session.VM.set_other_config(vm_ref, other_config)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
               name_label=None, rescue=False):
@@ -553,6 +558,7 @@ class VMOps(object):
             if power_on:
                 self._start(instance, vm_ref)
                 self._wait_for_instance_to_start(instance, vm_ref)
+                self._update_last_dom_id(vm_ref)
 
         @step
         def configure_booted_instance_step(undo_mgr, vm_ref):
@@ -1753,7 +1759,7 @@ class VMOps(object):
 
     def get_console_output(self, instance):
         """Return last few lines of instance console."""
-        dom_id = self._get_dom_id(instance, check_rescue=True)
+        dom_id = self._get_last_dom_id(instance, check_rescue=True)
 
         try:
             raw_console_data = self._session.call_plugin('console',
@@ -2000,6 +2006,13 @@ class VMOps(object):
         if not domid or domid == -1:
             raise exception.InstanceNotFound(instance_id=instance['name'])
         return domid
+
+    def _get_last_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
+        other_config = self._session.call_xenapi("VM.get_other_config", vm_ref)
+        if 'last_dom_id' not in other_config:
+            raise exception.InstanceNotFound(instance_id=instance['name'])
+        return other_config['last_dom_id']
 
     def _add_to_param_xenstore(self, vm_ref, key, val):
         """Takes a key/value pair and adds it to the xenstore parameter
