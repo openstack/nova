@@ -1148,7 +1148,7 @@ class TestMoveClaim(BaseTestCase):
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
         self.instance = _INSTANCE_FIXTURES[0].obj_clone()
-        self.flavor = _INSTANCE_TYPE_FIXTURES[1]
+        self.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1]
         self.limits = {}
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated
@@ -1244,7 +1244,7 @@ class TestMoveClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_create_migration') as migr_mock:
             migr_mock.return_value = migr_obj
             claim = self.rt.resize_claim(self.ctx, self.instance,
-                    _INSTANCE_TYPE_FIXTURES[1], None)
+                    _INSTANCE_TYPE_OBJ_FIXTURES[1], None)
 
         self.audit(self.rt, [self.instance], [migr_obj], self.instance)
         self.assertNotEqual(expected, self.rt.compute_node)

@@ -276,12 +276,12 @@ class MoveClaim(Claim):
 
     @property
     def disk_gb(self):
-        return (self.instance_type['root_gb'] +
-                self.instance_type['ephemeral_gb'])
+        return (self.instance_type.root_gb +
+                self.instance_type.ephemeral_gb)
 
     @property
     def memory_mb(self):
-        return self.instance_type['memory_mb'] + self.overhead['memory_mb']
+        return self.instance_type.memory_mb + self.overhead['memory_mb']
 
     @property
     def numa_topology(self):

@@ -170,7 +170,7 @@ class ResourceTracker(object):
         # get memory overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance_type)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance_type['memory_mb'],
+                  "MB", {'flavor': instance_type.memory_mb,
                           'overhead': overhead['memory_mb']})
 
         claim = claims.MoveClaim(context, instance, instance_type,
@@ -200,7 +200,7 @@ class ResourceTracker(object):
         migration.dest_node = self.nodename
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.old_instance_type_id = instance.flavor.id
-        migration.new_instance_type_id = instance_type['id']
+        migration.new_instance_type_id = instance_type.id
         migration.status = 'pre-migrating'
         migration.instance_uuid = instance.uuid
         migration.source_compute = instance.host
@@ -247,7 +247,7 @@ class ResourceTracker(object):
                         instance['system_metadata'])
 
             if (instance_type is not None and
-                instance_type['id'] == itype['id']):
+                instance_type.id == itype['id']):
                 numa_topology = hardware.numa_get_constraints(
                     itype, image_meta)
                 usage = self._get_usage_dict(

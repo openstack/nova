@@ -3417,11 +3417,11 @@ class ComputeManager(manager.Manager):
             old_vm_state = sys_meta.pop('old_vm_state', vm_states.ACTIVE)
 
             instance.system_metadata = sys_meta
-            instance.memory_mb = instance_type['memory_mb']
-            instance.vcpus = instance_type['vcpus']
-            instance.root_gb = instance_type['root_gb']
-            instance.ephemeral_gb = instance_type['ephemeral_gb']
-            instance.instance_type_id = instance_type['id']
+            instance.memory_mb = instance_type.memory_mb
+            instance.vcpus = instance_type.vcpus
+            instance.root_gb = instance_type.root_gb
+            instance.ephemeral_gb = instance_type.ephemeral_gb
+            instance.instance_type_id = instance_type.id
             instance.host = migration.source_compute
             instance.node = migration.source_node
             instance.save()
@@ -3686,11 +3686,11 @@ class ComputeManager(manager.Manager):
 
     @staticmethod
     def _set_instance_info(instance, instance_type):
-        instance.instance_type_id = instance_type['id']
-        instance.memory_mb = instance_type['memory_mb']
-        instance.vcpus = instance_type['vcpus']
-        instance.root_gb = instance_type['root_gb']
-        instance.ephemeral_gb = instance_type['ephemeral_gb']
+        instance.instance_type_id = instance_type.id
+        instance.memory_mb = instance_type.memory_mb
+        instance.vcpus = instance_type.vcpus
+        instance.root_gb = instance_type.root_gb
+        instance.ephemeral_gb = instance_type.ephemeral_gb
         instance.set_flavor(instance_type)
 
     def _finish_resize(self, context, instance, migration, disk_info,
