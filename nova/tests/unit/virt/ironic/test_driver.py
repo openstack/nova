@@ -21,6 +21,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 import six
+from testtools.matchers import HasLength
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
@@ -499,6 +500,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_inst_by_uuid.assert_has_calls(expected_calls)
         self.assertEqual(['instance-00000000', 'instance-00000001'],
                           sorted(response))
+
+    @mock.patch.object(cw.IronicClientWrapper, 'call')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_list_instances_fail(self, mock_inst_by_uuid, mock_call):
+        mock_call.side_effect = exception.NovaException
+        response = self.driver.list_instances()
+        mock_call.assert_called_with("node.list", associated=True, limit=0)
+        self.assertFalse(mock_inst_by_uuid.called)
+        self.assertThat(response, HasLength(0))
 
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test_list_instance_uuids(self, mock_call):
