@@ -36,6 +36,7 @@ from nova.i18n import _LE
 from nova.i18n import _LW
 from nova import objects
 from nova import quota
+from nova import utils
 
 osapi_opts = [
     cfg.IntOpt('osapi_max_limit',
@@ -220,13 +221,10 @@ def get_pagination_params(request):
 def _get_int_param(request, param):
     """Extract integer param from request or fail."""
     try:
-        int_param = int(request.GET[param])
-    except ValueError:
-        msg = _('%s param must be an integer') % param
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-    if int_param < 0:
-        msg = _('%s param must be positive') % param
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        int_param = utils.validate_integer(request.GET[param], param,
+                                           min_value=0)
+    except exception.InvalidInput as e:
+        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
     return int_param
 
 
@@ -247,25 +245,14 @@ def limited(items, request, max_limit=CONF.osapi_max_limit):
                     will cause exc.HTTPBadRequest() exceptions to be raised.
     :kwarg max_limit: The maximum number of items to return from 'items'
     """
-    try:
-        offset = int(request.GET.get('offset', 0))
-    except ValueError:
-        msg = _('offset param must be an integer')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+    offset = request.GET.get("offset", 0)
+    limit = request.GET.get('limit', max_limit)
 
     try:
-        limit = int(request.GET.get('limit', max_limit))
-    except ValueError:
-        msg = _('limit param must be an integer')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-
-    if limit < 0:
-        msg = _('limit param must be positive')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-
-    if offset < 0:
-        msg = _('offset param must be positive')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        offset = utils.validate_integer(offset, "offset", min_value=0)
+        limit = utils.validate_integer(limit, "limit", min_value=0)
+    except exception.InvalidInput as e:
+        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
