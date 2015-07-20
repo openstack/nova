@@ -459,32 +459,6 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 "maxthreads": 4,
                 "expect": exception.ImageVCPULimitsRangeImpossible,
             },
-            {
-                "allow_threads": True,
-                "specified_threads": 2,
-                "vcpus": 8,
-                "maxsockets": 4,
-                "maxcores": 2,
-                "maxthreads": 4,
-                "expect": [
-                    [4, 1, 2],
-                    [2, 2, 2],
-                ]
-            },
-            {
-                "allow_threads": False,
-                "specified_threads": 2,
-                "vcpus": 8,
-                "maxsockets": 8,
-                "maxcores": 8,
-                "maxthreads": 2,
-                "expect": [
-                    [8, 1, 1],
-                    [4, 2, 1],
-                    [2, 4, 1],
-                    [1, 8, 1],
-                ]
-            },
         ]
 
         for topo_test in testdata:
@@ -496,8 +470,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                                         sockets=topo_test["maxsockets"],
                                         cores=topo_test["maxcores"],
                                         threads=topo_test["maxthreads"]),
-                        topo_test["allow_threads"],
-                        topo_test.get("specified_threads")):
+                        topo_test["allow_threads"]):
                     actual.append([topology.sockets,
                                    topology.cores,
                                    topology.threads])
@@ -511,8 +484,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                                       sockets=topo_test["maxsockets"],
                                       cores=topo_test["maxcores"],
                                       threads=topo_test["maxthreads"]),
-                                  topo_test["allow_threads"],
-                                  topo_test.get("specified_threads"))
+                                  topo_test["allow_threads"])
 
     def test_sorting_topologies(self):
         testdata = [
@@ -590,8 +562,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 objects.VirtCPUTopology(sockets=topo_test["maxsockets"],
                                         cores=topo_test["maxcores"],
                                         threads=topo_test["maxthreads"]),
-                topo_test["allow_threads"],
-                None)
+                topo_test["allow_threads"])
 
             tops = hw._sort_possible_cpu_topologies(
                 possible,
@@ -762,6 +733,46 @@ class VCPUTopologyTest(test.NoDBTestCase):
                             cpu_topology=objects.VirtCPUTopology(
                                 sockets=1, cores=1, threads=4))]),
                 "expect": [2, 1, 2]
+            },
+            {  # NUMA needs threads, but more than limit in flavor - the
+               # least amount of threads which divides into the vcpu
+               # count wins. So with desired 4, max of 3, and
+               # vcpu count of 4, we should get 2 threads.
+                "allow_threads": True,
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_max_sockets": "5",
+                    "hw:cpu_max_cores": "2",
+                    "hw:cpu_max_threads": "3",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "numa_topology": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_topology=objects.VirtCPUTopology(
+                                sockets=1, cores=1, threads=4))]),
+                "expect": [2, 1, 2]
+            },
+            {  # NUMA needs threads, but thread count does not
+               # divide into flavor vcpu count, so we must
+               # reduce thread count to closest divisor
+                "allow_threads": True,
+                "flavor": objects.Flavor(vcpus=6, memory_mb=2048,
+                                         extra_specs={
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "numa_topology": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_topology=objects.VirtCPUTopology(
+                                sockets=1, cores=1, threads=4))]),
+                "expect": [2, 1, 3]
             },
             {  # NUMA needs different number of threads per cell - the least
                # amount of threads wins
