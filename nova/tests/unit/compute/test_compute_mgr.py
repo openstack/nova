@@ -1822,7 +1822,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(reboot_type, 'HARD')
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_id')
-    @mock.patch('nova.compute.manager.ComputeManager._detach_volume')
+    @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')
     @mock.patch('nova.objects.Instance._from_db_object')
     def test_remove_volume_connection(self, inst_from_db, detach, bdm_get):
         bdm = mock.sentinel.bdm
@@ -1833,6 +1833,50 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.remove_volume_connection(self.context, 'vol',
                                                   inst_obj)
         detach.assert_called_once_with(self.context, inst_obj, bdm)
+
+    def test_detach_volume(self):
+        self._test_detach_volume()
+
+    def test_detach_volume_not_destroy_bdm(self):
+        self._test_detach_volume(destroy_bdm=False)
+
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_id')
+    @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.conductor.manager.ConductorManager.vol_usage_update')
+    def _test_detach_volume(self, vol_usage_update, notify_inst_usage, detach,
+                            bdm_get, destroy_bdm=True):
+        volume_id = '123'
+        inst_obj = mock.sentinel.inst_obj
+
+        bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        bdm.device_name = 'vdb'
+        bdm_get.return_value = bdm
+
+        with mock.patch.object(self.compute, 'volume_api') as volume_api:
+            with mock.patch.object(self.compute, 'driver') as driver:
+                connector_sentinel = mock.sentinel.connector
+                driver.get_volume_connector.return_value = connector_sentinel
+
+                self.compute._detach_volume(self.context, volume_id,
+                                            inst_obj,
+                                            destroy_bdm=destroy_bdm)
+
+                detach.assert_called_once_with(self.context, inst_obj, bdm)
+                driver.get_volume_connector.assert_called_once_with(inst_obj)
+                volume_api.terminate_connection.assert_called_once_with(
+                    self.context, volume_id, connector_sentinel)
+                volume_api.detach.assert_called_once_with(mock.ANY, volume_id)
+                notify_inst_usage.assert_called_once_with(
+                    self.context, inst_obj, "volume.detach",
+                    extra_usage_info={'volume_id': volume_id}
+                )
+
+                if destroy_bdm:
+                    bdm.destroy.assert_called_once_with()
+                else:
+                    self.assertFalse(bdm.destroy.called)
 
     def _test_rescue(self, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
