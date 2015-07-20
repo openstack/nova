@@ -13,6 +13,7 @@
 #    under the License.
 
 from collections import OrderedDict
+from distutils import versionpredicate
 
 import netaddr
 from oslo_utils import strutils
@@ -362,6 +363,19 @@ class MonitorMetricType(Enum):
             valid_values=MonitorMetricType.ALL)
 
 
+# NOTE(sbauza): Remove this on next release of oslo.versionedobjects
+class VersionPredicate(fields.String):
+    @staticmethod
+    def coerce(obj, attr, value):
+        try:
+            versionpredicate.VersionPredicate('check (%s)' % value)
+        except ValueError:
+            raise ValueError(_('Version %(val)s is not a valid predicate in '
+                               'field %(attr)s') %
+                             {'val': value, 'attr': attr})
+        return value
+
+
 # NOTE(danms): Remove this on next release of oslo.versionedobjects
 class FlexibleBoolean(fields.Boolean):
     @staticmethod
@@ -627,6 +641,11 @@ class WatchdogActionField(BaseEnumField):
 
 class MonitorMetricTypeField(BaseEnumField):
     AUTO_TYPE = MonitorMetricType()
+
+
+# FIXME(sbauza): Remove this after oslo.versionedobjects gets it
+class VersionPredicateField(AutoTypedField):
+    AUTO_TYPE = VersionPredicate()
 
 
 # FIXME(danms): Remove this after oslo.versionedobjects gets it
