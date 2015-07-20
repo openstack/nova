@@ -750,7 +750,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def service_delete(self, message, service_id):
         """Deletes the specified service."""
-        self.host_api.service_delete(message.ctxt, service_id)
+        self.host_api._service_delete(message.ctxt, service_id)
 
     def proxy_rpc_to_manager(self, message, host_name, rpc_message,
                              topic, timeout):

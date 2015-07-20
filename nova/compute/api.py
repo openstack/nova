@@ -3391,9 +3391,13 @@ class HostAPI(base.Base):
         service.save()
         return service
 
+    def _service_delete(self, context, service_id):
+        """Performs the actual Service deletion operation."""
+        objects.Service.get_by_id(context, service_id).destroy()
+
     def service_delete(self, context, service_id):
         """Deletes the specified service."""
-        objects.Service.get_by_id(context, service_id).destroy()
+        self._service_delete(context, service_id)
 
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
