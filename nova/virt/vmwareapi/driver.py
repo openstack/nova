@@ -360,6 +360,9 @@ class VMwareVCDriver(driver.ComputeDriver):
         # itself. You must talk to the VNC host underneath vCenter.
         return self._vmops.get_vnc_console(instance)
 
+    def get_mks_console(self, context, instance):
+        return self._vmops.get_mks_console(instance)
+
     def _update_resources(self):
         """This method creates a dictionary of VMOps, VolumeOps and VCState.
 

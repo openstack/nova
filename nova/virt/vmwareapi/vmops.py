@@ -27,6 +27,7 @@ import decorator
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import units
@@ -1847,3 +1848,16 @@ class VMwareVMOps(object):
                   {'uuid': instance.uuid, 'host_name': host_name},
                   instance=instance)
         return ctype.ConsoleVNC(**vnc_console)
+
+    def get_mks_console(self, instance):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        ticket = self._session._call_method(self._session.vim,
+                                            'AcquireTicket',
+                                            vm_ref,
+                                            ticketType='mks')
+        thumbprint = ticket.sslThumbprint.replace(':', '').lower()
+        mks_auth = {'ticket': ticket.ticket,
+                    'cfgFile': ticket.cfgFile,
+                    'thumbprint': thumbprint}
+        internal_access_path = jsonutils.dumps(mks_auth)
+        return ctype.ConsoleMKS(ticket.host, ticket.port, internal_access_path)
