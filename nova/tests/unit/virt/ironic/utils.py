@@ -39,6 +39,7 @@ def get_test_node(**kw):
                                                  ironic_states.NOSTATE),
                 'last_error': kw.get('last_error'),
                 'instance_uuid': kw.get('instance_uuid'),
+                'instance_info': kw.get('instance_info'),
                 'driver': kw.get('driver', 'fake'),
                 'driver_info': kw.get('driver_info', {}),
                 'properties': kw.get('properties', {}),

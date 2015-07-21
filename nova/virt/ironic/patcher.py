@@ -64,6 +64,12 @@ class GenericDriverFields(object):
                       'value': str(flavor['swap'])})
         patch.append({'path': '/instance_info/display_name',
                       'op': 'add', 'value': instance.display_name})
+        patch.append({'path': '/instance_info/vcpus', 'op': 'add',
+                      'value': str(instance.vcpus)})
+        patch.append({'path': '/instance_info/memory_mb', 'op': 'add',
+                      'value': str(instance.memory_mb)})
+        patch.append({'path': '/instance_info/local_gb', 'op': 'add',
+                      'value': str(self.node.properties.get('local_gb', 0))})
 
         if instance.ephemeral_gb:
             patch.append({'path': '/instance_info/ephemeral_gb',

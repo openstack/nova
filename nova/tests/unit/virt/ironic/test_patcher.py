@@ -32,19 +32,31 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         self.flavor = ironic_utils.get_test_flavor()
         self.ctx = nova_context.get_admin_context()
         self.instance = fake_instance.fake_instance_obj(self.ctx)
+        self.node = ironic_utils.get_test_node(driver='fake')
         # Generic expected patches
-        self._expected_deploy_patch = [{'path': '/instance_info/image_source',
-                                        'value': self.image_meta['id'],
-                                        'op': 'add'},
-                                       {'path': '/instance_info/root_gb',
-                                        'value': str(self.instance['root_gb']),
-                                        'op': 'add'},
-                                       {'path': '/instance_info/swap_mb',
-                                        'value': str(self.flavor['swap']),
-                                        'op': 'add'},
-                                       {'path': '/instance_info/display_name',
-                                        'value': self.instance['display_name'],
-                                        'op': 'add'}]
+        self._expected_deploy_patch = [
+            {'path': '/instance_info/image_source',
+             'value': self.image_meta['id'],
+             'op': 'add'},
+            {'path': '/instance_info/root_gb',
+             'value': str(self.instance['root_gb']),
+             'op': 'add'},
+            {'path': '/instance_info/swap_mb',
+             'value': str(self.flavor['swap']),
+             'op': 'add'},
+            {'path': '/instance_info/display_name',
+             'value': self.instance['display_name'],
+             'op': 'add'},
+            {'path': '/instance_info/vcpus',
+             'value': str(self.instance['vcpus']),
+             'op': 'add'},
+            {'path': '/instance_info/memory_mb',
+             'value': str(self.instance['memory_mb']),
+             'op': 'add'},
+            {'path': '/instance_info/local_gb',
+             'value': str(self.node.properties.get('local_gb', 0)),
+             'op': 'add'}
+        ]
         self._expected_cleanup_patch = []
 
     def test_create_generic(self):
