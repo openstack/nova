@@ -446,6 +446,7 @@ class VMOps(object):
             if self._vmutils.vm_exists(instance_name):
 
                 # Stop the VM first.
+                self._vmutils.stop_vm_jobs(instance_name)
                 self.power_off(instance)
 
                 self._vmutils.destroy_vm(instance_name)
