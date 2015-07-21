@@ -2682,19 +2682,24 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertIsInstance(instance['access_ip_v4'], six.string_types)
         self.assertIsInstance(instance['access_ip_v6'], six.string_types)
 
-    def test_instance_destroy(self):
+    @mock.patch('nova.db.sqlalchemy.api._check_instance_exists',
+                return_value=None)
+    def test_instance_destroy(self, mock_check_inst_exists):
         ctxt = context.get_admin_context()
         values = {
             'metadata': {'key': 'value'},
             'system_metadata': {'key': 'value'}
         }
         inst_uuid = self.create_instance_with_args(**values)['uuid']
+        db.instance_tag_set(ctxt, inst_uuid, ['tag1', 'tag2'])
         db.instance_destroy(ctxt, inst_uuid)
 
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_get, ctxt, inst_uuid)
         self.assertIsNone(db.instance_info_cache_get(ctxt, inst_uuid))
         self.assertEqual({}, db.instance_metadata_get(ctxt, inst_uuid))
+        self.assertEqual([], db.instance_tag_get_by_instance_uuid(
+            ctxt, inst_uuid))
         ctxt.read_deleted = 'yes'
         self.assertEqual(values['system_metadata'],
                          db.instance_system_metadata_get(ctxt, inst_uuid))

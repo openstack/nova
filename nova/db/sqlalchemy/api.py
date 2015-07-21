@@ -1711,6 +1711,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
         model_query(context, models.InstanceSystemMetadata, session=session).\
                 filter_by(instance_uuid=instance_uuid).\
                 soft_delete()
+        # NOTE(snikitin): We can't use model_query here, because there is no
+        # column 'deleted' in 'tags' table.
+        session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()
 
     return instance_ref
 
