@@ -247,7 +247,7 @@ class VPNPingTestCase(test.NoDBTestCase):
     def fake_reply_packet(self, pkt_id=0x40):
         return struct.pack(self.fmt, pkt_id, 0x0, self.session_id)
 
-    def setup_socket(sefl, mock_socket, return_value, side_effect=None):
+    def setup_socket(self, mock_socket, return_value, side_effect=None):
         socket_obj = mock.MagicMock()
         if side_effect is not None:
             socket_obj.recv.side_effect = side_effect
