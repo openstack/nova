@@ -80,14 +80,16 @@ def notify_decorator(name, fn):
         for key in kwarg:
             body['kwarg'][key] = kwarg[key]
 
-        ctxt = common_context.get_context_from_function_and_args(
-            fn, args, kwarg)
+        ctxt = (common_context.get_context_from_function_and_args(
+                    fn, args, kwarg) or
+                common_context.get_current() or
+                nova.context.RequestContext())
 
         notifier = rpc.get_notifier('api',
                                     publisher_id=(CONF.default_publisher_id
                                                   or CONF.host))
-        method = notifier.getattr(CONF.default_notification_level.lower(),
-                                  'info')
+        method = getattr(notifier, CONF.default_notification_level.lower(),
+                         'info')
         method(ctxt, name, body)
 
         return fn(*args, **kwarg)

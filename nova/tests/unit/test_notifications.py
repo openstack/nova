@@ -70,6 +70,8 @@ class NotificationsTestCase(test.TestCase):
 
         self.instance = self._wrapped_create()
 
+        self.decorated_function_called = False
+
     def _wrapped_create(self, params=None):
         instance_type = flavors.get_flavor_by_name('m1.tiny')
         inst = objects.Instance(image_ref=1,
@@ -461,6 +463,28 @@ class NotificationsTestCase(test.TestCase):
                 task_states.NETWORKING, new_task_state=None)
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
         self.assertEqual(0, mock_log_exception.call_count)
+
+    def _decorated_function(self, arg1, arg2):
+        self.decorated_function_called = True
+
+    def test_notify_decorator(self):
+        func_name = self._decorated_function.__name__
+
+        # Decorated with notify_decorator like monkey_patch
+        self._decorated_function = notifications.notify_decorator(
+            func_name,
+            self._decorated_function)
+
+        ctxt = o_context.RequestContext()
+
+        self._decorated_function(1, ctxt)
+
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        n = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(n.priority, 'INFO')
+        self.assertEqual(n.event_type, func_name)
+        self.assertEqual(n.context, ctxt)
+        self.assertTrue(self.decorated_function_called)
 
 
 class NotificationsFormatTestCase(test.NoDBTestCase):
