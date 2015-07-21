@@ -97,21 +97,6 @@ dict_constructor_with_list_copy_re = re.compile(r".*\bdict\((\[)?(\(|\[)")
 decorator_re = re.compile(r"@.*")
 http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")
 
-# TODO(dims): When other oslo libraries switch over non-namespace'd
-# imports, we need to add them to the regexp below.
-oslo_namespace_imports = re.compile(r"from[\s]*oslo[.]"
-                                    r"(concurrency|config|context|db|i18n|"
-                                    r"log|messaging|middleware|rootwrap|"
-                                    r"serialization|utils|vmware)")
-oslo_namespace_imports_2 = re.compile(r"from[\s]*oslo[\s]*import[\s]*"
-                                    r"(concurrency|config|context|db|i18n|"
-                                    r"log|messaging|middleware|rootwrap|"
-                                    r"serialization|utils|vmware)")
-oslo_namespace_imports_3 = re.compile(r"import[\s]*oslo\."
-                                    r"(concurrency|config|context|db|i18n|"
-                                    r"log|messaging|middleware|rootwrap|"
-                                    r"serialization|utils|vmware)")
-
 
 class BaseASTChecker(ast.NodeVisitor):
     """Provides a simple framework for writing AST-based checks.
@@ -475,24 +460,6 @@ class CheckForTransAdd(BaseASTChecker):
         super(CheckForTransAdd, self).generic_visit(node)
 
 
-def check_oslo_namespace_imports(logical_line, blank_before, filename):
-    if re.match(oslo_namespace_imports, logical_line):
-        msg = ("N333: '%s' must be used instead of '%s'.") % (
-               logical_line.replace('oslo.', 'oslo_'),
-               logical_line)
-        yield(0, msg)
-    match = re.match(oslo_namespace_imports_2, logical_line)
-    if match:
-        msg = ("N333: 'module %s should not be imported "
-               "from oslo namespace.") % match.group(1)
-        yield(0, msg)
-    match = re.match(oslo_namespace_imports_3, logical_line)
-    if match:
-        msg = ("N333: 'module %s should not be imported "
-               "from oslo namespace.") % match.group(1)
-        yield(0, msg)
-
-
 def assert_true_or_false_with_in(logical_line):
     """Check for assertTrue/False(A in B), assertTrue/False(A not in B),
     assertTrue/False(A in B, message) or assertTrue/False(A not in B, message)
@@ -574,7 +541,6 @@ def factory(register):
     register(check_api_version_decorator)
     register(CheckForStrUnicodeExc)
     register(CheckForTransAdd)
-    register(check_oslo_namespace_imports)
     register(assert_true_or_false_with_in)
     register(dict_constructor_with_list_copy)
     register(assert_equal_in)
