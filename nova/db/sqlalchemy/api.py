@@ -5880,7 +5880,6 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
             raise exception.TaskNotRunning(task_name=task_name, host=host)
 
 
-@require_admin_context
 def archive_deleted_rows_for_table(context, tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table. The context argument is only used for the decorator.
@@ -5949,7 +5948,6 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     return rows_archived
 
 
-@require_admin_context
 def archive_deleted_rows(context, max_rows=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
