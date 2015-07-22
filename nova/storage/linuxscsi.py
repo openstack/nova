@@ -16,9 +16,9 @@
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_service import loopingcall
 
 from nova.i18n import _LW
-from nova.openstack.common import loopingcall
 from nova import utils
 
 import os

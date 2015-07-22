@@ -37,6 +37,7 @@ import netaddr
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_service import periodic_task
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import netutils
@@ -58,7 +59,6 @@ from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
-from nova.openstack.common import periodic_task
 from nova import servicegroup
 from nova import utils
 

@@ -19,6 +19,7 @@ from ironicclient import exc as ironic_exception
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
 from oslo_utils import uuidutils
 import six
 from testtools.matchers import HasLength
@@ -30,7 +31,6 @@ from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova import objects
-from nova.openstack.common import loopingcall
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import utils

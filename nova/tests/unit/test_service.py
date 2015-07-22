@@ -24,12 +24,12 @@ import mock
 from mox3 import mox
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_service import service as _service
 import testtools
 
 from nova import exception
 from nova import manager
 from nova import objects
-from nova.openstack.common import service as _service
 from nova import rpc
 from nova import service
 from nova import test
@@ -341,14 +341,16 @@ class TestLauncher(test.NoDBTestCase):
     def test_launch_app(self, mock_launch):
         service._launcher = None
         service.serve(mock.sentinel.service)
-        mock_launch.assert_called_once_with(mock.sentinel.service,
+        mock_launch.assert_called_once_with(mock.ANY,
+                                            mock.sentinel.service,
                                             workers=None)
 
     @mock.patch.object(_service, 'launch')
     def test_launch_app_with_workers(self, mock_launch):
         service._launcher = None
         service.serve(mock.sentinel.service, workers=mock.sentinel.workers)
-        mock_launch.assert_called_once_with(mock.sentinel.service,
+        mock_launch.assert_called_once_with(mock.ANY,
+                                            mock.sentinel.service,
                                             workers=mock.sentinel.workers)
 
     @mock.patch.object(_service, 'launch')

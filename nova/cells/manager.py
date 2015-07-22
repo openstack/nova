@@ -22,6 +22,7 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
+from oslo_service import periodic_task
 from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
@@ -37,7 +38,6 @@ from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import periodic_task
 
 cell_manager_opts = [
         cfg.StrOpt('driver',

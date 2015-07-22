@@ -53,9 +53,9 @@ This module provides Manager, a base class for managers.
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import periodic_task
 
 from nova.db import base
-from nova.openstack.common import periodic_task
 from nova import rpc
 
 
@@ -64,7 +64,12 @@ CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 
-class Manager(base.Base, periodic_task.PeriodicTasks):
+class PeriodicTasks(periodic_task.PeriodicTasks):
+    def __init__(self):
+        super(PeriodicTasks, self).__init__(CONF)
+
+
+class Manager(base.Base, PeriodicTasks):
 
     def __init__(self, host=None, db_driver=None, service_name='undefined'):
         if not host:

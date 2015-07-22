@@ -24,6 +24,7 @@ from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import sslutils
 from oslo_utils import importutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
@@ -80,7 +81,7 @@ ec2_opts = [
 CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-CONF.import_group('ssl', 'nova.openstack.common.sslutils')
+sslutils.is_enabled(CONF)
 
 
 # Fault Wrapper around all EC2 requests

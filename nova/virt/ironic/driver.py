@@ -30,6 +30,7 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
 import six
@@ -48,7 +49,6 @@ from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import objects
-from nova.openstack.common import loopingcall
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
