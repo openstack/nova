@@ -479,32 +479,34 @@ class HypervisorsTestV2(HypervisorsTestV21):
                           self.TEST_HYPERS_OBJ[0].id)
 
 
+_CELL_PATH = 'cell1'
+
+
 class CellHypervisorsTestV21(HypervisorsTestV21):
-    cell_path = 'cell1'
-    TEST_HYPERS_OBJ = [cells_utils.ComputeNodeProxy(obj, cell_path)
+    TEST_HYPERS_OBJ = [cells_utils.ComputeNodeProxy(obj, _CELL_PATH)
                        for obj in TEST_HYPERS_OBJ]
-    TEST_SERVICES = [cells_utils.ServiceProxy(obj, cell_path)
+    TEST_SERVICES = [cells_utils.ServiceProxy(obj, _CELL_PATH)
                      for obj in TEST_SERVICES]
 
     TEST_SERVERS = [dict(server,
-                         host=cells_utils.cell_with_item(cell_path,
+                         host=cells_utils.cell_with_item(_CELL_PATH,
                                                          server['host']))
                     for server in TEST_SERVERS]
 
     DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV21.DETAIL_HYPERS_DICTS)
-    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(cell_path,
+    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
                                                                    hyp['id']),
                                 service=dict(hyp['service'],
                                              id=cells_utils.cell_with_item(
-                                                 cell_path,
+                                                 _CELL_PATH,
                                                  hyp['service']['id']),
                                              host=cells_utils.cell_with_item(
-                                                 cell_path,
+                                                 _CELL_PATH,
                                                  hyp['service']['host'])))
                            for hyp in DETAIL_HYPERS_DICTS]
 
     INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV21.INDEX_HYPER_DICTS)
-    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(cell_path,
+    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
                                                                  hyp['id']))
                          for hyp in INDEX_HYPER_DICTS]
 
@@ -559,21 +561,20 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
 
 
 class CellHypervisorsTestV2(HypervisorsTestV2, CellHypervisorsTestV21):
-    cell_path = 'cell1'
     DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV2.DETAIL_HYPERS_DICTS)
-    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(cell_path,
+    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
                                                                    hyp['id']),
                                 service=dict(hyp['service'],
                                              id=cells_utils.cell_with_item(
-                                                 cell_path,
+                                                 _CELL_PATH,
                                                  hyp['service']['id']),
                                              host=cells_utils.cell_with_item(
-                                                 cell_path,
+                                                 _CELL_PATH,
                                                  hyp['service']['host'])))
                            for hyp in DETAIL_HYPERS_DICTS]
 
     INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV2.INDEX_HYPER_DICTS)
-    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(cell_path,
+    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
                                                                  hyp['id']))
                          for hyp in INDEX_HYPER_DICTS]
 

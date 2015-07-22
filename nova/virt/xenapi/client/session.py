@@ -13,11 +13,15 @@
 #    under the License.
 
 import contextlib
-import cPickle as pickle
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import errno
 import socket
 import time
-import xmlrpclib
 
 from eventlet import queue
 from eventlet import timeout
@@ -25,6 +29,11 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from six.moves import range
+
+try:
+    import xmlrpclib
+except ImportError:
+    import six.moves.xmlrpc_client as xmlrpclib
 
 from nova import context
 from nova import exception

@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import StringIO
+from six.moves import StringIO
 import sys
 
 import fixtures
@@ -59,7 +59,7 @@ class FixedIpCommandsTestCase(test.TestCase):
 
     def test_list(self):
         self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO.StringIO()))
+                                             StringIO()))
         self.commands.list()
         self.assertNotEqual(1, sys.stdout.getvalue().find('192.168.0.100'))
 
@@ -71,7 +71,7 @@ class FixedIpCommandsTestCase(test.TestCase):
             'nova.db.fixed_ip_get_by_host',
             fake_fixed_ip_get_by_host))
         self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO.StringIO()))
+                                             StringIO()))
         self.commands.list('banana')
         self.assertNotEqual(1, sys.stdout.getvalue().find('192.168.0.100'))
 
@@ -212,7 +212,7 @@ class NetworkCommandsTestCase(test.TestCase):
         def fake_network_get_all(context):
             return [db_fakes.FakeModel(self.net)]
         self.stubs.Set(db, 'network_get_all', fake_network_get_all)
-        output = StringIO.StringIO()
+        output = StringIO()
         sys.stdout = output
         self.commands.list()
         sys.stdout = sys.__stdout__
@@ -316,7 +316,7 @@ class ProjectCommandsTestCase(test.TestCase):
         self.commands = manage.ProjectCommands()
 
     def test_quota(self):
-        output = StringIO.StringIO()
+        output = StringIO()
         sys.stdout = output
         self.commands.quota(project_id='admin',
                             key='instances',
@@ -339,7 +339,7 @@ class VmCommandsTestCase(test.TestCase):
         self.fake_flavor = objects.Flavor(**test_flavors.DEFAULT_FLAVORS[0])
 
     def test_list_without_host(self):
-        output = StringIO.StringIO()
+        output = StringIO()
         sys.stdout = output
         with mock.patch.object(objects.InstanceList, 'get_by_filters') as get:
             get.return_value = objects.InstanceList(
@@ -357,7 +357,7 @@ class VmCommandsTestCase(test.TestCase):
         self.assertIn('foo-host', result)
 
     def test_list_with_host(self):
-        output = StringIO.StringIO()
+        output = StringIO()
         sys.stdout = output
         with mock.patch.object(objects.InstanceList, 'get_by_host') as get:
             get.return_value = objects.InstanceList(
@@ -387,7 +387,7 @@ class DBCommandsTestCase(test.TestCase):
                        return_value={'foo': 0})
     def test_null_instance_uuid_scan_no_records_found(self, mock_scan):
         self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO.StringIO()))
+                                             StringIO()))
         self.commands.null_instance_uuid_scan()
         self.assertIn("There were no records found", sys.stdout.getvalue())
 
@@ -395,7 +395,7 @@ class DBCommandsTestCase(test.TestCase):
                        return_value={'foo': 1, 'bar': 0})
     def _test_null_instance_uuid_scan(self, mock_scan, delete):
         self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO.StringIO()))
+                                             StringIO()))
         self.commands.null_instance_uuid_scan(delete)
         output = sys.stdout.getvalue()
 

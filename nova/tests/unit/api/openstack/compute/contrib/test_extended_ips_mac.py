@@ -90,7 +90,7 @@ for cache in NW_CACHE:
                 sanitized['mac_address'] = cache['address']
                 sanitized.pop('type')
                 ALL_IPS.append(sanitized)
-ALL_IPS.sort()
+ALL_IPS.sort(key=lambda x: '%s-%s' % (x['address'], x['mac_address']))
 
 
 def fake_compute_get(*args, **kwargs):

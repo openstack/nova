@@ -13,7 +13,7 @@
 #    under the License.
 
 import os
-import StringIO
+from six.moves import StringIO
 
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -137,9 +137,9 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
 class File(object):
     def __init__(self, path, mode=None):
         if path in files:
-            self.fp = StringIO.StringIO(files[path])
+            self.fp = StringIO(files[path])
         else:
-            self.fp = StringIO.StringIO(files[os.path.split(path)[-1]])
+            self.fp = StringIO(files[os.path.split(path)[-1]])
 
     def __enter__(self):
         return self.fp

@@ -54,7 +54,7 @@ from nova.virt import netutils
 
 CONF = cfg.CONF
 
-USER_DATA_STRING = ("This is an encoded string")
+USER_DATA_STRING = (b"This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
 
 

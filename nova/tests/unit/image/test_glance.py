@@ -15,7 +15,7 @@
 
 
 import datetime
-import StringIO
+from six.moves import StringIO
 
 import glanceclient.exc
 import mock
@@ -543,7 +543,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         class FakeDiskException(Exception):
             pass
 
-        class Exceptionator(StringIO.StringIO):
+        class Exceptionator(StringIO):
             def write(self, _):
                 raise FakeDiskException('Disk full!')
 
