@@ -511,6 +511,11 @@ class VMwareVolumeOps(object):
                                       disk_type=vmdk.disk_type)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
+
+        # Remove key-value pair <volume_id, vmdk_uuid> from instance's
+        # extra config. Setting value to empty string will remove the key.
+        self._update_volume_details(vm_ref, data['volume_id'], "")
+
         LOG.debug("Detached VMDK: %s", connection_info, instance=instance)
 
     def _detach_volume_iscsi(self, connection_info, instance):

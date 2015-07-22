@@ -534,6 +534,16 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         spec.tools.beforeGuestStandby = True
         return spec
 
+    def test_get_vm_extra_config_spec(self):
+
+        fake_factory = fake.FakeFactory()
+        extra_opts = {mock.sentinel.key: mock.sentinel.value}
+        res = vm_util.get_vm_extra_config_spec(fake_factory, extra_opts)
+
+        self.assertEqual(1, len(res.extraConfig))
+        self.assertEqual(mock.sentinel.key, res.extraConfig[0].key)
+        self.assertEqual(mock.sentinel.value, res.extraConfig[0].value)
+
     def test_get_vm_create_spec(self):
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
