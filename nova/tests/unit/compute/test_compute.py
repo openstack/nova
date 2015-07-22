@@ -11409,6 +11409,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
             return {'id': id, 'min_disk': None, 'min_ram': None,
                     'name': 'fake_name',
                     'status': 'deleted',
+                    'min_ram': 0,
+                    'min_disk': 0,
                     'properties': {'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
@@ -11770,78 +11772,175 @@ class CheckRequestedImageTestCase(test.TestCase):
 
     def test_no_image_specified(self):
         self.compute_api._check_requested_image(self.context, None, None,
-                self.instance_type)
+                self.instance_type, None)
 
     def test_image_status_must_be_active(self):
         image = dict(id='123', status='foo')
 
         self.assertRaises(exception.ImageNotActive,
                 self.compute_api._check_requested_image, self.context,
-                image['id'], image, self.instance_type)
+                image['id'], image, self.instance_type, None)
 
         image['status'] = 'active'
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_image_min_ram_check(self):
         image = dict(id='123', status='active', min_ram='65')
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
                 self.compute_api._check_requested_image, self.context,
-                image['id'], image, self.instance_type)
+                image['id'], image, self.instance_type, None)
 
         image['min_ram'] = '64'
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_image_min_disk_check(self):
         image = dict(id='123', status='active', min_disk='2')
 
         self.assertRaises(exception.FlavorDiskTooSmall,
                 self.compute_api._check_requested_image, self.context,
-                image['id'], image, self.instance_type)
+                image['id'], image, self.instance_type, None)
 
         image['min_disk'] = '1'
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_image_too_large(self):
         image = dict(id='123', status='active', size='1073741825')
 
         self.assertRaises(exception.FlavorDiskTooSmall,
                 self.compute_api._check_requested_image, self.context,
-                image['id'], image, self.instance_type)
+                image['id'], image, self.instance_type, None)
 
         image['size'] = '1073741824'
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_root_gb_zero_disables_size_check(self):
         self.instance_type['root_gb'] = 0
         image = dict(id='123', status='active', size='1073741825')
 
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_root_gb_zero_disables_min_disk(self):
         self.instance_type['root_gb'] = 0
         image = dict(id='123', status='active', min_disk='2')
 
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
 
     def test_config_drive_option(self):
         image = {'id': 1, 'status': 'active'}
         image['properties'] = {'img_config_drive': 'optional'}
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
         image['properties'] = {'img_config_drive': 'mandatory'}
         self.compute_api._check_requested_image(self.context, image['id'],
-                image, self.instance_type)
+                image, self.instance_type, None)
         image['properties'] = {'img_config_drive': 'bar'}
         self.assertRaises(exception.InvalidImageConfigDrive,
                           self.compute_api._check_requested_image,
-                          self.context, image['id'], image, self.instance_type)
+                          self.context, image['id'], image, self.instance_type,
+                          None)
+
+    def test_volume_blockdevicemapping(self):
+        # We should allow a root volume which is larger than the flavor root
+        # disk.
+        # We should allow a root volume created from an image whose min_disk is
+        # larger than the flavor root disk.
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=self.instance_type.root_gb * units.Gi,
+                     min_disk=self.instance_type.root_gb + 1)
+
+        volume_uuid = str(uuid.uuid4())
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='volume', destination_type='volume',
+            volume_id=volume_uuid, volume_size=self.instance_type.root_gb + 1)
+
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type, root_bdm)
+
+    def test_volume_blockdevicemapping_min_disk(self):
+        # A bdm object volume smaller than the image's min_disk should not be
+        # allowed
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=self.instance_type.root_gb * units.Gi,
+                     min_disk=self.instance_type.root_gb + 1)
+
+        volume_uuid = str(uuid.uuid4())
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='image', destination_type='volume',
+            image_id=image_uuid, volume_id=volume_uuid,
+            volume_size=self.instance_type.root_gb)
+
+        self.assertRaises(exception.FlavorDiskTooSmall,
+                          self.compute_api._check_requested_image,
+                          self.context, image_uuid, image, self.instance_type,
+                          root_bdm)
+
+    def test_volume_blockdevicemapping_min_disk_no_size(self):
+        # We should allow a root volume whose size is not given
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=self.instance_type.root_gb * units.Gi,
+                     min_disk=self.instance_type.root_gb)
+
+        volume_uuid = str(uuid.uuid4())
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='volume', destination_type='volume',
+            volume_id=volume_uuid, volume_size=None)
+
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type, root_bdm)
+
+    def test_image_blockdevicemapping(self):
+        # Test that we can succeed when passing bdms, and the root bdm isn't a
+        # volume
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=self.instance_type.root_gb * units.Gi, min_disk=0)
+
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='image', destination_type='local', image_id=image_uuid)
+
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type, root_bdm)
+
+    def test_image_blockdevicemapping_too_big(self):
+        # We should do a size check against flavor if we were passed bdms but
+        # the root bdm isn't a volume
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=(self.instance_type.root_gb + 1) * units.Gi,
+                     min_disk=0)
+
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='image', destination_type='local', image_id=image_uuid)
+
+        self.assertRaises(exception.FlavorDiskTooSmall,
+                          self.compute_api._check_requested_image,
+                          self.context, image['id'],
+                          image, self.instance_type, root_bdm)
+
+    def test_image_blockdevicemapping_min_disk(self):
+        # We should do a min_disk check against flavor if we were passed bdms
+        # but the root bdm isn't a volume
+        image_uuid = str(uuid.uuid4())
+        image = dict(id=image_uuid, status='active',
+                     size=0, min_disk=self.instance_type.root_gb + 1)
+
+        root_bdm = block_device_obj.BlockDeviceMapping(
+            source_type='image', destination_type='local', image_id=image_uuid)
+
+        self.assertRaises(exception.FlavorDiskTooSmall,
+                          self.compute_api._check_requested_image,
+                          self.context, image['id'],
+                          image, self.instance_type, root_bdm)
 
 
 class ComputeHooksTestCase(test.BaseHookTestCase):
