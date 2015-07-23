@@ -99,16 +99,6 @@ class FilterScheduler(driver.Scheduler):
         """Fetch options dictionary. Broken out for testing."""
         return self.options.get_configuration()
 
-    def populate_filter_properties(self, request_spec, filter_properties):
-        """Stuff things into filter_properties.  Can be overridden in a
-        subclass to add more data.
-        """
-        # Save useful information from the request spec for filter processing:
-        project_id = request_spec['instance_properties']['project_id']
-        os_type = request_spec['instance_properties']['os_type']
-        filter_properties['project_id'] = project_id
-        filter_properties['os_type'] = os_type
-
     def _schedule(self, context, request_spec, filter_properties):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
@@ -125,9 +115,6 @@ class FilterScheduler(driver.Scheduler):
                                   'request_spec': request_spec,
                                   'config_options': config_options,
                                   'instance_type': instance_type})
-
-        self.populate_filter_properties(request_spec,
-                                        filter_properties)
 
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
