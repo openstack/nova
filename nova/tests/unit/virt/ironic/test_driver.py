@@ -869,6 +869,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)
 
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    def test__cleanup_deploy_instance_already_removed(self, mock_update,
+                                                      mock_validate):
+        mock_validate.side_effect = exception.InstanceNotFound(
+            instance_id='fake-instance')
+        node = ironic_utils.get_test_node(driver='fake',
+                                          instance_uuid=self.instance_uuid)
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        flavor = ironic_utils.get_test_flavor(extra_specs={})
+        self.driver._cleanup_deploy(self.ctx, node, instance, None,
+                                    flavor=flavor)
+        # assert node.update is not called
+        self.assertFalse(mock_update.called)
+        mock_validate.assert_called_once_with(mock.ANY, instance)
+
     @mock.patch.object(FAKE_CLIENT.node, 'update')
     def test__cleanup_deploy_without_flavor(self, mock_update):
         node = ironic_utils.get_test_node(driver='fake',
@@ -1132,18 +1149,52 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NovaException, self.driver.destroy,
                           self.ctx, instance, None, None)
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_destroy_unprovision_fail(self, mock_node):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid,
-                                          provision_state=ironic_states.ACTIVE)
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__unprovision_instance(self, mock_validate_inst):
+        fake_ironic_client = mock.Mock()
+        node = ironic_utils.get_test_node(
+            driver='fake',
+            provision_state=ironic_states.CLEANING)
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
+        mock_validate_inst.return_value = node
+        self.driver._unprovision(fake_ironic_client, instance, node)
+        mock_validate_inst.assert_called_once_with(fake_ironic_client,
+                                                   instance)
+        fake_ironic_client.call.assert_called_once_with(
+            "node.set_provision_state", node.uuid, "deleted")
 
-        mock_node.get_by_instance_uuid.return_value = node
-        self.assertRaises(exception.NovaException, self.driver.destroy,
-                          self.ctx, instance, None, None)
-        mock_node.set_provision_state.assert_called_once_with(node_uuid,
-                                                              'deleted')
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__unprovision_fail_max_retries(self, mock_validate_inst):
+        CONF.set_default('api_max_retries', default=2, group='ironic')
+        fake_ironic_client = mock.Mock()
+        node = ironic_utils.get_test_node(
+            driver='fake',
+            provision_state=ironic_states.ACTIVE)
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
+
+        mock_validate_inst.return_value = node
+        self.assertRaises(exception.NovaException, self.driver._unprovision,
+                          fake_ironic_client, instance, node)
+        expected_calls = (mock.call(mock.ANY, instance),
+                          mock.call(mock.ANY, instance))
+        mock_validate_inst.assert_has_calls(expected_calls)
+        fake_ironic_client.call.assert_called_once_with(
+            "node.set_provision_state", node.uuid, "deleted")
+
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__unprovision_instance_not_found(self, mock_validate_inst):
+        fake_ironic_client = mock.Mock()
+        node = ironic_utils.get_test_node(
+            driver='fake', provision_state=ironic_states.DELETING)
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
+
+        mock_validate_inst.side_effect = exception.InstanceNotFound(
+            instance_id='fake')
+        self.driver._unprovision(fake_ironic_client, instance, node)
+        mock_validate_inst.assert_called_once_with(fake_ironic_client,
+                                                   instance)
+        fake_ironic_client.call.assert_called_once_with(
+            "node.set_provision_state", node.uuid, "deleted")
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     def test_destroy_unassociate_fail(self, mock_node):
