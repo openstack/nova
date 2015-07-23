@@ -1,0 +1,4 @@
+---
+upgrade:
+  - Now VMwareVCDriver will set disk.EnableUUID=True by default in all guest
+    VM configuration file. To enable udev to generate /dev/disk/by-id

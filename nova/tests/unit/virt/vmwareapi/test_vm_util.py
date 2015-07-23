@@ -566,6 +566,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config.value = self._instance.uuid
         extra_config.key = 'nvp.vm-uuid'
         spec.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        spec.extraConfig.append(extra_config)
         spec.files = fake_factory.create('ns0:VirtualMachineFileInfo')
         spec.files.vmPathName = '[fake-datastore]'
 
@@ -668,6 +672,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config.key = 'nvp.vm-uuid'
         extra_config.value = self._instance.uuid
         expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        expected.extraConfig.append(extra_config)
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_limit(self):
@@ -689,6 +697,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config = fake_factory.create("ns0:OptionValue")
         extra_config.value = self._instance.uuid
         extra_config.key = 'nvp.vm-uuid'
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
         expected.extraConfig.append(extra_config)
 
         expected.memoryMB = 2048
@@ -740,6 +752,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config.value = self._instance.uuid
         extra_config.key = 'nvp.vm-uuid'
         expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        expected.extraConfig.append(extra_config)
 
         expected.memoryMB = 2048
 
@@ -788,6 +804,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config = fake_factory.create('ns0:OptionValue')
         extra_config.key = 'nvp.vm-uuid'
         extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
         expected.extraConfig.append(extra_config)
 
         expected.memoryMB = 2048
@@ -838,6 +858,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config = fake_factory.create("ns0:OptionValue")
         extra_config.value = self._instance.uuid
         extra_config.key = 'nvp.vm-uuid'
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
         expected.extraConfig.append(extra_config)
         expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
         expected.files.vmPathName = '[fake-datastore]'
@@ -1547,6 +1571,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config.key = 'nvp.vm-uuid'
         expected.extraConfig.append(extra_config)
         extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
         extra_config.value = 2000000
         extra_config.key = 'keyboard.typematicMinDelay'
         expected.extraConfig.append(extra_config)
@@ -1602,6 +1630,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config.key = 'nvp.vm-uuid'
         extra_config.value = self._instance.uuid
         expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
+        expected.extraConfig.append(extra_config)
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_memory_allocations(self):
@@ -1648,6 +1680,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_config = fake_factory.create('ns0:OptionValue')
         extra_config.key = 'nvp.vm-uuid'
         extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = True
+        extra_config.key = 'disk.EnableUUID'
         expected.extraConfig.append(extra_config)
         self.assertEqual(expected, result)
 
