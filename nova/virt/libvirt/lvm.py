@@ -237,9 +237,6 @@ def clear_volume(path):
     elif volume_clear == 'shred':
         utils.execute('shred', '-n3', '-s%d' % volume_size, path,
                       run_as_root=True)
-    else:
-        raise exception.Invalid(_("volume_clear='%s' is not handled")
-                                % volume_clear)
 
 
 def remove_volumes(paths):
