@@ -82,6 +82,17 @@ class APITestCase(test.NoDBTestCase):
         image = imgmodel.LocalFileImage(imgfile.name, imgmodel.FORMAT_QCOW2)
         self.assertFalse(api.is_image_extendable(image))
 
+    def test_is_image_extendable_raw(self):
+        imgfile = tempfile.NamedTemporaryFile()
+
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('e2label', imgfile)
+        self.mox.ReplayAll()
+
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_RAW)
+        self.addCleanup(imgfile.close)
+        self.assertTrue(api.is_image_extendable(image))
+
     def test_resize2fs_success(self):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
