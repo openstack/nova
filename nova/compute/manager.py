@@ -5409,9 +5409,6 @@ class ComputeManager(manager.Manager):
                                 migrate_data=migrate_data,
                                 destroy_vifs=destroy_vifs)
 
-        # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(ctxt, instance,
-                                                self.host, teardown=True)
         self.instance_events.clear_events_for_instance(instance)
 
         # NOTE(timello): make sure we update available resources on source
@@ -5477,6 +5474,7 @@ class ComputeManager(manager.Manager):
         # Restore instance state
         current_power_state = self._get_power_state(context, instance)
         node_name = None
+        prev_host = instance.host
         try:
             compute_node = self._get_compute_info(context, self.host)
             node_name = compute_node.hypervisor_hostname
@@ -5489,6 +5487,9 @@ class ComputeManager(manager.Manager):
             instance.node = node_name
             instance.save(expected_task_state=task_states.MIGRATING)
 
+        # NOTE(tr3buchet): tear down networks on source host
+        self.network_api.setup_networks_on_host(context, instance,
+                                                prev_host, teardown=True)
         # NOTE(vish): this is necessary to update dhcp
         self.network_api.setup_networks_on_host(context, instance, self.host)
         self._notify_about_instance_usage(
