@@ -1154,6 +1154,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
 
 class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
+    FSID = "FakeFsID"
     POOL = "FakePool"
     USER = "FakeUser"
     CONF = "FakeConf"
@@ -1440,6 +1441,137 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             self.assertFalse(mock_remove.called)
             mock_import.assert_called_once_with(mock.sentinel.file, name)
         _test()
+
+    def test_get_parent_pool(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(rbd_utils.RBDDriver, 'parent_info') as mock_pi:
+            mock_pi.return_value = [self.POOL, 'fake-image', 'fake-snap']
+            parent_pool = image._get_parent_pool(self.CONTEXT, 'fake-image',
+                                                 self.FSID)
+            self.assertEqual(self.POOL, parent_pool)
+
+    def test_get_parent_pool_no_parent_info(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_uri = 'rbd://%s/%s/fake-image/fake-snap' % (self.FSID, self.POOL)
+        with test.nested(mock.patch.object(rbd_utils.RBDDriver, 'parent_info'),
+                         mock.patch.object(imagebackend.IMAGE_API, 'get'),
+                         ) as (mock_pi, mock_get):
+            mock_pi.side_effect = exception.ImageUnacceptable(image_id='test',
+                                                              reason='test')
+            mock_get.return_value = {'locations': [{'url': rbd_uri}]}
+            parent_pool = image._get_parent_pool(self.CONTEXT, 'fake-image',
+                                                 self.FSID)
+            self.assertEqual(self.POOL, parent_pool)
+
+    def test_get_parent_pool_non_local_image(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_uri = 'rbd://remote-cluster/remote-pool/fake-image/fake-snap'
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'parent_info'),
+                mock.patch.object(imagebackend.IMAGE_API, 'get')
+        ) as (mock_pi, mock_get):
+            mock_pi.side_effect = exception.ImageUnacceptable(image_id='test',
+                                                              reason='test')
+            mock_get.return_value = {'locations': [{'url': rbd_uri}]}
+            self.assertRaises(exception.ImageUnacceptable,
+                              image._get_parent_pool, self.CONTEXT,
+                              'fake-image', self.FSID)
+
+    def test_direct_snapshot(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/fake-image-id/snap' % (self.FSID, self.POOL)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'get_fsid',
+                                  return_value=self.FSID),
+                mock.patch.object(image, '_get_parent_pool',
+                                  return_value=self.POOL),
+                mock.patch.object(rbd_utils.RBDDriver, 'create_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'clone'),
+                mock.patch.object(rbd_utils.RBDDriver, 'flatten'),
+                mock.patch.object(image, 'cleanup_direct_snapshot')
+        ) as (mock_fsid, mock_parent, mock_create_snap, mock_clone,
+              mock_flatten, mock_cleanup):
+            location = image.direct_snapshot(self.CONTEXT, 'fake-snapshot',
+                                             'fake-format', 'fake-image-id',
+                                             'fake-base-image')
+            mock_fsid.assert_called_once_with()
+            mock_parent.assert_called_once_with(self.CONTEXT,
+                                                'fake-base-image',
+                                                self.FSID)
+            mock_create_snap.assert_has_calls([mock.call(image.rbd_name,
+                                                         'fake-snapshot',
+                                                         protect=True),
+                                               mock.call('fake-image-id',
+                                                         'snap',
+                                                         pool=self.POOL,
+                                                         protect=True)])
+            mock_clone.assert_called_once_with(mock.ANY, 'fake-image-id',
+                                               dest_pool=self.POOL)
+            mock_flatten.assert_called_once_with('fake-image-id',
+                                                 pool=self.POOL)
+            mock_cleanup.assert_called_once_with(mock.ANY)
+            self.assertEqual(test_snap, location)
+
+    def test_direct_snapshot_cleans_up_on_failures(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'get_fsid',
+                                  return_value=self.FSID),
+                mock.patch.object(image, '_get_parent_pool',
+                                  return_value=self.POOL),
+                mock.patch.object(rbd_utils.RBDDriver, 'create_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'clone',
+                                  side_effect=exception.Forbidden('testing')),
+                mock.patch.object(rbd_utils.RBDDriver, 'flatten'),
+                mock.patch.object(image, 'cleanup_direct_snapshot')) as (
+                mock_fsid, mock_parent, mock_create_snap, mock_clone,
+                mock_flatten, mock_cleanup):
+            self.assertRaises(exception.Forbidden, image.direct_snapshot,
+                              self.CONTEXT, 'snap', 'fake-format',
+                              'fake-image-id', 'fake-base-image')
+            mock_create_snap.assert_called_once_with(image.rbd_name, 'snap',
+                                                     protect=True)
+            self.assertFalse(mock_flatten.called)
+            mock_cleanup.assert_called_once_with(dict(url=test_snap))
+
+    def test_cleanup_direct_snapshot(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'destroy_volume')
+        ) as (mock_rm, mock_destroy):
+            # Ensure that the method does nothing when no location is provided
+            image.cleanup_direct_snapshot(None)
+            self.assertFalse(mock_rm.called)
+
+            # Ensure that destroy_volume is not called
+            image.cleanup_direct_snapshot(dict(url=test_snap))
+            mock_rm.assert_called_once_with(image.rbd_name, 'snap', force=True,
+                                            ignore_errors=False,
+                                            pool=image.pool)
+            self.assertFalse(mock_destroy.called)
+
+    def test_cleanup_direct_snapshot_destroy_volume(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'destroy_volume')
+        ) as (mock_rm, mock_destroy):
+            # Ensure that destroy_volume is called
+            image.cleanup_direct_snapshot(dict(url=test_snap),
+                                          also_destroy_volume=True)
+            mock_rm.assert_called_once_with(image.rbd_name, 'snap',
+                                            force=True,
+                                            ignore_errors=False,
+                                            pool=image.pool)
+            mock_destroy.assert_called_once_with(image.rbd_name,
+                                                 pool=image.pool)
 
 
 class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
