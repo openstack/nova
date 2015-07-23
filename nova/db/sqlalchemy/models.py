@@ -1022,6 +1022,7 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
               name=("uniq_instance_type_extra_specs0"
                     "instance_type_id0key0deleted")
         ),
+        {'mysql_collate': 'utf8_bin'},
     )
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
