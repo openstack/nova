@@ -19,7 +19,6 @@ import mock
 
 from nova import block_device
 from nova.compute import arch
-from nova.compute import vm_mode
 from nova import context
 from nova import exception
 from nova import objects
@@ -680,17 +679,6 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.flags(config_drive_format='vfat')
         config_drive_type = blockinfo.get_config_drive_type()
         self.assertEqual('disk', config_drive_type)
-
-    def test_get_config_drive_type_ploop(self):
-        self.flags(config_drive_format=None)
-        self.flags(virt_type='parallels', group='libvirt')
-        config_drive_type = blockinfo.get_config_drive_type(vm_mode.EXE)
-        self.assertEqual('fs', config_drive_type)
-
-    def test_get_config_drive_type_improper_value(self):
-        self.flags(config_drive_format='test')
-        self.assertRaises(exception.ConfigDriveUnknownFormat,
-                          blockinfo.get_config_drive_type)
 
     def test_get_info_from_bdm(self):
         bdms = [{'device_name': '/dev/vds', 'device_type': 'disk',

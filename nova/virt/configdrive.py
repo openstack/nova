@@ -55,12 +55,6 @@ CONF.register_opts(configdrive_opts)
 # Config drives are 64mb, if we can't size to the exact size of the data
 CONFIGDRIVESIZE_BYTES = 64 * units.Mi
 
-FS_FORMAT_VFAT = 'vfat'
-FS_FORMAT_ISO9660 = 'iso9660'
-
-IMAGE_TYPE_RAW = 'raw'
-IMAGE_TYPE_PLOOP = 'ploop'
-
 
 class ConfigDriveBuilder(object):
     """Build config drives, optionally as a context manager."""
@@ -156,80 +150,23 @@ class ConfigDriveBuilder(object):
                 if mounted:
                     utils.execute('umount', mountdir, run_as_root=True)
 
-    def _make_ext4_ploop(self, path, tmpdir):
-        """ploop is a disk loopback block device, that is used in
-        Parallels(OpenVZ) containers. It is similar to Linux loop
-        device but prevents double caching of data in memory and
-        supports snapshots and some other efficiency benefits. Adding
-        ploop is a natural way to add disk device to VZ containers.
-        Ploop device has its own image format. It contains specific
-        partition table with one ext4 partition.
-        """
-        os.mkdir(path)
-        utils.execute('ploop',
-                      'init',
-                      '-s', CONFIGDRIVESIZE_BYTES,
-                      '-t', 'ext4',
-                      path + '/disk.config.hds',
-                      attempts=1,
-                      run_as_root=True)
-        with utils.tempdir() as mountdir:
-            mounted = False
-            try:
-                _, err = utils.trycmd(
-                        'ploop', 'mount',
-                        '-m', mountdir,
-                        '-t', 'ext4',
-                        path + '/DiskDescriptor.xml',
-                        run_as_root=True)
-                if os.path.exists(mountdir):
-                    utils.execute('chown', '-R',
-                            '%(u)d:%(g)d' % {'u': os.getuid(),
-                                             'g': os.getgid()},
-                            mountdir,
-                            run_as_root=True)
-                mounted = True
-                for ent in os.listdir(tmpdir):
-                    shutil.copytree(os.path.join(tmpdir, ent),
-                                    os.path.join(mountdir, ent))
-            finally:
-                if mounted:
-                    utils.execute('ploop', 'umount',
-                            path + '/disk.config.hds', run_as_root=True)
-
-    def make_drive(self, path, image_type=IMAGE_TYPE_RAW):
+    def make_drive(self, path):
         """Make the config drive.
 
         :param path: the path to place the config drive image at
-        :param image_type: host side image format
 
         :raises ProcessExecuteError if a helper process has failed.
         """
-        fs_format = CONF.config_drive_format
-        if fs_format is None:
-            if image_type == IMAGE_TYPE_RAW:
-                fs_format = FS_FORMAT_ISO9660
-
         with utils.tempdir() as tmpdir:
             self._write_md_files(tmpdir)
 
-            if image_type == IMAGE_TYPE_RAW:
-                if fs_format not in (FS_FORMAT_VFAT, FS_FORMAT_ISO9660):
-                    raise exception.ConfigDriveUnsupportedFormat(
-                            format=fs_format,
-                            image_type=image_type,
-                            image_path=path)
-                elif fs_format == FS_FORMAT_ISO9660:
-                    self._make_iso9660(path, tmpdir)
-                elif fs_format == FS_FORMAT_VFAT:
-                    self._make_vfat(path, tmpdir)
-            elif image_type == IMAGE_TYPE_PLOOP:
-                self._make_ext4_ploop(path, tmpdir)
+            if CONF.config_drive_format == 'iso9660':
+                self._make_iso9660(path, tmpdir)
+            elif CONF.config_drive_format == 'vfat':
+                self._make_vfat(path, tmpdir)
             else:
-                raise exception.ConfigDriveUnsupportedFormat(
-                    format=fs_format,
-                    image_type=image_type,
-                    image_path=path)
+                raise exception.ConfigDriveUnknownFormat(
+                    format=CONF.config_drive_format)
 
     def cleanup(self):
         if self.imagefile:
