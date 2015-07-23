@@ -6,8 +6,7 @@ hacking<0.11,>=0.10.0
 coverage>=3.6
 discover
 fixtures>=1.3.1
-mock!=1.1.4,>=1.1;python_version!='2.6'
-mock==1.0.1;python_version=='2.6'
+mock>=1.2
 mox3>=0.7.0
 psycopg2
 PyMySQL>=0.6.2 # MIT License
@@ -25,4 +24,4 @@ tempest-lib>=0.6.1
 bandit>=0.10.1
 
 # vmwareapi driver specific dependencies
-oslo.vmware>=0.13.1 # Apache-2.0
+oslo.vmware>=1.16.0 # Apache-2.0
