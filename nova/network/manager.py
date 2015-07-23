@@ -1557,10 +1557,6 @@ class NetworkManager(manager.Manager):
         if networks is None or len(networks) == 0:
             return
 
-        network_uuids = [uuid for (uuid, fixed_ip) in networks]
-
-        self._get_networks_by_uuids(context, network_uuids)
-
         for network_uuid, address in networks:
             # check if the fixed IP address is valid and
             # it actually belongs to the network
