@@ -966,6 +966,18 @@ class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(5, image_meta["min_ram"])
         self.assertEqual(7, image_meta["min_disk"])
 
+    def test_suppress_not_image_properties(self):
+        properties = {"min_ram": "256", "min_disk": "128",
+                      "image_id": "fake_id", "image_name": "fake_name",
+                      "container_format": "ami", "disk_format": "ami",
+                      "size": "1234", "checksum": "fake_checksum"}
+        volume = {"volume_image_metadata": properties}
+        image_meta = utils.get_image_metadata_from_volume(volume)
+        self.assertEqual({}, image_meta["properties"])
+        self.assertEqual(0, image_meta["size"])
+        # volume's properties should not be touched
+        self.assertNotEqual({}, properties)
+
 
 class VersionTestCase(test.NoDBTestCase):
     def test_convert_version_to_int(self):
