@@ -1095,6 +1095,23 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     **encryption)
         return encryptor
 
+    def _check_discard_for_attach_volume(self, conf, instance):
+        """Perform some checks for volumes configured for discard support.
+
+        If discard is configured for the volume, and the guest is using a
+        configuration known to not work, we will log a message explaining
+        the reason why.
+        """
+        if conf.driver_discard == 'unmap' and conf.target_bus == 'virtio':
+            LOG.debug('Attempting to attach volume %(id)s with discard '
+                      'support enabled to an instance using an '
+                      'unsupported configuration. target_bus = '
+                      '%(bus)s. Trim commands will not be issued to '
+                      'the storage device.',
+                      {'bus': conf.target_bus,
+                       'id': conf.serial},
+                      instance=instance)
+
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
         image_meta = objects.ImageMeta.from_instance(instance)
@@ -1127,6 +1144,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._connect_volume(connection_info, disk_info)
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
+
+        self._check_discard_for_attach_volume(conf, instance)
 
         try:
             state = guest.get_power_state(self._host)

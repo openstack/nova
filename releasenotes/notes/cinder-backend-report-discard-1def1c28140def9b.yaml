@@ -1,0 +1,9 @@
+---
+features:
+  - Add support for enabling discard support for block devices with libvirt.
+    This will be enabled for Cinder volume attachments that specify support
+    for the feature in their connection properties. This requires support to
+    be present in the version of libvirt (v1.0.6+) and qemu (v1.6.0+) used
+    along with the configured virtual drivers for the instance. The
+    virtio-blk driver does not support this functionality.
+
