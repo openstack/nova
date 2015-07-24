@@ -30,6 +30,7 @@ from nova.i18n import _LW
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import units
 from nova import utils
 
@@ -254,6 +255,18 @@ class RBDDriver(object):
         utils.execute('rbd', 'import', *args)
 
     def cleanup_volumes(self, instance):
+        def _cleanup_vol(ioctx, volume, retryctx):
+            try:
+                rbd.RBD().remove(client.ioctx, volume)
+                raise loopingcall.LoopingCallDone(retvalue=False)
+            except (rbd.ImageBusy, rbd.ImageHasSnapshots):
+                LOG.warn(_LW('rbd remove %(volume)s in pool %(pool)s '
+                             'failed'),
+                         {'volume': volume, 'pool': self.pool})
+            retryctx['retries'] -= 1
+            if retryctx['retries'] <= 0:
+                raise loopingcall.LoopingCallDone()
+
         with RADOSClient(self, self.pool) as client:
 
             def belongs_to_instance(disk):
@@ -262,12 +275,18 @@ class RBDDriver(object):
             # pylint: disable=E1101
             volumes = rbd.RBD().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):
-                try:
-                    rbd.RBD().remove(client.ioctx, volume)
-                except (rbd.ImageNotFound, rbd.ImageHasSnapshots):
-                    LOG.warn(_LW('rbd remove %(volume)s in pool %(pool)s '
-                                 'failed'),
-                             {'volume': volume, 'pool': self.pool})
+                # NOTE(danms): We let it go for ten seconds
+                retryctx = {'retries': 10}
+                timer = loopingcall.FixedIntervalLoopingCall(
+                    _cleanup_vol, client.ioctx, volume, retryctx)
+                timed_out = timer.start(interval=1).wait()
+                if timed_out:
+                    # NOTE(danms): Run this again to propagate the error, but
+                    # if it succeeds, don't raise the loopingcall exception
+                    try:
+                        _cleanup_vol(client.ioctx, volume, retryctx)
+                    except loopingcall.LoopingCallDone:
+                        pass
 
     def get_pool_info(self):
         with RADOSClient(self) as client:
