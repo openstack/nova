@@ -1124,9 +1124,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # allow writing to existing external volume file
             dev.rebase(new_path, copy=True, reuse_ext=True)
 
-            # TODO(sahid): This method needs to be implemented in Guest
-            # a future patch will come.
-            while self._wait_for_block_job(guest._domain, disk_path):
+            while dev.wait_for_job():
                 time.sleep(0.5)
 
             dev.abort_job(pivot=True)
@@ -1134,8 +1132,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # NOTE(alex_xu): domain.blockJobAbort isn't sync call. This
                 # is bug in libvirt. So we need waiting for the pivot is
                 # finished. libvirt bug #1119173
-                while self._wait_for_block_job(guest._domain, disk_path,
-                                               wait_for_job_clean=True):
+                while dev.wait_for_job(wait_for_job_clean=True):
                     time.sleep(0.5)
                 dev.resize(resize_to * units.Gi / units.Ki)
         finally:
@@ -1431,36 +1428,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info(_LI("Snapshot image upload complete"),
                          instance=instance)
 
-    @staticmethod
-    def _wait_for_block_job(domain, disk_path, abort_on_error=False,
-                            wait_for_job_clean=False):
-        """Wait for libvirt block job to complete.
-
-        Libvirt may return either cur==end or an empty dict when
-        the job is complete, depending on whether the job has been
-        cleaned up by libvirt yet, or not.
-
-        :returns: True if still in progress
-                  False if completed
-        """
-
-        status = domain.blockJobInfo(disk_path, 0)
-        if status == -1 and abort_on_error:
-            msg = _('libvirt error while requesting blockjob info.')
-            raise exception.NovaException(msg)
-        try:
-            cur = status.get('cur', 0)
-            end = status.get('end', 0)
-        except Exception:
-            return False
-
-        if wait_for_job_clean:
-            job_ended = not status
-        else:
-            job_ended = cur == end
-
-        return not job_ended
-
     def _can_quiesce(self, image_meta):
         if CONF.libvirt.virt_type not in ('kvm', 'qemu'):
             return (False, _('Only KVM and QEMU are supported'))
@@ -1557,7 +1524,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             issue an abort once we have a complete copy.
             dev.rebase(disk_delta, copy=True, reuse_ext=True, shallow=True)
 
-            while self._wait_for_block_job(guest._domain, disk_path):
+            while dev.wait_for_job():
                 time.sleep(0.5)
 
             dev.abort_job()
@@ -1939,8 +1906,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if result == 0:
                 LOG.debug('blockRebase started successfully')
 
-            while self._wait_for_block_job(guest._domain, my_dev,
-                                           abort_on_error=True):
+            while dev.wait_for_job(abort_on_error=True):
                 LOG.debug('waiting for blockRebase job completion')
                 time.sleep(0.5)
 
@@ -1991,8 +1957,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if result == 0:
                 LOG.debug('blockCommit started successfully')
 
-            while self._wait_for_block_job(guest._domain, my_dev,
-                                           abort_on_error=True):
+            while dev.wait_for_job(abort_on_error=True):
                 LOG.debug('waiting for blockCommit job completion')
                 time.sleep(0.5)
 

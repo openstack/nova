@@ -13300,8 +13300,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain.blockRebase('vda', 'snap.img', 0, flags=0)
 
-        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1000, 'end': 1000})
+        domain.blockJobInfo('vda', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vda', flags=0).AndReturn(
+            {'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 
@@ -13336,8 +13337,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.blockRebase('vda', 'snap.img', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
 
-        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1000, 'end': 1000})
+        domain.blockJobInfo('vda', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vda', flags=0).AndReturn(
+            {'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 
@@ -13405,8 +13407,8 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
 
-        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vda', 0).AndReturn({})
+        domain.blockJobInfo('vda', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vda', flags=0).AndReturn({})
 
         self.mox.ReplayAll()
 
@@ -13534,8 +13536,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain.blockRebase('vdb', 'vdb[1]', 0, flags=0)
 
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1000, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn(
+            {'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 
@@ -13575,8 +13578,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.blockRebase('vdb', 'vdb[1]', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
 
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1000, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn(
+            {'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 
@@ -13657,8 +13661,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
 
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1000, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vdb', flags=0).AndReturn(
+            {'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 

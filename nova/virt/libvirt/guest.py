@@ -33,6 +33,8 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 
+from nova import exception
+from nova.i18n import _
 from nova.i18n import _LE
 from nova import utils
 from nova.virt.libvirt import config as vconfig
@@ -316,6 +318,33 @@ class BlockDevice(object):
     def resize(self, size_kb):
         """Resizes block device to Kib size."""
         self._guest._domain.blockResize(self._disk, size_kb)
+
+    def wait_for_job(self, abort_on_error=False, wait_for_job_clean=False):
+        """Wait for libvirt block job to complete.
+
+        Libvirt may return either cur==end or an empty dict when
+        the job is complete, depending on whether the job has been
+        cleaned up by libvirt yet, or not.
+
+        :param abort_on_error: Whether to stop process and raise NovaException
+                               on error (default: False)
+        :param wait_for_job_clean: Whether to force wait to ensure job is
+                                   finished (see bug: LP#1119173)
+
+        :returns: True if still in progress
+                  False if completed
+        """
+        status = self.get_job_info()
+        if not status and abort_on_error:
+            msg = _('libvirt error while requesting blockjob info.')
+            raise exception.NovaException(msg)
+
+        if wait_for_job_clean:
+            job_ended = status.job == 0
+        else:
+            job_ended = status.cur == status.end
+
+        return not job_ended
 
 
 class VCPUInfo(object):
