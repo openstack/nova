@@ -1255,7 +1255,24 @@ class FlavorMemoryTooSmall(NovaException):
 
 
 class FlavorDiskTooSmall(NovaException):
-    msg_fmt = _("Flavor's disk is too small for requested image.")
+    msg_fmt = _("The created instance's disk would be too small.")
+
+
+class FlavorDiskSmallerThanImage(FlavorDiskTooSmall):
+    msg_fmt = _("Flavor's disk is too small for requested image. Flavor disk "
+                "is %(flavor_size)i bytes, image is %(image_size)i bytes.")
+
+
+class FlavorDiskSmallerThanMinDisk(FlavorDiskTooSmall):
+    msg_fmt = _("Flavor's disk is smaller than the minimum size specified in "
+                "image metadata. Flavor disk is %(flavor_size)i bytes, "
+                "minimum size is %(image_min_disk)i bytes.")
+
+
+class VolumeSmallerThanMinDisk(FlavorDiskTooSmall):
+    msg_fmt = _("Volume is smaller than the minimum size specified in image "
+                "metadata. Volume size is %(volume_size)i bytes, minimum "
+                "size is %(image_min_disk)i bytes.")
 
 
 class InsufficientFreeMemory(NovaException):

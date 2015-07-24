@@ -3223,9 +3223,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.NoMoreFixedIps("error messge"))
 
-    def test_build_and_run_flavor_disk_too_small_exception(self):
+    def test_build_and_run_flavor_disk_smaller_image_exception(self):
         self._test_build_and_run_spawn_exceptions(
-            exception.FlavorDiskTooSmall())
+            exception.FlavorDiskSmallerThanImage(
+                flavor_size=0, image_size=1))
+
+    def test_build_and_run_flavor_disk_smaller_min_disk(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.FlavorDiskSmallerThanMinDisk(
+                flavor_size=0, image_min_disk=1))
 
     def test_build_and_run_flavor_memory_too_small_exception(self):
         self._test_build_and_run_spawn_exceptions(

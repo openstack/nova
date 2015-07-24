@@ -489,7 +489,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           image.create_image, fn, self.TEMPLATE_PATH, 1)
         self.mox.VerifyAll()
 
@@ -1362,7 +1362,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             driver_mock.exists.return_value = True
             driver_mock.size.return_value = 2
 
-            self.assertRaises(exception.FlavorDiskTooSmall,
+            self.assertRaises(exception.FlavorDiskSmallerThanImage,
                               image.create_image, mock.MagicMock(),
                               self.TEMPLATE_PATH, 1)
             driver_mock.size.assert_called_once_with(image.rbd_name)

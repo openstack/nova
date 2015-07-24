@@ -7412,7 +7412,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['min_disk'] = 2
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.create, self.context,
             inst_type, self.fake_image['id'])
 
@@ -7431,7 +7431,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.create, self.context,
             inst_type, self.fake_image['id'])
 
@@ -7873,7 +7873,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['min_disk'] = 2
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.rebuild, self.context,
             instance, self.fake_image['id'], 'new_password')
 
@@ -7942,7 +7942,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['size'] = '1073741825'
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.rebuild, self.context,
             instance, self.fake_image['id'], 'new_password')
 
@@ -11580,7 +11580,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_min_disk_check(self):
         image = dict(id='123', status='active', min_disk='2')
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
                 self.compute_api._check_requested_image, self.context,
                 image['id'], image, self.instance_type, None)
 
@@ -11591,7 +11591,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_too_large(self):
         image = dict(id='123', status='active', size='1073741825')
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
                 self.compute_api._check_requested_image, self.context,
                 image['id'], image, self.instance_type, None)
 
@@ -11659,7 +11659,7 @@ class CheckRequestedImageTestCase(test.TestCase):
             image_id=image_uuid, volume_id=volume_uuid,
             volume_size=self.instance_type.root_gb)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.VolumeSmallerThanMinDisk,
                           self.compute_api._check_requested_image,
                           self.context, image_uuid, image, self.instance_type,
                           root_bdm)
@@ -11703,7 +11703,7 @@ class CheckRequestedImageTestCase(test.TestCase):
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='local', image_id=image_uuid)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           self.compute_api._check_requested_image,
                           self.context, image['id'],
                           image, self.instance_type, root_bdm)
@@ -11718,7 +11718,7 @@ class CheckRequestedImageTestCase(test.TestCase):
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='local', image_id=image_uuid)
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
                           self.compute_api._check_requested_image,
                           self.context, image['id'],
                           image, self.instance_type, root_bdm)

@@ -705,10 +705,8 @@ class API(base.Base):
                 dest_size *= units.Gi
 
                 if image_min_disk > dest_size:
-                    # TODO(mdbooth) Raise a more descriptive exception here.
-                    # This is the exception which calling code expects, but
-                    # it's potentially misleading to the user.
-                    raise exception.FlavorDiskTooSmall()
+                    raise exception.VolumeSmallerThanMinDisk(
+                        volume_size=dest_size, image_min_disk=image_min_disk)
 
         # Target disk is a local disk whose size is taken from the flavor
         else:
@@ -719,10 +717,12 @@ class API(base.Base):
             # drivers. A value of 0 means don't check size.
             if dest_size != 0:
                 if image_size > dest_size:
-                    raise exception.FlavorDiskTooSmall()
+                    raise exception.FlavorDiskSmallerThanImage(
+                        flavor_size=dest_size, image_size=image_size)
 
                 if image_min_disk > dest_size:
-                    raise exception.FlavorDiskTooSmall()
+                    raise exception.FlavorDiskSmallerThanMinDisk(
+                        flavor_size=dest_size, image_min_disk=image_min_disk)
 
     def _get_image_defined_bdms(self, base_options, instance_type, image_meta,
                                 root_device_name):
