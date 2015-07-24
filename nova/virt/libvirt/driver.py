@@ -49,6 +49,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
+from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -75,7 +76,6 @@ from nova.i18n import _LW
 from nova import image
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import fileutils
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova import utils

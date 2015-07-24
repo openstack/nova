@@ -41,12 +41,12 @@ import urllib
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_log import versionutils
+from oslo_utils import fileutils
 import routes
 import six
 import webob
 
 from nova.i18n import _LW
-from nova.openstack.common import fileutils
 from nova import paths
 from nova import utils
 from nova import wsgi

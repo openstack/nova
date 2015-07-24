@@ -24,6 +24,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import fileutils
 from oslo_utils import strutils
 from oslo_utils import units
 import six
@@ -33,7 +34,6 @@ from nova.i18n import _
 from nova.i18n import _LE, _LI
 from nova import image
 from nova import keymgr
-from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt.image import model as imgmodel

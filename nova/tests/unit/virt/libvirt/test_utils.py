@@ -20,11 +20,11 @@ import tempfile
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_utils import fileutils
 import six
 
 from nova.compute import arch
 from nova import exception
-from nova.openstack.common import fileutils
 from nova.storage import linuxscsi
 from nova import test
 from nova.tests.unit import fake_instance

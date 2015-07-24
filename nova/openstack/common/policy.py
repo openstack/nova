@@ -101,9 +101,8 @@ import six
 import six.moves.urllib.parse as urlparse
 import six.moves.urllib.request as urlrequest
 
-from nova.openstack.common import fileutils
 from nova.openstack.common._i18n import _, _LE
-
+from nova import utils
 
 policy_opts = [
     cfg.StrOpt('policy_file',
@@ -248,7 +247,7 @@ class Enforcer(object):
     def clear(self):
         """Clears Enforcer rules, policy's cache and policy's path."""
         self.set_rules({})
-        fileutils.delete_cached_file(self.policy_path)
+        utils.delete_cached_file(self.policy_path)
         self.default_rule = None
         self.policy_path = None
 
@@ -287,7 +286,7 @@ class Enforcer(object):
             func(os.path.join(path, policy_file), *args)
 
     def _load_policy_file(self, path, force_reload, overwrite=True):
-            reloaded, data = fileutils.read_cached_file(
+            reloaded, data = utils.read_cached_file(
                 path, force_reload=force_reload)
             if reloaded or not self.rules or not overwrite:
                 rules = Rules.load_json(data, self.default_rule)

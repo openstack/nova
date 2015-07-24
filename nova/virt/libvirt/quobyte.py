@@ -17,12 +17,12 @@ import os
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import fileutils
 
 from nova import exception as nova_exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
-from nova.openstack.common import fileutils
 from nova import utils
 
 
