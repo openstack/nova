@@ -18,6 +18,7 @@ import itertools
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import strutils
 from oslo_utils import units
 import six
 
@@ -819,7 +820,11 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
             try:
                 request = int(request)
             except ValueError:
-                request = 0
+                try:
+                    request = strutils.string_to_bytes(
+                        request, return_int=True) / units.Ki
+                except ValueError:
+                    request = 0
 
         if request <= 0:
             raise exception.MemoryPageSizeInvalid(pagesize=request)
