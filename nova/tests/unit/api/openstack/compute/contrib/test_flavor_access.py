@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 import six
 from webob import exc
 
@@ -296,6 +297,16 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         result = add_access(req, '3', body=body)
         self.assertEqual(result, expected)
 
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id',
+                side_effect=exception.FlavorNotFound(flavor_id='1'))
+    def test_add_tenant_access_with_flavor_not_found(self, mock_get):
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        add_access = self._get_add_access()
+        self.assertRaises(exc.HTTPNotFound,
+                          add_access, req, '2', body=body)
+
     def test_add_tenant_access_with_no_tenant(self):
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
@@ -328,6 +339,15 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         remove_access = self._get_remove_access()
         self.assertRaises(exc.HTTPNotFound,
                           remove_access, self.req, '3', body=body)
+
+    def test_add_tenant_access_is_public(self):
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        req.api_version_request = api_version.APIVersionRequest('2.7')
+        add_access = self._get_add_access()
+        self.assertRaises(exc.HTTPConflict,
+                          add_access, req, '1', body=body)
 
     def test_delete_tenant_access_with_no_tenant(self):
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
@@ -373,6 +393,29 @@ class FlavorAccessTestV20(FlavorAccessTestV21):
         self.assertRaises(exception.AdminRequired,
                           self.flavor_access_controller.index,
                           req, 'fake')
+
+    @mock.patch('nova.objects.Flavor.add_access')
+    def test_add_tenant_access_is_public(self, mock_add):
+        # V2 don't test public before add access
+        expected = {'flavor_access':
+                    [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+
+        add_access = self._get_add_access()
+        result = add_access(req, '3', body=body)
+        mock_add.assert_called_once_with('proj2')
+        self.assertEqual(result, expected)
+
+    @mock.patch('nova.objects.Flavor.add_access')
+    def test_add_tenant_access_with_flavor_not_found(self, mock_add):
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        add_access = self._get_add_access()
+        add_access(req, '1000', body=body)
+        mock_add.assert_called_once_with('proj2')
 
 
 class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):

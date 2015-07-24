@@ -90,3 +90,9 @@ user documentation.
 
   The old APIs 'os-getVNCConsole', 'os-getSPICEConsole', 'os-getSerialConsole'
   and 'os-getRDPConsole' are removed.
+
+2.7
+---
+
+  Check the ``is_public`` attribute of a flavor before adding tenant access
+  to it. Reject the request with HTTPConflict error.

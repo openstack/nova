@@ -17,6 +17,7 @@
 
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import flavor_access
 from nova.api.openstack import extensions
@@ -103,8 +104,14 @@ class FlavorActionController(wsgi.Controller):
         vals = body['addTenantAccess']
         tenant = vals['tenant']
 
-        flavor = objects.Flavor(context=context, flavorid=id)
+        flavor = common.get_flavor(context, id)
+
         try:
+            req_ver = req.api_version_request
+            if req_ver >= api_version_request.APIVersionRequest("2.7"):
+                if flavor.is_public:
+                    exp = _("Can not add access to a public flavor.")
+                    raise webob.exc.HTTPConflict(explanation=exp)
             flavor.add_access(tenant)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())

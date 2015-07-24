@@ -45,6 +45,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.4 - Exposes reserved field in os-fixed-ips.
     * 2.5 - Allow server search option ip6 for non-admin
     * 2.6 - Consolidate the APIs for getting remote consoles
+    * 2.7 - Check flavor type before add tenant access.
 """
 
 # The minimum and maximum versions of the API supported
@@ -53,7 +54,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.6"
+_MAX_API_VERSION = "2.7"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 
