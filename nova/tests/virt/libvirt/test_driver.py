@@ -9011,7 +9011,8 @@ Active:          8381604 kB
         got = conn._get_instance_capabilities()
         self.assertEqual(want, got)
 
-    def test_event_dispatch(self):
+    @mock.patch.object(greenthread, 'spawn_after')
+    def test_event_dispatch(self, mock_spawn_after):
         # Validate that the libvirt self-pipe for forwarding
         # events between threads is working sanely
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9048,8 +9049,12 @@ Active:          8381604 kB
         conn._queue_event(event4)
         conn._dispatch_events()
 
-        want_events = [event1, event2, event3, event4]
+        want_events = [event1, event2, event3]
         self.assertEqual(want_events, got_events)
+
+        # STOPPED is delayed so it's handled separately
+        mock_spawn_after.assert_called_once_with(
+            conn._lifecycle_delay, conn.emit_event, event4)
 
     def test_event_lifecycle(self):
         # Validate that libvirt events are correctly translated
@@ -9057,10 +9062,13 @@ Active:          8381604 kB
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         got_events = []
 
-        def handler(event):
-            got_events.append(event)
+        def spawn_after(seconds, func, *args, **kwargs):
+            got_events.append(args[0])
+            return mock.Mock(spec=greenthread.GreenThread)
 
-        conn.register_event_listener(handler)
+        greenthread.spawn_after = mock.Mock(side_effect=spawn_after)
+
+        conn.register_event_listener(lambda e: None)
         conn._init_events_pipe()
         fake_dom_xml = """
                 <domain type='kvm'>
@@ -9088,22 +9096,18 @@ Active:          8381604 kB
         self.assertEqual(got_events[0].transition,
                          virtevent.EVENT_LIFECYCLE_STOPPED)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'emit_event')
-    def test_event_emit_delayed_call_now(self, emit_event_mock):
-        self.flags(virt_type="kvm", group="libvirt")
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn._event_emit_delayed(None)
-        emit_event_mock.assert_called_once_with(None)
-
-    @mock.patch.object(greenthread, 'spawn_after')
-    def test_event_emit_delayed_call_delayed(self, spawn_after_mock):
-        CONF.set_override("virt_type", "xen", group="libvirt")
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+    def test_event_emit_delayed_call_delayed(self):
         event = virtevent.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             virtevent.EVENT_LIFECYCLE_STOPPED)
-        conn._event_emit_delayed(event)
-        spawn_after_mock.assert_called_once_with(15, conn.emit_event, event)
+        for virt_type in ("kvm", "xen"):
+            spawn_after_mock = mock.Mock()
+            greenthread.spawn_after = spawn_after_mock
+            CONF.set_override("virt_type", virt_type, group="libvirt")
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            conn._event_emit_delayed(event)
+            spawn_after_mock.assert_called_once_with(
+                15, conn.emit_event, event)
 
     @mock.patch.object(greenthread, 'spawn_after')
     def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
