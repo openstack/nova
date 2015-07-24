@@ -632,7 +632,7 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
     def _process_object(self, context, objprim):
         try:
             objinst = NovaObject.obj_from_primitive(objprim, context=context)
-        except exception.IncompatibleObjectVersion as e:
+        except exception.IncompatibleObjectVersion:
             objver = objprim['nova_object.version']
             if objver.count('.') == 2:
                 # NOTE(danms): For our purposes, the .z part of the version
@@ -640,8 +640,13 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
                 objprim['nova_object.version'] = \
                     '.'.join(objver.split('.')[:2])
                 return self._process_object(context, objprim)
-            objinst = self.conductor.object_backport(context, objprim,
-                                                     e.kwargs['supported'])
+            objname = objprim['nova_object.name']
+            supported = NovaObjectRegistry.obj_classes().get(objname, [])
+            if supported:
+                objinst = self.conductor.object_backport(context, objprim,
+                                                         supported[0].VERSION)
+            else:
+                raise
         return objinst
 
     def _process_iterable(self, context, action_fn, values):
