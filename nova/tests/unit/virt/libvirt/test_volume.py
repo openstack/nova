@@ -760,8 +760,6 @@ Setting up iSCSI targets: unused
                              ('iscsiadm', '-m', 'node', '--rescan'),
                              ('iscsiadm', '-m', 'session', '--rescan'),
                              ('multipath', '-r'),
-                             ('iscsiadm', '-m', 'node', '--rescan'),
-                             ('iscsiadm', '-m', 'session', '--rescan'),
                              ('multipath', '-r'),
                              ('iscsiadm', '-m', 'discoverydb',
                               '-t', 'sendtargets',
