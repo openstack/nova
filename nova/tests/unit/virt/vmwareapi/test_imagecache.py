@@ -27,7 +27,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import imagecache
-from nova.virt.vmwareapi import vmops
 
 CONF = cfg.CONF
 
@@ -224,8 +223,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
               _timestamp_cleanup):
             timeutils.set_time_override(override_time=self._time)
             datastore = ds_obj.Datastore(name='ds', ref='fake-ds-ref')
-            dc_info = vmops.DcInfo(ref='dc_ref', name='name',
-                                   vmFolder='vmFolder')
+            dc_info = ds_util.DcInfo(ref='dc_ref', name='name',
+                                     vmFolder='vmFolder')
             self._get_timestamp_called = 0
             self._imagecache.originals = set(['fake-image-1', 'fake-image-2',
                                               'fake-image-3', 'fake-image-4'])
@@ -273,7 +272,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                              for instance in instances]
             self.images = set(['1', '2'])
             datastore = ds_obj.Datastore(name='ds', ref='fake-ds-ref')
-            dc_info = vmops.DcInfo(ref='dc_ref', name='name',
-                                   vmFolder='vmFolder')
+            dc_info = ds_util.DcInfo(ref='dc_ref', name='name',
+                                     vmFolder='vmFolder')
             datastores_info = [(datastore, dc_info)]
             self._imagecache.update('context', all_instances, datastores_info)

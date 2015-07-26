@@ -58,6 +58,7 @@ class DsPathMatcher(object):
 class VMwareVMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
+        ds_util.dc_cache_reset()
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         self.flags(enabled=True, group='vnc')
@@ -74,7 +75,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 ref=fake_ds_ref, name='fake_ds',
                 capacity=10 * units.Gi,
                 freespace=10 * units.Gi)
-        self._dc_info = vmops.DcInfo(
+        self._dc_info = ds_util.DcInfo(
                 ref='fake_dc_ref', name='fake_dc',
                 vmFolder='fake_vm_folder')
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
@@ -179,7 +180,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ds_ref = mock.Mock()
         ds_ref.value = 1
         dc_ref = mock.Mock()
-        ops._datastore_dc_mapping[ds_ref.value] = vmops.DcInfo(
+        ds_util._DS_DC_MAPPING[ds_ref.value] = ds_util.DcInfo(
                 ref=dc_ref,
                 name='fake-name',
                 vmFolder='fake-folder')
@@ -384,7 +385,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             dc_info = _vcvmops.get_datacenter_ref_and_name(instance_ds_ref)
 
             if ds_ref:
-                self.assertEqual(1, len(_vcvmops._datastore_dc_mapping))
+                self.assertEqual(1, len(ds_util._DS_DC_MAPPING))
                 calls = [mock.call(vim_util, "get_objects", "Datacenter",
                                    ["name", "datastore", "vmFolder"]),
                          mock.call(vutil, 'continue_retrieval',
@@ -587,8 +588,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 'fake-disk',
                                 'fake-capacity',
                                 device)
-        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
-                               vmFolder='fake_folder')
+        dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
+                                 vmFolder='fake_folder')
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         with contextlib.nested(
@@ -707,8 +708,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 'fake-disk',
                                 self._instance.root_gb * units.Gi,
                                 device)
-        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
-                               vmFolder='fake_folder')
+        dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
+                                 vmFolder='fake_folder')
         with mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
             return_value=dc_info) as fake_get_dc_ref_and_name:
             self._vmops._volumeops = mock.Mock()
@@ -776,8 +777,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 'fake-disk',
                                 'fake-capacity',
                                 device)
-        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
-                               vmFolder='fake_folder')
+        dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
+                                 vmFolder='fake_folder')
         with contextlib.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
                               return_value=dc_info),

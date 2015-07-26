@@ -88,9 +88,6 @@ VMWARE_POWER_STATES = {
 
 RESIZE_TOTAL_STEPS = 6
 
-DcInfo = collections.namedtuple('DcInfo',
-                                ['ref', 'name', 'vmFolder'])
-
 
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
@@ -165,7 +162,6 @@ class VMwareVMOps(object):
         self._datastore_regex = datastore_regex
         self._base_folder = self._get_base_folder()
         self._tmp_folder = 'vmware_temp'
-        self._datastore_dc_mapping = {}
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
@@ -1902,39 +1898,9 @@ class VMwareVMOps(object):
                     vi.root_gb * units.Mi, linked_clone,
                     disk_io_limits=vi._extra_specs.disk_io_limits)
 
-    def _update_datacenter_cache_from_objects(self, dcs):
-        """Updates the datastore/datacenter cache."""
-
-        while dcs:
-            for dco in dcs.objects:
-                dc_ref = dco.obj
-                ds_refs = []
-                prop_dict = vm_util.propset_dict(dco.propSet)
-                name = prop_dict.get('name')
-                vmFolder = prop_dict.get('vmFolder')
-                datastore_refs = prop_dict.get('datastore')
-                if datastore_refs:
-                    datastore_refs = datastore_refs.ManagedObjectReference
-                    for ds in datastore_refs:
-                        ds_refs.append(ds.value)
-                else:
-                    LOG.debug("Datacenter %s doesn't have any datastore "
-                              "associated with it, ignoring it", name)
-                for ds_ref in ds_refs:
-                    self._datastore_dc_mapping[ds_ref] = DcInfo(ref=dc_ref,
-                            name=name, vmFolder=vmFolder)
-            dcs = self._session._call_method(vutil, 'continue_retrieval',
-                                             dcs)
-
     def get_datacenter_ref_and_name(self, ds_ref):
         """Get the datacenter name and the reference."""
-        dc_info = self._datastore_dc_mapping.get(ds_ref.value)
-        if not dc_info:
-            dcs = self._session._call_method(vim_util, "get_objects",
-                    "Datacenter", ["name", "datastore", "vmFolder"])
-            self._update_datacenter_cache_from_objects(dcs)
-            dc_info = self._datastore_dc_mapping.get(ds_ref.value)
-        return dc_info
+        return ds_util.get_dc_info(self._session, ds_ref)
 
     def list_instances(self):
         """Lists the VM instances that are registered with vCenter cluster."""
