@@ -25,6 +25,11 @@ CONF = cfg.CONF
 
 class ApiPasteFixture(fixtures.Fixture):
 
+    def _replace_line(self, target_file, line):
+        target_file.write(line.replace(
+            "/v2: openstack_compute_api_v2",
+            "/v2: openstack_compute_api_v21"))
+
     def setUp(self):
         super(ApiPasteFixture, self).setUp()
         CONF.set_default('api_paste_config',
@@ -35,7 +40,16 @@ class ApiPasteFixture(fixtures.Fixture):
         with open(CONF.api_paste_config, 'r') as orig_api_paste:
             with open(tmp_api_paste_file_name, 'w') as tmp_file:
                 for line in orig_api_paste:
-                    tmp_file.write(line.replace(
-                        "/v2: openstack_compute_api_v2",
-                        "/v2: openstack_compute_api_v21"))
+                    self._replace_line(tmp_file, line)
         CONF.set_override('api_paste_config', tmp_api_paste_file_name)
+
+
+class ApiPasteV2CompatibleFixture(ApiPasteFixture):
+
+    def _replace_line(self, target_file, line):
+        line = line.replace("noauth2 osapi_compute_app_v21",
+            "noauth2 legacy_v2_compatible osapi_compute_app_v21")
+        line = line.replace(
+            "/v2: openstack_compute_api_v2",
+            "/v2: openstack_compute_api_v21")
+        target_file.write(line)
