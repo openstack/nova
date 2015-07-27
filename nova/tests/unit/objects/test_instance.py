@@ -1039,6 +1039,24 @@ class _TestInstanceObject(object):
                              expected_attrs=['info_cache'])
         self.assertIs(info_cache, inst.info_cache)
 
+    def test_from_db_object_info_cache_not_set(self):
+        inst = instance.Instance(context=self.context,
+                                 info_cache=None)
+        db_inst = fake_instance.fake_db_instance()
+        db_inst.pop('info_cache')
+        inst._from_db_object(self.context, inst, db_inst,
+                             expected_attrs=['info_cache'])
+        self.assertIsNone(inst.info_cache)
+
+    def test_from_db_object_security_groups_net_set(self):
+        inst = instance.Instance(context=self.context,
+                                 info_cache=None)
+        db_inst = fake_instance.fake_db_instance()
+        db_inst.pop('security_groups')
+        inst._from_db_object(self.context, inst, db_inst,
+                             expected_attrs=['security_groups'])
+        self.assertEqual([], inst.security_groups.objects)
+
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_with_pci_requests(self, mock_get):
         mock_get.return_value = objects.InstancePCIRequests()
