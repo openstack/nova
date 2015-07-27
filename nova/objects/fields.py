@@ -536,6 +536,24 @@ class NetworkModel(FieldType):
             ','.join([str(vif['id']) for vif in value]))
 
 
+class NonNegativeFloat(FieldType):
+    @staticmethod
+    def coerce(obj, attr, value):
+        v = float(value)
+        if v < 0:
+            raise ValueError(_('Value must be >= 0 for field %s') % attr)
+        return v
+
+
+class NonNegativeInteger(FieldType):
+    @staticmethod
+    def coerce(obj, attr, value):
+        v = int(value)
+        if v < 0:
+            raise ValueError(_('Value must be >= 0 for field %s') % attr)
+        return v
+
+
 class AutoTypedField(fields.Field):
     AUTO_TYPE = None
 
@@ -697,6 +715,14 @@ class ListOfIntegersField(AutoTypedField):
 # FIXME(sbauza): Remove this after oslo.versionedobjects releases it
 class DictOfListOfStringsField(AutoTypedField):
     AUTO_TYPE = Dict(List(fields.String()))
+
+
+class NonNegativeFloatField(AutoTypedField):
+    AUTO_TYPE = NonNegativeFloat()
+
+
+class NonNegativeIntegerField(AutoTypedField):
+    AUTO_TYPE = NonNegativeInteger()
 
 
 # FIXME(danms): Remove this after we convert to oslo.versionedobjects' registry

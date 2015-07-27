@@ -551,6 +551,13 @@ class TestInteger(TestField):
         self.from_primitive_values = self.coerce_good_values[0:1]
 
 
+class TestNonNegativeInteger(TestInteger):
+    def setUp(self):
+        super(TestNonNegativeInteger, self).setUp()
+        self.field = fields.Field(fields.NonNegativeInteger())
+        self.coerce_bad_values.extend(['-2', '4.2'])
+
+
 class TestFloat(TestField):
     def setUp(self):
         super(TestFloat, self).setUp()
@@ -559,6 +566,13 @@ class TestFloat(TestField):
         self.coerce_bad_values = ['foo', None]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
+
+
+class TestNonNegativeFloat(TestFloat):
+    def setUp(self):
+        super(TestNonNegativeFloat, self).setUp()
+        self.field = fields.Field(fields.NonNegativeFloat())
+        self.coerce_bad_values.extend(['-4.2'])
 
 
 class TestBoolean(TestField):
