@@ -128,6 +128,8 @@ man_pages = [
      [u'OpenStack'], 1),
     ('man/nova-dhcpbridge', 'nova-dhcpbridge', u'Cloud controller fabric',
      [u'OpenStack'], 1),
+    ('man/nova-idmapshift', 'nova-idmapshift', u'Cloud controller fabric',
+     [u'OpenStack'], 1),
     ('man/nova-manage', 'nova-manage', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-network', 'nova-network', u'Cloud controller fabric',
