@@ -39,9 +39,9 @@ from nova.virt.disk import api as disk
 from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import dmcrypt
-from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import dmcrypt
+from nova.virt.libvirt.storage import lvm
+from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 __imagebackend_opts = [
