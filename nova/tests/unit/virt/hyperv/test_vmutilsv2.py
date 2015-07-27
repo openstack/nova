@@ -150,6 +150,9 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
             ['ElementName', 'Notes'],
             VirtualSystemType=self._vmutils._VIRTUAL_SYSTEM_TYPE_REALIZED)
 
+    def _get_fake_instance_notes(self):
+        return [self._FAKE_VM_UUID]
+
     @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2.check_ret_val')
     @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2._get_wmi_obj')
     def _test_create_vm_obj(self, mock_get_wmi_obj, mock_check_ret_val,
