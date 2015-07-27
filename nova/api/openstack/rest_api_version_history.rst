@@ -96,3 +96,7 @@ user documentation.
 
   Check the ``is_public`` attribute of a flavor before adding tenant access
   to it. Reject the request with HTTPConflict error.
+
+2.8
+---
+  Add 'mks' protocol and 'webmks' type for remote consoles.

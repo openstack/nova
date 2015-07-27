@@ -107,3 +107,28 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         subs["url"] = self.http_regex
         self._verify_response('create-vnc-console-resp', subs, response, 200)
+
+
+class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
+    extension_name = "os-remote-consoles"
+    _api_version = 'v3'
+
+    def setUp(self):
+        super(ConsolesV28SampleJsonTests, self).setUp()
+        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+        self.flags(enabled=True, group='mks')
+
+    def test_create_mks_console(self):
+        # NOTE(rgerganov): set temporary to None to avoid duplicating server
+        # templates in the v2.8 folder
+        ConsolesV28SampleJsonTests.request_api_version = None
+        uuid = self._post_server()
+        ConsolesV28SampleJsonTests.request_api_version = '2.8'
+
+        body = {'protocol': 'mks', 'type': 'webmks'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-mks-console-req', body,
+                                 api_version='2.8')
+        subs = self._get_regexes()
+        subs["url"] = self.http_regex
+        self._verify_response('create-mks-console-resp', subs, response, 200)

@@ -33,7 +33,8 @@ class RemoteConsolesController(wsgi.Controller):
         self.handlers = {'vnc': self.compute_api.get_vnc_console,
                          'spice': self.compute_api.get_spice_console,
                          'rdp': self.compute_api.get_rdp_console,
-                         'serial': self.compute_api.get_serial_console}
+                         'serial': self.compute_api.get_serial_console,
+                         'mks': self.compute_api.get_mks_console}
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
     @wsgi.Controller.api_version("2.1", "2.5")
@@ -154,7 +155,8 @@ class RemoteConsolesController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.6")
     @extensions.expected_errors((400, 404, 409, 501))
-    @validation.schema(remote_consoles.create_v26)
+    @validation.schema(remote_consoles.create_v26, "2.6", "2.7")
+    @validation.schema(remote_consoles.create_v28, "2.8")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
         authorize(context)
