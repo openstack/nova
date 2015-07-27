@@ -4443,7 +4443,6 @@ class ComputeManager(manager.Manager):
         return do_reserve()
 
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def attach_volume(self, context, instance, bdm):
         """Attach a volume to an instance."""
@@ -4568,7 +4567,6 @@ class ComputeManager(manager.Manager):
         self.volume_api.detach(context.elevated(), volume_id)
 
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance):
         """Detach a volume from an instance."""
