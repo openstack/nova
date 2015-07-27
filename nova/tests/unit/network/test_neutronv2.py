@@ -3302,6 +3302,19 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_unbind_ports(self, mock_neutron, mock_has_ext):
         self._test_unbind_ports(mock_neutron, mock_has_ext, False)
 
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
+    def test_unbind_ports_no_port_ids(self, mock_has_ext):
+        # Tests that None entries in the ports list are filtered out.
+        mock_client = mock.Mock()
+        mock_update_port = mock.Mock()
+        mock_client.update_port = mock_update_port
+        mock_ctx = mock.Mock(is_admin=False)
+        mock_has_ext.return_value = True
+
+        api = neutronapi.API()
+        api._unbind_ports(mock_ctx, [None], mock_client, mock_client)
+        self.assertFalse(mock_update_port.called)
+
     @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
     @mock.patch('nova.network.neutronv2.api.excutils')
     @mock.patch('nova.network.neutronv2.api.API._delete_ports')
