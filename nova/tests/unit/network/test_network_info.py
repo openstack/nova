@@ -1140,3 +1140,53 @@ class TestNetworkMetadata(test.NoDBTestCase):
 
         network_json = netutils.get_network_metadata(self.netinfo)
         self.assertEqual(expected_json, network_json)
+
+    def test_get_network_metadata_no_ipv4(self):
+        expected_json = {
+            "services": [
+                {
+                    "type": "dns",
+                    "address": "1:2:3:4::"
+                },
+                {
+                    "type": "dns",
+                    "address": "2:3:4:5::"
+                }
+            ],
+            "networks": [
+                {
+                    "network_id": 1,
+                    "type": "ipv6",
+                    "netmask": "ffff:ffff:ffff::",
+                    "link": "interface0",
+                    "routes": [
+                        {
+                            "netmask": "::",
+                            "network": "::",
+                            "gateway": "fd00::1"
+                        },
+                        {
+                            "netmask": "ffff:ffff:ffff::",
+                            "network": "::",
+                            "gateway": "fd00::1:1"
+                        }
+                    ],
+                    "ip_address": "fd00::2",
+                    "id": "network0"
+                }
+            ],
+            "links": [
+                {
+                    "ethernet_mac_address": "aa:aa:aa:aa:aa:aa",
+                    "mtu": 1500,
+                    "type": "phy",
+                    "id": "interface0",
+                    "vif_id": 1
+                }
+            ]
+        }
+
+        # drop the ipv4 subnet
+        self.netinfo[0]['network']['subnets'].pop(0)
+        network_json = netutils.get_network_metadata(self.netinfo)
+        self.assertEqual(expected_json, network_json)
