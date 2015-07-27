@@ -15,6 +15,7 @@
 import contextlib
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -2095,3 +2096,21 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-detach-spec')
+
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    def test_get_mks_console(self, mock_get_vm_ref):
+        ticket = mock.MagicMock()
+        ticket.host = 'esx1'
+        ticket.port = 902
+        ticket.ticket = 'fira'
+        ticket.sslThumbprint = 'aa:bb:cc:dd:ee:ff'
+        ticket.cfgFile = '[ds1] fira/foo.vmx'
+        with mock.patch.object(self._session, '_call_method',
+                               return_value=ticket):
+            console = self._vmops.get_mks_console(self._instance)
+            self.assertEqual('esx1', console.host)
+            self.assertEqual(902, console.port)
+            path = jsonutils.loads(console.internal_access_path)
+            self.assertEqual('fira', path['ticket'])
+            self.assertEqual('aabbccddeeff', path['thumbprint'])
+            self.assertEqual('[ds1] fira/foo.vmx', path['cfgFile'])
