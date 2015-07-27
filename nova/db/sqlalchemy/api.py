@@ -2388,7 +2388,6 @@ def instance_get_all_by_host_and_node(context, host, node,
                 filter_by(node=node).all(), manual_joins=manual_joins)
 
 
-@require_admin_context
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return _instances_fill_metadata(context,
         _instance_get_all_query(context).filter_by(host=host).
