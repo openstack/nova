@@ -22,7 +22,6 @@ from nova import compute
 from nova import db
 from nova import exception
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -36,37 +35,34 @@ UUID5 = '00000000-0000-0000-0000-000000000005'
 
 
 def fake_compute_get(*args, **kwargs):
-    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
-    return objects.Instance._from_db_object(
-        args[1], objects.Instance(),
-        fakes.stub_instance(1, uuid=UUID3, host="host-fake",
-                            node="node-fake",
-                            reservation_id="r-1", launch_index=0,
-                            kernel_id=UUID4, ramdisk_id=UUID5,
-                            display_name="hostname-1",
-                            root_device_name="/dev/vda",
-                            user_data="userdata"), fields)
+    return fakes.stub_instance_obj(
+        None, 1, uuid=UUID3, host="host-fake",
+        node="node-fake",
+        reservation_id="r-1", launch_index=0,
+        kernel_id=UUID4, ramdisk_id=UUID5,
+        display_name="hostname-1",
+        root_device_name="/dev/vda",
+        user_data="userdata")
 
 
 def fake_compute_get_all(*args, **kwargs):
-    db_list = [
-        fakes.stub_instance(1, uuid=UUID1, host="host-1", node="node-1",
-                            reservation_id="r-1", launch_index=0,
-                            kernel_id=UUID4, ramdisk_id=UUID5,
-                            display_name="hostname-1",
-                            root_device_name="/dev/vda",
-                            user_data="userdata"),
-        fakes.stub_instance(2, uuid=UUID2, host="host-2", node="node-2",
-                            reservation_id="r-2", launch_index=1,
-                            kernel_id=UUID4, ramdisk_id=UUID5,
-                            display_name="hostname-2",
-                            root_device_name="/dev/vda",
-                            user_data="userdata")
+    inst_list = [
+        fakes.stub_instance_obj(
+            None, 1, uuid=UUID1, host="host-1", node="node-1",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID4, ramdisk_id=UUID5,
+            display_name="hostname-1",
+            root_device_name="/dev/vda",
+            user_data="userdata"),
+        fakes.stub_instance_obj(
+            None, 2, uuid=UUID2, host="host-2", node="node-2",
+            reservation_id="r-2", launch_index=1,
+            kernel_id=UUID4, ramdisk_id=UUID5,
+            display_name="hostname-2",
+            root_device_name="/dev/vda",
+            user_data="userdata"),
     ]
-    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
-    return instance_obj._make_instance_list(args[1],
-                                            objects.InstanceList(),
-                                            db_list, fields)
+    return objects.InstanceList(objects=inst_list)
 
 
 class ExtendedServerAttributesTestV21(test.TestCase):
