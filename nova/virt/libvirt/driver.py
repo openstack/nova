@@ -6752,7 +6752,15 @@ class LibvirtDriver(driver.ComputeDriver):
         image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
-        block_device_mapping = itertools.chain(*block_device_lists)
+        block_device_mapping = list(itertools.chain(*block_device_lists))
+        # NOTE(ndipanov): Null out the device names so that blockinfo code
+        #                 will assign them
+        for bdm in block_device_mapping:
+            if bdm.device_name is not None:
+                LOG.warn(_LW("Ignoring supplied device name: %(device_name)s. "
+                             "Libvirt can't honour user-supplied dev names"),
+                         {'device_name': bdm.device_name}, instance=instance)
+                bdm.device_name = None
         block_device_info = driver.get_block_device_info(instance,
                                                          block_device_mapping)
 
