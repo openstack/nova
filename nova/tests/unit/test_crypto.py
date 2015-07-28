@@ -16,9 +16,10 @@
 Tests for Crypto module.
 """
 
-import base64
 import os
 
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
 import mock
 from mox3 import mox
 from oslo_concurrency import processutils
@@ -257,34 +258,6 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
                           crypto.ssh_encrypt_text, '', self.text)
 
 
-class ConversionTests(test.TestCase):
-    k1 = ("ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA4CqmrxfU7x4sJrubpMNxeglul+d"
-          "ByrsicnvQcHDEjPzdvoz+BaoAG9bjCA5mCeTBIISsVTVXz/hxNeiuBV6LH/UR/c"
-          "27yl53ypN+821ImoexQZcKItdnjJ3gVZlDob1f9+1qDVy63NJ1c+TstkrCTRVeo"
-          "9VyE7RpdSS4UCiBe8Xwk3RkedioFxePrI0Ktc2uASw2G0G2Rl7RN7KZOJbCivfF"
-          "LQMAOu6e+7fYvuE1gxGHHj7dxaBY/ioGOm1W4JmQ1V7AKt19zTBlZKduN8FQMSF"
-          "r35CDlvoWs0+OP8nwlebKNCi/5sdL8qiSLrAcPB4LqdkAf/blNSVA2Yl83/c4lQ"
-          "== test@test")
-
-    k2 = ("-----BEGIN PUBLIC KEY-----\n"
-          "MIIBIDANBgkqhkiG9w0BAQEFAAOCAQ0AMIIBCAKCAQEA4CqmrxfU7x4sJrubpMNx\n"
-          "eglul+dByrsicnvQcHDEjPzdvoz+BaoAG9bjCA5mCeTBIISsVTVXz/hxNeiuBV6L\n"
-          "H/UR/c27yl53ypN+821ImoexQZcKItdnjJ3gVZlDob1f9+1qDVy63NJ1c+TstkrC\n"
-          "TRVeo9VyE7RpdSS4UCiBe8Xwk3RkedioFxePrI0Ktc2uASw2G0G2Rl7RN7KZOJbC\n"
-          "ivfFLQMAOu6e+7fYvuE1gxGHHj7dxaBY/ioGOm1W4JmQ1V7AKt19zTBlZKduN8FQ\n"
-          "MSFr35CDlvoWs0+OP8nwlebKNCi/5sdL8qiSLrAcPB4LqdkAf/blNSVA2Yl83/c4\n"
-          "lQIBIw==\n"
-          "-----END PUBLIC KEY-----\n")
-
-    def test_convert_keys(self):
-        result = crypto.convert_from_sshrsa_to_pkcs8(self.k1)
-        self.assertEqual(result, self.k2)
-
-    def test_convert_failure(self):
-        self.assertRaises(exception.EncryptionFailure,
-                          crypto.convert_from_sshrsa_to_pkcs8, '')
-
-
 class KeyPairTest(test.TestCase):
     rsa_prv = (
         "-----BEGIN RSA PRIVATE KEY-----\n"
@@ -363,19 +336,18 @@ class KeyPairTest(test.TestCase):
 
     def test_generate_key_pair_2048_bits(self):
         (private_key, public_key, fingerprint) = crypto.generate_key_pair()
-        raw_pub = public_key.split(' ')[1]
-        if six.PY3:
-            raw_pub = raw_pub.encode('ascii')
-        raw_pub = base64.b64decode(raw_pub)
-        pkey = paramiko.rsakey.RSAKey(None, raw_pub)
-        self.assertEqual(2048, pkey.get_bits())
+        pub_bytes = public_key.encode('utf-8')
+        pkey = serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        self.assertEqual(2048, pkey.key_size)
 
     def test_generate_key_pair_1024_bits(self):
         bits = 1024
         (private_key, public_key, fingerprint) = crypto.generate_key_pair(bits)
-        raw_pub = base64.b64decode(public_key.split(' ')[1])
-        pkey = paramiko.rsakey.RSAKey(None, raw_pub)
-        self.assertEqual(bits, pkey.get_bits())
+        pub_bytes = public_key.encode('utf-8')
+        pkey = serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        self.assertEqual(bits, pkey.key_size)
 
     def test_generate_key_pair_mocked_private_key(self):
         keyin = six.StringIO()

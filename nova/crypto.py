@@ -25,9 +25,13 @@ from __future__ import absolute_import
 import base64
 import binascii
 import os
-import re
-import struct
 
+from cryptography import exceptions
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography import x509
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -35,8 +39,6 @@ from oslo_utils import excutils
 from oslo_utils import fileutils
 from oslo_utils import timeutils
 import paramiko
-from pyasn1.codec.der import encoder as der_encoder
-from pyasn1.type import univ
 import six
 
 from nova import context
@@ -130,24 +132,21 @@ def ensure_ca_filesystem():
 
 def generate_fingerprint(public_key):
     try:
-        parts = public_key.split(' ')
-        ssh_alg = parts[0]
-        pub_data = base64.b64decode(parts[1])
-        if ssh_alg == 'ssh-rsa':
-            pkey = paramiko.RSAKey(data=pub_data)
-        elif ssh_alg == 'ssh-dss':
-            pkey = paramiko.DSSKey(data=pub_data)
-        elif ssh_alg == 'ecdsa-sha2-nistp256':
-            pkey = paramiko.ECDSAKey(data=pub_data, validate_point=False)
-        else:
-            raise exception.InvalidKeypair(
-                reason=_('Unknown ssh key type %s') % ssh_alg)
-        raw_fp = binascii.hexlify(pkey.get_fingerprint())
+        pub_bytes = public_key.encode('utf-8')
+        # Test that the given public_key string is a proper ssh key. The
+        # returned object is unused since pyca/cryptography does not have a
+        # fingerprint method.
+        serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        pub_data = base64.b64decode(public_key.split(' ')[1])
+        digest = hashes.Hash(hashes.MD5(), backends.default_backend())
+        digest.update(pub_data)
+        md5hash = digest.finalize()
+        raw_fp = binascii.hexlify(md5hash)
         if six.PY3:
             raw_fp = raw_fp.decode('ascii')
         return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))
-    except (TypeError, IndexError, UnicodeDecodeError, binascii.Error,
-            paramiko.ssh_exception.SSHException):
+    except Exception:
         raise exception.InvalidKeypair(
             reason=_('failed to generate fingerprint'))
 
@@ -156,12 +155,13 @@ def generate_x509_fingerprint(pem_key):
     try:
         if isinstance(pem_key, six.text_type):
             pem_key = pem_key.encode('utf-8')
-        (out, _err) = utils.execute('openssl', 'x509', '-inform', 'PEM',
-                                    '-fingerprint', '-noout',
-                                    process_input=pem_key)
-        fingerprint = out.rpartition('=')[2].strip()
-        return fingerprint.lower()
-    except processutils.ProcessExecutionError as ex:
+        cert = x509.load_pem_x509_certificate(
+            pem_key, backends.default_backend())
+        raw_fp = binascii.hexlify(cert.fingerprint(hashes.SHA1()))
+        if six.PY3:
+            raw_fp = raw_fp.decode('ascii')
+        return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))
+    except (ValueError, TypeError, binascii.Error) as ex:
         raise exception.InvalidKeypair(
             reason=_('failed to generate X509 fingerprint. '
                      'Error message: %s') % ex)
@@ -189,81 +189,17 @@ def fetch_crl(project_id):
 
 
 def decrypt_text(project_id, text):
-    private_key = key_path(project_id)
-    if not os.path.exists(private_key):
+    private_key_file = key_path(project_id)
+    if not os.path.exists(private_key_file):
         raise exception.ProjectNotFound(project_id=project_id)
+    with open(private_key_file, 'rb') as f:
+        data = f.read()
     try:
-        dec, _err = utils.execute('openssl',
-                                  'rsautl',
-                                  '-decrypt',
-                                  '-inkey', '%s' % private_key,
-                                  process_input=text,
-                                  binary=True)
-        return dec
-    except processutils.ProcessExecutionError as exc:
-        raise exception.DecryptionFailure(reason=exc.stderr)
-
-
-_RSA_OID = univ.ObjectIdentifier('1.2.840.113549.1.1.1')
-
-
-def _to_sequence(*vals):
-    seq = univ.Sequence()
-    for i in range(len(vals)):
-        seq.setComponentByPosition(i, vals[i])
-    return seq
-
-
-def convert_from_sshrsa_to_pkcs8(pubkey):
-    """Convert a ssh public key to openssl format
-       Equivalent to the ssh-keygen's -m option
-    """
-    # get the second field from the public key file.
-    try:
-        keydata = base64.b64decode(pubkey.split(None)[1])
-    except IndexError:
-        msg = _("Unable to find the key")
-        raise exception.EncryptionFailure(reason=msg)
-
-    # decode the parts of the key
-    parts = []
-    while keydata:
-        dlen = struct.unpack('>I', keydata[:4])[0]
-        data = keydata[4:dlen + 4]
-        keydata = keydata[4 + dlen:]
-        parts.append(data)
-
-    # Use asn to build the openssl key structure
-    #
-    #  SEQUENCE(2 elem)
-    #    +- SEQUENCE(2 elem)
-    #    |    +- OBJECT IDENTIFIER (1.2.840.113549.1.1.1)
-    #    |    +- NULL
-    #    +- BIT STRING(1 elem)
-    #         +- SEQUENCE(2 elem)
-    #              +- INTEGER(2048 bit)
-    #              +- INTEGER 65537
-
-    # Build the sequence for the bit string
-    n_val = int(binascii.hexlify(parts[2]), 16)
-    e_val = int(binascii.hexlify(parts[1]), 16)
-    pkinfo = _to_sequence(univ.Integer(n_val), univ.Integer(e_val))
-
-    # Convert the sequence into a bit string
-    pklong = int(binascii.hexlify(der_encoder.encode(pkinfo)), 16)
-    pkbitstring = univ.BitString("'00%s'B" % bin(pklong)[2:])
-
-    # Build the key data structure
-    oid = _to_sequence(_RSA_OID, univ.Null())
-    pkcs1_seq = _to_sequence(oid, pkbitstring)
-    pkcs8 = base64.b64encode(der_encoder.encode(pkcs1_seq))
-    if six.PY3:
-        pkcs8 = pkcs8.decode('ascii')
-
-    # Remove the embedded new line and format the key, each line
-    # should be 64 characters long
-    return ('-----BEGIN PUBLIC KEY-----\n%s\n-----END PUBLIC KEY-----\n' %
-            re.sub("(.{64})", "\\1\n", pkcs8.replace('\n', ''), re.DOTALL))
+        priv_key = serialization.load_pem_private_key(
+            data, None, backends.default_backend())
+        return priv_key.decrypt(text, padding.PKCS1v15())
+    except (ValueError, TypeError, exceptions.UnsupportedAlgorithm) as exc:
+        raise exception.DecryptionFailure(reason=six.text_type(exc))
 
 
 def ssh_encrypt_text(ssh_public_key, text):
@@ -273,23 +209,13 @@ def ssh_encrypt_text(ssh_public_key, text):
     """
     if isinstance(text, six.text_type):
         text = text.encode('utf-8')
-    with utils.tempdir() as tmpdir:
-        sslkey = os.path.abspath(os.path.join(tmpdir, 'ssl.key'))
-        try:
-            out = convert_from_sshrsa_to_pkcs8(ssh_public_key)
-            with open(sslkey, 'w') as f:
-                f.write(out)
-            enc, _err = utils.execute('openssl',
-                                      'rsautl',
-                                      '-encrypt',
-                                      '-pubin',
-                                      '-inkey', sslkey,
-                                      '-keyform', 'PEM',
-                                      process_input=text,
-                                      binary=True)
-            return enc
-        except processutils.ProcessExecutionError as exc:
-            raise exception.EncryptionFailure(reason=exc.stderr)
+    try:
+        pub_bytes = ssh_public_key.encode('utf-8')
+        pub_key = serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        return pub_key.encrypt(text, padding.PKCS1v15())
+    except Exception as exc:
+        raise exception.EncryptionFailure(reason=six.text_type(exc))
 
 
 def revoke_cert(project_id, file_name):
