@@ -2782,6 +2782,14 @@ class _ComputeAPIUnitTestMixIn(object):
         api = compute_api.API(skip_policy_check=True)
         api.create(self.context, None, None)
 
+    @mock.patch.object(compute_api.API, '_get_instances_by_filters')
+    def test_tenant_to_project_conversion(self, mock_get):
+        mock_get.return_value = []
+        api = compute_api.API()
+        api.get_all(self.context, search_opts={'tenant_id': 'foo'})
+        filters = mock_get.call_args_list[0][0][1]
+        self.assertEqual({'project_id': 'foo'}, filters)
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

@@ -21,6 +21,7 @@ import copy
 import datetime
 import uuid
 
+import fixtures
 import iso8601
 import mock
 from mox3 import mox
@@ -82,7 +83,7 @@ def fake_gen_uuid():
 
 
 def return_servers_empty(context, *args, **kwargs):
-    return []
+    return objects.InstanceList(objects=[])
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
@@ -179,14 +180,14 @@ class ControllerTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self.stubs)
-        return_server = fakes.fake_instance_get()
-        return_servers = fakes.fake_instance_get_all_by_filters()
+        return_server = fakes.fake_compute_get()
+        return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v3 so sort data is passed
         # to the instance API and the sorted DB API is invoked
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       return_servers)
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       return_server)
+        self.stubs.Set(compute_api.API, 'get_all',
+                       lambda api, *a, **k: return_servers(*a, **k))
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: return_server(*a, **k))
         self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update_and_get_original)
 
@@ -299,7 +300,8 @@ class ServersControllerTest(ControllerTest):
         def fake_get(_self, *args, **kwargs):
             self.expected_attrs = kwargs['expected_attrs']
             ctxt = context.RequestContext('fake', 'fake')
-            return fake_instance.fake_instance_obj(ctxt)
+            return fake_instance.fake_instance_obj(
+                ctxt, expected_attrs=['metadata', 'info_cache'])
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
 
@@ -312,20 +314,20 @@ class ServersControllerTest(ControllerTest):
         """Create two servers with the same host and different
         project_ids and check that the host_id's are unique.
         """
-        def return_instance_with_host(self, *args, **kwargs):
+        def return_instance_with_host(context, *args, **kwargs):
             project_id = str(uuid.uuid4())
-            return fakes.stub_instance(id=1, uuid=FAKE_UUID,
-                                       project_id=project_id,
-                                       host='fake_host')
+            return fakes.stub_instance_obj(context, id=1, uuid=FAKE_UUID,
+                                           project_id=project_id,
+                                           host='fake_host')
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       return_instance_with_host)
-        self.stubs.Set(db, 'instance_get',
+        self.stubs.Set(compute_api.API, 'get',
                        return_instance_with_host)
 
         req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
-        server1 = self.controller.show(req, FAKE_UUID)
-        server2 = self.controller.show(req, FAKE_UUID)
+        with mock.patch.object(compute_api.API, 'get') as mock_get:
+            mock_get.side_effect = return_instance_with_host
+            server1 = self.controller.show(req, FAKE_UUID)
+            server2 = self.controller.show(req, FAKE_UUID)
 
         self.assertNotEqual(server1['server']['hostId'],
                             server2['server']['hostId'])
@@ -340,7 +342,7 @@ class ServersControllerTest(ControllerTest):
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": progress,
-                "name": "server1",
+                "name": "server2",
                 "status": status,
                 "hostId": '',
                 "image": {
@@ -353,7 +355,7 @@ class ServersControllerTest(ControllerTest):
                     ],
                 },
                 "flavor": {
-                    "id": "1",
+                    "id": "2",
                   "links": [
                       {
                           "rel": "bookmark",
@@ -372,7 +374,7 @@ class ServersControllerTest(ControllerTest):
                     ]
                 },
                 "metadata": {
-                    "seq": "1",
+                    "seq": "2",
                 },
                 "links": [
                     {
@@ -390,7 +392,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_server_by_id(self):
         self.flags(use_ipv6=True)
         image_bookmark = "http://localhost/images/10"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/flavors/2"
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
@@ -401,16 +403,19 @@ class ServersControllerTest(ControllerTest):
                                                      flavor_bookmark,
                                                      status="BUILD",
                                                      progress=0)
+        expected_server['server']['name'] = 'server1'
+        expected_server['server']['metadata']['seq'] = '1'
 
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_active_status_by_id(self):
         image_bookmark = "http://localhost/images/10"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/flavors/2"
 
-        new_return_server = fakes.fake_instance_get(
-                vm_state=vm_states.ACTIVE, progress=100)
-        self.stubs.Set(db, 'instance_get_by_uuid', new_return_server)
+        new_return_server = fakes.fake_compute_get(
+            id=2, vm_state=vm_states.ACTIVE, progress=100)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: new_return_server(*a, **k))
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
@@ -424,12 +429,13 @@ class ServersControllerTest(ControllerTest):
         image_ref = "10"
         image_bookmark = "http://localhost/images/10"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/flavors/2"
 
-        new_return_server = fakes.fake_instance_get(
-                vm_state=vm_states.ACTIVE, image_ref=image_ref,
-                flavor_id=flavor_id, progress=100)
-        self.stubs.Set(db, 'instance_get_by_uuid', new_return_server)
+        new_return_server = fakes.fake_compute_get(
+            id=2, vm_state=vm_states.ACTIVE, image_ref=image_ref,
+            flavor_id=flavor_id, progress=100)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: new_return_server(*a, **k))
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
@@ -469,8 +475,9 @@ class ServersControllerTest(ControllerTest):
                          'subnets': [{'cidr': '192.168.0.0/24',
                                       'ips': [_ip(ip) for ip in priv0]}]}}]
 
-        return_server = fakes.fake_instance_get(nw_cache=nw_cache)
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        return_server = fakes.fake_compute_get(nw_cache=nw_cache)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: return_server(*a, **k))
 
         req = fakes.HTTPRequestV3.blank('/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
@@ -506,7 +513,7 @@ class ServersControllerTest(ControllerTest):
         def fake_instance_get(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
         server_id = str(uuid.uuid4())
         req = fakes.HTTPRequestV3.blank('/servers/%s/ips' % server_id)
@@ -514,7 +521,7 @@ class ServersControllerTest(ControllerTest):
                           self.ips_controller.index, req, server_id)
 
     def test_get_server_list_empty(self):
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
+        self.stubs.Set(compute_api.API, 'get_all',
                        return_servers_empty)
 
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -598,7 +605,7 @@ class ServersControllerTest(ControllerTest):
                           self.controller.index, req)
 
     def test_get_server_details_empty(self):
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
+        self.stubs.Set(compute_api.API, 'get_all',
                        return_servers_empty)
 
         req = fakes.HTTPRequestV3.blank('/servers/detail')
@@ -716,63 +723,36 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
-    def test_tenant_id_filter_converts_to_project_id_for_admin(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertIsNotNone(filters)
-            self.assertEqual(filters['project_id'], 'newfake')
-            self.assertFalse(filters.get('tenant_id'))
-            return [fakes.stub_instance(100)]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
-
-        req = fakes.HTTPRequestV3.blank('/servers'
-                                     '?all_tenants=1&tenant_id=newfake',
-                                      use_admin_context=True)
-        servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
-
     def test_tenant_id_filter_no_admin_context(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotEqual(filters, None)
-            self.assertEqual(filters['project_id'], 'fake')
-            return [fakes.stub_instance(100)]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertNotEqual(search_opts, None)
+            self.assertEqual(search_opts['project_id'], 'fake')
+            return [fakes.stub_instance_obj(100)]
 
         req = fakes.HTTPRequestV3.blank('/servers?tenant_id=newfake')
-        servers = self.controller.index(req)['servers']
+        with mock.patch.object(compute_api.API, 'get_all') as mock_get:
+            mock_get.side_effect = fake_get_all
+            servers = self.controller.index(req)['servers']
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_normal(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotIn('project_id', filters)
-            return [fakes.stub_instance(100)]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertNotIn('project_id', search_opts)
+            return [fakes.stub_instance_obj(100)]
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants',
                                       use_admin_context=True)
-        servers = self.controller.index(req)['servers']
+        with mock.patch.object(compute_api.API, 'get_all') as mock_get:
+            mock_get.side_effect = fake_get_all
+            servers = self.controller.index(req)['servers']
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_one(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotIn('project_id', filters)
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertNotIn('project_id', search_opts)
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants=1',
                                       use_admin_context=True)
@@ -780,14 +760,11 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_zero(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotIn('all_tenants', filters)
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertNotIn('all_tenants', search_opts)
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants=0',
                                       use_admin_context=True)
@@ -795,14 +772,11 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_false(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotIn('all_tenants', filters)
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertNotIn('all_tenants', search_opts)
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants=false',
                                       use_admin_context=True)
@@ -810,14 +784,11 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_invalid(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertNotIn('all_tenants', filters)
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertNotIn('all_tenants', search_opts)
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants=xxx',
                                       use_admin_context=True)
@@ -825,15 +796,12 @@ class ServersControllerTest(ControllerTest):
                           self.controller.index, req)
 
     def test_admin_restricted_tenant(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertIsNotNone(filters)
-            self.assertEqual(filters['project_id'], 'fake')
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            self.assertEqual(search_opts['project_id'], 'fake')
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers',
                                       use_admin_context=True)
@@ -841,16 +809,13 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_pass_policy(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, use_slave=False,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertIsNotNone(filters)
-            self.assertNotIn('project_id', filters)
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            self.assertNotIn('project_id', search_opts)
             self.assertTrue(context.is_admin)
-            return [fakes.stub_instance(100)]
+            return [fakes.stub_instance_obj(100)]
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         rules = {
             "os_compute_api:servers:index":
@@ -865,10 +830,9 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
 
     def test_all_tenants_fail_policy(self):
-        def fake_get_all(context, filters=None, limit=None, marker=None,
-                         columns_to_join=None, sort_keys=None, sort_dirs=None):
-            self.assertIsNotNone(filters)
-            return [fakes.stub_instance(100)]
+        def fake_get_all(api, context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            return [fakes.stub_instance_obj(100)]
 
         rules = {
             "os_compute_api:servers:index:get_all_tenants":
@@ -878,8 +842,7 @@ class ServersControllerTest(ControllerTest):
         }
 
         policy.set_rules(rules)
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fake_get_all)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers?all_tenants=1')
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -895,9 +858,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('flavor', search_opts)
             # flavor is an integer ID
             self.assertEqual(search_opts['flavor'], '12345')
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -909,13 +871,17 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_servers_with_bad_flavor(self):
         req = fakes.HTTPRequestV3.blank('/servers?flavor=abcde')
-        servers = self.controller.index(req)['servers']
+        with mock.patch.object(compute_api.API, 'get_all') as mock_get:
+            mock_get.return_value = objects.InstanceList(objects=[])
+            servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 0)
 
     def test_get_server_details_with_bad_flavor(self):
         req = fakes.HTTPRequestV3.blank('/servers?flavor=abcde')
-        servers = self.controller.detail(req)['servers']
+        with mock.patch.object(compute_api.API, 'get_all') as mock_get:
+            mock_get.return_value = objects.InstanceList(objects=[])
+            servers = self.controller.detail(req)['servers']
 
         self.assertThat(servers, testtools.matchers.HasLength(0))
 
@@ -928,9 +894,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -953,10 +918,9 @@ class ServersControllerTest(ControllerTest):
                               task_states.REBOOT_STARTED,
                               task_states.REBOOTING],
                              search_opts['task_state'])
-            db_list = [fakes.stub_instance(100, uuid=server_uuid,
-                                                task_state=task_state)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid,
+                                                 task_state=task_state)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -977,9 +941,8 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['vm_state'],
                              [vm_states.ACTIVE, vm_states.STOPPED])
 
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1011,9 +974,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], ['deleted'])
 
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1028,10 +990,10 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_deleted_filter_str_to_bool(self, mock_get_all):
         server_uuid = str(uuid.uuid4())
 
-        db_list = [fakes.stub_instance(100, uuid=server_uuid,
-                                       vm_state='deleted')]
-        mock_get_all.return_value = instance_obj._make_instance_list(
-            context, objects.InstanceList(), db_list, FIELDS)
+        db_list = objects.InstanceList(
+            objects=[fakes.stub_instance_obj(100, uuid=server_uuid,
+                                             vm_state='deleted')])
+        mock_get_all.return_value = db_list
 
         req = fakes.HTTPRequestV3.blank('/servers?deleted=true',
                                         use_admin_context=True)
@@ -1053,9 +1015,9 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_deleted_filter_invalid_str(self, mock_get_all):
         server_uuid = str(uuid.uuid4())
 
-        db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-        mock_get_all.return_value = instance_obj._make_instance_list(
-            context, objects.InstanceList(), db_list, FIELDS)
+        db_list = objects.InstanceList(
+            objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
+        mock_get_all.return_value = db_list
 
         req = fakes.HTTPRequest.blank('/fake/servers?deleted=abc',
                                       use_admin_context=True)
@@ -1082,9 +1044,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1115,9 +1076,8 @@ class ServersControllerTest(ControllerTest):
                                               tzinfo=iso8601.iso8601.UTC)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertNotIn('deleted', search_opts)
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1151,9 +1111,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('vm_state', search_opts)
             # Allowed only by admins with admin API on
             self.assertNotIn('unknown_option', search_opts)
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1182,9 +1141,8 @@ class ServersControllerTest(ControllerTest):
             # Allowed only by admins with admin API on
             self.assertIn('ip', search_opts)
             self.assertIn('unknown_option', search_opts)
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1207,9 +1165,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
             self.assertEqual(search_opts['ip'], '10\..*')
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1231,9 +1188,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1256,9 +1212,8 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')
-            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
-            return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1271,11 +1226,11 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_all_server_details(self):
         expected_flavor = {
-                "id": "1",
+                "id": "2",
                 "links": [
                     {
                         "rel": "bookmark",
-                        "href": 'http://localhost/flavors/1',
+                        "href": 'http://localhost/flavors/2',
                         },
                     ],
                 }
@@ -1307,13 +1262,17 @@ class ServersControllerTest(ControllerTest):
         there are 5 instances - 2 on one host and 3 on another.
         """
 
-        def return_servers_with_host(context, *args, **kwargs):
-            return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
-                                        uuid=fakes.get_fake_uuid(i))
-                    for i in range(5)]
+        def return_servers_with_host(*args, **kwargs):
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(None,
+                                                 id=i + 1,
+                                                 user_id='fake',
+                                                 project_id='fake',
+                                                 host=i % 2,
+                                                 uuid=fakes.get_fake_uuid(i))
+                    for i in range(5)])
 
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       return_servers_with_host)
+        self.stubs.Set(compute_api.API, 'get_all', return_servers_with_host)
 
         req = fakes.HTTPRequestV3.blank('/servers/detail')
         res_dict = self.controller.detail(req)
@@ -1350,12 +1309,12 @@ class ServersControllerDeleteTest(ControllerTest):
         super(ServersControllerDeleteTest, self).setUp()
         self.server_delete_called = False
 
-        def instance_destroy_mock(*args, **kwargs):
+        def fake_delete(api, context, instance):
+            if instance.uuid == 'non-existent-uuid':
+                raise exception.InstanceNotFound(instance_id=instance.uuid)
             self.server_delete_called = True
-            deleted_at = timeutils.utcnow()
-            return fake_instance.fake_db_instance(deleted_at=deleted_at)
 
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+        self.stubs.Set(compute_api.API, 'delete', fake_delete)
 
     def _create_delete_request(self, uuid):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
@@ -1365,8 +1324,10 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def _delete_server_instance(self, uuid=FAKE_UUID):
         req = self._create_delete_request(uuid)
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        fake_get = fakes.fake_compute_get(uuid=uuid,
+                                          vm_state=vm_states.ACTIVE)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: fake_get(*a, **k))
         self.controller.delete(req, uuid)
 
     def test_delete_server_instance(self):
@@ -1396,14 +1357,12 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_server_instance_while_resize(self):
         req = self._create_delete_request(FAKE_UUID)
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
-                                        task_state=task_states.RESIZE_PREP))
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          task_state=task_states.RESIZE_PREP)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: fake_get(*a, **k))
 
         self.controller.delete(req, FAKE_UUID)
-        # Delete shoud be allowed in any case, even during resizing,
-        # because it may get stuck.
-        self.assertTrue(self.server_delete_called)
 
     def test_delete_server_instance_if_not_launched(self):
         self.flags(reclaim_instance_interval=3600)
@@ -1412,8 +1371,9 @@ class ServersControllerDeleteTest(ControllerTest):
 
         self.server_delete_called = False
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
-            fakes.fake_instance_get(launched_at=None))
+        fake_get = fakes.fake_compute_get(launched_at=None)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: fake_get(*a, **k))
 
         def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
@@ -1434,8 +1394,21 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def setUp(self):
         super(ServersControllerRebuildInstanceTest, self).setUp()
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+
+        def fake_get(ctrl, ctxt, uuid):
+            if uuid == 'test_inst':
+                raise webob.exc.HTTPNotFound(explanation='fakeout')
+            return fakes.stub_instance_obj(None,
+                                           vm_state=vm_states.ACTIVE)
+
+        self.useFixture(
+            fixtures.MonkeyPatch('nova.api.openstack.compute.plugins.v3.'
+                                 'servers.ServersController._get_instance',
+                                 fake_get))
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: fake_get(*a, **k))
+
         self.body = {
             'rebuild': {
                 'name': 'new_name',
@@ -1707,8 +1680,9 @@ class ServersControllerUpdateTest(ControllerTest):
 
     def _get_request(self, body=None, options=None):
         if options:
-            self.stubs.Set(db, 'instance_get',
-                           fakes.fake_instance_get(**options))
+            fake_get = fakes.fake_compute_get(**options)
+            self.stubs.Set(compute_api.API, 'get',
+                           lambda api, *a, **k: fake_get(*a, **k))
         req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
