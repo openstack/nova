@@ -64,7 +64,8 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
                                                 "dummy")
         )
 
-    def test_get_all_host_states(self):
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
+    def test_get_all_host_states(self, mock_gbh):
         # Ensure .service is set and we have the values we expect to.
         context = 'fake_context'
 
@@ -76,8 +77,8 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
             ironic_fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
-        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
-            self.host_manager.get_all_host_states(context)
+        self.host_manager.get_all_host_states(context)
+        self.assertEqual(0, mock_gbh.call_count)
         host_states_map = self.host_manager.host_state_map
 
         self.assertEqual(len(host_states_map), 4)

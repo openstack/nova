@@ -111,3 +111,11 @@ class IronicHostManager(host_manager.HostManager):
             return IronicNodeState(host, node, **kwargs)
         else:
             return host_manager.HostState(host, node, **kwargs)
+
+    def _init_instance_info(self):
+        """Ironic hosts should not pass instance info."""
+        pass
+
+    def _add_instance_info(self, context, compute, host_state):
+        """Ironic hosts should not pass instance info."""
+        host_state.instances = {}
