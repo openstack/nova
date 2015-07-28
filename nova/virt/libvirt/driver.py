@@ -43,6 +43,7 @@ import eventlet
 from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
+from os_brick.initiator import connector
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -250,6 +251,8 @@ CONF.import_opt('proxyclient_address', 'nova.console.serial',
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
 CONF.import_group('workarounds', 'nova.utils')
+CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume',
+                group='libvirt')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -959,37 +962,12 @@ class LibvirtDriver(driver.ComputeDriver):
         return []
 
     def get_volume_connector(self, instance):
-        if self._initiator is None:
-            self._initiator = libvirt_utils.get_iscsi_initiator()
-            if not self._initiator:
-                LOG.debug('Could not determine iscsi initiator name',
-                          instance=instance)
-
-        if self._fc_wwnns is None:
-            self._fc_wwnns = libvirt_utils.get_fc_wwnns()
-            if not self._fc_wwnns or len(self._fc_wwnns) == 0:
-                LOG.debug('Could not determine fibre channel '
-                          'world wide node names',
-                          instance=instance)
-
-        if self._fc_wwpns is None:
-            self._fc_wwpns = libvirt_utils.get_fc_wwpns()
-            if not self._fc_wwpns or len(self._fc_wwpns) == 0:
-                LOG.debug('Could not determine fibre channel '
-                          'world wide port names',
-                          instance=instance)
-
-        connector = {'ip': CONF.my_block_storage_ip,
-                     'host': CONF.host}
-
-        if self._initiator:
-            connector['initiator'] = self._initiator
-
-        if self._fc_wwnns and self._fc_wwpns:
-            connector["wwnns"] = self._fc_wwnns
-            connector["wwpns"] = self._fc_wwpns
-
-        return connector
+        root_helper = utils._get_root_helper()
+        return connector.get_connector_properties(
+            root_helper, CONF.my_block_storage_ip,
+            CONF.libvirt.iscsi_use_multipath,
+            enforce_multipath=True,
+            host=CONF.host)
 
     def _cleanup_resize(self, instance, network_info):
         # NOTE(wangpan): we get the pre-grizzly instance path firstly,

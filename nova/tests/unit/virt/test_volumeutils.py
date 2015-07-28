@@ -14,34 +14,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests fot virt volumeutils.
+Tests for virt volumeutils.
 """
+import mock
+from os_brick.initiator import connector
 
-from nova import exception
 from nova import test
-from nova import utils
 from nova.virt import volumeutils
 
 
 class VolumeUtilsTestCase(test.NoDBTestCase):
-    def test_get_iscsi_initiator(self):
-        self.mox.StubOutWithMock(utils, 'execute')
+
+    @mock.patch.object(connector.ISCSIConnector, 'get_initiator',
+                       return_value='fake.initiator.iqn')
+    def test_get_iscsi_initiator(self, fake_initiator):
         initiator = 'fake.initiator.iqn'
-        rval = ("junk\nInitiatorName=%s\njunk\n" % initiator, None)
-        utils.execute('cat', '/etc/iscsi/initiatorname.iscsi',
-                      run_as_root=True).AndReturn(rval)
         # Start test
-        self.mox.ReplayAll()
         result = volumeutils.get_iscsi_initiator()
         self.assertEqual(initiator, result)
 
-    def test_get_missing_iscsi_initiator(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        file_path = '/etc/iscsi/initiatorname.iscsi'
-        utils.execute('cat', file_path, run_as_root=True).AndRaise(
-            exception.FileNotFound(file_path=file_path)
-        )
-        # Start test
-        self.mox.ReplayAll()
+    @mock.patch.object(connector.ISCSIConnector, 'get_initiator',
+                       return_value=None)
+    def test_get_missing_iscsi_initiator(self, fake_initiator):
         result = volumeutils.get_iscsi_initiator()
-        self.assertEqual('', result)
+        self.assertIsNone(result)

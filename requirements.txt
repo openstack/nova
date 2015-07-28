@@ -51,3 +51,4 @@ oslo.middleware>=2.4.0 # Apache-2.0
 psutil<2.0.0,>=1.1.1
 oslo.versionedobjects!=0.5.0,>=0.3.0
 alembic>=0.7.2
+os-brick>=0.3.2 # Apache-2.0

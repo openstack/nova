@@ -15,21 +15,20 @@
 """
 Volume utilities for virt drivers.
 """
+from os_brick.initiator import connector
+from oslo_concurrency import processutils as putils
 
-from nova import exception
 from nova import utils
 
 
-def get_iscsi_initiator():
+def get_iscsi_initiator(execute=None):
     """Get iscsi initiator name for this machine."""
-    # NOTE(vish) openiscsi stores initiator name in a file that
-    #            needs root permission to read.
-    try:
-        contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
-    except exception.FileNotFound:
-        return ''
 
-    for l in contents.split('\n'):
-        if l.startswith('InitiatorName='):
-            return l[l.index('=') + 1:].strip()
-    return ''
+    root_helper = utils._get_root_helper()
+    # so we can mock out the execute itself
+    # in unit tests.
+    if not execute:
+        execute = putils.execute
+    iscsi = connector.ISCSIConnector(root_helper=root_helper,
+                                     execute=execute)
+    return iscsi.get_initiator()

@@ -84,6 +84,9 @@ class _FakeDriverBackendTestCase(object):
             fake_libvirt_utils
         import nova.tests.unit.virt.libvirt.fakelibvirt as fakelibvirt
 
+        import nova.tests.unit.virt.libvirt.fake_os_brick_connector as \
+            fake_os_brick_connector
+
         sys.modules['libvirt'] = fakelibvirt
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
@@ -107,6 +110,10 @@ class _FakeDriverBackendTestCase(object):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.firewall.libvirt',
             fakelibvirt))
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.connector',
+            fake_os_brick_connector))
 
         fakelibvirt.disable_event_thread(self)
 
@@ -459,7 +466,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                           '/dev/sda'))
         self.assertIsNone(
             self.connection.detach_volume(connection_info, instance_ref,
-                                      '/dev/sda'))
+                                          '/dev/sda'))
 
     @catch_notimplementederror
     def test_swap_volume(self):
