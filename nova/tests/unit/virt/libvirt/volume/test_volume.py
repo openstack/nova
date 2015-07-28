@@ -645,12 +645,6 @@ Setting up iSCSI targets: unused
         ]
         self.assertEqual(expected_commands, self.executes)
 
-    @mock.patch('os.path.exists', return_value=True)
-    def test_libvirt_aoe_driver(self, exists):
-        libvirt_driver = volume.LibvirtAOEVolumeDriver(self.fake_conn)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.AoEConnector)
-
     @mock.patch.object(libvirt_utils, 'is_mounted')
     def test_libvirt_smbfs_driver(self, mock_is_mounted):
         mnt_base = '/mnt'
