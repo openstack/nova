@@ -68,10 +68,6 @@ volume_opts = [
     cfg.IntOpt('num_aoe_discover_tries',
                default=3,
                help='Number of times to rediscover AoE target to find volume'),
-    cfg.StrOpt('glusterfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the glusterfs volume is mounted on the '
-                    'compute node'),
     cfg.BoolOpt('iscsi_use_multipath',
                 default=False,
                 help='Use multipath connection of the iSCSI volume'),
@@ -528,98 +524,3 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
 
         super(LibvirtAOEVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
-
-
-class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
-    """Class implements libvirt part of volume driver for GlusterFS."""
-
-    def __init__(self, connection):
-        """Create back-end to glusterfs."""
-        super(LibvirtGlusterfsVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
-
-    def _get_device_path(self, connection_info):
-        path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-            utils.get_hash_str(connection_info['data']['export']))
-        path = os.path.join(path, connection_info['data']['name'])
-        return path
-
-    def get_config(self, connection_info, disk_info):
-        """Returns xml for libvirt."""
-        conf = super(LibvirtGlusterfsVolumeDriver,
-                     self).get_config(connection_info, disk_info)
-
-        data = connection_info['data']
-
-        if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:
-            vol_name = data['export'].split('/')[1]
-            source_host = data['export'].split('/')[0][:-1]
-
-            conf.source_ports = ['24007']
-            conf.source_type = 'network'
-            conf.source_protocol = 'gluster'
-            conf.source_hosts = [source_host]
-            conf.source_name = '%s/%s' % (vol_name, data['name'])
-        else:
-            conf.source_type = 'file'
-            conf.source_path = connection_info['data']['device_path']
-
-        conf.driver_format = connection_info['data'].get('format', 'raw')
-
-        return conf
-
-    def connect_volume(self, connection_info, mount_device):
-        data = connection_info['data']
-
-        if 'gluster' not in CONF.libvirt.qemu_allowed_storage_drivers:
-            self._ensure_mounted(data['export'], data.get('options'))
-            connection_info['data']['device_path'] = \
-                self._get_device_path(connection_info)
-
-    def disconnect_volume(self, connection_info, disk_dev):
-        """Disconnect the volume."""
-
-        if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:
-            return
-
-        export = connection_info['data']['export']
-        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  utils.get_hash_str(export))
-
-        try:
-            utils.execute('umount', mount_path, run_as_root=True)
-        except processutils.ProcessExecutionError as exc:
-            if 'target is busy' in exc.message:
-                LOG.debug("The GlusterFS share %s is still in use.", export)
-            else:
-                LOG.exception(_LE("Couldn't unmount the GlusterFS share %s"),
-                              export)
-
-    def _ensure_mounted(self, glusterfs_export, options=None):
-        """@type glusterfs_export: string
-           @type options: string
-        """
-        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  utils.get_hash_str(glusterfs_export))
-        if not libvirt_utils.is_mounted(mount_path, glusterfs_export):
-            self._mount_glusterfs(mount_path, glusterfs_export,
-                                  options, ensure=True)
-        return mount_path
-
-    def _mount_glusterfs(self, mount_path, glusterfs_share,
-                         options=None, ensure=False):
-        """Mount glusterfs export to mount path."""
-        utils.execute('mkdir', '-p', mount_path)
-
-        gluster_cmd = ['mount', '-t', 'glusterfs']
-        if options is not None:
-            gluster_cmd.extend(options.split(' '))
-        gluster_cmd.extend([glusterfs_share, mount_path])
-
-        try:
-            utils.execute(*gluster_cmd, run_as_root=True)
-        except processutils.ProcessExecutionError as exc:
-            if ensure and 'already mounted' in exc.message:
-                LOG.warn(_LW("%s is already mounted"), glusterfs_share)
-            else:
-                raise
