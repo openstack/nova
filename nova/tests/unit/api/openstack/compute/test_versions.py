@@ -23,6 +23,7 @@ from nova.api.openstack.compute import views
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
+from nova import wsgi
 
 
 NS = {
@@ -87,6 +88,15 @@ EXP_VERSIONS = {
         ],
     }
 }
+
+
+def _get_self_href(response):
+    """Extract the URL to self from response data."""
+    data = jsonutils.loads(response.body)
+    for link in data['versions'][0]['links']:
+        if link['rel'] == 'self':
+            return link['href']
+    return ''
 
 
 class VersionsTestV20(test.NoDBTestCase):
@@ -422,3 +432,26 @@ class VersionsTestV21(test.NoDBTestCase):
         version = jsonutils.loads(res.body)
         expected = {"version": self.exp_versions['v2.1']}
         self.assertEqual(expected, version)
+
+
+class VersionBehindSslTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(VersionBehindSslTestCase, self).setUp()
+        self.flags(secure_proxy_ssl_header='HTTP_X_FORWARDED_PROTO')
+
+    def test_versions_without_headers(self):
+        req = wsgi.Request.blank('/')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, res.status_int)
+        href = _get_self_href(res)
+        self.assertTrue(href.startswith('http://'))
+
+    def test_versions_with_header(self):
+        req = wsgi.Request.blank('/')
+        req.accept = "application/json"
+        req.headers['X-Forwarded-Proto'] = 'https'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, res.status_int)
+        href = _get_self_href(res)
+        self.assertTrue(href.startswith('https://'))
