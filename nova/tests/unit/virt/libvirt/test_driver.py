@@ -10468,6 +10468,51 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(3, save_mock.call_count)
 
+    def _test_get_device_name_for_instance(self, new_bdm, expected_dev):
+        instance = objects.Instance(**self.test_instance)
+        instance.root_device_name = '/dev/vda'
+        instance.ephemeral_gb = 0
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        got_dev = drvr.get_device_name_for_instance(
+            instance, [], new_bdm)
+        self.assertEqual(expected_dev, got_dev)
+
+    def test_get_device_name_for_instance_simple(self):
+        new_bdm = objects.BlockDeviceMapping(
+            context=context,
+            source_type='volume', destination_type='volume',
+            boot_index=-1, volume_id='fake-id',
+            device_name=None, guest_format=None,
+            disk_bus=None, device_type=None)
+        self._test_get_device_name_for_instance(new_bdm, '/dev/vdb')
+
+    def test_get_device_name_for_instance_suggested(self):
+        new_bdm = objects.BlockDeviceMapping(
+            context=context,
+            source_type='volume', destination_type='volume',
+            boot_index=-1, volume_id='fake-id',
+            device_name='/dev/vdg', guest_format=None,
+            disk_bus=None, device_type=None)
+        self._test_get_device_name_for_instance(new_bdm, '/dev/vdb')
+
+    def test_get_device_name_for_instance_bus(self):
+        new_bdm = objects.BlockDeviceMapping(
+            context=context,
+            source_type='volume', destination_type='volume',
+            boot_index=-1, volume_id='fake-id',
+            device_name=None, guest_format=None,
+            disk_bus='scsi', device_type=None)
+        self._test_get_device_name_for_instance(new_bdm, '/dev/sda')
+
+    def test_get_device_name_for_instance_device_type(self):
+        new_bdm = objects.BlockDeviceMapping(
+            context=context,
+            source_type='volume', destination_type='volume',
+            boot_index=-1, volume_id='fake-id',
+            device_name=None, guest_format=None,
+            disk_bus=None, device_type='floppy')
+        self._test_get_device_name_for_instance(new_bdm, '/dev/fda')
+
     def test_is_supported_fs_format(self):
         supported_fs = [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                         disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
