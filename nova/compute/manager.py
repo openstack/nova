@@ -3530,6 +3530,13 @@ class ComputeManager(manager.Manager):
             LOG.debug("No node specified, defaulting to %s", node,
                       instance=instance)
 
+        # NOTE(melwitt): Remove this in version 5.0 of the RPC API
+        # Code downstream may expect extra_specs to be populated since it
+        # is receiving an object, so lookup the flavor to ensure this.
+        if not isinstance(instance_type, objects.Flavor):
+            instance_type = objects.Flavor.get_by_id(context,
+                                                     instance_type['id'])
+
         quotas = objects.Quotas.from_reservations(context,
                                                   reservations,
                                                   instance=instance)
