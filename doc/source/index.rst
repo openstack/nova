@@ -32,24 +32,33 @@ any specific prior release.
 
 .. _`docs.openstack.org`: https://docs.openstack.org
 
+This documentation is intended to help explain what the Nova developers think
+is the current scope of the Nova project, as well as the architectural
+decisions we have made in order to support that scope. We also document our
+plans for evolving our architecture over time. Finally, we documented our
+current development process and policies.
+
 Compute API References
 ======================
 
+Nova has had a v2 API for a long time. We are currently in the process of
+moving to a new implementation of that API, which we have called v2.1. v2.1
+started life as an API called v3, but that name should never be used any more.
+We are currently in the process of transitioning users over to the v2.1
+implementation, at which point the v2 code will be deleted.
 
 * `v2.1 (CURRENT)`_
 * `v2 (SUPPORTED)`_ and `v2 extensions (SUPPORTED)`_ (Will be deprecated in
   the near future.)
 
-API Microversion History:
+Changes to the Compute API post v2.1 are made using microversions. You can see a history of our microversions here:
 
 .. toctree::
    :maxdepth: 1
 
    api_microversion_history
 
-
-
-Local copy of v2 docs:
+We also have a local copy of the v2 docs:
 
 .. toctree::
    :maxdepth: 1
@@ -66,6 +75,10 @@ Local copy of v2 docs:
 Hypervisor Support Matrix
 =========================
 
+The hypervisor support matrix is how we document what features we require
+hypervisor drivers to implement, as well as the level of support for optional
+features that we currently have. You can see the support matrix here:
+
 .. toctree::
    :maxdepth: 1
 
@@ -74,54 +87,81 @@ Hypervisor Support Matrix
 Developer Guide
 ===============
 
-Introduction
--------------
+If you are new to Nova, this should help you start to understand what Nova
+actually does, and why.
 
 .. toctree::
    :maxdepth: 1
 
    architecture
    project_scope
-
-.. toctree::
-   :maxdepth: 1
-
    development.environment
 
+Development Policies
+--------------------
 
-APIs Development
-----------------
+The Nova community is a large community. We have lots of users, and they all
+have a lot of expectations around upgrade and backwards compatibility.
+For example, having a good stable API, with discoverable versions and
+capabilities is important for maintaining the strong ecosystem around Nova.
+
+Our process is always evolving, just as Nova and the community around Nova
+evolves over time. If there are things that seem strange, or you have
+ideas on how to improve things, please engage in that debate, so we
+continue to improve how the Nova community operates.
+
+This section looks at the processes and why. The main aim behind all the
+process is to aid good communication between all members of the Nova
+community, while keeping users happy and keeping developers productive.
+
 .. toctree::
    :maxdepth: 1
 
-   addmethod.openstackapi
-   api_plugins
-   api_microversion_dev
-   policy_enforcement
-   stable_api
+   blueprints
+   policies
 
-Concepts
----------
+Architecture Concepts
+----------------------
+
+This follows on for the discussion in the introduction, and digs into
+details on specific parts of the Nova architecture.
+
+We find it important to document the reasons behind our architectural
+decisions, so its easier for people to engage in the debates about
+the future of Nova's architecture. This is all part of Open Design and
+Open Development.
+
 .. toctree::
    :maxdepth: 1
 
    aggregates
-   cells
    threading
    vmstates
    i18n
    filter_scheduler
    rpc
    hooks
-   upgrade
+   addmethod.openstackapi
 
-Development policies
---------------------
+Architecture Evolution Plans
+-----------------------------
+
+The following section includes documents that describe the overall plan behind
+groups of nova-specs. Most of these cover items relating to the evolution of
+various parts of Nova's architecture. Once the work is complete,
+these documents will move into the "Concepts" section.
+If you want to get involved in shaping the future of Nova's architecture,
+these are a great place to start reading up on the current plans.
+
 .. toctree::
    :maxdepth: 1
 
-   blueprints
-   policies
+   cells
+   upgrade
+   api_plugins
+   api_microversion_dev
+   policy_enforcement
+   stable_api
 
 Advanced testing and guides
 ----------------------------
