@@ -15,7 +15,6 @@
 
 import mock
 from os_brick.initiator import connector
-from oslo_config import cfg
 
 from nova import exception
 from nova import test
@@ -24,7 +23,6 @@ from nova import utils
 from nova.virt.libvirt import host
 from nova.virt.libvirt.volume import volume
 
-CONF = cfg.CONF
 SECRET_UUID = '2a0a0d6c-babf-454d-b93e-9ac9957b95e0'
 
 
@@ -96,19 +94,37 @@ class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
         self.assertEqual(tree.find('./source').get('file'), file_path)
 
 
-class LibvirtVolumeTestCase(LibvirtVolumeBaseTestCase):
+class LibvirtISCSIVolumeBaseTestCase(LibvirtVolumeBaseTestCase):
+    """Contains common setup and helper methods for iSCSI volume tests."""
 
-    def _assertNetworkAndProtocolEquals(self, tree):
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % ('rbd', self.name)
-        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+    def iscsi_connection(self, volume, location, iqn, auth=False,
+                         transport=None):
+        dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
+        if transport is not None:
+            dev_name = 'pci-0000:00:00.0-' + dev_name
+        dev_path = '/dev/disk/by-path/%s' % (dev_name)
+        ret = {
+                'driver_volume_type': 'iscsi',
+                'data': {
+                    'volume_id': volume['id'],
+                    'target_portal': location,
+                    'target_iqn': iqn,
+                    'target_lun': 1,
+                    'device_path': dev_path,
+                    'qos_specs': {
+                        'total_bytes_sec': '102400',
+                        'read_iops_sec': '200',
+                        }
+                }
+        }
+        if auth:
+            ret['data']['auth_method'] = 'CHAP'
+            ret['data']['auth_username'] = 'foo'
+            ret['data']['auth_password'] = 'bar'
+        return ret
 
-    def _assertISCSINetworkAndProtocolEquals(self, tree):
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'iscsi')
-        iscsi_name = '%s/%s' % (self.iqn, self.vol['id'])
-        self.assertEqual(tree.find('./source').get('name'), iscsi_name)
+
+class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
 
     def _assertDiskInfoEquals(self, tree, disk_info):
         self.assertEqual(tree.get('device'), disk_info['type'])
@@ -248,32 +264,6 @@ class LibvirtVolumeTestCase(LibvirtVolumeBaseTestCase):
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
 
-    def iscsi_connection(self, volume, location, iqn, auth=False,
-                         transport=None):
-        dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
-        if transport is not None:
-            dev_name = 'pci-0000:00:00.0-' + dev_name
-        dev_path = '/dev/disk/by-path/%s' % (dev_name)
-        ret = {
-                'driver_volume_type': 'iscsi',
-                'data': {
-                    'volume_id': volume['id'],
-                    'target_portal': location,
-                    'target_iqn': iqn,
-                    'target_lun': 1,
-                    'device_path': dev_path,
-                    'qos_specs': {
-                        'total_bytes_sec': '102400',
-                        'read_iops_sec': '200',
-                        }
-                }
-        }
-        if auth:
-            ret['data']['auth_method'] = 'CHAP'
-            ret['data']['auth_username'] = 'foo'
-            ret['data']['auth_password'] = 'bar'
-        return ret
-
     def iscsi_connection_discovery_chap_enable(self, volume, location, iqn):
         dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
         dev_path = '/dev/disk/by-path/%s' % (dev_name)
@@ -356,164 +346,3 @@ Setting up iSCSI targets: unused
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
-
-    def sheepdog_connection(self, volume):
-        return {
-            'driver_volume_type': 'sheepdog',
-            'data': {
-                'name': volume['name']
-            }
-        }
-
-    def test_libvirt_sheepdog_driver(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.sheepdog_connection(self.vol)
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
-        self.assertEqual(tree.find('./source').get('name'), self.name)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def rbd_connection(self, volume):
-        return {
-            'driver_volume_type': 'rbd',
-            'data': {
-                'name': '%s/%s' % ('rbd', volume['name']),
-                'auth_enabled': CONF.libvirt.rbd_secret_uuid is not None,
-                'auth_username': CONF.libvirt.rbd_user,
-                'secret_type': 'ceph',
-                'secret_uuid': CONF.libvirt.rbd_secret_uuid,
-                'qos_specs': {
-                    'total_bytes_sec': '1048576',
-                    'read_iops_sec': '500',
-                    }
-            }
-        }
-
-    def test_libvirt_rbd_driver(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertIsNone(tree.find('./source/auth'))
-        self.assertEqual('1048576', tree.find('./iotune/total_bytes_sec').text)
-        self.assertEqual('500', tree.find('./iotune/read_iops_sec').text)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_rbd_driver_hosts(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        hosts = ['example.com', '1.2.3.4', '::1']
-        ports = [None, '6790', '6791']
-        connection_info['data']['hosts'] = hosts
-        connection_info['data']['ports'] = ports
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertIsNone(tree.find('./source/auth'))
-        found_hosts = tree.findall('./source/host')
-        self.assertEqual([host.get('name') for host in found_hosts], hosts)
-        self.assertEqual([host.get('port') for host in found_hosts], ports)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_rbd_driver_auth_enabled(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        secret_type = 'ceph'
-        connection_info['data']['auth_enabled'] = True
-        connection_info['data']['auth_username'] = self.user
-        connection_info['data']['secret_type'] = secret_type
-        connection_info['data']['secret_uuid'] = self.uuid
-
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), self.user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), self.uuid)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        secret_type = 'ceph'
-        connection_info['data']['auth_enabled'] = True
-        connection_info['data']['auth_username'] = self.user
-        connection_info['data']['secret_type'] = secret_type
-        connection_info['data']['secret_uuid'] = self.uuid
-
-        flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
-        flags_user = 'bar'
-        self.flags(rbd_user=flags_user,
-                   rbd_secret_uuid=flags_uuid,
-                   group='libvirt')
-
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_rbd_driver_auth_disabled(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        secret_type = 'ceph'
-        connection_info['data']['auth_enabled'] = False
-        connection_info['data']['auth_username'] = self.user
-        connection_info['data']['secret_type'] = secret_type
-        connection_info['data']['secret_uuid'] = self.uuid
-
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertIsNone(tree.find('./auth'))
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_rbd_driver_auth_disabled_flags_override(self):
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.rbd_connection(self.vol)
-        secret_type = 'ceph'
-        connection_info['data']['auth_enabled'] = False
-        connection_info['data']['auth_username'] = self.user
-        connection_info['data']['secret_type'] = secret_type
-        connection_info['data']['secret_uuid'] = self.uuid
-
-        # NOTE: Supplying the rbd_secret_uuid will enable authentication
-        # locally in nova-compute even if not enabled in nova-volume/cinder
-        flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
-        flags_user = 'bar'
-        self.flags(rbd_user=flags_user,
-                   rbd_secret_uuid=flags_uuid,
-                   group='libvirt')
-
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
-        libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    @mock.patch.object(host.Host, 'find_secret')
-    @mock.patch.object(host.Host, 'create_secret')
-    @mock.patch.object(host.Host, 'delete_secret')
-    def test_libvirt_iscsi_net_driver(self, mock_delete, mock_create,
-                                      mock_find):
-        mock_find.return_value = FakeSecret()
-        mock_create.return_value = FakeSecret()
-        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
-        connection_info = self.iscsi_connection(self.vol, self.location,
-                                                self.iqn, auth=True)
-        secret_type = 'iscsi'
-        flags_user = connection_info['data']['auth_username']
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertISCSINetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), SECRET_UUID)
-        libvirt_driver.disconnect_volume(connection_info, 'vde')
