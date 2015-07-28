@@ -18,7 +18,7 @@ from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 CONF = cfg.CONF
-CONF.import_opt('num_iscsi_scan_tries', 'nova.virt.libvirt.volume.volume',
+CONF.import_opt('num_iscsi_scan_tries', 'nova.virt.libvirt.volume.iscsi',
                 group='libvirt')
 
 LOG = logging.getLogger(__name__)

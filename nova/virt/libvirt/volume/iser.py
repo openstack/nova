@@ -14,7 +14,7 @@ from os_brick.initiator import connector
 from oslo_config import cfg
 
 from nova import utils
-from nova.virt.libvirt.volume import volume as libvirt_volume
+from nova.virt.libvirt.volume import iscsi
 
 volume_opts = [
     cfg.IntOpt('num_iser_scan_tries',
@@ -29,7 +29,7 @@ CONF = cfg.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
 
-class LibvirtISERVolumeDriver(libvirt_volume.LibvirtISCSIVolumeDriver):
+class LibvirtISERVolumeDriver(iscsi.LibvirtISCSIVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
     def __init__(self, connection):
         super(LibvirtISERVolumeDriver, self).__init__(connection)

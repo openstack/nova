@@ -13,9 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-from os_brick.initiator import connector
-
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -263,86 +260,3 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         tree = conf.format_dom()
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
-
-    def iscsi_connection_discovery_chap_enable(self, volume, location, iqn):
-        dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
-        dev_path = '/dev/disk/by-path/%s' % (dev_name)
-        return {
-                'driver_volume_type': 'iscsi',
-                'data': {
-                    'volume_id': volume['id'],
-                    'target_portal': location,
-                    'target_iqn': iqn,
-                    'target_lun': 1,
-                    'device_path': dev_path,
-                    'discovery_auth_method': 'CHAP',
-                    'discovery_auth_username': "testuser",
-                    'discovery_auth_password': '123456',
-                    'qos_specs': {
-                        'total_bytes_sec': '102400',
-                        'read_iops_sec': '200',
-                        }
-                }
-        }
-
-    def generate_device(self, transport=None, lun=1, short=False):
-        dev_format = "ip-%s-iscsi-%s-lun-%s" % (self.location, self.iqn, lun)
-        if transport:
-            dev_format = "pci-0000:00:00.0-" + dev_format
-        if short:
-            return dev_format
-        fake_dev_path = "/dev/disk/by-path/" + dev_format
-        return fake_dev_path
-
-    def test_iscsiadm_discover_parsing(self):
-        # Ensure that parsing iscsiadm discover ignores cruft.
-
-        targets = [
-            ["192.168.204.82:3260,1",
-             ("iqn.2010-10.org.openstack:volume-"
-              "f9b12623-6ce3-4dac-a71f-09ad4249bdd3")],
-            ["192.168.204.82:3261,1",
-             ("iqn.2010-10.org.openstack:volume-"
-              "f9b12623-6ce3-4dac-a71f-09ad4249bdd4")]]
-
-        # This slight wonkiness brought to you by pep8, as the actual
-        # example output runs about 97 chars wide.
-        sample_input = """Loading iscsi modules: done
-Starting iSCSI initiator service: done
-Setting up iSCSI targets: unused
-%s %s
-%s %s
-""" % (targets[0][0], targets[0][1], targets[1][0], targets[1][1])
-        driver = volume.LibvirtISCSIVolumeDriver("none")
-        out = driver.connector._get_target_portals_from_iscsiadm_output(
-            sample_input)
-        self.assertEqual(out, targets)
-
-    def test_libvirt_iscsi_driver(self, transport=None):
-        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.ISCSIConnector)
-
-    def test_sanitize_log_run_iscsiadm(self):
-        # Tests that the parameters to the os-brick connector's
-        # _run_iscsiadm function are sanitized for passwords when logged.
-        def fake_debug(*args, **kwargs):
-            self.assertIn('node.session.auth.password', args[0])
-            self.assertNotIn('scrubme', args[0])
-
-        def fake_execute(*args, **kwargs):
-            return (None, None)
-
-        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        libvirt_driver.connector.set_execute(fake_execute)
-        connection_info = self.iscsi_connection(self.vol, self.location,
-                                                self.iqn)
-        iscsi_properties = connection_info['data']
-        with mock.patch.object(connector.LOG, 'debug',
-                               side_effect=fake_debug) as debug_mock:
-            libvirt_driver.connector._iscsiadm_update(
-                iscsi_properties, 'node.session.auth.password', 'scrubme')
-
-            # we don't care what the log message is, we just want to make sure
-            # our stub method is called which asserts the password is scrubbed
-            self.assertTrue(debug_mock.called)
