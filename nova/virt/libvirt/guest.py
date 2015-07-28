@@ -217,6 +217,36 @@ class Guest(object):
             conf.parse_dom(node)
             return conf
 
+    def get_all_disks(self):
+        """Returns all the disks for a guest
+
+        :returns: a list of LibvirtConfigGuestDisk instances
+        """
+
+        return self.get_all_devices(vconfig.LibvirtConfigGuestDisk)
+
+    def get_all_devices(self, devtype=None):
+        """Returns all devices for a guest
+
+        :param devtype: a LibvirtConfigGuestDevice subclass class
+
+        :returns: a list of LibvirtConfigGuestDevice instances
+        """
+
+        try:
+            config = vconfig.LibvirtConfigGuest()
+            config.parse_str(
+                self._domain.XMLDesc(0))
+        except Exception:
+            return []
+
+        devs = []
+        for dev in config.devices:
+            if (devtype is None or
+                isinstance(dev, devtype)):
+                devs.append(dev)
+        return devs
+
     def detach_device(self, conf, persistent=False, live=False):
         """Detaches device to the guest.
 
