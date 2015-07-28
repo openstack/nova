@@ -357,17 +357,6 @@ Setting up iSCSI targets: unused
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
 
-    def iser_connection(self, volume, location, iqn):
-        return {
-                'driver_volume_type': 'iser',
-                'data': {
-                    'volume_id': volume['id'],
-                    'target_portal': location,
-                    'target_iqn': iqn,
-                    'target_lun': 1,
-                }
-        }
-
     def sheepdog_connection(self, volume):
         return {
             'driver_volume_type': 'sheepdog',

@@ -274,7 +274,7 @@ GuestNumaConfig = collections.namedtuple(
 
 libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.volume.LibvirtISCSIVolumeDriver',
-    'iser=nova.virt.libvirt.volume.volume.LibvirtISERVolumeDriver',
+    'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
     'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
     'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
     'rbd=nova.virt.libvirt.volume.volume.LibvirtNetVolumeDriver',
