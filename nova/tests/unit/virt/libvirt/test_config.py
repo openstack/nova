@@ -566,6 +566,76 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.source_path, '/tmp/hello')
         self.assertEqual(obj.target_dev, '/dev/hda')
         self.assertEqual(obj.target_bus, 'ide')
+        self.assertFalse(obj.readonly)
+        self.assertFalse(obj.shareable)
+
+    def test_config_file_readonly(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+        obj.readonly = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="file" device="disk">
+              <source file="/tmp/hello"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <readonly/>
+            </disk>""")
+
+    def test_config_file_parse_readonly(self):
+        xml = """<disk type="file" device="disk">
+                   <source file="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                   <readonly/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.source_path, '/tmp/hello')
+        self.assertEqual(obj.target_dev, '/dev/hda')
+        self.assertEqual(obj.target_bus, 'ide')
+        self.assertTrue(obj.readonly)
+        self.assertFalse(obj.shareable)
+
+    def test_config_file_shareable(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+        obj.shareable = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="file" device="disk">
+              <source file="/tmp/hello"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <shareable/>
+            </disk>""")
+
+    def test_config_file_parse_shareable(self):
+        xml = """<disk type="file" device="disk">
+                   <source file="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                   <shareable/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.source_path, '/tmp/hello')
+        self.assertEqual(obj.target_dev, '/dev/hda')
+        self.assertEqual(obj.target_bus, 'ide')
+        self.assertFalse(obj.readonly)
+        self.assertTrue(obj.shareable)
 
     def test_config_file_serial(self):
         obj = config.LibvirtConfigGuestDisk()
@@ -2135,31 +2205,6 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.fun_capability[1].type, 'phys_function')
         self.assertEqual(obj.fun_capability[1].device_addrs,
                          [(0, 10, 1, 1), ])
-
-    def test_config_read_only_disk(self):
-        obj = config.LibvirtConfigGuestDisk()
-        obj.source_type = "disk"
-        obj.source_device = "disk"
-        obj.driver_name = "kvm"
-        obj.target_dev = "/dev/hdc"
-        obj.target_bus = "virtio"
-        obj.readonly = True
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <disk type="disk" device="disk">
-                <driver name="kvm"/>
-                <target bus="virtio" dev="/dev/hdc"/>
-                <readonly/>
-            </disk>""")
-
-        obj.readonly = False
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <disk type="disk" device="disk">
-                <driver name="kvm"/>
-                <target bus="virtio" dev="/dev/hdc"/>
-            </disk>""")
 
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
