@@ -36,9 +36,9 @@ from nova.i18n import _LW
 from nova import paths
 from nova import utils
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import quobyte
-from nova.virt.libvirt import remotefs
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt.volume import quobyte
+from nova.virt.libvirt.volume import remotefs
 
 LOG = logging.getLogger(__name__)
 

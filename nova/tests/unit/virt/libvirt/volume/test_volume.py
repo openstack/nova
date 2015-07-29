@@ -28,9 +28,9 @@ from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova.virt.libvirt import host
-from nova.virt.libvirt import quobyte
 from nova.virt.libvirt import utils as libvirt_utils
-from nova.virt.libvirt import volume
+from nova.virt.libvirt.volume import quobyte
+from nova.virt.libvirt.volume import volume
 
 CONF = cfg.CONF
 SECRET_UUID = '2a0a0d6c-babf-454d-b93e-9ac9957b95e0'
