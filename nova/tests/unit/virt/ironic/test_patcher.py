@@ -41,6 +41,9 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                                         'op': 'add'},
                                        {'path': '/instance_info/swap_mb',
                                         'value': str(self.flavor['swap']),
+                                        'op': 'add'},
+                                       {'path': '/instance_info/display_name',
+                                        'value': self.instance['display_name'],
                                         'op': 'add'}]
         self._expected_cleanup_patch = []
 
