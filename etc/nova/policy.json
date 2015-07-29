@@ -307,6 +307,7 @@
     "os_compute_api:os-keypairs:create": "",
     "os_compute_api:os-keypairs:delete": "",
     "os_compute_api:limits:discoverable": "",
+    "os_compute_api:limits": "",
     "os_compute_api:os-lock-server:discoverable": "",
     "os_compute_api:os-lock-server:lock": "rule:admin_or_owner",
     "os_compute_api:os-lock-server:unlock": "rule:admin_or_owner",

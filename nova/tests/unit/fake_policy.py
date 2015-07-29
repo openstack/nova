@@ -353,6 +353,7 @@ policy_data = """
     "os_compute_api:os-availability-zone:detail": "",
     "compute_extension:used_limits_for_admin": "is_admin:True",
     "os_compute_api:os-used-limits": "is_admin:True",
+    "os_compute_api:limits": "",
     "compute_extension:migrations:index": "is_admin:True",
     "os_compute_api:os-migrations:index": "is_admin:True",
     "compute_extension:os-assisted-volume-snapshots:create": "",
