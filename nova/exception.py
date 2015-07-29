@@ -1836,6 +1836,11 @@ class CPUPinningInvalid(Invalid):
                 "pinned set %(pinned)s")
 
 
+class CPUPinningUnknown(Invalid):
+    msg_fmt = _("CPU set to pin/unpin %(requested)s must be a subset of "
+                "known CPU set %(cpuset)s")
+
+
 class ImageCPUPinningForbidden(Forbidden):
     msg_fmt = _("Image property 'hw_cpu_policy' is not permitted to override "
                 "CPU pinning policy set against the flavor")
