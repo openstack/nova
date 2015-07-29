@@ -60,7 +60,7 @@ class PciDeviceStats(object):
         # NOTE(sbauza): Stats are a PCIDevicePoolList object
         self.pools = [pci_pool.to_dict()
                       for pci_pool in stats] if stats else []
-        self.pools.sort(self.pool_cmp)
+        self.pools.sort(key=lambda item: len(item))
 
     def _equal_properties(self, dev, entry, matching_keys):
         return all(dev.get(prop) == entry.get(prop)
@@ -102,7 +102,7 @@ class PciDeviceStats(object):
                 dev_pool['count'] = 0
                 dev_pool['devices'] = []
                 self.pools.append(dev_pool)
-                self.pools.sort(self.pool_cmp)
+                self.pools.sort(key=lambda item: len(item))
                 pool = dev_pool
             pool['count'] += 1
             pool['devices'].append(dev)
@@ -234,10 +234,6 @@ class PciDeviceStats(object):
         if not all([self._apply_request(self.pools, r, numa_cells)
                                             for r in requests]):
             raise exception.PciDeviceRequestFailed(requests=requests)
-
-    @staticmethod
-    def pool_cmp(dev1, dev2):
-        return len(dev1) - len(dev2)
 
     def __iter__(self):
         # 'devices' shouldn't be part of stats

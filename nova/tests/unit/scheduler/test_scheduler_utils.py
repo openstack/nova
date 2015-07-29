@@ -15,12 +15,12 @@
 """
 Tests For Scheduler Utils
 """
-import contextlib
 import uuid
 
 import mock
 from mox3 import mox
 from oslo_config import cfg
+import six
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
@@ -197,7 +197,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                 scheduler_utils.populate_retry,
                                 filter_properties, 'fake-uuid')
         # make sure 'msg' is a substring of the complete exception text
-        self.assertIn(msg, nvh.message)
+        self.assertIn(msg, six.text_type(nvh))
 
     def _check_parse_options(self, opts, sep, converter, expected):
         good = scheduler_utils.parse_options(opts,
@@ -248,7 +248,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     def _get_group_details(self, group, policy=None):
         group_hosts = ['hostB']
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',
@@ -297,7 +297,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group.members = [instance.uuid]
         group.policies = [policy]
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',

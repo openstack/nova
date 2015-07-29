@@ -295,7 +295,7 @@ class TestCase(testtools.TestCase):
             observed = jsonutils.loads(observed)
 
         def sort_key(x):
-            if isinstance(x, set) or isinstance(x, datetime.datetime):
+            if isinstance(x, (set, list)) or isinstance(x, datetime.datetime):
                 return str(x)
             if isinstance(x, dict):
                 items = ((sort_key(key), sort_key(value))
