@@ -201,7 +201,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_rescue(self):
         # A simple disk mapping setup, but in rescue mode
 
-        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref = objects.Instance()
         image_meta = {}
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
