@@ -84,7 +84,10 @@ class CellsManager(manager.Manager):
                         'less testing than the rest of Nova. This may change '
                         'in the future, but current deployers should be aware '
                         'that the use of it in production right now may be '
-                        'risky.'))
+                        'risky. Also note that cells does not currently '
+                        'support rolling upgrades, it is assumed that cells '
+                        'deployments are upgraded lockstep so n-1 cells '
+                        'compatibility does not work.'))
         # Mostly for tests.
         cell_state_manager = kwargs.pop('cell_state_manager', None)
         super(CellsManager, self).__init__(service_name='cells',
