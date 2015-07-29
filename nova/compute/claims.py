@@ -285,8 +285,9 @@ class MoveClaim(Claim):
 
     @property
     def numa_topology(self):
+        image_meta = objects.ImageMeta.from_dict(self.image_meta)
         return hardware.numa_get_constraints(
-            self.instance_type, self.image_meta)
+            self.instance_type, image_meta)
 
     def _test_pci(self):
         pci_requests = objects.InstancePCIRequests.\
