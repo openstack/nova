@@ -100,6 +100,13 @@ represented in target_provision_state.
 CLEANING = 'cleaning'
 """ Node is being automatically cleaned to prepare it for provisioning. """
 
+CLEANWAIT = 'clean wait'
+""" Node is waiting for a clean step to be finished.
+
+This will be the node's `provision_state` while the node is waiting for
+the driver to finish a cleaning step.
+"""
+
 CLEANFAIL = 'clean failed'
 """ Node failed cleaning. This requires operator intervention to resolve. """
 
