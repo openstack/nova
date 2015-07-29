@@ -81,17 +81,17 @@ we need a microversion".
 
     label="Do I need a microversion?"
 
-    silent_fail[shape="diamond", style="", label="Did we silently
+    silent_fail[shape="diamond", style="", group=g1, label="Did we silently
    fail to do what is asked?"];
-    ret_500[shape="diamond", style="", label="Did we return a 500
+    ret_500[shape="diamond", style="", group=g1, label="Did we return a 500
    before?"];
-    new_error[shape="diamond", style="", label="Are we changing what
+    new_error[shape="diamond", style="", group=g1, label="Are we changing what
     status code is returned?"];
-    new_attr[shape="diamond", style="", label="Did we add or remove an
+    new_attr[shape="diamond", style="", group=g1, label="Did we add or remove an
     attribute to a payload?"];
-    new_param[shape="diamond", style="", label="Did we add or remove
+    new_param[shape="diamond", style="", group=g1, label="Did we add or remove
     an accepted query string parameter or value?"];
-    new_resource[shape="diamond", style="", label="Did we add or remove a
+    new_resource[shape="diamond", style="", group=g1, label="Did we add or remove a
    resource url?"];
 
 
@@ -100,22 +100,22 @@ we need a microversion".
    no2[shape="box", style=rounded, label="No microversion needed, it's
    a bug"];
 
-   silent_fail -> ret_500[label="no"];
+   silent_fail -> ret_500[label=" no"];
    silent_fail -> no2[label="yes"];
 
     ret_500 -> no2[label="yes [1]"];
-    ret_500 -> new_error[label="no"];
+    ret_500 -> new_error[label=" no"];
 
-    new_error -> new_attr[label="no"];
+    new_error -> new_attr[label=" no"];
     new_error -> yes[label="yes"];
 
-    new_attr -> new_param[label="no"];
+    new_attr -> new_param[label=" no"];
     new_attr -> yes[label="yes"];
 
-    new_param -> new_resource[label="no"];
+    new_param -> new_resource[label=" no"];
     new_param -> yes[label="yes"];
 
-    new_resource -> no[label="no"];
+    new_resource -> no[label=" no"];
     new_resource -> yes[label="yes"];
 
    {rank=same; yes new_attr}
