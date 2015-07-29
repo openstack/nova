@@ -101,10 +101,14 @@ def _get_self_href(response):
 
 class VersionsTestV20(test.NoDBTestCase):
 
+    def setUp(self):
+        super(VersionsTestV20, self).setUp()
+        self.wsgi_app = fakes.wsgi_app()
+
     def test_get_version_list(self):
         req = webob.Request.blank('/')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         versions = jsonutils.loads(res.body)["versions"]
@@ -139,7 +143,7 @@ class VersionsTestV20(test.NoDBTestCase):
     def test_get_version_list_302(self):
         req = webob.Request.blank('/v2')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 302)
         redirect_req = webob.Request.blank('/v2/')
         self.assertEqual(res.location, redirect_req.url)
@@ -149,7 +153,7 @@ class VersionsTestV20(test.NoDBTestCase):
             accept = "application/json"
         req = webob.Request.blank(url)
         req.accept = accept
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         version = jsonutils.loads(res.body)
@@ -192,13 +196,13 @@ class VersionsTestV20(test.NoDBTestCase):
     def test_get_version_2_versions_invalid(self):
         req = webob.Request.blank('/v2/versions/1234')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(404, res.status_int)
 
     def test_multi_choice_image(self):
         req = webob.Request.blank('/images/1')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/json")
 
@@ -249,7 +253,7 @@ class VersionsTestV20(test.NoDBTestCase):
         """
         req = webob.Request.blank('/servers')
         req.accept = "application/atom+xml"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/json")
 
@@ -257,7 +261,7 @@ class VersionsTestV20(test.NoDBTestCase):
         uuid = str(stdlib_uuid.uuid4())
         req = webob.Request.blank('/servers/' + uuid)
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/json")
 
@@ -455,3 +459,10 @@ class VersionBehindSslTestCase(test.NoDBTestCase):
         self.assertEqual(200, res.status_int)
         href = _get_self_href(res)
         self.assertTrue(href.startswith('https://'))
+
+
+class VersionsTestV21WithV2CompatibleWrapper(VersionsTestV20):
+
+    def setUp(self):
+        super(VersionsTestV21WithV2CompatibleWrapper, self).setUp()
+        self.wsgi_app = fakes.wsgi_app_v21(v2_compatible=True)

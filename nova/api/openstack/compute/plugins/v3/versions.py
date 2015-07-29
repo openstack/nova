@@ -28,6 +28,8 @@ class VersionsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id='v2.1'):
         builder = views_versions.get_view_builder(req)
+        if req.is_legacy_v2():
+            id = 'v2.0'
         if id not in versions.VERSIONS:
             raise webob.exc.HTTPNotFound()
 
