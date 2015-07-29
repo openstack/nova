@@ -61,7 +61,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
             mock.call('cryptsetup', '--batch-mode', 'luksFormat',
                       '--key-file=-', self.dev_path,
                       process_input='passphrase',
-                      run_as_root=True, check_exit_code=True),
+                      run_as_root=True, check_exit_code=True, attempts=3),
         ])
         self.assertEqual(1, mock_execute.call_count)
 
@@ -118,7 +118,7 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
                       run_as_root=True, check_exit_code=True),
             mock.call('cryptsetup', '--batch-mode', 'luksFormat',
                       '--key-file=-', self.dev_path, process_input='0' * 32,
-                      run_as_root=True, check_exit_code=True),
+                      run_as_root=True, check_exit_code=True, attempts=3),
             mock.call('cryptsetup', 'luksOpen', '--key-file=-', self.dev_path,
                       self.dev_name, process_input='0' * 32,
                       run_as_root=True, check_exit_code=True),
