@@ -2839,8 +2839,6 @@ class ComputeManager(manager.Manager):
 
     @delete_image_on_error
     def _do_snapshot_instance(self, context, image_id, instance, rotation):
-        if rotation < 0:
-            raise exception.RotationRequiredForBackup()
         self._snapshot_instance(context, image_id, instance,
                                 task_states.IMAGE_BACKUP)
 
