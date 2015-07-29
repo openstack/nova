@@ -312,8 +312,8 @@ class VMOps(object):
         if root_vhd_path:
             self._attach_drive(instance_name, root_vhd_path, 0, ctrl_disk_addr,
                                controller_type)
-            ctrl_disk_addr += 1
 
+        ctrl_disk_addr = 1
         if eph_vhd_path:
             self._attach_drive(instance_name, eph_vhd_path, 0, ctrl_disk_addr,
                                controller_type)

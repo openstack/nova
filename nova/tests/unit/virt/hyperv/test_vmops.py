@@ -394,7 +394,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             expected.append(mock.call(mock_instance.name, fake_root_path,
                                       0, ctrl_disk_addr, ctrl_type,
                                       constants.DISK))
-            ctrl_disk_addr += 1
+        ctrl_disk_addr = 1
         if fake_ephemeral_path:
             expected.append(mock.call(mock_instance.name,
                                       fake_ephemeral_path, 0, ctrl_disk_addr,
