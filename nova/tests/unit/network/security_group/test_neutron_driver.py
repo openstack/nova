@@ -399,3 +399,16 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         result = sg_api.get_instance_security_groups(self.context, '1')
         self.assertEqual([], result)
+
+
+class TestNeutronDriverWithoutMock(test.NoDBTestCase):
+
+    def test_validate_property(self):
+        sg_api = neutron_driver.SecurityGroupAPI()
+
+        sg_api.validate_property('foo', 'name', None)
+        sg_api.validate_property('', 'name', None)
+        self.assertRaises(exception.Invalid, sg_api.validate_property,
+                          'a' * 256, 'name', None)
+        self.assertRaises(exception.Invalid, sg_api.validate_property,
+                          None, 'name', None)

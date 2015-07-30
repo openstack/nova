@@ -87,6 +87,21 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             six.reraise(*exc_info)
         return self._convert_to_nova_security_group_format(security_group)
 
+    def validate_property(self, value, property, allowed):
+        """Validate given security group property.
+
+        :param value:    the value to validate, as a string or unicode
+        :param property: the property, either 'name' or 'description'
+        :param allowed:  the range of characters allowed, but not used because
+                         Neutron is allowing any characters.
+        """
+
+        # NOTE: If using nova-network as the backend, min_length is 1. However
+        # if using Neutron, Nova has allowed empty string as its history.
+        # So this min_length should be 0 for passing the existing requests.
+        utils.check_string_length(value, name=property, min_length=0,
+                                  max_length=255)
+
     def _convert_to_nova_security_group_format(self, security_group):
         nova_group = {}
         nova_group['id'] = security_group['id']
