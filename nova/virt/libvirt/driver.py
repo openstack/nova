@@ -285,7 +285,7 @@ libvirt_volume_drivers = [
     'fibre_channel='
         'nova.virt.libvirt.volume.volume.LibvirtFibreChannelVolumeDriver',
     'scality=nova.virt.libvirt.volume.volume.LibvirtScalityVolumeDriver',
-    'gpfs=nova.virt.libvirt.volume.volume.LibvirtGPFSVolumeDriver',
+    'gpfs=nova.virt.libvirt.volume.gpfs.LibvirtGPFSVolumeDriver',
     'quobyte=nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
 ]
 

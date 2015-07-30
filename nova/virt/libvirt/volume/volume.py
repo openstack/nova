@@ -763,18 +763,3 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
             msg = _("Cannot mount Scality SOFS, check syslog for errors")
             LOG.warn(msg)
             raise exception.NovaException(msg)
-
-
-class LibvirtGPFSVolumeDriver(LibvirtBaseVolumeDriver):
-    """Class for volumes backed by gpfs volume."""
-    def __init__(self, connection):
-        super(LibvirtGPFSVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
-
-    def get_config(self, connection_info, disk_info):
-        """Returns xml for libvirt."""
-        conf = super(LibvirtGPFSVolumeDriver,
-                     self).get_config(connection_info, disk_info)
-        conf.source_type = "file"
-        conf.source_path = connection_info['data']['device_path']
-        return conf
