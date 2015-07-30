@@ -334,16 +334,6 @@ def check_img_metadata_properties_quota(context, metadata):
         raise webob.exc.HTTPBadRequest(explanation=expl)
 
 
-def dict_to_query_str(params):
-    # TODO(throughnothing): we should just use urllib.urlencode instead of this
-    # But currently we don't work with urlencoded url's
-    param_str = ""
-    for key, val in six.iteritems(params):
-        param_str = param_str + '='.join([str(key), str(val)]) + '&'
-
-    return param_str.rstrip('&')
-
-
 def get_networks_for_instance_from_nw_info(nw_info):
     networks = collections.OrderedDict()
     for vif in nw_info:
@@ -445,7 +435,7 @@ class ViewBuilder(object):
         url = os.path.join(prefix,
                            self._get_project_id(request),
                            collection_name)
-        return "%s?%s" % (url, dict_to_query_str(params))
+        return "%s?%s" % (url, urlparse.urlencode(params))
 
     def _get_href_link(self, request, identifier, collection_name):
         """Return an href string pointing to this object."""
