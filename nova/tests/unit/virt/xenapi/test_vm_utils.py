@@ -499,7 +499,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         utils.execute('parted', '--script', path, 'mkpart',
             'primary', '%ds' % start, '%ds' % end, run_as_root=True)
 
-    def _call_parted_boot_flag(sef, path):
+    def _call_parted_boot_flag(self, path):
         utils.execute('parted', '--script', path, 'set', '1',
             'boot', 'on', run_as_root=True)
 
