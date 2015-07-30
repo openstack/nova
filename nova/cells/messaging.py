@@ -1053,6 +1053,20 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             instance.destroy()
         except exception.InstanceNotFound:
             pass
+        except exception.ObjectActionError:
+            # NOTE(alaski): instance_destroy_at_top will sometimes be called
+            # when an instance does not exist in a cell but does in the parent.
+            # In that case instance.id is not set which causes instance.destroy
+            # to fail thinking that the object has already been destroyed.
+            # That's the right assumption for it to make because without cells
+            # that would be true.  But for cells we'll try to pull the actual
+            # instance and try to delete it again.
+            try:
+                instance = objects.Instance.get_by_uuid(message.ctxt,
+                        instance.uuid)
+                instance.destroy()
+            except exception.InstanceNotFound:
+                pass
 
     def instance_delete_everywhere(self, message, instance, delete_type,
                                    **kwargs):
