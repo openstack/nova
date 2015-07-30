@@ -690,6 +690,11 @@ class ListOfIntegersField(AutoTypedField):
     AUTO_TYPE = List(fields.Integer())
 
 
+# FIXME(sbauza): Remove this after oslo.versionedobjects releases it
+class DictOfListOfStringsField(AutoTypedField):
+    AUTO_TYPE = Dict(List(fields.String()))
+
+
 # FIXME(danms): Remove this after we convert to oslo.versionedobjects' registry
 class ObjectField(AutoTypedField):
     def __init__(self, objtype, **kwargs):
