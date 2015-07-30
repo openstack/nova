@@ -3318,6 +3318,35 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsInstance(console_device, device_type)
             self.assertEqual("tcp", console_device.type)
 
+    @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
+                return_value=4)
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
+                       side_effect=[arch.X86_64, arch.S390, arch.S390X])
+    def test_create_serial_console_devices_with_limit_exceeded_based_on_arch(
+            self, mock_get_arch, mock_get_port_number):
+        self.flags(enabled=True, group='serial_console')
+        self.flags(virt_type="qemu", group='libvirt')
+        flavor = 'fake_flavor'
+        image_meta = objects.ImageMeta()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        self.assertRaises(exception.SerialPortNumberLimitExceeded,
+                          drvr._create_serial_console_devices,
+                          guest, None, flavor, image_meta)
+        mock_get_arch.assert_called_with(image_meta)
+        mock_get_port_number.assert_called_with(flavor,
+                                                image_meta)
+
+        drvr._create_serial_console_devices(guest, None, flavor, image_meta)
+        mock_get_arch.assert_called_with(image_meta)
+        mock_get_port_number.assert_called_with(flavor,
+                                                image_meta)
+
+        drvr._create_serial_console_devices(guest, None, flavor, image_meta)
+        mock_get_arch.assert_called_with(image_meta)
+        mock_get_port_number.assert_called_with(flavor,
+                                                image_meta)
+
     @mock.patch('nova.console.serial.acquire_port')
     def test_get_guest_config_serial_console(self, acquire_port):
         self.flags(enabled=True, group='serial_console')
