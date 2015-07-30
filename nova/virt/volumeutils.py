@@ -24,7 +24,7 @@ from nova import utils
 def get_iscsi_initiator(execute=None):
     """Get iscsi initiator name for this machine."""
 
-    root_helper = utils._get_root_helper()
+    root_helper = utils.get_root_helper()
     # so we can mock out the execute itself
     # in unit tests.
     if not execute:

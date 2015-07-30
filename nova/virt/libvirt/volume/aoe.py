@@ -38,7 +38,7 @@ class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # Call the factory here so we can support
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
-            'AOE', utils._get_root_helper(),
+            'AOE', utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_aoe_discover_tries)
 
     def get_config(self, connection_info, disk_info):

@@ -31,7 +31,7 @@ class LibvirtHGSTVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtHGSTVolumeDriver,
               self).__init__(connection, is_block_dev=True)
         self.connector = connector.InitiatorConnector.factory(
-            'HGST', utils._get_root_helper(),
+            'HGST', utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)
 
     def get_config(self, connection_info, disk_info):

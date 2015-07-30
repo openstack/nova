@@ -239,7 +239,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
     return (identifier == 0x40 and client_sess == session_id)
 
 
-def _get_root_helper():
+def get_root_helper():
     if CONF.workarounds.disable_rootwrap:
         cmd = 'sudo'
     else:
@@ -250,7 +250,7 @@ def _get_root_helper():
 def execute(*cmd, **kwargs):
     """Convenience wrapper around oslo's execute() method."""
     if 'run_as_root' in kwargs and 'root_helper' not in kwargs:
-        kwargs['root_helper'] = _get_root_helper()
+        kwargs['root_helper'] = get_root_helper()
     return processutils.execute(*cmd, **kwargs)
 
 
@@ -265,7 +265,7 @@ def ssh_execute(dest, *cmd, **kwargs):
 def trycmd(*args, **kwargs):
     """Convenience wrapper around oslo's trycmd() method."""
     if 'run_as_root' in kwargs and 'root_helper' not in kwargs:
-        kwargs['root_helper'] = _get_root_helper()
+        kwargs['root_helper'] = get_root_helper()
     return processutils.trycmd(*args, **kwargs)
 
 
