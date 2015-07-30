@@ -14,6 +14,7 @@
 #    under the License.
 
 import functools
+import six
 import sys
 
 from oslo_config import cfg
@@ -44,7 +45,7 @@ class GlanceStore(object):
         def retry_cb(context, instance, exc=None):
             if exc:
                 exc_info = sys.exc_info()
-                LOG.debug(exc.message, exc_info=exc_info)
+                LOG.debug(six.text_type(exc), exc_info=exc_info)
                 compute_utils.add_instance_fault_from_exc(
                     context, instance, exc, exc_info)
 

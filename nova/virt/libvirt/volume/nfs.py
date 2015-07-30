@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -68,8 +70,8 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             utils.execute('umount', mount_path, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             export = connection_info['data']['export']
-            if ('device is busy' in exc.message or
-                'target is busy' in exc.message):
+            if ('device is busy' in six.text_type(exc) or
+                'target is busy' in six.text_type(exc)):
                 LOG.debug("The NFS share %s is still in use.", export)
             else:
                 LOG.exception(_LE("Couldn't unmount the NFS share %s"), export)
@@ -99,7 +101,7 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         try:
             utils.execute(*nfs_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
-            if ensure and 'already mounted' in exc.message:
+            if ensure and 'already mounted' in six.text_type(exc):
                 LOG.warn(_LW("%s is already mounted"), nfs_share)
             else:
                 raise

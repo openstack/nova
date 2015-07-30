@@ -15,6 +15,7 @@
 
 import errno
 import os
+import six
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -71,7 +72,7 @@ def umount_volume(mnt_base):
     try:
         utils.execute('umount.quobyte', mnt_base)
     except processutils.ProcessExecutionError as exc:
-        if 'Device or resource busy' in exc.message:
+        if 'Device or resource busy' in six.text_type(exc):
             LOG.error(_LE("The Quobyte volume at %s is still in use."),
                       mnt_base)
         else:

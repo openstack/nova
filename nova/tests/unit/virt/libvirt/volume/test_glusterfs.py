@@ -12,6 +12,9 @@
 
 import os
 
+import mock
+from oslo_concurrency import processutils
+
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
@@ -93,6 +96,20 @@ class LibvirtGlusterfsVolumeDriverTestCase(
              '--source', export_string),
             ('umount', export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
+
+    @mock.patch.object(glusterfs.utils, 'execute')
+    @mock.patch.object(glusterfs.LOG, 'debug')
+    @mock.patch.object(glusterfs.LOG, 'exception')
+    def test_libvirt_glusterfs_driver_umount_error(self, mock_LOG_exception,
+                                        mock_LOG_debug, mock_utils_exe):
+        export_string = '192.168.1.1:/volume-00001'
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
+            None, None, None, 'umount', 'umount: target is busy.')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertTrue(mock_LOG_debug.called)
 
     def test_libvirt_glusterfs_driver_with_opts(self):
         mnt_base = '/mnt'
