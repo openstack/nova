@@ -264,6 +264,7 @@ class SupportMatrixDirective(rst.Directive):
         content = []
         self._build_summary(matrix, content)
         self._build_details(matrix, content)
+        self._build_notes(content)
         return content
 
     def _build_summary(self, matrix, content):
@@ -434,6 +435,26 @@ class SupportMatrixDirective(rst.Directive):
             para_divers.append(impls)
             item.append(para_divers)
             details.append(item)
+
+    def _build_notes(self, content):
+        """Constructs a list of notes content for the support matrix.
+
+        This is generated as a bullet list.
+        """
+        notestitle = nodes.subtitle(text="Notes")
+        notes = nodes.bullet_list()
+
+        content.append(notestitle)
+        content.append(notes)
+
+        NOTES = [
+                "Virtuozzo was formely named Parallels in this document"
+                ]
+
+        for note in NOTES:
+            item = nodes.list_item()
+            item.append(nodes.strong(text=note))
+            notes.append(item)
 
     def _create_cli_paragraph(self, feature):
         ''' Create a paragraph which represents the CLI commands of the feature

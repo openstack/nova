@@ -26,7 +26,8 @@ class ImageMeta(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: updated ImageMetaProps
     # Version 1.2: ImageMetaProps version 1.2
-    VERSION = '1.2'
+    # Version 1.3: ImageMetaProps version 1.3
+    VERSION = '1.3'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -62,6 +63,7 @@ class ImageMeta(base.NovaObject):
         'properties': [('1.0', '1.0'),
                        ('1.1', '1.1'),
                        ('1.2', '1.2'),
+                       ('1.3', '1.3'),
                        ],
     }
 
@@ -110,6 +112,7 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: added os_require_quiesce field
     # Version 1.2: added img_hv_type and img_hv_requested_version fields
+    # Version 1.3: HVSpec version 1.1
     VERSION = ImageMeta.VERSION
 
     # Maximum number of NUMA nodes permitted for the guest topology
