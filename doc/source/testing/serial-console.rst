@@ -5,7 +5,7 @@ Testing Serial Console
 
 The main aim of this feature is exposing an interactive web-based
 serial consoles through a web-socket proxy.
-This page describes how to test it from a devstack environement.
+This page describes how to test it from a devstack environment.
 
 ---------------------------------
 Setting up a devstack environment

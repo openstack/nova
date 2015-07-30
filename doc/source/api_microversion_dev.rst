@@ -177,7 +177,7 @@ This method would only be available if the caller had specified an
 ``X-OpenStack-Nova-API-Version`` of <= ``2.4``. If ``2.5`` or later
 is specified the server will respond with ``HTTP/404``.
 
-Changing a method's behaviour
+Changing a method's behavior
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the controller class::
@@ -240,12 +240,12 @@ When not using decorators
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When you don't want to use the ``@api_version`` decorator on a method
-or you want to change behaviour within a method (say it leads to
+or you want to change behavior within a method (say it leads to
 simpler or simply a lot less code) you can directly test for the
 requested version with a method as long as you have access to the api
 request object (commonly called ``req``). Every API method has an
 api_version_request object attached to the req object and that can be
-used to modify behaviour based on its value::
+used to modify behavior based on its value::
 
     def index(self, req):
         <common code>

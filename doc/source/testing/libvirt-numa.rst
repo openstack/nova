@@ -298,7 +298,7 @@ The guest can now be started again, and ssh back into it
 
 
 Before starting OpenStack services again, it is necessary to
-reconfigure Nova to enable the NUMA schedular filter. The libvirt
+reconfigure Nova to enable the NUMA scheduler filter. The libvirt
 virtualization type must also be explicitly set to KVM, so that
 guests can take advantage of nested KVM.
 
@@ -476,7 +476,7 @@ Testing instance boot with 1 NUMA cell requested
 
 Moving forward a little, explicitly tell Nova that the NUMA topology
 for the guest should have a single NUMA node. This should operate
-in an identical manner to the default behaviour where no NUMA policy
+in an identical manner to the default behavior where no NUMA policy
 is set. To define the topology we will create a new flavor
 
 .. code-block:: bash

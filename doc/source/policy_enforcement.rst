@@ -115,7 +115,7 @@ group them, and put them in different policy configure file in policy.d
 
   * Nova V2 API: After we move to V2.1, we needn't spend time to change V2
     api rule, and needn't to bother deployer upgrade their policy config. So
-    just keep V2 API poicy rule named as before.
+    just keep V2 API policy rule named as before.
 
   * Nova V2.1 API: We name the policy rule as
     "os_compute_api:[extension]:[action]". The core API may be changed in
