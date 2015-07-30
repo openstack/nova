@@ -40,7 +40,7 @@ def fake_get_rdp_console(self, _context, _instance, _console_type):
 
 
 def fake_get_serial_console(self, _context, _instance, _console_type):
-    return {'url': 'http://fake'}
+    return {'url': 'ws://fake'}
 
 
 def fake_get_vnc_console_invalid_type(self, _context,
@@ -336,7 +336,7 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('')
         output = self.controller.get_serial_console(req, fakes.FAKE_UUID,
                                                     body=body)
-        self.assertEqual({u'console': {u'url': u'http://fake',
+        self.assertEqual({u'console': {u'url': u'ws://fake',
                                        u'type': u'serial'}},
                          output)
 
@@ -484,14 +484,14 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
     def test_create_serial_console(self, mock_get):
         mock_handler = mock.MagicMock()
-        mock_handler.return_value = {'url': "http://fake"}
+        mock_handler.return_value = {'url': "ws://fake"}
         self.controller.handlers['serial'] = mock_handler
 
         body = {'remote_console': {'protocol': 'serial', 'type': 'serial'}}
         output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
         self.assertEqual({'remote_console': {'protocol': 'serial',
                                              'type': 'serial',
-                                             'url': 'http://fake'}}, output)
+                                             'url': 'ws://fake'}}, output)
         mock_handler.assert_called_once_with(self.context, 'fake_instance',
                                              'serial')
 
