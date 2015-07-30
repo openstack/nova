@@ -19,6 +19,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+import six
 
 from nova import rpc
 from nova import test
@@ -86,6 +87,66 @@ class JsonTestCase(test.TestCase):
     ]
 }"""
         self.assertJsonEqual(expected, observed)
+
+    def test_json_equal_fail_on_length(self):
+        expected = {
+            'top': {
+                'l1': {
+                    'l2': ['a', 'b', 'c']
+                }
+            }
+        }
+        observed = {
+            'top': {
+                'l1': {
+                    'l2': ['c', 'a', 'b', 'd']
+                }
+            }
+        }
+        try:
+            self.assertJsonEqual(expected, observed)
+        except Exception as e:
+            # error reported is going to be a cryptic length failure
+            # on the level2 structure.
+            self.assertEqual(e.mismatch.describe(), "3 != 4")
+            self.assertIn(
+                "Matchee: {'top': {'l1': {'l2': ['c', 'a', 'b', 'd']}}}",
+                six.text_type(e))
+            self.assertIn(
+                "Matcher: {'top': {'l1': {'l2': ['a', 'b', 'c']}}}",
+                six.text_type(e))
+        else:
+            self.fail("This should have raised a mismatch exception")
+
+    def test_json_equal_fail_on_inner(self):
+        expected = {
+            'top': {
+                'l1': {
+                    'l2': ['a', 'b', 'c']
+                }
+            }
+        }
+        observed = {
+            'top': {
+                'l1': {
+                    'l2': ['c', 'a', 'd']
+                }
+            }
+        }
+        try:
+            self.assertJsonEqual(expected, observed)
+        except Exception as e:
+            # error reported is going to be a cryptic length failure
+            # on the level2 structure.
+            self.assertEqual(e.mismatch.describe(), "'b' != 'c'")
+            self.assertIn(
+                "Matchee: {'top': {'l1': {'l2': ['c', 'a', 'd']}}}",
+                six.text_type(e))
+            self.assertIn(
+                "Matcher: {'top': {'l1': {'l2': ['a', 'b', 'c']}}}",
+                six.text_type(e))
+        else:
+            self.fail("This should have raised a mismatch exception")
 
 
 class BadLogTestCase(test.TestCase):

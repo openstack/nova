@@ -289,6 +289,21 @@ class TestCase(testtools.TestCase):
         return svc.service
 
     def assertJsonEqual(self, expected, observed):
+        """Asserts that 2 complex data structures are json equivalent.
+
+        We use data structures which serialize down to json throughout
+        the code, and often times we just need to know that these are
+        json equivalent. This means that list order is not important,
+        and should be sorted.
+
+        Because this is a recursive set of assertions, when failure
+        happens we want to expose both the local failure and the
+        global view of the 2 data structures being compared. So a
+        MismatchError which includes the inner failure as the
+        mismatch, and the passed in expected / observed as matchee /
+        matcher.
+
+        """
         if isinstance(expected, six.string_types):
             expected = jsonutils.loads(expected)
         if isinstance(observed, six.string_types):
@@ -325,7 +340,15 @@ class TestCase(testtools.TestCase):
             else:
                 self.assertEqual(expected, observed)
 
-        inner(expected, observed)
+        try:
+            inner(expected, observed)
+        except testtools.matchers.MismatchError as e:
+            inner_mismatch = e.mismatch
+            # inverting the observed / expected because testtools
+            # error messages assume expected is second. Possibly makes
+            # reading the error messages less confusing.
+            raise testtools.matchers.MismatchError(observed, expected,
+                                          inner_mismatch, verbose=True)
 
     def assertPublicAPISignatures(self, baseinst, inst):
         def get_public_apis(inst):
