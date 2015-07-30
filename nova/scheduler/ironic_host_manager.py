@@ -89,7 +89,7 @@ class IronicNodeState(host_manager.HostState):
         self.updated = compute.updated_at
 
     @host_manager.set_update_time_on_success
-    def consume_from_instance(self, instance):
+    def consume_from_request(self, spec_obj):
         """Consume nodes entire resources regardless of instance request."""
         self.free_ram_mb = 0
         self.free_disk_mb = 0

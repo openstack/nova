@@ -204,8 +204,11 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         self.assertIsNone(host.updated)
-        instance = dict(root_gb=10, ephemeral_gb=0, memory_mb=1024, vcpus=1)
-        host.consume_from_instance(instance)
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(root_gb=10, ephemeral_gb=0, memory_mb=1024,
+                                  vcpus=1),
+            uuid='fake-uuid')
+        host.consume_from_request(spec_obj)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
@@ -217,8 +220,10 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         self.assertIsNone(host.updated)
-        instance = dict(root_gb=20, ephemeral_gb=0, memory_mb=2048, vcpus=2)
-        host.consume_from_instance(instance)
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(root_gb=20, ephemeral_gb=0, memory_mb=2048,
+                                  vcpus=2))
+        host.consume_from_request(spec_obj)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
@@ -230,8 +235,10 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         self.assertIsNone(host.updated)
-        instance = dict(root_gb=5, ephemeral_gb=0, memory_mb=512, vcpus=1)
-        host.consume_from_instance(instance)
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(root_gb=5, ephemeral_gb=0, memory_mb=512,
+                                  vcpus=1))
+        host.consume_from_request(spec_obj)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
