@@ -2212,6 +2212,20 @@ class LibvirtDriver(driver.ComputeDriver):
         # and available before we attempt to start the instance.
         self._hard_reboot(context, instance, network_info, block_device_info)
 
+    def inject_nmi(self, instance):
+
+        """Inject an NMI to the specified instance."""
+        try:
+            self._host.get_guest(instance).inject_nmi()
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            msg = (_('Error from libvirt while injecting an NMI to '
+                     '%(instance_uuid)s: '
+                     '[Error Code %(error_code)s] %(ex)s')
+                   % {'instance_uuid': instance.uuid,
+                      'error_code': error_code, 'ex': ex})
+            raise exception.NovaException(msg)
+
     def suspend(self, context, instance):
         """Suspend the specified instance."""
         guest = self._host.get_guest(instance)

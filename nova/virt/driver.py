@@ -673,6 +673,13 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def inject_nmi(self, instance):
+        """Inject an NMI to the specified instance.
+
+        :param instance: nova objects.instance.Instance
+        """
+        raise NotImplementedError()
+
     def soft_delete(self, instance):
         """Soft delete the specified instance.
 

@@ -243,6 +243,9 @@ class FakeDriver(driver.ComputeDriver):
                  block_device_info=None):
         pass
 
+    def inject_nmi(self, instance):
+        pass
+
     def soft_delete(self, instance):
         pass
 
