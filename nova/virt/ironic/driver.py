@@ -369,10 +369,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
-        # Unassociate the node
+        # TODO(lucasagomes): This code is here for backwards compatibility
+        # with old versions of Ironic that won't clean up the instance
+        # association as part of the node's tear down. Should be removed
+        # on the next cycle (M).
         patch.append({'op': 'remove', 'path': '/instance_uuid'})
         try:
+            _validate_instance_and_node(self.ironicclient, instance)
             self.ironicclient.call('node.update', node.uuid, patch)
+        except exception.InstanceNotFound:
+            LOG.debug("Instance already removed from Ironic node %s. Skip "
+                      "updating it", node.uuid, instance=instance)
         except ironic.exc.BadRequest:
             LOG.error(_LE("Failed to clean up the parameters on node %(node)s "
                           "when unprovisioning the instance %(instance)s"),
@@ -806,7 +813,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         data = {'tries': 0}
 
         def _wait_for_provision_state():
-            node = _validate_instance_and_node(ironicclient, instance)
+            try:
+                node = _validate_instance_and_node(ironicclient, instance)
+            except exception.InstanceNotFound:
+                LOG.debug("Instance already removed from Ironic",
+                          instance=instance)
+                raise loopingcall.LoopingCallDone()
             if node.provision_state in (ironic_states.NOSTATE,
                                         ironic_states.CLEANING,
                                         ironic_states.CLEANFAIL,
