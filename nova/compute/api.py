@@ -2681,7 +2681,8 @@ class API(base.Base):
             new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
             if (new_instance_type.get('root_gb') == 0 and
-                current_instance_type.get('root_gb') != 0):
+                current_instance_type.get('root_gb') != 0 and
+                not self.is_volume_backed_instance(context, instance)):
                 reason = _('Resize to zero disk flavor is not allowed.')
                 raise exception.CannotResizeDisk(reason=reason)
 
