@@ -42,7 +42,7 @@ class VMwareVolumeOps(object):
     def attach_disk_to_vm(self, vm_ref, instance,
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
-                          device_name=None):
+                          device_name=None, disk_io_limits=None):
         """Attach disk to VM by reconfiguration."""
         instance_name = instance.name
         client_factory = self._session.vim.client.factory
@@ -58,7 +58,7 @@ class VMwareVolumeOps(object):
         vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
                                     client_factory, disk_type, vmdk_path,
                                     disk_size, linked_clone, controller_key,
-                                    unit_number, device_name)
+                                    unit_number, device_name, disk_io_limits)
         if controller_spec:
             vmdk_attach_config_spec.deviceChange.append(controller_spec)
 

@@ -307,7 +307,7 @@ class VMwareVMOps(object):
     def _get_extra_specs(self, flavor, image_meta=None):
         image_meta = image_meta or objects.ImageMeta.from_dict({})
         extra_specs = vm_util.ExtraSpecs()
-        for resource in ['cpu', 'memory']:
+        for resource in ['cpu', 'memory', 'disk_io']:
             for (key, type) in (('limit', int),
                                 ('reservation', int),
                                 ('shares_level', str),
@@ -318,6 +318,7 @@ class VMwareVMOps(object):
                             key, type(value))
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
+        extra_specs.disk_io_limits.validate()
         hw_version = flavor.extra_specs.get('vmware:hw_version')
         extra_specs.hw_version = hw_version
         if CONF.vmware.pbm_enabled:
@@ -1688,7 +1689,8 @@ class VMwareVMOps(object):
                 vm_ref, vi.instance,
                 vi.ii.adapter_type, vi.ii.disk_type,
                 str(root_disk_ds_loc),
-                vi.root_gb * units.Mi, False)
+                vi.root_gb * units.Mi, False,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _sized_image_exists(self, sized_disk_ds_loc, ds_ref):
         ds_browser = self._get_ds_browser(ds_ref)
@@ -1761,7 +1763,8 @@ class VMwareVMOps(object):
                 vm_ref, vi.instance,
                 vi.ii.adapter_type, vi.ii.disk_type,
                 str(sized_disk_ds_loc),
-                vi.root_gb * units.Mi, vi.ii.linked_clone)
+                vi.root_gb * units.Mi, vi.ii.linked_clone,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _use_iso_image(self, vm_ref, vi):
         """Uses cached image as a bootable virtual cdrom."""
@@ -1791,7 +1794,8 @@ class VMwareVMOps(object):
                     vm_ref, vi.instance,
                     vi.ii.adapter_type, vi.ii.disk_type,
                     str(root_disk_ds_loc),
-                    vi.root_gb * units.Mi, linked_clone)
+                    vi.root_gb * units.Mi, linked_clone,
+                    disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _update_datacenter_cache_from_objects(self, dcs):
         """Updates the datastore/datacenter cache."""

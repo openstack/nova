@@ -1092,6 +1092,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                              mock_extend_virtual_disk,
                                              mock_sized_image_exists,
                                              flavor_fits_image=False):
+        extra_specs = vm_util.ExtraSpecs()
         file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
         image_info = images.VMwareImage(
                 image_id=self._image_id,
@@ -1103,7 +1104,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
                 self._instance, image_info,
-                self._ds, self._dc_info, mock_imagecache)
+                self._ds, self._dc_info, mock_imagecache, extra_specs)
 
         sized_cached_image_ds_loc = cache_root_folder.join(
                 "%s.%s.vmdk" % (self._image_id, vi.root_gb))
@@ -1128,7 +1129,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 "fake_vm_ref", self._instance, vi.ii.adapter_type,
                 vi.ii.disk_type,
                 str(sized_cached_image_ds_loc),
-                vi.root_gb * units.Mi, False)
+                vi.root_gb * units.Mi, False,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def test_use_disk_image_as_linked_clone(self):
         self._test_use_disk_image_as_linked_clone()
@@ -1142,6 +1144,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                           mock_copy_virtual_disk,
                                           mock_extend_virtual_disk,
                                           flavor_fits_image=False):
+        extra_specs = vm_util.ExtraSpecs()
         file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
         image_info = images.VMwareImage(
                 image_id=self._image_id,
@@ -1153,7 +1156,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
                 self._instance, image_info,
-                self._ds, self._dc_info, mock_imagecache)
+                self._ds, self._dc_info, mock_imagecache,
+                extra_specs)
 
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
@@ -1173,7 +1177,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_attach_disk_to_vm.assert_called_once_with(
                 "fake_vm_ref", self._instance, vi.ii.adapter_type,
                 vi.ii.disk_type, '[fake_ds] fake_uuid/fake_uuid.vmdk',
-                vi.root_gb * units.Mi, False)
+                vi.root_gb * units.Mi, False,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def test_use_disk_image_as_full_clone(self):
         self._test_use_disk_image_as_full_clone()
@@ -1187,6 +1192,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                             mock_create_virtual_disk,
                             mock_attach_cdrom,
                             with_root_disk):
+        extra_specs = vm_util.ExtraSpecs()
         image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=10 * units.Mi,
@@ -1197,7 +1203,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
                 self._instance, image_info,
-                self._ds, self._dc_info, mock_imagecache)
+                self._ds, self._dc_info, mock_imagecache, extra_specs)
 
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
@@ -1219,7 +1225,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     "fake_vm_ref", self._instance,
                     vi.ii.adapter_type, vi.ii.disk_type,
                     '[fake_ds] fake_uuid/fake_uuid.vmdk',
-                    vi.root_gb * units.Mi, linked_clone)
+                    vi.root_gb * units.Mi, linked_clone,
+                    disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def test_use_iso_image_with_root_disk(self):
         self._test_use_iso_image(with_root_disk=True)
