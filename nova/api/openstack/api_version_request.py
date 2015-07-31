@@ -104,6 +104,10 @@ class APIVersionRequest(object):
         return cmp((self.ver_major, self.ver_minor),
                    (other.ver_major, other.ver_minor))
 
+    def __lt__(self, other):
+        return ((self.ver_major, self.ver_minor) <
+                (other.ver_major, other.ver_minor))
+
     def matches(self, min_version, max_version):
         """Returns whether the version object represents a version
         greater than or equal to the minimum version and less than

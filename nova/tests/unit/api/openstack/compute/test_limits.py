@@ -17,8 +17,8 @@
 Tests dealing with HTTP rate-limiting.
 """
 
-import httplib
-import StringIO
+from six.moves import http_client as httplib
+from six.moves import StringIO
 
 import mock
 from oslo_serialization import jsonutils
@@ -727,7 +727,7 @@ class FakeHttplibSocket(object):
 
     def __init__(self, response_string):
         """Initialize new `FakeHttplibSocket`."""
-        self._buffer = StringIO.StringIO(response_string)
+        self._buffer = StringIO(response_string)
 
     def makefile(self, _mode, _other):
         """Returns the socket's internal buffer."""

@@ -47,9 +47,9 @@ class BaseProxyTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch.object(logging, 'setup')
     @mock.patch.object(gmr.TextGuruMeditation, 'setup_autorun')
-    @mock.patch.object(websocketproxy.NovaWebSocketProxy, '__init__',
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.__init__',
                        return_value=None)
-    @mock.patch.object(websocketproxy.NovaWebSocketProxy, 'start_server')
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
     def test_proxy(self, mock_start, mock_init, mock_gmr, mock_log,
                    mock_exists):
         baseproxy.proxy('0.0.0.0', '6080')

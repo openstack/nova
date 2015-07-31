@@ -18,7 +18,7 @@
 
 import random
 import re
-import StringIO
+from six.moves import StringIO
 
 import boto
 import boto.connection
@@ -28,7 +28,7 @@ from boto import exception as boto_exc
 if hasattr(boto.connection, 'HTTPResponse'):
     httplib = boto.connection
 else:
-    import httplib
+    from six.moves import http_client as httplib
 import fixtures
 from oslo_utils import versionutils
 import webob
@@ -47,7 +47,7 @@ class FakeHttplibSocket(object):
     """a fake socket implementation for httplib.HTTPResponse, trivial."""
     def __init__(self, response_string):
         self.response_string = response_string
-        self._buffer = StringIO.StringIO(response_string)
+        self._buffer = StringIO(response_string)
 
     def makefile(self, _mode, _other):
         """Returns the socket's internal buffer."""

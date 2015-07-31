@@ -23,7 +23,11 @@
 
 """Handle the uploading and downloading of images via Glance."""
 
-import httplib
+try:
+    import httplib
+except ImportError:
+    from six.moves import http_client as httplib
+
 import md5
 import socket
 import urllib2

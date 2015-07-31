@@ -18,10 +18,10 @@ Websocket proxy that is compatible with OpenStack Nova.
 Leverages websockify.py by Joel Martin
 '''
 
-import Cookie
+from six.moves import http_cookies as Cookie
+import six.moves.urllib.parse as urlparse
 import socket
 import sys
-import urlparse
 
 from oslo_log import log as logging
 import websockify

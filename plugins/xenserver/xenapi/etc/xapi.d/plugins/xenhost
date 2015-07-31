@@ -32,13 +32,17 @@ import logging
 import re
 import sys
 import time
-import xmlrpclib
 
 import utils
 
 import pluginlib_nova as pluginlib
 import XenAPI
 import XenAPIPlugin
+
+try:
+    import xmlrpclib
+except ImportError:
+    import six.moves.xmlrpc_client as xmlrpclib
 
 
 pluginlib.configure_logging("xenhost")

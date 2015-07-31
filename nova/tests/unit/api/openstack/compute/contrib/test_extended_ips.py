@@ -82,7 +82,7 @@ for cache in NW_CACHE:
             ALL_IPS.append(sanitized)
             for floating in fixed['floating_ips']:
                 ALL_IPS.append(floating)
-ALL_IPS.sort()
+ALL_IPS.sort(key=lambda x: str(x))
 
 
 def fake_compute_get(*args, **kwargs):

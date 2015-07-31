@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import __builtin__
 import contextlib
 import copy
 import datetime
@@ -46,6 +45,7 @@ from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 import six
+from six.moves import builtins
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
@@ -3472,9 +3472,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_sysinfo_serial_os(self):
         self.flags(sysinfo_serial="os", group="libvirt")
 
-        real_open = __builtin__.open
+        real_open = builtins.open
         with contextlib.nested(
-                mock.patch.object(__builtin__, "open"),
+                mock.patch.object(builtins, "open"),
         ) as (mock_open, ):
             theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
 
@@ -3515,10 +3515,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(sysinfo_serial="auto", group="libvirt")
 
         real_exists = os.path.exists
-        real_open = __builtin__.open
+        real_open = builtins.open
         with contextlib.nested(
                 mock.patch.object(os.path, "exists"),
-                mock.patch.object(__builtin__, "open"),
+                mock.patch.object(builtins, "open"),
         ) as (mock_exists, mock_open):
             def fake_exists(filename):
                 if filename == "/etc/machine-id":
