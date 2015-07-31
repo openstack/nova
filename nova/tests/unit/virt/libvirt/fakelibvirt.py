@@ -108,6 +108,7 @@ VIR_FROM_NWFILTER = 330
 VIR_FROM_REMOTE = 340
 VIR_FROM_RPC = 345
 VIR_FROM_NODEDEV = 666
+VIR_ERR_INVALID_ARG = 8
 VIR_ERR_NO_SUPPORT = 3
 VIR_ERR_XML_DETAIL = 350
 VIR_ERR_NO_DOMAIN = 420
@@ -739,7 +740,14 @@ class Domain(object):
     def blockResize(self, disk, size):
         pass
 
-    def blockRebase(self, disk, base, flags):
+    def blockRebase(self, disk, base, bandwidth=0, flags=0):
+        if (not base) and (flags and VIR_DOMAIN_BLOCK_REBASE_RELATIVE):
+            raise make_libvirtError(
+                    libvirtError,
+                    'flag VIR_DOMAIN_BLOCK_REBASE_RELATIVE is '
+                    'valid only with non-null base',
+                    error_code=VIR_ERR_INVALID_ARG,
+                    error_domain=VIR_FROM_QEMU)
         return 0
 
     def blockCommit(self, disk, base, top, flags):

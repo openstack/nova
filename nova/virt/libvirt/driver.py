@@ -1866,7 +1866,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # (relative backing path seems to work for this case)
             try:
                 libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE
-                relative = True
+                relative = rebase_base is not None
             except AttributeError:
                 LOG.warn(_LW("Relative blockrebase support was not detected. "
                              "Continuing with old behaviour."))

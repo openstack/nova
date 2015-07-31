@@ -13073,6 +13073,10 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                               'file_to_merge': 'snap.img',
                               'merge_target_file': 'other-snap.img'}
 
+        self.delete_info_3 = {'type': 'qcow2',
+                              'file_to_merge': None,
+                              'merge_target_file': None}
+
         self.delete_info_netdisk = {'type': 'qcow2',
                                     'file_to_merge': 'snap.img',
                                     'merge_target_file': 'root.img'}
@@ -13434,6 +13438,38 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           snapshot_id, self.delete_info_2)
 
         self.mox.VerifyAll()
+
+    def test_volume_snapshot_delete_nonrelative_null_base(self):
+        # Deleting newest and last snapshot of a volume
+        # with blockRebase. So base of the new image will be null.
+
+        instance = objects.Instance(**self.inst)
+        snapshot_id = 'snapshot-1234'
+
+        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        guest = libvirt_guest.Guest(domain)
+
+        with contextlib.nested(
+            mock.patch.object(domain, 'XMLDesc', return_value=self.dom_xml),
+            mock.patch.object(self.drvr._host, 'get_guest',
+                              return_value=guest),
+            mock.patch.object(self.drvr._host, 'has_min_version',
+                              return_value=True),
+            mock.patch.object(domain, 'blockRebase'),
+            mock.patch.object(domain, 'blockJobInfo',
+                              return_value={'cur': 1000, 'end': 1000})
+        ) as (mock_xmldesc, mock_get_guest, mock_has_min_version,
+              mock_rebase, mock_job_info):
+
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid, snapshot_id,
+                                              self.delete_info_3)
+
+            mock_xmldesc.assert_called_once_with(flags=0)
+            mock_get_guest.assert_called_once_with(instance)
+            mock_has_min_version.assert_called_once_with((1, 1, 1,))
+            mock_rebase.assert_called_once_with('vda', None, 0, flags=0)
+            mock_job_info.assert_called_once_with('vda', flags=0)
 
     def test_volume_snapshot_delete_outer_success(self):
         instance = objects.Instance(**self.inst)
