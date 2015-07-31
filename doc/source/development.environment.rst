@@ -127,6 +127,8 @@ Grab the code from git::
 Building the Documentation
 ==========================
 
+Install the prerequisite packages: graphviz
+
 To do a full documentation build, issue the following command while
 the nova directory is current.
 

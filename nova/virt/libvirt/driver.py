@@ -4919,11 +4919,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         :param instance: nova.objects.instance.Instance object
-        :returns
-            :tempfile: A dict containing the tempfile info on the destination
-                       host
-            :None: 1. If the instance path is not existing.
-                   2. If the image backend is shared block storage type.
+        :returns:
+         - tempfile: A dict containing the tempfile info on the destination
+                     host
+         - None:
+
+            1. If the instance path is not existing.
+            2. If the image backend is shared block storage type.
         """
         if self.image_backend.backend().is_shared_block_storage():
             return None

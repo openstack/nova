@@ -30,8 +30,6 @@ sys.path.insert(0, os.path.abspath('./'))
 extensions = ['sphinx.ext.autodoc',
               'ext.nova_todo',
               'sphinx.ext.coverage',
-              'sphinx.ext.pngmath',
-              'sphinx.ext.ifconfig',
               'sphinx.ext.graphviz',
               'oslosphinx',
               "ext.support_matrix",
@@ -73,13 +71,13 @@ version = version_info.version_string()
 # Else, today_fmt is used as the format for a strftime call.
 #today_fmt = '%B %d, %Y'
 
-# List of documents that shouldn't be included in the build.
-unused_docs = [
+# A list of glob-style patterns that should be excluded when looking for
+# source files. They are matched against the source file names relative to the
+# source directory, using slashes as directory separators on all platforms.
+exclude_patterns = [
+    'api/nova.wsgi.nova-*',
+    'api/nova.tests.*',
 ]
-
-# List of directories, relative to source directory, that shouldn't be searched
-# for source files.
-exclude_trees = []
 
 # The reST default role (used for this markup: `text`) to use
 # for all documents.

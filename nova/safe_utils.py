@@ -27,8 +27,8 @@ def getcallargs(function, *args, **kwargs):
 
     This method can only properly grab arguments which are passed in as
     keyword arguments, or given names by the method being called.  This means
-    that an *arg in a method signature and any arguments captured by it will
-    be left out of the results.
+    that an ``*arg`` in a method signature and any arguments captured by it
+    will be left out of the results.
     """
     keyed_args = {}
     argnames, varargs, keywords, defaults = inspect.getargspec(function)

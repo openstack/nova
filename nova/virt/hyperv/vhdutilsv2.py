@@ -126,15 +126,12 @@ class VHDUtilsV2(vhdutils.VHDUtils):
                                            new_vhd_file_size):
         """Get internal size of a VHD according to new VHD file size.
 
-        .. math::
-            VHDX Size =  Header (1 MB) + Log + Metadata Region + BAT
-            + Payload Blocks
+        VHDX Size = Header (1MB) + Log + Metadata Region + BAT + Payload Blocks
 
         The chunk size is the maximum number of bytes described by a SB
         block.
 
-        .. math::
-            Chunk size = 2^{23} * LogicalSectorSize
+        Chunk size = 2^{23} * LogicalSectorSize
 
         :param str vhd_path: VHD file path
         :param new_vhd_file_size: Size of the new VHD file.

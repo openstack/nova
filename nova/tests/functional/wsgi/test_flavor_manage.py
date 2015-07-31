@@ -47,24 +47,26 @@ class FlavorManageFullstack(test.TestCase):
 
     POST /v2/flavors:
 
-    {
-        'name': NAME, # string, required unique
-        'id': ID, # string, required unique
-        'ram': RAM, # in MB, required
-        'vcpus': VCPUS, # int value, required
-        'disk': DISK, # in GB, required
-        'OS-FLV-EXT-DATA:ephemeral', # in GB, ephemeral disk size
-        'is_public': IS_PUBLIC, # boolean
-        'swap': SWAP, # in GB?
-        'rxtx_factor': RXTX, # ???
-    }
+    ::
+
+        {
+            'name': NAME, # string, required unique
+            'id': ID, # string, required unique
+            'ram': RAM, # in MB, required
+            'vcpus': VCPUS, # int value, required
+            'disk': DISK, # in GB, required
+            'OS-FLV-EXT-DATA:ephemeral', # in GB, ephemeral disk size
+            'is_public': IS_PUBLIC, # boolean
+            'swap': SWAP, # in GB?
+            'rxtx_factor': RXTX, # ???
+        }
 
     Returns Flavor
 
     DELETE /v2/flavors/ID
 
 
-    Functional Test Scope::
+    Functional Test Scope:
 
     This test starts the wsgi stack for the nova api services, uses an
     in memory database to ensure the path through the wsgi layer to

@@ -83,19 +83,6 @@ utils_opts = [
                help='Explicitly specify the temporary working directory'),
 ]
 
-""" This group is for very specific reasons.
-
-If you're:
-- Working around an issue in a system tool (e.g. libvirt or qemu) where the fix
-  is in flight/discussed in that community.
-- The tool can be/is fixed in some distributions and rather than patch the code
-  those distributions can trivially set a config option to get the "correct"
-  behavior.
-This is a good place for your workaround.
-
-Please use with care!
-Document the BugID that your workaround is paired with."""
-
 workarounds_opts = [
     cfg.BoolOpt('disable_rootwrap',
                 default=False,
@@ -138,6 +125,23 @@ workarounds_opts = [
                      "the Nova database they will have to be synchronized "
                      "manually. See https://bugs.launchpad.net/bugs/1444630"),
     ]
+""" The workarounds_opts group is for very specific reasons.
+
+If you're:
+
+ - Working around an issue in a system tool (e.g. libvirt or qemu) where the
+   fix is in flight/discussed in that community.
+ - The tool can be/is fixed in some distributions and rather than patch the
+   code those distributions can trivially set a config option to get the
+   "correct" behavior.
+
+Then this is a good place for your workaround.
+
+.. warning::
+
+  Please use with care! Document the BugID that your workaround is paired with.
+"""
+
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)

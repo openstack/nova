@@ -820,10 +820,12 @@ class API(base_api.NetworkAPI):
 
         :param context - Request context.
         :param port_id - The id of port to be queried.
-        :returns: A dict containing port data keyed by 'port'.
-                  e.g. {'port': {'port_id': 'abcd',
-                                 'fixed_ip_address': '1.2.3.4'}}
+        :returns: A dict containing port data keyed by 'port', e.g.
 
+        ::
+
+            {'port': {'port_id': 'abcd',
+                      'fixed_ip_address': '1.2.3.4'}}
         """
         return dict(port=self._show_port(context, port_id))
 
@@ -835,7 +837,7 @@ class API(base_api.NetworkAPI):
         :param neutron_client - A neutron client.
         :param fields - The condition fields to query port data.
         :returns: A dict of port data.
-                  e.g. {'port_id': 'abcd', 'fixed_ip_address': '1.2.3.4'}}
+                  e.g. {'port_id': 'abcd', 'fixed_ip_address': '1.2.3.4'}
         """
         if not neutron_client:
             neutron_client = get_client(context)
