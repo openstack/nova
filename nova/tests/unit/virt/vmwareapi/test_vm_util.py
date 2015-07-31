@@ -151,8 +151,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_resize_spec_with_limits(self):
         vcpus = 2
         memory_mb = 2048
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_resize_spec(fake_factory,
@@ -542,8 +542,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_allocations(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -589,7 +589,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_limit(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        cpu_limits = vm_util.Limits(limit=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -637,7 +637,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_share(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        cpu_limits = vm_util.Limits(shares_level='high')
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -686,8 +686,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_share_custom(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
-                                       cpu_shares_share=1948)
+        cpu_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=1948)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -1273,14 +1273,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           devices,
                           self._instance)
 
-    def test_validate_cpu_limits(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high',
-                                       cpu_shares_share=1948)
+    def test_validate_limits(self):
+        limits = vm_util.Limits(shares_level='high',
+                                shares_share=1948)
         self.assertRaises(exception.InvalidInput,
-                          cpu_limits.validate)
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='fira')
+                          limits.validate)
+        limits = vm_util.Limits(shares_level='fira')
         self.assertRaises(exception.InvalidInput,
-                          cpu_limits.validate)
+                          limits.validate)
 
     def test_get_vm_create_spec_with_console_delay(self):
         extra_specs = vm_util.ExtraSpecs()

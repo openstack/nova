@@ -63,28 +63,33 @@ ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
 _VM_REFS_CACHE = {}
 
 
-class CpuLimits(object):
+class Limits(object):
 
-    def __init__(self, cpu_limit=None, cpu_reservation=None,
-                 cpu_shares_level=None, cpu_shares_share=None):
-        """CpuLimits object holds instance cpu limits for convenience."""
-        self.cpu_limit = cpu_limit
-        self.cpu_reservation = cpu_reservation
-        self.cpu_shares_level = cpu_shares_level
-        self.cpu_shares_share = cpu_shares_share
+    def __init__(self, limit=None, reservation=None,
+                 shares_level=None, shares_share=None):
+        """imits object holds instance limits for convenience."""
+        self.limit = limit
+        self.reservation = reservation
+        self.shares_level = shares_level
+        self.shares_share = shares_share
 
     def validate(self):
-        if self.cpu_shares_level in ('high', 'normal', 'low'):
-            if self.cpu_shares_share:
+        if self.shares_level in ('high', 'normal', 'low'):
+            if self.shares_share:
                 reason = _("Share level '%s' cannot have share "
-                           "configured") % self.cpu_shares_level
+                           "configured") % self.shares_level
                 raise exception.InvalidInput(reason=reason)
             return
-        if self.cpu_shares_level == 'custom':
+        if self.shares_level == 'custom':
             return
-        if self.cpu_shares_level:
-            reason = _("Share '%s' is not supported") % self.cpu_shares_level
+        if self.shares_level:
+            reason = _("Share '%s' is not supported") % self.shares_level
             raise exception.InvalidInput(reason=reason)
+
+    def has_limits(self):
+        return bool(self.limit or
+                    self.reservation or
+                    self.shares_level)
 
 
 class ExtraSpecs(object):
@@ -93,16 +98,11 @@ class ExtraSpecs(object):
                  storage_policy=None, cores_per_socket=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
-            cpu_limits = CpuLimits()
+            cpu_limits = Limits()
         self.cpu_limits = cpu_limits
         self.hw_version = hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
-
-    def has_cpu_limits(self):
-        return bool(self.cpu_limits.cpu_limit or
-                    self.cpu_limits.cpu_reservation or
-                    self.cpu_limits.cpu_shares_level)
 
 
 def vm_refs_cache_reset():
@@ -161,23 +161,23 @@ def _iface_id_option_value(client_factory, iface_id, port_index):
     return opt
 
 
-def _get_allocation_info(client_factory, extra_specs):
-    allocation = client_factory.create('ns0:ResourceAllocationInfo')
-    if extra_specs.cpu_limits.cpu_limit:
-        allocation.limit = extra_specs.cpu_limits.cpu_limit
+def _get_allocation_info(client_factory, limits, allocation_type):
+    allocation = client_factory.create(allocation_type)
+    if limits.limit:
+        allocation.limit = limits.limit
     else:
         # Set as 'umlimited'
         allocation.limit = -1
-    if extra_specs.cpu_limits.cpu_reservation:
-        allocation.reservation = extra_specs.cpu_limits.cpu_reservation
+    if limits.reservation:
+        allocation.reservation = limits.reservation
     else:
         allocation.reservation = 0
     shares = client_factory.create('ns0:SharesInfo')
-    if extra_specs.cpu_limits.cpu_shares_level:
-        shares.level = extra_specs.cpu_limits.cpu_shares_level
+    if limits.shares_level:
+        shares.level = limits.shares_level
         if (shares.level == 'custom' and
-            extra_specs.cpu_limits.cpu_shares_share):
-            shares.shares = extra_specs.cpu_limits.cpu_shares_share
+            limits.shares_share):
+            shares.shares = limits.shares_share
         else:
             shares.shares = 0
     else:
@@ -228,9 +228,10 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.memoryMB = int(instance.memory_mb)
 
     # Configure cpu information
-    if extra_specs.has_cpu_limits():
-        config_spec.cpuAllocation = _get_allocation_info(client_factory,
-                                                         extra_specs)
+    if extra_specs.cpu_limits.has_limits():
+        config_spec.cpuAllocation = _get_allocation_info(
+            client_factory, extra_specs.cpu_limits,
+            'ns0:ResourceAllocationInfo')
 
     vif_spec_list = []
     for vif_info in vif_infos:
@@ -296,8 +297,9 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     resize_spec.numCPUs = vcpus
     resize_spec.memoryMB = memory_mb
-    resize_spec.cpuAllocation = _get_allocation_info(client_factory,
-                                                     extra_specs)
+    resize_spec.cpuAllocation = _get_allocation_info(
+        client_factory, extra_specs.cpu_limits,
+        'ns0:ResourceAllocationInfo')
     if metadata:
         resize_spec.annotation = metadata
     return resize_spec

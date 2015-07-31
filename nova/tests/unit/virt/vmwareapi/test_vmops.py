@@ -1624,41 +1624,41 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.fail('NIC not configured')
 
     def test_spawn_cpu_limit(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        cpu_limits = vm_util.Limits(limit=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_reservation(self):
-        cpu_limits = vm_util.CpuLimits(cpu_reservation=7)
+        cpu_limits = vm_util.Limits(reservation=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_allocations(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_shares_level(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        cpu_limits = vm_util.Limits(shares_level='high')
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_shares_custom(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
-                                       cpu_shares_share=1948)
+        cpu_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=1948)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
     def _validate_extra_specs(self, expected, actual):
-        self.assertEqual(expected.cpu_limits.cpu_limit,
-                         actual.cpu_limits.cpu_limit)
-        self.assertEqual(expected.cpu_limits.cpu_reservation,
-                         actual.cpu_limits.cpu_reservation)
-        self.assertEqual(expected.cpu_limits.cpu_shares_level,
-                         actual.cpu_limits.cpu_shares_level)
-        self.assertEqual(expected.cpu_limits.cpu_shares_share,
-                         actual.cpu_limits.cpu_shares_share)
+        self.assertEqual(expected.cpu_limits.limit,
+                         actual.cpu_limits.limit)
+        self.assertEqual(expected.cpu_limits.reservation,
+                         actual.cpu_limits.reservation)
+        self.assertEqual(expected.cpu_limits.shares_level,
+                         actual.cpu_limits.shares_level)
+        self.assertEqual(expected.cpu_limits.shares_share,
+                         actual.cpu_limits.shares_share)
 
     def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
         # Validate that the extra specs are parsed correctly
@@ -1674,35 +1674,35 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_extra_specs_cpu_limit(self):
         flavor_extra_specs = {'quota:cpu_limit': 7}
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        cpu_limits = vm_util.Limits(limit=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
     def test_extra_specs_cpu_reservations(self):
         flavor_extra_specs = {'quota:cpu_reservation': 7}
-        cpu_limits = vm_util.CpuLimits(cpu_reservation=7)
+        cpu_limits = vm_util.Limits(reservation=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
     def test_extra_specs_cpu_allocations(self):
         flavor_extra_specs = {'quota:cpu_limit': 7,
                               'quota:cpu_reservation': 6}
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
     def test_extra_specs_cpu_shares_level(self):
         flavor_extra_specs = {'quota:cpu_shares_level': 'high'}
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        cpu_limits = vm_util.Limits(shares_level='high')
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
     def test_extra_specs_cpu_shares_custom(self):
         flavor_extra_specs = {'quota:cpu_shares_level': 'custom',
                               'quota:cpu_shares_share': 1948}
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
-                                       cpu_shares_share=1948)
+        cpu_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=1948)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
