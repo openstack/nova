@@ -1009,16 +1009,16 @@ class _ComputeAPIUnitTestMixIn(object):
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
 
+    def _fake_do_delete(context, instance, bdms,
+                        rservations=None, local=False):
+        pass
+
     def test_local_delete_with_deleted_volume(self):
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 42, 'volume_id': 'volume_id',
                  'source_type': 'volume', 'destination_type': 'volume',
                  'delete_on_termination': False}))]
-
-        def _fake_do_delete(context, instance, bdms,
-                           rservations=None, local=False):
-            pass
 
         inst = self._create_instance_obj()
         inst._context = self.context
@@ -1058,7 +1058,41 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
-                                       _fake_do_delete)
+                                       self._fake_do_delete)
+
+    def test_local_delete_without_info_cache(self):
+        inst = self._create_instance_obj()
+
+        with contextlib.nested(
+            mock.patch.object(inst, 'destroy'),
+            mock.patch.object(self.context, 'elevated'),
+            mock.patch.object(self.compute_api.network_api,
+                              'deallocate_for_instance'),
+            mock.patch.object(db, 'instance_system_metadata_get'),
+            mock.patch.object(compute_utils,
+                              'notify_about_instance_usage')
+        ) as (
+            inst_destroy, context_elevated, net_api_deallocate_for_instance,
+            db_instance_system_metadata_get, notify_about_instance_usage
+        ):
+
+            compute_utils.notify_about_instance_usage(
+                        self.compute_api.notifier, self.context,
+                        inst, 'delete.start')
+            self.context.elevated().MultipleTimes().AndReturn(self.context)
+            if self.cell_type != 'api':
+                self.compute_api.network_api.deallocate_for_instance(
+                            self.context, inst)
+
+            inst.destroy()
+            compute_utils.notify_about_instance_usage(
+                        self.compute_api.notifier, self.context,
+                        inst, 'delete.end',
+                        system_metadata=inst.system_metadata)
+            inst.info_cache = None
+            self.compute_api._local_delete(self.context, inst, [],
+                                           'delete',
+                                           self._fake_do_delete)
 
     def test_delete_disabled(self):
         inst = self._create_instance_obj()
