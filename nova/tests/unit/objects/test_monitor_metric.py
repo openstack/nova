@@ -25,6 +25,13 @@ _monitor_metric_spec = {
     'source': 'nova.virt.libvirt.driver'
 }
 
+_monitor_numa_metric_spec = {
+    'name': fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
+    'numa_membw_values': {"0": 10, "1": 43},
+    'timestamp': timeutils.strtime(_ts_now),
+    'source': 'nova.virt.libvirt.driver'
+}
+
 _monitor_metric_list_spec = [_monitor_metric_spec]
 
 
@@ -43,6 +50,13 @@ class _TestMonitorMetricObject(object):
                                     source='nova.virt.libvirt.driver')
         list_obj = objects.MonitorMetricList(objects=[obj])
         self.assertEqual(_monitor_metric_list_spec, list_obj.to_list())
+
+    def test_monitor_NUMA_metric_to_dict(self):
+        obj = objects.MonitorMetric(name='numa.membw.current',
+                                    numa_membw_values={"0": 10, "1": 43},
+                                    timestamp=_ts_now,
+                                    source='nova.virt.libvirt.driver')
+        self.assertEqual(_monitor_numa_metric_spec, obj.to_dict())
 
 
 class TestMonitorMetricObject(test_objects._LocalTest,

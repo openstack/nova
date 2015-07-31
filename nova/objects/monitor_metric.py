@@ -14,46 +14,65 @@ from oslo_utils import timeutils
 
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 @base.NovaObjectRegistry.register
 class MonitorMetric(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added NUMA support
+
+    VERSION = '1.1'
 
     fields = {
         'name': fields.MonitorMetricTypeField(nullable=False),
         'value': fields.IntegerField(nullable=False),
+        'numa_membw_values': fields.DictOfIntegersField(nullable=True),
         'timestamp': fields.DateTimeField(nullable=False),
         # This will be the stevedore extension full class name
         # for the plugin from which the metric originates.
         'source': fields.StringField(nullable=False),
     }
 
+    def obj_make_compatible(self, primitive, target_version):
+        super(MonitorMetric, self).obj_make_compatible(primitive,
+                                                       target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'numa_nodes_values' in primitive:
+            del primitive['numa_membw_values']
+
     # NOTE(jaypipes): This method exists to convert the object to the
     # format expected by the RPC notifier for metrics events.
     def to_dict(self):
-        return {
+        dict_to_return = {
             'name': self.name,
-            'value': self.value,
             # NOTE(jaypipes): This is what jsonutils.dumps() does to
             # datetime.datetime objects, which is what timestamp is in
             # this object as well as the original simple dict metrics
             'timestamp': timeutils.strtime(self.timestamp),
-            'source': self.source
+            'source': self.source,
         }
+
+        if self.obj_attr_is_set('value'):
+            dict_to_return['value'] = self.value
+        elif self.obj_attr_is_set('numa_membw_values'):
+            dict_to_return['numa_membw_values'] = self.numa_membw_values
+
+        return dict_to_return
 
 
 @base.NovaObjectRegistry.register
 class MonitorMetricList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: MonitorMetric version 1.1
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('MonitorMetric'),
     }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
     }
 
     # NOTE(jaypipes): This method exists to convert the object to the
