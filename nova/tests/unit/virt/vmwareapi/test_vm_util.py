@@ -1326,6 +1326,44 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_cores_per_socket(self):
+        extra_specs = vm_util.ExtraSpecs(cores_per_socket=4)
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.deviceChange = []
+        expected.guestId = 'otherGuest'
+        expected.instanceUuid = self._instance.uuid
+        expected.memoryMB = self._instance.memory_mb
+        expected.name = self._instance.uuid
+        expected.numCPUs = self._instance.vcpus
+        expected.numCoresPerSocket = 4
+        expected.version = None
+
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        expected.extraConfig = []
+        extra_config = fake_factory.create('ns0:OptionValue')
+        extra_config.key = 'nvp.vm-uuid'
+        extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        self.assertEqual(expected, result)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):

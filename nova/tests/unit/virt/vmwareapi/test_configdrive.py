@@ -66,7 +66,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'ramdisk_id': '1',
             'mac_addresses': [{'address': 'de:ad:be:ef:be:ef'}],
             'memory_mb': 8192,
-            'flavor': objects.Flavor(extra_specs={}),
+            'flavor': objects.Flavor(vcpus=4, extra_specs={}),
             'instance_type_id': 0,
             'vcpus': 4,
             'root_gb': 80,
