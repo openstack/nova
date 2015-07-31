@@ -94,7 +94,8 @@ DcInfo = collections.namedtuple('DcInfo',
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
-    def __init__(self, instance, image_info, datastore, dc_info, image_cache):
+    def __init__(self, instance, image_info, datastore, dc_info, image_cache,
+                 extra_specs=None):
 
         # Some methods called during spawn take the instance parameter purely
         # for logging purposes.
@@ -106,6 +107,7 @@ class VirtualMachineInstanceConfigInfo(object):
         self.datastore = datastore
         self.dc_info = dc_info
         self._image_cache = image_cache
+        self._extra_specs = extra_specs
 
     @property
     def cache_image_folder(self):
@@ -481,7 +483,7 @@ class VMwareVMOps(object):
                             vi.cache_image_folder)
 
     def _get_vm_config_info(self, instance, image_info,
-                            storage_policy=None):
+                            extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
         if (instance.root_gb != 0 and
@@ -494,7 +496,7 @@ class VMwareVMOps(object):
         datastore = ds_util.get_datastore(self._session,
                                           self._cluster,
                                           self._datastore_regex,
-                                          storage_policy,
+                                          extra_specs.storage_policy,
                                           allowed_ds_types)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
@@ -502,7 +504,8 @@ class VMwareVMOps(object):
                                                 image_info,
                                                 datastore,
                                                 dc_info,
-                                                self._imagecache)
+                                                self._imagecache,
+                                                extra_specs)
 
     def _get_image_callbacks(self, vi):
         disk_type = vi.ii.disk_type
@@ -602,7 +605,7 @@ class VMwareVMOps(object):
         extra_specs = self._get_extra_specs(instance.flavor, image_meta)
 
         vi = self._get_vm_config_info(instance, image_info,
-                                      extra_specs.storage_policy)
+                                      extra_specs)
 
         metadata = self._get_instance_metadata(context, instance)
         # Creates the virtual machine. The virtual machine reference returned
