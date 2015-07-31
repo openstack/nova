@@ -1250,10 +1250,31 @@ class TestObjectVersions(test.NoDBTestCase):
             # This means the top-level thing never hit a remotable layer
             return None
 
+    def _un_unicodify_enum_valid_values(self, _fields):
+        for name, field in _fields:
+            if not isinstance(field, (fields.BaseEnumField,
+                                      fields.EnumField)):
+                continue
+            orig_type = type(field._type._valid_values)
+            field._type._valid_values = orig_type(
+                [x.encode('utf-8') for x in
+                 field._type._valid_values])
+
     def _get_fingerprint(self, obj_name):
         obj_classes = base.NovaObjectRegistry.obj_classes()
         obj_class = obj_classes[obj_name][0]
         fields = list(obj_class.fields.items())
+        # NOTE(danms): We store valid_values in the enum as strings,
+        # but oslo is working to make these coerced to unicode (which
+        # is the right thing to do). The functionality will be
+        # unchanged, but the repr() result that we use for calculating
+        # the hashes will be different. This helper method coerces all
+        # Enum valid_values elements to UTF-8 string before we make the
+        # repr() call so that it is consistent before and after the
+        # unicode change, and on py2 and py3.
+        if six.PY2:
+            self._un_unicodify_enum_valid_values(fields)
+
         fields.sort()
         methods = []
         for name in dir(obj_class):
