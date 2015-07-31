@@ -11221,7 +11221,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, {'mapping': {}})
+                                    None, {'mapping': {'disk': {}}})
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
@@ -11242,6 +11242,62 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[3],
                               vconfig.LibvirtConfigGuestVideo)
+
+    def _test_get_guest_config_parallels_volume(self, vmmode, devices):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        ct_instance = self.test_instance.copy()
+        ct_instance["vm_mode"] = vmmode
+        instance_ref = objects.Instance(**ct_instance)
+
+        image_meta = {}
+        conn_info = {'driver_volume_type': 'fake'}
+        info = {'block_device_mapping': driver_block_device.convert_volumes([
+                    fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 0,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'device_name': '/dev/sda'}),
+                ])}
+        info['block_device_mapping'][0]['connection_info'] = conn_info
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta,
+                                            info)
+
+        with mock.patch.object(
+                        driver_block_device.DriverVolumeBlockDevice, 'save'
+                                ) as mock_save:
+            cfg = drvr._get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info, None, info)
+            mock_save.assert_called_once_with()
+
+        self.assertEqual("parallels", cfg.virt_type)
+        self.assertEqual(instance_ref["uuid"], cfg.uuid)
+        self.assertEqual(2 * units.Mi, cfg.memory)
+        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(vmmode, cfg.os_type)
+        self.assertIsNone(cfg.os_root)
+        self.assertEqual(devices, len(cfg.devices))
+
+        disk_found = False
+
+        for dev in cfg.devices:
+            result = isinstance(dev, vconfig.LibvirtConfigGuestFilesys)
+            self.assertFalse(result)
+            if (isinstance(dev, vconfig.LibvirtConfigGuestDisk) and
+                (dev.source_path is None or
+               'disk.local' not in dev.source_path)):
+                self.assertEqual("disk", dev.source_device)
+                self.assertEqual("sda", dev.target_dev)
+                disk_found = True
+
+        self.assertTrue(disk_found)
+
+    def test_get_guest_config_parallels_volume(self):
+        self._test_get_guest_config_parallels_volume(vm_mode.EXE, 4)
+        self._test_get_guest_config_parallels_volume(vm_mode.HVM, 6)
 
 
 class HostStateTestCase(test.NoDBTestCase):
