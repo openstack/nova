@@ -211,7 +211,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.StandardLogging())
 
         # NOTE(sdague): because of the way we were using the lock
-        # wrapper we eneded up with a lot of tests that started
+        # wrapper, we ended up with a lot of tests that started
         # relying on global external locking being set up for them. We
         # consider all of these to be *bugs*. Tests should not require
         # global external locking, or if they do, they should
