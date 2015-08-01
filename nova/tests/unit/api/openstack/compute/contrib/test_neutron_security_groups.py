@@ -54,7 +54,7 @@ class TestNeutronSecurityGroupsV21(
         TestNeutronSecurityGroupsTestCase):
 
     def _create_sg_template(self, **kwargs):
-        sg = test_security_groups.security_group_template(**kwargs)
+        sg = test_security_groups.security_group_request_template(**kwargs)
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         return self.controller.create(req, {'security_group': sg})
 
