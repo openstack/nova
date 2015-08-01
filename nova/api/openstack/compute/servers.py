@@ -327,7 +327,8 @@ class Controller(wsgi.Controller):
                 try:
                     request.address = network.get('fixed_ip', None)
                 except ValueError:
-                    msg = _("Invalid fixed IP address (%s)") % request.address
+                    msg = (_("Invalid fixed IP address (%s)") %
+                           network.get('fixed_ip'))
                     raise exc.HTTPBadRequest(explanation=msg)
 
                 # duplicate networks are allowed only for neutron v2.0
