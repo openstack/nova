@@ -685,7 +685,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 elif errcode == libvirt.VIR_ERR_OPERATION_TIMEOUT:
                     LOG.warn(_LW("Cannot destroy instance, operation time "
                                  "out"),
-                            instance=instance)
+                             instance=instance)
                     reason = _("operation time out")
                     raise exception.InstancePowerOffFailure(reason=reason)
                 elif errcode == libvirt.VIR_ERR_SYSTEM_ERROR:
@@ -1193,7 +1193,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
             #                will throw InstanceNotFound exception. Need to
             #                disconnect volume under this circumstance.
-            LOG.warn(_LW("During detach_volume, instance disappeared."))
+            LOG.warn(_LW("During detach_volume, instance disappeared."),
+                     instance=instance)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
@@ -1201,7 +1202,8 @@ class LibvirtDriver(driver.ComputeDriver):
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
                 # NOTE(vish):
-                LOG.warn(_LW("During detach_volume, instance disappeared."))
+                LOG.warn(_LW("During detach_volume, instance disappeared."),
+                         instance=instance)
             else:
                 raise
 
@@ -1637,7 +1639,7 @@ class LibvirtDriver(driver.ComputeDriver):
             snapshot.add_disk(snap_disk)
 
         snapshot_xml = snapshot.to_xml()
-        LOG.debug("snap xml: %s", snapshot_xml)
+        LOG.debug("snap xml: %s", snapshot_xml, instance=instance)
 
         snap_flags = (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
                       libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
@@ -1652,13 +1654,15 @@ class LibvirtDriver(driver.ComputeDriver):
             return
         except libvirt.libvirtError:
             LOG.exception(_LE('Unable to create quiesced VM snapshot, '
-                              'attempting again with quiescing disabled.'))
+                              'attempting again with quiescing disabled.'),
+                          instance=instance)
 
         try:
             domain.snapshotCreateXML(snapshot_xml, snap_flags)
         except libvirt.libvirtError:
             LOG.exception(_LE('Unable to create VM snapshot, '
-                              'failing volume_snapshot operation.'))
+                              'failing volume_snapshot operation.'),
+                          instance=instance)
 
             raise
 
@@ -1714,7 +1718,8 @@ class LibvirtDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Error occurred during '
                                   'volume_snapshot_create, '
-                                  'sending error status to Cinder.'))
+                                  'sending error status to Cinder.'),
+                              instance=instance)
                 self._volume_snapshot_update_status(
                     context, snapshot_id, 'error')
 
@@ -1765,7 +1770,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     "of volume snapshots.") % ver
             raise exception.Invalid(msg)
 
-        LOG.debug('volume_snapshot_delete: delete_info: %s', delete_info)
+        LOG.debug('volume_snapshot_delete: delete_info: %s', delete_info,
+                  instance=instance)
 
         if delete_info['type'] != 'qcow2':
             msg = _('Unknown delete_info type %s') % delete_info['type']
@@ -1806,10 +1812,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if my_dev is None or (active_disk is None and active_protocol is None):
             msg = _('Disk with id: %s '
                     'not found attached to instance.') % volume_id
-            LOG.debug('Domain XML: %s', xml)
+            LOG.debug('Domain XML: %s', xml, instance=instance)
             raise exception.NovaException(msg)
 
-        LOG.debug("found device at %s", my_dev)
+        LOG.debug("found device at %s", my_dev, instance=instance)
 
         def _get_snap_dev(filename, backing_store):
             if filename is None:
@@ -1819,7 +1825,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # libgfapi delete
             LOG.debug("XML: %s" % xml)
 
-            LOG.debug("active disk object: %s" % active_disk_object)
+            LOG.debug("active disk object: %s", active_disk_object)
 
             # determine reference within backing store for desired image
             filename_to_merge = filename
@@ -1834,7 +1840,7 @@ class LibvirtDriver(driver.ComputeDriver):
             while b is not None:
                 source_filename = b.source_name.split('/')[1]
                 if source_filename == filename_to_merge:
-                    LOG.debug('found match: %s' % b.source_name)
+                    LOG.debug('found match: %s', b.source_name)
                     matched_name = b.source_name
                     index = b.index
                     break
@@ -1845,7 +1851,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 msg = _('no match found for %s') % (filename_to_merge)
                 raise exception.NovaException(msg)
 
-            LOG.debug('index of match (%s) is %s' % (b.source_name, index))
+            LOG.debug('index of match (%s) is %s', b.source_name, index)
 
             my_snap_dev = '%s[%s]' % (my_dev, index)
             return my_snap_dev
@@ -1881,15 +1887,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 {'disk': rebase_disk,
                  'base': rebase_base,
                  'bw': libvirt_guest.BlockDevice.REBASE_DEFAULT_BANDWIDTH,
-                 'relative': str(relative)})
+                 'relative': str(relative)}, instance=instance)
 
             dev = guest.get_block_device(rebase_disk)
             result = dev.rebase(rebase_base, relative=relative)
             if result == 0:
-                LOG.debug('blockRebase started successfully')
+                LOG.debug('blockRebase started successfully',
+                          instance=instance)
 
             while dev.wait_for_job(abort_on_error=True):
-                LOG.debug('waiting for blockRebase job completion')
+                LOG.debug('waiting for blockRebase job completion',
+                          instance=instance)
                 time.sleep(0.5)
 
         else:
@@ -1928,19 +1936,21 @@ class LibvirtDriver(driver.ComputeDriver):
 
             LOG.debug('will call blockCommit with commit_disk=%(commit_disk)s '
                       'commit_base=%(commit_base)s '
-                      'commit_top=%(commit_top)s '
-                      % {'commit_disk': commit_disk,
-                         'commit_base': commit_base,
-                         'commit_top': commit_top})
+                      'commit_top=%(commit_top)s ',
+                      {'commit_disk': commit_disk,
+                       'commit_base': commit_base,
+                       'commit_top': commit_top}, instance=instance)
 
             dev = guest.get_block_device(commit_disk)
             result = dev.commit(commit_base, commit_top, relative=True)
 
             if result == 0:
-                LOG.debug('blockCommit started successfully')
+                LOG.debug('blockCommit started successfully',
+                          instance=instance)
 
             while dev.wait_for_job(abort_on_error=True):
-                LOG.debug('waiting for blockCommit job completion')
+                LOG.debug('waiting for blockCommit job completion',
+                          instance=instance)
                 time.sleep(0.5)
 
     def volume_snapshot_delete(self, context, instance, volume_id, snapshot_id,
@@ -1952,7 +1962,8 @@ class LibvirtDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Error occurred during '
                                   'volume_snapshot_delete, '
-                                  'sending error status to Cinder.'))
+                                  'sending error status to Cinder.'),
+                              instance=instance)
                 self._volume_snapshot_update_status(
                     context, snapshot_id, 'error_deleting')
 
@@ -1967,7 +1978,8 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 soft_reboot_success = self._soft_reboot(instance)
             except libvirt.libvirtError as e:
-                LOG.debug("Instance soft reboot failed: %s", e)
+                LOG.debug("Instance soft reboot failed: %s", e,
+                          instance=instance)
                 soft_reboot_success = False
 
             if soft_reboot_success:
@@ -2970,7 +2982,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      instance.flavor,
                                                      CONF.libvirt.virt_type)
                     LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
-                          {'port': vif, 'dom': guest.id})
+                              {'port': vif, 'dom': guest.id},
+                              instance=instance)
                     guest.attach_device(cfg)
 
     def _detach_sriov_ports(self, context, instance, guest):
@@ -4109,7 +4122,7 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warn(_LW('Old property name "hw_watchdog_action" is now '
                          'deprecated and will be removed in the next release. '
                          'Use updated property name '
-                         '"hw:watchdog_action" instead'))
+                         '"hw:watchdog_action" instead'), instance=instance)
         # TODO(pkholkin): accepting old property name 'hw_watchdog_action'
         #                should be removed in the next release
         watchdog_action = (flavor.extra_specs.get('hw_watchdog_action') or
@@ -4340,7 +4353,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _neutron_failed_callback(self, event_name, instance):
         LOG.error(_LE('Neutron Reported failure on event '
                       '%(event)s for instance %(uuid)s'),
-                  {'event': event_name, 'uuid': instance.uuid})
+                  {'event': event_name, 'uuid': instance.uuid},
+                  instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
@@ -4415,7 +4429,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
             LOG.warn(_LW('Timeout waiting for vif plugging callback for '
-                         'instance %(uuid)s'), {'uuid': instance.uuid})
+                         'instance %(uuid)s'), {'uuid': instance.uuid},
+                     instance=instance)
             if CONF.vif_plugging_is_fatal:
                 if guest:
                     guest.poweroff()
@@ -4553,7 +4568,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     total += len(list(vcpus))
             except libvirt.libvirtError as e:
                 LOG.warn(_LW("couldn't obtain the vpu count from domain id:"
-                             " %(uuid)s, exception: %(ex)s") %
+                             " %(uuid)s, exception: %(ex)s"),
                          {"uuid": dom.UUIDString(), "ex": e})
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
@@ -4791,7 +4806,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 volume_id = bdm['volume_id']
 
                 LOG.debug("Trying to get stats for the volume %s",
-                          volume_id)
+                          volume_id, instance=instance)
                 vol_stats = self.block_stats(instance, mountpoint)
 
                 if vol_stats:
@@ -5854,7 +5869,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # themselves, which is a recipe for disaster.
             LOG.error(
                 _LE('Cannot block migrate instance %s with mapped volumes'),
-                instance.uuid)
+                instance.uuid, instance=instance)
             msg = (_('Cannot block migrate instance %s with mapped volumes') %
                    instance.uuid)
             raise exception.MigrationError(reason=msg)
@@ -5915,7 +5930,8 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Image %(image_id)s doesn't exist anymore "
                       "on image service, attempting to copy "
                       "image from %(host)s",
-                      {'image_id': image_id, 'host': fallback_from_host})
+                      {'image_id': image_id, 'host': fallback_from_host},
+                      instance=instance)
 
             def copy_from_host(target, max_size):
                 libvirt_utils.copy_image(src=target,
@@ -6142,9 +6158,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(_LW(
                     'Error from libvirt while getting description of '
                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s'
-                ) % {'instance_name': guest.name,
-                     'error_code': error_code,
-                     'ex': ex})
+                ), {'instance_name': guest.name,
+                    'error_code': error_code,
+                    'ex': ex})
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     LOG.warn(_LW('Periodic task is updating the host stat, '
@@ -6679,7 +6695,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable
         instance_path = libvirt_utils.get_instance_path(instance)
-        LOG.debug('Checking instance files accessibility %s', instance_path)
+        LOG.debug('Checking instance files accessibility %s', instance_path,
+                  instance=instance)
         shared_instance_path = os.access(instance_path, os.W_OK)
         # NOTE(flwang): For shared block storage scenario, the file system is
         # not really shared by the two hosts, but the volume of evacuated
