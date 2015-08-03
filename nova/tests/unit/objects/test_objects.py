@@ -819,6 +819,9 @@ class _TestObject(object):
         class MyList(base.ObjectListBase, base.NovaObject):
             VERSION = '1.2'
             fields = {'objects': fields.ListOfObjectsField('MyObjElement')}
+            obj_relationships = {
+                'objects': [('1.1', '1.1'), ('1.2', '1.2')],
+            }
 
         mylist = MyList(objects=[])
 
@@ -1084,28 +1087,28 @@ class TestArgsSerializer(test.NoDBTestCase):
 # objects
 object_data = {
     'Agent': '1.0-c0c092abaceb6f51efe5d82175f15eba',
-    'AgentList': '1.0-4f12bf96ca77315e7e023d588fb071f1',
+    'AgentList': '1.0-5a7380d02c3aaf2a32fc8115ae7ca98c',
     'Aggregate': '1.1-1ab35c4516f71de0bef7087026ab10d1',
-    'AggregateList': '1.2-79689d69db4de545a82fe09f30468c53',
+    'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
-    'BandwidthUsageList': '1.2-77b4d43e641459f464a6aa4d53debd8f',
+    'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
     'BlockDeviceMapping': '1.13-d44d8d694619e79c172a99b3c1d6261d',
-    'BlockDeviceMappingList': '1.14-ff39c726181b66dfdf54d7c73abf5ffb',
+    'BlockDeviceMappingList': '1.14-6fa262c059dad1d519b9fe05b9e4f404',
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
     'ComputeNode': '1.12-71784d2e6f2814ab467d4e0f69286843',
-    'ComputeNodeList': '1.12-e903b1f471dc161292df49150c6e5c57',
+    'ComputeNodeList': '1.12-3b6f4f5ade621c40e70cb116db237844',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
-    'DNSDomainList': '1.0-f876961b1a6afe400b49cf940671db86',
+    'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'EC2Ids': '1.0-474ee1094c7ec16f8ce657595d8c49d9',
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
     'FixedIP': '1.11-b5818a33996228fc146f096d1403742c',
-    'FixedIPList': '1.11-18c3cc9a716bc12dd35940fe64d8eb7b',
+    'FixedIPList': '1.11-87a39361c8f08f059004d6b15103cdfd',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
-    'FlavorList': '1.1-d96e87307f94062ce538f77b5e221e13',
+    'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
     'FloatingIP': '1.7-52a67d52d85eb8b3f324a5b7935a335b',
-    'FloatingIPList': '1.8-9a9fe191dc694ea4ff08946be9460718',
+    'FloatingIPList': '1.8-7f2ba670714e1b7bab462ab3290f7159',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HVSpec': '1.1-6b4f7c0f688cbd03e24142a44eb9010d',
     'ImageMeta': '1.3-642d1b2eb3e880a367f37d72dd76162d',
@@ -1113,57 +1116,57 @@ object_data = {
     'Instance': '1.21-260d385315d4868b6397c61a13109841',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
-    'InstanceActionEventList': '1.0-c37db4e58b637a857c90fb02284d8f7c',
-    'InstanceActionList': '1.0-89266105d853ff9b8f83351776fab788',
+    'InstanceActionEventList': '1.0-13d92fb953030cdbfee56481756e02be',
+    'InstanceActionList': '1.0-4a53826625cc280e15fae64a575e0879',
     'InstanceExternalEvent': '1.0-33cc4a1bbd0655f68c0ee791b95da7e6',
     'InstanceFault': '1.2-7ef01f16f1084ad1304a513d6d410a38',
-    'InstanceFaultList': '1.1-ac4076924f7eb5374a92e4f9db7aa053',
+    'InstanceFaultList': '1.1-f8ec07cbe3b60f5f07a8b7a06311ac0d',
     'InstanceGroup': '1.9-a413a4ec0ff391e3ef0faa4e3e2a96d0',
-    'InstanceGroupList': '1.6-1e383df73d9bd224714df83d9a9983bb',
+    'InstanceGroupList': '1.6-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
-    'InstanceList': '1.19-d7256b45308fe195ecfb2f5718e44316',
+    'InstanceList': '1.19-5f6eba7d94c4e4ad6fc9a3347f85f4a7',
     'InstanceMapping': '1.0-47ef26034dfcbea78427565d9177fe50',
-    'InstanceMappingList': '1.0-b7b108f6a56bd100c20a3ebd5f3801a1',
+    'InstanceMappingList': '1.0-9e982e3de1613b9ada85e35f69b23d47',
     'InstanceNUMACell': '1.2-535ef30e0de2d6a0d26a71bd58ecafc4',
     'InstanceNUMATopology': '1.1-d944a7d6c21e1c773ffdf09c6d025954',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-fc8d179960869c9af038205a80af2541',
     'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
-    'KeyPairList': '1.2-60f984184dc5a8eba6e34e20cbabef04',
+    'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
     'Migration': '1.2-8784125bedcea0a9227318511904e853',
-    'MigrationList': '1.2-5e79c0693d7ebe4e9ac03b5db11ab243',
+    'MigrationList': '1.2-02c0ec0c50b75ca86a2a74c5e8c911cc',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
-    'MonitorMetricList': '1.1-ea2a8e1c1ecf3608af2956e657adeb4c',
+    'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
     'NUMAPagesTopology': '1.0-c71d86317283266dc8364c149155e48e',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
-    'NetworkList': '1.2-b2ae592657f06f6edce4c616821abcf8',
+    'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
     'NetworkRequest': '1.1-7a3e4ca2ce1e7b62d8400488f2f2b756',
-    'NetworkRequestList': '1.1-ea2a8e1c1ecf3608af2956e657adeb4c',
+    'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PciDevice': '1.3-4d43db45e3978fca4280f696633c7c20',
-    'PciDeviceList': '1.2-2b8b6d0cf622c58543c5dec50c7e877c',
+    'PciDeviceList': '1.2-3757458c45591cbc92c72ee99e757c98',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
-    'PciDevicePoolList': '1.1-ea2a8e1c1ecf3608af2956e657adeb4c',
+    'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'Quotas': '1.2-1fe4cd50593aaf5d36a6dc5ab3f98fb3',
     'QuotasNoOp': '1.2-e041ddeb7dc8188ca71706f78aad41c1',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SecurityGroup': '1.1-0e1b9ba42fe85c13c1437f8b74bdb976',
-    'SecurityGroupList': '1.0-a3bb51998e7d2a95b3e613111e853817',
+    'SecurityGroupList': '1.0-dc8bbea01ba09a2edb6e5233eae85cbc',
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
-    'SecurityGroupRuleList': '1.1-521f1aeb7b0cc00d026175509289d020',
+    'SecurityGroupRuleList': '1.1-674b323c9ccea02e93b1b40e7fd2091a',
     'Service': '1.15-1d5c9a16f47da93e82082c4fce31588a',
-    'ServiceList': '1.13-4ed12034c1bf47b3ea02155b4e601f99',
+    'ServiceList': '1.13-b767102cba7cbed290e396114c3f86b3',
     'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',
-    'TaskLogList': '1.0-2378c0e2afdbbfaf392f31c1dffa4d25',
+    'TaskLogList': '1.0-cc8cce1af8a283b9d28b55fcd682e777',
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
-    'TagList': '1.1-6263d7242b87010174cf1d4ad49e5148',
+    'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
     'VirtualInterface': '1.0-19921e38cba320f355d56ecbf8f29587',
-    'VirtualInterfaceList': '1.0-16a5c18df5574a9405e1a8b350ed8b27',
+    'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
 }
 
 
@@ -1396,6 +1399,64 @@ class TestObjectVersions(test.NoDBTestCase):
                          (obj_name, test_version))
                 obj_class().obj_to_primitive(target_version=test_version)
 
+    def test_list_obj_make_compatible(self):
+        @base.NovaObjectRegistry.register_if(False)
+        class TestObj(base.NovaObject):
+            VERSION = '1.4'
+            fields = {'foo': fields.IntegerField()}
+
+        @base.NovaObjectRegistry.register_if(False)
+        class TestListObj(base.ObjectListBase, base.NovaObject):
+            VERSION = '1.5'
+            fields = {'objects': fields.ListOfObjectsField('TestObj')}
+            obj_relationships = {
+                'objects': [('1.0', '1.1'), ('1.1', '1.2'),
+                            ('1.3', '1.3'), ('1.5', '1.4')]
+            }
+
+        my_list = TestListObj()
+        my_obj = TestObj(foo=1)
+        my_list.objects = [my_obj]
+        primitive = my_list.obj_to_primitive(target_version='1.5')
+        primitive_data = primitive['nova_object.data']
+        obj_primitive = my_obj.obj_to_primitive(target_version='1.4')
+        obj_primitive_data = obj_primitive['nova_object.data']
+        with mock.patch.object(TestObj, 'obj_make_compatible') as comp:
+            my_list.obj_make_compatible(primitive_data, '1.1')
+            comp.assert_called_with(obj_primitive_data,
+                                    '1.2')
+
+    def test_list_obj_make_compatible_when_no_objects(self):
+        """Test to make sure obj_make_compatible works with no 'objects'
+
+        If a List object ever has a version that did not contain the 'objects'
+        key, we need to make sure converting back to that version doesn't
+        cause backporting problems.
+        """
+        @base.NovaObjectRegistry.register_if(False)
+        class TestObj(base.NovaObject):
+            VERSION = '1.1'
+            fields = {'foo': fields.IntegerField()}
+
+        @base.NovaObjectRegistry.register_if(False)
+        class TestListObj(base.ObjectListBase, base.NovaObject):
+            VERSION = '1.1'
+            fields = {'objects': fields.ListOfObjectsField('TestObj')}
+            # pretend that version 1.0 didn't have 'objects'
+            obj_relationships = {
+                'objects': [('1.1', '1.1')]
+            }
+
+        my_list = TestListObj()
+        my_list.objects = [TestObj(foo=1)]
+        primitive = my_list.obj_to_primitive(target_version='1.1')
+        primitive_data = primitive['nova_object.data']
+        my_list.obj_make_compatible(primitive_data,
+                                    target_version='1.0')
+        self.assertNotIn('objects', primitive_data,
+                         "List was backported to before 'objects' existed."
+                         " 'objects' should not be in the primitive.")
+
     def _get_obj_to_test(self, obj_class):
         obj = obj_class()
         obj_classes = base.NovaObjectRegistry.obj_classes()
@@ -1484,6 +1545,15 @@ class TestObjectVersions(test.NoDBTestCase):
                                         field))
                     last_my_version = _my_version
                     last_child_version = _ch_version
+
+    def test_objects_use_obj_relationships(self):
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
+            self.assertFalse((hasattr(obj_class, 'child_versions')
+                              and obj_class.child_versions),
+                              'Object %s should be using obj_relationships, '
+                              'not child_versions.' % obj_name)
 
 
 class TestObjEqualPrims(_BaseTestCase):

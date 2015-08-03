@@ -213,15 +213,11 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
         }
-    child_versions = {
-        '1.0': '1.3',
-        # NOTE(danms): InstanceGroup was at 1.3 before we added this
-        '1.1': '1.4',
-        '1.2': '1.5',
-        '1.3': '1.6',
-        '1.4': '1.7',
-        '1.5': '1.8',
-        '1.6': '1.9',
+    # NOTE(danms): InstanceGroup was at 1.3 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.3'), ('1.1', '1.4'), ('1.2', '1.5'),
+                    ('1.3', '1.6'), ('1.4', '1.7'), ('1.5', '1.8'),
+                    ('1.6', '1.9')],
         }
 
     @base.remotable_classmethod

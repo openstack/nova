@@ -101,10 +101,9 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceFault'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): InstanceFault was at 1.1 before we added this
-        '1.1': '1.2',
+    # NOTE(danms): InstanceFault was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1'), ('1.1', '1.2')],
         }
 
     @base.remotable_classmethod

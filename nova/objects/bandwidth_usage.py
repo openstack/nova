@@ -78,10 +78,8 @@ class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('BandwidthUsage'),
     }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
-        '1.2': '1.2',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')],
     }
 
     @base.serialize_args

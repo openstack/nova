@@ -91,9 +91,8 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
     VERSION = '1.1'
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
 
     @base.remotable_classmethod

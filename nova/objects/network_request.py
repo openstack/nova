@@ -64,9 +64,8 @@ class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
         'objects': fields.ListOfObjectsField('NetworkRequest'),
         }
 
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
     VERSION = '1.1'
 

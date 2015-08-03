@@ -211,22 +211,13 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
         }
-    child_versions = {
-        '1.0': '1.2',
-        # NOTE(danms): Service was at 1.2 before we added this
-        '1.1': '1.3',
-        '1.2': '1.4',
-        '1.3': '1.5',
-        '1.4': '1.6',
-        '1.5': '1.7',
-        '1.6': '1.8',
-        '1.7': '1.9',
-        '1.8': '1.10',
-        '1.9': '1.11',
-        '1.10': '1.12',
-        '1.11': '1.13',
-        '1.12': '1.14',
-        '1.13': '1.15',
+    # NOTE(danms): Service was at 1.2 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.2'), ('1.1', '1.3'), ('1.2', '1.4'),
+                    ('1.3', '1.5'), ('1.4', '1.6'), ('1.5', '1.7'),
+                    ('1.6', '1.8'), ('1.7', '1.9'), ('1.8', '1.10'),
+                    ('1.9', '1.11'), ('1.10', '1.12'), ('1.11', '1.13'),
+                    ('1.12', '1.14'), ('1.13', '1.15')],
         }
 
     @base.remotable_classmethod

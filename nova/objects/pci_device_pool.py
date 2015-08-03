@@ -77,10 +77,9 @@ class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     fields = {
              'objects': fields.ListOfObjectsField('PciDevicePool'),
              }
-    child_versions = {
-            '1.0': '1.0',
-            '1.1': '1.1',
-            }
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
+        }
 
 
 def from_pci_stats(pci_stats):

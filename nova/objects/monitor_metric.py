@@ -70,9 +70,8 @@ class MonitorMetricList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('MonitorMetric'),
     }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
     }
 
     # NOTE(jaypipes): This method exists to convert the object to the
