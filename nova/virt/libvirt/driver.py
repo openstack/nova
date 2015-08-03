@@ -884,11 +884,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.serial_console.enabled:
             try:
                 serials = self._get_serial_ports_from_instance(instance)
+                for hostname, port in serials:
+                    serial_console.release_port(host=hostname, port=port)
             except exception.InstanceNotFound:
-                # Serial ports already gone. Nothing to release.
-                serials = ()
-            for hostname, port in serials:
-                serial_console.release_port(host=hostname, port=port)
+                pass
 
         self._undefine_domain(instance)
 
