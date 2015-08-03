@@ -987,7 +987,9 @@ class InstanceMetadata(BASE, NovaBase):
 class InstanceSystemMetadata(BASE, NovaBase):
     """Represents a system-owned metadata key/value pair for an instance."""
     __tablename__ = 'instance_system_metadata'
-    __table_args__ = ()
+    __table_args__ = (
+        Index('instance_uuid', 'instance_uuid'),
+    )
     id = Column(Integer, primary_key=True)
     key = Column(String(255), nullable=False)
     value = Column(String(255))
