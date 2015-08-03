@@ -14,14 +14,12 @@
 #    under the License.
 
 import os
-import platform
 
 import mock
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
 from oslo_config import cfg
 
-from nova.compute import arch
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -780,24 +778,6 @@ Setting up iSCSI targets: unused
         self.assertEqual(source.find('./host').get('port'), '24007')
 
         libvirt_driver.disconnect_volume(connection_info, "vde")
-
-    def test_libvirt_fibrechan_driver(self):
-        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.FibreChannelConnector)
-
-    def _test_libvirt_fibrechan_driver_s390(self):
-        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.FibreChannelConnectorS390X)
-
-    @mock.patch.object(platform, 'machine', return_value=arch.S390)
-    def test_libvirt_fibrechan_driver_s390(self, mock_machine):
-        self._test_libvirt_fibrechan_driver_s390()
-
-    @mock.patch.object(platform, 'machine', return_value=arch.S390X)
-    def test_libvirt_fibrechan_driver_s390x(self, mock_machine):
-        self._test_libvirt_fibrechan_driver_s390()
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
     def test_libvirt_smbfs_driver(self, mock_is_mounted):
