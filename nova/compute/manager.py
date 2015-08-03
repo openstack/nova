@@ -1208,7 +1208,10 @@ class ComputeManager(manager.Manager):
             LOG.warning(_LW("Unexpected power state %d"),
                         event.get_transition())
 
-        if vm_power_state is not None:
+        # Note(lpetrut): The event may be delayed, thus not reflecting
+        # the current instance power state. In that case, ignore the event.
+        current_power_state = self._get_power_state(context, instance)
+        if current_power_state == vm_power_state:
             LOG.debug('Synchronizing instance power state after lifecycle '
                       'event "%(event)s"; current vm_state: %(vm_state)s, '
                       'current task_state: %(task_state)s, current DB '
