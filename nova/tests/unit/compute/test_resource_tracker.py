@@ -329,7 +329,6 @@ class BaseTestCase(test.TestCase):
             'display_name': None,
             'default_swap_device': None,
             'power_state': None,
-            'scheduled_at': None,
             'access_ip_v6': None,
             'access_ip_v4': None,
             'key_name': None,

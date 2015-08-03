@@ -52,7 +52,6 @@ class _TestInstanceObject(object):
                                                  access_ip_v6='::1')
         db_inst['uuid'] = '34fd7606-2ed5-42c7-ad46-76240c088801'
         db_inst['cell_name'] = 'api!child'
-        db_inst['scheduled_at'] = None
         db_inst['terminated_at'] = None
         db_inst['deleted_at'] = None
         db_inst['created_at'] = None
@@ -424,6 +423,17 @@ class _TestInstanceObject(object):
             inst.pci_requests = None
             inst.save()
             self.assertTrue(save_mock.called)
+
+    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch.object(objects.Instance, '_from_db_object')
+    def test_save_skip_scheduled_at(self, mock_fdo, mock_update):
+        mock_update.return_value = None, None
+        inst = instance.Instance(context=self.context, id=123)
+        inst.uuid = 'foo'
+        inst.scheduled_at = None
+        inst.save()
+        self.assertNotIn('scheduled_at',
+                         mock_update.call_args_list[0][0][2])
 
     @mock.patch('nova.db.instance_update_and_get_original')
     @mock.patch.object(objects.Instance, '_from_db_object')
@@ -822,6 +832,22 @@ class _TestInstanceObject(object):
         self.assertEqual(set([which]), inst.obj_what_changed())
         inst.obj_reset_changes()
         self.assertEqual(set(), inst.obj_what_changed())
+
+    def test_create_skip_scheduled_at(self):
+        self.mox.StubOutWithMock(db, 'instance_create')
+        vals = {'host': 'foo-host',
+                'memory_mb': 128,
+                'system_metadata': {'foo': 'bar'},
+                'extra': {}}
+        fake_inst = fake_instance.fake_db_instance(**vals)
+        db.instance_create(self.context, vals).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance(context=self.context,
+                                 host='foo-host', memory_mb=128,
+                                 scheduled_at=None,
+                                 system_metadata={'foo': 'bar'})
+        inst.create()
+        self.assertEqual(inst.host, 'foo-host')
 
     def test_metadata_change_tracking(self):
         self._test_metadata_change_tracking('metadata')
@@ -1412,7 +1438,6 @@ class _TestInstanceListObject(object):
         db_inst = fake_instance.fake_db_instance(id=2,
                                                  access_ip_v4='1.2.3.4',
                                                  access_ip_v6='::1')
-        db_inst['scheduled_at'] = None
         db_inst['terminated_at'] = None
         db_inst['deleted_at'] = None
         db_inst['created_at'] = None

@@ -158,6 +158,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         'reservation_id': fields.StringField(nullable=True),
 
+        # NOTE(sbiswas7): this field is depcrecated,
+        # will be removed in instance v2.0
         'scheduled_at': fields.DateTimeField(nullable=True),
         'launched_at': fields.DateTimeField(nullable=True),
         'terminated_at': fields.DateTimeField(nullable=True),
@@ -457,6 +459,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 instance.deleted = db_inst['deleted'] == db_inst['id']
             elif field == 'cleaned':
                 instance.cleaned = db_inst['cleaned'] == 1
+            elif field == 'scheduled_at':
+                instance.scheduled_at = None
             else:
                 instance[field] = db_inst[field]
 
@@ -569,6 +573,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         updates = self.obj_get_changes()
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
+        if 'scheduled_at' in updates:
+            # NOTE(sbiswas7): 'scheduled_at' is not present in models.
+            del updates['scheduled_at']
         if 'security_groups' in updates:
             updates['security_groups'] = [x.name for x in
                                           updates['security_groups']]
@@ -794,6 +801,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self._maybe_upgrade_flavor()
         updates = {}
         changes = self.obj_what_changed()
+        if 'scheduled_at' in changes:
+            # NOTE(sbiswas7): Since 'scheduled_at' is removed from models,
+            # we need to discard it.
+            changes.remove('scheduled_at')
 
         for field in self.fields:
             # NOTE(danms): For object fields, we construct and call a
@@ -861,7 +872,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         old_ref, inst_ref = db.instance_update_and_get_original(
                 context, self.uuid, updates,
                 columns_to_join=_expected_cols(expected_attrs))
-
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
 

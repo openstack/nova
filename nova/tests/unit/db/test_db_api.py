@@ -1938,7 +1938,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'access_ip_v6': netaddr.IPAddress('::1'),
             }
         dt_keys = ('created_at', 'deleted_at', 'updated_at',
-                   'launched_at', 'terminated_at', 'scheduled_at')
+                   'launched_at', 'terminated_at')
         dt = timeutils.utcnow()
         dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
         for key in dt_keys:
@@ -1955,7 +1955,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'access_ip_v6': netaddr.IPAddress('::1'),
             }
         dt_keys = ('created_at', 'deleted_at', 'updated_at',
-                   'launched_at', 'terminated_at', 'scheduled_at')
+                   'launched_at', 'terminated_at')
         dt = timeutils.utcnow()
         dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
         for key in dt_keys:

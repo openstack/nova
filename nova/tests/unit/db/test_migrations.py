@@ -766,6 +766,22 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         # the point-of-view of unit tests, since they use SQLite
         pass
 
+    def filter_metadata_diff(self, diff):
+        # Overriding the parent method to decide on certain attributes
+        # that maybe present in the DB but not in the models.py
+        # Define a whitelist of columns that would be removed from the
+        # DB at a later release.
+        column_whitelist = {'instances': ['scheduled_at']}
+        for element in diff:
+            # Assuming that the diff structure will remain constant
+            # The 4th element in the diff is always the Column object
+            for key, values in column_whitelist.iteritems():
+                table_name = element[3].table.name
+                table_column = element[3].name
+                if key == table_name and table_column in values:
+                    diff.remove(element)
+        return diff
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
