@@ -152,7 +152,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
     def test_consume_requests_empty(self):
         devs = self.pci_stats.consume_requests([])
@@ -187,7 +187,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests, cells)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
     def test_consume_requests_numa_failed(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
@@ -202,7 +202,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_request, cells)
         self.assertEqual(1, len(devs))
         self.assertEqual(set(['v3']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
 
 @mock.patch.object(whitelist, 'get_pci_devices_filter')
@@ -286,7 +286,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['0071', '0072']),
-                         set([dev['product_id'] for dev in devs]))
+                         set([dev.product_id for dev in devs]))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 2)
         self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071', 3,
                                 physical_network='physnet1')

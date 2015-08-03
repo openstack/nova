@@ -88,7 +88,7 @@ class PciDeviceStats(object):
         if not devspec:
             return
         tags = devspec.get_tags()
-        pool = {k: dev.get(k) for k in self.pool_keys}
+        pool = {k: getattr(dev, k) for k in self.pool_keys}
         if tags:
             pool.update(tags)
         return pool

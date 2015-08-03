@@ -36,7 +36,7 @@ class PciServerController(wsgi.Controller):
     def _extend_server(self, server, instance):
         dev_id = []
         for dev in instance.pci_devices:
-            dev_id.append({'id': dev['id']})
+            dev_id.append({'id': dev.id})
         server['%s:pci_devices' % Pci.alias] = dev_id
 
     @wsgi.extends
@@ -88,13 +88,13 @@ class PciController(wsgi.Controller):
     def _view_pcidevice(self, device, detail=False):
         dev_dict = {}
         for key in PCI_ADMIN_KEYS:
-            dev_dict[key] = device[key]
+            dev_dict[key] = getattr(device, key)
         if detail:
             for field in PCI_DETAIL_KEYS:
                 if field == 'instance_uuid':
-                    dev_dict['server_uuid'] = device[field]
+                    dev_dict['server_uuid'] = getattr(device, field)
                 else:
-                    dev_dict[field] = device[field]
+                    dev_dict[field] = getattr(device, field)
         return dev_dict
 
     def _get_all_nodes_pci_devices(self, req, detail, action):

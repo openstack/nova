@@ -71,8 +71,10 @@ class PciDeviceTestCase(test.NoDBTestCase):
         self.assertEqual(self.devobj.status, 'allocated')
         self.assertEqual(self.devobj.instance_uuid, 'fake-inst-uuid')
         self.assertEqual(len(self.inst.pci_devices), 1)
-        self.assertEqual(self.inst.pci_devices[0]['vendor_id'], 'v')
-        self.assertEqual(self.inst.pci_devices[0]['status'], 'allocated')
+        self.assertEqual(self.inst.pci_devices[0].vendor_id,
+                         'v')
+        self.assertEqual(self.inst.pci_devices[0].status,
+                         'allocated')
 
     def test_allocacte_device_fail_status(self):
         self.devobj.status = 'removed'

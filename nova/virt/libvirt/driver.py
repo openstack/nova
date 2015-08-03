@@ -3284,7 +3284,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_pci_device(self, pci_device):
 
-        dbsf = pci_utils.parse_address(pci_device['address'])
+        dbsf = pci_utils.parse_address(pci_device.address)
         dev = vconfig.LibvirtConfigGuestHostdevPCI()
         dev.domain, dev.bus, dev.slot, dev.function = dbsf
 
