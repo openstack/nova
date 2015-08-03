@@ -76,6 +76,12 @@ RPC version pinning
     are able to be upgraded.
     https://wiki.openstack.org/wiki/RpcMajorVersionUpdates
 
+    .. note::
+
+      This does not apply to cells deployments since cells does not currently
+      support rolling upgrades. It is assumed that cells deployments are
+      upgraded in lockstep so n-1 cells compatibility does not work.
+
 Online Configuration Reload
     During the upgrade, we pin new serves at the older RPC version. When all
     services are updated to use newer code, we need to unpin them so we are
