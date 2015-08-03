@@ -123,16 +123,15 @@ def fake_instance_get_by_uuid_not_found(context, uuid,
 
 
 def fake_instance_get_all_with_locked(context, list_locked, **kwargs):
-    db_list = []
+    obj_list = []
     s_id = 0
     for locked in list_locked:
         uuid = fakes.get_fake_uuid(locked)
         s_id = s_id + 1
         kwargs['locked_by'] = None if locked == 'not_locked' else locked
-        server = fakes.stub_instance(id=s_id, uuid=uuid, **kwargs)
-        db_list.append(server)
-    return instance_obj._make_instance_list(
-                context, objects.InstanceList(), db_list, FIELDS)
+        server = fakes.stub_instance_obj(context, id=s_id, uuid=uuid, **kwargs)
+        obj_list.append(server)
+    return objects.InstanceList(objects=obj_list)
 
 
 class MockSetAdminPassword(object):
