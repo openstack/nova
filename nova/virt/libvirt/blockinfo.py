@@ -538,6 +538,12 @@ def get_disk_mapping(virt_type, instance,
     if not root_bdm and not block_device.volume_in_mapping(root_info['dev'],
                                                            block_device_info):
         mapping['disk'] = root_info
+    elif root_bdm:
+        # NOTE (ft): If device name is not set in root bdm, root_info has a
+        # generated one. We have to copy device name to root bdm to prevent its
+        # second generation in loop through bdms. If device name is already
+        # set, nothing is changed.
+        update_bdm(root_bdm, root_info)
 
     default_eph = has_default_ephemeral(instance, disk_bus, block_device_info,
                                         mapping)
