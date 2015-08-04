@@ -52,6 +52,9 @@ class BaseProxyTestCase(test.NoDBTestCase):
     @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
     def test_proxy(self, mock_start, mock_init, mock_gmr, mock_log,
                    mock_exists):
+        # Force verbose=False so something else testing nova.cmd.baseproxy
+        # doesn't impact the call to mocked NovaWebSocketProxy.__init__.
+        self.flags(verbose=False)
         baseproxy.proxy('0.0.0.0', '6080')
         mock_log.assert_called_once_with(baseproxy.CONF, 'nova')
         mock_gmr.mock_assert_called_once_with(version)
