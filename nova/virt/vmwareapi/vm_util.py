@@ -482,7 +482,7 @@ def get_vmdk_attach_config_spec(client_factory,
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
     device_config_spec = []
-    virtual_device_config_spec = create_virtual_disk_spec(client_factory,
+    virtual_device_config_spec = _create_virtual_disk_spec(client_factory,
                                 controller_key, disk_type, file_path,
                                 disk_size, linked_clone,
                                 unit_number, device_name, disk_io_limits)
@@ -764,14 +764,14 @@ def create_virtual_cdrom_spec(client_factory,
     return config_spec
 
 
-def create_virtual_disk_spec(client_factory, controller_key,
-                             disk_type=constants.DEFAULT_DISK_TYPE,
-                             file_path=None,
-                             disk_size=None,
-                             linked_clone=False,
-                             unit_number=None,
-                             device_name=None,
-                             disk_io_limits=None):
+def _create_virtual_disk_spec(client_factory, controller_key,
+                              disk_type=constants.DEFAULT_DISK_TYPE,
+                              file_path=None,
+                              disk_size=None,
+                              linked_clone=False,
+                              unit_number=None,
+                              device_name=None,
+                              disk_io_limits=None):
     """Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
     """
