@@ -1139,38 +1139,61 @@ class CloudTestCase(test.TestCase):
              'ownerId': None,
              'reservationId': u'b'}
 
+        def _normalize_reservation_set(reservation_set):
+            """Sort elements in reservation_set by instanceId, sort tags in
+             instance set, method is required because order of elements
+             could be changed by random PYTHONHASHSEED
+
+            :param reservation_set: reservation set to normalize
+            """
+
+            reservation_set['reservationSet'] = sorted(
+                reservation_set['reservationSet'],
+                key=lambda x: x['instancesSet'][0]['instanceId'])
+
+            for instance_ret in reservation_set['reservationSet']:
+                for instance_set in instance_ret['instancesSet']:
+                    instance_set['tagSet'] = sorted(
+                        instance_set['tagSet'],
+                        key=lambda x: (x['key'], x['value']))
+
+        def _compare_reservation_set(expected, actual):
+            _normalize_reservation_set(expected)
+            _normalize_reservation_set(actual)
+            self.assertEqual(expected, actual)
+
         # No filter
         result = self.cloud.describe_instances(self.context)
-        self.assertJsonEqual(result, {'reservationSet':
-                                      [inst1_ret, inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst1_ret, inst2_ret]},
+                                 result)
 
         # Key search
         # Both should have tags with key 'foo' and value 'bar'
         filters = {'filter': [{'name': 'tag:foo',
                                'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet':
-                                      [inst1_ret, inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst1_ret, inst2_ret]},
+                                 result)
 
         # Both should have tags with key 'foo'
         filters = {'filter': [{'name': 'tag-key',
                                'value': ['foo']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet':
-                                          [inst1_ret, inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst1_ret, inst2_ret]},
+                                 result)
 
         # Value search
         # Only inst2 should have tags with key 'baz' and value 'quux'
         filters = {'filter': [{'name': 'tag:baz',
                                'value': ['quux']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst2_ret]}, result)
 
         # Only inst2 should have tags with value 'quux'
         filters = {'filter': [{'name': 'tag-value',
                                'value': ['quux']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst2_ret]}, result)
 
         # Multiple values
         # Both should have tags with key 'baz' and values in the set
@@ -1178,8 +1201,8 @@ class CloudTestCase(test.TestCase):
         filters = {'filter': [{'name': 'tag:baz',
                                'value': ['quux', 'wibble']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet':
-                                      [inst1_ret, inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst1_ret, inst2_ret]},
+                                 result)
 
         # Both should have tags with key 'baz' or tags with value 'bar'
         filters = {'filter': [{'name': 'tag-key',
@@ -1187,8 +1210,8 @@ class CloudTestCase(test.TestCase):
                               {'name': 'tag-value',
                                'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet':
-                                      [inst1_ret, inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst1_ret, inst2_ret]},
+                                 result)
 
         # Confirm deletion of tags
         # Check for format 'tag:'
@@ -1196,17 +1219,17 @@ class CloudTestCase(test.TestCase):
         filters = {'filter': [{'name': 'tag:foo',
                               'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst2_ret]}, result)
 
         # Check for format 'tag-'
         filters = {'filter': [{'name': 'tag-key',
                               'value': ['foo']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst2_ret]}, result)
         filters = {'filter': [{'name': 'tag-value',
                               'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
+        _compare_reservation_set({'reservationSet': [inst2_ret]}, result)
 
         # destroy the test instances
         db.instance_destroy(self.context, inst1['uuid'])
