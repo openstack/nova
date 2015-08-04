@@ -66,8 +66,7 @@ class _TestKeyPairObject(object):
         keypair_obj.name = 'foo-keypair'
         keypair_obj.public_key = 'keydata'
         keypair_obj.create()
-        self.assertRaises(exception.ObjectActionError, keypair_obj.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, keypair_obj.create)
 
     def test_destroy(self):
         self.mox.StubOutWithMock(db, 'key_pair_destroy')

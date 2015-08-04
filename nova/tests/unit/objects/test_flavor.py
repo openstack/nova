@@ -129,9 +129,8 @@ class _TestFlavor(object):
         self.assertEqual(['project-1', 'project-2'], flavor.projects)
 
     def test_create_with_id(self):
-        flavor = flavor_obj.Flavor(id=123)
-        self.assertRaises(exception.ObjectActionError, flavor.create,
-                          self.context)
+        flavor = flavor_obj.Flavor(context=self.context, id=123)
+        self.assertRaises(exception.ObjectActionError, flavor.create)
 
     @mock.patch('nova.db.flavor_access_add')
     @mock.patch('nova.db.flavor_access_remove')

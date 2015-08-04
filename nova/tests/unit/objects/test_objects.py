@@ -122,7 +122,7 @@ class MyObjDiffVers(MyObj):
         return 'MyObj'
 
 
-class MyObj2(object):
+class MyObj2(base.NovaObject):
     fields = {
         'bar': fields.StringField(),
     }
@@ -507,7 +507,7 @@ class _TestObject(object):
     def test_orphaned_object(self):
         obj = MyObj.query(self.context)
         obj._context = None
-        self.assertRaises(exception.OrphanedObjectError,
+        self.assertRaises(ovo_exc.OrphanedObjectError,
                           obj._update_test)
 
     def test_changed_1(self):

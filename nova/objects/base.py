@@ -27,7 +27,6 @@ from oslo_versionedobjects import base as ovoo_base
 from oslo_versionedobjects import exception as ovoo_exc
 import six
 
-from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
@@ -51,71 +50,8 @@ class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
         setattr(objects, cls.obj_name(), newest)
 
 
-# These are decorators that mark an object's method as remotable.
-# If the metaclass is configured to forward object methods to an
-# indirection service, these will result in making an RPC call
-# instead of directly calling the implementation in the object. Instead,
-# the object implementation on the remote end will perform the
-# requested action and the result will be returned here.
-def remotable_classmethod(fn):
-    """Decorator for remotable classmethods."""
-    @functools.wraps(fn)
-    def wrapper(cls, context, *args, **kwargs):
-        if NovaObject.indirection_api:
-            result = NovaObject.indirection_api.object_class_action(
-                context, cls.obj_name(), fn.__name__, cls.VERSION,
-                args, kwargs)
-        else:
-            result = fn(cls, context, *args, **kwargs)
-            if isinstance(result, NovaObject):
-                result._context = context
-        return result
-
-    # NOTE(danms): Make this discoverable
-    wrapper.remotable = True
-    wrapper.original_fn = fn
-    return classmethod(wrapper)
-
-
-# See comment above for remotable_classmethod()
-#
-# Note that this will use either the provided context, or the one
-# stashed in the object. If neither are present, the object is
-# "orphaned" and remotable methods cannot be called.
-def remotable(fn):
-    """Decorator for remotable object methods."""
-    @functools.wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        if args and isinstance(args[0], context.RequestContext):
-            raise exception.ObjectActionError(
-                action=fn.__name__,
-                reason='Calling remotables with context is deprecated')
-        if self._context is None:
-            raise exception.OrphanedObjectError(method=fn.__name__,
-                                                objtype=self.obj_name())
-        if NovaObject.indirection_api:
-            updates, result = NovaObject.indirection_api.object_action(
-                self._context, self, fn.__name__, args, kwargs)
-            for key, value in six.iteritems(updates):
-                if key in self.fields:
-                    field = self.fields[key]
-                    # NOTE(ndipanov): Since NovaObjectSerializer will have
-                    # deserialized any object fields into objects already,
-                    # we do not try to deserialize them again here.
-                    if isinstance(value, NovaObject):
-                        setattr(self, key, value)
-                    else:
-                        setattr(self, key,
-                                field.from_primitive(self, key, value))
-            self.obj_reset_changes()
-            self._changed_fields = set(updates.get('obj_what_changed', []))
-            return result
-        else:
-            return fn(self, *args, **kwargs)
-
-    wrapper.remotable = True
-    wrapper.original_fn = fn
-    return wrapper
+remotable_classmethod = ovoo_base.remotable_classmethod
+remotable = ovoo_base.remotable
 
 
 class NovaObject(ovoo_base.VersionedObject):

@@ -316,8 +316,7 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
         compute.create()
-        self.assertRaises(exception.ObjectActionError, compute.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, compute.create)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')

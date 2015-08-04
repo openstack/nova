@@ -97,8 +97,7 @@ class _TestMigrationObject(object):
         mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
         mig.create()
-        self.assertRaises(exception.ObjectActionError, mig.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, mig.create)
 
     def test_save(self):
         ctxt = context.get_admin_context()

@@ -894,8 +894,7 @@ class _TestInstanceObject(object):
                                  project_id=self.context.project_id,
                                  host='foo-host')
         inst.create()
-        self.assertRaises(exception.ObjectActionError, inst.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, inst.create)
 
     def test_create_with_special_things(self):
         self.mox.StubOutWithMock(db, 'instance_create')
