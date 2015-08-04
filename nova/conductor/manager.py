@@ -34,6 +34,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
+from nova.conductor.tasks import migrate
 from nova.db import base
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -47,6 +48,7 @@ from nova import quota
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
+from nova import servicegroup
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -493,6 +495,7 @@ class ComputeTaskManager(base.Base):
         super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.image_api = image.API()
+        self.servicegroup_api = servicegroup.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.notifier = rpc.get_notifier('compute', CONF.host)
 
@@ -545,17 +548,11 @@ class ComputeTaskManager(base.Base):
 
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
+        task = self._build_cold_migrate_task(context, instance, flavor,
+                                             filter_properties, request_spec,
+                                             reservations, clean_shutdown)
         try:
-            scheduler_utils.setup_instance_group(context, request_spec,
-                                                 filter_properties)
-            scheduler_utils.populate_retry(filter_properties, instance.uuid)
-            hosts = self.scheduler_client.select_destinations(
-                    context, request_spec, filter_properties)
-            host_state = hosts[0]
+            task.execute()
         except exception.NoValidHost as ex:
             vm_state = instance.vm_state
             if not vm_state:
@@ -564,7 +561,6 @@ class ComputeTaskManager(base.Base):
             self._set_vm_state_and_notify(context, instance.uuid,
                                           'migrate_server',
                                           updates, ex, request_spec)
-            quotas.rollback()
 
             # if the flavor IDs match, it's migrate; otherwise resize
             if flavor['id'] == instance.instance_type_id:
@@ -581,21 +577,6 @@ class ComputeTaskManager(base.Base):
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
                                               updates, ex, request_spec)
-                quotas.rollback()
-
-        try:
-            scheduler_utils.populate_filter_properties(filter_properties,
-                                                       host_state)
-            # context is not serializable
-            filter_properties.pop('context', None)
-
-            (host, node) = (host_state['host'], host_state['nodename'])
-            self.compute_rpcapi.prep_resize(
-                context, image, instance,
-                flavor, host,
-                reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node=node,
-                clean_shutdown=clean_shutdown)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 updates = {'vm_state': instance.vm_state,
@@ -603,7 +584,6 @@ class ComputeTaskManager(base.Base):
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
                                               updates, ex, request_spec)
-                quotas.rollback()
 
     def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
                                  ex, request_spec):
@@ -642,10 +622,11 @@ class ComputeTaskManager(base.Base):
             migration.new_instance_type_id = instance.instance_type_id
         migration.create()
 
+        task = self._build_live_migrate_task(context, instance, destination,
+                                             block_migration, disk_over_commit,
+                                             migration)
         try:
-            live_migrate.execute(context, instance, destination,
-                                 block_migration, disk_over_commit,
-                                 migration)
+            task.execute()
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
@@ -673,6 +654,24 @@ class ComputeTaskManager(base.Base):
             migration.status = 'failed'
             migration.save()
             raise exception.MigrationError(reason=six.text_type(ex))
+
+    def _build_live_migrate_task(self, context, instance, destination,
+                                 block_migration, disk_over_commit, migration):
+        return live_migrate.LiveMigrationTask(context, instance,
+                                              destination, block_migration,
+                                              disk_over_commit, migration,
+                                              self.compute_rpcapi,
+                                              self.servicegroup_api,
+                                              self.scheduler_client)
+
+    def _build_cold_migrate_task(self, context, instance, flavor,
+                                 filter_properties, request_spec, reservations,
+                                 clean_shutdown):
+        return migrate.MigrationTask(context, instance, flavor,
+                                     filter_properties, request_spec,
+                                     reservations, clean_shutdown,
+                                     self.compute_rpcapi,
+                                     self.scheduler_client)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,

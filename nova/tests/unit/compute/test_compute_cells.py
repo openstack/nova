@@ -350,8 +350,9 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(flavors, 'extract_flavor')
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
-    def test_resize_instance(self, _check, _extract, _save, _upsize, _reserve,
-                             _cells, _record):
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_resize_instance(self, _bdms, _check, _extract, _save, _upsize,
+                             _reserve, _cells, _record):
         flavor = objects.Flavor(**test_flavor.fake_flavor)
         _extract.return_value = flavor
         orig_system_metadata = {}

@@ -14,14 +14,11 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import power_state
-from nova.compute import rpcapi as compute_rpcapi
+from nova.conductor.tasks import base
 from nova import exception
 from nova.i18n import _
-from nova import image
 from nova import objects
-from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
-from nova import servicegroup
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -36,23 +33,23 @@ CONF = cfg.CONF
 CONF.register_opt(migrate_opt)
 
 
-class LiveMigrationTask(object):
+class LiveMigrationTask(base.TaskBase):
     def __init__(self, context, instance, destination,
-                 block_migration, disk_over_commit, migration):
-        self.context = context
-        self.instance = instance
+                 block_migration, disk_over_commit, migration, compute_rpcapi,
+                 servicegroup_api, scheduler_client):
+        super(LiveMigrationTask, self).__init__(context, instance)
         self.destination = destination
         self.block_migration = block_migration
         self.disk_over_commit = disk_over_commit
         self.migration = migration
         self.source = instance.host
         self.migrate_data = None
-        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.servicegroup_api = servicegroup.API()
-        self.scheduler_client = scheduler_client.SchedulerClient()
-        self.image_api = image.API()
 
-    def execute(self):
+        self.compute_rpcapi = compute_rpcapi
+        self.servicegroup_api = servicegroup_api
+        self.scheduler_client = scheduler_client
+
+    def _execute(self):
         self._check_instance_is_active()
         self._check_host_is_up(self.source)
 
@@ -79,7 +76,7 @@ class LiveMigrationTask(object):
         # calls, since this class currently makes no state changes,
         # except to call the compute method, that has no matching
         # rollback call right now.
-        raise NotImplementedError()
+        pass
 
     def _check_instance_is_active(self):
         if self.instance.power_state not in (power_state.RUNNING,
@@ -185,14 +182,3 @@ class LiveMigrationTask(object):
                    % {'max_retries': retries,
                       'instance_uuid': self.instance.uuid})
             raise exception.MaxRetriesExceeded(reason=msg)
-
-
-def execute(context, instance, destination,
-            block_migration, disk_over_commit, migration):
-    task = LiveMigrationTask(context, instance,
-                             destination,
-                             block_migration,
-                             disk_over_commit,
-                             migration)
-    # TODO(johngarbutt) create a superclass that contains a safe_execute call
-    return task.execute()
