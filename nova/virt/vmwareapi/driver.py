@@ -492,13 +492,13 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Efficient override of base instance_exists method."""
         return self._vmops.instance_exists(instance)
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         """Attach an interface to the instance."""
-        self._vmops.attach_interface(instance, image_meta, vif)
+        self._vmops.attach_interface(context, instance, image_meta, vif)
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         """Detach an interface from the instance."""
-        self._vmops.detach_interface(instance, vif)
+        self._vmops.detach_interface(context, instance, vif)
 
 
 class VMwareAPISession(api.VMwareAPISession):

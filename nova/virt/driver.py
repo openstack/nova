@@ -489,11 +489,12 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def attach_interface(self, instance, image_meta, vif):
+    def attach_interface(self, context, instance, image_meta, vif):
         """Use hotplug to add a network interface to a running instance.
 
         The counter action to this is :func:`detach_interface`.
 
+        :param context: The request context.
         :param nova.objects.instance.Instance instance:
             The instance which will get an additional network interface.
         :param nova.objects.ImageMeta image_meta:
@@ -507,11 +508,12 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def detach_interface(self, instance, vif):
+    def detach_interface(self, context, instance, vif):
         """Use hotunplug to remove a network interface from a running instance.
 
         The counter action to this is :func:`attach_interface`.
 
+        :param context: The request context.
         :param nova.objects.instance.Instance instance:
             The instance which gets a network interface removed.
         :param nova.network.model.NetworkInfo vif:

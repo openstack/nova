@@ -13820,10 +13820,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         if method_name == "attach_interface":
-            drvr.attach_interface(instance, fake_image_meta,
+            drvr.attach_interface(self.context, instance, fake_image_meta,
                                   network_info[0])
         elif method_name == "detach_interface":
-            drvr.detach_interface(instance, network_info[0])
+            drvr.detach_interface(self.context, instance, network_info[0])
         else:
             raise ValueError("Unhandled method %s" % method_name)
 
@@ -16224,10 +16224,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         if method == 'attach_interface':
             self.drvr.attach_interface(
-                instance, fake_image_meta, network_info[0])
+                self.context, instance, fake_image_meta, network_info[0])
         elif method == 'detach_interface':
             self.drvr.detach_interface(
-                instance, network_info[0])
+                self.context, instance, network_info[0])
         self.mox.VerifyAll()
 
     def test_attach_interface_with_running_instance(self):
@@ -16280,7 +16280,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         guest.detach_device = mock.Mock(side_effect=error)
         # mock out that get_interface_by_mac doesn't find the interface
         guest.get_interface_by_mac = mock.Mock(return_value=None)
-        self.drvr.detach_interface(instance, vif)
+        self.drvr.detach_interface(self.context, instance, vif)
         guest.get_interface_by_mac.assert_called_once_with(vif['address'])
         # an error shouldn't be logged, but a warning should be logged
         self.assertFalse(mock_log.error.called)

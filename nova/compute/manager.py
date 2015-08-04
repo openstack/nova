@@ -5018,7 +5018,8 @@ class ComputeManager(manager.Manager):
         image_meta = objects.ImageMeta.from_instance(instance)
 
         try:
-            self.driver.attach_interface(instance, image_meta, network_info[0])
+            self.driver.attach_interface(context, instance, image_meta,
+                                         network_info[0])
         except exception.NovaException as ex:
             port_id = network_info[0].get('id')
             LOG.warning(_LW("attach interface failed , try to deallocate "
@@ -5050,7 +5051,7 @@ class ComputeManager(manager.Manager):
             raise exception.PortNotFound(_("Port %s is not "
                                            "attached") % port_id)
         try:
-            self.driver.detach_interface(instance, condemned)
+            self.driver.detach_interface(context, instance, condemned)
         except exception.NovaException as ex:
             LOG.warning(_LW("Detach interface failed, port_id=%(port_id)s,"
                             " reason: %(msg)s"),
