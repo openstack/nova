@@ -442,7 +442,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             # the instance state.
             self._vmops.power_off(instance)
             # TODO(garyk): update the volumeops to read the state form the
-            # VM instead of relying on a instance flag
+            # VM instead of relying on an instance flag
             instance.vm_state = vm_states.STOPPED
             for disk in block_device_mapping:
                 connection_info = disk['connection_info']

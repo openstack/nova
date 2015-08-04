@@ -151,9 +151,10 @@ class PciDevTracker(object):
                     # hotplug or config changes. Although normally this should
                     # not happen.
 
-                    # As the devices have been assigned to a instance, we defer
-                    # the change till the instance is destroyed. We will
-                    # not sync the new properties with database before that.
+                    # As the devices have been assigned to an instance,
+                    # we defer the change till the instance is destroyed.
+                    # We will not sync the new properties with database
+                    # before that.
 
                     # TODO(yjiang5): Not sure if this is a right policy, but
                     # at least it avoids some confusion and, if needed,
@@ -224,7 +225,7 @@ class PciDevTracker(object):
         self.stats.add_device(dev)
 
     def _free_instance(self, instance):
-        # Note(yjiang5): When a instance is resized, the devices in the
+        # Note(yjiang5): When an instance is resized, the devices in the
         # destination node are claimed to the instance in prep_resize stage.
         # However, the instance contains only allocated devices
         # information, not the claimed one. So we can't use

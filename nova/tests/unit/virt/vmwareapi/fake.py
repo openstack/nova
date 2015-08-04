@@ -1287,7 +1287,7 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _extend_disk(self, method, size):
-        """Extend disk size when create a instance."""
+        """Extend disk size when create an instance."""
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 

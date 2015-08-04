@@ -172,7 +172,7 @@ class HostOps(object):
 
         # format the string to match libvirt driver uptime
         # Libvirt uptime returns a combination of the following
-        # - curent host time
+        # - current host time
         # - time since host is up
         # - number of logged in users
         # - cpu load

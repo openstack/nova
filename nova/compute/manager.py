@@ -665,7 +665,7 @@ class ComputeManager(manager.Manager):
     target = messaging.Target(version='4.4')
 
     # How long to wait in seconds before re-issuing a shutdown
-    # signal to a instance during power off.  The overall
+    # signal to an instance during power off.  The overall
     # time to wait is set by CONF.shutdown_timeout.
     SHUTDOWN_RETRY_INTERVAL = 10
 

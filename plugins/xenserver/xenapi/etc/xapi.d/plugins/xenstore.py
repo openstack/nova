@@ -85,7 +85,7 @@ def record_exists(arg_dict):
 def read_record(self, arg_dict):
     """Returns the value stored at the given path for the given dom_id.
     These must be encoded as key/value pairs in arg_dict. You can
-    optinally include a key 'ignore_missing_path'; if this is present
+    optionally include a key 'ignore_missing_path'; if this is present
     and boolean True, attempting to read a non-existent path will return
     the string 'None' instead of raising an exception.
     """

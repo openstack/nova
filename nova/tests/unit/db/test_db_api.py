@@ -5597,7 +5597,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
     def test_vol_usage_update_totals_update_when_blockdevicestats_reset(self):
         # This is unlikely to happen, but could when a volume is detached
-        # right after a instance has rebooted / recovered and before
+        # right after an instance has rebooted / recovered and before
         # the system polled and updated the volume usage cache table.
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
