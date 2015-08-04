@@ -502,6 +502,38 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_detach_virtual_disk_destroy_spec(self):
         self._test_detach_virtual_disk_spec(destroy_disk=True)
 
+    def _create_vm_config_spec(self):
+        fake_factory = fake.FakeFactory()
+        spec = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        spec.name = self._instance.uuid
+        spec.instanceUuid = self._instance.uuid
+        spec.deviceChange = []
+        spec.numCPUs = 2
+
+        spec.version = None
+        spec.memoryMB = 2048
+        spec.guestId = 'otherGuest'
+        spec.extraConfig = []
+
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = self._instance.uuid
+        extra_config.key = 'nvp.vm-uuid'
+        spec.extraConfig.append(extra_config)
+        spec.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        spec.files.vmPathName = '[fake-datastore]'
+
+        spec.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        spec.managedBy.extensionKey = 'org.openstack.compute'
+        spec.managedBy.type = 'instance'
+
+        spec.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        spec.tools.afterPowerOn = True
+        spec.tools.afterResume = True
+        spec.tools.beforeGuestReboot = True
+        spec.tools.beforeGuestShutdown = True
+        spec.tools.beforeGuestStandby = True
+        return spec
+
     def test_get_vm_create_spec(self):
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
@@ -510,35 +542,28 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             'fake-datastore', [],
                                             extra_specs)
 
-        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
-        expected.name = self._instance.uuid
-        expected.instanceUuid = self._instance.uuid
-        expected.deviceChange = []
-        expected.numCPUs = 2
+        expected = self._create_vm_config_spec()
+        self.assertEqual(expected, result)
 
         expected.version = None
         expected.memoryMB = 2048
         expected.guestId = constants.DEFAULT_OS_TYPE
         expected.extraConfig = []
 
-        extra_config = fake_factory.create("ns0:OptionValue")
-        extra_config.value = self._instance.uuid
-        extra_config.key = 'nvp.vm-uuid'
-        expected.extraConfig.append(extra_config)
-        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
-        expected.files.vmPathName = '[fake-datastore]'
+    def test_get_vm_create_spec_with_serial_port(self):
+        extra_specs = vm_util.ExtraSpecs()
+        fake_factory = fake.FakeFactory()
+        self.flags(serial_port_service_uri='foobar', group='vmware')
+        self.flags(serial_port_proxy_uri='telnet://example.com:31337',
+                   group='vmware')
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
 
-        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
-        expected.managedBy.extensionKey = 'org.openstack.compute'
-        expected.managedBy.type = 'instance'
-
-        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
-        expected.tools.afterPowerOn = True
-        expected.tools.afterResume = True
-        expected.tools.beforeGuestReboot = True
-        expected.tools.beforeGuestShutdown = True
-        expected.tools.beforeGuestStandby = True
-
+        serial_port_spec = vm_util.create_serial_port_spec(fake_factory)
+        expected = self._create_vm_config_spec()
+        expected.deviceChange = [serial_port_spec]
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_allocations(self):
