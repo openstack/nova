@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Project-id and user-id are now also returned in
+    the return data of os-server-groups APIs. In order
+    to use this new feature, user have to contain the
+    header of request microversion v2.13 in the API
+    request.

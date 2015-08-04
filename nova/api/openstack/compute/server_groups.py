@@ -19,6 +19,7 @@ from oslo_log import log as logging
 import webob
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_groups as schema
 from nova.api.openstack import extensions
@@ -46,7 +47,7 @@ def _authorize_context(req):
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
 
-    def _format_server_group(self, context, group):
+    def _format_server_group(self, context, group, req_ver):
         # the id field has its value as the uuid of the server group
         # There is no 'uuid' key in server_group seen by clients.
         # In addition, clients see policies as a ["policy-name"] list;
@@ -66,17 +67,25 @@ class ServerGroupController(wsgi.Controller):
                 context, filters=filters)
             members = [instance.uuid for instance in instances]
         server_group['members'] = members
+        # Add project id information to the response data for
+        # API version v2.13
+        if req_ver >= api_version_request.APIVersionRequest("2.13"):
+            server_group['project_id'] = group.project_id
+            server_group['user_id'] = group.user_id
         return server_group
 
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Return data about the given server group."""
+        req_ver = req.api_version_request
+
         context = _authorize_context(req)
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        return {'server_group': self._format_server_group(context, sg)}
+        return {'server_group': self._format_server_group(
+                context, sg, req_ver)}
 
     @wsgi.response(204)
     @extensions.expected_errors(404)
@@ -113,6 +122,8 @@ class ServerGroupController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a list of server groups."""
+        req_ver = req.api_version_request
+
         context = _authorize_context(req)
         project_id = context.project_id
         if 'all_projects' in req.GET and context.is_admin:
@@ -121,7 +132,7 @@ class ServerGroupController(wsgi.Controller):
             sgs = objects.InstanceGroupList.get_by_project_id(
                     context, project_id)
         limited_list = common.limited(sgs.objects, req)
-        result = [self._format_server_group(context, group)
+        result = [self._format_server_group(context, group, req_ver)
                   for group in limited_list]
         return {'server_groups': result}
 
@@ -129,6 +140,8 @@ class ServerGroupController(wsgi.Controller):
     @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new server group."""
+        req_ver = req.api_version_request
+
         context = _authorize_context(req)
 
         quotas = objects.Quotas(context=context)
@@ -152,8 +165,8 @@ class ServerGroupController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e)
 
         quotas.commit()
-
-        return {'server_group': self._format_server_group(context, sg)}
+        return {'server_group': self._format_server_group(context, sg,
+                                                           req_ver)}
 
 
 class ServerGroups(extensions.V21APIExtensionBase):

@@ -53,6 +53,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              user.
     * 2.11 - Exposes forced_down attribute for os-services
     * 2.12 - Exposes VIF net-id in os-virtual-interfaces
+    * 2.13 - Add project id and user id information for os-server-groups API
 """
 
 # The minimum and maximum versions of the API supported
@@ -61,7 +62,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.12"
+_MAX_API_VERSION = "2.13"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 
