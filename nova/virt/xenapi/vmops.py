@@ -713,7 +713,8 @@ class VMOps(object):
                               "rescue image_properties. Setting value to %s",
                               auto_disk_config, instance=instance)
                 else:
-                    auto_disk_config = rescue_auto_disk_config
+                    auto_disk_config = strutils.bool_from_string(
+                            rescue_auto_disk_config)
 
             if auto_disk_config:
                 LOG.debug("Auto configuring disk, attempting to "

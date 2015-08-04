@@ -182,6 +182,37 @@ class VMOpsTestCase(VMOpsTestBase):
         hard_shutdown_vm.assert_called_once_with(self._vmops._session,
                 self.instance, vm_ref)
 
+    @mock.patch.object(vm_utils, 'try_auto_configure_disk')
+    @mock.patch.object(vm_utils, 'create_vbd',
+            side_effect=test.TestingException)
+    def test_attach_disks_rescue_auto_disk_config_false(self, create_vbd,
+            try_auto_config):
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image_meta = {'properties': {'auto_disk_config': 'false'}}
+        vdis = {'root': {'ref': 'fake-ref'}}
+        self.assertRaises(test.TestingException, self._vmops._attach_disks,
+                instance, image_meta=image_meta, vm_ref=None,
+                name_label=None, vdis=vdis, disk_image_type='fake',
+                network_info=[], rescue=True)
+        self.assertFalse(try_auto_config.called)
+
+    @mock.patch.object(vm_utils, 'try_auto_configure_disk')
+    @mock.patch.object(vm_utils, 'create_vbd',
+            side_effect=test.TestingException)
+    def test_attach_disks_rescue_auto_disk_config_true(self, create_vbd,
+            try_auto_config):
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image_meta = {'properties': {'auto_disk_config': 'true'}}
+        vdis = {'root': {'ref': 'fake-ref'}}
+        self.assertRaises(test.TestingException, self._vmops._attach_disks,
+                instance, image_meta=image_meta, vm_ref=None,
+                name_label=None, vdis=vdis, disk_image_type='fake',
+                network_info=[], rescue=True)
+        try_auto_config.assert_called_once_with(self._vmops._session,
+                'fake-ref', instance.flavor.root_gb)
+
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
     def test_inject_auto_disk_config_when_present(self):
