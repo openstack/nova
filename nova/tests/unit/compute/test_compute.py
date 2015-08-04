@@ -2753,9 +2753,7 @@ class ComputeTestCase(BaseTestCase):
                                         updated_dbinstance1['uuid'],
                                         {'task_state': task_started,
                                          'expected_task_state': task_pending},
-                                            columns_to_join=['system_metadata',
-                                                             'extra',
-                                                             'extra.flavor']
+                                            columns_to_join=['system_metadata']
                                         ).AndReturn((None,
                                                      updated_dbinstance1))
 
@@ -2801,7 +2799,7 @@ class ComputeTestCase(BaseTestCase):
                 {'power_state': new_power_state,
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
-                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
+                columns_to_join=['system_metadata'],
                 ).AndRaise(fault)
             self.compute._notify_about_instance_usage(
                 econtext,
@@ -2811,7 +2809,7 @@ class ComputeTestCase(BaseTestCase):
             db.instance_update_and_get_original(
                 econtext, updated_dbinstance1['uuid'],
                 {'vm_state': vm_states.ERROR},
-                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
+                columns_to_join=['system_metadata'],
                 ).AndRaise(fault)
         else:
             db.instance_update_and_get_original(
@@ -2819,7 +2817,7 @@ class ComputeTestCase(BaseTestCase):
                 {'power_state': new_power_state,
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
-                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
+                columns_to_join=['system_metadata'],
                 ).AndReturn((None, updated_dbinstance2))
             if fail_running:
                 self.compute._notify_about_instance_usage(econtext, instance,
@@ -6269,8 +6267,7 @@ class ComputeTestCase(BaseTestCase):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
-            self.assertEqual(['system_metadata', 'info_cache',
-                              'extra', 'extra.flavor'],
+            self.assertEqual(['system_metadata', 'info_cache'],
                              columns_to_join)
             return instance_map[instance_uuid]
 

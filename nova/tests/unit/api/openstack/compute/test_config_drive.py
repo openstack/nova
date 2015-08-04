@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
@@ -27,6 +28,7 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -61,14 +63,14 @@ class ConfigDriveTestV21(test.TestCase):
         res_dict = jsonutils.loads(response.body)
         self.assertIn('config_drive', res_dict['server'])
 
-    def test_detail_servers(self):
-        # Sort is disabled in v2 without an extension so stub out
-        # the non-sorted DB get
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                       fakes.fake_instance_get_all_by_filters())
-        # But it is enabled in v3 so stub out the sorted function
-        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
-                       fakes.fake_instance_get_all_by_filters())
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_detail_servers(self, mock_get_all):
+        # NOTE(danms): Orphan these fakes (no context) so that we
+        # are sure that the API is requesting what it needs without
+        # having to lazy-load.
+        mock_get_all.return_value = objects.InstanceList(
+            objects=[fakes.stub_instance_obj(ctxt=None, id=1),
+                     fakes.stub_instance_obj(ctxt=None, id=2)])
         req = fakes.HTTPRequest.blank(self.base_url + 'detail')
         res = req.get_response(self.app)
         server_dicts = jsonutils.loads(res.body)['servers']

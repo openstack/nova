@@ -67,12 +67,6 @@ def _expected_cols(expected_attrs):
     if not expected_attrs:
         return expected_attrs
 
-    if ('system_metadata' in expected_attrs and
-            'flavor' not in expected_attrs):
-        # NOTE(danms): If the client asked for sysmeta, we have to
-        # pull flavor so we can potentially provide compatibility
-        expected_attrs.append('flavor')
-
     simple_cols = [attr for attr in expected_attrs
                    if attr in _INSTANCE_OPTIONAL_JOINED_FIELDS]
 
@@ -82,14 +76,6 @@ def _expected_cols(expected_attrs):
     if complex_cols:
         simple_cols.append('extra')
     simple_cols = [x for x in simple_cols if x not in _INSTANCE_EXTRA_FIELDS]
-    if (any([flavor in expected_attrs
-             for flavor in ['flavor', 'old_flavor', 'new_flavor']]) and
-            'system_metadata' not in simple_cols):
-        # NOTE(danms): While we're maintaining compatibility with
-        # flavor data being stored in system_metadata, we need to
-        # ask for it any time flavors are requested.
-        simple_cols.append('system_metadata')
-        expected_attrs.append('system_metadata')
     return simple_cols + complex_cols
 
 
