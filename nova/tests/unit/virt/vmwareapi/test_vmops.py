@@ -495,13 +495,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):
         with contextlib.nested(
-                mock.patch.object(self._vmops, '_resize_create_ephemerals'),
+                mock.patch.object(self._vmops,
+                                  '_resize_create_ephemerals_and_swap'),
                 mock.patch.object(self._vmops, "_update_instance_progress"),
                 mock.patch.object(vm_util, "power_on_instance"),
                 mock.patch.object(vm_util, "get_vm_ref",
                                   return_value='fake-ref')
-        ) as (fake_resize_create_ephemerals, fake_update_instance_progress,
-              fake_power_on, fake_get_vm_ref):
+        ) as (fake_resize_create_ephemerals_and_swap,
+              fake_update_instance_progress, fake_power_on, fake_get_vm_ref):
             self._vmops.finish_migration(context=self._context,
                                          migration=None,
                                          instance=self._instance,
@@ -511,9 +512,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          resize_instance=resize_instance,
                                          image_meta=None,
                                          power_on=power_on)
-            fake_resize_create_ephemerals.called_once_with('fake-ref',
-                                                           self._instance,
-                                                           None)
+            fake_resize_create_ephemerals_and_swap.called_once_with(
+                'fake-ref', self._instance, None)
             if power_on:
                 fake_power_on.assert_called_once_with(self._session,
                                                       self._instance,
@@ -538,8 +538,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_finish_migration(power_on=True, resize_instance=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
-    @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals')
-    @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals')
+    @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals_and_swap')
+    @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals_and_swap')
     @mock.patch.object(ds_util, 'disk_delete')
     @mock.patch.object(ds_util, 'disk_move')
     @mock.patch.object(ds_util, 'file_exists',
@@ -558,8 +558,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                       fake_get_browser,
                                       fake_original_exists, fake_disk_move,
                                       fake_disk_delete,
-                                      fake_remove_ephemerals,
-                                      fake_resize_create_ephemerals,
+                                      fake_remove_ephemerals_and_swap,
+                                      fake_resize_create_ephemerals_and_swap,
                                       fake_get_extra_specs,
                                       power_on):
         """Tests the finish_revert_migration method on vmops."""
@@ -641,10 +641,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_attach_disk.assert_called_once_with(
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
                     '[fake] uuid/root.vmdk')
-            fake_remove_ephemerals.called_once_with('fake-ref')
-            fake_resize_create_ephemerals.called_once_with('fake-ref',
-                                                           self._instance,
-                                                           None)
+            fake_remove_ephemerals_and_swap.called_once_with('fake-ref')
+            fake_resize_create_ephemerals_and_swap.called_once_with(
+                'fake-ref', self._instance, None)
         if power_on:
             fake_power_on.assert_called_once_with(self._session,
                                                   self._instance)
@@ -728,6 +727,21 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
                     '[fake] uuid/root.vmdk')
 
+    @mock.patch.object(vm_util, 'detach_devices_from_vm')
+    @mock.patch.object(vm_util, 'get_swap')
+    @mock.patch.object(vm_util, 'get_ephemerals')
+    def test_remove_ephemerals_and_swap(self, get_ephemerals, get_swap,
+                                        detach_devices):
+        get_ephemerals.return_value = [mock.sentinel.ephemeral0,
+                                       mock.sentinel.ephemeral1]
+        get_swap.return_value = mock.sentinel.swap
+        devices = [mock.sentinel.ephemeral0, mock.sentinel.ephemeral1,
+                   mock.sentinel.swap]
+
+        self._vmops._remove_ephemerals_and_swap(mock.sentinel.vm_ref)
+        detach_devices.assert_called_once_with(self._vmops._session,
+                                               mock.sentinel.vm_ref, devices)
+
     @mock.patch.object(ds_util, 'disk_delete')
     @mock.patch.object(ds_util, 'file_exists',
                        return_value=True)
@@ -784,7 +798,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                           self._test_migrate_disk_and_power_off,
                           flavor_root_gb=self._instance.root_gb - 1)
 
-    @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals")
+    @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
     @mock.patch.object(vmops.VMwareVMOps, "_resize_vm")
@@ -794,7 +808,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def _test_migrate_disk_and_power_off(self, fake_get_vm_ref, fake_progress,
                                          fake_power_off, fake_resize_vm,
                                          fake_resize_disk, fake_get_vmdk_info,
-                                         fake_remove_ephemerals,
+                                         fake_remove_ephemerals_and_swap,
                                          flavor_root_gb):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
@@ -1405,7 +1419,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     cookies='Fake-CookieJar')
             self.assertTrue(len(_wait_for_task.mock_calls) > 0)
             extras = None
-            if block_device_info and 'ephemerals' in block_device_info:
+            if block_device_info and ('ephemerals' in block_device_info or
+                                      'swap' in block_device_info):
                 extras = ['CreateVirtualDisk_Task']
             self._verify_spawn_method_calls(_call_method, extras)
 
@@ -1512,6 +1527,99 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                        'size': 1}]
         self._spawn_with_block_device_info_ephemerals(ephemerals)
 
+    def test_spawn_with_block_device_info_swap(self):
+        block_device_info = {'swap': {'disk_bus': None,
+                                      'swap_size': 512,
+                                      'device_name': '/dev/sdb'}}
+        self._test_spawn(block_device_info=block_device_info)
+
+    @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
+    @mock.patch.object(vmops.VMwareVMOps, '_create_and_attach_thin_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_use_disk_image_as_linked_clone')
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
+    @mock.patch(
+        'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
+    @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
+                       'from_image')
+    def test_spawn_with_ephemerals_and_swap(self, from_image,
+                                            get_extra_specs,
+                                            get_vm_config_info,
+                                            build_virtual_machine,
+                                            enlist_image,
+                                            fetch_image,
+                                            use_disk_image,
+                                            create_and_attach_thin_disk,
+                                            power_on_instance):
+        self._instance.flavor = objects.Flavor(vcpus=1, memory_mb=512,
+                                               name="m1.tiny", root_gb=1,
+                                               ephemeral_gb=1, swap=512,
+                                               extra_specs={})
+        extra_specs = self._vmops._get_extra_specs(self._instance.flavor)
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': None,
+                       'device_name': '/dev/vdb',
+                       'size': 1},
+                      {'device_type': 'disk',
+                       'disk_bus': None,
+                       'device_name': '/dev/vdc',
+                       'size': 1}]
+        swap = {'disk_bus': None, 'swap_size': 512, 'device_name': '/dev/vdd'}
+        bdi = {'block_device_mapping': [], 'root_device_name': '/dev/sda',
+               'ephemerals': ephemerals, 'swap': swap}
+        metadata = self._vmops._get_instance_metadata(self._context,
+                                                      self._instance)
+        self.flags(enabled=False, group='vnc')
+        self.flags(flat_injected=False)
+
+        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_info = images.VMwareImage(
+                image_id=self._image_id,
+                file_size=image_size)
+        vi = get_vm_config_info.return_value
+        from_image.return_value = image_info
+        build_virtual_machine.return_value = 'fake-vm-ref'
+
+        self._vmops.spawn(self._context, self._instance, {},
+                          injected_files=None, admin_password=None,
+                          network_info=[], block_device_info=bdi)
+
+        from_image.assert_called_once_with(self._instance.image_ref, {})
+        get_vm_config_info.assert_called_once_with(self._instance,
+            image_info, extra_specs)
+        build_virtual_machine.assert_called_once_with(self._instance,
+            image_info, vi.dc_info, vi.datastore, [], extra_specs, metadata)
+        enlist_image.assert_called_once_with(image_info.image_id,
+                                             vi.datastore, vi.dc_info.ref)
+        fetch_image.assert_called_once_with(self._context, vi)
+        use_disk_image.assert_called_once_with('fake-vm-ref', vi)
+
+        # _create_and_attach_thin_disk should be called for each ephemeral
+        # and swap disk
+        eph0_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                             'ephemeral_0.vmdk'))
+        eph1_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                             'ephemeral_1.vmdk'))
+        swap_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                             'swap.vmdk'))
+        create_and_attach_thin_disk.assert_has_calls([
+            mock.call(self._instance, 'fake-vm-ref', vi.dc_info,
+                      ephemerals[0]['size'] * units.Mi, vi.ii.adapter_type,
+                      eph0_path),
+            mock.call(self._instance, 'fake-vm-ref', vi.dc_info,
+                      ephemerals[1]['size'] * units.Mi, vi.ii.adapter_type,
+                      eph1_path),
+            mock.call(self._instance, 'fake-vm-ref', vi.dc_info,
+                      swap['swap_size'] * units.Ki, vi.ii.adapter_type,
+                      swap_path)
+        ])
+
+        power_on_instance.assert_called_once_with(self._session,
+                                                  self._instance,
+                                                  vm_ref='fake-vm-ref')
+
     def _get_fake_vi(self):
         image_info = images.VMwareImage(
                 image_id=self._image_id,
@@ -1523,18 +1631,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         return vi
 
     @mock.patch.object(vm_util, 'create_virtual_disk')
-    def test_create_and_attach_ephemeral_disk(self, mock_create):
+    def test_create_and_attach_thin_disk(self, mock_create):
         vi = self._get_fake_vi()
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
         path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
-                                        'fake-filename'))
-        self._vmops._create_and_attach_ephemeral_disk(self._instance,
-                                                      'fake-vm-ref',
-                                                      vi.dc_info, 1,
-                                                      'fake-adapter-type',
-                                                      path)
+                                         'fake-filename'))
+        self._vmops._create_and_attach_thin_disk(self._instance,
+                                                 'fake-vm-ref',
+                                                 vi.dc_info, 1,
+                                                 'fake-adapter-type',
+                                                 path)
         mock_create.assert_called_once_with(
                 self._session, self._dc_info.ref, 'fake-adapter-type',
                 'thin', path, 1)
@@ -1550,7 +1658,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         block_device_info = {'ephemerals': ephemerals}
         vi = self._get_fake_vi()
         with mock.patch.object(
-            self._vmops, '_create_and_attach_ephemeral_disk') as mock_caa:
+            self._vmops, '_create_and_attach_thin_disk') as mock_caa:
             self._vmops._create_ephemeral(block_device_info,
                                           self._instance,
                                           'fake-vm-ref',
@@ -1565,7 +1673,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def _test_create_ephemeral_from_instance(self, bdi):
         vi = self._get_fake_vi()
         with mock.patch.object(
-            self._vmops, '_create_and_attach_ephemeral_disk') as mock_caa:
+            self._vmops, '_create_and_attach_thin_disk') as mock_caa:
             self._vmops._create_ephemeral(bdi,
                                           self._instance,
                                           'fake-vm-ref',
@@ -1585,6 +1693,35 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_create_ephemeral_with_no_bdi(self):
         self._instance.ephemeral_gb = 1
         self._test_create_ephemeral_from_instance(None)
+
+    def _test_create_swap_from_instance(self, bdi):
+        vi = self._get_fake_vi()
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024, ephemeral_gb=1,
+                                swap=1024, extra_specs={})
+        self._instance.flavor = flavor
+        with mock.patch.object(
+            self._vmops, '_create_and_attach_thin_disk'
+        ) as create_and_attach:
+            self._vmops._create_swap(bdi, self._instance, 'fake-vm-ref',
+                                     vi.dc_info, vi.datastore, 'fake_uuid',
+                                     'lsiLogic')
+            size = flavor.swap * units.Ki
+            if bdi is not None:
+                swap = bdi.get('swap', {})
+                size = swap.get('swap_size', 0) * units.Ki
+            path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                             'swap.vmdk'))
+            create_and_attach.assert_called_once_with(self._instance,
+                'fake-vm-ref', vi.dc_info, size, 'lsiLogic', path)
+
+    def test_create_swap_with_bdi(self):
+        block_device_info = {'swap': {'disk_bus': None,
+                                      'swap_size': 512,
+                                      'device_name': '/dev/sdb'}}
+        self._test_create_swap_from_instance(block_device_info)
+
+    def test_create_swap_with_no_bdi(self):
+        self._test_create_swap_from_instance(None)
 
     def test_build_virtual_machine(self):
         image_id = nova.tests.unit.image.fake.get_valid_image_id()
