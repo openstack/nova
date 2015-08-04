@@ -16,3 +16,4 @@
 QOS_QUEUE = 'QoS Queue'
 NET_EXTERNAL = 'router:external'
 PORTBINDING_EXT = 'Port Binding'
+VNIC_INDEX_EXT = 'VNIC Index'

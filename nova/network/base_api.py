@@ -344,3 +344,17 @@ class NetworkAPI(base.Base):
         :param host: The host which network should be cleanup for instance.
         """
         raise NotImplementedError()
+
+    def update_instance_vnic_index(self, context, instance, vif, index):
+        """Update instance vnic index.
+
+        When the 'VNIC index' extension is supported this method will update
+        the vnic index of the instance on the port. A instance may have more
+        than one vnic.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param vif: The VIF in question.
+        :param index: The index on the instance for the VIF.
+        """
+        pass

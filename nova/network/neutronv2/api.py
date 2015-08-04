@@ -1793,6 +1793,24 @@ class API(base_api.NetworkAPI):
                         LOG.exception(_LE("Unable to update host of port %s"),
                                       p['id'])
 
+    def update_instance_vnic_index(self, context, instance, vif, index):
+        """Update instance vnic index.
+
+        When the 'VNIC index' extension is supported this method will update
+        the vnic index of the instance on the port.
+        """
+        self._refresh_neutron_extensions_cache(context)
+        if constants.VNIC_INDEX_EXT in self.extensions:
+            neutron = get_client(context)
+            port_req_body = {'port': {'vnic_index': index}}
+            try:
+                neutron.update_port(vif['id'], port_req_body)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_LE('Unable to update instance VNIC index '
+                                      'for port %s.'),
+                                  vif['id'], instance=instance)
+
 
 def _ensure_requested_network_ordering(accessor, unordered, preferred):
     """Sort a list with respect to the preferred network ordering."""

@@ -44,6 +44,7 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
+from nova import network
 from nova import objects
 from nova import utils
 from nova import version
@@ -168,6 +169,7 @@ class VMwareVMOps(object):
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
+        self._network_api = network.API()
 
     def _get_base_folder(self):
         # Enable more than one compute node to run on the same host
@@ -620,6 +622,12 @@ class VMwareVMOps(object):
             self._create_and_attach_thin_disk(instance, vm_ref, dc_info, size,
                                               adapter_type, path)
 
+    def _update_vnic_index(self, context, instance, network_info):
+        if network_info:
+            for index, vif in enumerate(network_info):
+                self._network_api.update_instance_vnic_index(
+                    context, instance, vif, index)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
 
@@ -645,6 +653,9 @@ class VMwareVMOps(object):
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
         vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
+
+        # Update the Neutron VNIC index
+        self._update_vnic_index(context, instance, network_info)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -1660,6 +1671,11 @@ class VMwareVMOps(object):
                           e, instance=instance)
                 raise exception.InterfaceAttachFailed(
                         instance_uuid=instance.uuid)
+
+            context = nova_context.get_admin_context()
+            self._network_api.update_instance_vnic_index(
+                context, instance, vif, port_index)
+
         LOG.debug("Reconfigured VM to attach interface", instance=instance)
 
     def detach_interface(self, instance, vif):
@@ -1685,6 +1701,10 @@ class VMwareVMOps(object):
                 msg = _("No device with MAC address %s exists on the "
                         "VM") % vif['address']
                 raise exception.NotFound(msg)
+
+            context = nova_context.get_admin_context()
+            self._network_api.update_instance_vnic_index(
+                context, instance, vif, None)
 
             client_factory = self._session.vim.client.factory
             detach_config_spec = vm_util.get_network_detach_config_spec(
