@@ -282,7 +282,8 @@ libvirt_volume_drivers = [
     'nfs=nova.virt.libvirt.volume.volume.LibvirtNFSVolumeDriver',
     'smbfs=nova.virt.libvirt.volume.volume.LibvirtSMBFSVolumeDriver',
     'aoe=nova.virt.libvirt.volume.volume.LibvirtAOEVolumeDriver',
-    'glusterfs=nova.virt.libvirt.volume.volume.LibvirtGlusterfsVolumeDriver',
+    'glusterfs='
+        'nova.virt.libvirt.volume.glusterfs.LibvirtGlusterfsVolumeDriver',
     'fibre_channel='
         'nova.virt.libvirt.volume.fibrechannel.'
         'LibvirtFibreChannelVolumeDriver',
