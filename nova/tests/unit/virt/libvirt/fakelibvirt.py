@@ -615,6 +615,9 @@ class Domain(object):
     def detachDeviceFlags(self, xml, flags):
         self.detachDevice(xml)
 
+    def setUserPassword(self, user, password, flags=0):
+        pass
+
     def XMLDesc(self, flags):
         disks = ''
         for disk in self._def['devices']['disks']:

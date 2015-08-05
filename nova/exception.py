@@ -1815,6 +1815,10 @@ class QemuGuestAgentNotEnabled(Invalid):
     msg_fmt = _('QEMU guest agent is not enabled')
 
 
+class SetAdminPasswdNotSupported(Invalid):
+    msg_fmt = _('Set admin password is not supported')
+
+
 class MemoryPageSizeInvalid(Invalid):
     msg_fmt = _("Invalid memory page size '%(pagesize)s'")
 

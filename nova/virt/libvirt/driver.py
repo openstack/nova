@@ -395,6 +395,9 @@ MIN_QEMU_HYPERV_FEATURE_VERSION = (1, 1, 0)
 # parallels driver support
 MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 
+# Ability to set the user guest password with Qemu
+MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -1413,6 +1416,34 @@ class LibvirtDriver(driver.ComputeDriver):
                                        image_file)
                 LOG.info(_LI("Snapshot image upload complete"),
                          instance=instance)
+
+    def _can_set_admin_password(self, image_meta):
+        if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
+            not self._host.has_min_version(MIN_LIBVIRT_SET_ADMIN_PASSWD)):
+            raise exception.SetAdminPasswdNotSupported()
+
+        hw_qga = image_meta.properties.get('hw_qemu_guest_agent', '')
+        if not strutils.bool_from_string(hw_qga):
+            raise exception.QemuGuestAgentNotEnabled()
+
+    def set_admin_password(self, instance, new_pass):
+        image_meta = objects.ImageMeta.from_instance(instance)
+        self._can_set_admin_password(image_meta)
+
+        guest = self._host.get_guest(instance)
+        if instance.os_type == "windows":
+            user = "Administrator"
+        else:
+            user = "root"
+
+        try:
+            guest.set_user_password(user, new_pass)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            msg = (_('Error from libvirt while set password for username '
+                     '"%(user)s": [Error Code %(error_code)s] %(ex)s')
+                   % {'user': user, 'error_code': error_code, 'ex': ex})
+            raise exception.NovaException(msg)
 
     def _can_quiesce(self, instance, image_meta):
         if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or

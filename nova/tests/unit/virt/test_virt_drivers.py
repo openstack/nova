@@ -919,3 +919,13 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_get_device_name_for_instance(self):
         self.skipTest("Tested by the nova.tests.unit.virt.libvirt suite")
+
+    @catch_notimplementederror
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    @mock.patch("nova.virt.libvirt.host.Host.has_min_version")
+    def test_set_admin_password(self, ver, mock_image):
+        self.flags(virt_type='kvm', group='libvirt')
+        mock_image.return_value = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        instance, network_info = self._get_running_instance(obj=True)
+        self.connection.set_admin_password(instance, 'p4ssw0rd')

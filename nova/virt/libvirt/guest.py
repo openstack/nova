@@ -256,6 +256,10 @@ class Guest(object):
         """Returns a block device wrapper for disk."""
         return BlockDevice(self, disk)
 
+    def set_user_password(self, user, new_pass):
+        """Configures a new user password."""
+        self._domain.setUserPassword(user, new_pass, 0)
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
