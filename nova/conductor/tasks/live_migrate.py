@@ -164,7 +164,7 @@ class LiveMigrationTask(base.TaskBase):
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
-            except exception.Invalid as e:
+            except (exception.Invalid, exception.MigrationPreCheckError) as e:
                 LOG.debug("Skipping host: %(host)s because: %(e)s",
                     {"host": host, "e": e})
                 attempted_hosts.append(host)
