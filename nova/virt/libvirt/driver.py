@@ -6325,38 +6325,21 @@ class LibvirtDriver(driver.ComputeDriver):
                 fname = os.path.basename(img_path)
                 from_path = os.path.join(inst_base_resize, fname)
 
-                if (fname == 'disk.swap' and
+                # To properly resize the swap partition, it must be
+                # re-created with the proper size.  This is acceptable
+                # because when an OS is shut down, the contents of the
+                # swap space are just garbage, the OS doesn't bother about
+                # what is in it.
+
+                # We will not copy over the swap disk here, and rely on
+                # finish_migration/_create_image to re-create it for us.
+                if not (fname == 'disk.swap' and
                     active_flavor.get('swap', 0) != flavor.get('swap', 0)):
-                    # To properly resize the swap partition, it must be
-                    # re-created with the proper size.  This is acceptable
-                    # because when an OS is shut down, the contents of the
-                    # swap space are just garbage, the OS doesn't bother about
-                    # what is in it.
 
-                    # We will not copy over the swap disk here, and rely on
-                    # finish_migration/_create_image to re-create it for us.
-                    continue
-
-                on_execute = lambda process: self.job_tracker.add_job(
-                    instance, process.pid)
-                on_completion = lambda process: self.job_tracker.remove_job(
-                    instance, process.pid)
-
-                if info['type'] == 'qcow2' and info['backing_file']:
-                    tmp_path = from_path + "_rbase"
-                    # merge backing file
-                    utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                                  '-O', 'qcow2', from_path, tmp_path)
-
-                    if shared_storage:
-                        utils.execute('mv', tmp_path, img_path)
-                    else:
-                        libvirt_utils.copy_image(tmp_path, img_path, host=dest,
-                                                 on_execute=on_execute,
-                                                 on_completion=on_completion)
-                        utils.execute('rm', '-f', tmp_path)
-
-                else:  # raw or qcow2 with no backing file
+                    on_execute = lambda process: self.job_tracker.add_job(
+                        instance, process.pid)
+                    on_completion = lambda process: self.job_tracker.\
+                        remove_job(instance, process.pid)
                     libvirt_utils.copy_image(from_path, img_path, host=dest,
                                              on_execute=on_execute,
                                              on_completion=on_completion)
