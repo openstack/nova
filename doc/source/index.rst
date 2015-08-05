@@ -30,7 +30,7 @@ any specific prior release.
           general documentation including API, install, operator and user
           guides see `docs.openstack.org`_
 
-.. _`docs.openstack.org`: https://docs.openstack.org
+.. _`docs.openstack.org`: http://docs.openstack.org
 
 This documentation is intended to help explain what the Nova developers think
 is the current scope of the Nova project, as well as the architectural
