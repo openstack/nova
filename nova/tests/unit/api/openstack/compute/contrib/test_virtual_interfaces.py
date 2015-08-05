@@ -22,6 +22,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import network
+from nova.objects import virtual_interface as vif_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -34,11 +35,22 @@ def compute_api_get(self, context, instance_id, expected_attrs=None,
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
+def _generate_fake_vifs(context):
+    vif = vif_obj.VirtualInterface(context=context)
+    vif.address = '00-00-00-00-00-00'
+    vif.network_id = 123
+    vif.uuid = '00000000-0000-0000-0000-00000000000000000'
+    fake_vifs = [vif]
+    vif = vif_obj.VirtualInterface(context=context)
+    vif.address = '11-11-11-11-11-11'
+    vif.network_id = 456
+    vif.uuid = '11111111-1111-1111-1111-11111111111111111'
+    fake_vifs.append(vif)
+    return fake_vifs
+
+
 def get_vifs_by_instance(self, context, instance_id):
-    return [{'uuid': '00000000-0000-0000-0000-00000000000000000',
-             'address': '00-00-00-00-00-00'},
-            {'uuid': '11111111-1111-1111-1111-11111111111111111',
-             'address': '11-11-11-11-11-11'}]
+    return _generate_fake_vifs(context)
 
 
 class FakeRequest(object):
