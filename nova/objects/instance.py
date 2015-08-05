@@ -24,7 +24,6 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import flavors
-from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _LE
@@ -323,52 +322,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 base_name = self.uuid
         return base_name
 
-    @staticmethod
-    def _migrate_flavor(instance):
-        """Migrate a fractional flavor to a full one stored in extra.
-
-        This method migrates flavor information stored in an instance's
-        system_metadata to instance_extra. Since the information in the
-        former is not complete, we must attempt to fetch the original
-        flavor by id to merge its extra_specs with what we store.
-
-        This is a transitional tool and can be removed in a later release
-        once we can ensure that everyone has migrated their instances
-        (likely the L release).
-        """
-
-        # NOTE(danms): Always use admin context and read_deleted=yes here
-        # because we need to make sure we can look up our original flavor
-        # and try to reconstruct extra_specs, even if it has been deleted
-        ctxt = context.get_admin_context(read_deleted='yes')
-
-        instance.flavor = flavors.extract_flavor(instance)
-        flavors.delete_flavor_info(instance.system_metadata, '')
-
-        for ftype in ('old', 'new'):
-            attrname = '%s_flavor' % ftype
-            prefix = '%s_' % ftype
-
-            try:
-                flavor = flavors.extract_flavor(instance, prefix)
-                setattr(instance, attrname, flavor)
-                flavors.delete_flavor_info(instance.system_metadata, prefix)
-            except KeyError:
-                setattr(instance, attrname, None)
-
-        # NOTE(danms): Merge in the extra_specs from the original flavor
-        # since they weren't stored with the instance.
-        for flv in (instance.flavor, instance.new_flavor, instance.old_flavor):
-            if flv is not None:
-                try:
-                    db_flavor = objects.Flavor.get_by_flavor_id(ctxt,
-                                                                flv.flavorid)
-                except exception.FlavorNotFound:
-                    continue
-                extra_specs = dict(db_flavor.extra_specs)
-                extra_specs.update(flv.get('extra_specs', {}))
-                flv.extra_specs = extra_specs
-
     def _flavor_from_db(self, db_flavor):
         """Load instance flavor information from instance_extra."""
 
@@ -386,61 +339,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             self.new_flavor = None
         self.obj_reset_changes(['flavor', 'old_flavor', 'new_flavor'])
-
-    def _maybe_migrate_flavor(self, db_inst, expected_attrs):
-        """Determine the proper place and format for flavor loading.
-
-        This method loads the flavor information into the instance. If
-        the information is already migrated to instance_extra, then we
-        load that. If it is in system_metadata, we migrate it to extra.
-        If, however, we're loading an instance for an older client and
-        the flavor has already been migrated, we need to stash it back
-        into system metadata, which we do here.
-
-        This is transitional and can be removed when we remove
-        _migrate_flavor().
-        """
-
-        version = utils.convert_version_to_tuple(self.VERSION)
-        flavor_requested = any(
-            [flavor in expected_attrs
-             for flavor in ('flavor', 'old_flavor', 'new_flavor')])
-        flavor_implied = (version < (1, 18) and
-                          'system_metadata' in expected_attrs)
-        # NOTE(danms): This is compatibility logic. If the flavor
-        # attributes were requested, then we do this load/migrate
-        # logic. However, if the instance is old, we might need to
-        # do it anyway in order to satisfy our sysmeta-based contract.
-        if not (flavor_requested or flavor_implied):
-            return False
-
-        migrated_flavor = False
-        if flavor_implied:
-            # This instance is from before flavors were migrated out of
-            # system_metadata. Make sure that we honor that.
-            instance_extra = db_inst.get('extra') or {}
-            if instance_extra.get('flavor') is not None:
-                self._flavor_from_db(instance_extra['flavor'])
-                sysmeta = self.system_metadata
-                flavors.save_flavor_info(sysmeta, self.flavor)
-                del self.flavor
-                if self.old_flavor:
-                    flavors.save_flavor_info(sysmeta, self.old_flavor, 'old_')
-                    del self.old_flavor
-                if self.new_flavor:
-                    flavors.save_flavor_info(sysmeta, self.new_flavor, 'new_')
-                    del self.new_flavor
-                self.system_metadata = sysmeta
-        else:
-            # Migrate the flavor from system_metadata to extra,
-            # if needed
-            instance_extra = db_inst.get('extra') or {}
-            if instance_extra.get('flavor') is not None:
-                self._flavor_from_db(db_inst['extra']['flavor'])
-            elif 'instance_type_id' in self.system_metadata:
-                self._migrate_flavor(self)
-                migrated_flavor = True
-        return migrated_flavor
 
     @staticmethod
     def _from_db_object(context, instance, db_inst, expected_attrs=None):
@@ -511,8 +409,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                                     instance.info_cache,
                                                     db_inst['info_cache'])
 
-        migrated_flavor = instance._maybe_migrate_flavor(db_inst,
-                                                         expected_attrs)
+        if any([x in expected_attrs for x in ('flavor',
+                                              'old_flavor',
+                                              'new_flavor')]):
+            if have_extra and db_inst['extra'].get('flavor'):
+                instance._flavor_from_db(db_inst['extra']['flavor'])
 
         # TODO(danms): If we are updating these on a backlevel instance,
         # we'll end up sending back new versions of these objects (see
@@ -535,13 +436,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             instance['tags'] = tags
 
         instance.obj_reset_changes()
-        if migrated_flavor:
-            # NOTE(danms): If we migrated the flavor above, we need to make
-            # sure we know that flavor and system_metadata have been
-            # touched so that the next save will update them. We can remove
-            # this when we remove _migrate_flavor().
-            instance._changed_fields.add('system_metadata')
-            instance._changed_fields.add('flavor')
         return instance
 
     @base.remotable_classmethod
@@ -723,32 +617,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(hanlind): Read-only so no need to save this.
         pass
 
-    def _maybe_upgrade_flavor(self):
-        # NOTE(danms): We may have regressed to flavors stored in sysmeta,
-        # so we have to merge back in here. That could happen if we pass
-        # a converted instance to an older node, which still stores the
-        # flavor in sysmeta, which then calls save(). We need to not
-        # store that flavor info back into sysmeta after we've already
-        # converted it.
-        if (not self.obj_attr_is_set('system_metadata') or
-                'instance_type_id' not in self.system_metadata):
-            return
-
-        LOG.debug('Transforming legacy flavors on save', instance=self)
-        for ftype in ('', 'old_', 'new_'):
-            attr = '%sflavor' % ftype
-            try:
-                flavor = flavors.extract_flavor(self, prefix=ftype)
-                flavors.delete_flavor_info(self.system_metadata, ftype)
-                # NOTE(danms): This may trigger a lazy-load of the flavor
-                # information, but only once and it avoids re-fetching and
-                # re-migrating the original flavor.
-                getattr(self, attr).update(flavor)
-            except AttributeError:
-                setattr(self, attr, flavor)
-            except KeyError:
-                setattr(self, attr, None)
-
     @base.remotable
     def save(self, expected_vm_state=None,
              expected_task_state=None, admin_state_reset=False):
@@ -798,7 +666,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                             expected_task_state,
                             admin_state_reset)
 
-        self._maybe_upgrade_flavor()
         updates = {}
         changes = self.obj_what_changed()
         if 'scheduled_at' in changes:
@@ -999,16 +866,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
-
-        if ('flavor' in attrname and
-                self.obj_attr_is_set('system_metadata') and
-                'instance_type_id' in self.system_metadata):
-            # NOTE(danms): Looks like we're loading a flavor, and that
-            # should be doable without a context, so do this before the
-            # orphan check below.
-            self._migrate_flavor(self)
-            if self.obj_attr_is_set(attrname):
-                return
 
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
