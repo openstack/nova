@@ -51,6 +51,11 @@ wsgi_opts = [
                  'generate log lines. The following values can be formatted '
                  'into it: client_ip, date_time, request_line, status_code, '
                  'body_length, wall_seconds.'),
+    cfg.StrOpt('secure_proxy_ssl_header',
+               help='The HTTP header used to determine the scheme for the '
+                    'original request, even if it was removed by an SSL '
+                    'terminating proxy. Typical value is '
+                    '"HTTP_X_FORWARDED_PROTO".'),
     cfg.StrOpt('ssl_ca_file',
                help="CA certificate file to use to verify "
                     "connecting clients"),
@@ -274,7 +279,12 @@ class Server(service.ServiceBase):
 
 
 class Request(webob.Request):
-    pass
+    def __init__(self, environ, *args, **kwargs):
+        if CONF.secure_proxy_ssl_header:
+            scheme = environ.get(CONF.secure_proxy_ssl_header)
+            if scheme:
+                environ['wsgi.url_scheme'] = scheme
+        super(Request, self).__init__(environ, *args, **kwargs)
 
 
 class Application(object):

@@ -83,7 +83,7 @@ def get_media_map():
     return dict(_MEDIA_TYPE_MAP.items())
 
 
-class Request(webob.Request):
+class Request(wsgi.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
 
     def __init__(self, *args, **kwargs):
