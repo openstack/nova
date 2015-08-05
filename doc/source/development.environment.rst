@@ -39,7 +39,7 @@ on Linux, although you can run the unit tests on Mac OS X.
 
 .. _GerritWorkflow: http://docs.openstack.org/infra/manual/developers.html#development-workflow
 .. _HowToContribute: http://docs.openstack.org/infra/manual/developers.html
-.. _`docs.openstack.org`: https://docs.openstack.org
+.. _`docs.openstack.org`: http://docs.openstack.org
 
 Setup
 =====
