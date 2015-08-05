@@ -8,16 +8,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-22 18:50+0000\n"
-"Last-Translator: Andre Campos Bezerra <andrecbezerra@gmail.com>\n"
-"Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/nova/"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: Portuguese (Brazil) (http://www.transifex.com/openstack/nova/"
 "language/pt_BR/)\n"
 "Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #, python-format
@@ -95,26 +95,6 @@ msgstr "Inicializando com o volume %(volume_id)s em %(mountpoint)s"
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "Chamada setup_basic_filtering em nwfilter"
 
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "%s capturadas, saindo"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "%s capturado, parando filhos"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "%(pid)d filho eliminado pelo sinal %(sig)d"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "Filho %(pid)s encerrando com status %(code)d"
-
-#, python-format
-msgid "Child caught %s, exiting"
-msgstr "Filho capturado %s, terminando"
-
 msgid "Claim successful"
 msgstr "Solicitação bem-sucedida"
 
@@ -190,14 +170,6 @@ msgid "Delete volume with id: %s"
 msgstr "Excluir o volume com o ID: %s"
 
 #, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"Excluindo a instância uma vez que seu host (%(instance_host)s) não é igual "
-"ao nosso host (%(our_host)s)."
-
-#, python-format
 msgid "Deleting orphan compute node %s"
 msgstr "Deletando nó de computação orfão %s"
 
@@ -271,10 +243,6 @@ msgid "Error in handshake: %s"
 msgstr "Erro no handshake: %s"
 
 #, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "Backdoor de Eventlet escutando na porta %(port)s pelo processo %(pid)d"
-
-#, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr ""
 "Falha ao montar sistema de arquivos (esperado para instâncias não linux): %s"
@@ -298,9 +266,6 @@ msgid ""
 msgstr ""
 "Forçando uma sincronização de instâncias, project_id=%(projid_str)s, "
 "updated_since=%(since_str)s"
-
-msgid "Forking too fast, sleeping"
-msgstr "Bifurcação muito rápida, suspendendo"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
@@ -446,9 +411,6 @@ msgstr ""
 "Nenhuma célula disponível ao planejar. Nova tentativa em %(sleep_time)s "
 "segundo(s)"
 
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "Processo pai saiu inesperadamente, saindo"
-
 msgid "Pausing"
 msgstr "Pausando"
 
@@ -523,14 +485,6 @@ msgstr ""
 "Executando auditoria de uso da instância para o host %(host)s de "
 "%(begin_time)s até %(end_time)s. %(number_instances)s instâncias."
 
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "Ignorando tarefa periódica %(task)s porque ela está desativada"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "Ignorando tarefa periódica %(task)s porque seu intervalo é negativo"
-
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Captura instantânea extraída, iniciando upload da imagem"
 
@@ -544,16 +498,8 @@ msgid "Spawning new instance"
 msgstr "Executando spawn de nova instância"
 
 #, python-format
-msgid "Started child %d"
-msgstr "Filho %d iniciado"
-
-#, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
 msgstr "Iniciando o nó %(topic)s (versão %(version)s)"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "Iniciando %d trabalhadores"
 
 msgid "Starting halted instance found during reboot"
 msgstr "Iniciar instância parada localizado durante a reinicialização"
@@ -621,13 +567,6 @@ msgstr "VBD %s já removido"
 
 msgid "WSGI server has stopped."
 msgstr "O servidor WSGI foi interrompido."
-
-msgid "Wait called after thread killed. Cleaning up."
-msgstr "Espera requisitada depois que thread foi morta.  Limpando."
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "Aguardando em %d filhos para sair"
 
 #, python-format
 msgid "Writing stored info to %s"

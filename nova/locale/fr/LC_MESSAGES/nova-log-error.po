@@ -4,21 +4,22 @@
 #
 # Translators:
 # Frédéric <frosmont@free.fr>, 2014
+# Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-22 06:09+0000\n"
-"PO-Revision-Date: 2015-06-17 21:07+0000\n"
+"POT-Creation-Date: 2015-08-05 06:21+0000\n"
+"PO-Revision-Date: 2015-08-05 00:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
+"Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #, python-format
@@ -117,6 +118,9 @@ msgstr "Echec de la connexion à libvirt : %s"
 msgid "Could not bind to %(host)s:%(port)s"
 msgstr "Impossible de s'attacher à %(host)s:%(port)s"
 
+msgid "Could not decode scheduler options"
+msgstr "Impossible de décoder les potions de l'ordonnanceur "
+
 #, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "Impossible de supprimer tmpdir : %s"
@@ -137,12 +141,32 @@ msgid "Couldn't unmount the NFS share %s"
 msgstr "Impossible de démonter le partage NFS %s"
 
 #, python-format
+msgid "Couldn't unmount the share %s"
+msgstr "Impossible de démonter le partage %s"
+
+#, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr "La création de l'unité de configuration a échoué avec l'erreur : %s"
+
+msgid "DB error"
+msgstr "Erreur DB."
+
+msgid "Destroy VM failed"
+msgstr "Echec lors de la destruction de la machine virtuelle"
+
+msgid "Destroy instance failed"
+msgstr "Echec lors de la suppression de l'instance"
 
 #, python-format
 msgid "Detaching network adapter failed. Exception: %s"
 msgstr "Détachement de l'adaptateur réseau a échoué. Exception : %s"
+
+msgid "Download image error"
+msgstr "Erreur de téléchargement de l'image"
+
+#, python-format
+msgid "Driver failed to attach volume %(volume_id)s at %(mountpoint)s"
+msgstr "Le driver a échoué a attacher le volume %(volume_id)s à %(mountpoint)s"
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
@@ -152,8 +176,20 @@ msgid "Environment: %s"
 msgstr "Environnement : %s"
 
 #, python-format
+msgid ""
+"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
+"%(extra)s."
+msgstr ""
+"Erreur lors du contact du serveur glance '%(host)s:%(port)s' pour "
+"'%(method)s', %(extra)s."
+
+#, python-format
 msgid "Error copying key: %s"
 msgstr "Erreur lors de la copie de clé: %s"
+
+#, python-format
+msgid "Error creating Barbican client: %s"
+msgstr "Erreur lors de la création du client Babican: %s"
 
 #, python-format
 msgid "Error creating key: %s"
@@ -206,6 +242,17 @@ msgid "Error getting key: %s"
 msgstr "Erreur lors de la réception de la clé: %s"
 
 #, python-format
+msgid "Error getting secret data: %s"
+msgstr "Erreur lors de la récupération des données secrète : %s"
+
+#, python-format
+msgid "Error getting secret metadata: %s"
+msgstr "Erreur lors de la récupération des métadonnées secrète : %s"
+
+msgid "Error in migrate"
+msgstr "Erreur dans la migration"
+
+#, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
 msgstr "Erreur lors de l'injection des données dans l'image %(img_id)s (%(e)s)"
 
@@ -216,6 +263,12 @@ msgstr "Erreur en instanciant %(provider)s : %(exception)s"
 #, python-format
 msgid "Error launching a defined domain with XML: %s"
 msgstr "Erreur en lancant un domaine défini avec XML : %s"
+
+msgid "Error locating next hop for message"
+msgstr "Erreur lors de la localisation du troncon suivant pour le message"
+
+msgid "Error locating next hops for message"
+msgstr "Erreur lors de la localisation du troncon suivant pour le message"
 
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
@@ -242,6 +295,9 @@ msgstr ""
 "Erreur en préparant le déploiement de l'instance %(instance)s sur un nœud "
 "baremetal %(node)s."
 
+msgid "Error processing message locally"
+msgstr "Erreur lors du traitement du message en local"
+
 #, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
 msgstr ""
@@ -257,6 +313,9 @@ msgstr ""
 msgid "Error scheduling instances %(instance_uuids)s"
 msgstr "Erreur lors de la planification des instances %(instance_uuids)s"
 
+msgid "Error sending message to next hops."
+msgstr "Erreur lors de l'envoi du message aux troncons suivants."
+
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Erreur au démarrage xvp : %s"
@@ -270,6 +329,9 @@ msgstr "Erreur en essayant de Sauver l'Instance"
 
 msgid "Error trying to reschedule"
 msgstr "Erreur lors de la tentative de replanification"
+
+msgid "Error waiting for responses from neighbor cells"
+msgstr "Erreur lors de l'attente de réponses des cellules voisines"
 
 #, python-format
 msgid "Error while trying to clean up image %s"
@@ -295,6 +357,9 @@ msgstr "Exception lors du traitement de la ressource : %s"
 
 msgid "Exception in string format operation"
 msgstr "Exception dans le formatage de la chaîne"
+
+msgid "Exception loading extension"
+msgstr "Exception lors du chargement de l'extension"
 
 #, python-format
 msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
@@ -460,6 +525,12 @@ msgstr ""
 "Echec du montage du système de fichiers de conteneur '%(image)s' sur "
 "'%(target)s' : %(errors)s"
 
+msgid "Failed to notify cells of BDM destroy."
+msgstr "Impossible d'avertir les cellules de la destruction de BDM."
+
+msgid "Failed to notify cells of BDM update/create."
+msgstr "Impossible d'avertir les cellules de la mise à jour / création de BDM."
+
 msgid "Failed to notify cells of bw_usage update"
 msgstr "Impossible d'avertir les cellules de la mise à jour de bw_usage"
 
@@ -499,6 +570,10 @@ msgstr "Echec de rétablissement de la migration interrompue"
 msgid "Failed to roll back reservations %s"
 msgstr "Échec à restaurer les réservations %s"
 
+#, python-format
+msgid "Failed to send message to cell: %(next_hop)s"
+msgstr "Echec de l'envoi du message à la cellule: %(next_hop)s"
+
 msgid "Failed to send state update notification"
 msgstr "Echec de l'envoi de la notification de mise à jour d'état"
 
@@ -526,9 +601,18 @@ msgstr "Echec dans l'arrêt de l'instance"
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr "Echec à échanger le volume %(old_volume_id)s par %(new_volume_id)s"
 
+msgid "Failed to teardown container filesystem"
+msgstr "Échec à démonter le conteneur de système de fichiers"
+
+msgid "Failed to umount container filesystem"
+msgstr "Echec du démontage du système de fichiers conteneur"
+
 #, python-format
 msgid "Failed to understand rule %s"
 msgstr "Règle %s incompréhensible"
+
+msgid "Failed to unpause instance"
+msgstr "Echec de la reprise de l'instance"
 
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
@@ -580,6 +664,9 @@ msgstr "Echec lors du nettoyage des VDI connectées"
 #, python-format
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
+
+msgid "Get version 2 connection error"
+msgstr "Impossible de recevoir la version 2, erreur de connexion"
 
 msgid "Guest does not have a console available"
 msgstr "Aucune console n'est disponible pour l'invité"
@@ -660,6 +747,9 @@ msgid ""
 msgstr ""
 "La migration de l'instance %(instance_id)s vers l'hôte %(dest)s a "
 "inexplicablement échoué."
+
+msgid "Migration operation has aborted"
+msgstr "La migration a été interrompu "
 
 #, python-format
 msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
@@ -765,8 +855,19 @@ msgstr "Pool-set_name_label a échoué : %s"
 msgid "Pre live migration failed at %s"
 msgstr "Pré migration en directe a échoué a %s"
 
+msgid "Read/Write data failed"
+msgstr "Echec de Lecture/Ecriture des données"
+
 msgid "Recovered model server connection!"
 msgstr "Récupération du modelle de connexion serveur terminée!"
+
+#, python-format
+msgid "Requested VM Generation %s is not supported on  this OS."
+msgstr "La VM Generation %s n'est pas supporté pour ce système d'exploitation "
+
+#, python-format
+msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
+msgstr "La VM Generation %s est fourni en VHD au lieu de VHDX"
 
 #, python-format
 msgid "Returning exception %s to caller"
@@ -777,6 +878,12 @@ msgstr "Une erreur de service est survenu durant cleanup_host"
 
 msgid "Setting instance vm_state to ERROR"
 msgstr "Instance vm_state positionnée à ERROR"
+
+msgid "Shutting down VM (cleanly) failed."
+msgstr "Echec de l'arret de la machine virtuelle (à chaud)"
+
+msgid "Shutting down VM (hard) failed"
+msgstr "Echec de l'arret de la machine virtuelle (à froid)"
 
 msgid ""
 "Something wrong happened when trying to delete snapshot from shelved "
@@ -816,6 +923,9 @@ msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s."
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s. args=%(args)r"
 
+msgid "Transfer data failed"
+msgstr "Le transfert de donnée a échoué"
+
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
@@ -825,9 +935,16 @@ msgstr ""
 msgid "Unable to access floating IP %s"
 msgstr "Incapable d'accéder à l'IP flottante %s"
 
+msgid "Unable to access the rescue disk"
+msgstr "Impossible d'accéder à la ressource du disque"
+
 #, python-format
 msgid "Unable to attach volume to instance %s"
 msgstr "Impossible d'attacher le volume à l'instance %s"
+
+#, python-format
+msgid "Unable to clear device ID for port '%s'"
+msgstr "Impossible de réinitialiser l'ID du périphérique du port '%s'"
 
 msgid "Unable to create VM snapshot, failing volume_snapshot operation."
 msgstr ""
@@ -841,20 +958,34 @@ msgstr ""
 "Incapable de créer un instantané d'une VM mise au repos, essayer encore avec "
 "la mise au repos désactivée."
 
+msgid "Unable to destroy VBD"
+msgstr "Impossible de supprimer le VBD"
+
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "Impossible d'exécuter %(cmd)s. Exception : %(exception)s"
+
+msgid "Unable to find SR from VBD"
+msgstr "Impossible de trouver SR du VBD"
+
+msgid "Unable to find SR from VDI"
+msgstr "Impossible de trouver SR du VDI"
 
 #, python-format
 msgid "Unable to find address %r"
 msgstr "Adresse %r introuvable"
 
+msgid "Unable to get record of VDI"
+msgstr "Impossible de récuppérer l'enregistrement du VDI"
+
 msgid "Unable to get updated status"
 msgstr "Impossible d'obtenir le statut mis à jour"
 
-#, python-format
-msgid "Unable to instantiate unregistered object type %(objtype)s"
-msgstr "Incapable d'instancier le type d'objet non enregistrée %(objtype)s"
+msgid "Unable to introduce VDI for SR"
+msgstr "Impossible d'introduire le VDI pour SR"
+
+msgid "Unable to introduce VDI on SR"
+msgstr "Impossible d'introduire VDI sur SR"
 
 msgid ""
 "Unable to join. It is possible that either another node exists with the same "
@@ -884,8 +1015,15 @@ msgid "Unable to parse rrd of %s"
 msgstr "Impossible d’analyser %s de rrd"
 
 #, python-format
+msgid "Unable to retrieve storage policy with name %s"
+msgstr "Impossible de récuper les détails du stockage ayant le nom %s"
+
+#, python-format
 msgid "Unable to set up pool: %s."
 msgstr "Incapable de positionner le pool  : %s."
+
+msgid "Unable to unplug VBD"
+msgstr "Impossible de deconnecter le VBD"
 
 #, python-format
 msgid "Unable to update host of port %s"
@@ -900,9 +1038,6 @@ msgstr "Échec inexpliqué de la génération, pas de construction re-planifiée
 
 msgid "Unexpected exception in API method"
 msgstr "Exception inattendue dans la méthode API"
-
-msgid "Unhandled exception"
-msgstr "Exception non gérée"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
@@ -977,12 +1112,6 @@ msgstr "erreur en ouvrant image rbd %s"
 msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
 
-msgid "in dynamic looping call"
-msgstr "dans l'appel en boucle dynamique"
-
-msgid "in fixed duration looping call"
-msgstr "dans l'appel en boucle de durée fixe"
-
 #, python-format
 msgid "killing radvd threw %s"
 msgstr "La destruction de radvd à renvoyé %s"
@@ -992,6 +1121,9 @@ msgstr "Le modèle de serveur à disparu"
 
 msgid "nbd module not loaded"
 msgstr "Module nbd non chargé"
+
+msgid "set_admin_password failed"
+msgstr "Echec de set_admin_password"
 
 #, python-format
 msgid ""

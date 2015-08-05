@@ -4,22 +4,28 @@
 #
 # Translators:
 # Frédéric <frosmont@free.fr>, 2014
+# Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-22 06:09+0000\n"
-"PO-Revision-Date: 2015-06-19 04:48+0000\n"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-08-05 00:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
+"Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#, python-format
+msgid "%(cmd)s failed. Sleeping %(time)s seconds before retry."
+msgstr ""
+"Echec de %(cmd)s. Attente de %(time)s secondes avant le prochain essai."
 
 #, python-format
 msgid "%(host_state)s has not been heard from in a while"
@@ -42,6 +48,10 @@ msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr ""
 "quota dépassé de %(overs)s pour %(pid)s, tentative de redimensionnement de "
 "l'instance."
+
+#, python-format
+msgid "%s failed. Not Retrying."
+msgstr "Échec de %s. Pas de nouvelle tentative."
 
 #, python-format
 msgid "%s is already mounted"
@@ -73,22 +83,23 @@ msgstr ""
 "normal de migration directe. Erreur : %s"
 
 #, python-format
-msgid "AoE volume not yet found at: %(aoedevpath)s. Try number: %(tries)s"
-msgstr ""
-"Volume AoE pas encore trouvé à : %(aoedevpath)s. Nombre de tentatives : "
-"%(tries)s"
-
-#, python-format
 msgid "Arguments dropped when creating context: %s"
 msgstr "Arguments supprimés lors de la création du contexte : %s"
+
+#, python-format
+msgid ""
+"Assigning a pci device without numa affinity toinstance %(instance)s which "
+"has numa topology"
+msgstr ""
+"Assignation d'un périphérique pci sans affinité numa a l'instance "
+"%(instance)s qui possède une topologie numa"
 
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "Tentative de retrait de la chaîne %s qui n'existe pas"
 
-#, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "Impossible d'accéder à 'scality_sofs_config' : %s"
+msgid "Bandwidth usage not supported by hypervisor."
+msgstr "L'usage de la bande passante n'est pas supporté par l'hyperviseur"
 
 #, python-format
 msgid ""
@@ -114,8 +125,9 @@ msgstr "Impossible de supprimer l'entrée |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr "Impossible de détruire l'instance, l'opération a expiré"
 
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "Impossible d'exécuter /sbin/mount.sofs"
+#, python-format
+msgid "Cannot get the metrics from %s."
+msgstr "Impossible de récupérer les indicateurs depuis: %s"
 
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
@@ -124,14 +136,28 @@ msgstr ""
 "Impossible d'obtenir le nombre d'UC, car cette fonction n'est pas "
 "implémentée pour cette plateforme. "
 
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr ""
-"Impossible de monter Scality SOFS, consultez le fichier syslog pour voir les "
-"erreurs"
-
 msgid "Cannot purge SR with referenced VDIs"
 msgstr ""
 "Impossible de purger le référentiel de stockage avec les VDI référencés"
+
+#, python-format
+msgid ""
+"Cannot update service status on host \"%s\" due to an unexpected exception."
+msgstr ""
+"Impossible de mettre à jour le statut du service sur l'hôte : \"%s\", en "
+"raison d'une exception inattendue."
+
+#, python-format
+msgid "Cannot update service status on host \"%s\" since it is not registered."
+msgstr ""
+"Impossible de mettre à jour le statut du service sur l'hôte : \"%s\", car il "
+"n'est pas enregistré."
+
+#, python-format
+msgid "Change will make usage less than 0 for the following resources: %s"
+msgstr ""
+"La modification définira une utilisation inférieure à 0 pour les ressources "
+"suivantes : %s"
 
 #, python-format
 msgid "Compute resource plugin %s was not loaded"
@@ -165,8 +191,12 @@ msgid "Could not determine key: %s"
 msgstr "Impossible de déterminer la clé : %s"
 
 #, python-format
-msgid "Couldn't find multipath device %s"
-msgstr "Impossible de trouver le périphérique multi-chemin %s"
+msgid ""
+"Couldn't retrieve the online CPUs due to a Libvirt error: %(error)s with "
+"error code: %(error_code)s"
+msgstr ""
+"Impossible de récupérer les CPU en ligne du a l'erreur Libvirt: %(error)s "
+"avec un code d'erreur: %(error_code)s"
 
 #, python-format
 msgid ""
@@ -196,6 +226,22 @@ msgstr "La dissociation de l'unité nbd erronée a renvoyée une erreur : %s."
 msgid "Detaching volume from unknown instance"
 msgstr "Déconnexion du volume d'une instance inconnue"
 
+#, python-format
+msgid ""
+"Detected instance with name label '%s' which is marked as DELETED but still "
+"present on host."
+msgstr ""
+"L'instance nommée '%s' détecté est marqué comme étant SUPPRIMEE mais est "
+"toujours présente dans l’hôte."
+
+#, python-format
+msgid ""
+"Detected running orphan instance: %(uuid)s (consuming %(memory_mb)s MB "
+"memory)"
+msgstr ""
+"Instance orpheline en cours d’exécution détectée: %(uuid)s (consommant "
+"%(memory_mb)s MB de mémoire)."
+
 msgid "Device allocation failed after repeated retries."
 msgstr "L'allocation d'unité a échoué après des tentatives répétées."
 
@@ -222,6 +268,19 @@ msgstr "L'instance a disparu lord de l'opération detach_interface."
 
 msgid "During detach_volume, instance disappeared."
 msgstr "Pendant l'opération detach_volume, l'instance a disparu."
+
+msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
+msgstr ""
+"Erreur lors du nettoyage de l'allocation des IP fixe. Un nettoyage manuel "
+"peut êter requis "
+
+#, python-format
+msgid ""
+"Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s; attempt "
+"%(attempt)d of 3"
+msgstr ""
+"Erreur venant de libvirt pendant la destruction. Code=%(errcode)s Erreur="
+"%(e)s; essai %(attempt)d sur 3"
 
 #, python-format
 msgid ""
@@ -283,8 +342,16 @@ msgid "Failed to delete volume: %(volume_id)s due to %(exc)s"
 msgstr "Echec à supprimer le volume : %(volume_id)s à cause de %(exc)s"
 
 #, python-format
+msgid "Failed to disassociated floating address: %s"
+msgstr "Echec lors de la désasociation de l'IP flottante: %s"
+
+#, python-format
 msgid "Failed to extract instance support from %s"
 msgstr "Echec de l'extraction du support d'instance de %s"
+
+#, python-format
+msgid "Failed to get cluster references %s"
+msgstr "Echec lors de la récupération des références %s de la grappe."
 
 #, python-format
 msgid "Failed to load extension %(classpath)s: %(exc)s"
@@ -300,14 +367,6 @@ msgstr "Echec de chargement de l'extension %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Echec de mise sous tension de l'instance"
-
-#, python-format
-msgid ""
-"Failed to remove multipath device descriptor %(dev_mapper)s. Exception "
-"message: %(msg)s"
-msgstr ""
-"Echec à supprimer le descriptif du périphérique multi-chemin %(dev_mapper)s. "
-"Message d'exception : %(msg)s"
 
 #, python-format
 msgid "Failed to remove snapshot for VM %s"
@@ -329,14 +388,6 @@ msgstr ""
 "Échec dans le redémarrage logiciel de l'instance. Essayez un redémarrage "
 "matériel."
 
-#, python-format
-msgid ""
-"Fibre volume not yet found at: %(mount_device)s. Will rescan & retry.  Try "
-"number: %(tries)s"
-msgstr ""
-"Volume de fibre pas encore trouvé à : %(mount_device)s. Nouvelle analyse et "
-"nouvelle tentative. Nombre de tentatives : %(tries)s"
-
 msgid "File injection into a boot from volume instance is not supported"
 msgstr ""
 "L'injection de fichier dans le démarrage d'une instance de volume n'est pas "
@@ -351,6 +402,17 @@ msgstr ""
 #, python-format
 msgid "Flavor %d not found"
 msgstr "Flavor %d non trouvée"
+
+msgid "Flavor could not be found, skipping migration."
+msgstr "Version introuvable, migration ignorée."
+
+#, python-format
+msgid ""
+"Floating ip address |%(address)s| no longer belongs to instance "
+"%(instance_uuid)s. Will not migrate it "
+msgstr ""
+"L'IP flottante |%(address)s| n’appartiens plus a l'instance "
+"%(instance_uuid)s. Elle ne sera pas migré."
 
 #, python-format
 msgid ""
@@ -396,14 +458,6 @@ msgstr "IP %s libérée qui n'était pas allouée"
 #, python-format
 msgid "IP |%s| leased that isn't allocated"
 msgstr "Adresse IP |%s| spécialisée qui n'est pas allouée"
-
-#, python-format
-msgid ""
-"ISCSI volume not yet found at: %(disk_dev)s. Will rescan & retry.  Try "
-"number: %(tries)s"
-msgstr ""
-"Volume ISCSI pas encore trouvé à : %(disk_dev)s. Nouvelle analyse et "
-"nouvelle tentative. Nombre de tentatives : %(tries)s"
 
 #, python-format
 msgid ""
@@ -507,6 +561,14 @@ msgid "Instance not resizing, skipping migration."
 msgstr "Instance non en cours de redimensionnement ; migration ignorée"
 
 #, python-format
+msgid ""
+"Instance uuid could not be retrieved for instance %s. Instance state change "
+"event will be ignored."
+msgstr ""
+"L'UUID d'instance n'a pu être récupéré pour l'instance %s. L’événement de "
+"changement d'état de l'instance va être ignoré."
+
+#, python-format
 msgid "Instance: %(instance_uuid)s failed to save into memcached"
 msgstr "Instance: %(instance_uuid)s a échoué à sauvegarder dans le memcached"
 
@@ -515,6 +577,10 @@ msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr ""
 "Mode de mise en cache non valide %(cache_mode)s spécifié pour le type de "
 "disque %(disk_type)s."
+
+#, python-format
+msgid "Invalid floating ip id %s in request"
+msgstr "IP flottante invalide d'ID: %s dans la requete "
 
 #, python-format
 msgid "Invalid value for id mapping %s"
@@ -542,13 +608,12 @@ msgstr ""
 msgid "Metric name unknown of %r"
 msgstr "Nom de la mesure inconnu de %r"
 
+msgid "Migration operation was cancelled"
+msgstr "La migration a été annulée."
+
 #, python-format
 msgid "Mountpoint cannot be translated: %s"
 msgstr "Le point de montage ne peut pas être traduit : %s"
-
-#, python-format
-msgid "Multipath call failed exit (%(code)s)"
-msgstr "L'appel multi-chemin a échoué sa sortie (%(code)s)"
 
 #, python-format
 msgid ""
@@ -576,6 +641,14 @@ msgstr "Erreur Neutron : Plus d'adresse IP fixes dans le réseau : %s"
 #, python-format
 msgid "Neutron error: Port quota exceeded in tenant: %s"
 msgstr "Erreur Neutron : Quota de Port dépassé dans le tenant : %s"
+
+#, python-format
+msgid "No Network for FixedIP: %s"
+msgstr "Pas de réseau pour l'IP fixe: %s"
+
+#, python-format
+msgid "No VirtualInterface for FixedIP: %s"
+msgstr "Pas d'interface virtuelle pour l'IP fixe: %s"
 
 #, python-format
 msgid "No cell_name for %(method)s() from API"
@@ -606,6 +679,9 @@ msgstr "Aucun réseau ou adresse IP fixes ne peuvent être alloués"
 msgid "No service record for host %s"
 msgstr "Aucun enregistrement de service pour l'hôte %s"
 
+msgid "No valid host found for rebuild"
+msgstr "Hôte valide non trouvée pour la regénération."
+
 #, python-format
 msgid "Not loading %s because it is in the blacklist"
 msgstr "Pas de chargement de %s car il est la liste noire"
@@ -622,6 +698,14 @@ msgstr ""
 "L'ancien nom de propriété \"hw_watchdog_action\" est maintenant obsolète et "
 "sera retiré dans la prochaine version. Utiliser à la place le nom de "
 "propriété mis à jour \"hw:watchdog_action\""
+
+msgid "Paused instance shutdown by itself. Calling the stop API."
+msgstr ""
+"L'instance en pause s'est fermé automatiquement. Appel de l'API d’arrêt "
+
+#, python-format
+msgid "Periodic cleanup failed to delete instance: %s"
+msgstr "Le nettoyage périodique n'as pas réussi a supprimer l'instance: %s"
 
 #, python-format
 msgid ""
@@ -670,12 +754,19 @@ msgid "Power state %s not found."
 msgstr "État de l'alimentation %s non trouvé."
 
 #, python-format
+msgid "Quota exceeded for %s, tried to allocate floating IP"
+msgstr "Quota dépassé pour %s, tentative d'allocation d'IP flottante. "
+
+#, python-format
 msgid ""
 "Quota exceeded for project %(pid)s, tried to allocate fixed IP. %(used)s of "
 "%(allowed)s are in use or are already reserved."
 msgstr ""
 "Quota dépassé pour le projet %(pid)s, essayé d'allouer une adresse IP fixe. "
 "%(used)s de %(allowed)s sont utilisés ou déjà réservés."
+
+msgid "Reboot failed but instance is running"
+msgstr "Echec du redémarrage mais l'instance est en cours d'execution"
 
 msgid ""
 "Reboot failed due to bad volumes, detaching bad volumes and starting halted "
@@ -690,6 +781,37 @@ msgstr "Rejet de la demande d'instantané, instantanés actuellement désactivé
 #, python-format
 msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
 msgstr "%(num)d règles en double supprimées pour l'IP flottante %(float)s"
+
+#, python-format
+msgid ""
+"Report interval must be less than service down time. Current config: "
+"<service_down_time: %(service_down_time)s, report_interval: "
+"%(report_interval)s>. Setting service_down_time to: %(new_service_down_time)s"
+msgstr ""
+"Le délai entre les raports doivent être moins élevés que le temps "
+"d'indisponibilité du service. Configuration actuelle: <service_down_time: "
+"%(service_down_time)s, report_interval: %(report_interval)s>. Modification "
+"de service_down_time pour: %(new_service_down_time)s"
+
+#, python-format
+msgid ""
+"Running Nova with a VMware vCenter version less than %(version)s is "
+"deprecated. The required minimum version of vCenter will be raised to "
+"%(version)s in the 13.0.0 release."
+msgstr ""
+"L'execution de Nova avec une version du VMware vCenter inferieure a "
+"%(version)s est déprécié. Le minimum requis de vCenter sera augmenté à "
+"%(version)s dans la version 13.0.0 de Nova"
+
+#, python-format
+msgid ""
+"Running Nova with a libvirt version less than %(version)s is deprecated. The "
+"required minimum version of libvirt will be raised to %(version)s in the "
+"13.0.0 release."
+msgstr ""
+"L’exécution de Nova avec une version de libvirt inférieure à %(version)s est "
+"déprécié. La version minimum requise de libvirt sera augmenté a %(version)s "
+"dans la version 13.0.0 de Nova"
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -713,12 +835,6 @@ msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr "Définition de la migration %(migration_id)s pour l'erreur : %(reason)s"
 
 #, python-format
-msgid "Skip faulty line \"%(dev_line)s\" of multipath device %(mdev)s"
-msgstr ""
-"Passer la mauvaise ligne \"%(dev_line)s\" du périphérique multi-chemin "
-"%(mdev)s"
-
-#, python-format
 msgid ""
 "Subnet(s) too large, defaulting to /%s.  To override, specify network_size "
 "flag."
@@ -732,6 +848,18 @@ msgid ""
 msgstr ""
 "Tenant_id %(tenant_id)s ne correspond pas avec le tenant_id de l'instance "
 "%(instance_id)s."
+
+msgid ""
+"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
+"project and thus its quality can not be ensured. This may change in the "
+"future, but current deployers should be aware that the use of it in "
+"production right now may be risky."
+msgstr ""
+"Le service de centralisation de driver ZooKeeper de Nova n'est pas testé par "
+"la communauté du projet OpenStack par conséquent la qualité de peut être "
+"assurée. Cette situation peut changer a l'avenir, mais les actuels "
+"utilisateurs doivent être averti que l'utilisation immédiate de ce service "
+"en production peut être risquée."
 
 #, python-format
 msgid "The following clusters could not be found in the vCenter %s"
@@ -748,8 +876,24 @@ msgstr ""
 "d'informations, voir : https://wiki.openstack.org/wiki/"
 "HypervisorSupportMatrix"
 
+msgid ""
+"The setting \"always\" will be deprecated in the Liberty version. Please use "
+"\"True\" instead"
+msgstr ""
+"La configuration \"always\" sera dépréciée dans la version Liberty. Veuillez "
+"utiliser \"True\" a la place."
+
 msgid "This shouldn't be getting called except during testing."
 msgstr "Le programme ne doit pas être appelé sauf pendant le test."
+
+msgid ""
+"Timed out waiting for nova-conductor.  Is it running? Or did this service "
+"start before nova-conductor?  Reattempting establishment of nova-conductor "
+"connection..."
+msgstr ""
+"Dépassement de délai pendant l'attente de nova-conductor. Le programme est-"
+"il en cours d'exécution ? Ou ce service a-t-il démarré avant nova-"
+"conductor ? Tentative d'établissement de connexion au nova-conductor.  "
 
 msgid "Timed out while waiting for soft shutdown."
 msgstr "Temps dépassé durant l'attente de l'arrêt logiciel."
@@ -773,6 +917,21 @@ msgid ""
 msgstr ""
 "Traitement de la valeur de configuration négative (%(retries)s) pour "
 "'block_device_retries' à 0."
+
+#, python-format
+msgid ""
+"Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
+msgstr ""
+"La valeur négative (%(retries)s) de la configuration 'glance.num_retries' "
+"traitée comme 0."
+
+#, python-format
+msgid ""
+"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
+"as 0."
+msgstr ""
+"La valeur négative (%(retries)s) de la configuration "
+"'network_allocate_retries' traitée comme 0."
 
 #, python-format
 msgid ""
@@ -800,8 +959,8 @@ msgid "URI %(uri)s does not support listDevices: %(error)s"
 msgstr "l'URI %(uri)s ne supporte pas la liste de périphériques : %(error)s"
 
 #, python-format
-msgid "Unable to delete volume device %s"
-msgstr "Incapable de supprimer le périphérique du volume %s"
+msgid "Unable to delete %(file)s. Exception: %(ex)s"
+msgstr "Impossible de supprimer %(file)s. Exception: %(ex)s"
 
 #, python-format
 msgid "Unable to dequalify.  %(name)s is not in %(domain)s.\n"
@@ -817,6 +976,12 @@ msgstr ""
 #, python-format
 msgid "Unable to force TCG mode, libguestfs too old? %s"
 msgstr "Incapable de forcer le mode TCG, libguestfs trop ancienne? %s"
+
+#, python-format
+msgid "Unable to mount image %(image)s with error %(error)s. Cannot resize."
+msgstr ""
+"Impossible de monter %(image)s avec l'erreur %(error)s. Impossible de "
+"redimentionner."
 
 #, python-format
 msgid "Unable to retrieve value for %(path)s Reason: %(reason)s"
@@ -852,9 +1017,6 @@ msgstr ""
 "La machine virtuelle n'est pas présente et la suppression logicielle est "
 "ignorée..."
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "Valeur requise pour 'scality_sofs_config'"
-
 #, python-format
 msgid ""
 "Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
@@ -864,6 +1026,13 @@ msgstr ""
 "Le groupe de volumes %(vg)s ne pourra pas contenir le volume incomplet "
 "%(lv)s. La taille du volume virtuel est de %(size)db, mais l'espace libre "
 "sur le groupe de volumes est de seulement %(free_space)db."
+
+#, python-format
+msgid ""
+"Volume id: %(vol_id)s finished being created but its status is "
+"%(vol_status)s."
+msgstr ""
+"Création du volume d'ID: %(vol_id)s finie mais son status est %(vol_status)s"
 
 msgid ""
 "WARNING: Using the remote debug option changes how Nova uses the eventlet "
@@ -895,6 +1064,22 @@ msgstr ""
 "X-instance-ID est présent dans les en-têtes de requêtes. L'option 'service-"
 "metadata-proxy' doit être activée pour traiter ces en-têtes."
 
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
+"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
+"node do not match the addresses on the source node. Since the source node "
+"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
+"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
+"the VM will continue to listen on the current addresses."
+msgstr ""
+"Votre version de libvirt ne supporte pas le drapeau "
+"VIR_DOMAIN_XML_MIGRATABLE, et l'adresse graphique (VNC et/ou SPICE) écoutée "
+"sur le nœud de destination n'est pas identique à l'adresse du nœud source. "
+"Le noeud source possède son adresse d'écoute réglée sur l'adresse \"catch-all"
+"\" (0.0.0.0 ou ::) ou alors l'adresse locale (127.0.0.1 ou ::1), la "
+"migration en cours s'effectura, mais la VM continuera d'écouter l'adresse "
+"actuelle."
+
 #, python-format
 msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
 msgstr ""
@@ -920,6 +1105,10 @@ msgstr "cpu_arch n'est pas défini pour le nœud '%s'"
 
 msgid "datastore_regex is ignored when PBM is enabled"
 msgstr "datastore_regex est ignoré quand PBM est activé"
+
+#, python-format
+msgid "deallocate port %(port_id)s failed"
+msgstr "Echec lors de la dé-allocation du port %(port_id)s"
 
 #, python-format
 msgid ""
@@ -949,18 +1138,15 @@ msgid "instance-dns-zone not found |%s|."
 msgstr "nstance-dns-zone non trouvé  |%s|."
 
 #, python-format
-msgid "multipath-tools probably work improperly. devices to remove = %s."
-msgstr ""
-"L'outil de multi-chemin fonctionne probablement mal. Périphériques à "
-"supprimer = %s."
-
-#, python-format
 msgid "multiple fixed_ips exist, using the first: %s"
 msgstr "plusieurs fixed_ips existent, utilisation de la première : %s"
 
 #, python-format
-msgid "pid %d not in child list"
-msgstr "PID %d absent de la liste d'enfants"
+msgid ""
+"my_ip address (%(my_ip)s) was not found on any of the interfaces: %(ifaces)s"
+msgstr ""
+"L'adresse my_ip (%(my_ip)s) n'a pas été trouvé dans aucune des interfaces: "
+"%(ifaces)s."
 
 #, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
@@ -984,8 +1170,8 @@ msgstr ""
 "set_admin_password n'est pas implémenté par ce pilote ou par cette instance "
 "invitée."
 
-msgid "systool is not installed"
-msgstr "systool n'est pas installé"
+msgid "set_bootable is not implemented for the current driver"
+msgstr "set_bootable n'est pas implémenté pour le driver actuel."
 
 #, python-format
 msgid ""

@@ -8,16 +8,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-06 14:14+0000\n"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-07-23 20:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Japanese (http://www.transifex.com/projects/p/nova/language/"
+"Language-Team: Japanese (http://www.transifex.com/openstack/nova/language/"
 "ja/)\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
@@ -100,22 +100,6 @@ msgstr "%(mountpoint)s にあるボリューム %(volume_id)s を使用してブ
 
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "nwfilter で setup_basic_filtering を呼び出しました"
-
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "%s が見つかりました。終了しています"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "%s が見つかりました。子を停止しています"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "子 %(pid)d がシグナル %(sig)d によって強制終了されました"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "子 %(pid)s が状況 %(code)d で終了しました"
 
 msgid "Claim successful"
 msgstr "要求が正常に実行されました"
@@ -203,14 +187,6 @@ msgstr "スナップショット %s を削除しました"
 msgid "Deleted virtual disk %s."
 msgstr "バーチャルディスク %s を削除しました"
 
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"ホスト (%(instance_host)s) として削除中のインスタンスは、当該ホスト "
-"(%(our_host)s) と同じではありません。"
-
 msgid "Destroyed the VM"
 msgstr "VM を破棄しました"
 
@@ -279,10 +255,6 @@ msgid "Error in handshake: %s"
 msgstr "ハンドシェーク中にエラーが発生しました: %s"
 
 #, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "Eventlet backdoorは、プロセス%(pid)dの%(port)sをリスニングしています。"
-
-#, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr ""
 "ファイル・システムのマウントに失敗しました (非 Linux インスタンスでは想定済"
@@ -299,9 +271,6 @@ msgid ""
 msgstr ""
 "インスタンスの同期を強制実行しています。project_id=%(projid_str)s、"
 "updated_since=%(since_str)s"
-
-msgid "Forking too fast, sleeping"
-msgstr "fork が早すぎます。スリープ状態にしています"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
@@ -412,9 +381,6 @@ msgid ""
 msgstr ""
 "スケジュール時に使用可能なセルがありません。%(sleep_time)s 秒後に再試行します"
 
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "親プロセスが予期せずに停止しました。終了しています"
-
 msgid "Pausing"
 msgstr "一時停止中"
 
@@ -490,14 +456,6 @@ msgstr ""
 "ホスト %(host)s のインスタンス使用率監査を %(begin_time)s から %(end_time)s "
 "まで実行しています。%(number_instances)s 個のインスタンス。"
 
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "タスクが使用不可であるため、定期タスク %(task)s をスキップしています"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "タスクの間隔が負であるため、定期タスク %(task)s をスキップしています"
-
 msgid "Snapshot extracted, beginning image upload"
 msgstr ""
 "スナップショットが抽出されました。イメージのアップロードを開始しています"
@@ -509,16 +467,8 @@ msgid "Spawning new instance"
 msgstr "新規インスタンスの作成中"
 
 #, python-format
-msgid "Started child %d"
-msgstr "子 %d を開始しました"
-
-#, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
 msgstr "%(topic)s ノード (バージョン %(version)s) を開始しています"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "%d ワーカーを開始しています"
 
 msgid "Starting halted instance found during reboot"
 msgstr "停止したインスタンスの開始が、リブート中に見つかりました"
@@ -582,10 +532,6 @@ msgstr "VBD %s は既に切り離されています"
 
 msgid "WSGI server has stopped."
 msgstr "WSGI サーバーが停止しました。"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "%d 個の子で終了を待機しています"
 
 #, python-format
 msgid "Writing stored info to %s"

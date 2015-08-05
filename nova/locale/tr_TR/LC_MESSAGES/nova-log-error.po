@@ -3,11 +3,6 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
-# David Martinez Morata, 2014
-# Pablo Sanchez <furybeat@gmail.com>, 2015
-# Rafael Rivero <rafael@cloudscaling.com>, 2014
-# Sergio Cuellar Valdes <scuellarv@kionetworks.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
@@ -15,83 +10,81 @@ msgstr ""
 "POT-Creation-Date: 2015-08-05 06:21+0000\n"
 "PO-Revision-Date: 2015-08-05 00:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
-"es/)\n"
-"Language: es\n"
+"Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
+"language/tr_TR/)\n"
+"Language: tr_TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "\"Look for the VDIs failed"
-msgstr "\"Ha fallado la búsqueda de las VDIs"
+msgstr "\"VDI arama başarısız"
 
 #, python-format
 msgid ""
 "%(base)s virtual size %(base_size)s larger than flavor root disk size "
 "%(size)s"
 msgstr ""
-"El tamaño virtual %(base_size)s de %(base)s es más grande que el tamaño del "
-"disco raíz del sabor %(size)s"
+"%(base)s sanal boyutu %(base_size)s nitelik kök diski boyutu %(size)s den "
+"büyük"
 
 #, python-format
 msgid ""
 "%(base)s virtual size %(disk_size)s larger than flavor root disk size "
 "%(size)s"
 msgstr ""
-"El tamaño virtual %(disk_size)s de %(base)s es más grande que el tamaño del "
-"disco raíz del sabor %(size)s"
+"%(base)s sanal boyutu %(disk_size)s nitelik kök disk boyutu %(size)s den "
+"büyük"
 
 #, python-format
 msgid ""
 "%(scheme)s is registered as a module twice. %(module_name)s is not being "
 "used."
 msgstr ""
-"%(scheme)s se está registrado como módulo dos veces. %(module_name)s no se "
-"encuentra en uso."
+"%(scheme)s bir modül olarak iki kere kaydedilmiş. %(module_name)s "
+"kullanılmıyor."
 
 #, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: unrecoverable state during operation on %(host)s"
 msgstr ""
-"Agregado %(aggregate_id)s: estado irrecuperable durante la operación en "
-"%(host)s"
+"Takım %(aggregate_id)s: %(host)s istemcisi üzerindeki işlem sırasında "
+"kurtarılamayacak durum"
 
 msgid "An error occurred while refreshing the network cache."
-msgstr "Ha ocurrido un error al actualizar el cache de red."
+msgstr "Ağ zulası tazelenirken bir hata oluştu."
 
 #, python-format
 msgid "Attach volume failed: %s"
-msgstr "Ha fallado la conexión de volumen: %s"
+msgstr "Mantıksal sürücü ekleme başarısız: %s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
-msgstr "La asociación de dispositivos PCI %(dev)s a %(dom)s ha fallado."
+msgstr "%(dev)s PCI aygıtlarının %(dom)s e eklenmesi başarısız."
 
 #, python-format
 msgid "Attaching network adapter failed. Exception:  %s"
-msgstr "Error al conectar el adaptador de red. Excepción: %s"
+msgstr "Ağ bağdaştırıcısı ekleme başarısız. İstisna:  %s"
 
 #, python-format
 msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr ""
-"No se puede bloquea la migración de instancia %s con volúmenes mapeados"
+msgstr "Eşleşmiş mantıksal sürücülerle %s sunucu göçü engellenemez"
 
 msgid "Cannot cleanup migration files"
-msgstr "No se pueden limpiar los archivos de migración"
+msgstr "Göç dosyaları temizlenemiyor"
 
 #, python-format
 msgid "Cannot reboot instance: %s"
-msgstr "No se puede reiniciar instancia: %s"
+msgstr "Sunucu yeniden başlatılamıyor: %s"
 
 #, python-format
 msgid "Caught error: %s"
-msgstr "Capturado error: %s"
+msgstr "Yakalama hatası: %s"
 
 msgid "Compute driver option required, but not specified"
-msgstr ""
-"La opción de controlador de cálculo es necesaria, pero no se ha especificado"
+msgstr "Hesaplama sürücüsü seçeneği gerekli, ama belirtilmemiş"
 
 #, python-format
 msgid "Compute.api::inject_network_info %s"
@@ -123,314 +116,296 @@ msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
-msgstr "Ha fallado la conexión a libvirt: %s"
+msgstr "Libvirt bağlantısı başarısız: %s"
 
 #, python-format
 msgid "Could not bind to %(host)s:%(port)s"
-msgstr "No se puede asociar a %(host)s:%(port)s"
+msgstr "%(host)s:%(port)s a bağlanılamadı"
 
 msgid "Could not decode scheduler options"
-msgstr "No se ha podido decodificar las opciones del programador"
+msgstr "Zamanlayıcı seçenekleri kodu çözülemedi"
 
 #, python-format
 msgid "Could not remove tmpdir: %s"
-msgstr "No se ha podido eliminar directorio temporal: %s"
+msgstr "tmpdir silinemedi: %s"
 
 #, python-format
 msgid "Could not stat scheduler options file %(filename)s"
-msgstr ""
-"No se ha podido crear estadísticas de archivo de opciones de planificador "
-"%(filename)s"
+msgstr "Zamanlayıcı seçenekleri dosyası %(filename)s durumu alınamadı"
 
 msgid "Couldn't communicate with any cells"
-msgstr "No se puede establecer comunicación con alguna celda"
+msgstr "Hiçbir hücreyle iletişim kurulamadı"
 
 #, python-format
 msgid "Couldn't communicate with cell '%s'"
-msgstr "No se puede comunicar con la celda '%s'"
+msgstr "Hücre '%s' ile iletişim kurulamadı"
 
 #, python-format
 msgid "Couldn't lookup app: %s"
-msgstr "No se pudo buscar aplicación: %s"
+msgstr "Uygulama aranamadı: %s"
 
 #, python-format
 msgid "Couldn't unmount the GlusterFS share %s"
-msgstr "No se puede desmontar el recurso compartido GlusterFS %s"
+msgstr "%s GlusterFS paylaşımı ayrılamıyor"
 
 #, python-format
 msgid "Couldn't unmount the NFS share %s"
-msgstr "No se puede desmontar el recurso compartido NFS %s"
+msgstr "%s NFS paylaşımı ayrılamıyor"
 
 #, python-format
 msgid "Couldn't unmount the Quobyte Volume at %s"
-msgstr "No se ha podido desmontar el Volumen Quobyte en %s"
+msgstr "%s deki Quobyte Mantıksal Sürücüsü ayrılamıyor"
 
 #, python-format
 msgid "Couldn't unmount the share %s"
-msgstr "No se pudo desmontar el compartido %s"
+msgstr "%s paylaşımı ayrılamadı"
 
 #, python-format
 msgid "Creating config drive failed with error: %s"
-msgstr "La creación de unidad de configuración ha fallado con el error: %s"
+msgstr "Yapılandırma sürücüsü oluşturma şu hatayla başarısız oldu: %s"
 
 msgid "DB error"
-msgstr "Error de BD"
+msgstr "DB hatası"
 
 msgid "Destroy VM failed"
-msgstr "Ha fallado la destrucción de VM"
+msgstr "VM silme başarısız"
 
 msgid "Destroy instance failed"
-msgstr "Fallo en la destrucción de la instancia"
+msgstr "Sunucu silme başarısız"
 
 #, python-format
 msgid "Detaching network adapter failed. Exception: %s"
-msgstr "Fallo al desconectar el adaptador de red. Excepción: %s"
+msgstr "Ağ bağdaştırıcısı ayırma başarısız. İstisna: %s"
 
 #, python-format
 msgid ""
 "Download handler '%(handler)s' raised an exception, falling back to default "
 "handler '%(default_handler)s'"
 msgstr ""
-"La descarga del manejador '%(handler)s' ha arrojado una excepción, "
-"restaurando hacia el manejador predeterminado '%(default_handler)s"
+"İndirme işleyicisi '%(handler)s' bir istisna yükseltti, varsayılan "
+"işleyiciye '%(default_handler)s' dönülüyor"
 
 msgid "Download image error"
-msgstr "Error en la descarga de la imagen"
+msgstr "İmaj indirme hatası"
 
 #, python-format
 msgid "Driver failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
-"El controlador ha fallado al asignar el volumen %(volume_id)s en "
-"%(mountpoint)s"
+"Sürücü %(volume_id)s mantıksal sürücüsünü %(mountpoint)s noktasına ekleyemedi"
 
 msgid "Environment variable 'NETWORK_ID' must be set."
-msgstr "La variable de entorno 'NETWORK_ID' debe ser establecida."
+msgstr "Çevresel değişken 'NETWORK_ID' ayarlanmış olmalı."
 
 #, python-format
 msgid "Environment: %s"
-msgstr "Entorno: %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"Error al contactar con el servidor de glance '%(host)s:%(port)s' para "
-"'%(method)s', %(extra)s."
+msgstr "Ortam: %s"
 
 #, python-format
 msgid "Error copying key: %s"
-msgstr "Error al copiar la llave: %s"
+msgstr "Anahtar kopyalanırken hata: %s"
 
 #, python-format
 msgid "Error creating Barbican client: %s"
-msgstr "Error al crear cliente Barbican: %s"
+msgstr "Barbican istemcisi oluştururken hata: %s"
 
 #, python-format
 msgid "Error creating key: %s"
-msgstr "Error al crear clave: %s"
+msgstr "Anahtar oluştururken hata: %s"
 
 #, python-format
 msgid "Error defining a domain with XML: %s"
-msgstr "Error definiendo el dominio con XML: %s"
+msgstr "XML ile bir alanın tanımlanmasında hata: %s"
 
 #, python-format
 msgid "Error defining a secret with XML: %s"
-msgstr "Error al definir un secreto con XML: %s"
+msgstr "Bir sırın XML ile tanımlanması başarısız: %s"
 
 #, python-format
 msgid "Error deleting conntrack entries for %s"
-msgstr "Error al eliminar las entradas conntrack para %s"
+msgstr "%s için conntrack girdileri silinirken hata"
 
 #, python-format
 msgid "Error deleting key: %s"
-msgstr "Error al eliminar clave: %s"
+msgstr "Anahtar silinirken hata: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Error al desplegar la instancia %(instance)s en nodo de máquina vacía "
-"%(node)s."
+"%(instance)s sunucusunun çıplak metal %(node)s düğümü üzerine açılmasında "
+"hata."
 
 #, python-format
 msgid "Error enabling hairpin mode with XML: %s"
-msgstr "Error al habilitar modo horquilla con XML: %s"
+msgstr "XML ile hairpin kipinin etkinleştirilmesinde hata: %s"
 
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
-msgstr "Error del último host: %(last_host)s (nodo %(last_node)s): %(exc)s"
+msgstr "Son istemciden hata: %(last_host)s (node %(last_node)s): %(exc)s"
 
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
-msgstr "Error de libvirt durante destrucción. Código=%(errcode)s Error=%(e)s"
+msgstr "Silme sırasında libvirt'den hata. Kod=%(errcode)s Hata=%(e)s"
 
 #, python-format
 msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
 msgstr ""
-"Error de libvirt durante borrado de definición. Código=%(errcode)s Error="
-"%(e)s"
+"Tanımlama kaldırma sırasında libvirt hatası. Kod=%(errcode)s Hata=%(e)s"
 
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
-msgstr ""
-"Error de libvirt durante eliminación de filtro. Código=%(errcode)s Error="
-"%(e)s"
+msgstr "Filtre kaldırma sırasında libvirt hatası. Kod=%(errcode)s Hata=%(e)s"
 
 #, python-format
 msgid "Error getting key: %s"
-msgstr "Error al obtener clave: %s"
+msgstr "Anahtar alınırken hata: %s"
 
 #, python-format
 msgid "Error getting secret data: %s"
-msgstr "Error al obtener los datos secretos: %s"
+msgstr "Sır verisi alınırken hata: %s"
 
 #, python-format
 msgid "Error getting secret metadata: %s"
-msgstr "Error al obtener los metadatos secretos: %s"
+msgstr "Sır metadata alınırken hata: %s"
 
 msgid "Error in migrate"
-msgstr "Error en la migración"
+msgstr "Göçte hata"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
-msgstr "Error al inyectar datos en imagen %(img_id)s (%(e)s)"
+msgstr "Verinin %(img_id)s imajına eklenmesinde hata (%(e)s)"
 
 #, python-format
 msgid "Error instantiating %(provider)s: %(exception)s"
-msgstr "Error al instanciar %(provider)s: %(exception)s"
+msgstr "%(provider)s ilklendirmede hata: %(exception)s"
 
 #, python-format
 msgid "Error launching a defined domain with XML: %s"
-msgstr "Error al lanzar el dominio definido con XML: %s"
+msgstr "Tanımlanmış bir alanın XML ile başlatılmasında hata: %s"
 
 msgid "Error locating next hop for message"
-msgstr "Error al localizar el siguiente salto para el mensaje"
+msgstr "İleti için sonraki atlayış noktası tespit edilirken hata"
 
 msgid "Error locating next hops for message"
-msgstr "Error al localizar el siguiente salto para el mensaje"
+msgstr "İleti için sonraki noktalar tespit edilirken hata"
 
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
 msgstr ""
-"Error ocurrido durante volume_snapshot_create, enviando estado de error a "
-"Cinder."
+"volume_snapshot_create sırasında hata oluştu, hata durumu Cinder'e "
+"gönderiliyor."
 
 msgid ""
 "Error occurred during volume_snapshot_delete, sending error status to Cinder."
 msgstr ""
-"Ha ocurrido un error durante volume_snapshot_delete, envinado estado de "
-"error a Cinder."
+"volume_snapshot_delete sırasında hata oluştu, hata durumu Cinder'e "
+"gönderiliyor."
 
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
-msgstr "Error en '%(path)s' al comprobar E/S directa: '%(ex)s'"
+msgstr "Direk I/O kontrol edilirken '%(path)s' üzerinde hata: '%(ex)s'"
 
 #, python-format
 msgid ""
 "Error preparing deploy for instance %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Error al preparar la implementacion para instancia %(instance)s en nodo "
-"nativo %(node)s."
+"%(instance)s sunucusunun %(node)s çıplak metal düğümü üzerinde açılmasında "
+"hata."
 
 msgid "Error processing message locally"
-msgstr "Error al procesar el mensaje localmente"
+msgstr "İleti yerel olarak işlenirken hata"
 
 #, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "Error al leer imagen en archivo %(filename)s: %(error)s"
+msgstr "İmaj bilgi dosyası %(filename)s okumada hata: %(error)s"
 
 #, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
-msgstr "Error al liberar DHCP para la IP %(address)s con MAC %(mac_address)s"
+msgstr ""
+"%(mac_address)s MAC'ine sahip %(address)s IP'si için DHCP serbest "
+"bırakılamadı"
 
 #, python-format
 msgid "Error scheduling instances %(instance_uuids)s"
-msgstr "Error al planificar instancias %(instance_uuids)s"
+msgstr "Sunucular %(instance_uuids)s eşzamanlanırken hata"
 
 msgid "Error sending message to next hops."
-msgstr "Error al enviar el mensaje a los siguientes saltos"
+msgstr "İleti sonraki noktalara gönderilirken hata."
 
 #, python-format
 msgid "Error starting xvp: %s"
-msgstr "Error al iniciar xvp: %s "
+msgstr "XVP başlatılırken hata oluştu: %s"
 
 #, python-format
 msgid "Error storing key: %s"
-msgstr "Error al almacenar la llave: %s"
+msgstr "Anahtar depolanırken hata: %s"
 
 msgid "Error trying to Rescue Instance"
-msgstr "Error al intentar Rescatar Instancia"
+msgstr "Sunucu Kurtarılmaya çalışılırken hata"
 
 msgid "Error trying to reschedule"
-msgstr "Error al intentar volver a programar "
+msgstr "Yeniden zamanlama yapmaya çalışılırken hata"
 
 #, python-format
 msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Error al actualizar recursos para nodo %(node)s: %(e)s"
+msgstr "%(node)s düğümü için kaynaklar güncellenirken hata: %(e)s"
 
 msgid "Error waiting for responses from neighbor cells"
-msgstr "Error al esperar respuestas de celdas vecinas"
+msgstr "Komşu hücrelerden yanıt beklerken hata"
 
 #, python-format
 msgid "Error while trying to clean up image %s"
-msgstr "Error al intentar limpiar imagen %s"
-
-#, python-format
-msgid "Error writing to %(path)s: %(exception)s"
-msgstr "Error escribiendo en %(path)s: %(exception)s"
+msgstr "%s imajı temizlenmeye çalışılırken hata"
 
 #, python-format
 msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Error al escribir archivo de inicio de sesión de consola vm a partir de "
-"canalización de consola serial. Error: %s"
+msgstr "Seri konsol borusundan vm konsol kaydı yazmada hata. Hata: %s"
 
 #, python-format
 msgid "Error: %s"
-msgstr "Error: %s"
+msgstr "Hata: %s"
 
 #, python-format
 msgid "Exception dispatching event %(event)s: %(ex)s"
-msgstr "Excepción al asignar el suceso %(event)s: %(ex)s"
+msgstr "%(event)s olayı dağıtılırken istisna: %(ex)s"
 
 #, python-format
 msgid "Exception handling resource: %s"
-msgstr "Excepción al manejar recurso: %s"
+msgstr "İstisna ele alma kaynağı: %s"
 
 msgid "Exception in string format operation"
-msgstr "Excepción en la operación de formato de cadena"
+msgstr "Karakter dizisi biçimleme işleminde istisna"
 
 msgid "Exception loading extension"
-msgstr "Excepción al cargar extensión"
+msgstr "Eklenti yüklenirken istisna"
 
 #, python-format
 msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Excepción ejecutándose %(name)s %(type)s-enlace: %(obj)s"
+msgstr "%(name)s %(type)s-hook çalıştırılırken istisna: %(obj)s"
 
 msgid "Exception while creating table."
-msgstr "Excepción al crear la tabla."
+msgstr "Tablo oluştururken istisna."
 
 msgid "Exception while seeding instance_types table"
-msgstr "Excepción al iniciar la tabla instance_types"
+msgstr "instance_types tablosu beslenirken istisna"
 
 #, python-format
 msgid "Exception while waiting completion of volume snapshots: %s"
-msgstr "Excepción al esperar finalización de instantáneas de volumen: %s"
+msgstr "Mantıksal sürücü anlık görüntülerinin bitmesini beklerken istisna: %s"
 
 #, python-format
 msgid "Extending virtual disk failed with error: %s"
-msgstr "La extensión del disco virtual ha fallado con el error: %s"
+msgstr "Sanal diskin büyütülmesi şu hatayla başarısız oldu: %s"
 
 #, python-format
 msgid "Failed removing bridge device: '%s'"
-msgstr "Error al eliminar dispositivo de puente: '%s'"
+msgstr "Köprü aygıtı kaldırma başarısız: '%s'"
 
 #, python-format
 msgid "Failed removing net device: '%s'"
-msgstr "Fallo al remover dispositivo de red: '%s'"
+msgstr "Ağ aygıtı kaldırma başarısız: '%s'"
 
 msgid "Failed storing info cache"
-msgstr "Ha fallado el almacenamiento de memoria caché de información"
+msgstr "Bilgi zulası depolanması başarısız"
 
 msgid ""
 "Failed to allocate PCI devices for instance. Unassigning devices back to "
@@ -438,757 +413,726 @@ msgid ""
 "information, and allocation during claims is controlled via a hold on the "
 "compute node semaphore"
 msgstr ""
-"Error al asignar dispositivos PCI para instancia. Desasignando dispositivos "
-"de nuevo a pools. Esto no debe suceder, mientras el planificador tenga "
-"información acertada y se controle la asignación durante reclamos mediante "
-"la detención del semáforo de nodo de computación"
+"Sunucu için PCI aygıtları ayırma başarısız. Aygıtlar havuza geri "
+"bırakılıyor. Zamanlayıcı doğru bilgiye sahip olduğundan ve talepler "
+"sırasında ayırma, hesaplama düğümü semaforundaki tutma tarafından kontrol "
+"edildiğinden bu olmamalı"
 
 msgid "Failed to allocate network(s)"
-msgstr "Fallo al asociar red(es)"
+msgstr "Ağ(lar) ayrılamadı"
 
 #, python-format
 msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
-msgstr "Fallo al asociar %(volume_id)s en %(mountpoint)s"
+msgstr "%(volume_id)s nin %(mountpoint)s e eklenmesi başarısız"
 
 #, python-format
 msgid "Failed to attach volume at mountpoint: %s"
-msgstr "Error al adjuntar volumen a punto de montaje: %s"
+msgstr "Mantıksal sürücü bağlama noktasına eklenemedi: %s"
 
 #, python-format
 msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
-msgstr "Error al cambiar el estado de vm de %(instance_name)s a %(req_state)s"
+msgstr ""
+"%(instance_name)s vm durumunun %(req_state)s olarak değiştirilmesi başarısız"
 
 msgid "Failed to check if instance shared"
-msgstr "Fallo al verificar si la instancia se encuentra compartida"
+msgstr "Sunucunun paylaşılıp paylaşılmadığı kontrolü yapılamadı"
 
 #, python-format
 msgid ""
 "Failed to clean up the parameters on node %(node)s when unprovisioning the "
 "instance %(instance)s"
 msgstr ""
-"Error al limpiar los parámetros en nodo  %(node)s  mientras de se des-"
-"aprovisionaba instancia %(instance)s"
+"%(instance)s sunucusu hazırlığı iptal edilirken %(node)s düğümündeki "
+"parametrelerin temizlenmesi başarısız"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
-msgstr "No se ha podido limpiar el directorio %(target)s: %(e)s"
+msgstr "%(target)s dizini temizleme başarısız: %(e)s"
 
 msgid "Failed to cleanup snapshot."
-msgstr "Fallo al limpiar instantánea."
+msgstr "Anlık görüntü temizliği başarısız."
 
 #, python-format
 msgid "Failed to commit reservations %s"
-msgstr "Ha fallado la entrega de reservas %s|"
+msgstr "Rezervasyonlar gönderilemedi %s"
 
 msgid "Failed to complete a deletion"
-msgstr "Fallo durante la compleción una remoción"
+msgstr "Silme tamamlanamadı"
 
 #, python-format
 msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
 msgstr ""
-"Fallo al conectar hacia al volúmen %(volume_id)s con el volumen en "
-"%(mountpoint)s"
+"%(volume_id)s mantıksal sürücüsüne %(mountpoint)s noktasındaki mantıksal "
+"sürücü ile bağlanma başarısız"
 
 #, python-format
 msgid ""
 "Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
 msgstr ""
-"Error al copiar la imagen en memoria cahé %(source)s a %(dest)s para "
-"redimensionamiento: %(error)s"
+"Zuladaki imaj %(source)s %(dest)s e yeniden boyutlandırma için "
+"kopyalanamadı: %(error)s"
 
 msgid "Failed to deallocate network for instance."
-msgstr "Se ha encontrado un error al desasignar la red para la instancia"
+msgstr "Sunucu için ağ ilişiği kesilemedi"
 
 msgid "Failed to deallocate networks"
-msgstr "Fallo al desasociar redes"
+msgstr "Ağ ilişikleri kesilemedi"
 
 #, python-format
 msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "No se ha podido descifrar %(image_location)s en %(image_path)s"
+msgstr "%(image_path)s için %(image_location)s çözümü başarısız"
 
 #, python-format
 msgid "Failed to destroy instance: %s"
-msgstr "No se ha podido destruir instancia: %s"
+msgstr "Sunucu silme başarısız: %s"
 
 #, python-format
 msgid "Failed to detach %(device_name)s. Exception: %(exc)s"
-msgstr "Error al separar %(device_name)s. Excepción: %(exc)s"
+msgstr "%(device_name)s ayrılamadı: İstisna: %(exc)s"
 
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "No se ha podido desconectar el volumen %(volume_id)s de %(mp)s"
+msgstr "%(volume_id)s mantıksal sürücüsünün %(mp)s den ayrılması başarısız"
 
 #, python-format
 msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "No se ha podido descargar %(image_location)s en %(image_path)s"
+msgstr "%(image_path)si için %(image_location)s indirme işlemi başarısız"
 
 msgid "Failed to fetch glance image"
-msgstr "No se ha podido captar la imagen glance"
+msgstr "Glance imajı getirilirken hata"
 
 #, python-format
 msgid "Failed to find an SR for volume %s"
-msgstr "Error al encontrar SR para volumen %s"
+msgstr "%s mantıksal sürücüsü için SR bulunamadı"
 
 #, python-format
 msgid "Failed to forget the SR for volume %s"
-msgstr "Error al olvidad el SR para volumen %s"
+msgstr "%s mantıksal sürücüsü için SR unutma başarısız"
 
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
-msgstr ""
-"No se ha podido generar auditoría de uso para la instancia en el host %s "
+msgstr "%s istemcisi üzerindeki sunucu için kullanım denetimi üretilemedi"
 
 #, python-format
 msgid "Failed to get compute_info for %s"
-msgstr "Fallo al obtener compute_info para %s"
+msgstr "%s için compute_info alınamadı"
 
 msgid "Failed to get default networks"
-msgstr "Fallo al obtener las redes predeterminadas"
+msgstr "Varsayılan ağlar alınamadı"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
-msgstr "No se han podido obtener metadatos para el id de instancia: %s"
+msgstr "Sunucu kimliği için metadata alınmada hata: %s"
 
 #, python-format
 msgid "Failed to get metadata for ip: %s"
-msgstr "Fallo al generar metadatos para la ip %s"
+msgstr "IP için metadata alma hata ile sonuçlandı: %s"
 
 msgid "Failed to get nw_info"
-msgstr "No se ha podido obtener nw_info"
+msgstr "nw_info alınamadı"
 
 #, python-format
 msgid "Failed to instantiate the download handler for %(scheme)s"
-msgstr "Fallo al instanciar el manejador de descargas para %(scheme)s"
+msgstr "%(scheme)s için indirme işleyicisi ilklendirilemedi"
 
 #, python-format
 msgid "Failed to load %(cfgfile)s: %(ex)s"
-msgstr "Fallo al cargar %(cfgfile)s: %(ex)s"
+msgstr "%(cfgfile)s yüklenemedi: %(ex)s"
 
 #, python-format
 msgid "Failed to load %s"
-msgstr "Ha fallado la carga de %s"
+msgstr "%s yüklenemedi"
 
 #, python-format
 msgid "Failed to load %s-api"
-msgstr "Error al cargar %s-api"
+msgstr "%s-api yükleme başarısı"
 
 #, python-format
 msgid ""
 "Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
 msgstr ""
-"Se ha encontrado un error en el montaje del sistema de archivos de "
-"contenedor '%(image)s' en '%(target)s': : %(errors)s"
+"Kap dosya sistemi '%(image)s' '%(target)s' üstüne bağlanamadı: %(error)s"
 
 msgid "Failed to notify cells of BDM destroy."
-msgstr "Fallo al notiifcar las celdas de destrucción de BDM"
+msgstr "BDM silme hücrelerini bilgilendirme başarısız."
 
 msgid "Failed to notify cells of BDM update/create."
-msgstr "Fallo al notificar las celdas de actualización/creación de BDM."
+msgstr "BDM güncelleme/oluşturma hücrelerini bilgilendirme başarısız."
 
 msgid "Failed to notify cells of bw_usage update"
-msgstr "No se ha podido notificar a las celdas la actualización de bw_usage"
+msgstr "Hücrelerin bw_usage güncellemesi ile bilgilendirilmeleri başarısız"
 
 msgid "Failed to notify cells of instance fault"
-msgstr "No se ha podido notificar a las celdas el error de instancia"
+msgstr "Hücreler sunucu arızasıyla ilgili bilgilendirilemedi"
 
 msgid "Failed to notify cells of instance info cache update"
-msgstr ""
-"No se ha podido notificar a las celdas la actualización de memoria caché de "
-"información de instancia"
+msgstr "Sunucu bilgi zula güncelleme hücrelerini bilgilendirme başarısız"
 
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
-msgstr "No se ha podido eliminar %(base_file)s, el error era %(error)s"
+msgstr "%(base_file)s dosyasını kaldırma başarısız, %(error)s"
 
 #, python-format
 msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
-msgstr ""
-"Error al solicitar Ironic para aprovisionar instancia %(inst)s: %(reason)s"
+msgstr "Ironic'den %(inst)s sunucusunu açmasını isteme başarısız: %(reason)s"
 
 #, python-format
 msgid ""
 "Failed to retrieve encryption metadata for volume %(volume_id)s: "
 "%(exception)s"
-msgstr ""
-"Fallo al recuperar los metadatos de encripción para el volumen "
-"%(volume_id)s: %(exception)s"
+msgstr "%(volume_id)s için şifreleme metadata'sı alma başarısız: %(exception)s"
 
 msgid "Failed to retrieve ephemeral encryption key"
-msgstr "Error al recuperar clave de cifrado efímera"
+msgstr "Geçici şifreleme anahtarı alınması başarısız"
 
 msgid "Failed to revert crashed migration"
-msgstr "Se ha encontrado un error en al revertir la migración colgada"
+msgstr "Çökmüş göçün geri alınması başarısız"
 
 #, python-format
 msgid "Failed to roll back reservations %s"
-msgstr "Fallo al revertir las reservas %s"
+msgstr "Rezervasyonlar geri alınamadı %s"
 
 msgid "Failed to rollback quota for failed finish_resize"
-msgstr "Error al restaurar capacidad para finish_resize fallido"
+msgstr "Başarısız olmuş finish_resize için kota geri alma başarısız"
 
 #, python-format
 msgid "Failed to send message to cell: %(next_hop)s"
-msgstr "Error al enviar mensaje a celda: %(next_hop)s"
+msgstr "İleti hücreye gönderilemedi: %(next_hop)s"
 
 msgid "Failed to send state update notification"
-msgstr "No se ha podido enviar notificación de actualización de estado"
+msgstr "Durum güncelleme bildirimi gönderilemedi"
 
 msgid "Failed to send updated snapshot status to volume service."
 msgstr ""
-"Fallo al enviar estado de instantánea actualizada al servicio de volumen."
+"Güncellenmiş anlık görüntü durumunun mantıksal sürücü servisine gönderilmesi "
+"başarısız."
 
 msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
-"Se ha encontrado un error en la definición del nombre de instancia mediante "
-"multi_instance_display_name_template."
+"multi_instance_display_name_template kullanarak sunucu ismi ayarlanamadı."
 
 #, python-format
 msgid "Failed to start %(name)s on %(host)s:%(port)s with SSL support"
-msgstr "No se ha podido iniciar %(name)s en %(host)s:%(port)s con soporte SSL"
+msgstr "%(host)s:%(port)s üzerinde SSL destekli %(name)s başlatılamadı"
 
 msgid "Failed to start instance"
-msgstr "Fallo al iniciar instancia"
+msgstr "Sunucu başlatma başarısız"
 
 msgid "Failed to stop instance"
-msgstr "Fallo al detener instancia"
+msgstr "Sunucu durdurma başarısız"
 
 #, python-format
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
-msgstr ""
-"Fallo para intercambiar volúmen %(old_volume_id)s por %(new_volume_id)s"
+msgstr "%(old_volume_id)s nin %(new_volume_id)s ile yer değişmesi başarısız"
 
 msgid "Failed to teardown container filesystem"
-msgstr "Error al desarmar el sistema de archivo de contenedor "
+msgstr "Kap dosya sistemi koparılamadı"
 
 msgid "Failed to umount container filesystem"
-msgstr "Error al desmontar el sistema de archivos de contenedor"
+msgstr "Kap dosya sistemi ayırma başarısız"
 
 #, python-format
 msgid "Failed to understand rule %s"
-msgstr "Ha ocurrido un error al interpretar la regla %s"
+msgstr "Kural %s anlaşılamadı"
 
 msgid "Failed to unpause instance"
-msgstr "Fallo al reanudar la instancia"
+msgstr "Sunucu sürdürme başarısız"
 
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "No se ha podido ejecutar untar %(image_location)s en %(image_path)s"
+msgstr "%(image_path)s için %(image_location)s çıkarma işlemi başarısız"
 
 msgid "Failed to update usages bulk deallocating floating IP"
-msgstr "Fallo al actualizar uso de desasignación masiva de IP fotante"
+msgstr "Kullanımlar güncellenemedi değişken IP toptan bırakılıyor"
 
 msgid "Failed to update usages deallocating fixed IP"
-msgstr ""
-"Se ha encontrado un error en la actualización de los usos desasignando IP "
-"flotante"
+msgstr "Kullanımlar güncellenemedi sabit IP bırakılıyor"
 
 msgid "Failed to update usages deallocating floating IP"
-msgstr "No se han podido actualizar los usos desasignando IP flotante "
+msgstr "Kullanımlar güncellenemedi değişken IP bırakılıyor"
 
 msgid "Failed to update usages deallocating network."
-msgstr "No se han podido actualizar los usos desasignando la red."
+msgstr "Kullanımların güncellenmesi başarısız ağ bırakılıyor."
 
 msgid "Failed to update usages deallocating security group"
-msgstr ""
-"No se han podido actualizar los usos desasignando el grupo de seguridad "
+msgstr "Kullanımların güncellenmesi başarısız güvenlik grubu bırakılıyor"
 
 msgid "Failed to update usages deallocating server group"
-msgstr "Error al actualizar los usos desasignando el grupo de servidor"
+msgstr "Kullanımların güncellenmesi başarısız sunucu grubu bırakılıyor."
 
 #, python-format
 msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "No se ha podido subir %(image_location)s a %(image_path)s "
+msgstr "%(image_path)s için %(image_location)s yükleme işlemi başarısız"
 
 msgid "Failed to write configuration file"
-msgstr "No se ha podido grabar archivo de configuración"
+msgstr "Yapılandırma dosyası yazma başarısız"
 
 msgid "Failed to write inbound.csr"
-msgstr "No se ha podido grabar inbound.csr"
+msgstr "inbound.csr yazılamadı"
 
 msgid "Failed while plugging vif"
-msgstr "Fallo al conectar vif"
+msgstr "Vif takılırken başarısız olundu"
 
 msgid "Failed while unplugging vif"
-msgstr "No se ha podido desconectar vif"
+msgstr "Vif ayrılırken başarısız olundu"
 
 msgid "Failure prepping block device"
-msgstr "Fallo al preparar el dispositivo de bloques"
+msgstr "Blok aygıt hazırlanırken hata"
 
 msgid "Failure while cleaning up attached VDIs"
-msgstr "Error al limpiar VDI conectados "
+msgstr "Ekli VDI'ler temizlenmesi başarısız"
 
 #, python-format
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Excepción fatal ejecutándose %(name)s %(type)s-enlace: %(obj)s"
+msgstr "%(name)s %(type)s-hook çalıştırılırken ölümcül istisna: %(obj)s"
 
 msgid "FaultWrapper error"
-msgstr "Error de FaultWrapper"
+msgstr "FaultWrapper hatası"
 
 msgid "Get version 2 connection error"
-msgstr "Error de conexión en obtención de versión 2"
+msgstr "Get sürüm 2 bağlantı hatası"
 
 msgid "Guest does not have a console available"
-msgstr "El invitado no tiene una consola disponible"
+msgstr "Konuğun kullanılabilir bir konsolu yok"
 
 msgid "Host is member of a pool, but DB says otherwise"
-msgstr ""
-"El host es miembro de una agrupación, pero la base de datos indica lo "
-"contrario"
+msgstr "İstemci bir havuza üye, ama DB aksini söylüyor"
 
 #, python-format
 msgid ""
 "Hostname has changed from %(old)s to %(new)s. A restart is required to take "
 "effect."
 msgstr ""
-"El nombre del anfitrión ha cambiado de %(old)s a %(new)s. Se requiere un "
-"reinicio para hacer efecto."
+"Makine adı %(old)s den %(new)s e değişti. Etkinleşmesi için yeniden başlatma "
+"gerekiyor."
 
 #, python-format
 msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
 msgstr ""
-"El tamaño de la imagen %(size)d excede el tamaño permitido por el sabor "
-"%(allowed_size)d"
+"İmaj boyutu %(size)d nitelik izin verilen boyutu %(allowed_size)d yi geçti"
 
 #, python-format
 msgid ""
 "Instance compute service state on %s expected to be down, but it was up."
 msgstr ""
-"El estado de la instancia del servicio de cómputo en %s debería ser "
-"inactivo, pero se encontraba activo."
+"%s üzerindeki sunucu hesap servisi durumu kapalı olarak bekleniyordu, ama "
+"açık."
 
 msgid "Instance failed block device setup"
-msgstr "Ha fallado la configuración de dispositivo de bloque en la instancia"
+msgstr "Örnek blok aygıtı kurulumu hatalı"
 
 #, python-format
 msgid "Instance failed network setup after %(attempts)d attempt(s)"
-msgstr ""
-"La configuración de red de la instancia falló después de %(attempts)d "
-"intento(s)"
+msgstr "Sunucu %(attempts)d girişimden sonra ağ kurulumunda başarısız oldu"
 
 msgid "Instance failed to spawn"
-msgstr "La instancia no se ha podido generar"
+msgstr "Örnek oluşturmada hata"
 
 #, python-format
 msgid "Instance type %s not found for deletion"
-msgstr "No se ha encontrado el tipo de instancia %s para suprimirse"
+msgstr "Silme işlemi için %s örnek türü bulunamadı"
 
 #, python-format
 msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
-msgstr "Se intentado actualizar instancia para '%(key)s' en %(instance_uuid)s"
+msgstr "%(instance_uuid)s üzerinde '%(key)s' için sunucu güncellemesi denendi"
 
 #, python-format
 msgid "Interface %s not found"
-msgstr "Interfaz %s no encontrada"
+msgstr "Arayüz %s bulunamadı"
 
 #, python-format
 msgid "Invalid server_string: %s"
-msgstr "Serie de servidor no válida: %s"
+msgstr "Geçersiz server_string: %s"
 
 #, python-format
 msgid "Keystone failure: %s"
-msgstr "Anomalía de keystone: %s"
+msgstr "Keystone başarısızlığı: %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
-msgstr "Fallo en migración en vivo: %s"
+msgstr "Canlı Göç başarısız: %s"
 
 msgid "Migrate Receive failed"
-msgstr "Ha fallado la recepción de migración"
+msgstr "Göç Alma başarısız"
 
 msgid "Migrate Send failed"
-msgstr "Ha fallado el envío de migración"
+msgstr "Göç Gönderme başarısız"
 
 #, python-format
 msgid "Migration %s is not found during confirmation"
-msgstr "La migración %s no ha sido encontrada durante la confirmación"
+msgstr "Onaylama sırasında göç %s bulunamadı"
 
 #, python-format
 msgid ""
 "Migration of instance %(instance_id)s to host %(dest)s unexpectedly failed."
 msgstr ""
-"La migración de la instancia %(instance_id)s al anfitrión %(dest)s ha "
-"fallado inesperadamente."
+"%(instance_id)s sunucusunun %(dest)s istemcisine göçü beklenmedik şekilde "
+"başarısız oldu."
 
 msgid "Migration operation has aborted"
-msgstr "La operación de migración ha sido abortada"
+msgstr "Göç işlemi iptal edildi"
 
 #, python-format
 msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
-msgstr "Error NBD - desmontaje previo no ha limpiado /var/qemu-nbd-%s."
+msgstr "NBD hatası - önce umount /var/lock/qemu-nbd-%s yolunu temizlemedi."
 
 #, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. args="
 "%(args)r"
 msgstr ""
-"SIN IMPLEMENTAR: el agente no soporta la llamada a %(method)s. args=%(args)r"
+"UYGULANMAMIŞ: %(method)s çağrısı ajan tarafından desteklenmiyor. args="
+"%(args)r"
 
 msgid "Network driver option required, but not specified"
-msgstr ""
-"La opción de controlador de red es necesaria, pero no se ha especificado"
+msgstr "Ağ sürücüsü seçeneği gerekiyor, ama belirtilmemiş"
 
 #, python-format
 msgid "Neutron Error adding rules to security group %s"
-msgstr "Error de Neutron al agregar reglas al grupo de seguridad %s"
+msgstr "%s güvenlik grubuna kural eklerken Neutron Hatası"
 
 #, python-format
 msgid "Neutron Error creating security group %s"
-msgstr "Error de Neutron al crear el grupo de seguridad %s"
+msgstr "Güvenlik grubu %s oluştururken Neutron Hatası"
 
 #, python-format
 msgid "Neutron Error getting security group %s"
-msgstr "Error de Neutron al obtener los grupos de seguridad %s"
+msgstr "%s güvenlik grubu alınırken Neutron Hatası"
 
 msgid "Neutron Error getting security groups"
-msgstr "Error de Neutron al obtener los grupos de seguridad"
+msgstr "Güvenlik gruplarını alırken Neutron Hatası"
 
 #, python-format
 msgid "Neutron Error unable to delete %s"
-msgstr "Error de Neutron incapaz de eliminar %s"
+msgstr "Neutron Hatası %s silinemiyor"
 
 #, python-format
 msgid "Neutron Error updating security group %s"
-msgstr "Error de Neutron al actualizar el grupo de seguridad %s"
+msgstr "%s güvenlik grubu güncellemesinde Neutron Hatası"
 
 msgid "Neutron Error:"
-msgstr "Error de Neutron:"
+msgstr "Neutron Hatası:"
 
 #, python-format
 msgid "Neutron Error: %s"
-msgstr "Error de Neutron: %s"
+msgstr "Neutron Hatası: %s"
 
 #, python-format
 msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
 msgstr ""
-"Neutron ha reportado una falla en el evento %(event)s para la instancia "
-"%(uuid)s"
+"Neutron %(uuid)s sunucusu için %(event)s olayında başarısızlık raporladı"
 
 #, python-format
 msgid "Neutron error creating port on network %s"
-msgstr "Error de Neutron al crear puerto en la red: %s"
+msgstr "%s ağında bağlantı noktası oluştururken Neutron hatası"
 
 #, python-format
 msgid "No compute node record for host %s"
-msgstr "No hay registro de nodo de cómputo para host %s"
+msgstr "%s istemcisi için hesap düğüm kaydı yok"
 
 #, python-format
 msgid "No db access allowed in nova-compute: %s"
-msgstr "No se permite acceso a la base de datos en nova-compute: %s"
+msgstr "nova-compute'de db erişimine izin verilmiyor: %s"
 
 #, python-format
 msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "No se permite acceso a la base de datos en nova-dhcpbridge: %s"
+msgstr "nova-dhcpbridge'de db erişimine izin verilmiyor: %s"
 
 #, python-format
 msgid "No db access allowed in nova-network: %s"
-msgstr "No se permite acceso a base de datos en nova-network: %s"
+msgstr "nova-network'de db erişimine izin verilmiyor: %s"
 
 #, python-format
 msgid "No handler for matches of kind %s"
-msgstr "No hay manejador para coincidencias de clase %s"
+msgstr "%s türünde eşleşmeler için işleyici yok"
 
 #, python-format
 msgid "No save handler for %s"
-msgstr "No hay manejador de guardado para %s"
+msgstr "%s için kaydetme işleyicisi yok"
 
 msgid "Not all properties needed are implemented in the compute driver"
-msgstr ""
-"No todas las propiedades necesarias están implementadas en el controlador de "
-"cómputo"
+msgstr "İhtiyaç duyulan tüm özellikler hesap sürücüsünde uygulanmamış"
 
 #, python-format
 msgid "PCI device %s not found"
-msgstr "El dispositivo PCI %s no se ha encontrado"
+msgstr "PCI aygıtı %s bulunamadı"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
-msgstr ""
-"La tarea periódica sync_power_state ha tenido un error al procesar una "
-"instancia."
+msgstr "Dönemsel sync_power_state görevi bir sunucuyu işlerken hata aldı."
 
 msgid "Periodic task failed to offload instance."
-msgstr "Tarea periódica falló al descargar instancia."
+msgstr "Dönemsel görev sunucu yükünü almada başarısız."
 
 msgid "Plugin config_file get_val failed"
-msgstr "Ha fallado desconexión config_file get_val "
+msgstr "Eklenti config_file get_val başarısız"
 
 #, python-format
 msgid "Pool-Join failed: %s"
-msgstr "Fallo en la integración al conjunto: %s"
+msgstr "Havuz-Katılma başarısız: %s"
 
 #, python-format
 msgid "Pool-eject failed: %s"
-msgstr "Expulsión de conjunto fallida: %s"
+msgstr "Havuz-çıkarma başarısız: %s"
 
 #, python-format
 msgid "Pool-set_name_label failed: %s"
-msgstr "Fallo al establecer set_name_label en conjunto: %s"
+msgstr "Havuz-set_name_label başarısız: %s"
 
 #, python-format
 msgid "Pre live migration failed at %s"
-msgstr "Previo a migración en vivo falló en %s"
+msgstr "Canlı öncesi göç %s de başarısız"
 
 msgid "Read/Write data failed"
-msgstr "Fallo en la Lectura/Escritura de datos"
+msgstr "Veri okuma/yazma başarısız"
 
 msgid "Recovered model server connection!"
-msgstr "Recuperada la conexión al servidor de modelos."
+msgstr "Kurtarılmış model sunucu bağlantısı!"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on  this OS."
-msgstr "Este Sistema Operativo no soporta la generación de VM %s solicitada."
+msgstr "İstenen VM Üretimi %s bu  işletim sisteminde desteklenmiyor."
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
-msgstr ""
-"Generación de VM  solicitada %s, pero se ha proporcionado VHD en lugar de "
-"VHDX."
+msgstr "VM Oluşturma %s istendi, ama VHDX yerine VHD sağlandı."
 
 #, python-format
 msgid "Returning exception %s to caller"
-msgstr "Devolviendo excepción %s al interlocutor"
+msgstr "Çağırana %s istisnası döndürülüyor"
 
 msgid "Service error occurred during cleanup_host"
-msgstr "Ha ocurrido un error de servicio durante cleanup_host"
+msgstr "cleanup_host sırasında servis hatası oluştu"
 
 msgid "Setting instance vm_state to ERROR"
-msgstr "Estableciendo el vm_state de la instancia a ERROR"
+msgstr "Sunucu vm_state HATA olarak ayarlanıyor"
 
 msgid "Shutting down VM (cleanly) failed."
-msgstr "Ha fallado el cierre de VM (de forma limpia)."
+msgstr "VM kapatma (temizce) başarısız."
 
 msgid "Shutting down VM (hard) failed"
-msgstr "Ha fallado el cierre de VM (de forma permanente)"
+msgstr "VM kapatma (katı) başarısız"
 
 msgid ""
 "Something wrong happened when trying to delete snapshot from shelved "
 "instance."
 msgstr ""
-"Algo malo ha pasado al intentar eliminar la instantánea de la imagen "
-"almacenada."
+"Askıdaki sunucudan anlık görüntüler silinmeye çalışılırken bir şeyler ters "
+"gitti."
 
 #, python-format
 msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
-msgstr ""
-"TIEMPO DE ESPERA EXCEDIDO: La llamada a %(method)s ha excedido el tiempo de "
-"espera. args=%(args)r"
+msgstr "ZAMAN AŞIMI: %(method)s çağrısı zaman aşımına uğradı. args=%(arg)r"
 
 #, python-format
 msgid "Temporary directory is invalid: %s"
-msgstr "El directorio temporal no es válido: %s"
+msgstr "Geçici dizin geçersiz: %s"
 
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
-msgstr "El volumen Quobyte en %s todavía esta en uso."
+msgstr "%s deki Quobyte mantıksal sürücüsü hala kullanımda."
 
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr ""
-"La llamada del agente para %(method)s ha arrojado un error: %(ret)r. args="
-"%(args)r"
+msgstr "%(method)s ajan çağrısı bir hata döndürdü: %(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an invalid response: %(ret)r. args="
 "%(args)r"
 msgstr ""
-"La llamada del agente para %(method)s ha arrojado una respuesta inválida: "
-"%(ret)r. args=$(args)r"
+"%(method)s ajan çağrısı geçersiz bir yanıt döndürdü: %(ret)r. args=%(args)r"
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s."
-msgstr "La llamada a %(method)s ha devuelto un error: %(e)s."
+msgstr "%(method)s çağrısı hata döndürdü: %(e)s."
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
-msgstr "La llamada a %(method)s ha devuelto un error: %(e)s. args=%(args)r"
+msgstr "%(method)s çağrısı bir hata döndürdü: %(e)s. args=%(args)r"
 
 msgid "Transfer data failed"
-msgstr "Ha fallado la transferencia de datos"
+msgstr "Veri aktarımı başarısız"
 
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
-"Incapaz de acceder a la IP flotante %(fixed_ip)s para el puerto %(port_id)s"
+"%(port_id)s bağlantı noktası için değişken IP %(fixed_ip)s ye erişilemiyor"
 
 #, python-format
 msgid "Unable to access floating IP %s"
-msgstr "Incapaz de acceder a la Ip flotante %s"
+msgstr "%s değişken IP'sine erişilemiyor"
 
 msgid "Unable to access the rescue disk"
-msgstr "No es posible acceder al disco de recuperación"
+msgstr "Kurtarma diskine erişilemiyor"
 
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "Imposible adjuntar volumen a la instancia %s"
+msgstr "Mantıksal sürücü %s sunucusuna eklenemiyor"
 
 #, python-format
 msgid "Unable to clear device ID for port '%s'"
-msgstr "No es posible limpiar el ID del dispositivo para puerto '%s'"
+msgstr "'%s' bağlantı noktası için aygıt kimliği temizlenemedi"
 
 msgid "Unable to create VM snapshot, failing volume_snapshot operation."
-msgstr ""
-"Incapaz de crear instantánea de VM, operación de volume_snapshot fallida."
+msgstr "VM anlık görüntüsü oluşturulamıyor, volume_snapshot işlemi başarısız."
 
 msgid ""
 "Unable to create quiesced VM snapshot, attempting again with quiescing "
 "disabled."
 msgstr ""
-"Incapaz de crear instantánea de VM inmovilizada, intentando nuevamente con "
-"la inmovilidad deshabilitada"
+"Susturulmuş VM anlık görüntüsü oluşturulamadı, susturma kapatılmış olarak "
+"tekrar deneniyor."
 
 msgid "Unable to destroy VBD"
-msgstr "No ha sido posible destruir VBD"
+msgstr "VBD silinemedi"
 
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
-msgstr "No se puede ejecutar %(cmd)s. Excepción: %(exception)s"
+msgstr "%(cmd)s çalıştırılamadı. Hata: %(exception)s"
 
 msgid "Unable to find SR from VBD"
-msgstr "No es posible encontrar SR a partir de VBD"
+msgstr "VBD'den SR bulunamadı"
 
 msgid "Unable to find SR from VDI"
-msgstr "No es posible encontrar SR a partir de VDI"
+msgstr "VDI'den SR bulunamadı"
 
 #, python-format
 msgid "Unable to find address %r"
-msgstr "No se puede encontrar la dirección %r"
+msgstr "%r adresini bulmak olanaksız"
 
 msgid "Unable to get record of VDI"
-msgstr "No es posible obtener registro de VDI"
+msgstr "VDI kaydı alınamadı"
 
 msgid "Unable to get updated status"
-msgstr "No se puede obtener el estado actualizado"
+msgstr "Güncellenen durum alınamıyor"
 
 msgid "Unable to introduce VDI for SR"
-msgstr "Inposible insertar VDI para SR"
+msgstr "VDI SR için tanıtılamadı"
 
 msgid "Unable to introduce VDI on SR"
-msgstr "No es posible insertar VDI o SR"
+msgstr "VDI SR üzerinde tanıtılamadı"
 
 msgid ""
 "Unable to join. It is possible that either another node exists with the same "
 "name, or this node just restarted. We will try again in a short while to "
 "make sure."
 msgstr ""
-"No se ha podido unir. Es posible que exista otro nodo con el mismo nombre, o "
-"que este nodo se acabe de reiniciar. Volverá a intentarse en poco tiempo "
-"para asegurarse."
+"Katılınamıyor. Aynı isimde başka bir düğümün olması, veya bu düğümün henüz "
+"yeniden başlatılmış olması olası. Emin olmak için birazdan tekrar "
+"deneyeceğiz."
 
 msgid "Unable to load the virtualization driver"
-msgstr "Incapaz de cargar el controlador de virtualización"
+msgstr "Sanallaştırma sürücüsü yüklenemiyor"
 
 #, python-format
 msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
-msgstr "Incapaz de migrar VM %(vm_ref)s desde %(host)s"
+msgstr "VM %(vm_ref)s %(host)s istemcisinden göç ettirilemiyor"
 
 #, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: %(server)s."
 msgstr ""
-"No se ha podido obtener XML RRD para la máquina virtual %(vm_uuid)s con los "
-"detalles de servidor: %(server)s."
+"%(server)s sunucu detaylarına sahip VM %(vm_uuid)s için RRD XML elde "
+"edilemiyor."
 
 #, python-format
 msgid "Unable to parse rrd of %s"
-msgstr "Incapaz de analizar rrd de %s"
+msgstr "%s rrd'si ayrıştırılamadı"
 
 #, python-format
 msgid "Unable to preallocate image at path: %(path)s"
-msgstr "No es posible pre-asignar imagen a ruta: %(path)s"
+msgstr "Şu yoldaki imajın önceden ayrılması başarısız: %(path)s"
 
 #, python-format
 msgid "Unable to retrieve storage policy with name %s"
-msgstr ""
-"No ha sido posible recuperar la política de almacenamiento de nombre %s"
+msgstr "%s isimli depolama ilkesi alınamadı"
 
 #, python-format
 msgid "Unable to set up pool: %s."
-msgstr "Incapaz de establecer conjunto: %s"
+msgstr "Havuz ayarlanamıyor: %s."
 
 msgid "Unable to unplug VBD"
-msgstr "No ha sido posible desconectar VBD"
+msgstr "VBD sökülemedi"
 
 #, python-format
 msgid "Unable to update host of port %s"
-msgstr "Incapaz de actualizar el anfitrión del puerto %s"
+msgstr "%s bağlantı noktasının istemcisi güncellenemiyor"
 
 #, python-format
 msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "Encontrado %(ex_name)s inesperado : %(ex_str)s"
+msgstr "Beklenmedik %(ex_name)s yükseltildi: %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
-msgstr "Fallo de compilación inesperado, no se reprogramará la compilación."
+msgstr "Beklenmeyen inşa başarısızlığı, inşa tekrar zamanlanmıyor."
 
 msgid "Unexpected exception in API method"
-msgstr "Excepción inesperada en método API."
+msgstr "API metodunda beklenmeyen istisna"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
-msgstr "Celda '%(cell_name)s' desconocida al intentar actualizar prestaciones"
+msgstr "Yetenekler güncellenmeye çalışılırken bilinmeye hücre '%(cell_name)s'"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
-msgstr "Celda '%(cell_name)s' desconocida al intentar actualizar capacidades"
+msgstr ""
+"Kapasiteler güncellenmeye çalışılırken bilinmeyen hücre '%(cell_name)s'"
 
 #, python-format
 msgid "Unknown content in connection_info/access_mode: %s"
-msgstr "Contenido desconocido en connection_info/access_mode: %s"
+msgstr "connection_info/access_mode içinde bilinmeyen içerik: %s"
 
 msgid "Unshelve attempted but an error has occurred"
-msgstr "Se ha intentado la extracción pero ha ocurrido un error"
+msgstr "Askıdan alma denendi ama bir hata oluştu"
 
 msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
 msgstr ""
-"Se ha intentado desarchivar pero vm_state no se encuentra como SHELVED o "
-"SHELVED_OFFLOADED"
+"Askıdan almaya çalışıldı ama vm_state SHELVED veya SHELVED_OFFLOADED değil"
 
 msgid "Vifs plug failed"
-msgstr "Error de conexión Vifs"
+msgstr "Vifs takma başarısız"
 
 #, python-format
 msgid "Volume %s is associated with the instance but no SR was found for it"
 msgstr ""
-"El volumen %s está asociado con la instancia pero no se ha encontrado SR "
-"alguna para éste"
+"Mantıksal sürücü %s sunucu ile ilişkilendirilmiş ama kendisi için bir SR "
+"bulunamadı"
 
 #, python-format
 msgid "Volume is not writable. Please broaden the file permissions. Mount: %s"
 msgstr ""
-"No se puede escribir el volumen. Por favor amplíe los permisos del fichero. "
-"Montaje: %s"
+"Mantıksal sürücü yazılabilir değil. Lütfen dosya izinlerinin kapsamını "
+"artırın. Bağlama yeri: %s"
 
 #, python-format
 msgid ""
 "When loading the module %(module_str)s the following error occurred: %(ex)s"
-msgstr ""
-"Al cargar el módulo %(module_str)s se ha presentado el siguiente error: "
-"%(ex)s"
+msgstr "%(module_str)s modülü yüklenirken şu hata oluştu: %(ex)s"
 
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances on. "
 "Please check your configuration (e.g. set a default SR for the pool) and/or "
 "configure the flag 'sr_matching_filter'."
 msgstr ""
-"XenAPI es incapaz de encontrar un Storage Repository en dónde instalar las "
-"instancias invitadas. Por favor verifica tu configuración (p.ej. establece "
-"un SR predeterminado en el conjunto) y/o ocnfigura el identificador "
-"'sr_matching_filter'."
+"XenAPI konuk sunucuların yükleneceği Depolama Havuzunu bulamıyor. Lütfen "
+"yapılandırmanızı kontrol edin (örn. havuz için varsayılan SR ayarlayın) ve/"
+"veya 'sr_matching_filter' bayrağını yapılandırın."
 
 msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
-msgstr "Falló _migrate_disk_resizing_down. Restaurando vm original"
+msgstr "_migrate_disk_resizing_down başarısız. Asıl vm geri yükleniyor"
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed. Restoring orig vm due_to: %s."
-msgstr "_migrate_disk_resizing_up fallido. Restaurando vm original due_to: %s."
+msgstr ""
+"_migrate_disk_resizing_up başarısız. Asıl vm geri yükleniyor sebep: %s."
 
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
-msgstr "allocate_port_for_instance ha regresado %(ports)s puertos"
+msgstr "allocate_port_for_instance %(port)s bağlantı noktaları döndürdü"
 
 msgid "attaching network adapter failed."
-msgstr "se ha encontrado un error en la conexión del adaptador de red."
+msgstr "ağ bağdaştırıcısı ekleme başarısız."
 
 #, python-format
 msgid "compute.api::resume %s"
@@ -1199,40 +1143,40 @@ msgid "compute.api::suspend %s"
 msgstr "compute.api::suspend %s"
 
 msgid "detaching network adapter failed."
-msgstr "se ha encontrado un error en la desconexión del adaptador de red."
+msgstr "ağ bağdaştırıcısı ayırma başarısız."
 
 msgid "error during stop() in sync_power_state."
-msgstr "error durante stop() en sync_power_state."
+msgstr "sync_power_state stop() sırasında hata."
 
 #, python-format
 msgid "error opening rbd image %s"
-msgstr "Error al abrir imagen rbd %s"
+msgstr "%s rbd imajının açılmasında hata"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "imagen %(id)s en (%(base_file)s): ha fallado la verificación de imagen"
+msgstr "(%(base_file)s) deki imaj %(id)s: imaj doğrulama başarısız"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"
-msgstr "kill -HUP dnsmasq lanzó %s"
+msgstr "kill -HUP dnsmasq %s fırlattı"
 
 #, python-format
 msgid "killing radvd threw %s"
-msgstr "Matando radvd lanzado %s"
+msgstr "radvd öldürme işlemi %s fırlattı"
 
 msgid "model server went away"
-msgstr "el servidor de modelos se ha ido"
+msgstr "Model sunucusu gitti."
 
 msgid "nbd module not loaded"
-msgstr "El módulo nbd no se ha cargado"
+msgstr "nbd modülü yüklü değil"
 
 msgid "set_admin_password failed"
-msgstr "Error de set_admin_password"
+msgstr "set_admin_password başarısız"
 
 #, python-format
 msgid ""
 "status is UNKNOWN from vm_state=%(vm_state)s task_state=%(task_state)s. Bad "
 "upgrade or db corrupted?"
 msgstr ""
-"el estado es UNKNOWN de vm_state=%(vm_state)s task_state=%(task_state)s. "
-"¿Actualización errónea o base de datos dañada?"
+"durum BİLİNMİYOR vm_state=%(vm_state)s task_state=%(task_state)s. Kötü "
+"yükseltme ya da db bozuk olabilir mi?"

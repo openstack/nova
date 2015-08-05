@@ -3,343 +3,332 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
-# Pablo Sanchez <furybeat@gmail.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
-"es/)\n"
-"Language: es\n"
+"PO-Revision-Date: 2015-07-30 14:41+0000\n"
+"Last-Translator: İşbaran Akçayır <isbaran@gmail.com>\n"
+"Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
+"language/tr_TR/)\n"
+"Language: tr_TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
 msgid "%(action_str)s instance"
-msgstr "%(action_str)s instancia"
+msgstr "%(action_str)s örneği"
 
 #, python-format
 msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): generando suma de comprobación"
+msgstr "%(id)s (%(base_file)s): kontrol toplamı üretiliyor"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
-msgstr "%(name)s está escuchando en %(host)s:%(port)s"
+msgstr "%(name)s %(host)s:%(port)s üzerinde dinlemede"
 
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
-msgstr ""
-"se encontraron valores %(num_values)d , de los cuales se utilizará el valor "
-"mínimo."
+msgstr "%(num_values)d değer bulundu, bunların en küçüğü kullanılacak."
 
 #, python-format
 msgid "%(type)s limit not specified, defaulting to unlimited"
-msgstr "Límite de %(type)s no especificado, predeterminando a ilimitado"
+msgstr "%(type)s sınırı belirtilmemiş, sınırsız olarak varsayılan ayarlanıyor"
 
 #, python-format
 msgid "%(type)s limit: %(limit).02f %(unit)s, free: %(free).02f %(unit)s"
-msgstr "Límite de %(type)s: %(limit).02f %(unit)s, libre: %(free).02f %(unit)s"
+msgstr "%(type)s sınırı: %(limit).02f %(unit)s, boş: %(free).02f %(unit)s"
 
 #, python-format
 msgid "%(url)s returned with HTTP %(status)d"
-msgstr "Se ha devuelto %(url)s con HTTP %(status)d"
+msgstr "%(url)s HTTP %(status)d ile geri döndü"
 
 #, python-format
 msgid "%s is not a valid LUKS device; formatting device for first use"
 msgstr ""
-"%s no es un dispositivo LUKS válido; formateando el dispositivo para usar "
-"por primera vez"
+"%s geçerli bir LUKS aygıtı değil; aygıt ilk kullanım için biçimlendiriliyor"
 
 #, python-format
 msgid "Active base files: %s"
-msgstr "Archivos de base activos: %s"
+msgstr "Aktif temel dosyalar: %s"
 
 #, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
-"Añadiendo grupo de seguridad %(security_group_id)s al puerto %(port_id)s"
+"%(security_group_id)s güvenlik grubu %(port_id)s bağlantı noktasına ekleniyor"
 
 msgid "Allocate address"
-msgstr "Asignar dirección"
+msgstr "Adres tahsisi"
 
 #, python-format
 msgid "Allocated network: '%s' for instance"
-msgstr "Red asignada: '%s' para instancia"
+msgstr "Ağ: '%s' sunucu için ayrıldı"
 
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Asociar dirección %(public_ip)s a instancia %(instance_id)s"
+msgstr "%(instance_id)s örneğine %(public_ip)s adresini ilişkilendir"
 
 msgid "Attach interface"
-msgstr "Conectar interfaz"
+msgstr "Arayüz ekle"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr ""
-"Conectar el volumen %(volume_id)s a la instancia %(instance_id)s en "
-"%(device)s"
+msgstr "%(device)s'daki %(instance_id)s örneğine %(volume_id)s birimini bağla"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr ""
-"Conectar el volumen %(volume_id)s a la instancia %(server_id)s en %(device)s"
+msgstr "%(device)s'daki %(server_id)s örneğine %(volume_id)s birimi ekleniyor"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
-msgstr "Conectando el volumen %(volume_id)s a %(mountpoint)s"
+msgstr "%(mountpoint)s'e %(volume_id)s bölümü bağlanıyor"
 
 msgid "Attempted to unfilter instance which is not filtered"
-msgstr "Se ha intentado eliminar filtro de instancia que no está filtrada"
+msgstr "Filtrelenmemiş sunucunun filtresi kaldırılmaya çalışıldı"
 
 #, python-format
 msgid "Auditing locally available compute resources for node %(node)s"
 msgstr ""
-"Auditando recursos de cálculo disponibles localmente para nodo %(node)s"
+"Yerel olarak kullanılabilir hesap kaynakları %(node)s düğümü için inceleniyor"
 
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
-"Confirmando automáticamente la migración %(migration_id)s para la instancia "
-"%(instance_uuid)s"
+"%(instance_uuid)s sunucusu için %(migration_id)s göçü otomatik olarak "
+"onaylanıyor"
 
 msgid "Automatically hard rebooting"
-msgstr "Rearrancando automáticamente de forma permanente"
+msgstr "Otomatik olarak katı yeniden başlatma yapılıyor"
 
 #, python-format
 msgid "Base or swap file too young to remove: %s"
-msgstr ""
-"El archivo de base o de intercambio es demasiado nuevo para eliminarse: %s"
+msgstr "Taban ya da swap dosyası kaldırılamayacak kadar küçük: %s"
 
 msgid "Beginning cold snapshot process"
-msgstr "Empezando proceso de instantánea frío"
+msgstr "Soğuk anlık görüntü işlemine başlanıyor"
 
 msgid "Beginning live snapshot process"
-msgstr "Empezando proceso de instantánea en directo"
+msgstr "Canlı anlık görüntü işlemine başlanıyor"
 
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "Arrancando con el volumen %(volume_id)s en %(mountpoint)s"
+msgstr "%(mountpoint)s'de %(volume_id)s bölümü ön yükleniyor"
 
 msgid "Called setup_basic_filtering in nwfilter"
-msgstr "Se ha llamado a setup_basic_filtering en nwfilter"
+msgstr "Ağ filtresinde temel filtreleme kurulumu çağırıldı"
 
 #, python-format
 msgid "Checking Token: %(token)s, %(token_valid)s"
-msgstr "Validando Token: %(token)s, %(token_valid)s"
+msgstr "Jeton Kontrol Ediliyor: %(token)s, %(token_valid)s"
 
 msgid "Claim successful"
-msgstr "Reclamación satisfactoria"
+msgstr "Talep başarılı"
 
 #, python-format
 msgid "Compute node '%s' not found in update_available_resource."
-msgstr "No se ha encontrado nodo '%s' calculado en update_available_resource."
+msgstr "Hesap düğümü '%s' update_available_resource'de bulunamadı."
 
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
-msgstr "Registro compute_service creado para %(host)s:%(node)s"
+msgstr "%(host)s:%(node)s için compute_service kaydı oluşturuldu"
 
 #, python-format
 msgid "Compute_service record updated for %(host)s:%(node)s"
-msgstr "El registro compute_service se ha actualizado para %(host)s:%(node)s"
+msgstr "Compute_service kaydı %(host)s:%(node)s için güncellendi"
 
 #, python-format
 msgid ""
 "Config drive for instance %(instance)s on baremetal node %(node)s created."
 msgstr ""
-"Se ha creado el controlador de configuración para instancia  %(instance)s en "
-"nodo hipervisor nativo %(node)s."
+"Gerçek metal düğüm %(node)s üzerindeki sunucu %(instance)s için yapılandırma "
+"sürücüsü oluşturuldu."
 
 #, python-format
 msgid "Configured network %(network)s on host %(host)s"
-msgstr "Red configurada %(network)s en host %(host)s"
+msgstr "%(network)s ağı %(host)s istemcisi üzerinde yapılandırıldı"
 
 msgid "Configuring timezone for windows instance to localtime"
-msgstr "Configurando la zona horaria para la instancia windows a horario local"
+msgstr "Windows sunucunun zaman dilimi yerel saate ayarlanıyor"
 
 #, python-format
 msgid "Connected volume (vdi_uuid): %s"
-msgstr "Volumen conectado (vdi_uuid): %s"
+msgstr "Mantıksal sürücü bağlandı (vdi_uuid): %s"
 
 #, python-format
 msgid "Connection event '%(enabled)d' reason '%(reason)s'"
-msgstr "Incidente de conexión '%(enabled)d' razón '%(reason)s'"
+msgstr "Bağlantı olayı '%(enabled)d' sebep '%(reason)s'"
 
 #, python-format
 msgid "Copied %(source_file)s using %(module_str)s"
-msgstr "Copiado %(source_file)s usando %(module_str)s"
+msgstr "%(source_file)s %(module_str)s kullanılarak kopyalandı"
 
 #, python-format
 msgid "Copied virtual disk from %(src)s to %(dst)s."
-msgstr "Se copió el escritorio virtual desde %(src)s hacia %(dst)s."
+msgstr "Sanal disk %(src)s den %(dst)s e kopyalandı."
 
 #, python-format
 msgid "Corrupt base files: %s"
-msgstr "Archivos de base corruptos: %s "
+msgstr "Bozuk temel dosyalar: %s"
 
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 msgstr ""
-"No se ha podido encontrar el dominio en libvirt para la instancia %s. No se "
-"pueden obtener estadísticas de bloque para el dispositivo"
+"%s sunucusu için libvirt'de alan bulunamadı. Aygıt için blok istatistikleri "
+"getirilemiyor"
 
 #, python-format
 msgid "Create Security Group %s"
-msgstr "Crear Grupo de Seguridad %s"
+msgstr "%s güvenlik grubunu oluşturunuz"
 
 #, python-format
 msgid "Create assisted snapshot from volume %s"
-msgstr "Se ha creado instantánea asistida del volúmen %s"
+msgstr "%s hacminden anlık görüntü oluştur"
 
 #, python-format
 msgid "Create key pair %s"
-msgstr "Creando par de claves %s"
+msgstr "%s anahtar çiftini oluştur"
 
 #, python-format
 msgid "Create snapshot from volume %s"
-msgstr "Crear instantánea desde el volumen %s"
+msgstr "%s biriminden sistem görüntüsü oluşturuluyor"
 
 #, python-format
 msgid "Create snapshot of volume %s"
-msgstr "Crear instantánea del volumen %s"
+msgstr "Bölüm %s'in sistem anlık görüntüsünü oluştur"
 
 #, python-format
 msgid "Create volume from snapshot %s"
-msgstr "Crear volumen desde la instantánea %s"
+msgstr "%s sistem görüntüsünden birim oluştur"
 
 #, python-format
 msgid "Create volume of %s GB"
-msgstr "Crear volumen de %s GB"
+msgstr "%s GB'lık birim oluştur"
 
 msgid "Created linked-clone VM from snapshot"
-msgstr "Se creó un enlace clonado de VM para instantánea"
+msgstr "Anlık görüntüden bağlı-kopya VM oluşturuldu"
 
 #, python-format
 msgid "Creating config drive at %(path)s"
-msgstr "Creando unidad de configuración en %(path)s"
+msgstr "%(path)s de yapılandırma sürücüsü oluşturuluyor"
 
 #, python-format
 msgid "Creating event %(name)s:%(tag)s for instance %(instance_uuid)s"
-msgstr "Creando evento  %(name)s:%(tag)s para la instancia %(instance_uuid)s"
+msgstr "Olay %(name)s:%(tag)s sunucu %(instance_uuid)s için oluşturuluyor"
 
 msgid "Creating image"
-msgstr "Creando imagen"
+msgstr "İmaj oluşturuluyor"
 
 #, python-format
 msgid "De-registering image %s"
-msgstr "Des-registrando la imagen %s"
+msgstr "%s imaj kaydı siliniyor"
 
 #, python-format
 msgid "Delete key pair %s"
-msgstr "Borrar para de claves %s"
+msgstr "%s anahtar çiftini sil"
 
 #, python-format
 msgid "Delete security group %s"
-msgstr "Borrar grupo de seguridad %s"
+msgstr "%s güvenlik grubunu siliniz"
 
 #, python-format
 msgid "Delete snapshot with id: %s"
-msgstr "Suprimir instantánea con el ID: %s"
+msgstr "%s id'li sistem görüntüsü siliniyor"
 
 #, python-format
 msgid "Delete volume with id: %s"
-msgstr "Suprimir volumen con el id: %s"
+msgstr "%s id'li birim siliniyor"
 
 #, python-format
 msgid "Deleted %s snapshots."
-msgstr "Se eliminaron %s las instantáneas."
+msgstr "%s anlık görüntü silindi."
 
 #, python-format
 msgid "Deleted virtual disk %s."
-msgstr "Se eliminó el escritorio virtual %s."
+msgstr "Sanal disk %s silindi."
 
 msgid "Deleting instance as it has been evacuated from this host"
-msgstr "Borrando instancia ya que ha sido evacuada de este nodo."
+msgstr "Sunucu bu sunucudan tahliye edildiğinden siliniyor"
 
 #, python-format
 msgid "Deleting instance files %s"
-msgstr "Eliminado los archivos de instancia %s"
+msgstr "Sunucu dosyaları %s siliniyor"
 
 #, python-format
 msgid "Deleting orphan compute node %s"
-msgstr "Eliminando nodo de cómputo huérfano %s"
+msgstr "Artık hesap düğümü %s siliniyor"
 
 #, python-format
 msgid "Deletion of %s complete"
-msgstr "La remoción de %s se ha completado"
+msgstr "%s silinmesi tamamlandı"
 
 #, python-format
 msgid "Deletion of %s failed"
-msgstr "La remoción de %s ha fallado"
+msgstr "%s silinmesi başarısız"
 
 msgid "Destroyed the VM"
-msgstr "Se ha destruido la máquina virtual"
+msgstr "VM silindi"
 
 msgid "Destroying VM"
-msgstr "Destruyendo VM "
+msgstr "VM Siliniyor"
 
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
-"Desrtuyendo instancia con etiqueta de nombre '%s' la cual ha sido marcada "
-"como ELIMINADA pero todavía se encuentra presente en el anfitrión."
+"İsim etiketi '%s' olan ve DELETED olarak işaretlenmesine rağmen istemcide "
+"bulunan sunucu siliniyor."
 
 #, python-format
 msgid "Detach interface %s"
-msgstr "Desconectar interfaz %s"
+msgstr "%s arayüzünü ayır"
 
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "Desconectar el volumen %(volume_id)s del punto de montaje %(mp)s"
+msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
 
 #, python-format
 msgid "Detach volume %s"
-msgstr "Desasociar volumen %s"
+msgstr "Birimi ayır %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
-msgstr "Desconectando de la API del volumen: %s"
+msgstr "Mantıksal sürücü api'sinden ayrılıyor: %s"
 
 #, python-format
 msgid "Dev %(dev_number)s attached to instance %(instance_name)s"
-msgstr "Dev %(dev_number)s adjuntados a instancia %(instance_name)s"
+msgstr "Aygıt %(dev_number)s %(instance_name)s sunucusuna eklendi"
 
 msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr ""
-"Ha fallado la asignación de dispositivo. Se volverá a intentar dentro de 2 "
-"segundos."
+msgstr "Aygıt ayırma başarısız. 2 saniye içinde tekrar denenecek."
 
 #, python-format
 msgid "Disabling host %s."
-msgstr "Inhabilitando el host %s."
+msgstr "%s istemcisini kapatmak."
 
 #, python-format
 msgid "Disassociate address %s"
-msgstr "Desasociar dirección %s"
+msgstr "Adresi kes %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "Desconectando VDI obsoleto %s de domU de cálculo "
+msgstr "Vadesi geçmiş VDI %s hesap domU'sundan ayrılıyor"
 
 #, python-format
 msgid "Downloaded OVA image file %(image_ref)s"
-msgstr "Se descargó el fichero de imagen OVA %(image_ref)s"
+msgstr "OVA imaj dosyası %(image_ref)s indirildi"
 
 #, python-format
 msgid "Downloaded image file data %(image_ref)s"
-msgstr "Se descargaron datos del fichero de imagen %(image_ref)s"
+msgstr "İmaj dosya verisi %(image_ref)s indirildi"
 
 #, python-format
 msgid ""
@@ -347,79 +336,74 @@ msgid ""
 "does not match the vm_power_state from the hypervisor (%(vm_power_state)s). "
 "Updating power_state in the DB to match the hypervisor."
 msgstr ""
-"Durante _sync_instance_power_state el power_state de la Base de Datos  "
-"(%(db_power_state)s) no coincide con el vm_power_state del hipervisor "
-"(%(vm_power_state)s). Actualizando power_state en la Base de Datos para "
-"coincidir con el hipervisor."
+" _sync_instance_power_state sırasında DB power_state (%(db_power_state)s) "
+"hipervizör (%(vm_power_state)s) den gelene vm_power_state ile eşleşmiyor. "
+"DB'deki power_state hipervizör'deki ile eşleşecek şekilde güncelleniyor."
 
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
-"Durante sync_power_state la instancia ha dejado una tarea pendiente "
-"(%(task)s). Omitir."
+"sync_power_state sırasında sunucunun bekleyen bir görevi var (%(task)s). "
+"Atla."
 
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to "
 "host %(dst)s"
 msgstr ""
-"Durante el proceso sync_power, la instancia se ha movido del host %(src)s al "
-"host %(dst)s"
+"sync_power süreci sırasında sunucu %(src)s istemcisinden %(dst)s istemcisine "
+"taşındı"
 
 msgid "During wait destroy, instance disappeared."
-msgstr "Durante la destrucción de espera, la instancia ha desaparecido."
+msgstr "Silme bekleme sırasında, sunucu ortadan kayboldu."
 
 #, python-format
 msgid "Enabling host %s."
-msgstr "Habilitando el host %s."
+msgstr "%s istemcisi etkinleştirmek."
 
 msgid "Ensuring static filters"
-msgstr "Asegurando filtros estáticos"
+msgstr "Durağan filtreler koruma altına alındı"
 
 #, python-format
 msgid "Error %(ex)s, migration failed"
-msgstr "Error %(ex)s, la migración falló"
+msgstr "Hata %(ex)s, göç başarısız"
 
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
-"Error auto confirmando modificación de tamaño: %s. Se intentará "
-"posteriormente."
+"Yeniden boyutlandırmanın otomatik onaylanmasında hata: %s. Daha sonra tekrar "
+"denenecek."
 
 #, python-format
 msgid "Error in handshake format: %s"
-msgstr "Error al reconocer el formato: %s"
+msgstr "El sıkışma biçiminde hata: %s"
 
 #, python-format
 msgid "Error in handshake: %s"
-msgstr "Error en reconocimiento: %s"
+msgstr "El sıkışmada hata: %s"
 
 #, python-format
 msgid "Failed to get image info from path %(path)s; error: %(error)s"
-msgstr ""
-"No se ha podido obtener la imagen de la ruta %(path)s; error: %(error)s"
+msgstr "İmaj bilgisi %(path)s yolundan alınamadı; hata: %(error)s"
 
 #, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
-msgstr ""
-"No se ha podido montar sistema de archivos (se espera para instancias no "
-"Linux): %s "
+msgstr "Dosya sistemi bağlanamadı (linux olmayan sunucularda beklenir): %s"
 
 #, python-format
 msgid ""
 "Failed to undefine network filter %(name)s. Try %(cnt)d of %(max_retry)d."
 msgstr ""
-"No se ha podido anular la definición del filtro de red  %(name)s. Intente "
-"%(cnt)d de %(max_retry)d."
+"Ağ filtresi %(name)s'in tanımı kaldırılamadı. Deneme %(cnt)d / %(max_retry)d."
 
 #, python-format
 msgid "Fault thrown: %s"
-msgstr "Error emitido: %s"
+msgstr "Hata fırlatıldı: %s"
 
 #, python-format
 msgid "Filter %s returned 0 hosts"
-msgstr "El filtro %s ha arrojado 0 anfitriones"
+msgstr "%s süzgeci 0 istemci döndürdü"
 
 #, python-format
 msgid ""
@@ -427,84 +411,82 @@ msgid ""
 "%(used_ram)sMB phys_disk=%(phys_disk)sGB used_disk=%(used_disk)sGB "
 "total_vcpus=%(total_vcpus)s used_vcpus=%(used_vcpus)s pci_stats=%(pci_stats)s"
 msgstr ""
-"Vista final del recurso: nombre=%(node)s phys_ram=%(phys_ram)sMB used_ram="
-"%(used_ram)sMB phys_disk=%(phys_disk)sGB used_disk=%(used_disk)sGB "
-"total_vcpus=%(total_vcpus)s used_vcpus=%(used_vcpus)s pci_stats=%(pci_stats)s"
+"Son kaynak görünümü: isim=%(node)s fiziksel_ram=%(phys_ram)sMB "
+"kullanılan_ram=%(used_ram)sMB fiziksel_disk=%(phys_disk)sGB kullanılan_disk="
+"%(used_disk)sGB toplam_vcpu=%(total_vcpus)s kullanılan_vcpu=%(used_vcpus)s "
+"pci_istatistikleri=%(pci_stats)s"
 
 #, python-format
 msgid "Finishing migration network for instance %s"
-msgstr "Finalizando la migración de red para la instancia %s"
+msgstr "%s sunucusu için göç ağı bitiriliyor"
 
 #, python-format
 msgid "Fixing previous mount %s which was not unmounted correctly."
-msgstr ""
-"Arreglando los montajes previos %s que no fueron montados correctamente."
+msgstr "Düzgün bağı ayrılmamış önceki %s bağı düzeltiliyor."
 
 #, python-format
 msgid "Floating IP %s is not associated. Ignore."
-msgstr "La IP flotante %s no está asociada. Ignorar."
+msgstr "Değişken IP '%s' ilişkilendirilmemiş. Atla."
 
 #, python-format
 msgid ""
 "Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
 "%(since_str)s"
 msgstr ""
-"Forzando una sincronización de instancias, project_id=%(projid_str)s, "
+"Sunucuların eşzamanlaması zorlanıyor, project_id=%(projid_str)s, "
 "updated_since=%(since_str)s"
 
 #, python-format
 msgid ""
 "Forcing direct route to %(cell_name)s because of 'target_cell' scheduler hint"
 msgstr ""
-"Forzando la ruta directa hacia %(cell_name)s debido al consejo del "
-"planificador 'target_cell'"
+"'target_cell' zamanlayıcı ipucu sebebiyle %(cell_name)s hücrelerine direk "
+"rota zorlanıyor"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr ""
-"Se han encontrado %(instance_count)d rearranques colgados de más de "
-"%(timeout)d segundos"
+"%(timeout)d saniyeden daha eski %(instance_count)d askıda kalmış yeniden "
+"başlatma bulundu"
 
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
-"Se han encontrado %(migration_count)d migraciones sin confirmar de más de "
-"%(confirm_window)d segundos"
+"%(confirm_window)d saniyeden daha eski %(migration_count)d onaylanmamış göç "
+"bulundu"
 
 #, python-format
 msgid ""
 "Found an unconfirmed migration during delete, id: %(id)s, status: %(status)s"
 msgstr ""
-"Se ha encontrado una migración no confirmada durante la remoción, "
-"identificador: %(id)s, estado: %(status)s"
+"Silme sırasında onaylanmamış bir göç bulundu, id: %(id)s, durum: %(status)s"
 
 msgid "Get console output"
-msgstr "Obtener salida de consola "
+msgstr "Konsol çıktısını al"
 
 #, python-format
 msgid "Get console output for instance %s"
-msgstr "Obtener salida de la consola para la instancia %s"
+msgstr "%s örneği için konsol çıktısını getir"
 
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
-"Fallo al obtener estadísticas de bloque, el dispositivo puede haber sido "
-"desasociado. Instancia=%(instance_name)s Disco=%(disk)s Código=%(errcode)s "
-"Error=%(e)s"
+"Blok istatistiklerinin alınması başarısız, aygıt ayrılmış olabilir. Sunucu="
+"%(instance_name)s Disk=%(disk)s Kod=%(errcode)s Hata=%(e)s"
 
 msgid "Going to destroy instance again."
-msgstr "Se va a volver a destruir la instancia."
+msgstr "Sunucu tekrar silinecek."
 
 msgid "Got request to destroy instance"
-msgstr "Se ha obtenido una solicitud para destruir instancia"
+msgstr "Sunucunun silinmesi için istek alındı"
 
 #, python-format
 msgid "HTTP exception thrown: %s"
-msgstr "Excepción de HTTP emitida: %s"
+msgstr "HTTP istisnası fırlatıldı: %s"
 
 #, python-format
 msgid ""
@@ -512,184 +494,173 @@ msgid ""
 "is now associated with a new instance that is in the process of allocating "
 "it's network."
 msgstr ""
-"Ignorando peticion de liberar IP fija %(address)s con MAC %(mac)s ya que "
-"esta siendo ahora asociada con una nueva instancia que está en el proceso de "
-"reservar su red."
+"Kendi ağını ayırmak üzere olan yeni bir sunucu ile ilişkilendirilmiş "
+"olduğundan %(mac)s MAC'ine sahip %(address)s sabit IP'sini bırakma isteği "
+"göz ardı ediliyor."
 
 #, python-format
 msgid "Image %s is no longer used by this node. Pending deletion!"
-msgstr "La imagen %s ya no está en uso por este nodo. Remoción pendiente!"
+msgstr "İmaj %s artık bu düğüm tarafından kullanılmıyor. Silme bekleniyor!"
 
 #, python-format
 msgid "Image %s is no longer used. Deleting!"
-msgstr "La imagen %s ya no está en uso. Eliminando!"
+msgstr "İmaj %s artık kullanılmıyor. Siliniyor!"
 
 #, python-format
 msgid "Image %s was deleted underneath us"
-msgstr "La imagen %s se ha eliminado de manera ilegal"
+msgstr "%s imajı altımızdan silindi"
 
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
 "duration: %(duration).2f secs for image %(image_id)s"
 msgstr ""
-"Datos de creación de imagen, almacenables en memoria caché: %(cache)s, "
-"descargados: %(downloaded)s duración: %(duration).2f segundos por imagen "
-"%(image_id)s"
+"İmaj oluşturma verisi, zulalanabilir: %(cache)s, indirilmiş: %(downloaded)s "
+"süre: %(image_id)s imajı için %(duration).2f saniye"
 
 #, python-format
 msgid "Import key %s"
-msgstr "Importar la clave %s"
+msgstr "%s anahtarını içeriye aktar"
 
 #, python-format
 msgid ""
 "Instance %(name)s running on %(host)s could not be found in the database: "
 "assuming it is a worker VM and skip ping migration to a new host"
 msgstr ""
-"La instancia %(name)s que se ejecuta en %(host)s no se ha podido encontrar "
-"en la base de datos, suponiendo que se trata de una máquina virtual de "
-"trabajador y se salta la migración de ping a un nuevo host"
+"%(host)s üzerinde çalışan %(name)s sunucusu veri tabanında bulunamadı: Bir "
+"işçi VM olduğu varsayılıyor ve yeni bir istemciye ping göçü atlanıyor"
 
 msgid "Instance already shutdown."
-msgstr "La instancia ya ha sido cerrada."
+msgstr "Sunucu zaten kapalı."
 
 msgid "Instance destroyed successfully."
-msgstr "La instancia se ha destruido satisfactoriamente. "
+msgstr "Sunucu başarıyla silindi."
 
 msgid "Instance disappeared during terminate"
-msgstr "La instancia ha desaparecido durante la terminación"
+msgstr "Sunucu sonlandırma sırasından ortadan kayboldu"
 
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
-msgstr "El cierre de la instancia ha fallado en %d segundos."
+msgstr "Sunucu %d saniyede kapatılamadı."
 
 msgid "Instance found in migrating state during startup. Resetting task_state"
-msgstr ""
-"Se ha encontrado una instancia en estado de migración durante el inicio. "
-"Restableciendo task_state"
+msgstr "Sunucu başlatılırken göç durumunda bulundu. task_state sıfırlanıyor"
 
 msgid ""
 "Instance has been marked deleted already, removing it from the hypervisor."
-msgstr ""
-"La instancia ya ha sido marcada como eliminada, removiendo del hipervisor."
+msgstr "Sunucu zaten silinmiş olarak işaretlenmiş, hipervizörden siliniyor."
 
 msgid "Instance is already in deleting state, ignoring this request"
-msgstr ""
-"La instancia ya se encuentra en estado de remoción, ignorando esta solicitud"
+msgstr "Sunucu zaten silme durumunda, bu istek göz ardı ediliyor"
 
 msgid "Instance is already powered off in the hypervisor when stop is called."
-msgstr ""
-"La Instancia se apagado inmediatamente en el hipervisor luego de que se pida "
-"su detención."
+msgstr "Durdurma çağrıldığında sunucu zaten hipervizör'de kapalıydı."
 
 msgid ""
 "Instance is configured with a file console, but the backing file is not "
 "(yet?) present"
 msgstr ""
-"La instancia se configuró con una consola de fichero, sin embargo, el "
-"fichero viejo (¿aún?) no está presente"
+"Sunucu bir dosya konsoluyla yapılandırılmış, ama destekleyen dosya (henüz?) "
+"mevcut değil"
 
 msgid "Instance is not found during confirmation"
-msgstr "La instancia no ha sido encontrada durante la confirmación"
+msgstr "Sunucu onaylama esnasında bulunamadı"
 
 #, python-format
 msgid "Instance launched has CPU info: %s"
-msgstr "La instancia iniciada tiene información de CPU: %s"
+msgstr "Başlatılan sunucunun CPU bilgisi: %s"
 
 msgid ""
 "Instance lifecycle events from the compute driver have been disabled. Note "
 "that lifecycle changes to an instance outside of the compute service will "
 "only be synchronized by the _sync_power_states periodic task."
 msgstr ""
-"Se han inhabilitado los eventos de ciclo de vida de instancia del "
-"controlador de cómputo. Recuerde que los cambios del ciclo de vida a una "
-"instancia fuera del servicio de cómputo únicamente se sincronizaran por la "
-"tarea periódica _sync_power_states periodic task."
+"Hesaplama sürücüsünden sunucu yaşamdöngüsü olayları kapatıldı. Bir sunucuya "
+"hesaplama servisi dışındaki yaşamdöngüsü değişikliklerinin yalnızca "
+"_sync_power_states devresel görevi tarafından eşzamanlanabileceğini "
+"unutmayın."
 
 msgid "Instance may be started again."
-msgstr "La instancia puede volver a iniciarse."
+msgstr "Sunucu tekrar başlatılabilir."
 
 msgid "Instance may have been confirmed during delete"
-msgstr "la instanacia debe haber sido confirmada durante la remoción"
+msgstr "Sunucu silme sırasında onaylanmış olabilir"
 
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
-"Es posible que la instancia se haya rearrancado durante el arranque no "
-"permanente, por consiguiente volver ahora."
+"Sunucu yumuşak yeniden başlatma sırasında yeniden başlatılmış olabilir, yani "
+"şimdi dön."
 
 msgid "Instance rebooted successfully."
-msgstr "La instancia ha rearrancado satisfactoriamente."
+msgstr "Sunucu başarıyla yeniden başlatıldı."
 
 msgid "Instance running successfully."
-msgstr "La instancia se está ejecutando satisfactoriamente."
+msgstr "Sunucu başarıyla çalışıyor."
 
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
-msgstr ""
-"El cierre de la instancia ha concluido satisfactoriamente luego de %d "
-"segundos."
+msgstr "Sunucu %d saniye sonra başarıyla kapatıldı."
 
 msgid "Instance shutdown successfully."
-msgstr "El cierre de la instancia ha concluido satisfactoriamente."
+msgstr "Sunucu başarıyla kapatıldı."
 
 msgid "Instance soft rebooted successfully."
-msgstr ""
-"La instancia ha rearrancado satisfactoriamente de forma no permanente. "
+msgstr "Sunucu başarıyla yumuşak yeniden başlatıldı."
 
 msgid "Instance spawned successfully."
-msgstr "Instancia generada satisfactoriamente. "
+msgstr "Sunucu başarıyla açıldı."
 
 msgid "Instance was successfully rebuilt"
-msgstr "Instancia recreada satisfactoriamente."
+msgstr "Sunucu başarıyla yeniden inşa edildi"
 
 #, python-format
 msgid "Invalid cluster or resource pool name : %s"
-msgstr "Cluster o nombre de pool de recursos inválido: %s"
+msgstr "Geçersiz küme ya da kaynak havuz ismi: %s"
 
 #, python-format
 msgid "Invalid request: %s"
-msgstr "Solicitud no válida: %s "
+msgstr "Geçersiz istek: %s"
 
 #, python-format
 msgid "Libvirt host capabilities %s"
-msgstr "Capacidades del host Libvirt %s"
+msgstr "Libvirt istemci yetenekleri %s"
 
 #, python-format
 msgid "Loaded extensions: %s"
-msgstr "Extensiones cargadas: %s"
+msgstr "Yüklü eklentiler: %s"
 
 #, python-format
 msgid "Loading compute driver '%s'"
-msgstr "Cargando controlador de cálculo '%s' "
+msgstr "Hesaplama sürücüsü '%s' yükleniyor"
 
 #, python-format
 msgid "Loading network driver '%s'"
-msgstr "Cargando controlador de red '%s'"
+msgstr "Ağ sürücüsü '%s' yükleniyor"
 
 #, python-format
 msgid "Loop mount error: %s"
-msgstr "Error de montaje en bucle: %s"
+msgstr "Döngü bağlama hatası: %s"
 
 msgid "Manipulating interface files directly"
-msgstr "Manipulando archivos de interfaz directamente "
+msgstr "Arayüz dosyaları doğrudan değiştiriliyor"
 
 msgid "Migrating"
-msgstr "Migrando"
+msgstr "Göç ediliyor"
 
 #, python-format
 msgid "Migrating instance to %s finished successfully."
-msgstr "La migración de la instancia hacia %s ha finalizado exitosamente."
+msgstr "Sunucunun %s'e göçü başarıyla bitti."
 
 #, python-format
 msgid "Migration %s is already confirmed"
-msgstr "La migración %s ya ha sido confirmada"
+msgstr "%s göçü zaten onaylanmış"
 
 #, python-format
 msgid "Migration %s may have been confirmed during delete"
-msgstr "La migración %s debe haber sido conifrmada durante la remoción"
+msgstr "%s göçü silme sırasında onaylanmış olabilir"
 
 msgid "Migration operation has completed"
-msgstr "Se ha completado la operación de migración"
+msgstr "Göç işlemi tamamlandı"
 
 #, python-format
 msgid ""
@@ -697,515 +668,498 @@ msgid ""
 "(bytes processed=%(processed_memory)d, remaining=%(remaining_memory)d, total="
 "%(total_memory)d)"
 msgstr ""
-"Migración ejecutándose por %(secs)d segundos, memoria %(remaining)d%% "
-"restante; (bytes processed=%(processed_memory)d, restante="
-"%(remaining_memory)d, total=%(total_memory)d)"
+"Göç %(secs)d saniyedir çalışıyor, hafıza %(remaining)d%% kalan; (işlenen "
+"bayt=%(processed_memory)d, kalan=%(remaining_memory)d, toplam="
+"%(total_memory)d)"
 
 #, python-format
 msgid "Mounted volume: %s"
-msgstr "Volumen montado: %s"
+msgstr "Bağlı mantıksal sürücü: %s"
 
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr ""
-"El punto de montaje %(mountpoint)s se desligó de la instancia "
-"%(instance_name)s"
+msgstr "%(mountpoint)s bağlantı noktası %(instance_name)s sunucusundan ayrıldı"
 
 #, python-format
 msgid "Moved virtual disk from %(src)s to %(dst)s."
-msgstr "Se movió el escritorio virtual desde %(src)s hacia %(dst)s."
+msgstr "Sanal disk %(src)s den %(dst)s e taşındı."
 
 #, python-format
 msgid "NBD mount error: %s"
-msgstr "Error de montaje de NBD: %s"
+msgstr "NBD bağlama hatası: %s"
 
 #, python-format
 msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Red desasignada para instancia (ips fija: '%s' )"
+msgstr "Sunucu için ayrılan ağ bırakıldı (sabit ip: '%s')"
 
 #, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr ""
-"No hay celdas disponibles al planificar. Se reintentará dentro de "
-"%(sleep_time)s segundo(s)"
+"Zamanlamada hiçbir hücre kullanılabilir değil.  %(sleep_time)s saniye içinde "
+"tekrar denenecek"
 
 msgid "Pausing"
-msgstr "Poniéndose en pausa"
+msgstr "Durduruluyor"
 
 #, python-format
 msgid ""
 "Port %s from network info_cache is no longer associated with instance in "
 "Neutron. Removing from network info_cache."
 msgstr ""
-"El puerto %s de la red info_cache ya no está asociado con la instancia en "
-"Neutron. Removiendo de red info_cache."
+"Ağ info_cache'inden %s bağlantı noktası artık Neutron'daki sunucu ile "
+"ilişkili değil. Ağ info_cache'inden siliniyor."
 
 msgid "Post operation of migration started"
-msgstr "Se ha iniciado la operación posterior de migración"
+msgstr "Göç sonrası işlemler başladı"
 
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
-"Apagando la instancia con nombre '%s' que está marcada como ELIMINADA pero "
-"sigue presente en el anfitrión."
+"İsim etiketi '%s' olan ve DELETED olarak işaretlenmesine rağmen istemcide "
+"bulunan sunucu kapatılıyor."
 
 #, python-format
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "Poniendo el host %(host_name)s en modalidad de mantenimiento %(mode)s."
+msgstr "%(host_name)s istemcisi %(mode)s bakım kipine alınıyor."
 
 #, python-format
 msgid "Reboot instance %r"
-msgstr "Reiniciar instancia %r"
+msgstr "%r örneğini tekrar yükle"
 
 msgid "Rebooting instance"
-msgstr "Rearrancando instancia"
+msgstr "Sunucu yeniden başlatılıyor"
 
 msgid "Rebooting instance after nova-compute restart."
-msgstr "Rearrancando instancia después de reiniciar nova-compute. "
+msgstr "Sunucu nova-compute yeniden başlatma sonrası yeniden başlatılıyor."
 
 msgid "Rebuilding instance"
-msgstr "Volver a crear instancia"
+msgstr "Sunucu yeniden inşa ediliyor"
 
 #, python-format
 msgid "Received Token: %(token)s, %(token_dict)s"
-msgstr "Se ha recibido el Token: %(token)s, %(token_dict)s"
+msgstr "Jeton Alındı: %(token)s, %(token_dict)s"
 
 #, python-format
 msgid ""
 "Received a delete update from an unknown host '%s'. Re-created its "
 "InstanceList."
 msgstr ""
-"Se ha recibido una actualización de borrado de un host desconocido '%s'. Se "
-"ha creado de nuevo su Instancia de lista."
+"Bilinmeyen bir istemciden '%s' silme güncellemesi alındı. SunucuListesi "
+"yeniden oluşturuldu."
 
 #, python-format
 msgid ""
 "Received a sync request from an unknown host '%s'. Re-created its "
 "InstanceList."
 msgstr ""
-"Se ha recibido una solicitud de sincronización de un host desconocido '%s'. "
-"Se ha creado de nuevo su  Instancia de lista."
+"Bilinmeyen bir istemciden '%s' eşzamanlama isteği alındı. SunucuListesi "
+"yeniden oluşturuldu."
 
 #, python-format
 msgid ""
 "Received an update from an unknown host '%s'. Re-created its InstanceList."
 msgstr ""
-"Se ha recibido una actualización de un host desconocido '%s'. Se ha creado "
-"de nuevo su  Instancia de lista."
+"Bilinmeyen bir istemciden '%s' güncelleme alındı. SunucuListesi yeniden "
+"oluşturuldu."
 
 msgid "Reclaiming deleted instance"
-msgstr "Reclamando instancia suprimida"
+msgstr "Silinen örnek kurtarılıyor"
 
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Imagen registrada %(image_location)s con el id %(image_id)s"
+msgstr "%(image_id)s id ile %(image_location)s imajı kaydedildi"
 
 #, python-format
 msgid "Release address %s"
-msgstr "Liberar dirección %s"
+msgstr "%s adresini serbest bırak"
 
 #, python-format
 msgid "Removable base files: %s"
-msgstr "Archivos de base eliminables: %s"
+msgstr "Taşınabilir temel dosyalar: %s"
 
 #, python-format
 msgid "Removing base or swap file: %s"
-msgstr "Eliminando archivo de base o de intercambio: %s "
+msgstr "Taban ya da swap dosyası kaldırılıyor: %s"
 
 #, python-format
 msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr "Eliminando nodo de cálculo inactivo %(host)s:%(node)s del planificador"
+msgstr "Ölü hesaplama düğümü %(host)s:%(node)s zamanlayıcıdan çıkarılıyor"
 
 #, python-format
 msgid "Request made with invalid token: %s"
-msgstr "Solicitud realizada con señal no válida: %s "
+msgstr "İstek geçersiz jetonla yapıldı: %s"
 
 #, python-format
 msgid "Request made with missing token: %s"
-msgstr "Solicitud realizada con señal que falta: %s "
+msgstr "İstek eksik jetonla yapıldı: %s"
 
 #, python-format
 msgid "Request: %s"
-msgstr "Solicitud: %s "
+msgstr "İstek: %s"
 
 msgid "Rescuing"
-msgstr "Rescatando"
+msgstr "Kurtarılıyor"
 
 msgid "Resuming"
-msgstr "Reanudando"
+msgstr "Devam ediliyo"
 
 msgid "Retrieving diagnostics"
-msgstr "Recuperando diagnósticos"
+msgstr "Teşhis alınıyor"
 
 msgid "Root password set"
-msgstr "Contraseña raíz establecida"
+msgstr "Kök parolası ayarlandı"
 
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
-"Ejecutando auditoría de uso de instancia para %(host)s desde %(begin_time)s "
-"hasta %(end_time)s. %(number_instances)s instancias."
+"%(host)s istemcisi için %(begin_time)s %(end_time)s aralığı için sunucu "
+"kullanım denetimi çalıştırılıyor. %(number_instances)s sunucu."
 
 msgid ""
 "Service started deleting the instance during the previous run, but did not "
 "finish. Restarting the deletion now."
 msgstr ""
-"El servicio ha iniciado la remoción de la instancia durante la ejecución "
-"previa, pero no ha finalizado. Reiniciando la remoción ahora."
+"Servis sunucunun silinmesini önceki çalışmasında başlattı, ama bitirmedi. "
+"Silme şimdi yeniden başlatılıyor."
 
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
-msgstr "Estableciendo la instancia de vuelta a %(state)s tras: %(error)s"
+msgstr "Sunucu tekrar %(state)s olarak ayarlanıyor: %(error)s"
 
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
-msgstr "Marcando la instancia de nuevo como ACTIVA después de: %s"
+msgstr "Sunucu tekrar ACTIVE Olarak ayarlanıyor: %s"
 
 #, python-format
 msgid "Skipped adding %s because an equivalent index already exists."
-msgstr "Omitiendo la adición de %s porque ya existe un índice equivalente."
+msgstr "%s eklenmesi atlanıyor çünkü eşdeğerde bir indis zaten mevcut."
 
 msgid ""
 "Skipped adding instances_project_id_deleted_idx because an equivalent index "
 "already exists."
 msgstr ""
-"Omitiendo la adición de instances_project_id_deleted_idx porque ya existe un "
-"índice equivalente."
+"instances_project_id_deleted_idx eklenmesi atlanıyor çünkü eşdeğerde bir "
+"indis zaten mevcut."
 
 msgid ""
 "Skipped adding reservations_deleted_expire_idx because an equivalent index "
 "already exists."
 msgstr ""
-"Omitiendo la adición de reservations_deleted_expire_idx porque ya existe un "
-"índice equivalente."
+"reservations_deleted_expire_idx eklenmesi atlanıyor çünkü eşdeğerde bir "
+"indis zaten mevcut."
 
 #, python-format
 msgid "Skipping quiescing instance: %(reason)s."
-msgstr "Omitiendo instancia de desactivación: %(reason)s."
+msgstr "Sunucunun yeni işleme başlaması atlanıyor: %(reason)s."
 
 msgid "Snapshot extracted, beginning image upload"
-msgstr "Se ha extraído instantánea, empezando subida de imagen"
+msgstr "Anlık görüntü çıkarıldı, imaj yüklemesine başlanıyor"
 
 msgid "Snapshot image upload complete"
-msgstr "Subida de imagen de instantánea se ha completado"
+msgstr "Anlık görüntü imajı yüklemesi bitti"
 
 msgid "Soft shutdown succeeded."
-msgstr "El cierre suave ha concluido satisfactoriamente."
+msgstr "Yumuşak kapatma başarılı."
 
 msgid "Spawning new instance"
-msgstr "Generando nueva instancia"
+msgstr "Yeni sunucu açılıyor"
 
 #, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "Iniciando el nodo %(topic)s (versión %(version)s)"
+msgstr "%(topic)s düğümü başlatılıyor (sürüm %(version)s)"
 
 msgid "Starting halted instance found during reboot"
-msgstr "Iniciando instancia detenida encontrada durante rearranque"
+msgstr "Yeniden başlatma sırasında bulunan durdurulmuş sunucu başlatılıyor"
 
 msgid "Starting instance..."
-msgstr "Iniciando instancia..."
+msgstr "Örnek başlatılıyor.."
 
 #, python-format
 msgid "Starting migration network for instance %s"
-msgstr "Comenzando migración de red para la instancia %s"
+msgstr "%s sunucusu için göç ağı başlatılıyor"
 
 #, python-format
 msgid "Starting nova-xvpvncproxy node (version %s)"
-msgstr "Iniciando el nodo nova-xvpvncproxy (versión %s)"
+msgstr "nova-xvpvncproxy düğümü başlatılıyor (sürüm %s)"
 
 msgid "Stopping WSGI server."
-msgstr "Deteniendo el servidor WSGI. "
+msgstr "WSGI sunucusu durduruluyor."
 
 #, python-format
 msgid "Successfully powered off Ironic node %s"
-msgstr "Apagado satisfactoriamente nodo Ironic %s"
+msgstr "Ironic düğümü %s başarıyla kapatıldı"
 
 #, python-format
 msgid "Successfully powered on Ironic node %s"
-msgstr "Encendido correctamente nodo Ironic %s"
+msgstr "Ironic düğümü %s başarıyla açıldı"
 
 #, python-format
 msgid "Successfully provisioned Ironic node %s"
-msgstr "Provisionado satisfactoriamente nodo Ironic %s"
+msgstr "Ironic düğüm %s başarıyla hazırlandı"
 
 #, python-format
 msgid "Successfully rebooted Ironic node %s"
-msgstr "Reiniciado satisfactoriamente nodo Ironic %s"
+msgstr "Ironic düğümü %s başarıyla yeniden başlatıldı"
 
 #, python-format
 msgid "Successfully synced instances from host '%s'."
-msgstr "Las instancias del host '%s' se han sincronizado correctamente."
-
-#, python-format
-msgid "Successfully transferred using %s"
-msgstr "Exitosamente transferido utilizando %s"
+msgstr "Sunucular '%s' istemcisinden başarıyla eş zamanlandı."
 
 #, python-format
 msgid "Successfully unprovisioned Ironic node %s"
-msgstr "Desprovisionado satfisfactoriamente nodo Ironic %s"
+msgstr "Sağlanan Ironic düğümü %s başarıyla geri alındı"
 
 #, python-format
 msgid "Swapping volume %(old_volume)s for %(new_volume)s"
-msgstr "Cambiando volumen %(old_volume)s por %(new_volume)s"
+msgstr "%(old_volume)s mantıksal sürücüsü %(new_volume)s ile değiştiriliyor"
 
 #, python-format
 msgid "Task possibly preempted: %s"
-msgstr "Tarea posiblemente preapropiada: %s"
+msgstr "Görev muhtemelen etkisizleştirildi: %s"
 
 msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr ""
-"No se puede encontrar el nombre de iniciador ISCSI. Eligiendo el "
-"predeterminado"
+msgstr "ISCSI başlatıcısı ismi bulunamadı. Varsayılan seçiliyor"
 
 msgid "The imported VM was unregistered"
-msgstr "La VM importada no estaba registrada"
+msgstr "İçe aktarılan VM'nin kaydı silinmişti"
 
 #, python-format
 msgid ""
 "The instance sync for host '%s' did not match. Re-created its InstanceList."
 msgstr ""
-"La instancia de sincronización para el host '%s' no coincide. Se ha creado "
-"de nuevo su Instancia de lista."
+"'%s' istemcisi için sunucu eşzamanlama eşleşmedi. SunucuListesi yeniden "
+"oluşturuldu."
 
 #, python-format
 msgid ""
 "The volume's backing has been relocated to %s. Need to consolidate backing "
 "disk file."
 msgstr ""
-"El volúmen de apoyo ha sido reubicado a %s. Se necesita consolidar el "
-"archivo de disco de apoyo."
+"Mantıksal sürücünün desteği %s e tekrar konumlandırıldı. Destek disk dosyası "
+"güçlendirilmeli."
 
 msgid "Timestamp is invalid."
-msgstr "La indicación de fecha y hora no es válida."
+msgstr "Zaman damgası geçersiz."
 
 #, python-format
 msgid "Total %(type)s: %(total)d %(unit)s, used: %(used).02f %(unit)s"
-msgstr "%(type)s totales: %(total)d %(unit)s utilizados: %(used).02f %(unit)s"
+msgstr "Toplam %(type)s: %(total)d %(unit)s, kullanılan: %(used).02f %(unit)s"
 
 #, python-format
 msgid "Total usable vcpus: %(tcpu)s, total allocated vcpus: %(ucpu)s"
-msgstr "Total vcpus disponible: %(tcpu)s, total vcpus asignado: %(ucpu)s"
+msgstr "Toplam kullanılabilir vcpu: %(tcpu)s, toplam ayrılmış vcpu: %(ucpu)s"
 
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
-msgstr "Se ha devuelto registro de consola truncado, se han ignorado %d bytes "
+msgstr "Kırpılmış konsol kaydı döndü, %d bayt göz ardı edildi"
 
 #, python-format
 msgid "Trying to disconnected unmounted volume at %s"
-msgstr "Intentando desconectar volumen montado en %s"
+msgstr ""
+"%s deki bağlanmamış mantıksal sürücünün bağlantısı kesilmeye çalışılıyor"
 
 msgid "Unable to import guestfs, falling back to VFSLocalFS"
-msgstr "No es posible importar guestfs, retrocediendo a VFSLocalFS"
+msgstr "guestfs içe aktarılamıyor, VFSLocalFS'e geri dönülüyor"
 
 #, python-format
 msgid "Unable to release %s because vif doesn't exist"
-msgstr "No se puede liberar %s porque no existe vif."
+msgstr "vif mevcut olmadığından %s bırakılamıyor"
 
 #, python-format
 msgid "Unable to release %s because vif object doesn't exist"
-msgstr "No se puede liberar %s porque no existe objeto vif."
+msgstr "vif nesnesi mevcut olmadığından %s bırakılamıyor"
 
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
-"No es posible utilizar la lista de dominio masivo de APIs, retrocediendo a "
-"la ruta del código lenta: %(ex)s"
+"Toplu alan listesi API'leri kullanılamıyor, yavaş kod yoluna geri dönülüyor: "
+"%(ex)s"
 
 #, python-format
 msgid ""
 "Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr ""
-"Solicitud no autorizada para el controlador=%(controller)s y la acción="
-"%(action)s"
+msgstr "%(controller)s kontrolcüsü ve %(action)s işlemi için izinsiz istek"
 
 #, python-format
 msgid "Unexpected error: %s"
-msgstr "Error inesperado: %s "
+msgstr "Beklenmeyen hata: %s"
 
 msgid "Unpausing"
-msgstr "Cancelando la pausa"
+msgstr "Sürdürülüyor"
 
 msgid "Unrescuing"
-msgstr "Cancelando rescate"
+msgstr "Kurtarılmıyor"
 
 msgid "Updating bandwidth usage cache"
-msgstr "Actualizando memoria caché de uso de ancho de banda"
+msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
 
 #, python-format
 msgid "Updating from migration %s"
-msgstr "Actualizando desde la migración %s"
+msgstr "%s göçünden güncelleniyor"
 
 #, python-format
 msgid "Updating image %s publicity"
-msgstr "Actualizando imagen %s públicamente"
+msgstr "%s imaj tanıtımı güncelleniyor"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"
-msgstr "Actualizando el estado original de instancia hacia: '%s'"
+msgstr "Sunucu asıl durumuna güncelleniyor: '%s'"
 
 msgid "Using config drive"
-msgstr "Utilizando unidad de configuración"
+msgstr "Yapılandırma sürücüsü kullanılıyor"
 
 msgid "Using config drive for instance"
-msgstr "Utilizando dispositivo de configuración para instancia"
+msgstr "Sunucu için yapılandırma sürücüsü kullanılıyor"
 
 msgid "V3 API has been disabled by configuration"
-msgstr "La configurción ha inhabilitado V3 API"
+msgstr "V3 API yapılandırma ile kapatılmış"
 
 #, python-format
 msgid ""
 "VBD %(vbd_ref)s uplug failed with \"%(err)s\", attempt %(num_attempt)d/"
 "%(max_attempts)d"
 msgstr ""
-"La desconexión del VBD %(vbd_ref)s ha fallado con \"%(err)s\", intento "
-"%(num_attempt)d/%(max_attempts)d"
+"VBD %(vbd_ref)s ayırma başarısız \"%(err)s\", deneme %(num_attempt)d/"
+"%(max_attempts)d"
 
 #, python-format
 msgid "VBD %s already detached"
-msgstr "VBD %s ya se ha desconectado"
+msgstr "VBD %s zaten ayrılmış"
 
 #, python-format
 msgid "VM %(state)s (Lifecycle Event)"
-msgstr "VM %(state)s (Evento de Ciclo de vida)"
+msgstr "VM %(state)s (Yaşamdöngüsü Olayı)"
 
 #, python-format
 msgid "VMware vCenter version: %s"
-msgstr "VMware vCenter versión: %s"
+msgstr "VMware vCenter sürümü: %s"
 
 msgid ""
 "Virt driver does not support 'get_available_resource'. Compute tracking is "
 "disabled."
 msgstr ""
-"El controlador Virt no soporta 'get_available_resource'. El seguimiento de "
-"cálculo está inhabilitado."
+"Virt sürücüsü 'get_available_resource' desteklemiyor. Hesaplama takibi "
+"kapatıldı."
 
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
 "been rebooted or crashed. Updating totals."
 msgstr ""
-"El volúmen(%s) tiene mejores estadísticas de lo encontrado en la base de "
-"datos. la instancia debió haber reiniciado o colapsado. Actualizando los "
-"totales."
+"Mantıksal sürücü(%s) veri tabanında bulunandan daha düşük istatistiklere "
+"sahip. Sunucu yeniden başlatılmış ya da çökmüş olmalı. Tutarlar "
+"güncelleniyor."
 
 msgid "WSGI server has stopped."
-msgstr "El servidor WSGI se ha detenido."
+msgstr "WSGI sunucusu durduruldu."
 
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr ""
-"Trabajando en la remoción de la instantánea %s de la instancia almacenada..."
+"Askıdaki sunucudan %s anlık görüntüsünün silinmesi üzerine çalışılıyor..."
 
 #, python-format
 msgid "Writing stored info to %s"
-msgstr "Grabando información almacenada en %s"
+msgstr "Depolanan bilgi %s'e yazılıyor"
 
 msgid "XenServer tools are not installed in this image"
-msgstr "Las herramientas de XenServer no están instaladas en esta imagen"
+msgstr "XenServer araçları bu imajda kurulu değil"
 
 msgid ""
 "XenServer tools are present in this image but are not capable of network "
 "injection"
-msgstr ""
-"Las herramientas de XenServer están presentes en esta imagen, pero no tienen "
-"capacidad de inyección de red"
+msgstr "XenServer araçları bu imajda mevcut ama ağ enjeksiyonu yetenekleri yok"
 
 msgid ""
 "XenServer tools installed in this image are capable of network injection.  "
 "Networking files will not bemanipulated"
 msgstr ""
-"Las herramientas de XenServer instaladas en esta imagen tienen capacidad de "
-"inyección de red. Los archivos de red no se manipularán"
+"Bu imajda kurulmuş XenServer araçları ağ enjeksiyonunu destekliyor.  Ağ "
+"dosyalarında oynama yapılmayacak"
 
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 msgstr ""
-"Es posible que vea el error \"libvirt: error de QEMU: Domino no encontrado: "
-"ningún dominio con un nombre coincidente.\" Este error se puede ignorar sin "
-"ningún riesgo."
+"\"libvirt: QEMU hatası: Alan bulunamadı: Bu isimle eşleşen bir alan yok.\" "
+"hatası görebilirsiniz. Bu hatayı göz ardı edebilirsiniz."
 
 msgid "_post_live_migration() is started.."
-msgstr "Se ha iniciado _post_live_migration()."
+msgstr "_post_live_migration() başlatıldı.."
 
 #, python-format
 msgid "bringing vm to original state: '%s'"
-msgstr "poniendo vm en estado original: '%s'"
+msgstr "vm asıl durumuna getiriliyor: '%s'"
 
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr "data: %(data)r, fpath: %(fpath)r"
+msgstr "veri: %(data)r, fpath: %(fpath)r"
 
 #, python-format
 msgid "deleted %s"
-msgstr "Se ha eliminado %s"
+msgstr "%s silindi"
 
 #, python-format
 msgid "disk not on shared storage, rebuilding from: '%s'"
-msgstr ""
-"El disco on está en almacenamiento compartido, reconstruyendo desde: '%s'"
+msgstr "disk paylaşımlı depolamada, yeniden inşa ediliyor: '%s'"
 
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
-"disco en almacenamiento compartido, volviendo a crear utilizando disco "
-"existente"
+"disk paylaşımlı depolamada, mevcut disk kullanılarak yeniden oluşturuluyor"
 
 msgid "findmnt tool is not installed"
-msgstr "La herramienta findmnt no está instalada"
+msgstr "findmnt aracı kurulmamış"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
-msgstr "imagen %(id)s en (%(base_file)s): comprobando"
+msgstr "(%(base_file)s) deki %(id)s imajı: kontrol ediliyor"
 
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
 msgstr ""
-"imagen %(id)s en (%(base_file)s): se ha saltado la verificación de imagen, "
-"no hay ningún hash almacenado"
+"(%(base_file)s) deki %(id)s imajı: imaj doğrulama atlandı, depolanan özet yok"
 
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
-"imagen %(id)s en (%(base_file)s): en uso: en este nodo %(local)d local, "
-"%(remote)d en otros nodos que comparten este almacenamiento de instancia"
+"(%(base_file)s) deki %(id)s imajı: kullanımda: bu düğümde %(local)d yerel, "
+"diğer düğümlerde %(remote)d bu sunucunun depolamasını paylaşıyor"
 
 #, python-format
 msgid "injecting file to %s"
-msgstr "inyectando archivo a %s"
+msgstr "Dosya %s'e ekleniyor"
 
 #, python-format
 msgid "instance chain %s disappeared during refresh, skipping"
-msgstr ""
-"La instancia en cadena %s desapareció durante la actualización, omitiendo"
+msgstr "Sunucu zinciri %s tazeleme sırasında ortadan kayboldu, atlanıyor"
 
 msgid ""
 "instance is in SHELVED_OFFLOADED state, cleanup the instance's info from "
 "database."
 msgstr ""
-"instancia está en estado SHELVED_OFFLOADED, limpiar la información de la "
-"base de datos."
+"Sunucu SHELVED_OFFLOADED durumunda, sunucu bilgisini veri tabanından temizle."
 
 msgid "instance snapshotting"
-msgstr "creación de instantánea de instancia"
+msgstr "sunucunun anlık görüntüsü alınıyor"
 
 msgid "instance termination disabled"
-msgstr "terminación de instancia inhabilitada"
+msgstr "sunucu sonlandırma kapatıldı"
 
 msgid "nova-conductor connection established successfully"
-msgstr "Se ha establecido la conexión nova-conductor correctamente"
+msgstr "nova-conductor bağlantı başarıyla sağlandı"
 
 #, python-format
 msgid "preserve multipath_id %s"
-msgstr "conservar multipath_id %s"
+msgstr "multipath_id %s'i koru"
 
 #, python-format
 msgid ""
@@ -1213,19 +1167,18 @@ msgid ""
 "%(user_id)s, resource: %(res)s, tracked usage: %(tracked_use)s, actual "
 "usage: %(in_use)s"
 msgstr ""
-"quota_usages fuera de sincronía, actualizando. project_id: %(project_id)s, "
-"user_id: %(user_id)s, recurso: %(res)s, traza de uso: %(tracked_use)s, uso "
-"actual: %(in_use)s"
+"quota_usages eşzamanlanmamış, güncelleniyor. proje_id: %(project_id)s, "
+"kullanıcı_id: %(user_id)s, kaynak: %(res)s, takip edilen kullanım: "
+"%(tracked_use)s, asıl kullanım: %(in_use)s"
 
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr ""
-"volver a asignar IP flotante %(address)s desde instancia %(instance_id)s"
+msgstr "%(instance_id)s sunucusundan %(address)s değişken IP'sini yeniden ata"
 
 #, python-format
 msgid "tap-ctl check: %s"
-msgstr "Revisión del tap-ctl: %s"
+msgstr "tap-ctl kontrolü: %s"
 
 #, python-format
 msgid "vol=%s"
-msgstr "vol=%s"
+msgstr "birim=%s"
