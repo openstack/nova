@@ -280,7 +280,7 @@ libvirt_volume_drivers = [
     'rbd=nova.virt.libvirt.volume.volume.LibvirtNetVolumeDriver',
     'sheepdog=nova.virt.libvirt.volume.volume.LibvirtNetVolumeDriver',
     'nfs=nova.virt.libvirt.volume.volume.LibvirtNFSVolumeDriver',
-    'smbfs=nova.virt.libvirt.volume.volume.LibvirtSMBFSVolumeDriver',
+    'smbfs=nova.virt.libvirt.volume.smbfs.LibvirtSMBFSVolumeDriver',
     'aoe=nova.virt.libvirt.volume.aoe.LibvirtAOEVolumeDriver',
     'glusterfs='
         'nova.virt.libvirt.volume.glusterfs.LibvirtGlusterfsVolumeDriver',
