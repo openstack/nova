@@ -385,6 +385,13 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
         return conf
 
+    def get_config_ib_hostdev(self, instance, vif, image_meta,
+                              inst_type, virt_type):
+        conf = vconfig.LibvirtConfigGuestHostdevPCI()
+        pci_slot = vif['profile']['pci_slot']
+        designer.set_vif_host_backend_ib_hostdev_config(conf, pci_slot)
+        return conf
+
     def get_config_vrouter(self, instance, vif, image_meta,
                            inst_type, virt_type):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -526,6 +533,25 @@ class LibvirtGenericVIFDriver(object):
                           run_as_root=True)
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+
+    def plug_ib_hostdev(self, instance, vif):
+        fabric = vif.get_physical_network()
+        if not fabric:
+            raise exception.NetworkMissingPhysicalNetwork(
+                network_uuid=vif['network']['id']
+            )
+        pci_slot = vif['profile']['pci_slot']
+        device_id = instance['uuid']
+        vnic_mac = vif['address']
+        try:
+            utils.execute('ebrctl', 'add-port', vnic_mac, device_id,
+                          fabric, network_model.VIF_TYPE_IB_HOSTDEV,
+                          pci_slot, run_as_root=True)
+        except processutils.ProcessExecutionError:
+            LOG.exception(
+                _LE("Failed while plugging ib hostdev vif"),
+                instance=instance
+            )
 
     def plug_802qbg(self, instance, vif):
         pass
@@ -749,6 +775,19 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
+
+    def unplug_ib_hostdev(self, instance, vif):
+        fabric = vif.get_physical_network()
+        if not fabric:
+            raise exception.NetworkMissingPhysicalNetwork(
+                network_uuid=vif['network']['id']
+            )
+        vnic_mac = vif['address']
+        try:
+            utils.execute('ebrctl', 'del-port', fabric, vnic_mac,
+                          run_as_root=True)
+        except Exception:
+            LOG.exception(_LE("Failed while unplugging ib hostdev vif"))
 
     def unplug_802qbg(self, instance, vif):
         pass

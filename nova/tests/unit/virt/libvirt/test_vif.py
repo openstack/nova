@@ -255,6 +255,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                  type=network_model.VIF_TYPE_MLNX_DIRECT,
                                  devname='tap-xxx-yyy-zzz')
 
+    vif_ib_hostdev = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                   address='ca:fe:de:ad:be:ef',
+                                   network=network_8021,
+                                   type=network_model.VIF_TYPE_IB_HOSTDEV,
+                                   vnic_type=network_model.VNIC_TYPE_DIRECT,
+                                   ovs_interfaceid=None,
+                                   details={
+                                       network_model.VIF_DETAILS_VLAN: '100'},
+                                   profile={'pci_vendor_info': '1137:0043',
+                                            'pci_slot': '0000:0a:00.1',
+                                            'physical_network': 'phynet1'})
+
     vif_mlnx_net = network_model.VIF(id='vif-xxx-yyy-zzz',
                                      address='ca:fe:de:ad:be:ef',
                                      network=network_mlnx,
@@ -395,9 +407,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def _assertTypeAndPciEquals(self, node, type, vif):
         self.assertEqual(node.get("type"), type)
+        self._assertPciEqual(node, vif, type="pci")
+
+    def _assertPciEqual(self, node, vif, type=None):
         address = node.find("source").find("address")
-        addr_type = address.get("type")
-        self.assertEqual("pci", addr_type)
+        if type:
+            addr_type = address.get("type")
+            self.assertEqual(type, addr_type)
         pci_slot = "%(domain)s:%(bus)s:%(slot)s.%(func)s" % {
                      'domain': address.get("domain")[2:],
                      'bus': address.get("bus")[2:],
@@ -1018,6 +1034,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "mode", "passthrough")
         self._assertMacEquals(node, self.vif_mlnx)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_ib_hostdev_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_ib_hostdev)
+        doc = etree.fromstring(xml)
+        node = doc.findall('./devices/hostdev')[0]
+        self.assertEqual(1, len(node))
+        self._assertPciEqual(node, self.vif_ib_hostdev)
 
     def test_midonet_ethernet_vif_driver(self):
         d = vif.LibvirtGenericVIFDriver()
