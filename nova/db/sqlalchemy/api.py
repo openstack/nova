@@ -1581,7 +1581,7 @@ def _handle_objects_related_type_conversions(values):
             values[key] = str(values[key])
 
     datetime_keys = ('created_at', 'deleted_at', 'updated_at',
-                     'launched_at', 'terminated_at', 'scheduled_at')
+                     'launched_at', 'terminated_at')
     convert_objects_related_datetimes(values, *datetime_keys)
 
 

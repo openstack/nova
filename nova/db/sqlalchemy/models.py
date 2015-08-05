@@ -273,7 +273,9 @@ class Instance(BASE, NovaBase):
 
     reservation_id = Column(String(255))
 
-    scheduled_at = Column(DateTime)
+    # NOTE(sbiswas7): 'scheduled_at' is still in the database
+    # and can be removed in the future release.
+
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
