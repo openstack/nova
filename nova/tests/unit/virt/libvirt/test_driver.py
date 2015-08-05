@@ -13329,6 +13329,44 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_create_noquiesce(self):
         self.test_volume_snapshot_create(quiesce=False)
 
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    def test_can_quiesce(self, ver):
+        self.flags(virt_type='kvm', group='libvirt')
+        instance = objects.Instance(**self.inst)
+        image_meta = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        self.assertIsNone(self.drvr._can_quiesce(instance, image_meta))
+
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    def test_can_quiesce_bad_hyp(self, ver):
+        self.flags(virt_type='xxx', group='libvirt')
+        instance = objects.Instance(**self.inst)
+        image_meta = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        self.assertRaises(exception.InstanceQuiesceNotSupported,
+                          self.drvr._can_quiesce, instance, image_meta)
+
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=False)
+    def test_can_quiesce_bad_ver(self, ver):
+        self.flags(virt_type='kvm', group='libvirt')
+        instance = objects.Instance(**self.inst)
+        image_meta = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        self.assertRaises(exception.InstanceQuiesceNotSupported,
+                          self.drvr._can_quiesce, instance, image_meta)
+
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    def test_can_quiesce_agent_not_enable(self, ver):
+        self.flags(virt_type='kvm', group='libvirt')
+        instance = objects.Instance(**self.inst)
+        image_meta = {}
+        self.assertRaises(exception.QemuGuestAgentNotEnabled,
+                          self.drvr._can_quiesce, instance, image_meta)
+
     def test_volume_snapshot_create_outer_success(self):
         instance = objects.Instance(**self.inst)
 
