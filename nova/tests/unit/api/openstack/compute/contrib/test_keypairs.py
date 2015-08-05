@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_serialization import jsonutils
 import webob
 
@@ -397,6 +398,105 @@ class KeypairsTestV22(KeypairsTestV21):
 
     def _assert_keypair_type(self, res_dict):
         self.assertEqual('ssh', res_dict['keypair']['type'])
+
+
+class KeypairsTestV210(KeypairsTestV22):
+    wsgi_api_version = '2.10'
+
+    def test_keypair_list_other_user(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs?user_id=foo',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=True)
+        with mock.patch.object(self.controller.api, 'get_key_pairs') as mock_g:
+            self.controller.index(req)
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('foo', userid)
+
+    def test_keypair_list_other_user_not_admin(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs?user_id=foo',
+                                      version=self.wsgi_api_version)
+        with mock.patch.object(self.controller.api, 'get_key_pairs'):
+            self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller.index, req)
+
+    def test_keypair_show_other_user(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs/FAKE?user_id=foo',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=True)
+        with mock.patch.object(self.controller.api, 'get_key_pair') as mock_g:
+            self.controller.show(req, 'FAKE')
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('foo', userid)
+
+    def test_keypair_show_other_user_not_admin(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs/FAKE?user_id=foo',
+                                      version=self.wsgi_api_version)
+        with mock.patch.object(self.controller.api, 'get_key_pair'):
+            self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller.show, req, 'FAKE')
+
+    def test_keypair_delete_other_user(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs/FAKE?user_id=foo',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=True)
+        with mock.patch.object(self.controller.api,
+                               'delete_key_pair') as mock_g:
+            self.controller.delete(req, 'FAKE')
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('foo', userid)
+
+    def test_keypair_delete_other_user_not_admin(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs/FAKE?user_id=foo',
+                                      version=self.wsgi_api_version)
+        with mock.patch.object(self.controller.api, 'delete_key_pair'):
+            self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller.delete, req, 'FAKE')
+
+    def test_keypair_create_other_user(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=True)
+        body = {'keypair': {'name': 'create_test',
+                            'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a'}}
+        with mock.patch.object(self.controller.api,
+                               'create_key_pair',
+                               return_value=(mock.MagicMock(), 1)) as mock_g:
+            res = self.controller.create(req, body=body)
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('8861f37f-034e-4ca8-8abe-6d13c074574a', userid)
+        self.assertIn('keypair', res)
+
+    def test_keypair_import_other_user(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=True)
+        body = {'keypair': {'name': 'create_test',
+                            'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a',
+                            'public_key': 'public_key'}}
+        with mock.patch.object(self.controller.api,
+                               'import_key_pair') as mock_g:
+            res = self.controller.create(req, body=body)
+            userid = mock_g.call_args_list[0][0][1]
+            self.assertEqual('8861f37f-034e-4ca8-8abe-6d13c074574a', userid)
+        self.assertIn('keypair', res)
+
+    def test_keypair_create_other_user_not_admin(self):
+        req = fakes.HTTPRequest.blank(self.base_url +
+                                      '/os-keypairs',
+                                      version=self.wsgi_api_version)
+        body = {'keypair': {'name': 'create_test',
+                            'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.create,
+                          req, body=body)
 
 
 class KeypairPolicyTestV2(KeypairPolicyTestV21):

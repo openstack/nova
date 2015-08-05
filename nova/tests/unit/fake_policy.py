@@ -266,10 +266,14 @@ policy_data = """
     "compute_extension:keypairs:delete": "",
 
     "os_compute_api:os-keypairs": "",
-    "os_compute_api:os-keypairs:index": "",
-    "os_compute_api:os-keypairs:show": "",
-    "os_compute_api:os-keypairs:create": "",
-    "os_compute_api:os-keypairs:delete": "",
+    "os_compute_api:os-keypairs:index":
+        "rule:admin_api or user_id:%(user_id)s",
+    "os_compute_api:os-keypairs:show":
+        "rule:admin_api or user_id:%(user_id)s",
+    "os_compute_api:os-keypairs:create":
+        "rule:admin_api or user_id:%(user_id)s",
+    "os_compute_api:os-keypairs:delete":
+        "rule:admin_api or user_id:%(user_id)s",
     "os_compute_api:os-lock-server:lock": "",
     "os_compute_api:os-lock-server:unlock": "",
     "os_compute_api:os-lock-server:unlock:unlock_override": "",
