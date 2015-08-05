@@ -112,6 +112,10 @@ _POWER_STATE_MAP = {
     ironic_states.POWER_OFF: power_state.SHUTDOWN,
 }
 
+_UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
+                       ironic_states.ERROR, ironic_states.DEPLOYWAIT,
+                       ironic_states.DEPLOYING)
+
 
 def map_power_state(state):
     try:
@@ -899,10 +903,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             #             without raising any exceptions.
             return
 
-        if node.provision_state in (ironic_states.ACTIVE,
-                                    ironic_states.DEPLOYFAIL,
-                                    ironic_states.ERROR,
-                                    ironic_states.DEPLOYWAIT):
+        if node.provision_state in _UNPROVISION_STATES:
             self._unprovision(self.ironicclient, instance, node)
 
         self._cleanup_deploy(context, node, instance, network_info)
