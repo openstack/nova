@@ -454,6 +454,34 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             }
         self.assertEqual(expect, mapping)
 
+    def test_get_disk_mapping_blockdev_root_on_spawn(self):
+        # A disk mapping with a blockdev initializing the default root
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = {}
+
+        block_device_info = {
+            'block_device_mapping': [
+                {'connection_info': None,
+                 'mount_device': None,
+                 'boot_index': 0,
+                 'device_type': None,
+                 'delete_on_termination': True},
+                ]
+            }
+        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                             "virtio", "ide",
+                                             image_meta,
+                                             block_device_info)
+
+        expect = {
+            '/dev/vda': {'bus': 'virtio', 'dev': 'vda',
+                         'type': 'disk', 'boot_index': '1'},
+            'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            }
+        self.assertEqual(expect, mapping)
+
     def test_get_disk_mapping_blockdev_eph(self):
         # A disk mapping with a blockdev replacing the ephemeral device
         instance_ref = objects.Instance(**self.test_instance)
