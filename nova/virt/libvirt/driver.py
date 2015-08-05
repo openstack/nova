@@ -2630,6 +2630,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((not bool(instance.get('image_ref')))
                 or 'disk' not in disk_mapping)
 
+    @staticmethod
+    def _has_local_disk(instance, disk_mapping):
+        """Determines whether the VM has a local disk
+
+        Determines whether the disk mapping indicates that the VM
+        has a local disk (e.g. ephemeral, swap disk and config-drive).
+        """
+        if disk_mapping:
+            if ('disk.local' in disk_mapping or
+                'disk.swap' in disk_mapping or
+                'disk.config' in disk_mapping):
+                return True
+        return False
+
     def _inject_data(self, instance, network_info, admin_pass, files, suffix):
         """Injects data in a disk image
 
@@ -5034,6 +5048,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._is_shared_block_storage(instance, dest_check_data,
                                               block_device_info)})
 
+        disk_info_text = self.get_instance_disk_info(
+            instance, block_device_info=block_device_info)
+        booted_from_volume = self._is_booted_from_volume(instance,
+                                                         disk_info_text)
+        has_local_disk = self._has_local_disk(instance, disk_info_text)
+
         if dest_check_data['block_migration']:
             if (dest_check_data['is_shared_block_storage'] or
                     dest_check_data['is_shared_instance_path']):
@@ -5046,9 +5066,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                     block_device_info)
 
         elif not (dest_check_data['is_shared_block_storage'] or
-                  dest_check_data['is_shared_instance_path']):
+                  dest_check_data['is_shared_instance_path'] or
+                  (booted_from_volume and not has_local_disk)):
             reason = _("Live migration can not be used "
-                       "without shared storage.")
+                       "without shared storage except "
+                       "a booted from volume VM which "
+                       "does not have a local disk.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
 
         # NOTE(mikal): include the instance directory name here because it
