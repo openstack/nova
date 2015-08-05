@@ -11,16 +11,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-08 18:53+0000\n"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-07-23 20:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Chinese (China) (http://www.transifex.com/projects/p/nova/"
+"Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
 "Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
@@ -106,26 +106,6 @@ msgstr "卷 %(volume_id)s 正在 %(mountpoint)s 上启动"
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "在 nwfilter 里调用 setup_basic_filtering"
 
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "捕获到 %s，正在退出"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "捕获到 %s，正在停止子代"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "信号 %(sig)d 已终止子代 %(pid)d"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "子代 %(pid)s 已退出，状态为 %(code)d"
-
-#, python-format
-msgid "Child caught %s, exiting"
-msgstr "子代捕获 %s，正在退出"
-
 msgid "Claim successful"
 msgstr "请求成功"
 
@@ -207,14 +187,6 @@ msgid "Delete volume with id: %s"
 msgstr "删除id为 %s 的卷"
 
 #, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"正在删除实例，因为其主机 (%(instance_host)s) 不等同于我们的主机 "
-"(%(our_host)s)。"
-
-#, python-format
 msgid "Deleting orphan compute node %s"
 msgstr "正在删除孤立计算节点%s"
 
@@ -286,10 +258,6 @@ msgid "Error in handshake: %s"
 msgstr "握手出错：%s"
 
 #, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "携程为进程 %(pid)d 在后台监听 %(port)s "
-
-#, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr "挂载文件系统失败(期望的是非Linux实例)：%s"
 
@@ -312,9 +280,6 @@ msgid ""
 msgstr ""
 "正在强制执行实例的同步，project_id=%(projid_str)s，updated_since="
 "%(since_str)s"
-
-msgid "Forking too fast, sleeping"
-msgstr "派生速度太快，正在休眠"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
@@ -453,9 +418,6 @@ msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr "进行调度时，没有任何单元可用。将在 %(sleep_time)s 秒后重试"
 
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "父进程已意外终止，正在退出"
-
 msgid "Pausing"
 msgstr "正在暂停"
 
@@ -561,14 +523,6 @@ msgid ""
 msgstr "跳过增加reservations_deleted_expire_idx,因为一个同等的索引已经存在"
 
 #, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "正在跳过周期性任务 %(task)s，因为它已禁用"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "正在跳过周期性任务 %(task)s，因为其时间间隔为负"
-
-#, python-format
 msgid "Skipping quiescing instance: %(reason)s."
 msgstr "正在跳过静默实例:%(reason)s."
 
@@ -585,16 +539,8 @@ msgid "Spawning new instance"
 msgstr "正在衍生新实例"
 
 #, python-format
-msgid "Started child %d"
-msgstr "已启动子代 %d"
-
-#, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
 msgstr "正在启动 %(topic)s 节点 (V%(version)s)"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "正在启动 %d 工作程序"
 
 msgid "Starting halted instance found during reboot"
 msgstr "正在启动在重新引导期间找到的已停止实例"
@@ -673,13 +619,6 @@ msgstr "VM %(state)s (生命周期事件)"
 
 msgid "WSGI server has stopped."
 msgstr "WSGI服务器已经停止。"
-
-msgid "Wait called after thread killed. Cleaning up."
-msgstr "线程结束，正在清理"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "正在等待 %d 个子代退出"
 
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."

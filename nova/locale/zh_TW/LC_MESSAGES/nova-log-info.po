@@ -7,16 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-06 14:14+0000\n"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-07-23 20:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Chinese (Taiwan) (http://www.transifex.com/projects/p/nova/"
+"Language-Team: Chinese (Taiwan) (http://www.transifex.com/openstack/nova/"
 "language/zh_TW/)\n"
 "Language: zh_TW\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
@@ -90,22 +90,6 @@ msgstr "正在使用 %(mountpoint)s 處的磁區 %(volume_id)s 來開機"
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "已呼叫 nwfilter 中的 setup_basic_filtering"
 
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "已捕捉到 %s，正在結束"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "已捕捉到 %s，正在停止子項"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "信號 %(sig)d 結束了子項 %(pid)d"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "子項 %(pid)s 已結束，狀態為 %(code)d"
-
 msgid "Claim successful"
 msgstr "要求成功"
 
@@ -178,14 +162,6 @@ msgstr "刪除 ID 為 %s 的 Snapshot"
 msgid "Delete volume with id: %s"
 msgstr "刪除 ID 為 %s 的磁區"
 
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"正在刪除實例，因為它的主機 (%(instance_host)s) 不同於我們的主機 "
-"(%(our_host)s)。"
-
 msgid "Destroyed the VM"
 msgstr "已毀損 VM"
 
@@ -257,9 +233,6 @@ msgid ""
 "%(since_str)s"
 msgstr ""
 "正在強制同步實例，project_id = %(projid_str)s，updated_since = %(since_str)s"
-
-msgid "Forking too fast, sleeping"
-msgstr "分岔太快，正在休眠"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
@@ -359,9 +332,6 @@ msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr "排程時沒有可用的 Cell。將在 %(sleep_time)s 秒鐘後重試"
 
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "母程序已非預期地當掉，正在結束"
-
 msgid "Pausing"
 msgstr "正在暫停"
 
@@ -436,14 +406,6 @@ msgstr ""
 "正在對主機 %(host)s 執行實例使用審核（從 %(begin_time)s 到 "
 "%(end_time)s）。%(number_instances)s 個實例。"
 
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "正在跳過定期作業 %(task)s，因為它已停用"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "正在跳過定期作業 %(task)s，因為其間隔為負數"
-
 msgid "Snapshot extracted, beginning image upload"
 msgstr "已擷取 Snapshot，正在開始上傳映像檔"
 
@@ -454,16 +416,8 @@ msgid "Spawning new instance"
 msgstr "正在大量產生新實例"
 
 #, python-format
-msgid "Started child %d"
-msgstr "已開始子行程 %d"
-
-#, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
 msgstr "正在啟動 %(topic)s 節點（%(version)s 版）"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "正在啟動 %d 個工作程式"
 
 msgid "Starting halted instance found during reboot"
 msgstr "正在啟動重新啟動期間發現的已中止實例"
@@ -523,10 +477,6 @@ msgstr "已分離 VBD %s"
 
 msgid "WSGI server has stopped."
 msgstr "WSGI 伺服器已停止。"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "正在等待 %d 個子項結束"
 
 #, python-format
 msgid "Writing stored info to %s"
