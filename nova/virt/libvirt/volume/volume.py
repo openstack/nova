@@ -65,9 +65,6 @@ volume_opts = [
                help='Mount options passed to the SMBFS client. See '
                     'mount.cifs man page for details. Note that the '
                     'libvirt-qemu uid and gid must be specified.'),
-    cfg.IntOpt('num_aoe_discover_tries',
-               default=3,
-               help='Number of times to rediscover AoE target to find volume'),
     cfg.BoolOpt('iscsi_use_multipath',
                 default=False,
                 help='Use multipath connection of the iSCSI volume'),
@@ -484,43 +481,3 @@ class LibvirtSMBFSVolumeDriver(LibvirtBaseVolumeDriver):
             # Remove the Domain Name from user name
             mount_options = self.username_regex.sub(r'\1=\2', mount_options)
         return mount_options.strip(", ").split(' ')
-
-
-class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
-    """Driver to attach AoE volumes to libvirt."""
-    def __init__(self, connection):
-        super(LibvirtAOEVolumeDriver,
-              self).__init__(connection, is_block_dev=True)
-
-        # Call the factory here so we can support
-        # more than x86 architectures.
-        self.connector = connector.InitiatorConnector.factory(
-            'AOE', utils._get_root_helper(),
-            device_scan_attempts=CONF.libvirt.num_aoe_discover_tries)
-
-    def get_config(self, connection_info, disk_info):
-        """Returns xml for libvirt."""
-        conf = super(LibvirtAOEVolumeDriver,
-                     self).get_config(connection_info, disk_info)
-
-        conf.source_type = "block"
-        conf.source_path = connection_info['data']['device_path']
-        return conf
-
-    def connect_volume(self, connection_info, mount_device):
-        LOG.debug("Calling os-brick to attach AoE Volume")
-        device_info = self.connector.connect_volume(connection_info['data'])
-        LOG.debug("Attached AoE volume %s", device_info)
-
-        connection_info['data']['device_path'] = device_info['path']
-
-    def disconnect_volume(self, connection_info, disk_dev):
-        """Detach the volume from instance_name."""
-
-        LOG.debug("calling os-brick to detach AoE Volume %s",
-                  connection_info)
-        self.connector.disconnect_volume(connection_info['data'], None)
-        LOG.debug("Disconnected AoE Volume %s", disk_dev)
-
-        super(LibvirtAOEVolumeDriver,
-              self).disconnect_volume(connection_info, disk_dev)
