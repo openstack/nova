@@ -44,6 +44,7 @@ from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.network.neutronv2 import api as neutronapi
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -763,22 +764,22 @@ class MetadataHandlerTestCase(test.TestCase):
 
         self.assertEqual(1, mock_compare.call_count)
 
-    def test_user_data_with_neutron_instance_id(self):
-        expected_instance_id = 'a-b-c-d'
+    def _fake_x_get_metadata(self, instance_id, remote_address):
+        if remote_address is None:
+            raise Exception('Expected X-Forwared-For header')
+        elif instance_id == self.expected_instance_id:
+            return self.mdinst
+        else:
+            # raise the exception to aid with 500 response code test
+            raise Exception("Expected instance_id of %s, got %s" %
+                            (self.expected_instance_id, instance_id))
 
-        def fake_get_metadata(instance_id, remote_address):
-            if remote_address is None:
-                raise Exception('Expected X-Forwared-For header')
-            elif instance_id == expected_instance_id:
-                return self.mdinst
-            else:
-                # raise the exception to aid with 500 response code test
-                raise Exception("Expected instance_id of %s, got %s" %
-                                (expected_instance_id, instance_id))
+    def test_user_data_with_neutron_instance_id(self):
+        self.expected_instance_id = 'a-b-c-d'
 
         signed = hmac.new(
             CONF.neutron.metadata_proxy_shared_secret,
-            expected_instance_id,
+            self.expected_instance_id,
             hashlib.sha256).hexdigest()
 
         # try a request with service disabled
@@ -798,7 +799,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
                      'X-Tenant-ID': 'test',
@@ -815,7 +816,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
                      'X-Tenant-ID': 'test',
@@ -828,7 +829,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
                      'X-Instance-ID-Signature': signed})
@@ -840,7 +841,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
                      'X-Tenant-ID': 'FAKE',
@@ -853,7 +854,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Instance-ID': 'a-b-c-d',
                      'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': signed})
@@ -870,7 +871,7 @@ class MetadataHandlerTestCase(test.TestCase):
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'z-z-z-z',
                      'X-Tenant-ID': 'test',
@@ -973,6 +974,137 @@ class MetadataHandlerTestCase(test.TestCase):
         self._metadata_handler_with_remote_address(hnd)
         self._metadata_handler_with_remote_address(hnd)
         self.assertEqual(2, get_by_uuid.call_count)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy(self, mock_get_client):
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+
+        self.expected_instance_id = 'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id})
+
+        self.assertEqual(200, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy_chain(self, mock_get_client):
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+
+        self.expected_instance_id = 'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        def fake_list_ports(ctx, **kwargs):
+            if kwargs.get('fixed_ips') == 'ip_address=192.192.192.2':
+                return {
+                    'ports': [{
+                        'device_id': 'a-b-c-d',
+                        'tenant_id': 'test'}]}
+            else:
+                return {'ports':
+                        []}
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.side_effect = fake_list_ports
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="10.10.10.10",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2, 10.10.10.10',
+                     'X-Metadata-Provider': proxy_lb_id})
+
+        self.assertEqual(200, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy_signed(self, mock_get_client):
+
+        shared_secret = "testing1234"
+        self.flags(
+            metadata_proxy_shared_secret=shared_secret,
+            service_metadata_proxy=True, group='neutron')
+
+        self.expected_instance_id = 'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        signature = hmac.new(
+            shared_secret,
+            proxy_lb_id,
+            hashlib.sha256).hexdigest()
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id,
+                     'X-Metadata-Provider-Signature': signature})
+
+        self.assertEqual(200, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy_signed_fail(self, mock_get_client):
+
+        shared_secret = "testing1234"
+        bad_secret = "testing3468"
+        self.flags(
+            metadata_proxy_shared_secret=shared_secret,
+            service_metadata_proxy=True, group='neutron')
+
+        self.expected_instance_id = 'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        signature = hmac.new(
+            bad_secret,
+            proxy_lb_id,
+            hashlib.sha256).hexdigest()
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id,
+                     'X-Metadata-Provider-Signature': signature})
+        self.assertEqual(403, response.status_int)
 
 
 class MetadataPasswordTestCase(test.TestCase):
