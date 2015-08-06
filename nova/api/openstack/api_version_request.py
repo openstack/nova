@@ -50,6 +50,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.9 - Exposes lock information in server details.
     * 2.10 - Allow admins to query, create and delete keypairs owned by any
              user.
+    * 2.11 - Exposes forced_down attribute for os-services
 """
 
 # The minimum and maximum versions of the API supported
@@ -58,7 +59,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.10"
+_MAX_API_VERSION = "2.11"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

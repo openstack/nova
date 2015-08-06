@@ -20,10 +20,26 @@ service_update = {
         'host': parameter_types.hostname,
         'binary': {
             'type': 'string', 'minLength': 1, 'maxLength': 255,
-         },
+        },
         'disabled_reason': {
             'type': 'string', 'minLength': 1, 'maxLength': 255,
-         }
+        }
+    },
+    'required': ['host', 'binary'],
+    'additionalProperties': False
+}
+
+service_update_v211 = {
+    'type': 'object',
+    'properties': {
+        'host': parameter_types.hostname,
+        'binary': {
+            'type': 'string', 'minLength': 1, 'maxLength': 255,
+        },
+        'disabled_reason': {
+            'type': 'string', 'minLength': 1, 'maxLength': 255,
+        },
+        'forced_down': parameter_types.boolean
     },
     'required': ['host', 'binary'],
     'additionalProperties': False
