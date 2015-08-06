@@ -35,9 +35,6 @@ volume_opts = [
     cfg.IntOpt('num_iscsi_scan_tries',
                default=5,
                help='Number of times to rescan iSCSI target to find volume'),
-    cfg.IntOpt('num_iser_scan_tries',
-               default=5,
-               help='Number of times to rescan iSER target to find volume'),
     cfg.StrOpt('rbd_user',
                help='The RADOS client name for accessing rbd volumes'),
     cfg.StrOpt('rbd_secret_uuid',
@@ -46,9 +43,6 @@ volume_opts = [
     cfg.BoolOpt('iscsi_use_multipath',
                 default=False,
                 help='Use multipath connection of the iSCSI volume'),
-    cfg.BoolOpt('iser_use_multipath',
-                default=False,
-                help='Use multipath connection of the iSER volume'),
     cfg.ListOpt('qemu_allowed_storage_drivers',
                 default=[],
                 help='Protocols listed here will be accessed directly '
@@ -298,21 +292,3 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
         super(LibvirtISCSIVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
-
-
-class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
-    """Driver to attach Network volumes to libvirt."""
-
-    def __init__(self, connection):
-        super(LibvirtISERVolumeDriver, self).__init__(connection)
-
-        # Call the factory here so we can support
-        # more than x86 architectures.
-        self.connector = connector.InitiatorConnector.factory(
-            'ISER', utils._get_root_helper(),
-            use_multipath=CONF.libvirt.iser_use_multipath,
-            device_scan_attempts=CONF.libvirt.num_iser_scan_tries,
-            transport=self._get_transport())
-
-    def _get_transport(self):
-        return 'iser'
