@@ -107,7 +107,6 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('instances_path', 'nova.compute.manager')
-CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume', 'libvirt')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 

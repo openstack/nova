@@ -252,7 +252,7 @@ CONF.import_opt('proxyclient_address', 'nova.console.serial',
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
 CONF.import_group('workarounds', 'nova.utils')
-CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume',
+CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume.iscsi',
                 group='libvirt')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
@@ -273,7 +273,7 @@ GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
 
 libvirt_volume_drivers = [
-    'iscsi=nova.virt.libvirt.volume.volume.LibvirtISCSIVolumeDriver',
+    'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
     'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
     'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
     'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
