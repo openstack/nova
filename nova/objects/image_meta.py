@@ -28,7 +28,8 @@ class ImageMeta(base.NovaObject):
     # Version 1.2: ImageMetaProps version 1.2
     # Version 1.3: ImageMetaProps version 1.3
     # Version 1.4: ImageMetaProps version 1.4
-    VERSION = '1.4'
+    # Version 1.5: ImageMetaProps version 1.5
+    VERSION = '1.5'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -66,6 +67,7 @@ class ImageMeta(base.NovaObject):
                        ('1.2', '1.2'),
                        ('1.3', '1.3'),
                        ('1.4', '1.4'),
+                       ('1.5', '1.5'),
                        ],
     }
 
@@ -116,6 +118,7 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.2: added img_hv_type and img_hv_requested_version fields
     # Version 1.3: HVSpec version 1.1
     # Version 1.4: added hw_vif_multiqueue_enabled field
+    # Version 1.5: added os_admin_user field
     VERSION = ImageMeta.VERSION
 
     # Maximum number of NUMA nodes permitted for the guest topology
@@ -284,6 +287,9 @@ class ImageMetaProps(base.NovaObject):
 
         # integer value 1
         'img_version': fields.IntegerField(),
+
+        # string of username with admin privileges
+        'os_admin_user': fields.StringField(),
 
         # string of boot time command line arguments for the guest kernel
         'os_command_line': fields.StringField(),

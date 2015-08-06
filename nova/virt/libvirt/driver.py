@@ -1438,11 +1438,12 @@ class LibvirtDriver(driver.ComputeDriver):
         self._can_set_admin_password(image_meta)
 
         guest = self._host.get_guest(instance)
-        if instance.os_type == "windows":
-            user = "Administrator"
-        else:
-            user = "root"
-
+        user = image_meta.properties.get("os_admin_user")
+        if not user:
+            if instance.os_type == "windows":
+                user = "Administrator"
+            else:
+                user = "root"
         try:
             guest.set_user_password(user, new_pass)
         except libvirt.libvirtError as ex:
