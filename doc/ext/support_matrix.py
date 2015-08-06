@@ -448,7 +448,7 @@ class SupportMatrixDirective(rst.Directive):
         content.append(notes)
 
         NOTES = [
-                "Virtuozzo was formely named Parallels in this document"
+                "Virtuozzo was formerly named Parallels in this document"
                 ]
 
         for note in NOTES:
