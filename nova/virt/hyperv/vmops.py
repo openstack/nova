@@ -547,7 +547,7 @@ class VMOps(object):
             self._set_vm_state(instance,
                                constants.HYPERV_VM_STATE_DISABLED)
         except exception.NotFound:
-            # The manager can call the stop API after recieving instance
+            # The manager can call the stop API after receiving instance
             # power off events. If this is triggered when the instance
             # is being deleted, it might attempt to power off an unexisting
             # instance. We'll just pass in this case.

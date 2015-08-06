@@ -76,7 +76,7 @@ class InstanceEventHandler(object):
     def _poll_events(self):
         while True:
             try:
-                # Retrieve one by one all the events that occured in
+                # Retrieve one by one all the events that occurred in
                 # the checked interval.
                 event = self._listener(self._WAIT_TIMEOUT)
                 self._dispatch_event(event)

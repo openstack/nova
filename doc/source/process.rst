@@ -12,7 +12,7 @@
       under the License.
 
 =====================
-Developement Process
+Development Process
 =====================
 
 Nova is always evolving its processes, but its import to explain why we have
