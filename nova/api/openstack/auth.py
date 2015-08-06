@@ -66,28 +66,12 @@ class NoAuthMiddlewareBase(base_wsgi.Middleware):
 class NoAuthMiddleware(NoAuthMiddlewareBase):
     """Return a fake token if one isn't specified.
 
-    noauth2 is a variation on noauth that only provides admin privs if
-    'admin' is provided as the user id. We will deprecate the
-    NoAuthMiddlewareOld for future removal so we don't need to
-    maintain both code paths.
+    noauth2 provides admin privs if 'admin' is provided as the user id.
 
     """
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         return self.base_call(req, True, always_admin=False)
-
-
-# TODO(sdague): remove in Liberty
-class NoAuthMiddlewareOld(NoAuthMiddlewareBase):
-    """Return a fake token if one isn't specified.
-
-    This is the Deprecated version of noauth, and should be removed in
-    the Liberty cycle.
-
-    """
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        return self.base_call(req, True)
 
 
 class NoAuthMiddlewareV3(NoAuthMiddlewareBase):
