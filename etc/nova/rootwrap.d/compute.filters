@@ -207,6 +207,7 @@ multipath: CommandFilter, multipath, root
 multipathd: CommandFilter, multipathd, root
 systool: CommandFilter, systool, root
 sginfo: CommandFilter, sginfo, root
+vgc-cluster: CommandFilter, vgc-cluster, root
 
 # nova/storage/linuxscsi.py: sg_scan device
 sg_scan: CommandFilter, sg_scan, root

@@ -290,6 +290,7 @@ libvirt_volume_drivers = [
     'scality=nova.virt.libvirt.volume.scality.LibvirtScalityVolumeDriver',
     'gpfs=nova.virt.libvirt.volume.gpfs.LibvirtGPFSVolumeDriver',
     'quobyte=nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
+    'hgst=nova.virt.libvirt.volume.hgst.LibvirtHGSTVolumeDriver',
 ]
 
 
