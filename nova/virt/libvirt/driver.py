@@ -5451,7 +5451,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 flaglist = CONF.libvirt.live_migration_flag.split(',')
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
-            logical_sum = reduce(lambda x, y: x | y, flagvals)
+            logical_sum = six.moves.reduce(lambda x, y: x | y, flagvals)
 
             pre_live_migrate_data = (migrate_data or {}).get(
                                         'pre_live_migration_result', {})
