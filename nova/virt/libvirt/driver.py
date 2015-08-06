@@ -398,6 +398,9 @@ MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 
+# vhostuser queues support
+MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -425,7 +428,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             host=self._host)
 
-        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
+        support_vhostuser_mq = self._host.has_min_version(
+                                          MIN_LIBVIRT_VHOSTUSER_MQ)
+        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
+                                    support_vhostuser_mq=support_vhostuser_mq)
 
         self.volume_drivers = driver.driver_dict_from_config(
             self._get_volume_drivers(), self)

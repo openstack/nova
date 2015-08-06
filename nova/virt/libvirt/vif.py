@@ -29,6 +29,7 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.network import linux_net
 from nova.network import model as network_model
+from nova import objects
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
@@ -83,6 +84,9 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
 class LibvirtGenericVIFDriver(object):
     """Generic VIF driver for libvirt networking."""
 
+    def __init__(self, support_vhostuser_mq=False):
+        self.support_vhostuser_mq = support_vhostuser_mq
+
     def _normalize_vif_type(self, vif_type):
         return vif_type.replace('2.1q', '2q')
 
@@ -101,6 +105,7 @@ class LibvirtGenericVIFDriver(object):
         # Default to letting libvirt / the hypervisor choose the model
         model = None
         driver = None
+        vhost_queues = None
 
         # If the user has specified a 'vif_model' against the
         # image then honour that model
@@ -127,11 +132,31 @@ class LibvirtGenericVIFDriver(object):
                                            model):
             raise exception.UnsupportedHardware(model=model,
                                                 virt=virt_type)
+        if (virt_type == 'kvm' and
+            model == network_model.VIF_MODEL_VIRTIO):
+            vhost_drv, vhost_queues = self._get_virtio_mq_settings(image_meta,
+                                                                   inst_type)
+            driver = vhost_drv or driver
 
         designer.set_vif_guest_frontend_config(
-            conf, vif['address'], model, driver)
+            conf, vif['address'], model, driver, vhost_queues)
 
         return conf
+
+    def _get_virtio_mq_settings(self, image_meta, flavor):
+        """A methods to set the number of virtio queues,
+           if it has been requested in extra specs.
+        """
+        driver = None
+        vhost_queues = None
+        if not isinstance(image_meta, objects.ImageMeta):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
+        img_props = image_meta.properties
+        if img_props.get('hw_vif_multiqueue_enabled'):
+            driver = 'vhost'
+            vhost_queues = flavor.vcpus
+
+        return (driver, vhost_queues)
 
     def get_bridge_name(self, vif):
         return vif['network']['bridge']
@@ -383,6 +408,13 @@ class LibvirtGenericVIFDriver(object):
             raise exception.VifDetailsMissingVhostuserSockPath(
                                                         vif_id=vif['id'])
         designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
+        # (vladikr) Not setting up driver and queues for vhostuser
+        # as queues are not supported in Libvirt until version 1.2.17
+        if not self.support_vhostuser_mq:
+            LOG.debug('Queues are not a vhostuser supported feature.')
+            conf.driver_name = None
+            conf.vhost_queues = None
+
         return conf
 
     def get_config_ib_hostdev(self, instance, vif, image_meta,

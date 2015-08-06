@@ -453,6 +453,35 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf.add_device(nic)
         return conf.to_xml()
 
+    def test_virtio_multiqueue(self):
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
+
+        flavor = objects.Flavor(name='m1.small',
+                    memory_mb=128,
+                    vcpus=4,
+                    root_gb=0,
+                    ephemeral_gb=0,
+                    swap=0,
+                    deleted_at=None,
+                    deleted=0,
+                    created_at=None, flavorid=1,
+                    is_public=True, vcpu_weight=None,
+                    id=2, disabled=False, rxtx_factor=1.0)
+
+        d = vif.LibvirtGenericVIFDriver()
+        image_meta = {'properties': {'hw_vif_model': 'virtio',
+                                     'hw_vif_multiqueue_enabled': 'true'}}
+        xml = self._get_instance_xml(d, self.vif_bridge,
+                                     image_meta, flavor)
+
+        node = self._get_node(xml)
+        driver = node.find("driver").get("name")
+        self.assertEqual(driver, 'vhost')
+        queues = node.find("driver").get("queues")
+        self.assertEqual(queues, '4')
+
     def test_multiple_nics(self):
         conf = self._get_conf()
         # Tests multiple nic configuration and that target_dev is
@@ -1225,6 +1254,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "source", "type", "unix")
         self._assertMacEquals(node, self.vif_vhostuser)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_vhostuser_no_queues(self):
+        d = vif.LibvirtGenericVIFDriver()
+        image_meta = {'properties': {'hw_vif_model': 'virtio',
+                                     'hw_vif_multiqueue_enabled': 'true'}}
+        xml = self._get_instance_xml(d, self.vif_vhostuser, image_meta)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"),
+                         network_model.VIF_TYPE_VHOSTUSER)
+        self._assertMacEquals(node, self.vif_vhostuser)
+        driver = node.find("driver")
+        self.assertIsNone(driver, None)
 
     def test_vhostuser_driver_no_path(self):
         d = vif.LibvirtGenericVIFDriver()
