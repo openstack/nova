@@ -30,6 +30,7 @@ Reference
    nova-api-metadata
    nova-api-os-compute
    nova-api
+   nova-cells
    nova-cert
    nova-compute
    nova-conductor
