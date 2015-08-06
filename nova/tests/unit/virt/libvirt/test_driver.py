@@ -5459,8 +5459,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def _mock_can_live_migrate_source(self, block_migration=False,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
+                                      is_booted_from_volume=False,
                                       disk_available_mb=1024,
-                                      block_device_info=None):
+                                      block_device_info=None,
+                                      block_device_text=None):
         instance = objects.Instance(**self.test_instance)
         dest_check_data = {'filename': 'file',
                            'image_type': 'default',
@@ -5475,6 +5477,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(drvr, '_check_shared_storage_test_file')
         drvr._check_shared_storage_test_file('file').AndReturn(
                 is_shared_instance_path)
+        self.mox.StubOutWithMock(drvr, "get_instance_disk_info")
+        drvr.get_instance_disk_info(instance,
+                                    block_device_info=block_device_info).\
+                                    AndReturn(block_device_text)
+        self.mox.StubOutWithMock(drvr, '_is_booted_from_volume')
+        drvr._is_booted_from_volume(instance, block_device_text).AndReturn(
+            is_booted_from_volume)
 
         return (instance, dest_check_data, drvr)
 
@@ -5549,13 +5558,29 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 block_migration=True,
                 disk_available_mb=0)
 
-        self.mox.StubOutWithMock(drvr, "get_instance_disk_info")
         drvr.get_instance_disk_info(instance,
                                     block_device_info=None).AndReturn(
                                         '[{"virt_disk_size":2}]')
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationError,
+                          drvr.check_can_live_migrate_source,
+                          self.context, instance, dest_check_data)
+
+    def test_check_can_live_migrate_source_booted_from_volume(self):
+        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
+                is_booted_from_volume=True,
+                block_device_text='[]')
+        self.mox.ReplayAll()
+        drvr.check_can_live_migrate_source(self.context, instance,
+                                           dest_check_data)
+
+    def test_check_can_live_migrate_source_booted_from_volume_with_swap(self):
+        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
+                is_booted_from_volume=True,
+                block_device_text='[{"path":"disk.swap"}]')
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InvalidSharedStorage,
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
 
