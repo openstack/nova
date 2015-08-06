@@ -16,6 +16,7 @@
 
 import collections
 
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -28,6 +29,7 @@ from nova.pci import stats
 from nova.pci import whitelist
 from nova.virt import hardware
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -55,7 +57,7 @@ class PciDevTracker(object):
         self.stale = {}
         self.node_id = node_id
         self.stats = stats.PciDeviceStats()
-        self.dev_filter = whitelist.get_pci_devices_filter()
+        self.dev_filter = whitelist.Whitelist(CONF.pci_passthrough_whitelist)
         if node_id:
             self.pci_devs = list(
                 objects.PciDeviceList.get_by_compute_node(context, node_id))
