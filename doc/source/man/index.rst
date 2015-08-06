@@ -36,6 +36,7 @@ Reference
    nova-console
    nova-consoleauth
    nova-dhcpbridge
+   nova-idmapshift
    nova-manage
    nova-network
    nova-novncproxy
