@@ -104,7 +104,7 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         }
     # NOTE(danms): InstanceAction was at 1.1 before we added this
     obj_relationships = {
-        'objects': [('1.0', '1.1')],
+        'objects': [('1.0', '1.1')]
         }
 
     @base.remotable_classmethod
@@ -209,6 +209,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
 
 @base.NovaObjectRegistry.register
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
+    VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }
