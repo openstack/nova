@@ -143,6 +143,7 @@ Open Development.
    filter_scheduler
    rpc
    hooks
+   block_device_mapping
    addmethod.openstackapi
 
 Architecture Evolution Plans
