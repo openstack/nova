@@ -80,8 +80,8 @@ CONF.import_opt('cipher', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
 CONF.import_opt('key_size', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
-CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.volume', group='libvirt')
-CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.volume',
+CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
+CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
                 group='libvirt')
 
 LOG = logging.getLogger(__name__)
