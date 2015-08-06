@@ -183,20 +183,19 @@ class ServiceController(wsgi.Controller):
 
         return {'services': _services}
 
-    @wsgi.Controller.api_version('2.1', '2.10')
     @extensions.expected_errors((400, 404))
-    @validation.schema(services.service_update)
+    @validation.schema(services.service_update, '2.1', '2.10')
+    @validation.schema(services.service_update_v211, '2.11')
     def update(self, req, id, body):
         """Perform service update"""
-        return self._perform_action(req, id, body, self.actions)
+        req_ver = req.api_version_request
 
-    @wsgi.Controller.api_version('2.11')  # noqa
-    @extensions.expected_errors((400, 404))
-    @validation.schema(services.service_update_v211)
-    def update(self, req, id, body):
-        """Perform service update"""
-        actions = self.actions.copy()
-        actions["force-down"] = self._forced_down
+        if req_ver >= api_version_request.APIVersionRequest("2.11"):
+            actions = self.actions.copy()
+            actions["force-down"] = self._forced_down
+        else:
+            actions = self.actions
+
         return self._perform_action(req, id, body, actions)
 
 
