@@ -551,6 +551,7 @@ class Host(object):
         libvirt.registerErrorHandler(self._libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
         self._init_events()
+        self._initialized = True
 
     def _version_check(self, lv_ver=None, hv_ver=None, hv_type=None,
                        op=operator.lt):

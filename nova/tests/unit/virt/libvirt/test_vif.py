@@ -28,6 +28,7 @@ from nova.pci import utils as pci_utils
 from nova import test
 from nova import utils
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import host
 from nova.virt.libvirt import vif
 
 CONF = cfg.CONF
@@ -448,8 +449,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                 id=2, disabled=False, rxtx_factor=1.0)
 
         conf = self._get_conf()
+        hostimpl = host.Host("qemu:///system")
         nic = driver.get_config(self.instance, vif, image_meta,
-                                flavor, CONF.libvirt.virt_type)
+                                flavor, CONF.libvirt.virt_type,
+                                hostimpl)
         conf.add_device(nic)
         return conf.to_xml()
 

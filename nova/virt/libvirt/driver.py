@@ -399,9 +399,6 @@ MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 
-# vhostuser queues support
-MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
-
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -429,10 +426,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             host=self._host)
 
-        support_vhostuser_mq = self._host.has_min_version(
-                                          MIN_LIBVIRT_VHOSTUSER_MQ)
-        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
-                                    support_vhostuser_mq=support_vhostuser_mq)
+        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
         self.volume_drivers = driver.driver_dict_from_config(
             self._get_volume_drivers(), self)
@@ -1228,7 +1222,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
-                                         CONF.libvirt.virt_type)
+                                         CONF.libvirt.virt_type,
+                                         self._host)
         try:
             state = self._get_power_state(guest._domain)
             live = state in (power_state.RUNNING, power_state.PAUSED)
@@ -1243,7 +1238,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def detach_interface(self, instance, vif):
         guest = self._host.get_guest(instance)
         cfg = self.vif_driver.get_config(instance, vif, None, instance.flavor,
-                                         CONF.libvirt.virt_type)
+                                         CONF.libvirt.virt_type, self._host)
         try:
             self.vif_driver.unplug(instance, vif)
             state = self._get_power_state(guest._domain)
@@ -3026,7 +3021,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      vif,
                                                      image_meta,
                                                      instance.flavor,
-                                                     CONF.libvirt.virt_type)
+                                                     CONF.libvirt.virt_type,
+                                                     self._host)
                     LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
                               {'port': vif, 'dom': guest.id},
                               instance=instance)
@@ -3056,7 +3052,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      vif,
                                                      image_meta,
                                                      instance.flavor,
-                                                     CONF.libvirt.virt_type)
+                                                     CONF.libvirt.virt_type,
+                                                     self._host)
                     guest.detach_device(cfg, live=True)
 
     def _set_host_enabled(self, enabled,
@@ -4107,7 +4104,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vif in network_info:
             config = self.vif_driver.get_config(
                 instance, vif, image_meta,
-                flavor, virt_type)
+                flavor, virt_type, self._host)
             guest.add_device(config)
 
         consolepty = self._create_consoles(virt_type, guest, instance, flavor,
