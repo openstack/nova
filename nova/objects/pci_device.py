@@ -96,7 +96,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'address': fields.StringField(),
         'vendor_id': fields.StringField(),
         'product_id': fields.StringField(),
-        'dev_type': fields.StringField(),
+        'dev_type': fields.PciDeviceTypeField(),
         'status': fields.PciDeviceStatusField(),
         'dev_id': fields.StringField(nullable=True),
         'label': fields.StringField(nullable=True),

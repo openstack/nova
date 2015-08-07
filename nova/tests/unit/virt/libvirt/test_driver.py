@@ -8996,7 +8996,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "numa_node": None,
             "vendor_id": '8086',
             "label": 'label_8086_1521',
-            "dev_type": 'type-PF',
+            "dev_type": fields.PciDeviceType.SRIOV_PF,
             }
 
         self.assertEqual(expect_vf, actualvf)
@@ -9008,7 +9008,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "numa_node": None,
             "vendor_id": '8086',
             "label": 'label_8086_1520',
-            "dev_type": 'type-VF',
+            "dev_type": fields.PciDeviceType.SRIOV_VF,
             "phys_function": '0000:04:00.3',
             }
         self.assertEqual(expect_vf, actualvf)
@@ -9020,7 +9020,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "vendor_id": '8086',
             "numa_node": 0,
             "label": 'label_8086_1520',
-            "dev_type": 'type-VF',
+            "dev_type": fields.PciDeviceType.SRIOV_VF,
             "phys_function": '0000:04:00.3',
             }
 
@@ -9080,7 +9080,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "address": "0000:04:00.3",
                 "product_id": '1521',
                 "vendor_id": '8086',
-                "dev_type": 'type-PF',
+                "dev_type": fields.PciDeviceType.SRIOV_PF,
                 "phys_function": None,
                 "numa_node": None},
             {
@@ -9090,7 +9090,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "product_id": '1520',
                 "vendor_id": '8086',
                 "numa_node": None,
-                "dev_type": 'type-VF',
+                "dev_type": fields.PciDeviceType.SRIOV_VF,
                 "phys_function": [('0x0000', '0x04', '0x00', '0x3')]},
             {
                 "dev_id": "pci_0000_04_11_7",
@@ -9099,7 +9099,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "product_id": '1520',
                 "vendor_id": '8086',
                 "numa_node": 0,
-                "dev_type": 'type-VF',
+                "dev_type": fields.PciDeviceType.SRIOV_VF,
                 "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
             }
         ]
@@ -11552,7 +11552,7 @@ class HostStateTestCase(test.NoDBTestCase):
         "address": "0000:04:10.3",
         "product_id": '1521',
         "vendor_id": '8086',
-        "dev_type": 'type-PF',
+        "dev_type": fields.PciDeviceType.SRIOV_PF,
         "phys_function": None}]
     numa_topology = objects.NUMATopology(
                         cells=[objects.NUMACell(

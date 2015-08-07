@@ -21,6 +21,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova.pci import device
 from nova import test
@@ -162,7 +163,7 @@ class PciControlletestV21(test.NoDBTestCase):
                                'compute_node_id': 1,
                                'dev_id': 'i',
                                'extra_info': {},
-                               'dev_type': 't',
+                               'dev_type': fields.PciDeviceType.STANDARD,
                                'id': 1,
                                'server_uuid': None,
                                'label': 'l',

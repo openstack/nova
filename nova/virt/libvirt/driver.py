@@ -77,6 +77,7 @@ from nova.i18n import _LW
 from nova import image
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import fields
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova import utils
@@ -4728,16 +4729,20 @@ class LibvirtDriver(driver.ComputeDriver):
             for fun_cap in cfgdev.pci_capability.fun_capability:
                 if len(fun_cap.device_addrs) != 0:
                     if fun_cap.type == 'virt_functions':
-                        return {'dev_type': 'type-PF'}
+                        return {
+                            'dev_type': fields.PciDeviceType.SRIOV_PF,
+                        }
                     if fun_cap.type == 'phys_function':
                         phys_address = "%04x:%02x:%02x.%01x" % (
                             fun_cap.device_addrs[0][0],
                             fun_cap.device_addrs[0][1],
                             fun_cap.device_addrs[0][2],
                             fun_cap.device_addrs[0][3])
-                        return {'dev_type': 'type-VF',
-                                'phys_function': phys_address}
-            return {'dev_type': 'type-PCI'}
+                        return {
+                            'dev_type': fields.PciDeviceType.SRIOV_VF,
+                            'phys_function': phys_address,
+                        }
+            return {'dev_type': fields.PciDeviceType.STANDARD}
 
         virtdev = self._host.device_lookup_by_name(devname)
         xmlstr = virtdev.XMLDesc(0)

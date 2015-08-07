@@ -34,6 +34,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova import rpc
 from nova import test
@@ -96,7 +97,7 @@ class FakeVirtDriver(driver.ComputeDriver):
         self.pci_devices = [
             {
                 'label': 'label_8086_0443',
-                'dev_type': 'type-VF',
+                'dev_type': fields.PciDeviceType.SRIOV_VF,
                 'compute_node_id': 1,
                 'address': '0000:00:01.1',
                 'product_id': '0443',
@@ -107,7 +108,7 @@ class FakeVirtDriver(driver.ComputeDriver):
             },
             {
                 'label': 'label_8086_0443',
-                'dev_type': 'type-VF',
+                'dev_type': fields.PciDeviceType.SRIOV_VF,
                 'compute_node_id': 1,
                 'address': '0000:00:01.2',
                 'product_id': '0443',
@@ -118,7 +119,7 @@ class FakeVirtDriver(driver.ComputeDriver):
             },
             {
                 'label': 'label_8086_0443',
-                'dev_type': 'type-PF',
+                'dev_type': fields.PciDeviceType.SRIOV_PF,
                 'compute_node_id': 1,
                 'address': '0000:00:01.0',
                 'product_id': '0443',
@@ -140,7 +141,7 @@ class FakeVirtDriver(driver.ComputeDriver):
             },
             {
                 'label': 'label_8086_7891',
-                'dev_type': 'type-VF',
+                'dev_type': fields.PciDeviceType.SRIOV_VF,
                 'compute_node_id': 1,
                 'address': '0000:00:01.0',
                 'product_id': '7891',

@@ -1145,7 +1145,7 @@ object_data = {
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
     'NetworkRequest': '1.1-7a3e4ca2ce1e7b62d8400488f2f2b756',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'PciDevice': '1.3-9781610624d20acc48da992567b7f397',
+    'PciDevice': '1.3-d92e0b17bbed61815b919af6b8d8998e',
     'PciDeviceList': '1.2-3757458c45591cbc92c72ee99e757c98',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
