@@ -34,10 +34,8 @@ def all_things_equal(obj_a, obj_b):
     return True
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class NUMACell(base.NovaObject,
-               base.NovaObjectDictCompat):
+class NUMACell(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pinned_cpus and siblings fields
     # Version 1.2: Added mempages field
@@ -131,10 +129,8 @@ class NUMACell(base.NovaObject,
         raise exception.MemoryPageSizeNotSupported(pagesize=pagesize)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class NUMAPagesTopology(base.NovaObject,
-                        base.NovaObjectDictCompat):
+class NUMAPagesTopology(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
