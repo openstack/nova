@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import os
 
 from oslo_config import cfg
@@ -118,17 +119,27 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             LOG.warn(msg)
             raise exception.NovaException(msg)
 
+    def _sofs_is_mounted(self):
+        """Detects whether Scality SOFS is already mounted."""
+        mount_path = CONF.libvirt.scality_sofs_mount_point.rstrip('/')
+        with io.open('/proc/mounts') as mounts:
+            for mount in mounts.readlines():
+                parts = mount.split()
+                if (parts[0].endswith('fuse') and
+                        parts[1].rstrip('/') == mount_path):
+                            return True
+        return False
+
     def _mount_sofs(self):
         config = CONF.libvirt.scality_sofs_config
         mount_path = CONF.libvirt.scality_sofs_mount_point
-        sysdir = os.path.join(mount_path, 'sys')
 
         if not os.path.isdir(mount_path):
             utils.execute('mkdir', '-p', mount_path)
-        if not os.path.isdir(sysdir):
+        if not self._sofs_is_mounted():
             utils.execute('mount', '-t', 'sofs', config, mount_path,
                           run_as_root=True)
-        if not os.path.isdir(sysdir):
-            msg = _("Cannot mount Scality SOFS, check syslog for errors")
-            LOG.warn(msg)
-            raise exception.NovaException(msg)
+            if not self._sofs_is_mounted():
+                msg = _("Cannot mount Scality SOFS, check syslog for errors")
+                LOG.warn(msg)
+                raise exception.NovaException(msg)
