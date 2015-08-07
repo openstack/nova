@@ -1292,7 +1292,9 @@ class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
     def format_dom(self):
         dev = super(LibvirtConfigMemoryBalloon, self).format_dom()
         dev.set('model', str(self.model))
-        dev.append(etree.Element('stats', period=str(self.period)))
+        # NOTE(ORBIT): Skip stats when model is 'none'
+        if self.model != 'none':
+            dev.append(etree.Element('stats', period=str(self.period)))
         return dev
 
 

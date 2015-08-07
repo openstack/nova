@@ -4136,6 +4136,11 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 balloon.model = 'xen'
             balloon.period = CONF.libvirt.mem_stats_period_seconds
+
+            # NOTE(ORBIT): Memory balloon disabled when using COLO
+            if utils.ft_enabled(instance):
+                balloon.model = 'none'
+
             guest.add_device(balloon)
 
         if utils.ft_enabled(instance):
