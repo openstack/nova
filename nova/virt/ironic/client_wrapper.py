@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
@@ -35,7 +33,7 @@ IRONIC_API_VERSION = (1, 8)
 
 
 class IronicClientWrapper(object):
-    """Ironic client wrapper class that encapsulates retry logic."""
+    """Ironic client wrapper class that encapsulates authentication logic."""
 
     def __init__(self):
         """Initialise the IronicClientWrapper for use.
@@ -114,7 +112,7 @@ class IronicClientWrapper(object):
         return obj
 
     def call(self, method, *args, **kwargs):
-        """Call an Ironic client method and retry on errors.
+        """Call an Ironic client method and retry on stale token.
 
         :param method: Name of the client method to call as a string.
         :param args: Client method arguments.
@@ -124,19 +122,12 @@ class IronicClientWrapper(object):
                                   (HTTP 409) or not. If retry_on_conflict is
                                   False the cached instance of the client
                                   won't be used. Defaults to True.
-        :raises: NovaException if all retries failed.
         """
-        # TODO(dtantsur): drop these once ironicclient 0.8.0 is out and used in
-        # global-requirements.
-        retry_excs = (ironic.exc.ServiceUnavailable,
-                      ironic.exc.ConnectionRefused)
         retry_on_conflict = kwargs.pop('retry_on_conflict', True)
 
-        # num_attempts should be the times of retry + 1
-        # eg. retry==0 just means  run once and no retry
-        num_attempts = max(0, CONF.ironic.api_max_retries) + 1
-
-        for attempt in range(1, num_attempts + 1):
+        # NOTE(dtantsur): allow for authentication retry, other retries are
+        # handled by ironicclient starting with 0.8.0
+        for attempt in range(2):
             client = self._get_client(retry_on_conflict=retry_on_conflict)
 
             try:
@@ -145,21 +136,10 @@ class IronicClientWrapper(object):
                 # In this case, the authorization token of the cached
                 # ironic-client probably expired. So invalidate the cached
                 # client and the next try will start with a fresh one.
-                self._invalidate_cached_client()
-                LOG.debug("The Ironic client became unauthorized. "
-                          "Will attempt to reauthorize and try again.")
-            except retry_excs:
-                pass
-
-            # We want to perform this logic for all exception cases listed
-            # above.
-            msg = (_("Error contacting Ironic server for "
-                     "'%(method)s'. Attempt %(attempt)d of %(total)d") %
-                        {'method': method,
-                         'attempt': attempt,
-                         'total': num_attempts})
-            if attempt == num_attempts:
-                LOG.error(msg)
-                raise exception.NovaException(msg)
-            LOG.warning(msg)
-            time.sleep(CONF.ironic.api_retry_interval)
+                if not attempt:
+                    self._invalidate_cached_client()
+                    LOG.debug("The Ironic client became unauthorized. "
+                              "Will attempt to reauthorize and try again.")
+                else:
+                    # This code should be unreachable actually
+                    raise
