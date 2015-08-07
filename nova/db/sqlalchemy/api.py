@@ -5190,14 +5190,15 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                   'last_ctr_out': last_ctr_out,
                   'bw_in': bw_in,
                   'bw_out': bw_out}
-        rows = model_query(context, models.BandwidthUsage,
-                              session=session, read_deleted="yes").\
-                      filter_by(start_period=ts_values['start_period']).\
-                      filter_by(uuid=uuid).\
-                      filter_by(mac=mac).\
-                      update(values, synchronize_session=False)
-        if rows:
-            return
+        bw_usage = model_query(context, models.BandwidthUsage, session=session,
+                read_deleted='yes').\
+                        filter_by(start_period=ts_values['start_period']).\
+                        filter_by(uuid=uuid).\
+                        filter_by(mac=mac).first()
+
+        if bw_usage:
+            bw_usage.update(values)
+            return bw_usage
 
         bwusage = models.BandwidthUsage()
         bwusage.start_period = ts_values['start_period']
@@ -5214,6 +5215,7 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
             # NOTE(sirp): Possible race if two greenthreads attempt to create
             # the usage entry at the same time. First one wins.
             pass
+        return bwusage
 
 
 ####################
