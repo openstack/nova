@@ -4138,6 +4138,12 @@ class LibvirtDriver(driver.ComputeDriver):
             balloon.period = CONF.libvirt.mem_stats_period_seconds
             guest.add_device(balloon)
 
+        if utils.ft_enabled(instance):
+            guest.add_qemu_cmdline(vconfig.LibvirtConfigQEMUCommandline(
+                # TODO(ORBIT): Add qemu commandline needed for COLO
+                ''
+            ))
+
         return guest
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,

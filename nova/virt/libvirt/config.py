@@ -41,6 +41,7 @@ LOG = logging.getLogger(__name__)
 # Namespace to use for Nova specific metadata items in XML
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
 
+QEMU_NS = "http://libvirt.org/schemas/domain/qemu/1.0"
 
 class LibvirtConfigObject(object):
 
@@ -1609,6 +1610,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.devices = []
         self.metadata = []
         self.idmaps = []
+        self.qemu_cmdline = []
 
     def _format_basic_props(self, root):
         root.append(self._text_node("uuid", self.uuid))
@@ -1684,8 +1686,18 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             idmaps.append(idmap.format_dom())
         root.append(idmaps)
 
+    def _format_qemu_cmdline(self, root):
+        if len(self.qemu_cmdline) == 0:
+            return
+        for cmdline in self.qemu_cmdline:
+            root.append(cmdline.format_dom())
+
     def format_dom(self):
         root = super(LibvirtConfigGuest, self).format_dom()
+
+        # TODO(ORBIT): Temp
+        if len(self.qemu_cmdline) > 0:
+            root = etree.Element("domain", nsmap={"qemu": QEMU_NS})
 
         root.set("type", self.virt_type)
 
@@ -1709,6 +1721,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_devices(root)
 
         self._format_idmaps(root)
+
+        self._format_qemu_cmdline(root)
 
         return root
 
@@ -1750,6 +1764,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
     def set_clock(self, clk):
         self.clock = clk
+
+    def add_qemu_cmdline(self, cmdline):
+        self.qemu_cmdline.append(cmdline)
 
 
 class LibvirtConfigGuestSnapshot(LibvirtConfigObject):
@@ -1992,3 +2009,22 @@ class LibvirtConfigGuestMetaNovaOwner(LibvirtConfigObject):
             project.set("uuid", self.projectid)
             meta.append(project)
         return meta
+
+
+class LibvirtConfigQEMUCommandline(LibvirtConfigObject):
+
+    def __init__(self, cmdline):
+        super(LibvirtConfigQEMUCommandline, self).__init__(
+            root_name="commandline",
+            ns_prefix="qemu",
+            ns_uri=QEMU_NS)
+
+        self.cmdline = cmdline
+
+    def format_dom(self):
+        qemu_cmdline = super(LibvirtConfigQEMUCommandline, self).format_dom()
+
+        for arg in self.cmdline.split():
+            qemu_cmdline.append(self._new_node("arg", value=arg))
+
+        return qemu_cmdline
