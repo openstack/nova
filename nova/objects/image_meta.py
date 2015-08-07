@@ -21,6 +21,11 @@ from nova import utils
 from nova.virt import hardware
 
 
+NULLABLE_STRING_FIELDS = ['name', 'checksum', 'owner',
+                          'container_format', 'disk_format']
+NULLABLE_INTEGER_FIELDS = ['size', 'virtual_size']
+
+
 @base.NovaObjectRegistry.register
 class ImageMeta(base.NovaObject):
     # Version 1.0: Initial version
@@ -38,7 +43,10 @@ class ImageMeta(base.NovaObject):
     # self, file, schema - Nova does not appear to ever use
     # these field; locations - modelling the arbitrary
     # data in the 'metadata' subfield is non-trivial as
-    # there's no clear spec
+    # there's no clear spec.
+    #
+    # TODO(ft): In version 2.0, these fields should be nullable:
+    # name, checksum, owner, size, virtual_size, container_format, disk_format
     #
     fields = {
         'id': fields.UUIDField(),
@@ -91,6 +99,18 @@ class ImageMeta(base.NovaObject):
         image_meta["properties"] = \
             objects.ImageMetaProps.from_dict(
                 image_meta.get("properties", {}))
+
+        # Some fields are nullable in Glance DB schema, but was not marked that
+        # in ImageMeta initially by mistake. To keep compatibility with compute
+        # nodes which are run with previous versions these fields are still
+        # not nullable in ImageMeta, but the code below converts None to
+        # approppriate empty values.
+        for fld in NULLABLE_STRING_FIELDS:
+            if fld in image_meta and image_meta[fld] is None:
+                image_meta[fld] = ''
+        for fld in NULLABLE_INTEGER_FIELDS:
+            if fld in image_meta and image_meta[fld] is None:
+                image_meta[fld] = 0
 
         return cls(**image_meta)
 

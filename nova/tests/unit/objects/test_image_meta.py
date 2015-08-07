@@ -67,6 +67,38 @@ class TestImageMeta(test.NoDBTestCase):
 
         self.assertIsInstance(image_meta.properties, objects.ImageMetaProps)
 
+    def test_volume_backed_image(self):
+        image = {'container_format': None,
+                 'size': 0,
+                 'checksum': None,
+                 'disk_format': None,
+        }
+        image_meta = objects.ImageMeta.from_dict(image)
+
+        self.assertEqual('', image_meta.container_format)
+        self.assertEqual(0, image_meta.size)
+        self.assertEqual('', image_meta.checksum)
+        self.assertEqual('', image_meta.disk_format)
+
+    def test_null_substitution(self):
+        image = {'name': None,
+                 'checksum': None,
+                 'owner': None,
+                 'size': None,
+                 'virtual_size': None,
+                 'container_format': None,
+                 'disk_format': None,
+        }
+        image_meta = objects.ImageMeta.from_dict(image)
+
+        self.assertEqual('', image_meta.name)
+        self.assertEqual('', image_meta.checksum)
+        self.assertEqual('', image_meta.owner)
+        self.assertEqual(0, image_meta.size)
+        self.assertEqual(0, image_meta.virtual_size)
+        self.assertEqual('', image_meta.container_format)
+        self.assertEqual('', image_meta.disk_format)
+
 
 class TestImageMetaProps(test.NoDBTestCase):
     def test_normal_props(self):
