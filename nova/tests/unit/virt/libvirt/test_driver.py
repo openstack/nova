@@ -536,7 +536,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        imagebackend.Image._get_driver_format)
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-        mock.patch.object(host.Host, "has_min_version", return_value=True)
         self.test_instance = _create_test_instance()
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
                 self.stubs)
@@ -5028,8 +5027,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_host_sysinfo_serial_hardware",)
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def _check_xml_and_uri(self, instance, mock_ver, mock_serial,
+    def _check_xml_and_uri(self, instance, mock_serial,
                            expect_ramdisk=False, expect_kernel=False,
                            rescue=None, expect_xen_hvm=False, xen_only=False):
         mock_serial.return_value = "cef19ce0-0ca2-11df-855d-b19fbce37686"
@@ -7843,10 +7841,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ip = drvr.get_host_ip_addr()
         self.assertEqual(ip, CONF.my_ip)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
     @mock.patch.object(libvirt_driver.LOG, 'warn')
     @mock.patch('nova.compute.utils.get_machine_ips')
-    def test_get_host_ip_addr_failure(self, mock_ips, mock_log, mock_ver):
+    def test_get_host_ip_addr_failure(self, mock_ips, mock_log):
         mock_ips.return_value = ['8.8.8.8', '75.75.75.75']
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.get_host_ip_addr()
@@ -7856,8 +7853,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                          {'ifaces': '8.8.8.8, 75.75.75.75',
                                           'my_ip': mock.ANY})
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_conn_event_handler(self, mock_ver):
+    def test_conn_event_handler(self):
         self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
@@ -7881,8 +7877,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               "wibble")
             self.assertTrue(service_mock.disabled)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_command_with_broken_connection(self, mock_ver):
+    def test_command_with_broken_connection(self):
         self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
@@ -7908,8 +7903,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               drvr.get_num_instances)
             self.assertTrue(service_mock.disabled)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_service_resume_after_broken_connection(self, mver):
+    def test_service_resume_after_broken_connection(self):
         self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         service_mock = mock.MagicMock()
@@ -10463,12 +10457,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         expected = drvr.vif_driver.get_config(instance, network_info[0],
                                               fake_image_meta,
                                               instance.get_flavor(),
-                                              CONF.libvirt.virt_type)
+                                              CONF.libvirt.virt_type,
+                                              drvr._host)
         self.mox.StubOutWithMock(drvr.vif_driver, 'get_config')
         drvr.vif_driver.get_config(instance, network_info[0],
                                    fake_image_meta,
                                    mox.IsA(objects.Flavor),
-                                   CONF.libvirt.virt_type).\
+                                   CONF.libvirt.virt_type,
+                                   drvr._host).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()
@@ -12534,7 +12530,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             fake_image_meta = None
         expected = self.drvr.vif_driver.get_config(
             instance, network_info[0], fake_image_meta, instance.flavor,
-            CONF.libvirt.virt_type)
+            CONF.libvirt.virt_type, self.drvr._host)
 
         self.mox.StubOutWithMock(self.drvr.vif_driver,
                                  'get_config')
@@ -12542,7 +12538,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             instance, network_info[0],
             fake_image_meta,
             mox.IsA(objects.Flavor),
-            CONF.libvirt.virt_type).AndReturn(expected)
+            CONF.libvirt.virt_type,
+            self.drvr._host).AndReturn(expected)
         domain.info().AndReturn([power_state])
         if method == 'attach_interface':
             domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
@@ -13193,8 +13190,7 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         drvr.set_host_enabled = mock.Mock()
         jsonutils.to_primitive(drvr._conn, convert_instances=True)
 
-    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
-    def test_tpool_execute_calls_libvirt(self, mock_ver):
+    def test_tpool_execute_calls_libvirt(self):
         conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
