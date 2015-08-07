@@ -3032,8 +3032,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_unexpecteddeleting_exception(self):
         self._test_build_and_run_exceptions(
-                exception.UnexpectedDeletingTaskStateError(expected='',
-                    actual=''))
+                exception.UnexpectedDeletingTaskStateError(
+                    instance_uuid='fake_uuid', expected={}, actual={}))
 
     def test_build_and_run_buildabort_exception(self):
         self._test_build_and_run_exceptions(exception.BuildAbortException(
@@ -3281,7 +3281,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     return_value=self.network_info),
                 mock.patch.object(self.instance, 'save',
                     side_effect=exception.UnexpectedDeletingTaskStateError(
-                        actual=task_states.DELETING, expected='None')),
+                        instance_uuid='fake_uuid',
+                        actual={'task_state': task_states.DELETING},
+                        expected={'task_state': None})),
         ) as (_build_networks_for_instance, save):
 
             try:
@@ -3319,8 +3321,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 '_build_networks_for_instance') as _build_networks:
 
             exc = exception.UnexpectedDeletingTaskStateError
-            _build_networks.side_effect = exc(actual=task_states.DELETING,
-                    expected='None')
+            _build_networks.side_effect = exc(
+                instance_uuid='fake_uuid',
+                actual={'task_state': task_states.DELETING},
+                expected={'task_state': None})
 
             try:
                 with self.compute._build_resources(self.context, self.instance,
@@ -3413,7 +3417,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self, mock_save, mock_build_network, mock_info_wait):
         mock_build_network.return_value = self.network_info
         mock_save.side_effect = exception.UnexpectedTaskStateError(
-            expected='', actual='')
+            instance_uuid='fake_uuid', expected={}, actual={})
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,

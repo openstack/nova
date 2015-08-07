@@ -29,6 +29,7 @@ from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -48,6 +49,7 @@ from sqlalchemy import Table
 
 from nova import block_device
 from nova.compute import arch
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -2465,7 +2467,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_update_with_unexpected_vm_state(self):
         instance = self.create_instance_with_args(vm_state='foo')
-        self.assertRaises(exception.UnexpectedVMStateError,
+        self.assertRaises(exception.InstanceUpdateConflict,
                     db.instance_update, self.ctxt, instance['uuid'],
                     {'host': 'h1', 'expected_vm_state': ('spam', 'bar')})
 
@@ -2532,7 +2534,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Make sure instance faults is deleted as well
         self.assertEqual(0, len(faults[uuid]))
 
-    def test_instance_update_with_and_get_original(self):
+    def test_instance_update_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,
                             instance['uuid'], {'vm_state': 'needscoffee'})
@@ -2587,6 +2589,174 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         # 4. the "old" object is detached from this Session.
         self.assertTrue(old_insp.detached)
+
+    def test_instance_update_and_get_original_conflict_race(self):
+        # Ensure that we retry if update_on_match fails for no discernable
+        # reason
+        instance = self.create_instance_with_args()
+
+        orig_update_on_match = update_match.update_on_match
+
+        # Reproduce the conditions of a race between fetching and updating the
+        # instance by making update_on_match fail for no discernable reason the
+        # first time it is called, but work normally the second time.
+        with mock.patch.object(update_match, 'update_on_match',
+                        side_effect=[update_match.NoRowsMatched,
+                                     orig_update_on_match]):
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
+            self.assertEqual(update_match.update_on_match.call_count, 2)
+
+    def test_instance_update_and_get_original_conflict_race_fallthrough(self):
+        # Ensure that is update_match continuously fails for no discernable
+        # reason, we evantually raise UnknownInstanceUpdateConflict
+        instance = self.create_instance_with_args()
+
+        # Reproduce the conditions of a race between fetching and updating the
+        # instance by making update_on_match fail for no discernable reason.
+        with mock.patch.object(update_match, 'update_on_match',
+                        side_effect=update_match.NoRowsMatched):
+            self.assertRaises(exception.UnknownInstanceUpdateConflict,
+                              db.instance_update_and_get_original,
+                              self.ctxt,
+                              instance['uuid'],
+                              {'metadata': {'mk1': 'mv3'}})
+
+    def test_instance_update_and_get_original_expected_host(self):
+        # Ensure that we allow update when expecting a host field
+        instance = self.create_instance_with_args()
+
+        (orig, new) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {'host': None},
+            expected={'host': 'h1'})
+
+        self.assertIsNone(new['host'])
+
+    def test_instance_update_and_get_original_expected_host_fail(self):
+        # Ensure that we detect a changed expected host and raise
+        # InstanceUpdateConflict
+        instance = self.create_instance_with_args()
+
+        try:
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {'host': None},
+                expected={'host': 'h2'})
+        except exception.InstanceUpdateConflict as ex:
+            self.assertEqual(ex.kwargs['instance_uuid'], instance['uuid'])
+            self.assertEqual(ex.kwargs['actual'], {'host': 'h1'})
+            self.assertEqual(ex.kwargs['expected'], {'host': ['h2']})
+        else:
+            self.fail('InstanceUpdateConflict was not raised')
+
+    def test_instance_update_and_get_original_expected_host_none(self):
+        # Ensure that we allow update when expecting a host field of None
+        instance = self.create_instance_with_args(host=None)
+
+        (old, new) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {'host': 'h1'},
+            expected={'host': None})
+        self.assertEqual('h1', new['host'])
+
+    def test_instance_update_and_get_original_expected_host_none_fail(self):
+        # Ensure that we detect a changed expected host of None and raise
+        # InstanceUpdateConflict
+        instance = self.create_instance_with_args()
+
+        try:
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {'host': None},
+                expected={'host': None})
+        except exception.InstanceUpdateConflict as ex:
+            self.assertEqual(ex.kwargs['instance_uuid'], instance['uuid'])
+            self.assertEqual(ex.kwargs['actual'], {'host': 'h1'})
+            self.assertEqual(ex.kwargs['expected'], {'host': [None]})
+        else:
+            self.fail('InstanceUpdateConflict was not raised')
+
+    def test_instance_update_and_get_original_expected_task_state_single_fail(self):  # noqa
+        # Ensure that we detect a changed expected task and raise
+        # UnexpectedTaskStateError
+        instance = self.create_instance_with_args()
+
+        try:
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {
+                    'host': None,
+                    'expected_task_state': task_states.SCHEDULING
+                })
+        except exception.UnexpectedTaskStateError as ex:
+            self.assertEqual(ex.kwargs['instance_uuid'], instance['uuid'])
+            self.assertEqual(ex.kwargs['actual'], {'task_state': None})
+            self.assertEqual(ex.kwargs['expected'],
+                             {'task_state': [task_states.SCHEDULING]})
+        else:
+            self.fail('UnexpectedTaskStateError was not raised')
+
+    def test_instance_update_and_get_original_expected_task_state_single_pass(self):  # noqa
+        # Ensure that we allow an update when expected task is correct
+        instance = self.create_instance_with_args()
+
+        (orig, new) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {
+                'host': None,
+                'expected_task_state': None
+            })
+        self.assertIsNone(new['host'])
+
+    def test_instance_update_and_get_original_expected_task_state_multi_fail(self):  # noqa
+        # Ensure that we detect a changed expected task and raise
+        # UnexpectedTaskStateError when there are multiple potential expected
+        # tasks
+        instance = self.create_instance_with_args()
+
+        try:
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {
+                    'host': None,
+                    'expected_task_state': [task_states.SCHEDULING,
+                                            task_states.REBUILDING]
+                })
+        except exception.UnexpectedTaskStateError as ex:
+            self.assertEqual(ex.kwargs['instance_uuid'], instance['uuid'])
+            self.assertEqual(ex.kwargs['actual'], {'task_state': None})
+            self.assertEqual(ex.kwargs['expected'],
+                             {'task_state': [task_states.SCHEDULING,
+                                              task_states.REBUILDING]})
+        else:
+            self.fail('UnexpectedTaskStateError was not raised')
+
+    def test_instance_update_and_get_original_expected_task_state_multi_pass(self):  # noqa
+        # Ensure that we allow an update when expected task is in a list of
+        # expected tasks
+        instance = self.create_instance_with_args()
+
+        (orig, new) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {
+                'host': None,
+                'expected_task_state': [task_states.SCHEDULING, None]
+            })
+        self.assertIsNone(new['host'])
+
+    def test_instance_update_and_get_original_expected_task_state_deleting(self):  # noqa
+        # Ensure that we raise UnepectedDeletingTaskStateError when task state
+        # is not as expected, and it is DELETING
+        instance = self.create_instance_with_args(
+            task_state=task_states.DELETING)
+
+        try:
+            db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {
+                    'host': None,
+                    'expected_task_state': task_states.SCHEDULING
+                })
+        except exception.UnexpectedDeletingTaskStateError as ex:
+            self.assertEqual(ex.kwargs['instance_uuid'], instance['uuid'])
+            self.assertEqual(ex.kwargs['actual'],
+                             {'task_state': task_states.DELETING})
+            self.assertEqual(ex.kwargs['expected'],
+                             {'task_state': [task_states.SCHEDULING]})
+        else:
+            self.fail('UnexpectedDeletingTaskStateError was not raised')
 
     def test_instance_update_unique_name(self):
         context1 = context.RequestContext('user1', 'p1')

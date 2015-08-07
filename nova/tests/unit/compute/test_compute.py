@@ -1786,7 +1786,9 @@ class ComputeTestCase(BaseTestCase):
 
         with mock.patch.object(instance, 'save') as mock_save:
             mock_save.side_effect = exception.UnexpectedDeletingTaskStateError(
-                actual='foo', expected='bar')
+                instance_uuid=instance['uuid'],
+                expected={'task_state': 'bar'},
+                actual={'task_state': 'foo'})
             self.compute.build_and_run_instance(self.context, instance, {}, {},
                                                 {}, block_device_mapping=[])
             self.assertTrue(mock_save.called)
@@ -3159,7 +3161,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_snapshot_fails_with_task_state_error(self):
         deleting_state_error = exception.UnexpectedDeletingTaskStateError(
-            expected=task_states.IMAGE_SNAPSHOT, actual=task_states.DELETING)
+            instance_uuid='fake_uuid',
+            expected={'task_state': task_states.IMAGE_SNAPSHOT},
+            actual={'task_state': task_states.DELETING})
         self._test_snapshot_deletes_image_on_failure(
             'error', deleting_state_error)
         self.assertTrue(self.fake_image_delete_called)

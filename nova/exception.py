@@ -1433,9 +1433,18 @@ class InstanceUserDataMalformed(NovaException):
     msg_fmt = _("User data needs to be valid base 64.")
 
 
-class UnexpectedTaskStateError(NovaException):
-    msg_fmt = _("Unexpected task state: expecting %(expected)s but "
-                "the actual state is %(actual)s")
+class InstanceUpdateConflict(NovaException):
+    msg_fmt = _("Conflict updating instance %(instance_uuid)s. "
+                "Expected: %(expected)s. Actual: %(actual)s")
+
+
+class UnknownInstanceUpdateConflict(InstanceUpdateConflict):
+    msg_fmt = _("Conflict updating instance %(instance_uuid)s, but we were "
+                "unable to determine the cause")
+
+
+class UnexpectedTaskStateError(InstanceUpdateConflict):
+    pass
 
 
 class UnexpectedDeletingTaskStateError(UnexpectedTaskStateError):
@@ -1449,11 +1458,6 @@ class InstanceActionNotFound(NovaException):
 
 class InstanceActionEventNotFound(NovaException):
     msg_fmt = _("Event %(event)s not found for action id %(action_id)s")
-
-
-class UnexpectedVMStateError(NovaException):
-    msg_fmt = _("Unexpected VM state: expecting %(expected)s but "
-                "the actual state is %(actual)s")
 
 
 class CryptoCAFileNotFound(FileNotFound):

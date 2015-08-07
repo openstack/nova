@@ -730,17 +730,18 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
     return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window)
 
 
-def instance_update(context, instance_uuid, values):
+def instance_update(context, instance_uuid, values, expected=None):
     """Set the given properties on an instance and update it.
 
     Raises NotFound if instance does not exist.
 
     """
-    return IMPL.instance_update(context, instance_uuid, values)
+    return IMPL.instance_update(context, instance_uuid, values,
+                                expected=expected)
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
-                                     columns_to_join=None):
+                                     columns_to_join=None, expected=None):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
@@ -754,7 +755,8 @@ def instance_update_and_get_original(context, instance_uuid, values,
     Raises NotFound if instance does not exist.
     """
     rv = IMPL.instance_update_and_get_original(context, instance_uuid, values,
-                                               columns_to_join=columns_to_join)
+                                               columns_to_join=columns_to_join,
+                                               expected=expected)
     return rv
 
 
