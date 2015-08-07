@@ -33,7 +33,8 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     # Version 1.5: FixedIP <= version 1.5
     # Version 1.6: FixedIP <= version 1.6
     # Version 1.7: FixedIP <= version 1.11
-    VERSION = '1.7'
+    # Version 1.8: FixedIP <= version 1.12
+    VERSION = '1.8'
     fields = {
         'id': fields.IntegerField(),
         'address': fields.IPAddressField(),
@@ -49,7 +50,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     obj_relationships = {
         'fixed_ip': [('1.0', '1.1'), ('1.2', '1.2'), ('1.3', '1.3'),
                      ('1.4', '1.4'), ('1.5', '1.5'), ('1.6', '1.6'),
-                     ('1.7', '1.11')],
+                     ('1.7', '1.11'), ('1.8', '1.12')],
     }
 
     @staticmethod
@@ -173,15 +174,17 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.6: FloatingIP 1.5
     # Version 1.7: FloatingIP 1.6
     # Version 1.8: FloatingIP 1.7
+    # Version 1.9: FloatingIP 1.8
     fields = {
         'objects': fields.ListOfObjectsField('FloatingIP'),
         }
     obj_relationships = {
         'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.1'),
                     ('1.3', '1.2'), ('1.4', '1.3'), ('1.5', '1.4'),
-                    ('1.6', '1.5'), ('1.7', '1.6'), ('1.8', '1.7')],
+                    ('1.6', '1.5'), ('1.7', '1.6'), ('1.8', '1.7'),
+                    ('1.9', '1.8')],
         }
-    VERSION = '1.8'
+    VERSION = '1.9'
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
