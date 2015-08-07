@@ -55,7 +55,7 @@ class _TestVirtCPUModel(object):
     def test_create(self):
         model = objects.VirtCPUModel(**fake_vcpumodel_dict)
         self.assertEqual(fake_vcpumodel_dict['model'], model.model)
-        self.assertEqual(fake_vcpumodel_dict['topology']['sockets'],
+        self.assertEqual(fake_vcpumodel_dict['topology'].sockets,
                          model.topology.sockets)
         feature = model.features[0]
         self.assertEqual(fake_cpu_model_feature['policy'],
