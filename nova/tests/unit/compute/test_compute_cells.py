@@ -27,6 +27,7 @@ from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -345,8 +346,8 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
 
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_api.API, '_resize_cells_support')
-    @mock.patch.object(compute_api.API, '_reserve_quota_delta')
-    @mock.patch.object(compute_api.API, '_upsize_quota_delta')
+    @mock.patch.object(compute_utils, 'reserve_quota_delta')
+    @mock.patch.object(compute_utils, 'upsize_quota_delta')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(flavors, 'extract_flavor')
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
