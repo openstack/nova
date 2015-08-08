@@ -18,7 +18,7 @@ System-level utilities and helper functions.
 """
 
 import errno
-import logging as stdlib_logging
+import logging
 import multiprocessing
 import os
 import random
@@ -30,7 +30,6 @@ from eventlet import greenthread
 import six
 
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 
 
@@ -116,8 +115,18 @@ def execute(*cmd, **kwargs):
                             execute this command. Defaults to false.
     :type shell:            boolean
     :param loglevel:        log level for execute commands.
-    :type loglevel:         int.  (Should be stdlib_logging.DEBUG or
-                            stdlib_logging.INFO)
+    :type loglevel:         int.  (Should be logging.DEBUG or logging.INFO)
+    :param on_execute:      This function will be called upon process creation
+                            with the object as a argument.  The Purpose of this
+                            is to allow the caller of `processutils.execute` to
+                            track process creation asynchronously.
+    :type on_execute:       function(:class:`subprocess.Popen`)
+    :param on_completion:   This function will be called upon process
+                            completion with the object as a argument.  The
+                            Purpose of this is to allow the caller of
+                            `processutils.execute` to track process completion
+                            asynchronously.
+    :type on_completion:    function(:class:`subprocess.Popen`)
     :returns:               (stdout, stderr) from process execution
     :raises:                :class:`UnknownArgumentError` on
                             receiving unknown arguments
@@ -133,7 +142,9 @@ def execute(*cmd, **kwargs):
     run_as_root = kwargs.pop('run_as_root', False)
     root_helper = kwargs.pop('root_helper', '')
     shell = kwargs.pop('shell', False)
-    loglevel = kwargs.pop('loglevel', stdlib_logging.DEBUG)
+    loglevel = kwargs.pop('loglevel', logging.DEBUG)
+    on_execute = kwargs.pop('on_execute', None)
+    on_completion = kwargs.pop('on_completion', None)
 
     if isinstance(check_exit_code, bool):
         ignore_exit_code = not check_exit_code
@@ -142,8 +153,7 @@ def execute(*cmd, **kwargs):
         check_exit_code = [check_exit_code]
 
     if kwargs:
-        raise UnknownArgumentError(_('Got unknown keyword args '
-                                     'to utils.execute: %r') % kwargs)
+        raise UnknownArgumentError(_('Got unknown keyword args: %r') % kwargs)
 
     if run_as_root and hasattr(os, 'geteuid') and os.geteuid() != 0:
         if not root_helper:
@@ -176,23 +186,32 @@ def execute(*cmd, **kwargs):
                                    preexec_fn=preexec_fn,
                                    shell=shell,
                                    env=env_variables)
-            result = None
-            for _i in six.moves.range(20):
-                # NOTE(russellb) 20 is an arbitrary number of retries to
-                # prevent any chance of looping forever here.
-                try:
-                    if process_input is not None:
-                        result = obj.communicate(process_input)
-                    else:
-                        result = obj.communicate()
-                except OSError as e:
-                    if e.errno in (errno.EAGAIN, errno.EINTR):
-                        continue
-                    raise
-                break
-            obj.stdin.close()  # pylint: disable=E1101
-            _returncode = obj.returncode  # pylint: disable=E1101
-            LOG.log(loglevel, 'Result was %s' % _returncode)
+
+            if on_execute:
+                on_execute(obj)
+
+            try:
+                result = None
+                for _i in six.moves.range(20):
+                    # NOTE(russellb) 20 is an arbitrary number of retries to
+                    # prevent any chance of looping forever here.
+                    try:
+                        if process_input is not None:
+                            result = obj.communicate(process_input)
+                        else:
+                            result = obj.communicate()
+                    except OSError as e:
+                        if e.errno in (errno.EAGAIN, errno.EINTR):
+                            continue
+                        raise
+                    break
+                obj.stdin.close()  # pylint: disable=E1101
+                _returncode = obj.returncode  # pylint: disable=E1101
+                LOG.log(loglevel, 'Result was %s' % _returncode)
+            finally:
+                if on_completion:
+                    on_completion(obj)
+
             if not ignore_exit_code and _returncode not in check_exit_code:
                 (stdout, stderr) = result
                 sanitized_stdout = strutils.mask_password(stdout)
