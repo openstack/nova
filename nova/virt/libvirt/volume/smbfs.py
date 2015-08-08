@@ -10,16 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
 import re
 
 from oslo_config import cfg
 
 from nova import paths
-from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import remotefs
-from nova.virt.libvirt.volume import volume as libvirt_volume
 
 volume_opts = [
     cfg.StrOpt('smbfs_mount_point_base',
@@ -36,27 +34,14 @@ volume_opts = [
 CONF = cfg.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
+USERNAME_REGEX = re.compile(r"(user(?:name)?)=(?:[^ ,]+\\)?([^ ,]+)")
 
-class LibvirtSMBFSVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
+
+class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for SMBFS."""
 
-    def __init__(self, connection):
-        super(LibvirtSMBFSVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
-        self.username_regex = re.compile(
-            r"(user(?:name)?)=(?:[^ ,]+\\)?([^ ,]+)")
-
-    def _get_device_path(self, connection_info):
-        smbfs_share = connection_info['data']['export']
-        mount_path = self._get_mount_path(smbfs_share)
-        volume_path = os.path.join(mount_path,
-                                   connection_info['data']['name'])
-        return volume_path
-
-    def _get_mount_path(self, smbfs_share):
-        mount_path = os.path.join(CONF.libvirt.smbfs_mount_point_base,
-                                  utils.get_hash_str(smbfs_share))
-        return mount_path
+    def _get_mount_point_base(self):
+        return CONF.libvirt.smbfs_mount_point_base
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
@@ -72,7 +57,7 @@ class LibvirtSMBFSVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     def connect_volume(self, connection_info, disk_info):
         """Connect the volume."""
         smbfs_share = connection_info['data']['export']
-        mount_path = self._get_mount_path(smbfs_share)
+        mount_path = self._get_mount_path(connection_info)
 
         if not libvirt_utils.is_mounted(mount_path, smbfs_share):
             mount_options = self._parse_mount_options(connection_info)
@@ -85,7 +70,7 @@ class LibvirtSMBFSVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     def disconnect_volume(self, connection_info, disk_dev):
         """Disconnect the volume."""
         smbfs_share = connection_info['data']['export']
-        mount_path = self._get_mount_path(smbfs_share)
+        mount_path = self._get_mount_path(connection_info)
         remotefs.unmount_share(mount_path, smbfs_share)
 
     def _parse_mount_options(self, connection_info):
@@ -93,9 +78,9 @@ class LibvirtSMBFSVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             [connection_info['data'].get('options') or '',
              CONF.libvirt.smbfs_mount_options])
 
-        if not self.username_regex.findall(mount_options):
+        if not USERNAME_REGEX.findall(mount_options):
             mount_options = mount_options + ' -o username=guest'
         else:
             # Remove the Domain Name from user name
-            mount_options = self.username_regex.sub(r'\1=\2', mount_options)
+            mount_options = USERNAME_REGEX.sub(r'\1=\2', mount_options)
         return mount_options.strip(", ").split(' ')
