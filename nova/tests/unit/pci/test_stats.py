@@ -159,9 +159,8 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(devs))
 
     def test_consume_requests_failed(self):
-        self.assertRaises(exception.PciDeviceRequestFailed,
-            self.pci_stats.consume_requests,
-            pci_requests_multiple)
+        self.assertIsNone(self.pci_stats.consume_requests(
+                          pci_requests_multiple))
 
     def test_support_requests_numa(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0),
@@ -191,9 +190,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_consume_requests_numa_failed(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
-        self.assertRaises(exception.PciDeviceRequestFailed,
-            self.pci_stats.consume_requests,
-            pci_requests, cells)
+        self.assertIsNone(self.pci_stats.consume_requests(pci_requests, cells))
 
     def test_consume_requests_no_numa_info(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
