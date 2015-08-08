@@ -118,7 +118,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
-    @extensions.expected_errors((403, 404))
+    @extensions.expected_errors((400, 403, 404))
     def create(self, req, body=None):
         context = req.environ['nova.context']
         authorize(context)
@@ -143,6 +143,8 @@ class FloatingIPController(object):
             raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.FloatingIpPoolNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.FloatingIpBadRequest as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         return _translate_floating_ip_view(ip)
 

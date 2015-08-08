@@ -3018,6 +3018,22 @@ class TestNeutronv2WithMock(test.TestCase):
                           api.allocate_floating_ip,
                           self.context, pool_name)
 
+    def test_allocate_floating_ip_no_ipv4_subnet(self):
+        api = neutronapi.API()
+        net_id = uuid.uuid4()
+        error_msg = ('Bad floatingip request: Network %s does not contain '
+                     'any IPv4 subnet' % net_id)
+        with contextlib.nested(
+            mock.patch.object(client.Client, 'create_floatingip'),
+            mock.patch.object(api,
+                '_get_floating_ip_pool_id_by_name_or_id')) as (
+            create_mock, get_mock):
+            create_mock.side_effect = exceptions.BadRequest(error_msg)
+
+            self.assertRaises(exception.FloatingIpBadRequest,
+                              api.allocate_floating_ip, self.context,
+                              'ext_net')
+
     def test_create_port_for_instance_no_more_ip(self):
         instance = fake_instance.fake_instance_obj(self.context)
         net = {'id': 'my_netid1',

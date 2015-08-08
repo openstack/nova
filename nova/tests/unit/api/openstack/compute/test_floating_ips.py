@@ -18,6 +18,7 @@ import contextlib
 import uuid
 
 import mock
+import six
 import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
@@ -427,6 +428,18 @@ class FloatingIpTestV21(test.TestCase):
 
         self.assertIn('No more floating ips in pool non_existent_pool',
                       ex.explanation)
+
+    @mock.patch.object(network.api.API, 'allocate_floating_ip',
+                       side_effect=exception.FloatingIpBadRequest(
+        'Bad floatingip request: Network '
+        'c8f0e88f-ae41-47cb-be6c-d8256ba80576 does not contain any '
+        'IPv4 subnet'))
+    def test_floating_ip_allocate_no_ipv4_subnet(self, allocate_mock):
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create, self.fake_req,
+                               {'pool': 'non_existent_pool'})
+        self.assertIn("does not contain any IPv4 subnet",
+                      six.text_type(ex))
 
     @mock.patch('nova.network.api.API.allocate_floating_ip',
                 side_effect=exception.FloatingIpLimitExceeded())
