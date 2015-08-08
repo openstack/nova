@@ -46,11 +46,11 @@ class ServerStartStopActionController(wsgi.Controller):
 
         try:
             self.compute_api.start(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'start', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @wsgi.action('os-stop')
@@ -62,11 +62,11 @@ class ServerStartStopActionController(wsgi.Controller):
 
         try:
             self.compute_api.stop(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'stop', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
 
