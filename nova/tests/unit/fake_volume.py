@@ -76,7 +76,7 @@ class fake_volume(object):
         self.vol[key] = value
 
     def __getitem__(self, key):
-        self.vol[key]
+        return self.vol[key]
 
 
 class fake_snapshot(object):
@@ -110,7 +110,7 @@ class fake_snapshot(object):
         self.snap[key] = value
 
     def __getitem__(self, key):
-        self.snap[key]
+        return self.snap[key]
 
 
 class API(object):
