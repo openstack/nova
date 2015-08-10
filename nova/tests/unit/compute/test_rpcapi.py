@@ -327,10 +327,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 security_group_id='id', host='host', version='4.0')
 
     def test_refresh_instance_security_rules(self):
-        expected_args = {'instance': self.fake_instance}
+        expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('refresh_instance_security_rules', 'cast',
                 expected_args, host='fake_host',
-                instance=self.fake_instance_obj, version='4.0')
+                instance=self.fake_instance_obj, version='4.4')
 
     def test_remove_aggregate_host(self):
         self._test_compute_api('remove_aggregate_host', 'cast',

@@ -649,7 +649,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.3')
+    target = messaging.Target(version='4.4')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
