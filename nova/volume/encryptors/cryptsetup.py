@@ -18,6 +18,7 @@ import os
 
 from oslo_log import log as logging
 
+from nova import exception
 from nova import utils
 from nova.volume.encryptors import base
 
@@ -33,6 +34,15 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
 
     def __init__(self, connection_info, **kwargs):
         super(CryptsetupEncryptor, self).__init__(connection_info, **kwargs)
+
+        # Fail if no device_path was set when connecting the volume, e.g. in
+        # the case of libvirt network volume drivers.
+        data = connection_info['data']
+        if not data.get('device_path'):
+            volume_id = data.get('volume_id') or connection_info.get('serial')
+            raise exception.VolumeEncryptionNotSupported(
+                volume_id=volume_id,
+                volume_type=connection_info['driver_volume_type'])
 
         # the device's path as given to libvirt -- e.g., /dev/disk/by-path/...
         self.symlink_path = connection_info['data']['device_path']
