@@ -20,10 +20,12 @@ Unit tests for the Hyper-V Driver.
 import platform
 
 import mock
+from os_win import exceptions as os_win_exc
 
 from nova import exception
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
+from nova import utils
 from nova.virt import driver as base_driver
 from nova.virt.hyperv import driver
 
@@ -46,16 +48,45 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._migrationops = mock.MagicMock()
         self.driver._rdpconsoleops = mock.MagicMock()
 
-    @mock.patch.object(driver.hostutils.HostUtils, 'check_min_windows_version')
-    def test_check_minimum_windows_version(self, mock_check_min_win_version):
-        mock_check_min_win_version.return_value = False
+    @mock.patch.object(driver.utilsfactory, 'get_hostutils')
+    def test_check_minimum_windows_version(self, mock_get_hostutils):
+        mock_hostutils = mock_get_hostutils.return_value
+        mock_hostutils.check_min_windows_version.return_value = False
 
         self.assertRaises(exception.HypervisorTooOld,
                           self.driver._check_minimum_windows_version)
 
     def test_public_api_signatures(self):
-        self.assertPublicAPISignatures(base_driver.ComputeDriver(None),
-                                       self.driver)
+        # NOTE(claudiub): wrapped functions do not keep the same signature in
+        # Python 2.7, which causes this test to fail. Instead, we should
+        # compare the public API signatures of the unwrapped methods.
+
+        for attr in driver.HyperVDriver.__dict__:
+            class_member = getattr(driver.HyperVDriver, attr)
+            if callable(class_member):
+                mocked_method = mock.patch.object(
+                    driver.HyperVDriver, attr,
+                    utils.get_wrapped_function(class_member))
+                mocked_method.start()
+                self.addCleanup(mocked_method.stop)
+
+        self.assertPublicAPISignatures(base_driver.ComputeDriver,
+                                       driver.HyperVDriver)
+
+    def test_converted_exception(self):
+        self.driver._vmops.get_info.side_effect = (
+            os_win_exc.OSWinException)
+        self.assertRaises(exception.NovaException,
+                          self.driver.get_info, mock.sentinel.instance)
+
+        self.driver._vmops.get_info.side_effect = os_win_exc.HyperVException
+        self.assertRaises(exception.NovaException,
+                          self.driver.get_info, mock.sentinel.instance)
+
+        self.driver._vmops.get_info.side_effect = (
+            os_win_exc.HyperVVMNotFoundException(vm_name='foofoo'))
+        self.assertRaises(exception.InstanceNotFound,
+                          self.driver.get_info, mock.sentinel.instance)
 
     @mock.patch.object(driver.eventhandler, 'InstanceEventHandler')
     def test_init_host(self, mock_InstanceEventHandler):

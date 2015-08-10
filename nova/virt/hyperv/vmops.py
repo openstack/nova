@@ -22,6 +22,9 @@ import os
 import time
 
 from eventlet import timeout as etimeout
+from os_win import exceptions as os_win_exc
+from os_win.utils.io import ioutils
+from os_win import utilsfactory
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -41,9 +44,7 @@ from nova.virt import configdrive
 from nova.virt import hardware
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
-from nova.virt.hyperv import ioutils
-from nova.virt.hyperv import utilsfactory
-from nova.virt.hyperv import vmutils
+from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -130,8 +131,8 @@ class VMOps(object):
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
         self._vhdutils = utilsfactory.get_vhdutils()
-        self._pathutils = utilsfactory.get_pathutils()
         self._hostutils = utilsfactory.get_hostutils()
+        self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
         self._vif_driver = None
@@ -180,7 +181,7 @@ class VMOps(object):
     def _create_root_vhd(self, context, instance):
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
         base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
-        base_vhd_size = base_vhd_info['MaxInternalSize']
+        base_vhd_size = base_vhd_info['VirtualSize']
         format_ext = base_vhd_path.split('.')[-1]
         root_vhd_path = self._pathutils.get_root_vhd_path(instance.name,
                                                           format_ext)
@@ -246,8 +247,7 @@ class VMOps(object):
 
             eph_vhd_path = self._pathutils.get_ephemeral_vhd_path(
                 instance.name, vhd_format)
-            self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size,
-                                              vhd_format)
+            self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size)
             return eph_vhd_path
 
     @check_admin_permissions
@@ -495,7 +495,7 @@ class VMOps(object):
                     LOG.info(_LI("Soft shutdown succeeded."),
                              instance=instance)
                     return True
-            except vmutils.HyperVException as e:
+            except os_win_exc.HyperVException as e:
                 # Exception is raised when trying to shutdown the instance
                 # while it is still booting.
                 LOG.debug("Soft shutdown failed: %s", e, instance=instance)
@@ -545,7 +545,7 @@ class VMOps(object):
 
             self._set_vm_state(instance,
                                constants.HYPERV_VM_STATE_DISABLED)
-        except exception.InstanceNotFound:
+        except os_win_exc.HyperVVMNotFoundException:
             # The manager can call the stop API after receiving instance
             # power off events. If this is triggered when the instance
             # is being deleted, it might attempt to power off an unexisting
@@ -761,7 +761,7 @@ class VMOps(object):
             LOG.debug('Detaching vif: %s', vif['id'], instance=instance)
             self._vif_driver.unplug(instance, vif)
             self._vmutils.destroy_nic(instance.name, vif['id'])
-        except exception.NotFound:
+        except os_win_exc.HyperVVMNotFoundException:
             # TODO(claudiub): add set log level to error after string freeze.
             LOG.debug("Instance not found during detach interface. It "
                       "might have been destroyed beforehand.",

@@ -255,6 +255,7 @@ nova.tests.unit.virt.hyperv.test_snapshotops.SnapshotOpsTestCase
 nova.tests.unit.virt.hyperv.test_utilsfactory.TestHyperVUtilsFactory
 nova.tests.unit.virt.hyperv.test_vhdutils.VHDUtilsTestCase
 nova.tests.unit.virt.hyperv.test_vhdutilsv2.VHDUtilsV2TestCase
+nova.tests.unit.virt.hyperv.test_vif.HyperVNovaNetworkVIFDriverTestCase
 nova.tests.unit.virt.hyperv.test_vmops.VMOpsTestCase
 nova.tests.unit.virt.hyperv.test_vmutils.VMUtilsTestCase
 nova.tests.unit.virt.hyperv.test_vmutilsv2.VMUtilsV2TestCase

@@ -21,6 +21,7 @@ import os
 import platform
 import time
 
+from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -31,7 +32,7 @@ from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova.i18n import _
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import utilsfactory
+from nova.virt.hyperv import pathutils
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
@@ -41,7 +42,7 @@ LOG = logging.getLogger(__name__)
 class HostOps(object):
     def __init__(self):
         self._hostutils = utilsfactory.get_hostutils()
-        self._pathutils = utilsfactory.get_pathutils()
+        self._pathutils = pathutils.PathUtils()
 
     def _get_cpu_info(self):
         """Get the CPU information.

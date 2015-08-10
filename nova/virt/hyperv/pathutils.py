@@ -14,21 +14,14 @@
 #    under the License.
 
 import os
-import shutil
-import sys
-import time
 
-if sys.platform == 'win32':
-    import wmi
-
+from os_win.utils import pathutils
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _
-from nova import utils
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import vmutils
 
 LOG = logging.getLogger(__name__)
 
@@ -47,89 +40,14 @@ CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 ERROR_INVALID_NAME = 123
-ERROR_DIR_IS_NOT_EMPTY = 145
+
+# NOTE(claudiub): part of the pre-existing PathUtils is nova-specific and
+# it does not belong in the os-win library. In order to ensure the same
+# functionality with the least amount of changes necessary, adding as a mixin
+# the os_win.pathutils.PathUtils class into this PathUtils.
 
 
-class PathUtils(object):
-    def __init__(self):
-        self._set_smb_conn()
-
-    @property
-    def _smb_conn(self):
-        if self._smb_conn_attr:
-            return self._smb_conn_attr
-        raise vmutils.HyperVException(_("The SMB WMI namespace is not "
-                                        "available on this OS version."))
-
-    def _set_smb_conn(self):
-        # The following namespace is not available prior to Windows
-        # Server 2012. utilsfactory is not used in order to avoid a
-        # circular dependency.
-        try:
-            self._smb_conn_attr = wmi.WMI(
-                moniker=r"root\Microsoft\Windows\SMB")
-        except wmi.x_wmi:
-            self._smb_conn_attr = None
-
-    def open(self, path, mode):
-        """Wrapper on __builtin__.open used to simplify unit testing."""
-        import __builtin__
-        return __builtin__.open(path, mode)
-
-    def exists(self, path):
-        return os.path.exists(path)
-
-    def makedirs(self, path):
-        os.makedirs(path)
-
-    def remove(self, path):
-        os.remove(path)
-
-    def rename(self, src, dest):
-        os.rename(src, dest)
-
-    def copyfile(self, src, dest):
-        self.copy(src, dest)
-
-    def copy(self, src, dest):
-        # With large files this is 2x-3x faster than shutil.copy(src, dest),
-        # especially when copying to a UNC target.
-        # shutil.copyfileobj(...) with a proper buffer is better than
-        # shutil.copy(...) but still 20% slower than a shell copy.
-        # It can be replaced with Win32 API calls to avoid the process
-        # spawning overhead.
-        LOG.debug('Copying file from %s to %s', src, dest)
-        output, ret = utils.execute('cmd.exe', '/C', 'copy', '/Y', src, dest)
-        if ret:
-            raise IOError(_('The file copy from %(src)s to %(dest)s failed')
-                           % {'src': src, 'dest': dest})
-
-    def move_folder_files(self, src_dir, dest_dir):
-        """Moves the files of the given src_dir to dest_dir.
-        It will ignore any nested folders.
-
-        :param src_dir: Given folder from which to move files.
-        :param dest_dir: Folder to which to move files.
-        """
-
-        for fname in os.listdir(src_dir):
-            src = os.path.join(src_dir, fname)
-            # ignore subdirs.
-            if os.path.isfile(src):
-                self.rename(src, os.path.join(dest_dir, fname))
-
-    def rmtree(self, path):
-        # This will be removed once support for Windows Server 2008R2 is
-        # stopped
-        for i in range(5):
-            try:
-                shutil.rmtree(path)
-                return
-            except WindowsError as e:
-                if e.winerror == ERROR_DIR_IS_NOT_EMPTY:
-                    time.sleep(1)
-                else:
-                    raise e
+class PathUtils(pathutils.PathUtils):
 
     def get_instances_dir(self, remote_server=None):
         local_instance_path = os.path.normpath(CONF.instances_path)
@@ -145,25 +63,15 @@ class PathUtils(object):
         else:
             return local_instance_path
 
-    def _check_create_dir(self, path):
-        if not self.exists(path):
-            LOG.debug('Creating directory: %s', path)
-            self.makedirs(path)
-
-    def _check_remove_dir(self, path):
-        if self.exists(path):
-            LOG.debug('Removing directory: %s', path)
-            self.rmtree(path)
-
     def _get_instances_sub_dir(self, dir_name, remote_server=None,
                                create_dir=True, remove_dir=False):
         instances_path = self.get_instances_dir(remote_server)
         path = os.path.join(instances_path, dir_name)
         try:
             if remove_dir:
-                self._check_remove_dir(path)
+                self.check_remove_dir(path)
             if create_dir:
-                self._check_create_dir(path)
+                self.check_create_dir(path)
             return path
         except WindowsError as ex:
             if ex.winerror == ERROR_INVALID_NAME:
@@ -238,52 +146,3 @@ class PathUtils(object):
                                              remote_server)
         console_log_path = os.path.join(instance_dir, 'console.log')
         return console_log_path, console_log_path + '.1'
-
-    def check_smb_mapping(self, smbfs_share):
-        mappings = self._smb_conn.Msft_SmbMapping(RemotePath=smbfs_share)
-
-        if not mappings:
-            return False
-
-        if os.path.exists(smbfs_share):
-            LOG.debug('Share already mounted: %s', smbfs_share)
-            return True
-        else:
-            LOG.debug('Share exists but is unavailable: %s ', smbfs_share)
-            self.unmount_smb_share(smbfs_share, force=True)
-            return False
-
-    def mount_smb_share(self, smbfs_share, username=None, password=None):
-        try:
-            LOG.debug('Mounting share: %s', smbfs_share)
-            self._smb_conn.Msft_SmbMapping.Create(RemotePath=smbfs_share,
-                                                  UserName=username,
-                                                  Password=password)
-        except wmi.x_wmi as exc:
-            err_msg = (_(
-                'Unable to mount SMBFS share: %(smbfs_share)s '
-                'WMI exception: %(wmi_exc)s') % {'smbfs_share': smbfs_share,
-                                                 'wmi_exc': exc})
-            raise vmutils.HyperVException(err_msg)
-
-    def unmount_smb_share(self, smbfs_share, force=False):
-        mappings = self._smb_conn.Msft_SmbMapping(RemotePath=smbfs_share)
-        if not mappings:
-            LOG.debug('Share %s is not mounted. Skipping unmount.',
-                      smbfs_share)
-
-        for mapping in mappings:
-            # Due to a bug in the WMI module, getting the output of
-            # methods returning None will raise an AttributeError
-            try:
-                mapping.Remove(Force=force)
-            except AttributeError:
-                pass
-            except wmi.x_wmi:
-                # If this fails, a 'Generic Failure' exception is raised.
-                # This happens even if we unforcefully unmount an in-use
-                # share, for which reason we'll simply ignore it in this
-                # case.
-                if force:
-                    raise vmutils.HyperVException(
-                        _("Could not unmount share: %s") % smbfs_share)

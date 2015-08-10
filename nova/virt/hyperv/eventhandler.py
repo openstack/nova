@@ -20,15 +20,15 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from os_win import exceptions as os_win_exc
+from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from nova import exception
 from nova.i18n import _LW
 from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import utilsfactory
 
 LOG = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class InstanceEventHandler(object):
                              "will be ignored."),
                          instance_name)
             return instance_uuid
-        except exception.InstanceNotFound:
+        except os_win_exc.HyperVVMNotFoundException:
             # The instance has been deleted.
             pass
 

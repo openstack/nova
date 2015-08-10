@@ -20,7 +20,6 @@ import nova.virt.driver
 import nova.virt.firewall
 import nova.virt.hardware
 import nova.virt.hyperv.pathutils
-import nova.virt.hyperv.utilsfactory
 import nova.virt.hyperv.vif
 import nova.virt.hyperv.vmops
 import nova.virt.hyperv.volumeops
@@ -70,7 +69,6 @@ def list_opts():
         ('hyperv',
          itertools.chain(
              nova.virt.hyperv.pathutils.hyperv_opts,
-             nova.virt.hyperv.utilsfactory.hyper_opts,
              nova.virt.hyperv.vif.hyperv_opts,
              nova.virt.hyperv.vmops.hyperv_opts,
              nova.virt.hyperv.volumeops.hyper_volumeops_opts,
