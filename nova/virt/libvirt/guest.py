@@ -365,6 +365,10 @@ class Guest(object):
     def get_power_state(self, host):
         return self.get_info(host).state
 
+    def is_active(self):
+        "Determines whether guest is currently running."
+        return self._domain.isActive()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

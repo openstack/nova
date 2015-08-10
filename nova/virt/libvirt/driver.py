@@ -5848,7 +5848,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # Leave type untouched
                 else:
                     try:
-                        if dom.isActive():
+                        if guest.is_active():
                             LOG.debug("VM running on src, migration failed",
                                       instance=instance)
                             info.type = libvirt.VIR_DOMAIN_JOB_FAILED
