@@ -319,7 +319,9 @@ class TestDiskBus(TestField):
                                    ('scsi', 'scsi'),
                                    ('usb', 'usb'),
                                    ('virtio', 'virtio'),
-                                   ('xen', 'xen')]
+                                   ('xen', 'xen'),
+                                   ('lxc', 'lxc'),
+                                   ('uml', 'uml')]
         self.coerce_bad_values = ['acme']
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
