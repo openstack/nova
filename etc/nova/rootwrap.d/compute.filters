@@ -246,3 +246,6 @@ ploop: CommandFilter, ploop, root
 
 # nova/virt/libvirt/utils.py: 'xend', 'status'
 xend: CommandFilter, xend, root
+
+# nova/virt/libvirt/utils.py:
+touch: CommandFilter, touch, root

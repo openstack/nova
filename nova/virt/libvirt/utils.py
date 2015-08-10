@@ -248,6 +248,14 @@ def chown(path, owner):
     execute('chown', owner, path, run_as_root=True)
 
 
+def update_mtime(path):
+    """Touch a file without being the owner.
+
+    :param path: File bump the mtime on
+    """
+    execute('touch', '-c', path, run_as_root=True)
+
+
 def _id_map_to_config(id_map):
     return "%s:%s:%s" % (id_map.start, id_map.target, id_map.count)
 

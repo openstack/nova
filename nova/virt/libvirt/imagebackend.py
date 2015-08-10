@@ -531,10 +531,15 @@ class Raw(Image):
         else:
             if not os.path.exists(base):
                 prepare_template(target=base, max_size=size, *args, **kwargs)
+
+            # NOTE(mikal): Update the mtime of the base file so the image
+            # cache manager knows it is in use.
+            libvirt_utils.update_mtime(base)
             self.verify_base_size(base, size)
             if not os.path.exists(self.path):
                 with fileutils.remove_path_on_error(self.path):
                     copy_raw_image(base, self.path, size)
+
         self.correct_format()
 
     def resize_image(self, size):
@@ -584,6 +589,10 @@ class Qcow2(Image):
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
             prepare_template(target=base, max_size=size, *args, **kwargs)
+
+        # NOTE(ankit): Update the mtime of the base file so the image
+        # cache manager knows it is in use.
+        libvirt_utils.update_mtime(base)
         self.verify_base_size(base, size)
 
         legacy_backing_size = None
