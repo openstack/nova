@@ -71,7 +71,9 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'os_tenant_name': CONF.ironic.admin_tenant_name,
                     'os_service_type': 'baremetal',
                     'os_endpoint_type': 'public',
-                    'ironic_url': CONF.ironic.api_endpoint}
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
@@ -82,7 +84,9 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
         expected = {'os_auth_token': 'fake-token',
-                    'ironic_url': CONF.ironic.api_endpoint}
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
