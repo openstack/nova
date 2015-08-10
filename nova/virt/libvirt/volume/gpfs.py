@@ -10,14 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.virt.libvirt.volume import volume as libvirt_volume
+from nova.virt.libvirt.volume import fs
 
 
-class LibvirtGPFSVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
+class LibvirtGPFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class for volumes backed by gpfs volume."""
-    def __init__(self, connection):
-        super(LibvirtGPFSVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
+
+    def _get_mount_point_base(self):
+        return ''
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
