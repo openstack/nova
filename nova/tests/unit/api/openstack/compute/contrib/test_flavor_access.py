@@ -20,7 +20,7 @@ import six
 from webob import exc
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack.compute.contrib import flavor_access \
+from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
     as flavor_access_v2
 from nova.api.openstack.compute.legacy_v2 import flavors as flavors_api
 from nova.api.openstack.compute.plugins.v3 import flavor_access \

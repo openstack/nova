@@ -16,7 +16,8 @@
 from oslo_serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import extended_virtual_interfaces_net
+from nova.api.openstack.compute.legacy_v2.contrib import \
+    extended_virtual_interfaces_net
 from nova import compute
 from nova import network
 from nova.objects import virtual_interface as vif_obj

@@ -39,7 +39,8 @@ CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
 CONF.import_opt('enable_network_quota',
-                'nova.api.openstack.compute.contrib.os_tenant_networks')
+                'nova.api.openstack.compute.legacy_v2.contrib.'
+                'os_tenant_networks')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
@@ -166,7 +167,7 @@ class ServersSampleBase(ApiSampleTestBaseV2):
 
 
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
-    extension_name = '.'.join(('nova.api.openstack.compute.contrib',
+    extension_name = '.'.join(('nova.api.openstack.compute.legacy_v2.contrib',
                                'server_list_multi_status',
                                'Server_list_multi_status'))
 
@@ -206,7 +207,7 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class VirtualInterfacesJsonTest(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
                      ".virtual_interfaces.Virtual_interfaces")
 
     def test_vifs_list(self):
@@ -221,8 +222,8 @@ class VirtualInterfacesJsonTest(ServersSampleBase):
 
 
 class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.contrib.used_limits."
-                      "Used_limits")
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
+                      "used_limits.Used_limits")
 
     def test_get_used_limits(self):
         # Get api sample to used limits.
@@ -233,10 +234,10 @@ class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
 
 class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
     ADMIN_API = True
-    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
+    extends_name = ("nova.api.openstack.compute.legacy_v2.contrib.used_limits."
                     "Used_limits")
     extension_name = (
-        "nova.api.openstack.compute.contrib.used_limits_for_admin."
+        "nova.api.openstack.compute.legacy_v2.contrib.used_limits_for_admin."
         "Used_limits_for_admin")
 
     def test_get_used_limits_for_admin(self):
@@ -248,7 +249,7 @@ class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
 
 
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
                       ".extended_ips.Extended_ips")
 
     def test_show(self):
@@ -270,7 +271,7 @@ class ExtendedIpsSampleJsonTests(ServersSampleBase):
 
 
 class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
                       ".extended_ips_mac.Extended_ips_mac")
 
     def test_show(self):
@@ -296,7 +297,7 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
 
 
 class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
           ".extended_virtual_interfaces_net.Extended_virtual_interfaces_net")
 
     def _get_flags(self):
@@ -305,7 +306,7 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         # extended_virtual_interfaces_net_update also
         # needs virtual_interfaces to be loaded
         f['osapi_compute_extension'].append(
-            ('nova.api.openstack.compute.contrib'
+            ('nova.api.openstack.compute.legacy_v2.contrib'
              '.virtual_interfaces.Virtual_interfaces'))
         return f
 
@@ -322,7 +323,7 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
 
 
 class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
-    extension_name = ('nova.api.openstack.compute.contrib.'
+    extension_name = ('nova.api.openstack.compute.legacy_v2.contrib.'
                       'block_device_mapping_v2_boot.'
                       'Block_device_mapping_v2_boot')
 
@@ -331,7 +332,7 @@ class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         # We need the volumes extension as well
         f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
+            'nova.api.openstack.compute.legacy_v2.contrib.volumes.Volumes')
         return f
 
     def test_servers_post_with_bdm_v2(self):
@@ -343,12 +344,12 @@ class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
 
 class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
     sample_dir = None
-    extension_name = ("nova.api.openstack.compute.contrib."
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
                       "server_group_quotas.Server_group_quotas")
 
 
 class ServerGroupQuotas_UsedLimitsSamplesJsonTest(UsedLimitsSamplesJsonTest):
-    extension_name = ("nova.api.openstack.compute.contrib."
+    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
                "server_group_quotas.Server_group_quotas")
-    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
+    extends_name = ("nova.api.openstack.compute.legacy_v2.contrib.used_limits."
                     "Used_limits")

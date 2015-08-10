@@ -19,7 +19,8 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import security_groups as secgroups_v2
+from nova.api.openstack.compute.legacy_v2.contrib import security_groups as \
+    secgroups_v2
 from nova.api.openstack.compute.plugins.v3 import security_groups as \
     secgroups_v21
 from nova import compute

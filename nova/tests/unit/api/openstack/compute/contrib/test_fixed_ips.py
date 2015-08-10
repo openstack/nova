@@ -15,7 +15,8 @@
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.contrib import fixed_ips as fixed_ips_v2
+from nova.api.openstack.compute.legacy_v2.contrib import fixed_ips \
+        as fixed_ips_v2
 from nova.api.openstack.compute.plugins.v3 import fixed_ips as fixed_ips_v21
 from nova.api.openstack import wsgi as os_wsgi
 from nova import context

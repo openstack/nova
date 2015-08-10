@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.contrib import admin_actions as \
+from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
     pause_server_v2
 from nova.api.openstack.compute.plugins.v3 import pause_server as \
     pause_server_v21

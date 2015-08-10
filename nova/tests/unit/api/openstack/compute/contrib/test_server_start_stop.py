@@ -15,7 +15,7 @@
 from mox3 import mox
 import webob
 
-from nova.api.openstack.compute.contrib import server_start_stop \
+from nova.api.openstack.compute.legacy_v2.contrib import server_start_stop \
     as server_v2
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import servers \

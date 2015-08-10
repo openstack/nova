@@ -18,7 +18,8 @@ import mock
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import evacuate as evacuate_v2
+from nova.api.openstack.compute.legacy_v2.contrib import evacuate \
+        as evacuate_v2
 from nova.api.openstack.compute.plugins.v3 import evacuate as evacuate_v21
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api

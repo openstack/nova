@@ -18,7 +18,8 @@
 import mock
 from webob import exc
 
-from nova.api.openstack.compute.contrib import aggregates as aggregates_v2
+from nova.api.openstack.compute.legacy_v2.contrib import aggregates \
+        as aggregates_v2
 from nova.api.openstack.compute.plugins.v3 import aggregates as aggregates_v21
 from nova import context
 from nova import exception

@@ -15,7 +15,7 @@
 
 import webob
 
-from nova.api.openstack.compute.contrib import quota_classes
+from nova.api.openstack.compute.legacy_v2.contrib import quota_classes
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import quota_classes \
        as quota_classes_v21

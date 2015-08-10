@@ -210,6 +210,13 @@ class ExtensionManager(object):
         LOG.debug("Loading extension %s", ext_factory)
 
         if isinstance(ext_factory, six.string_types):
+            if ext_factory.startswith('nova.api.openstack.compute.contrib'):
+                LOG.warn(_LW("The legacy v2 API module already moved into"
+                             "'nova.api.openstack.compute.legacy_v2.contrib'. "
+                             "Use new path instead of old path %s"),
+                         ext_factory)
+                ext_factory = ext_factory.replace('contrib',
+                                                  'legacy_v2.contrib')
             # Load the factory
             factory = importutils.import_class(ext_factory)
         else:

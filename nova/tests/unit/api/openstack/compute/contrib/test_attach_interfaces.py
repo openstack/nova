@@ -16,7 +16,7 @@
 import mock
 from oslo_config import cfg
 
-from nova.api.openstack.compute.contrib import attach_interfaces \
+from nova.api.openstack.compute.legacy_v2.contrib import attach_interfaces \
     as attach_interfaces_v2
 from nova.api.openstack.compute.plugins.v3 import attach_interfaces \
     as attach_interfaces_v21

@@ -17,7 +17,7 @@ from oslo_serialization import jsonutils
 import six
 import webob
 
-from nova.api.openstack.compute.contrib import extended_ips_mac
+from nova.api.openstack.compute.legacy_v2.contrib import extended_ips_mac
 from nova import compute
 from nova import objects
 from nova import test

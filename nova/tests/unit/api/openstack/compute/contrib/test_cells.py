@@ -18,7 +18,7 @@ import copy
 from oslo_utils import timeutils
 from webob import exc
 
-from nova.api.openstack.compute.contrib import cells as cells_ext_v2
+from nova.api.openstack.compute.legacy_v2.contrib import cells as cells_ext_v2
 from nova.api.openstack.compute.plugins.v3 import cells as cells_ext_v21
 from nova.api.openstack import extensions
 from nova.cells import rpcapi as cells_rpcapi

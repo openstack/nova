@@ -18,7 +18,7 @@ import copy
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import console_auth_tokens \
+from nova.api.openstack.compute.legacy_v2.contrib import console_auth_tokens \
     as console_auth_tokens_v2
 from nova.api.openstack.compute.plugins.v3 import console_auth_tokens \
     as console_auth_tokens_v21

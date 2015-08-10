@@ -16,7 +16,8 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.contrib import multinic as multinic_v2
+from nova.api.openstack.compute.legacy_v2.contrib import multinic \
+        as multinic_v2
 from nova.api.openstack.compute.plugins.v3 import multinic as multinic_v21
 from nova import compute
 from nova import exception
