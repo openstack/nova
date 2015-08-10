@@ -18,6 +18,8 @@
 
 import copy
 
+import six
+
 from oslo_utils import timeutils
 
 from nova.api.ec2 import apirequest
@@ -70,7 +72,7 @@ class APIRequestTestCase(test.NoDBTestCase):
 
     def test_render_response_utf8(self):
         resp = copy.deepcopy(self.resp)
-        resp['utf8'] = unichr(40960) + u'abcd' + unichr(1972)
+        resp['utf8'] = six.unichr(40960) + u'abcd' + six.unichr(1972)
         data = self.req._render_response(resp, 'uuid')
         self.assertIn('<utf8>&#40960;abcd&#1972;</utf8>', data)
 
