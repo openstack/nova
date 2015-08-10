@@ -70,6 +70,9 @@ We also have a local copy of the v2 docs:
 .. _`v2 (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2.html
 .. _`v2 extensions (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2-ext.html
 
+There was a session on the v2.1 API at the Liberty summit which you can watch
+`here <https://www.openstack.org/summit/vancouver-2015/summit-videos/presentation/introduction-of-a-new-nova-rest-api-why-we-need-to-use-nova-v2-1-api>`_.
+
 
 
 Hypervisor Support Matrix
