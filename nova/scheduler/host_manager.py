@@ -56,6 +56,7 @@ host_manager_opts = [
                   'RetryFilter',
                   'AvailabilityZoneFilter',
                   'RamFilter',
+                  'DiskFilter',
                   'ComputeFilter',
                   'ComputeCapabilitiesFilter',
                   'ImagePropertiesFilter',
