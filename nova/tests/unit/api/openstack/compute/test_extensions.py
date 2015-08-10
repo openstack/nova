@@ -20,7 +20,8 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute import extensions as compute_extensions
+from nova.api.openstack.compute.legacy_v2 import extensions \
+        as compute_extensions
 from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
 from nova import exception

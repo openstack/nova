@@ -103,13 +103,3 @@ class Versions(wsgi.Resource):
             args['action'] = 'multi'
 
         return args
-
-
-class VersionV2(object):
-    def show(self, req):
-        builder = views_versions.get_view_builder(req)
-        return builder.build_version(VERSIONS['v2.0'])
-
-
-def create_resource():
-    return wsgi.Resource(VersionV2())

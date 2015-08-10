@@ -22,7 +22,7 @@ from nova.tests.unit import utils as test_utils
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FixedIpTest(test_servers.ServersSampleBase):

@@ -15,7 +15,7 @@
 
 """Config Drive extension."""
 
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute.legacy_v2 import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 

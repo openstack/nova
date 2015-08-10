@@ -24,7 +24,7 @@ import mock
 import six.moves.urllib.parse as urlparse
 import webob
 
-from nova.api.openstack.compute import images
+from nova.api.openstack.compute.legacy_v2 import images
 from nova.api.openstack.compute.plugins.v3 import images as images_v21
 from nova.api.openstack.compute.views import images as images_view
 from nova import exception

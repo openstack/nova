@@ -19,13 +19,13 @@ import uuid
 from oslo_config import cfg
 import webob
 
+from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import block_device_mapping as \
     block_device_mapping_v21
 from nova.api.openstack.compute.plugins.v3 import multiple_create as \
     multiple_create_v21
 from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
-from nova.api.openstack.compute import servers as servers_v20
 from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors

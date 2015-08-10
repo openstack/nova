@@ -13,10 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.legacy_v2 import limits
+from nova.api.openstack.compute import versions
+from nova.api.openstack.compute.views import versions as views_versions
+from nova.api.openstack import wsgi
 
 
-# NOTE(alex_xu): This is just for keeping backward compatible with v2 endpoint
-# in api-paste.ini. This will be removed after v2 API code deprecated in the
-# future.
-RateLimitingMiddleware = limits.RateLimitingMiddleware
+class VersionV2(object):
+    def show(self, req):
+        builder = views_versions.get_view_builder(req)
+        return builder.build_version(versions.VERSIONS['v2.0'])
+
+
+def create_resource():
+    return wsgi.Resource(VersionV2())

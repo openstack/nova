@@ -26,7 +26,7 @@ import six
 from six.moves import range
 import webob
 
-from nova.api.openstack.compute import limits
+from nova.api.openstack.compute.legacy_v2 import limits
 from nova.api.openstack.compute.plugins.v3 import limits as limits_v21
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi

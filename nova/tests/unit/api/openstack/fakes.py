@@ -31,7 +31,7 @@ from nova.api import openstack as openstack_api
 from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import auth
 from nova.api.openstack import compute
-from nova.api.openstack.compute import limits
+from nova.api.openstack.compute.legacy_v2 import limits
 from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
@@ -157,11 +157,9 @@ def stub_out_rate_limiting(stubs):
         super(limits.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.compute.limits.RateLimitingMiddleware,
-        '__init__', fake_rate_init)
-
-    stubs.Set(nova.api.openstack.compute.limits.RateLimitingMiddleware,
-        '__call__', fake_wsgi)
+    v2_limits = nova.api.openstack.compute.legacy_v2.limits
+    stubs.Set(v2_limits.RateLimitingMiddleware, '__init__', fake_rate_init)
+    stubs.Set(v2_limits.RateLimitingMiddleware, '__call__', fake_wsgi)
 
 
 def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):

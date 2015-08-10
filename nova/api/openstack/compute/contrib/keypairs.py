@@ -18,7 +18,7 @@
 import webob
 import webob.exc
 
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute.legacy_v2 import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api

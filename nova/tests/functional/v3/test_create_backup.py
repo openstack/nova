@@ -22,7 +22,7 @@ from nova.tests.unit.image import fake
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):

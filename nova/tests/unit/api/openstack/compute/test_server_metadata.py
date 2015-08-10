@@ -22,9 +22,10 @@ from oslo_utils import timeutils
 import six
 import webob
 
+from nova.api.openstack.compute.legacy_v2 import server_metadata \
+        as server_metadata_v2
 from nova.api.openstack.compute.plugins.v3 import server_metadata \
-    as server_metadata_v21
-from nova.api.openstack.compute import server_metadata as server_metadata_v2
+        as server_metadata_v21
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db

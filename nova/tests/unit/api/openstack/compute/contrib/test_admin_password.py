@@ -16,9 +16,9 @@
 import mock
 import webob
 
+from nova.api.openstack.compute.legacy_v2 import servers
 from nova.api.openstack.compute.plugins.v3 import admin_password \
-                                           as admin_password_v21
-from nova.api.openstack.compute import servers
+        as admin_password_v21
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test

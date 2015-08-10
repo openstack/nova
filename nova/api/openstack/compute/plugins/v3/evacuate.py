@@ -29,7 +29,7 @@ from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.servers')
+                'nova.api.openstack.compute.legacy_v2.servers')
 
 ALIAS = "os-evacuate"
 authorize = extensions.os_compute_authorizer(ALIAS)

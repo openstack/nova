@@ -20,7 +20,7 @@ from nova.tests.functional.v3 import test_servers
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 def fake_get(*args, **kwargs):

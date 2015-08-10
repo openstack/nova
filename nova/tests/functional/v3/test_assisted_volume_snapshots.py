@@ -20,7 +20,7 @@ from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class AssistedVolumeSnapshotsJsonTests(test_servers.ServersSampleBase):

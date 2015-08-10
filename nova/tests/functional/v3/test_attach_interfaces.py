@@ -23,7 +23,7 @@ from nova.tests.unit import fake_network_cache_model
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):

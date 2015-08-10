@@ -41,7 +41,7 @@ CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
 CONF.import_opt('enable_network_quota',
                 'nova.api.openstack.compute.contrib.os_tenant_networks')
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('osapi_glance_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')

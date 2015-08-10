@@ -32,8 +32,8 @@ import six.moves.urllib.parse as urlparse
 import testtools
 import webob
 
-from nova.api.openstack.compute import ips
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute.legacy_v2 import ips
+from nova.api.openstack.compute.legacy_v2 import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api

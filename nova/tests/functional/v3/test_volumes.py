@@ -31,7 +31,7 @@ from nova.volume import cinder
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):

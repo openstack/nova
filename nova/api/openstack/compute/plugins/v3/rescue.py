@@ -30,7 +30,7 @@ from nova import utils
 ALIAS = "os-rescue"
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.servers')
+                'nova.api.openstack.compute.legacy_v2.servers')
 
 authorize = extensions.os_compute_authorizer(ALIAS)
 

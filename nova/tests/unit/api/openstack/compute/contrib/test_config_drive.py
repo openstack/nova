@@ -19,9 +19,9 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
-from nova.api.openstack.compute import servers as servers_v2
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors

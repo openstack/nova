@@ -48,7 +48,7 @@ ALIAS = 'servers'
 
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.servers')
+                'nova.api.openstack.compute.legacy_v2.servers')
 CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')

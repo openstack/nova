@@ -22,7 +22,7 @@ CONF = cfg.CONF
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV3):

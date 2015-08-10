@@ -24,7 +24,7 @@ CONF = cfg.CONF
 CONF.import_opt('enable_network_quota',
                 'nova.api.openstack.compute.contrib.os_tenant_networks')
 CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.extensions')
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
