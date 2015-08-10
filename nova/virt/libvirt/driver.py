@@ -2646,6 +2646,13 @@ class LibvirtDriver(driver.ComputeDriver):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'disk.config' + suffix)
 
+    @staticmethod
+    def _get_disk_config_image_type():
+        # TODO(mikal): there is a bug here if images_type has
+        # changed since creation of the instance, but I am pretty
+        # sure that this bug already exists.
+        return 'rbd' if CONF.libvirt.images_type == 'rbd' else 'raw'
+
     def _chown_console_log_for_instance(self, instance):
         console_log = self._get_console_log_path(instance)
         if os.path.exists(console_log):
@@ -2743,6 +2750,9 @@ class LibvirtDriver(driver.ComputeDriver):
                               {'img_id': img_id, 'e': e},
                               instance=instance)
 
+    # NOTE(sileht): many callers of this method assume that this
+    # method doesn't fail if an image already exists but instead
+    # think that it will be reused (ie: (live)-migration/resize)
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
@@ -2908,6 +2918,20 @@ class LibvirtDriver(driver.ComputeDriver):
                         LOG.error(_LE('Creating config drive failed '
                                       'with error: %s'),
                                   e, instance=instance)
+
+            try:
+                # Tell the storage backend about the config drive
+                config_drive_image = self.image_backend.image(
+                    instance, 'disk.config' + suffix,
+                    self._get_disk_config_image_type())
+
+                config_drive_image.import_file(
+                    instance, configdrive_path, 'disk.config' + suffix)
+            finally:
+                # NOTE(mikal): if the config drive was imported into RBD, then
+                # we no longer need the local copy
+                if CONF.libvirt.images_type == 'rbd':
+                    os.unlink(configdrive_path)
 
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
@@ -3265,11 +3289,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         block_device.prepend_dev(diskswap.target_dev))
 
             if 'disk.config' in disk_mapping:
-                diskconfig = self._get_guest_disk_config(instance,
-                                                         'disk.config',
-                                                         disk_mapping,
-                                                         inst_type,
-                                                         'raw')
+                diskconfig = self._get_guest_disk_config(
+                    instance, 'disk.config', disk_mapping, inst_type,
+                    self._get_disk_config_image_type())
                 devices.append(diskconfig)
 
         for vol in block_device.get_bdms_to_connect(block_device_mapping,
@@ -5859,14 +5881,21 @@ class LibvirtDriver(driver.ComputeDriver):
         image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
-        if not (is_shared_instance_path and is_shared_block_storage):
-            # NOTE(dims): Using config drive with iso format does not work
-            # because of a bug in libvirt with read only devices. However
-            # one can use vfat as config_drive_format which works fine.
-            # Please see bug/1246201 for details on the libvirt bug.
-            if CONF.config_drive_format != 'vfat':
-                if configdrive.required_by(instance):
-                    raise exception.NoLiveMigrationForConfigDriveInLibVirt()
+        if configdrive.required_by(instance):
+                # NOTE(sileht): configdrive is stored into the block storage
+                # kvm is a block device, live migration will work
+                # NOTE(sileht): the configdrive is stored into a shared path
+                # kvm don't need to migrate it, live migration will work
+                # NOTE(dims): Using config drive with iso format does not work
+                # because of a bug in libvirt with read only devices. However
+                # one can use vfat as config_drive_format which works fine.
+                # Please see bug/1246201 for details on the libvirt bug.
+            if (is_shared_block_storage or
+                is_shared_instance_path or
+                CONF.config_drive_format == 'vfat'):
+                pass
+            else:
+                raise exception.NoLiveMigrationForConfigDriveInLibVirt()
 
         if not is_shared_instance_path:
             instance_dir = libvirt_utils.get_instance_path_at_destination(

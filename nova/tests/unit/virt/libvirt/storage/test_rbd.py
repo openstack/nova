@@ -325,3 +325,18 @@ class RbdTestCase(test.NoDBTestCase):
     def test_cleanup_volumes_fail_other(self):
         self.assertRaises(test.TestingException,
                           self._test_cleanup_exception, 'DoesNotExist')
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    def test_remove_image(self, mock_client, mock_rados, mock_rbd):
+        name = '12345_disk.config.rescue'
+
+        rbd = mock_rbd.RBD.return_value
+
+        client = mock_client.return_value
+        self.driver.remove_image(name)
+        rbd.remove.assert_called_once_with(client.ioctx, name)
+        # Make sure that we entered and exited the RADOSClient
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)
