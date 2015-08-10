@@ -1728,7 +1728,7 @@ class ComputeManager(manager.Manager):
             msg = _LW('Failed to create block device for instance due to '
                       'being over volume resource quota')
             LOG.warn(msg, instance=instance)
-            raise exception.InvalidBDM()
+            raise exception.VolumeLimitExceeded()
 
         except Exception:
             LOG.exception(_LE('Instance failed block device setup'),

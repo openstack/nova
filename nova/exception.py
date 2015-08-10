@@ -189,6 +189,10 @@ class PolicyNotAuthorized(Forbidden):
     msg_fmt = _("Policy doesn't allow %(action)s to be performed.")
 
 
+class VolumeLimitExceeded(Forbidden):
+    msg_fmt = _("Volume resource quota exceeded")
+
+
 class ImageNotActive(NovaException):
     # NOTE(jruzicka): IncorrectState is used for volumes only in EC2,
     # but it still seems like the most appropriate option.
