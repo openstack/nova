@@ -284,15 +284,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
     def test_get_info(self, mock_get_vm_ref):
-        props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
-                 'runtime.powerState']
-        prop_cpu = vmwareapi_fake.Prop(props[0], 4)
-        prop_mem = vmwareapi_fake.Prop(props[1], 128)
-        prop_state = vmwareapi_fake.Prop(props[2], 'poweredOn')
-        prop_list = [prop_state, prop_mem, prop_cpu]
-        obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
-        result = vmwareapi_fake.FakeRetrieveResult()
-        result.add_object(obj_content)
+        result = {
+            'summary.config.numCpu': 4,
+            'summary.config.memorySizeMB': 128,
+            'runtime.powerState': 'poweredOn'
+        }
 
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'continue_retrieval':
@@ -312,14 +308,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
     def test_get_info_when_ds_unavailable(self, mock_get_vm_ref):
-        props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
-                 'runtime.powerState']
-        prop_state = vmwareapi_fake.Prop(props[2], 'poweredOff')
-        # when vm's ds not available, only power state can be received
-        prop_list = [prop_state]
-        obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
-        result = vmwareapi_fake.FakeRetrieveResult()
-        result.add_object(obj_content)
+        result = {
+            'runtime.powerState': 'poweredOff'
+        }
 
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'continue_retrieval':
@@ -394,7 +385,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(ds_util, 'disk_copy')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
-    @mock.patch.object(vm_util, 'get_values_from_object_properties')
     @mock.patch.object(vm_util, 'find_rescue_device')
     @mock.patch.object(vm_util, 'get_vm_boot_spec')
     @mock.patch.object(vm_util, 'reconfigure_vm')
@@ -402,7 +392,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(ds_obj, 'get_datastore_by_ref')
     def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
                     mock_get_boot_spec, mock_find_rescue,
-                    mock_get_values, mock_get_vm_ref, mock_disk_copy,
+                    mock_get_vm_ref, mock_disk_copy,
                     mock_power_off):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
@@ -2171,7 +2161,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _test_reboot_vm(self, reboot_type="SOFT"):
 
-        expected_methods = ['get_object_properties']
+        expected_methods = ['get_object_properties_dict']
         if reboot_type == "SOFT":
             expected_methods.append('RebootGuest')
         else:
@@ -2185,28 +2175,21 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         def fake_call_method(module, method, *args, **kwargs):
             expected_method = expected_methods.pop(0)
             self.assertEqual(expected_method, method)
-            if (expected_method == 'get_object_properties'):
-                return 'fake-props'
+            if (expected_method == 'get_object_properties_dict'):
+                return query
             elif (expected_method == 'ResetVM_Task'):
                 return 'fake-task'
 
         with contextlib.nested(
                 mock.patch.object(vm_util, "get_vm_ref",
                                   return_value='fake-vm-ref'),
-                mock.patch.object(vm_util, "get_values_from_object_properties",
-                                  return_value=query),
                 mock.patch.object(self._session, "_call_method",
                                   fake_call_method),
                 mock.patch.object(self._session, "_wait_for_task")
-        ) as (_get_vm_ref, _get_values_from_object_properties,
-              fake_call_method, _wait_for_task):
+        ) as (_get_vm_ref, fake_call_method, _wait_for_task):
             self._vmops.reboot(self._instance, self.network_info, reboot_type)
             _get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
-
-            _get_values_from_object_properties.assert_called_once_with(
-                                                              self._session,
-                                                              'fake-props')
             if reboot_type == "HARD":
                 _wait_for_task.assert_has_calls([
                        mock.call('fake-task')])
