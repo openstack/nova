@@ -465,6 +465,9 @@ class VMwareVMOps(object):
         self._move_to_cache(vi.dc_info.ref,
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
+        # The size of the image is different from the size of the virtual
+        # disk. We want to use the latter.
+        self._update_image_size(vi)
 
     def _cache_flat_image(self, vi, tmp_image_ds_loc):
         self._move_to_cache(vi.dc_info.ref,
@@ -627,6 +630,20 @@ class VMwareVMOps(object):
             for index, vif in enumerate(network_info):
                 self._network_api.update_instance_vnic_index(
                     context, instance, vif, index)
+
+    def _update_image_size(self, vi):
+        """Updates the file size of the specified image."""
+        # The size of the Glance image is different from the deployed VMDK
+        # size for sparse, streamOptimized and OVA images. We need to retrieve
+        # the size of the flat VMDK and update the file_size property of the
+        # image. This ensures that further operations involving size checks
+        # and disk resizing will work as expected.
+        ds_browser = self._get_ds_browser(vi.datastore.ref)
+        flat_file = "%s-flat.vmdk" % vi.ii.image_id
+        new_size = ds_util.file_size(self._session, ds_browser,
+                                     vi.cache_image_folder, flat_file)
+        if new_size is not None:
+            vi.ii.file_size = new_size
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
