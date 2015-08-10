@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api import openstack
+from nova.api.openstack import compute
 from nova.api.openstack import wsgi
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.v3 import api_paste_fixture
@@ -24,10 +26,20 @@ class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
     def setUp(self):
         self.useFixture(api_paste_fixture.ApiPasteV2CompatibleFixture())
         super(LegacyV2CompatibleTestBase, self).setUp()
+        self._check_api_endpoint('/v2', [compute.APIRouterV21,
+                                         openstack.LegacyV2CompatibleWrapper])
 
     def test_request_with_microversion_headers(self):
         response = self.api.api_post('os-keypairs',
             {"keypair": {"name": "test"}},
+            headers={wsgi.API_VERSION_REQUEST_HEADER: '2.100'})
+        self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
+        self.assertNotIn('Vary', response.headers)
+        self.assertNotIn('type', response.body["keypair"])
+
+    def test_request_without_addtional_properties_check(self):
+        response = self.api.api_post('os-keypairs',
+            {"keypair": {"name": "test", "foooooo": "barrrrrr"}},
             headers={wsgi.API_VERSION_REQUEST_HEADER: '2.100'})
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
         self.assertNotIn('Vary', response.headers)

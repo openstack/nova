@@ -23,6 +23,10 @@ from nova import test
 
 class FakeRequest(object):
     api_version_request = api_version.APIVersionRequest("2.1")
+    environ = {}
+
+    def is_legacy_v2(self):
+        return False
 
 
 class APIValidationTestCase(test.NoDBTestCase):

@@ -93,3 +93,16 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         wrapper = nova.api.openstack.LegacyV2CompatibleWrapper(fake_app)
         response = req.get_response(wrapper)
         self.assertNotIn('Vary', response.headers)
+
+    def test_legacy_env_variable(self):
+        req = webob.Request.blank('/')
+
+        @webob.dec.wsgify(RequestClass=wsgi.Request)
+        def fake_app(req, *args, **kwargs):
+            self.assertTrue(req.is_legacy_v2())
+            resp = webob.Response()
+            resp.status_int = 204
+            return resp
+
+        wrapper = nova.api.openstack.LegacyV2CompatibleWrapper(fake_app)
+        req.get_response(wrapper)

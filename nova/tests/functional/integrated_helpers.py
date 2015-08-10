@@ -238,3 +238,18 @@ class _IntegratedTestBase(test.TestCase):
         server_name = self.get_unused_server_name()
         server['name'] = server_name
         return server
+
+    def _check_api_endpoint(self, endpoint, expected_middleware):
+        app = self.api_fixture.osapi.app.get((None, '/v2'))
+
+        while getattr(app, 'application', False):
+            for middleware in expected_middleware:
+                if isinstance(app.application, middleware):
+                    expected_middleware.remove(middleware)
+                    break
+            app = app.application
+
+        self.assertEqual([],
+                         expected_middleware,
+                         ("The expected wsgi middlewares %s are not "
+                          "existed") % expected_middleware)

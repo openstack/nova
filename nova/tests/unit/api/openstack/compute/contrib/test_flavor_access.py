@@ -111,6 +111,9 @@ class FakeRequest(object):
     def get_db_flavor(self, flavor_id):
         return INSTANCE_TYPES[flavor_id]
 
+    def is_legacy_v2(self):
+        return False
+
 
 class FakeResponse(object):
     obj = {'flavor': {'id': '0'},
