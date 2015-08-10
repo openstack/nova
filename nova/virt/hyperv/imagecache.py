@@ -22,10 +22,9 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
 
-from nova.i18n import _
+from nova import exception
 from nova import utils
 from nova.virt.hyperv import utilsfactory
-from nova.virt.hyperv import vmutils
 from nova.virt import images
 
 LOG = logging.getLogger(__name__)
@@ -57,12 +56,8 @@ class ImageCache(object):
                     vhd_path, root_vhd_size))
 
         if root_vhd_internal_size < vhd_size:
-            raise vmutils.HyperVException(
-                _("Cannot resize the image to a size smaller than the VHD "
-                  "max. internal size: %(vhd_size)s. Requested disk size: "
-                  "%(root_vhd_size)s") %
-                {'vhd_size': vhd_size, 'root_vhd_size': root_vhd_size}
-            )
+            raise exception.FlavorDiskSmallerThanImage(
+                flavor_size=root_vhd_size, image_size=vhd_size)
         if root_vhd_internal_size > vhd_size:
             path_parts = os.path.splitext(vhd_path)
             resized_vhd_path = '%s_%s%s' % (path_parts[0],

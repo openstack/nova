@@ -31,6 +31,7 @@ from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import uuidutils
+import six
 
 from nova.api.metadata import base as instance_metadata
 from nova import exception
@@ -227,12 +228,8 @@ class VMOps(object):
 
     def _is_resize_needed(self, vhd_path, old_size, new_size, instance):
         if new_size < old_size:
-            error_msg = _("Cannot resize a VHD to a smaller size, the"
-                          " original size is %(old_size)s, the"
-                          " newer size is %(new_size)s"
-                          ) % {'old_size': old_size,
-                               'new_size': new_size}
-            raise vmutils.VHDResizeException(error_msg)
+            raise exception.FlavorDiskSmallerThanImage(
+                flavor_size=new_size, image_size=old_size)
         elif new_size > old_size:
             LOG.debug("Resizing VHD %(vhd_path)s to new "
                       "size %(new_size)s" %
@@ -272,7 +269,8 @@ class VMOps(object):
             root_vhd_path = self._create_root_vhd(context, instance)
 
         eph_vhd_path = self.create_ephemeral_vhd(instance)
-        vm_gen = self.get_image_vm_generation(root_vhd_path, image_meta)
+        vm_gen = self.get_image_vm_generation(
+            instance.uuid, root_vhd_path, image_meta)
 
         try:
             self.create_instance(instance, network_info, block_device_info,
@@ -345,36 +343,33 @@ class VMOps(object):
             self._vmutils.attach_ide_drive(instance_name, path, drive_addr,
                                            ctrl_disk_addr, drive_type)
 
-    def get_image_vm_generation(self, root_vhd_path, image_meta):
+    def get_image_vm_generation(self, instance_id, root_vhd_path, image_meta):
         default_vm_gen = self._hostutils.get_default_vm_generation()
         image_prop_vm = image_meta.properties.get(
             'hw_machine_type', default_vm_gen)
         if image_prop_vm not in self._hostutils.get_supported_vm_types():
-            LOG.error(_LE('Requested VM Generation %s is not supported on '
-                          'this OS.'), image_prop_vm)
-            raise vmutils.HyperVException(
-                _('Requested VM Generation %s is not supported on this '
-                  'OS.') % image_prop_vm)
+            reason = _LE('Requested VM Generation %s is not supported on '
+                         'this OS.') % image_prop_vm
+            raise exception.InstanceUnacceptable(instance_id=instance_id,
+                                                 reason=reason)
 
         vm_gen = VM_GENERATIONS[image_prop_vm]
 
         if (vm_gen != constants.VM_GEN_1 and root_vhd_path and
                 self._vhdutils.get_vhd_format(
                     root_vhd_path) == constants.DISK_FORMAT_VHD):
-            LOG.error(_LE('Requested VM Generation %s, but provided VHD '
-                          'instead of VHDX.'), vm_gen)
-            raise vmutils.HyperVException(
-                _('Requested VM Generation %s, but provided VHD instead of '
-                  'VHDX.') % vm_gen)
+            reason = _LE('Requested VM Generation %s, but provided VHD '
+                         'instead of VHDX.') % vm_gen
+            raise exception.InstanceUnacceptable(instance_id=instance_id,
+                                                 reason=reason)
 
         return vm_gen
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              network_info):
         if CONF.config_drive_format != 'iso9660':
-            raise vmutils.UnsupportedConfigDriveFormatException(
-                _('Invalid config_drive_format "%s"') %
-                CONF.config_drive_format)
+            raise exception.ConfigDriveUnsupportedFormat(
+                format=CONF.config_drive_format)
 
         LOG.info(_LI('Using config drive for instance'), instance=instance)
 
@@ -667,8 +662,8 @@ class VMOps(object):
                         instance_log += fp.read()
             return instance_log
         except IOError as err:
-            msg = _("Could not get instance console log. Error: %s") % err
-            raise vmutils.HyperVException(msg, instance=instance)
+            raise exception.ConsoleLogOutputException(
+                instance_id=instance.uuid, reason=six.text_type(err))
 
     def _delete_vm_console_log(self, instance):
         console_log_files = self._pathutils.get_vm_console_log_paths(

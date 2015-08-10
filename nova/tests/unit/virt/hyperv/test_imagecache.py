@@ -17,6 +17,7 @@ import os
 
 import mock
 from oslo_config import cfg
+from oslo_utils import units
 
 from nova import exception
 from nova import objects
@@ -35,6 +36,7 @@ class ImageCacheTestCase(test.NoDBTestCase):
     FAKE_BASE_DIR = 'fake/base/dir'
     FAKE_FORMAT = 'fake_format'
     FAKE_IMAGE_REF = 'fake_image_ref'
+    FAKE_VHD_SIZE_GB = 1
 
     def setUp(self):
         super(ImageCacheTestCase, self).setUp()
@@ -77,6 +79,27 @@ class ImageCacheTestCase(test.NoDBTestCase):
     def test_get_root_vhd_size_gb(self):
         ret_val = self._test_get_root_vhd_size_gb(old_flavor=False)
         self.assertEqual(self.instance.root_gb, ret_val)
+
+    @mock.patch.object(imagecache.ImageCache, '_get_root_vhd_size_gb')
+    def test_resize_and_cache_vhd_smaller(self, mock_get_vhd_size_gb):
+        self.imagecache._vhdutils.get_vhd_info.return_value = {
+            'MaxInternalSize': (self.FAKE_VHD_SIZE_GB + 1) * units.Gi
+        }
+        mock_get_vhd_size_gb.return_value = self.FAKE_VHD_SIZE_GB
+        mock_internal_vhd_size = (
+            self.imagecache._vhdutils.get_internal_vhd_size_by_file_size)
+        mock_internal_vhd_size.return_value = self.FAKE_VHD_SIZE_GB * units.Gi
+
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
+                          self.imagecache._resize_and_cache_vhd,
+                          mock.sentinel.instance,
+                          mock.sentinel.vhd_path)
+
+        self.imagecache._vhdutils.get_vhd_info.assert_called_once_with(
+            mock.sentinel.vhd_path)
+        mock_get_vhd_size_gb.assert_called_once_with(mock.sentinel.instance)
+        mock_internal_vhd_size.assert_called_once_with(
+            mock.sentinel.vhd_path, self.FAKE_VHD_SIZE_GB * units.Gi)
 
     def _prepare_get_cached_image(self, path_exists, use_cow):
         self.instance.image_ref = self.FAKE_IMAGE_REF

@@ -173,11 +173,12 @@ class ISCSIVolumeDriver(object):
         auth_password = data.get('auth_password')
 
         if auth_method and auth_method.upper() != 'CHAP':
-            raise vmutils.HyperVException(
-                _("Cannot log in target %(target_iqn)s. Unsupported iSCSI "
-                  "authentication method: %(auth_method)s.") %
-                 {'target_iqn': target_iqn,
-                  'auth_method': auth_method})
+            LOG.error(_LE("Cannot log in target %(target_iqn)s. Unsupported "
+                          "iSCSI authentication method: %(auth_method)s."),
+                      {'target_iqn': target_iqn,
+                       'auth_method': auth_method})
+            raise exception.UnsupportedBDMVolumeAuthMethod(
+                auth_method=auth_method)
 
         # Check if we already logged in
         if self._volutils.get_device_number_for_target(target_iqn, target_lun):
@@ -382,9 +383,12 @@ class SMBFSVolumeDriver(object):
                                        ctrller_path,
                                        slot)
         except vmutils.HyperVException as exn:
-            LOG.exception(_LE('Attach volume failed: %s'), exn)
-            raise vmutils.HyperVException(_('Unable to attach volume '
-                                            'to instance %s') % instance_name)
+            LOG.exception(_LE('Attach volume failed to %(instance_name)s: '
+                              '%(exn)s'), {'instance_name': instance_name,
+                                           'exn': exn})
+            raise exception.VolumeAttachFailed(
+                volume_id=connection_info['data']['volume_id'],
+                reason=exn.message)
 
     def detach_volume(self, connection_info, instance_name):
         LOG.debug("Detaching volume: %(connection_info)s "

@@ -161,7 +161,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         instance.config_drive = 'True'
         self._migrationops._pathutils.lookup_configdrive_path.return_value = (
             None)
-        self.assertRaises(vmutils.HyperVException,
+        self.assertRaises(exception.ConfigDriveNotFound,
                           self._migrationops._check_and_attach_config_drive,
                           instance,
                           mock.sentinel.FAKE_VM_GEN)
@@ -255,7 +255,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         lookup_ephemeral.assert_called_with(mock_instance.name)
         get_image_vm_gen = self._migrationops._vmops.get_image_vm_generation
         get_image_vm_gen.assert_called_once_with(
-            fake_root_path,
+            mock_instance.uuid, fake_root_path,
             test.MatchType(objects.ImageMeta))
         self._migrationops._vmops.create_instance.assert_called_once_with(
             mock_instance, mock.sentinel.network_info,
@@ -319,7 +319,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         mock_resize_vhd.assert_called_once_with(mock.sentinel.vhd_path, 2)
 
     def test_check_resize_vhd_exception(self):
-        self.assertRaises(vmutils.VHDResizeException,
+        self.assertRaises(exception.CannotResizeDisk,
                           self._migrationops._check_resize_vhd,
                           mock.sentinel.vhd_path,
                           {'MaxInternalSize': 1}, 0)
@@ -417,7 +417,8 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self._migrationops._vhdutils.get_vhd_info.assert_has_calls(
             expected_get_info)
         get_image_vm_gen = self._migrationops._vmops.get_image_vm_generation
-        get_image_vm_gen.assert_called_once_with(root_vhd_path,
+        get_image_vm_gen.assert_called_once_with(mock_instance.uuid,
+                                                 root_vhd_path,
                                                  mock.sentinel.image_meta)
         self._migrationops._vmops.create_instance.assert_called_once_with(
             mock_instance, mock.sentinel.network_info, None, root_vhd_path,
@@ -446,7 +447,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         mock_ebs_root_in_block_devices.return_value = False
         self._migrationops._pathutils.lookup_root_vhd_path.return_value = None
 
-        self.assertRaises(vmutils.HyperVException,
+        self.assertRaises(exception.DiskNotFound,
                           self._migrationops.finish_migration,
                           self.context, mock.sentinel.migration,
                           mock_instance, mock.sentinel.disk_info,

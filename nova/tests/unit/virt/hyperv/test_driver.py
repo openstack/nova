@@ -21,11 +21,11 @@ import platform
 
 import mock
 
+from nova import exception
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import driver as base_driver
 from nova.virt.hyperv import driver
-from nova.virt.hyperv import vmutils
 
 
 class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
@@ -50,7 +50,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_check_minimum_windows_version(self, mock_check_min_win_version):
         mock_check_min_win_version.return_value = False
 
-        self.assertRaises(vmutils.HyperVException,
+        self.assertRaises(exception.HypervisorTooOld,
                           self.driver._check_minimum_windows_version)
 
     def test_public_api_signatures(self):
