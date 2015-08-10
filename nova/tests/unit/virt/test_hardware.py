@@ -1759,6 +1759,27 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
             self._test_get_requested_mempages_pagesize,
             {"hw:mem_page_size": "foo"})
 
+        self.assertRaises(
+            exception.MemoryPageSizeInvalid,
+            self._test_get_requested_mempages_pagesize,
+            {"hw:mem_page_size": "-42"})
+
+    def test_get_requested_mempages_pagesizes_from_flavor_suffix_sweep(self):
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "2048KB"}))
+
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "2MB"}))
+
+        self.assertEqual(
+            1048576,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "1GB"}))
+
     def test_get_requested_mempages_pagesize_from_image_flavor_any(self):
         self.assertEqual(
             2048,
