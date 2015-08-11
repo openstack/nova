@@ -20,7 +20,7 @@ import six.moves.urllib.parse as urlparse
 from nova import exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.libvirt.volume import volume as libvirt_volume
+from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
 
@@ -36,17 +36,34 @@ CONF = cfg.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
 
-class LibvirtScalityVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
+class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Scality SOFS Nova driver. Provide hypervisors with access
     to sparse files on SOFS.
     """
 
-    def __init__(self, connection):
-        """Create back-end to SOFS and check connection."""
-        super(LibvirtScalityVolumeDriver,
-              self).__init__(connection, is_block_dev=False)
+    def _get_mount_point_base(self):
+        return CONF.libvirt.scality_sofs_mount_point
 
     def _get_device_path(self, connection_info):
+        """Returns the hashed path to the device.
+
+        :param connection_info: dict of the form
+
+        ::
+
+          connection_info = {
+              'data': {
+                  'sofs_path': the file system share
+                  ...
+              }
+              ...
+          }
+
+        :returns: The full path to the device.
+        """
+        # TODO(mriedem): change the scality volume driver in cinder to set
+        # the export and name keys rather than the sofs_path so this is
+        # standardized.
         path = os.path.join(CONF.libvirt.scality_sofs_mount_point,
                             connection_info['data']['sofs_path'])
         return path
