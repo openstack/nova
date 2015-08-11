@@ -21,10 +21,11 @@ import platform
 
 from oslo_log import log as logging
 
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
+from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
@@ -52,6 +53,17 @@ class HyperVDriver(driver.ComputeDriver):
         self._livemigrationops = livemigrationops.LiveMigrationOps()
         self._migrationops = migrationops.MigrationOps()
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
+
+        # check if the current version is older than kernel version 6.2
+        # (Windows Server 2012)
+        if not hostutils.HostUtils().check_min_windows_version(6, 2):
+            # the version is Windows Server 2008 R2. Log a warning, letting
+            # users know that this version is deprecated in Liberty.
+            LOG.warning(
+                _LW('You are running nova-compute on Windows / Hyper-V Server '
+                    '2008 R2. This version of Windows is deprecated in the '
+                    'current version of OpenStack and the support for it will '
+                    'be removed in the next cycle.'))
 
     def init_host(self, host):
         self._vmops.restart_vm_log_writers()
