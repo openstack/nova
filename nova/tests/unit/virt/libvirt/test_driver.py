@@ -6265,16 +6265,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)
 
+    EXPECT_SUCCESS = 1
+    EXPECT_FAILURE = 2
+    EXPECT_ABORT = 3
+
     @mock.patch.object(time, "time")
     @mock.patch.object(time, "sleep",
                        side_effect=lambda x: eventlet.sleep(0))
     @mock.patch.object(host.DomainJobInfo, "for_domain")
     @mock.patch.object(objects.Instance, "save")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
+    @mock.patch.object(fakelibvirt.virDomain, "abortJob")
     def _test_live_migration_monitoring(self,
                                         job_info_records,
                                         time_records,
-                                        expect_success,
+                                        expect_result,
+                                        mock_abort,
                                         mock_running,
                                         mock_save,
                                         mock_job_info,
@@ -6326,12 +6332,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      dom,
                                      finish_event)
 
-        if expect_success:
+        if expect_result == self.EXPECT_SUCCESS:
             self.assertFalse(fake_recover_method.called,
                              'Recover method called when success expected')
+            self.assertFalse(mock_abort.called,
+                             'abortJob not called when success expected')
             fake_post_method.assert_called_once_with(
                 self.context, instance, dest, False, migrate_data)
         else:
+            if expect_result == self.EXPECT_ABORT:
+                self.assertTrue(mock_abort.called,
+                                'abortJob called when abort expected')
+            else:
+                self.assertFalse(mock_abort.called,
+                                 'abortJob not called when failure expected')
             self.assertFalse(fake_post_method.called,
                              'Post method called when success not expected')
             fake_recover_method.assert_called_once_with(
@@ -6354,7 +6368,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
-        self._test_live_migration_monitoring(domain_info_records, [], True)
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS)
 
     def test_live_migration_monitor_success_race(self):
         # A normalish sequence but we're too slow to see the
@@ -6374,7 +6389,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
-        self._test_live_migration_monitoring(domain_info_records, [], True)
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS)
 
     def test_live_migration_monitor_failed(self):
         # A failed sequence where we see all the expected events
@@ -6392,7 +6408,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
         ]
 
-        self._test_live_migration_monitoring(domain_info_records, [], False)
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_FAILURE)
 
     def test_live_migration_monitor_failed_race(self):
         # A failed sequence where we are too slow to see the
@@ -6411,7 +6428,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
-        self._test_live_migration_monitoring(domain_info_records, [], False)
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_FAILURE)
 
     def test_live_migration_monitor_cancelled(self):
         # A cancelled sequence where we see all the events
@@ -6430,13 +6448,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
-        self._test_live_migration_monitoring(domain_info_records, [], False)
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_FAILURE)
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateSetMaxDowntime")
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_migration_downtime_steps")
     def test_live_migration_monitor_downtime(self, mock_downtime_steps,
                                              mock_set_downtime):
+        self.flags(live_migration_completion_timeout=1000000,
+                   live_migration_progress_timeout=1000000,
+                   group='libvirt')
         # We've setup 4 fake downtime steps - first value is the
         # time delay, second is the downtime value
         downtime_steps = [
@@ -6474,11 +6496,73 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ]
 
         self._test_live_migration_monitoring(domain_info_records,
-                                             fake_times, True)
+                                             fake_times, self.EXPECT_SUCCESS)
 
         mock_set_downtime.assert_has_calls([mock.call(10),
                                             mock.call(50),
                                             mock.call(200)])
+
+    def test_live_migration_monitor_completion(self):
+        self.flags(live_migration_completion_timeout=100,
+                   live_migration_progress_timeout=1000000,
+                   group='libvirt')
+        # Each one of these fake times is used for time.time()
+        # when a new domain_info_records entry is consumed.
+        fake_times = [0, 40, 80, 120, 160, 200, 240, 280, 320]
+
+        # A normal sequence where see all the normal job states
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records,
+                                             fake_times, self.EXPECT_ABORT)
+
+    def test_live_migration_monitor_progress(self):
+        self.flags(live_migration_completion_timeout=1000000,
+                   live_migration_progress_timeout=150,
+                   group='libvirt')
+        # Each one of these fake times is used for time.time()
+        # when a new domain_info_records entry is consumed.
+        fake_times = [0, 40, 80, 120, 160, 200, 240, 280, 320]
+
+        # A normal sequence where see all the normal job states
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records,
+                                             fake_times, self.EXPECT_ABORT)
 
     def test_live_migration_downtime_steps(self):
         self.flags(live_migration_downtime=400, group='libvirt')

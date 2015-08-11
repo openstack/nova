@@ -768,6 +768,9 @@ class Domain(object):
     def injectNMI(self, flags=0):
         return 0
 
+    def abortJob(self):
+        pass
+
 
 class DomainSnapshot(object):
     def __init__(self, name, domain):
