@@ -21,9 +21,9 @@ import uuid
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import servers
-from nova.api.openstack.compute.plugins.v3 import user_data
+from nova.api.openstack.compute import extension_info
+from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import user_data
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
@@ -59,7 +59,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-user-data',
                           'osapi_v3')

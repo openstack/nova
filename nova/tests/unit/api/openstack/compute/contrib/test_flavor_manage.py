@@ -20,14 +20,12 @@ from oslo_serialization import jsonutils
 import six
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import flavor_access as \
-    flavor_access_v2
-from nova.api.openstack.compute.legacy_v2.contrib import flavormanage as \
-    flavormanage_v2
-from nova.api.openstack.compute.plugins.v3 import flavor_access as \
-    flavor_access_v21
-from nova.api.openstack.compute.plugins.v3 import flavor_manage as \
-    flavormanage_v21
+from nova.api.openstack.compute import flavor_access as flavor_access_v21
+from nova.api.openstack.compute import flavor_manage as flavormanage_v21
+from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
+        as flavor_access_v2
+from nova.api.openstack.compute.legacy_v2.contrib import flavormanage \
+        as flavormanage_v2
 from nova.compute import flavors
 from nova import db
 from nova import exception

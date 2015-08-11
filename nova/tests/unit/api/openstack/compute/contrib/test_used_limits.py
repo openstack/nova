@@ -17,7 +17,7 @@ import six
 
 from nova.api.openstack.compute.legacy_v2.contrib import used_limits \
         as used_limits_v2
-from nova.api.openstack.compute.plugins.v3 import used_limits \
+from nova.api.openstack.compute import used_limits \
         as used_limits_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi

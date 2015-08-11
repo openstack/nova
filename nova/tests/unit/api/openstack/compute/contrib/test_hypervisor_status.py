@@ -16,10 +16,10 @@ import copy
 
 import mock
 
+from nova.api.openstack.compute import hypervisors \
+        as hypervisors_v21
 from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
         as hypervisors_v2
-from nova.api.openstack.compute.plugins.v3 import hypervisors \
-        as hypervisors_v21
 from nova.api.openstack import extensions
 from nova import objects
 from nova import test

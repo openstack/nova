@@ -513,7 +513,8 @@ def check_http_not_implemented(logical_line, physical_line, filename):
            " common raise_feature_not_supported().")
     if pep8.noqa(physical_line):
         return
-    if "nova/api/openstack/compute/plugins/v3" not in filename:
+    if ("nova/api/openstack/compute/legacy_v2" in filename or
+            "nova/api/openstack/compute" not in filename):
         return
     if re.match(http_not_implemented_re, logical_line):
         yield(0, msg)

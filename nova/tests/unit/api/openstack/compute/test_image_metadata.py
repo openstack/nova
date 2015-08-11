@@ -19,9 +19,8 @@ import mock
 from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute import image_metadata as image_metadata_v21
 from nova.api.openstack.compute.legacy_v2 import image_metadata
-from nova.api.openstack.compute.plugins.v3 import image_metadata \
-     as image_metadata_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes

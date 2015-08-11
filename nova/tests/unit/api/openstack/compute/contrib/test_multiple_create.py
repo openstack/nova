@@ -19,13 +19,12 @@ import uuid
 from oslo_config import cfg
 import webob
 
+from nova.api.openstack.compute import block_device_mapping \
+        as block_device_mapping_v21
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import block_device_mapping as \
-    block_device_mapping_v21
-from nova.api.openstack.compute.plugins.v3 import multiple_create as \
-    multiple_create_v21
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import multiple_create as multiple_create_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -62,7 +61,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
             extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-multiple-create',

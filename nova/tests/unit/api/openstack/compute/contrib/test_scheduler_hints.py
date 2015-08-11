@@ -19,9 +19,9 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions
 import nova.compute.api
 from nova.compute import flavors
@@ -179,7 +179,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.stubs.Set(db, 'instance_create', instance_create)
 
     def _set_up_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', 'os-scheduler-hints',
                           'osapi_v3')
         self.no_scheduler_hints_controller = servers_v21.ServersController(

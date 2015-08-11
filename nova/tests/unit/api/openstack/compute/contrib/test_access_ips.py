@@ -14,10 +14,10 @@
 
 import webob
 
+from nova.api.openstack.compute import access_ips
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import access_ips
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions as extensions_v20
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
@@ -178,7 +178,7 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
                             extension_info=ext_info)
 

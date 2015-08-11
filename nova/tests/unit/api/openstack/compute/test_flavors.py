@@ -18,8 +18,8 @@ import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack import common
+from nova.api.openstack.compute import flavors as flavors_v21
 from nova.api.openstack.compute.legacy_v2 import flavors as flavors_v2
-from nova.api.openstack.compute.plugins.v3 import flavors as flavors_v21
 import nova.compute.flavors
 from nova import context
 from nova import db

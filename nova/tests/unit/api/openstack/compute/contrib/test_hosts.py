@@ -16,8 +16,8 @@
 import testtools
 import webob.exc
 
+from nova.api.openstack.compute import hosts as os_hosts_v21
 from nova.api.openstack.compute.legacy_v2.contrib import hosts as os_hosts_v2
-from nova.api.openstack.compute.plugins.v3 import hosts as os_hosts_v21
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker

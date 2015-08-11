@@ -518,7 +518,7 @@ class HackingTestCase(test.NoDBTestCase):
                except NotImplementedError:
                    common.raise_http_not_implemented_error()
                """
-        filename = "nova/api/openstack/compute/plugins/v3/test.py"
+        filename = "nova/api/openstack/compute/v21/test.py"
         self._assert_has_no_errors(code, checks.check_http_not_implemented,
                                    filename=filename)
 
@@ -531,6 +531,6 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_http_not_implemented,
                                 expected_errors=errors, filename=filename)
 
-        filename = "nova/api/openstack/compute/legacy_v2/contrib/test.py"
+        filename = "nova/api/openstack/compute/legacy_v2/test.py"
         self._assert_has_no_errors(code, checks.check_http_not_implemented,
                                    filename=filename)

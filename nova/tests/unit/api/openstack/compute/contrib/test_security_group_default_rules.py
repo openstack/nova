@@ -18,7 +18,7 @@ import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import \
     security_group_default_rules as security_group_default_rules_v2
-from nova.api.openstack.compute.plugins.v3 import \
+from nova.api.openstack.compute import \
     security_group_default_rules as security_group_default_rules_v21
 from nova import context
 import nova.db

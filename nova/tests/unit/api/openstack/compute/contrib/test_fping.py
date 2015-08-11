@@ -17,8 +17,8 @@
 import mock
 import webob
 
+from nova.api.openstack.compute import fping as fping_v21
 from nova.api.openstack.compute.legacy_v2.contrib import fping
-from nova.api.openstack.compute.plugins.v3 import fping as fping_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes

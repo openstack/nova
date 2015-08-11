@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack.compute import floating_ip_pools \
+        as fipp_v21
 from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_pools \
         as fipp_v2
-from nova.api.openstack.compute.plugins.v3 import floating_ip_pools \
-        as fipp_v21
 from nova import context
 from nova import exception
 from nova import network

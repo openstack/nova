@@ -20,7 +20,7 @@ from nova.tests.functional.v3 import test_servers
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_hide_server_address_states',
-                'nova.api.openstack.compute.plugins.v3.hide_server_addresses')
+                'nova.api.openstack.compute.hide_server_addresses')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 

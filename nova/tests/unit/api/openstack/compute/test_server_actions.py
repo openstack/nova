@@ -22,9 +22,9 @@ from oslo_config import cfg
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -105,7 +105,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.context = self.req.environ['nova.context']
 
     def _get_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         return self.servers.ServersController(extension_info=ext_info)
 
     def _set_fake_extension(self):

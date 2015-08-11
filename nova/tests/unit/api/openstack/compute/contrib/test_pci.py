@@ -15,7 +15,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.plugins.v3 import pci
+from nova.api.openstack.compute import pci
 from nova.api.openstack import wsgi
 from nova import context
 from nova import db

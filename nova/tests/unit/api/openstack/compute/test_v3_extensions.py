@@ -18,7 +18,7 @@ import webob.exc
 
 from nova.api import openstack
 from nova.api.openstack import compute
-from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack import extensions
 from nova import exception
 from nova import test
@@ -65,8 +65,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         self.assertIn('servers', app._loaded_extension_info.extensions)
 
     def test_check_bad_extension(self):
-        extension_info = plugins.LoadedExtensionInfo()
-        self.assertFalse(extension_info._check_extension(fake_bad_extension))
+        loaded_ext_info = extension_info.LoadedExtensionInfo()
+        self.assertFalse(loaded_ext_info._check_extension(fake_bad_extension))
 
     def test_extensions_blacklist(self):
         app = compute.APIRouterV3()
@@ -142,7 +142,7 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_core_extensions_present(self):
         self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',
                        fake_stevedore_enabled_extensions)
-        self.stubs.Set(plugins, 'LoadedExtensionInfo',
+        self.stubs.Set(extension_info, 'LoadedExtensionInfo',
                        fake_loaded_extension_info)
         v3_core = openstack.API_V3_CORE_EXTENSIONS
         openstack.API_V3_CORE_EXTENSIONS = set(['core1', 'core2'])
@@ -154,7 +154,7 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_core_extensions_missing(self):
         self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',
                        fake_stevedore_enabled_extensions)
-        self.stubs.Set(plugins, 'LoadedExtensionInfo',
+        self.stubs.Set(extension_info, 'LoadedExtensionInfo',
                        fake_loaded_extension_info)
         self.assertRaises(exception.CoreAPIMissing, compute.APIRouterV3)
 

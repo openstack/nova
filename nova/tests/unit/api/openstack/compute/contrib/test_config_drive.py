@@ -19,9 +19,9 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -91,7 +91,7 @@ class ServersControllerCreateTestV21(test.TestCase):
     bad_request = exception.ValidationError
 
     def _set_up_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
             extension_info=ext_info)
         CONF.set_override('extensions_blacklist',

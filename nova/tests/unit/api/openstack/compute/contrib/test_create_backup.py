@@ -16,10 +16,10 @@
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
-    create_backup_v2
-from nova.api.openstack.compute.plugins.v3 import create_backup as \
-    create_backup_v21
+from nova.api.openstack.compute import create_backup \
+        as create_backup_v21
+from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
+        as create_backup_v2
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common

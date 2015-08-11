@@ -19,12 +19,12 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from webob import exc
 
+from nova.api.openstack.compute import block_device_mapping_v1 \
+        as block_device_mapping
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import extensions
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import block_device_mapping_v1 as \
-    block_device_mapping
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test
@@ -38,7 +38,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     validation_error = exception.ValidationError
 
     def _setup_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
                           'osapi_v3')
         self.controller = servers_v21.ServersController(
@@ -295,7 +295,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self._test_create(params)
 
     def test_create_instance_decide_format_legacy(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist',
                           ['os-block-device-mapping',
                            'os-block-device-mapping-v1'],
@@ -327,7 +327,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self._test_create(params, override_controller=controller)
 
     def test_create_instance_both_bdm_formats(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', '', 'osapi_v3')
         both_controllers = servers_v21.ServersController(
                 extension_info=ext_info)

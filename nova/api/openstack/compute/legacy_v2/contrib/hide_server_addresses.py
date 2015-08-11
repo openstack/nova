@@ -24,7 +24,7 @@ from nova.compute import vm_states
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_hide_server_address_states',
-                'nova.api.openstack.compute.plugins.v3.hide_server_addresses')
+                'nova.api.openstack.compute.hide_server_addresses')
 
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'hide_server_addresses')

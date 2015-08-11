@@ -18,10 +18,10 @@ import copy
 from oslo_config import cfg
 import webob
 
+from nova.api.openstack.compute import console_auth_tokens \
+        as console_auth_tokens_v21
 from nova.api.openstack.compute.legacy_v2.contrib import console_auth_tokens \
-    as console_auth_tokens_v2
-from nova.api.openstack.compute.plugins.v3 import console_auth_tokens \
-    as console_auth_tokens_v21
+        as console_auth_tokens_v2
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import test
 from nova.tests.unit.api.openstack import fakes

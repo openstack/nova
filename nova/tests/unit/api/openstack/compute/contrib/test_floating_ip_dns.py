@@ -19,10 +19,10 @@ import urllib
 import mock
 import webob
 
+from nova.api.openstack.compute import floating_ip_dns \
+        as fipdns_v21
 from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_dns \
         as fipdns_v2
-from nova.api.openstack.compute.plugins.v3 import floating_ip_dns \
-        as fipdns_v21
 from nova import context
 from nova import db
 from nova import exception

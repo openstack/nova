@@ -14,7 +14,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.plugins.v3 import security_groups as sg
+from nova.api.openstack.compute import security_groups as sg
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception

@@ -20,8 +20,8 @@ import uuid as stdlib_uuid
 from oslo_utils import timeutils
 import webob
 
+from nova.api.openstack.compute import consoles as consoles_v21
 from nova.api.openstack.compute.legacy_v2 import consoles as consoles_v2
-from nova.api.openstack.compute.plugins.v3 import consoles as consoles_v21
 from nova.compute import vm_states
 from nova import console
 from nova import db

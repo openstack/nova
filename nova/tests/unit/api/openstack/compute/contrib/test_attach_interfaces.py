@@ -16,10 +16,10 @@
 import mock
 from oslo_config import cfg
 
+from nova.api.openstack.compute import attach_interfaces \
+        as attach_interfaces_v21
 from nova.api.openstack.compute.legacy_v2.contrib import attach_interfaces \
-    as attach_interfaces_v2
-from nova.api.openstack.compute.plugins.v3 import attach_interfaces \
-    as attach_interfaces_v21
+        as attach_interfaces_v2
 from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api

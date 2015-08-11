@@ -21,6 +21,7 @@ WSGI middleware for OpenStack Compute API.
 from oslo_config import cfg
 
 import nova.api.openstack
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2 import consoles as v2_consoles
 from nova.api.openstack.compute.legacy_v2 import extensions as v2_extensions
 from nova.api.openstack.compute.legacy_v2 import flavors as v2_flavors
@@ -32,9 +33,8 @@ from nova.api.openstack.compute.legacy_v2 import limits as v2_limits
 from nova.api.openstack.compute.legacy_v2 import server_metadata \
         as v2_server_metadata
 from nova.api.openstack.compute.legacy_v2 import servers as v2_servers
-from nova.api.openstack.compute.legacy_v2 import versions as \
-    legacy_v2_versions
-from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.legacy_v2 import versions \
+        as legacy_v2_versions
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
         default=True,
@@ -137,7 +137,7 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
     and method.
     """
     def __init__(self, init_only=None):
-        self._loaded_extension_info = plugins.LoadedExtensionInfo()
+        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
         super(APIRouterV21, self).__init__(init_only)
 
     def _register_extension(self, ext):
@@ -155,7 +155,7 @@ class APIRouterV3(nova.api.openstack.APIRouterV21):
     and method.
     """
     def __init__(self, init_only=None):
-        self._loaded_extension_info = plugins.LoadedExtensionInfo()
+        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
         super(APIRouterV3, self).__init__(init_only, v3mode=True)
 
     def _register_extension(self, ext):

@@ -17,7 +17,7 @@ import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import virtual_interfaces \
         as vi20
-from nova.api.openstack.compute.plugins.v3 import virtual_interfaces as vi21
+from nova.api.openstack.compute import virtual_interfaces as vi21
 from nova import compute
 from nova.compute import api as compute_api
 from nova import context

@@ -15,11 +15,11 @@
 from mox3 import mox
 import webob
 
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2.contrib import server_start_stop \
-    as server_v2
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import servers \
-    as server_v21
+        as server_v2
+from nova.api.openstack.compute import servers \
+        as server_v21
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
@@ -63,7 +63,7 @@ class ServerStartStopTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _setup_controller(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = server_v21.ServersController(
                               extension_info=ext_info)
 

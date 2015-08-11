@@ -20,7 +20,7 @@ import mock
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import quotas as quotas_v2
-from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas_v21
+from nova.api.openstack.compute import quota_sets as quotas_v21
 from nova.api.openstack import extensions
 from nova import db
 from nova import exception

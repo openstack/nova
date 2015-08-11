@@ -20,9 +20,9 @@ import uuid
 import mock
 import webob
 
+from nova.api.openstack.compute import floating_ips as fips_v21
 from nova.api.openstack.compute.legacy_v2.contrib import floating_ips \
         as fips_v2
-from nova.api.openstack.compute.plugins.v3 import floating_ips as fips_v21
 from nova.api.openstack import extensions
 from nova import compute
 from nova.compute import utils as compute_utils

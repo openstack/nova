@@ -17,7 +17,7 @@ import mock
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute.plugins.v3 import server_diagnostics
+from nova.api.openstack.compute import server_diagnostics
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test

@@ -16,10 +16,10 @@
 import mock
 import webob
 
+from nova.api.openstack.compute import flavors_extraspecs \
+        as flavorextraspecs_v21
 from nova.api.openstack.compute.legacy_v2.contrib import flavorextraspecs \
- as flavorextraspecs_v2
-from nova.api.openstack.compute.plugins.v3 import flavors_extraspecs \
- as flavorextraspecs_v21
+        as flavorextraspecs_v2
 import nova.db
 from nova import exception
 from nova import test

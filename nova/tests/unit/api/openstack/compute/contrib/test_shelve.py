@@ -17,7 +17,7 @@ import uuid
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import shelve as shelve_v2
-from nova.api.openstack.compute.plugins.v3 import shelve as shelve_v21
+from nova.api.openstack.compute import shelve as shelve_v21
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception

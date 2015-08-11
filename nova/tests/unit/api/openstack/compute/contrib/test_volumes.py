@@ -23,12 +23,12 @@ from six.moves import urllib
 import webob
 from webob import exc
 
+from nova.api.openstack.compute import assisted_volume_snapshots \
+        as assisted_snaps_v21
 from nova.api.openstack.compute.legacy_v2.contrib import \
         assisted_volume_snapshots as assisted_snaps_v2
 from nova.api.openstack.compute.legacy_v2.contrib import volumes
-from nova.api.openstack.compute.plugins.v3 import assisted_volume_snapshots as \
-        assisted_snaps_v21
-from nova.api.openstack.compute.plugins.v3 import volumes as volumes_v21
+from nova.api.openstack.compute import volumes as volumes_v21
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
