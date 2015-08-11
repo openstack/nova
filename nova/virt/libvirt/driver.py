@@ -5319,7 +5319,8 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             cpu = self._vcpu_model_to_cpu_config(guest_cpu)
 
-        u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
+        u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
+             "virCPUCompareResult")
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
         # unknown character exists in xml, then libvirt complains
         try:
