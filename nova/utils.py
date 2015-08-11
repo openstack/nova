@@ -18,6 +18,7 @@
 """Utilities and helper functions."""
 
 import contextlib
+import copy
 import datetime
 import errno
 import functools
@@ -175,6 +176,12 @@ SM_SKIP_KEYS = (
     'mappings', 'block_device_mapping',
     # Modern names
     'img_mappings', 'img_block_device_mapping',
+)
+# Image attributes which Cinder stores in volume image metadata
+# as regular properties
+VIM_IMAGE_ATTRIBUTES = (
+    'image_id', 'image_name', 'size', 'checksum',
+    'container_format', 'disk_format', 'min_ram', 'min_disk',
 )
 
 _FILE_CACHE = {}
@@ -1165,21 +1172,23 @@ def get_image_from_system_metadata(system_meta):
 
 
 def get_image_metadata_from_volume(volume):
-    properties = volume.get('volume_image_metadata', {})
+    properties = copy.copy(volume.get('volume_image_metadata', {}))
     image_meta = {'properties': properties}
-    # NOTE(yjiang5): restore the basic attributes
-    # NOTE(mdbooth): These values come from volume_glance_metadata
-    # in cinder. This is a simple key/value table, and all values
-    # are strings. We need to convert them to ints to avoid
-    # unexpected type errors.
-    image_meta['min_ram'] = int(properties.get('min_ram', 0))
-    image_meta['min_disk'] = int(properties.get('min_disk', 0))
     # Volume size is no longer related to the original image size,
     # so we take it from the volume directly. Cinder creates
     # volumes in Gb increments, and stores size in Gb, whereas
     # glance reports size in bytes. As we're returning glance
     # metadata here, we need to convert it.
     image_meta['size'] = volume.get('size', 0) * units.Gi
+    # NOTE(yjiang5): restore the basic attributes
+    # NOTE(mdbooth): These values come from volume_glance_metadata
+    # in cinder. This is a simple key/value table, and all values
+    # are strings. We need to convert them to ints to avoid
+    # unexpected type errors.
+    for attr in VIM_IMAGE_ATTRIBUTES:
+        val = properties.pop(attr, None)
+        if attr in ('min_ram', 'min_disk'):
+            image_meta[attr] = int(val or 0)
     # NOTE(yjiang5): Always set the image status as 'active'
     # and depends on followed volume_api.check_attach() to
     # verify it. This hack should be harmless with that check.
