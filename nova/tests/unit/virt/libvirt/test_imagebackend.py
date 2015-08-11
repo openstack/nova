@@ -153,6 +153,37 @@ class _ImageTestCase(object):
             self.assertEqual(fs.source_type, "file")
             self.assertEqual(fs.source_file, image.path)
 
+    def test_libvirt_info(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        extra_specs = {
+            'quota:disk_read_bytes_sec': 10 * units.Mi,
+            'quota:disk_read_iops_sec': 1 * units.Ki,
+            'quota:disk_write_bytes_sec': 20 * units.Mi,
+            'quota:disk_write_iops_sec': 2 * units.Ki,
+            'quota:disk_total_bytes_sec': 30 * units.Mi,
+            'quota:disk_total_iops_sec': 3 * units.Ki,
+        }
+
+        disk = image.libvirt_info(disk_bus="virtio",
+                                  disk_dev="/dev/vda",
+                                  device_type="cdrom",
+                                  cache_mode="none",
+                                  extra_specs=extra_specs,
+                                  hypervisor_version=4004001)
+
+        self.assertIsInstance(disk, vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual("/dev/vda", disk.target_dev)
+        self.assertEqual("virtio", disk.target_bus)
+        self.assertEqual("none", disk.driver_cache)
+        self.assertEqual("cdrom", disk.source_device)
+
+        self.assertEqual(10 * units.Mi, disk.disk_read_bytes_sec)
+        self.assertEqual(1 * units.Ki, disk.disk_read_iops_sec)
+        self.assertEqual(20 * units.Mi, disk.disk_write_bytes_sec)
+        self.assertEqual(2 * units.Ki, disk.disk_write_iops_sec)
+        self.assertEqual(30 * units.Mi, disk.disk_total_bytes_sec)
+        self.assertEqual(3 * units.Ki, disk.disk_total_iops_sec)
+
     @mock.patch('nova.virt.disk.api.get_disk_size')
     def test_get_disk_size(self, get_disk_size):
         get_disk_size.return_value = 2361393152
@@ -1335,6 +1366,16 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                               image.create_image, mock.MagicMock(),
                               self.TEMPLATE_PATH, 1)
             driver_mock.size.assert_called_once_with(image.rbd_name)
+
+    @mock.patch.object(rbd_utils.RBDDriver, "get_mon_addrs")
+    def test_libvirt_info(self, mock_mon_addrs):
+        def get_mon_addrs():
+            hosts = ["server1", "server2"]
+            ports = ["1899", "1920"]
+            return hosts, ports
+        mock_mon_addrs.side_effect = get_mon_addrs
+
+        super(RbdTestCase, self).test_libvirt_info()
 
     @mock.patch.object(rbd_utils.RBDDriver, "get_mon_addrs")
     def test_get_model(self, mock_mon_addrs):
