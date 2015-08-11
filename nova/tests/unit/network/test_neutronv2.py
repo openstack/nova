@@ -1602,14 +1602,15 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks, 1)
 
-    def test_validate_networks_port_show_rasies_non404(self):
+    def test_validate_networks_port_show_raises_non404(self):
         # Verify that the correct exception is thrown when a non existent
         # port is passed to validate_networks.
+        fake_port_id = '3123-ad34-bc43-32332ca33e'
 
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(
                 network_id='my_netid1',
-                port_id='3123-ad34-bc43-32332ca33e')])
+                port_id=fake_port_id)])
 
         NeutronNotFound = exceptions.NeutronClientException(status_code=0)
         self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
@@ -1618,9 +1619,13 @@ class TestNeutronv2(TestNeutronv2Base):
         # Expected call from setUp.
         neutronapi.get_client(None)
         api = neutronapi.API()
-        self.assertRaises(exception.NovaException,
-                          api.validate_networks,
-                          self.context, requested_networks, 1)
+        exc = self.assertRaises(exception.NovaException,
+                                api.validate_networks,
+                                self.context, requested_networks, 1)
+        expected_exception_message = ('Failed to access port %(port_id)s: '
+                                      'An unknown exception occurred.' %
+                                      {'port_id': fake_port_id})
+        self.assertEqual(expected_exception_message, str(exc))
 
     def test_validate_networks_port_in_use(self):
         requested_networks = objects.NetworkRequestList(
@@ -2917,9 +2922,15 @@ class TestNeutronv2WithMock(test.TestCase):
             mock.patch.object(client.Client, 'show_quota',
                               return_value={'quota': {'port': 1}})):
 
-                self.assertRaises(exception.PortLimitExceeded,
-                                  self.api.validate_networks,
-                                  self.context, requested_networks, 1)
+                exc = self.assertRaises(exception.PortLimitExceeded,
+                                        self.api.validate_networks,
+                                        self.context, requested_networks, 1)
+                expected_exception_msg = ('The number of defined ports: '
+                                          '%(ports)d is over the limit: '
+                                          '%(quota)d' %
+                                          {'ports': 5,
+                                           'quota': 1})
+                self.assertEqual(expected_exception_msg, str(exc))
 
     def test_validate_networks_fixed_ip_no_dup1(self):
         # Test validation for a request for a network with a
@@ -3088,11 +3099,19 @@ class TestNeutronv2WithMock(test.TestCase):
                                   'mac_address': 'XX:XX:XX:XX:XX:XX'}}
         fake_ip = '1.1.1.1'
         # Run the code.
-        self.assertRaises(exception.InvalidInput,
-                          self.api._create_port,
-                          neutronapi.get_client(self.context),
-                          instance, net['id'], port_req_body,
-                          fixed_ip=fake_ip)
+        exc = self.assertRaises(exception.InvalidInput,
+                                self.api._create_port,
+                                neutronapi.get_client(self.context),
+                                instance, net['id'], port_req_body,
+                                fixed_ip=fake_ip)
+
+        # Assert the exception message
+        expected_exception_msg = ('Invalid input received: Fixed IP %(ip)s is '
+                                  'not a valid ip address for network '
+                                  '%(net_id)s.' %
+                                  {'ip': fake_ip, 'net_id': net['id']})
+        self.assertEqual(expected_exception_msg, str(exc))
+
         # Assert the calls.
         create_port_mock.assert_called_once_with(port_req_body)
 
