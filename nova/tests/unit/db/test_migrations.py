@@ -769,18 +769,24 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def filter_metadata_diff(self, diff):
         # Overriding the parent method to decide on certain attributes
         # that maybe present in the DB but not in the models.py
-        # Define a whitelist of columns that would be removed from the
-        # DB at a later release.
-        column_whitelist = {'instances': ['scheduled_at']}
-        for element in diff:
-            # Assuming that the diff structure will remain constant
-            # The 4th element in the diff is always the Column object
-            for key, values in column_whitelist.iteritems():
-                table_name = element[3].table.name
-                table_column = element[3].name
-                if key == table_name and table_column in values:
-                    diff.remove(element)
-        return diff
+
+        def removed_column(element):
+            # Define a whitelist of columns that would be removed from the
+            # DB at a later release.
+            column_whitelist = {'instances': ['scheduled_at']}
+
+            if element[0] != 'remove_column':
+                return False
+
+            table_name, column = element[2], element[3]
+            return (table_name in column_whitelist and
+                    column.name in column_whitelist[table_name])
+
+        return [
+            element
+            for element in diff
+            if not removed_column(element)
+        ]
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
