@@ -395,6 +395,21 @@ class PciDeviceStatus(Enum):
             valid_values=PciDeviceStatus.ALL)
 
 
+class PciDeviceType(Enum):
+
+    # NOTE(jaypipes): It's silly that the word "type-" is in these constants,
+    # but alas, these were the original constant strings used...
+    STANDARD = "type-PCI"
+    SRIOV_PF = "type-PF"
+    SRIOV_VF = "type-VF"
+
+    ALL = (STANDARD, SRIOV_PF, SRIOV_VF)
+
+    def __init__(self):
+        super(PciDeviceType, self).__init__(
+            valid_values=PciDeviceType.ALL)
+
+
 # NOTE(danms): Remove this on next release of oslo.versionedobjects
 class FlexibleBoolean(fields.Boolean):
     @staticmethod
@@ -669,6 +684,10 @@ class VersionPredicateField(AutoTypedField):
 
 class PciDeviceStatusField(BaseEnumField):
     AUTO_TYPE = PciDeviceStatus()
+
+
+class PciDeviceTypeField(BaseEnumField):
+    AUTO_TYPE = PciDeviceType()
 
 
 # FIXME(danms): Remove this after oslo.versionedobjects gets it

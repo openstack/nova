@@ -21,6 +21,7 @@ from nova.compute import task_states
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_flavor
@@ -382,7 +383,7 @@ class SpawnTestCase(VMOpsTestBase):
                 'address': '00:00.0',
                 'vendor_id': '1234',
                 'product_id': 'abcd',
-                'dev_type': 'type-PCI',
+                'dev_type': fields.PciDeviceType.STANDARD,
                 'status': 'available',
                 'dev_id': 'devid',
                 'label': 'label',

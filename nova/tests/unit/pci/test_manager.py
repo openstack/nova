@@ -54,7 +54,7 @@ fake_db_dev = {
     'vendor_id': 'v',
     'product_id': 'p',
     'numa_node': 1,
-    'dev_type': 't',
+    'dev_type': fields.PciDeviceType.STANDARD,
     'status': fields.PciDeviceStatus.AVAILABLE,
     'dev_id': 'i',
     'label': 'l',
