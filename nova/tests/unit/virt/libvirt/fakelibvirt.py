@@ -591,6 +591,9 @@ class Domain(object):
                 error_code=VIR_ERR_INTERNAL_ERROR,
                 error_domain=VIR_FROM_QEMU)
 
+    def migrateSetMaxDowntime(self, downtime):
+        pass
+
     def attachDevice(self, xml):
         disk_info = _parse_disk_info(etree.fromstring(xml))
         disk_info['_attached'] = True
