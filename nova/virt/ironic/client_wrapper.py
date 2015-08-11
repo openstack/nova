@@ -75,6 +75,9 @@ class IronicClientWrapper(object):
             kwargs = {'os_auth_token': auth_token,
                       'ironic_url': CONF.ironic.api_endpoint}
 
+        # Retries for Conflict exception
+        kwargs['max_retries'] = CONF.ironic.api_max_retries
+        kwargs['retry_interval'] = CONF.ironic.api_retry_interval
         try:
             cli = ironic.client.get_client(CONF.ironic.api_version, **kwargs)
             # Cache the client so we don't have to reconstruct and
@@ -110,9 +113,10 @@ class IronicClientWrapper(object):
 
         :raises: NovaException if all retries failed.
         """
+        # TODO(dtantsur): drop these once ironicclient 0.8.0 is out and used in
+        # global-requirements.
         retry_excs = (ironic.exc.ServiceUnavailable,
-                      ironic.exc.ConnectionRefused,
-                      ironic.exc.Conflict)
+                      ironic.exc.ConnectionRefused)
         # num_attempts should be the times of retry + 1
         # eg. retry==0 just means  run once and no retry
         num_attempts = max(0, CONF.ironic.api_max_retries) + 1
