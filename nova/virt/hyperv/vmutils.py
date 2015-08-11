@@ -733,7 +733,8 @@ class VMUtils(object):
 
     def get_free_controller_slot(self, scsi_controller_path):
         attached_disks = self.get_attached_disks(scsi_controller_path)
-        used_slots = [int(disk.AddressOnParent) for disk in attached_disks]
+        used_slots = [int(self._get_disk_resource_address(disk))
+                      for disk in attached_disks]
 
         for slot in range(constants.SCSI_CONTROLLER_SLOTS_NUMBER):
             if slot not in used_slots:
