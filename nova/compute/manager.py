@@ -128,6 +128,14 @@ compute_opts = [
     cfg.IntOpt('max_concurrent_builds',
                default=10,
                help='Maximum number of instance builds to run concurrently'),
+    cfg.IntOpt('max_concurrent_live_migrations',
+               default=1,
+               help='Maximum number of live migrations to run concurrently. '
+                    'This limit is enforced to avoid outbound live migrations '
+                    'overwhelming the host/network and causing failures. It '
+                    'is not recommended that you change this unless you are '
+                    'very sure that doing so is safe and stable in your '
+                    'environment.'),
     cfg.IntOpt('block_device_allocate_retries',
                default=60,
                help='Number of times to retry block device'
@@ -686,6 +694,11 @@ class ComputeManager(manager.Manager):
                 CONF.max_concurrent_builds)
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
+        if max(CONF.max_concurrent_live_migrations, 0) != 0:
+            self._live_migration_semaphore = eventlet.semaphore.Semaphore(
+                CONF.max_concurrent_live_migrations)
+        else:
+            self._live_migration_semaphore = compute_utils.UnlimitedSemaphore()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -4925,22 +4938,8 @@ class ComputeManager(manager.Manager):
 
         return pre_live_migration_data
 
-    @wrap_exception()
-    @wrap_instance_event
-    @wrap_instance_fault
-    def live_migration(self, context, dest, instance, block_migration,
-                       migration, migrate_data):
-        """Executing live migration.
-
-        :param context: security context
-        :param instance: a nova.objects.instance.Instance object
-        :param dest: destination host
-        :param block_migration: if true, prepare for block migration
-        :param migration: an nova.objects.Migration object
-        :param migrate_data: implementation specific params
-
-        """
-
+    def _do_live_migration(self, context, dest, instance, block_migration,
+                           migration, migrate_data):
         # NOTE(danms): Remove these guards in v5.0 of the RPC API
         if migration:
             # NOTE(danms): We should enhance the RT to account for migrations
@@ -4994,6 +4993,39 @@ class ComputeManager(manager.Manager):
                 if migration:
                     migration.status = 'failed'
                     migration.save()
+
+    @wrap_exception()
+    @wrap_instance_event
+    @wrap_instance_fault
+    def live_migration(self, context, dest, instance, block_migration,
+                       migration, migrate_data):
+        """Executing live migration.
+
+        :param context: security context
+        :param dest: destination host
+        :param instance: a nova.objects.instance.Instance object
+        :param block_migration: if true, prepare for block migration
+        :param migration: an nova.objects.Migration object
+        :param migrate_data: implementation specific params
+
+        """
+
+        # NOTE(danms): Remove these guards in v5.0 of the RPC API
+        if migration:
+            migration.status = 'queued'
+            migration.save()
+
+        def dispatch_live_migration(*args, **kwargs):
+            with self._live_migration_semaphore:
+                self._do_live_migration(*args, **kwargs)
+
+        # NOTE(danms): We spawn here to return the RPC worker thread back to
+        # the pool. Since what follows could take a really long time, we don't
+        # want to tie up RPC workers.
+        utils.spawn_n(dispatch_live_migration,
+                      context, dest, instance,
+                      block_migration, migration,
+                      migrate_data)
 
     def _live_migration_cleanup_flags(self, block_migration, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after

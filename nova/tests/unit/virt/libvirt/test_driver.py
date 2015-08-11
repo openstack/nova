@@ -11533,18 +11533,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                   dstfile, "qcow2")
             mock_define.assert_called_once_with(xmldoc)
 
-    @mock.patch.object(utils, "spawn")
-    def test_live_migration_hostname_valid(self, mock_spawn):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration")
+    def test_live_migration_hostname_valid(self, mock_lm):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.live_migration(self.context, self.test_instance,
                             "host1.example.com",
                             lambda x: x,
                             lambda x: x)
-        self.assertEqual(1, mock_spawn.call_count)
+        self.assertEqual(1, mock_lm.call_count)
 
-    @mock.patch.object(utils, "spawn")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration")
     @mock.patch.object(fake_libvirt_utils, "is_valid_hostname")
-    def test_live_migration_hostname_invalid(self, mock_hostname, mock_spawn):
+    def test_live_migration_hostname_invalid(self, mock_hostname, mock_lm):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_hostname.return_value = False
         self.assertRaises(exception.InvalidHostname,
