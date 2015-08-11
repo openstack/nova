@@ -91,7 +91,8 @@ opts = [
                help='Ironic keystone tenant name.'),
     cfg.IntOpt('api_max_retries',
                default=60,
-               help='How many retries when a request does conflict.'),
+               help=('How many retries when a request does conflict. '
+                     'If <= 0, only try once, no retries.')),
     cfg.IntOpt('api_retry_interval',
                default=2,
                help='How often to retry in seconds when a request '
@@ -832,7 +833,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                           instance=instance)
                 raise loopingcall.LoopingCallDone()
 
-            if data['tries'] >= CONF.ironic.api_max_retries:
+            if data['tries'] >= max(0, CONF.ironic.api_max_retries) + 1:
                 msg = (_("Error destroying the instance on node %(node)s. "
                          "Provision state still '%(state)s'.")
                        % {'state': node.provision_state,
