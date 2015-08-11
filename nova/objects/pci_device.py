@@ -97,7 +97,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'vendor_id': fields.StringField(),
         'product_id': fields.StringField(),
         'dev_type': fields.StringField(),
-        'status': fields.StringField(),
+        'status': fields.PciDeviceStatusField(),
         'dev_id': fields.StringField(nullable=True),
         'label': fields.StringField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
@@ -179,16 +179,16 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         """
         pci_device = cls()
         pci_device.update_device(dev_dict)
-        pci_device.status = 'available'
+        pci_device.status = fields.PciDeviceStatus.AVAILABLE
         return pci_device
 
     @base.remotable
     def save(self):
-        if self.status == 'removed':
-            self.status = 'deleted'
+        if self.status == fields.PciDeviceStatus.REMOVED:
+            self.status = fields.PciDeviceStatus.DELETED
             db.pci_device_destroy(self._context, self.compute_node_id,
                                   self.address)
-        elif self.status != 'deleted':
+        elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])

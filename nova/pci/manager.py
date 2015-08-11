@@ -21,6 +21,7 @@ from oslo_log import log as logging
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
+from nova.objects import fields
 from nova.pci import device
 from nova.pci import stats
 from nova.virt import hardware
@@ -64,11 +65,11 @@ class PciDevTracker(object):
         self.claims = collections.defaultdict(list)
         for dev in self.pci_devs:
             uuid = dev.instance_uuid
-            if dev.status == 'claimed':
+            if dev.status == fields.PciDeviceStatus.CLAIMED:
                 self.claims[uuid].append(dev)
-            elif dev.status == 'allocated':
+            elif dev.status == fields.PciDeviceStatus.ALLOCATED:
                 self.allocations[uuid].append(dev)
-            elif dev.status == 'available':
+            elif dev.status == fields.PciDeviceStatus.AVAILABLE:
                 self.stats.add_device(dev)
 
     @property
@@ -82,7 +83,7 @@ class PciDevTracker(object):
                     dev.save()
 
         self.pci_devs = [dev for dev in self.pci_devs
-                         if dev.status != 'deleted']
+                         if dev.status != fields.PciDeviceStatus.DELETED]
 
     @property
     def pci_stats(self):
@@ -117,7 +118,7 @@ class PciDevTracker(object):
                                  'pci_exception': e.format_message()})
                     # Note(yjiang5): remove the device by force so that
                     # db entry is cleaned in next sync.
-                    existed.status = 'removed'
+                    existed.status = fields.PciDeviceStatus.REMOVED
                 else:
                     # Note(yjiang5): no need to update stats if an assigned
                     # device is hot removed.
@@ -126,7 +127,8 @@ class PciDevTracker(object):
                 new_value = next((dev for dev in devices if
                     dev['address'] == existed.address))
                 new_value['compute_node_id'] = self.node_id
-                if existed.status in ('claimed', 'allocated'):
+                if existed.status in (fields.PciDeviceStatus.CLAIMED,
+                                      fields.PciDeviceStatus.ALLOCATED):
                     # Pci properties may change while assigned because of
                     # hotplug or config changes. Although normally this should
                     # not happen.
@@ -210,9 +212,10 @@ class PciDevTracker(object):
         # information, not the claimed one. So we can't use
         # instance['pci_devices'] to check the devices to be freed.
         for dev in self.pci_devs:
-            if (dev.status in ('claimed', 'allocated') and
-                    dev.instance_uuid == instance['uuid']):
-                self._free_device(dev)
+            if dev.status in (fields.PciDeviceStatus.CLAIMED,
+                              fields.PciDeviceStatus.ALLOCATED):
+                if dev.instance_uuid == instance['uuid']:
+                    self._free_device(dev)
 
     def free_instance(self, context, instance):
         if self.allocations.pop(instance['uuid'], None):
