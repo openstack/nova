@@ -33,7 +33,7 @@ class PciDevTracker(object):
     """Manage pci devices in a compute node.
 
     This class fetches pci passthrough information from hypervisor
-    and trackes the usage of these devices.
+    and tracks the usage of these devices.
 
     It's called by compute node resource tracker to allocate and free
     devices to/from instances, and to update the available pci passthrough
