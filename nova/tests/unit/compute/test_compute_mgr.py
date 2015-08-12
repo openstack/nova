@@ -47,6 +47,7 @@ from nova import test
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
@@ -1744,27 +1745,107 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(event_obj, event.wait())
         self.assertEqual({}, self.compute.instance_events._events)
 
+    def test_process_instance_vif_deleted_event(self):
+        vif1 = fake_network_cache_model.new_vif()
+        vif1['id'] = '1'
+        vif2 = fake_network_cache_model.new_vif()
+        vif2['id'] = '2'
+        nw_info = network_model.NetworkInfo([vif1, vif2])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid='uuid')
+        inst_obj = objects.Instance(id=3, uuid='uuid', info_cache=info_cache)
+
+        @mock.patch.object(manager.base_net_api,
+                           'update_instance_cache_with_nw_info')
+        @mock.patch.object(self.compute.driver, 'detach_interface')
+        def do_test(detach_interface, update_instance_cache_with_nw_info):
+            self.compute._process_instance_vif_deleted_event(self.context,
+                                                             inst_obj,
+                                                             vif2['id'])
+            update_instance_cache_with_nw_info.assert_called_once_with(
+                                                   self.compute.network_api,
+                                                   self.context,
+                                                   inst_obj,
+                                                   nw_info=[vif1])
+            detach_interface.assert_called_once_with(inst_obj, vif2)
+        do_test()
+
     def test_external_instance_event(self):
         instances = [
             objects.Instance(id=1, uuid='uuid1'),
-            objects.Instance(id=2, uuid='uuid2')]
+            objects.Instance(id=2, uuid='uuid2'),
+            objects.Instance(id=3, uuid='uuid3')]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
                                           instance_uuid='uuid1'),
             objects.InstanceExternalEvent(name='network-vif-plugged',
                                           instance_uuid='uuid2',
-                                          tag='tag2')]
+                                          tag='tag2'),
+            objects.InstanceExternalEvent(name='network-vif-deleted',
+                                          instance_uuid='uuid3',
+                                          tag='tag3')]
 
+        @mock.patch.object(self.compute, '_process_instance_vif_deleted_event')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_process_instance_event')
-        def do_test(_process_instance_event, get_instance_nw_info):
+        def do_test(_process_instance_event, get_instance_nw_info,
+                    _process_instance_vif_deleted_event):
             self.compute.external_instance_event(self.context,
                                                  instances, events)
             get_instance_nw_info.assert_called_once_with(self.context,
                                                          instances[0])
             _process_instance_event.assert_called_once_with(instances[1],
                                                             events[1])
+            _process_instance_vif_deleted_event.assert_called_once_with(
+                self.context, instances[2], events[2].tag)
+        do_test()
+
+    def test_external_instance_event_with_exception(self):
+        vif1 = fake_network_cache_model.new_vif()
+        vif1['id'] = '1'
+        vif2 = fake_network_cache_model.new_vif()
+        vif2['id'] = '2'
+        nw_info = network_model.NetworkInfo([vif1, vif2])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid='uuid2')
+        instances = [
+            objects.Instance(id=1, uuid='uuid1'),
+            objects.Instance(id=2, uuid='uuid2', info_cache=info_cache),
+            objects.Instance(id=3, uuid='uuid3')]
+        events = [
+            objects.InstanceExternalEvent(name='network-changed',
+                                          tag='tag1',
+                                          instance_uuid='uuid1'),
+            objects.InstanceExternalEvent(name='network-vif-deleted',
+                                          instance_uuid='uuid2',
+                                          tag='2'),
+            objects.InstanceExternalEvent(name='network-vif-plugged',
+                                          instance_uuid='uuid3',
+                                          tag='tag3')]
+
+        # Make sure all the three events are handled despite the exception in
+        # processing event 2
+        @mock.patch.object(manager.base_net_api,
+                           'update_instance_cache_with_nw_info')
+        @mock.patch.object(self.compute.driver, 'detach_interface',
+                           side_effect=exception.NovaException)
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
+        @mock.patch.object(self.compute, '_process_instance_event')
+        def do_test(_process_instance_event, get_instance_nw_info,
+                    detach_interface, update_instance_cache_with_nw_info):
+            self.compute.external_instance_event(self.context,
+                                                 instances, events)
+            get_instance_nw_info.assert_called_once_with(self.context,
+                                                         instances[0])
+            update_instance_cache_with_nw_info.assert_called_once_with(
+                                                   self.compute.network_api,
+                                                   self.context,
+                                                   instances[1],
+                                                   nw_info=[vif1])
+            detach_interface.assert_called_once_with(instances[1], vif2)
+            _process_instance_event.assert_called_once_with(instances[2],
+                                                            events[2])
         do_test()
 
     def test_cancel_all_events(self):

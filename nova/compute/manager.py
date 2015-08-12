@@ -76,6 +76,7 @@ from nova import image
 from nova.image import glance
 from nova import manager
 from nova import network
+from nova.network import base_api as base_net_api
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
@@ -6228,6 +6229,33 @@ class ComputeManager(manager.Manager):
                       {'event': event.key}, instance=instance)
             _event.send(event)
 
+    def _process_instance_vif_deleted_event(self, context, instance,
+                                            deleted_vif_id):
+        # If an attached port is deleted by neutron, it needs to
+        # be detached from the instance.
+        # And info cache needs to be updated.
+        network_info = instance.info_cache.network_info
+        for index, vif in enumerate(network_info):
+            if vif['id'] == deleted_vif_id:
+                LOG.info(_LI('Neutron deleted interface %(intf)s; '
+                             'detaching it from the instance and '
+                             'deleting it from the info cache'),
+                         {'intf': vif['id']},
+                         instance=instance)
+                del network_info[index]
+                base_net_api.update_instance_cache_with_nw_info(
+                                 self.network_api, context,
+                                 instance,
+                                 nw_info=network_info)
+                try:
+                    self.driver.detach_interface(instance, vif)
+                except exception.NovaException as ex:
+                    LOG.warning(_LW("Detach interface failed, "
+                                    "port_id=%(port_id)s, reason: %(msg)s"),
+                                {'port_id': deleted_vif_id, 'msg': ex},
+                                instance=instance)
+                break
+
     @wrap_exception()
     def external_instance_event(self, context, instances, events):
         # NOTE(danms): Some event types are handled by the manager, such
@@ -6242,6 +6270,10 @@ class ComputeManager(manager.Manager):
                       instance=instance)
             if event.name == 'network-changed':
                 self.network_api.get_instance_nw_info(context, instance)
+            elif event.name == 'network-vif-deleted':
+                self._process_instance_vif_deleted_event(context,
+                                                         instance,
+                                                         event.tag)
             else:
                 self._process_instance_event(instance, event)
 
