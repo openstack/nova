@@ -15,7 +15,7 @@
 from oslo_log import log as logging
 import webob
 
-from nova.api.openstack.compute.schemas.v3 import server_external_events
+from nova.api.openstack.compute.schemas import server_external_events
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

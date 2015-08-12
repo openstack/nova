@@ -19,7 +19,7 @@ from oslo_utils import fileutils
 from oslo_utils import timeutils
 from webob import exc
 
-from nova.api.openstack.compute.schemas.v3 import cloudpipe
+from nova.api.openstack.compute.schemas import cloudpipe
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

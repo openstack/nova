@@ -15,7 +15,7 @@
 import webob
 import webob.exc
 
-from nova.api.openstack.compute.schemas.v3 import fixed_ips
+from nova.api.openstack.compute.schemas import fixed_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

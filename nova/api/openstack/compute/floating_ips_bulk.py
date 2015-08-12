@@ -17,7 +17,7 @@ from oslo_config import cfg
 import six
 import webob.exc
 
-from nova.api.openstack.compute.schemas.v3 import floating_ips_bulk
+from nova.api.openstack.compute.schemas import floating_ips_bulk
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

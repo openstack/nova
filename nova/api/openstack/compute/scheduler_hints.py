@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas.v3 import scheduler_hints as schema
+from nova.api.openstack.compute.schemas import scheduler_hints as schema
 from nova.api.openstack import extensions
 
 ALIAS = "os-scheduler-hints"

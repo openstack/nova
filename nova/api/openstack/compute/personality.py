@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas.v3 import personality
+from nova.api.openstack.compute.schemas import personality
 from nova.api.openstack import extensions
 
 ALIAS = "os-personality"

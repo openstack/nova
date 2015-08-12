@@ -18,7 +18,7 @@ import six
 import six.moves.urllib.parse as urlparse
 import webob
 
-from nova.api.openstack.compute.schemas.v3 import quota_sets
+from nova.api.openstack.compute.schemas import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

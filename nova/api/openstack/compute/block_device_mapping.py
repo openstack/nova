@@ -17,7 +17,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.schemas.v3 import block_device_mapping as \
+from nova.api.openstack.compute.schemas import block_device_mapping as \
                                                   schema_block_device_mapping
 from nova.api.openstack import extensions
 from nova import block_device

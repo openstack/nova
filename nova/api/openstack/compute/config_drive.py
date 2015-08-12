@@ -15,7 +15,7 @@
 
 """Config Drive extension."""
 
-from nova.api.openstack.compute.schemas.v3 import config_drive as \
+from nova.api.openstack.compute.schemas import config_drive as \
                                                   schema_config_drive
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi

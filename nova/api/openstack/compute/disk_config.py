@@ -17,7 +17,7 @@
 from oslo_utils import strutils
 from webob import exc
 
-from nova.api.openstack.compute.schemas.v3 import disk_config
+from nova.api.openstack.compute.schemas import disk_config
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _

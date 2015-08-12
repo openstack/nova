@@ -15,7 +15,7 @@
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import reset_server_state
+from nova.api.openstack.compute.schemas import reset_server_state
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

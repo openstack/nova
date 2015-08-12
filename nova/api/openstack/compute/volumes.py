@@ -19,7 +19,7 @@ from oslo_utils import strutils
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import volumes as volumes_schema
+from nova.api.openstack.compute.schemas import volumes as volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
