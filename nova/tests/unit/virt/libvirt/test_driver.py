@@ -1559,6 +1559,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.NUMATopologyUnsupported,
             None)
 
+    @mock.patch.object(libvirt_driver.LOG, 'warn')
+    def test_has_numa_support_bad_version_libvirt_log(self, mock_warn):
+        # Tests that a warning is logged once and only once when there is a bad
+        # BAD_LIBVIRT_NUMA_VERSIONS detected.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertFalse(hasattr(drvr, '_bad_libvirt_numa_version_warn'))
+        with mock.patch.object(drvr._host, 'has_version', return_value=True):
+            with mock.patch.object(drvr._host, 'get_capabilities'):
+                for i in xrange(2):
+                    self.assertFalse(drvr._has_numa_support())
+        self.assertTrue(drvr._bad_libvirt_numa_version_warn)
+        self.assertEqual(1, mock_warn.call_count)
+        # assert the version is logged properly
+        self.assertEqual('1.2.9.2', mock_warn.call_args[0][1])
+
     def test_get_guest_config_numa_old_version_qemu(self):
         self.flags(virt_type='kvm', group='libvirt')
 
