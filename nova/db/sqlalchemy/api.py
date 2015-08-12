@@ -2412,7 +2412,6 @@ def instance_floating_address_get_all(context, instance_uuid):
 
 
 # NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
-@require_admin_context
 def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
                      datetime.timedelta(seconds=reboot_window))
