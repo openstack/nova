@@ -47,7 +47,6 @@ import testtools
 from nova import context
 from nova import db
 from nova.network import manager as network_manager
-from nova import objects
 from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
@@ -61,11 +60,6 @@ CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 logging.register_options(CONF)
 CONF.set_override('use_stderr', False)
 logging.setup(CONF, 'nova')
-
-# NOTE(comstud): Make sure we have all of the objects loaded. We do this
-# at module import time, because we may be using mock decorators in our
-# tests that run at import time.
-objects.register_all()
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
