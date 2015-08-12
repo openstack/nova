@@ -561,16 +561,24 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
             mock_rm_virt_res.assert_called_with(mock_disk, self._FAKE_VM_PATH)
 
-    def test_get_mounted_disk_resource_from_path(self):
+    def _test_get_mounted_disk_resource_from_path(self, is_physical):
         mock_disk_1 = mock.MagicMock()
         mock_disk_2 = mock.MagicMock()
-        mock_disk_2.HostResource = [self._FAKE_MOUNTED_DISK_PATH]
+        conn_attr = (self._vmutils._PHYS_DISK_CONNECTION_ATTR if is_physical
+                     else self._vmutils._VIRT_DISK_CONNECTION_ATTR)
+        setattr(mock_disk_2, conn_attr, [self._FAKE_MOUNTED_DISK_PATH])
         self._vmutils._conn.query.return_value = [mock_disk_1, mock_disk_2]
 
-        physical_disk = self._vmutils._get_mounted_disk_resource_from_path(
-            self._FAKE_MOUNTED_DISK_PATH, True)
+        mounted_disk = self._vmutils._get_mounted_disk_resource_from_path(
+            self._FAKE_MOUNTED_DISK_PATH, is_physical)
 
-        self.assertEqual(mock_disk_2, physical_disk)
+        self.assertEqual(mock_disk_2, mounted_disk)
+
+    def test_get_physical_mounted_disk_resource_from_path(self):
+        self._test_get_mounted_disk_resource_from_path(is_physical=True)
+
+    def test_get_virtual_mounted_disk_resource_from_path(self):
+        self._test_get_mounted_disk_resource_from_path(is_physical=False)
 
     def test_get_controller_volume_paths(self):
         self._prepare_mock_disk()
