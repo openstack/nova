@@ -874,7 +874,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                             reservations=cast_reservations)
             elif delete_type in ['delete', 'force_delete']:
                 rpcapi.terminate_instance(self.context, inst, [],
-                                          reservations=cast_reservations)
+                                          reservations=cast_reservations,
+                                          delete_type=delete_type)
 
         if commit_quotas:
             # Local delete or when we're testing API cell.
@@ -985,7 +986,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi.terminate_instance(
                     self.context, inst,
                     mox.IsA(objects.BlockDeviceMappingList),
-                    reservations=None)
+                    reservations=None, delete_type='delete')
         else:
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,

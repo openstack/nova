@@ -785,10 +785,12 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_terminate_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'terminate_instance')
-        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance')
+        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance',
+                                           delete_type='delete')
         self.mox.ReplayAll()
         self.cells_manager.terminate_instance(self.ctxt,
-                                              instance='fake-instance')
+                                              instance='fake-instance',
+                                              delete_type='delete')
 
     def test_soft_delete_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'soft_delete_instance')

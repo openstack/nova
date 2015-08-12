@@ -116,6 +116,7 @@ class CellsAPI(object):
 
         * 1.35 - Make instance_update_at_top, instance_destroy_at_top
                  and instance_info_cache_update_at_top use instance objects
+        * 1.36 - Added 'delete_type' parameter to terminate_instance()
     '''
 
     VERSION_ALIASES = {
@@ -564,15 +565,22 @@ class CellsAPI(object):
         cctxt = self.client.prepare(version='1.15')
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
-    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None,
+                           delete_type='delete'):
         """Delete an instance in its cell.
 
         This method takes a new-world instance object.
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.18')
-        cctxt.cast(ctxt, 'terminate_instance', instance=instance)
+        msg_kwargs = {'instance': instance}
+        if self.client.can_send_version('1.36'):
+            version = '1.36'
+            msg_kwargs['delete_type'] = delete_type
+        else:
+            version = '1.18'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'terminate_instance', **msg_kwargs)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
         """Soft-delete an instance in its cell.

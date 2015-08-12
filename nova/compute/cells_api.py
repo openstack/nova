@@ -206,6 +206,9 @@ class ComputeCellsAPI(compute_api.API):
         """
         pass
 
+    def force_delete(self, context, instance):
+        self._handle_cell_delete(context, instance, 'force_delete')
+
     def soft_delete(self, context, instance):
         self._handle_cell_delete(context, instance, 'soft_delete')
 
@@ -258,12 +261,6 @@ class ComputeCellsAPI(compute_api.API):
         """Restore a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).restore(context, instance)
         self._cast_to_cells(context, instance, 'restore')
-
-    @check_instance_cell
-    def force_delete(self, context, instance):
-        """Force delete a previously deleted (but not reclaimed) instance."""
-        super(ComputeCellsAPI, self).force_delete(context, instance)
-        self._cast_to_cells(context, instance, 'force_delete')
 
     @check_instance_cell
     def evacuate(self, context, instance, *args, **kwargs):

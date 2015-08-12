@@ -796,7 +796,11 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
-    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None,
+                           delete_type=None):
+        # NOTE(rajesht): The `delete_type` parameter is passed because
+        # the method signature has to match with `terminate_instance()`
+        # method of cells rpcapi.
         version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
