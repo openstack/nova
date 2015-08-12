@@ -97,7 +97,8 @@ class PciHostDevicesWhiteList(object):
         """
         for spec in self.specs:
             if spec.match(dev):
-                return spec
+                return True
+        return False
 
     def get_devspec(self, pci_dev):
         for spec in self.specs:

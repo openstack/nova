@@ -52,21 +52,21 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
     def test_device_assignable(self):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = whitelist.PciHostDevicesWhiteList([white_list])
-        self.assertIsNotNone(parsed.device_assignable(dev_dict))
+        self.assertTrue(parsed.device_assignable(dev_dict))
 
     def test_device_assignable_multiple(self):
         white_list_1 = '{"product_id":"0001", "vendor_id":"8086"}'
         white_list_2 = '{"product_id":"0002", "vendor_id":"8087"}'
         parsed = whitelist.PciHostDevicesWhiteList(
             [white_list_1, white_list_2])
-        self.assertIsNotNone(parsed.device_assignable(dev_dict))
+        self.assertTrue(parsed.device_assignable(dev_dict))
         dev_dict1 = dev_dict.copy()
         dev_dict1['vendor_id'] = '8087'
         dev_dict1['product_id'] = '0002'
-        self.assertIsNotNone(parsed.device_assignable(dev_dict1))
+        self.assertTrue(parsed.device_assignable(dev_dict1))
 
     def test_get_pci_devices_filter(self):
         white_list_1 = '{"product_id":"0001", "vendor_id":"8086"}'
         self.flags(pci_passthrough_whitelist=[white_list_1])
         pci_filter = whitelist.get_pci_devices_filter()
-        self.assertIsNotNone(pci_filter.device_assignable(dev_dict))
+        self.assertTrue(pci_filter.device_assignable(dev_dict))
