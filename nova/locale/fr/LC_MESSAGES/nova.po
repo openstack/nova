@@ -25,8 +25,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-08-12 06:30+0000\n"
+"PO-Revision-Date: 2015-08-12 06:27+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -500,6 +500,16 @@ msgid "Cannot access 'scality_sofs_config': %s"
 msgstr "Impossible d'accéder à 'scality_sofs_config' : %s"
 
 #, python-format
+msgid "Cannot add host %(host)s in aggregate %(id)s: host exists"
+msgstr ""
+"Impossible d'ajouter l'hôte %(host)s dans le groupe %(id)s: l'hôte existe"
+
+#, python-format
+msgid "Cannot add host %(host)s in aggregate %(id)s: not found"
+msgstr ""
+"Impossible d'ajouter l'hôte %(host)s dans le groupe %(id)s: introuvable"
+
+#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Impossible d'ajouter l’hôte sur l'ensemble %(aggregate_id)s. Raison: "
@@ -541,6 +551,15 @@ msgstr ""
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
 msgstr "Impossible de supprimer l'hôte %(host)s dans l'agrégat %(id)s"
+
+#, python-format
+msgid "Cannot remove host %(host)s in aggregate %(id)s: invalid"
+msgstr "Impossible de supprimer l'hôte %(host)s du le groupe %(id)s: invalide"
+
+#, python-format
+msgid "Cannot remove host %(host)s in aggregate %(id)s: not found"
+msgstr ""
+"Impossible de supprimer l'hôte %(host)s du le groupe %(id)s: introuvable"
 
 #, python-format
 msgid "Cannot remove host from aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -800,6 +819,14 @@ msgstr "Impossible de télécharger l'image %(image_id)s"
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "Impossible de trouver l'IP du lien local de %(interface)s :%(ex)s"
 
+#, python-format
+msgid ""
+"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
+"%(vm_state)s, current task_state: %(task_state)s"
+msgstr ""
+"L'instance %(instance)s n'a pas pu être stoppée en moins de 1 heure. Etat "
+"actuel de la VM: %(vm_state)s, etat actuel de la tache: %(task_state)s"
+
 msgid "Create networks failed"
 msgstr "La création de réseaux a échoué"
 
@@ -826,6 +853,10 @@ msgstr "Datetime est dans un format non valide"
 msgid "Default rule. Enforced when a requested rule is not found."
 msgstr ""
 "Règle par défaut. Respectée quand une règle demandée n'est pas trouvée."
+
+#, python-format
+msgid "Deleted %(records)d records from table '%(table_name)s'."
+msgstr "%(records)d entrée supprimer de la table '%(table_name)s'."
 
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "La suppression par fixed_range n'est pas supportée avec NeutronManager"
@@ -883,6 +914,13 @@ msgstr "Les réseaux en double (%s) ne sont pas autorisés"
 
 msgid "Duplicate policies configured!"
 msgstr "Politiques dupliquées configurées!"
+
+msgid ""
+"ERROR: Network commands are not supported when using the Neutron API.  Use "
+"python-neutronclient instead."
+msgstr ""
+"ERREUR: les commandes de réseau ne sont pas supportées quand utilisées avec "
+"l'API Neutron. Utilisez python-neutronclient à la place"
 
 msgid ""
 "ESX SOAP server returned an empty port group for the host system in its "
@@ -1314,6 +1352,9 @@ msgstr ""
 "migrations live effectuée avec cette version peuvent causer des pertes de "
 "données. Mettez à jour Nova sur %(server)s et essayez à nouveau."
 
+msgid "Host does not support guests with NUMA topology set"
+msgstr "L'hote ne supporte pas les invités avec le groupe topologique NUMA"
+
 msgid "Host parameter must be specified"
 msgstr "Parametre host doit etre spécifié"
 
@@ -1450,6 +1491,15 @@ msgstr "Format de corps de demande incorrect"
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
 msgstr "Le cache d'infos pour l'instance %(instance_uuid)s est introuvable."
+
+#, python-format
+msgid ""
+"Instance %(instance)s and volume %(vol)s are not in the same "
+"availability_zone. Instance is in %(ins_zone)s. Volume is in %(vol_zone)s"
+msgstr ""
+"L'instance %(instance)s et le volume %(vol)s ne sont pas dans la même zone "
+"de disponibilité. L'instance est dans %(ins_zone)s. Le volume est dans "
+"%(vol_zone)s"
 
 #, python-format
 msgid "Instance %(instance)s does not have a port with id %(port)s"
@@ -1889,6 +1939,9 @@ msgstr "Volume invalide : %(reason)s"
 msgid "Invalid volume_size."
 msgstr "volume_size invalide."
 
+msgid "Ironic client unavailable, cannot access Ironic."
+msgstr "Client Ironic indisponible, impossible d'accéder à Ironic"
+
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "L' uuid du noeud Ironic non fourni au pilote pour instance %s."
@@ -1952,10 +2005,6 @@ msgstr "Ligne %(linenum)d: %(line)s"
 msgid "Link Local address is not found.:%s"
 msgstr "L'adresse du lien local n'a pas été trouvé :%s"
 
-msgid "Live migration can not be used without shared storage."
-msgstr ""
-"La migration active ne peut pas être utilisée sans le stockage partagé."
-
 #, python-format
 msgid "Live migration failed: %s"
 msgstr "Echec de la migration active : %s"
@@ -1996,6 +2045,13 @@ msgstr "Format de corps de message non valide : %(reason)s"
 
 msgid "Malformed request body"
 msgstr "Format de corps de demande incorrect"
+
+msgid "Malformed request body. meta item must be object"
+msgstr ""
+"Corps de la requête mal formé. Les méta composant doivent être un objet "
+
+msgid "Malformed request body. metadata must be object"
+msgstr "Corps de la requête mal formé. Les métadonnées doivent être un objet "
 
 msgid "Malformed scheduler_hints attribute"
 msgstr "Format incorrect de l'attribut scheduler_hints"
@@ -2094,6 +2150,9 @@ msgstr "Le champ de la raison de désactivation est manquant"
 
 msgid "Missing flavorRef attribute"
 msgstr "Attribut flavorRef manquant"
+
+msgid "Missing forced_down field"
+msgstr "Champ forced_down maquant"
 
 msgid "Missing imageRef attribute"
 msgstr "Attribut imageRef manquant"
@@ -2580,6 +2639,9 @@ msgstr "Le modèle de vidéo fourni (%(model)s) n'est pas supporté."
 msgid "Provided watchdog action (%(action)s) is not supported."
 msgstr "L'action de garde fourni (%(action)s) n'est pas supportée"
 
+msgid "QEMU guest agent is not enabled"
+msgstr "L'agent invité QEMU n'est pas activé"
+
 msgid "Quota"
 msgstr "Quota"
 
@@ -2643,6 +2705,29 @@ msgstr ""
 msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
 msgstr ""
 "La limite de quota %(limit)s pour %(resource)s doit être -1 ou supérieure."
+
+#, python-format
+msgid ""
+"Quota limit %(limit)s for %(resource)s must be greater than or equal to "
+"already used and reserved %(minimum)s."
+msgstr ""
+"Le quota limite %(limit)s pour %(resource)s doit être supérieur ou égal a "
+"celle déjà utilisé et réservé: %(minimum)s."
+
+#, python-format
+msgid ""
+"Quota limit %(limit)s for %(resource)s must be in the range of -1 and "
+"%(max)s."
+msgstr ""
+"Le quota limite %(limit)s pour %(resource)s doit être entre -1 et %(max)s."
+
+#, python-format
+msgid ""
+"Quota limit %(limit)s for %(resource)s must be less than or equal to "
+"%(maximum)s."
+msgstr ""
+"Le quota limite %(limit)s pour %(resource)s doit être inferieur ou égal à "
+"%(maximum)s."
 
 msgid "Quota limit must be -1 or greater."
 msgstr "La limite de quota doit être égale à -1 ou une valeur supérieure."
@@ -3070,6 +3155,9 @@ msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr ""
 "Le chemin du périphérique RNG donné: (%(path)s) n'est pas présent sur l’hôte."
 
+msgid "The request body can't be empty"
+msgstr "Le corps de la requete ne peut être vide"
+
 msgid "The request is invalid."
 msgstr "La requête est invalide."
 
@@ -3232,11 +3320,17 @@ msgstr ""
 msgid "Unable to create dns domain"
 msgstr "Incapable de créer un domaine dns"
 
+msgid "Unable to create dns entry"
+msgstr "Impossible de créer l'entrée DNS."
+
 msgid "Unable to create flavor"
 msgstr "Incapable de créer un type d'instance"
 
 msgid "Unable to delete dns domain"
 msgstr "Incapable de supprimer le domaine dns"
+
+msgid "Unable to delete dns entry"
+msgstr "Impossible de supprimer l'entrée DNS."
 
 #, python-format
 msgid "Unable to delete system group '%s'"
@@ -3409,22 +3503,6 @@ msgstr ""
 "Erreur de l'API inattendue. Merci de la reporter sur http://bugs.launchpad."
 "net/nova/ et d'y joindre le rapport de L'API Nova si possible.\n"
 "%s"
-
-#, python-format
-msgid ""
-"Unexpected VM state: expecting %(expected)s but the actual state is "
-"%(actual)s"
-msgstr ""
-"État inattendu de la VM : %(expected)s attendu mais l'état actuel est "
-"%(actual)s"
-
-#, python-format
-msgid ""
-"Unexpected task state: expecting %(expected)s but the actual state is "
-"%(actual)s"
-msgstr ""
-"État inattendu de la tâche : %(expected)s attendu mais l'état actuel est "
-"%(actual)s"
 
 #, python-format
 msgid "Unexpected vif_type=%s"
@@ -3970,6 +4048,9 @@ msgstr ""
 msgid "resource_id and tag are required"
 msgstr "les champs 'resource_id' et 'tag' sont requis"
 
+msgid "rpc_port must be integer"
+msgstr "rpc_port doit être un entier"
+
 msgid "security group default rule not found"
 msgstr "Règle par défaut du groupe de sécurité introuvable"
 
@@ -4067,6 +4148,14 @@ msgstr ""
 
 msgid "vlan must be an integer"
 msgstr "vlan doit etre un entier"
+
+#, python-format
+msgid "volume %s already attached"
+msgstr "Le volume %s est dajà attahcé "
+
+#, python-format
+msgid "volume %s already detached"
+msgstr "Le volume %s est déjà détaché"
 
 msgid "volume not specified"
 msgstr "volume non spécifié"

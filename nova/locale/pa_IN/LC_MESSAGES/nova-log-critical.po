@@ -1,0 +1,25 @@
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
+# This file is distributed under the same license as the nova project.
+#
+# Translators:
+# A S Alam <apreet.alam@gmail.com>, 2015
+msgid ""
+msgstr ""
+"Project-Id-Version: nova\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2015-08-12 06:31+0000\n"
+"PO-Revision-Date: 2015-08-08 23:24+0000\n"
+"Last-Translator: A S Alam <apreet.alam@gmail.com>\n"
+"Language-Team: Panjabi (Punjabi) (India) (http://www.transifex.com/openstack/"
+"nova/language/pa_IN/)\n"
+"Language: pa_IN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, python-format
+msgid "Missing core API extensions: %s"
+msgstr "ਗੁੰਮ ਕੋਰ API ਇਕਸਟੈਂਸ਼ਨ: %s"
