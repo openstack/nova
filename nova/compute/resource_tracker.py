@@ -396,11 +396,6 @@ class ResourceTracker(object):
             resources["cpu_info"] is None):
             resources["cpu_info"] = ''
 
-        # TODO(berrange): remove this once all virt drivers are updated
-        # to report topology
-        if "numa_topology" not in resources:
-            resources["numa_topology"] = None
-
         self._verify_resources(resources)
 
         self._report_hypervisor_resource_view(resources)

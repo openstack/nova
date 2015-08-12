@@ -333,6 +333,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             'supported_instances': jsonutils.dumps(
                 _get_nodes_supported_instances(cpu_arch)),
             'stats': jsonutils.dumps(nodes_extra_specs),
+            'numa_topology': None,
         }
         return dic
 
