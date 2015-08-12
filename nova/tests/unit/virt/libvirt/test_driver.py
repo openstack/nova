@@ -1566,9 +1566,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertFalse(hasattr(drvr, '_bad_libvirt_numa_version_warn'))
         with mock.patch.object(drvr._host, 'has_version', return_value=True):
-            with mock.patch.object(drvr._host, 'get_capabilities'):
-                for i in xrange(2):
-                    self.assertFalse(drvr._has_numa_support())
+            for i in xrange(2):
+                self.assertFalse(drvr._has_numa_support())
         self.assertTrue(drvr._bad_libvirt_numa_version_warn)
         self.assertEqual(1, mock_warn.call_count)
         # assert the version is logged properly
