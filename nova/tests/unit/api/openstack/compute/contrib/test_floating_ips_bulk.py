@@ -17,9 +17,10 @@ import netaddr
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import floating_ips_bulk as fipbulk_v2
-from nova.api.openstack.compute.plugins.v3 import floating_ips_bulk as\
-                                                      fipbulk_v21
+from nova.api.openstack.compute.legacy_v2.contrib import floating_ips_bulk \
+        as fipbulk_v2
+from nova.api.openstack.compute.plugins.v3 import floating_ips_bulk \
+        as fipbulk_v21
 from nova import context
 from nova import exception
 from nova import objects

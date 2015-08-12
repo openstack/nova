@@ -16,7 +16,8 @@ import datetime
 
 from oslotest import moxstubout
 
-from nova.api.openstack.compute.contrib import migrations as migrations_v2
+from nova.api.openstack.compute.legacy_v2.contrib import migrations \
+        as migrations_v2
 from nova.api.openstack.compute.plugins.v3 import migrations as migrations_v21
 from nova import context
 from nova import exception

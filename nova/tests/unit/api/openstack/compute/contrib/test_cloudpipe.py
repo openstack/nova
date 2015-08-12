@@ -19,7 +19,8 @@ from oslo_config import cfg
 from oslo_utils import timeutils
 from webob import exc
 
-from nova.api.openstack.compute.contrib import cloudpipe as cloudpipe_v2
+from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe \
+        as cloudpipe_v2
 from nova.api.openstack.compute.plugins.v3 import cloudpipe as cloudpipe_v21
 from nova.compute import utils as compute_utils
 from nova import exception

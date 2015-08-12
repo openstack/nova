@@ -34,14 +34,14 @@ from nova import quota
 
 
 CONF = cfg.CONF
-CONF.import_opt('enable_network_quota',
-                'nova.api.openstack.compute.contrib.os_tenant_networks')
-CONF.import_opt('use_neutron_default_nets',
-                'nova.api.openstack.compute.contrib.os_tenant_networks')
-CONF.import_opt('neutron_default_tenant_id',
-                'nova.api.openstack.compute.contrib.os_tenant_networks')
-CONF.import_opt('quota_networks',
-                'nova.api.openstack.compute.contrib.os_tenant_networks')
+CONF.import_opt('enable_network_quota', 'nova.api.openstack.compute.'
+                'legacy_v2.contrib.os_tenant_networks')
+CONF.import_opt('use_neutron_default_nets', 'nova.api.openstack.compute.'
+                'legacy_v2.contrib.os_tenant_networks')
+CONF.import_opt('neutron_default_tenant_id', 'nova.api.openstack.compute.'
+                'legacy_v2.contrib.os_tenant_networks')
+CONF.import_opt('quota_networks', 'nova.api.openstack.compute.'
+                'legacy_v2.contrib.os_tenant_networks')
 
 
 ALIAS = 'os-tenant-networks'

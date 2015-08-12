@@ -17,7 +17,7 @@ import string
 
 import webob
 
-from nova.api.openstack.compute.contrib import console_output \
+from nova.api.openstack.compute.legacy_v2.contrib import console_output \
     as console_output_v2
 from nova.api.openstack.compute.plugins.v3 import console_output \
     as console_output_v21

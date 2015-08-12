@@ -16,7 +16,7 @@ import six
 import webob
 from webob import exc
 
-from nova.api.openstack.compute.contrib import security_groups as sg
+from nova.api.openstack.compute.legacy_v2.contrib import security_groups as sg
 from nova.api.openstack import extensions
 from nova import context as nova_context
 from nova import exception

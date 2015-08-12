@@ -16,7 +16,7 @@ import mock
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import \
+from nova.api.openstack.compute.legacy_v2.contrib import \
     security_group_default_rules as security_group_default_rules_v2
 from nova.api.openstack.compute.plugins.v3 import \
     security_group_default_rules as security_group_default_rules_v21

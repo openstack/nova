@@ -531,6 +531,6 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_http_not_implemented,
                                 expected_errors=errors, filename=filename)
 
-        filename = "nova/api/openstack/compute/contrib/test.py"
+        filename = "nova/api/openstack/compute/legacy_v2/contrib/test.py"
         self._assert_has_no_errors(code, checks.check_http_not_implemented,
                                    filename=filename)

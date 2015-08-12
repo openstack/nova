@@ -18,9 +18,10 @@ import mock
 from mox3 import mox
 from webob import exc
 
-from nova.api.openstack.compute.contrib import certificates as certificates_v2
+from nova.api.openstack.compute.legacy_v2.contrib import certificates \
+        as certificates_v2
 from nova.api.openstack.compute.plugins.v3 import certificates \
-    as certificates_v21
+        as certificates_v21
 from nova.cert import rpcapi
 from nova import context
 from nova import exception

@@ -22,7 +22,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import security_groups
+from nova.api.openstack.compute.legacy_v2.contrib import security_groups
 from nova import compute
 from nova import context
 import nova.db

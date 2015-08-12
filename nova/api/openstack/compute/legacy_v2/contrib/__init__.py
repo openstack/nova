@@ -29,7 +29,7 @@ ext_opts = [
                 default=[],
                 help='Specify list of extensions to load when using osapi_'
                      'compute_extension option with nova.api.openstack.'
-                     'compute.contrib.select_extensions'),
+                     'compute.legacy_v2.contrib.select_extensions'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(ext_opts)

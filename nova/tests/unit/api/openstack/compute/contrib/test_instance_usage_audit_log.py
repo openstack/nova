@@ -17,9 +17,10 @@ import datetime
 
 from oslo_utils import timeutils
 
-from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
-from nova.api.openstack.compute.plugins.v3 import instance_usage_audit_log as \
-    v21_ial
+from nova.api.openstack.compute.legacy_v2.contrib \
+        import instance_usage_audit_log as ial
+from nova.api.openstack.compute.plugins.v3 import instance_usage_audit_log \
+        as v21_ial
 from nova import context
 from nova import db
 from nova import exception

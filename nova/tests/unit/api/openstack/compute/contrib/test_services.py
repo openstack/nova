@@ -22,7 +22,8 @@ from oslo_utils import timeutils
 import webob.exc
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack.compute.contrib import services as services_v2
+from nova.api.openstack.compute.legacy_v2.contrib import services \
+        as services_v2
 from nova.api.openstack.compute.plugins.v3 import services as services_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi

@@ -16,7 +16,7 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.contrib import flavorextraspecs \
+from nova.api.openstack.compute.legacy_v2.contrib import flavorextraspecs \
  as flavorextraspecs_v2
 from nova.api.openstack.compute.plugins.v3 import flavors_extraspecs \
  as flavorextraspecs_v21

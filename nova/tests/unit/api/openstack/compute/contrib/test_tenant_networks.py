@@ -18,9 +18,10 @@ import mock
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import os_tenant_networks as networks
+from nova.api.openstack.compute.legacy_v2.contrib import os_tenant_networks \
+        as networks
 from nova.api.openstack.compute.plugins.v3 import tenant_networks \
-     as networks_v21
+        as networks_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes

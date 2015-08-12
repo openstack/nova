@@ -19,11 +19,11 @@ from oslo_log import log as logging
 from nova.api.openstack import extensions as base_extensions
 
 ext_opts = [
-    cfg.MultiStrOpt('osapi_compute_extension',
-                    default=[
-                      'nova.api.openstack.compute.contrib.standard_extensions'
-                      ],
-                    help='osapi compute extension to load'),
+    cfg.MultiStrOpt(
+        'osapi_compute_extension',
+        default=['nova.api.openstack.compute.legacy_v2.contrib.'
+                 'standard_extensions'],
+        help='osapi compute extension to load'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(ext_opts)

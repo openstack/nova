@@ -19,7 +19,7 @@ import uuid
 import six
 from webob import exc
 
-from nova.api.openstack.compute.contrib import instance_actions \
+from nova.api.openstack.compute.legacy_v2.contrib import instance_actions \
                                         as instance_actions_v2
 from nova.api.openstack.compute.plugins.v3 import instance_actions \
                                         as instance_actions_v21

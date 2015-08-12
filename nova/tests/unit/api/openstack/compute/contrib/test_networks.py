@@ -25,11 +25,12 @@ import netaddr
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import networks_associate
-from nova.api.openstack.compute.contrib import os_networks as networks
+from nova.api.openstack.compute.legacy_v2.contrib import networks_associate
+from nova.api.openstack.compute.legacy_v2.contrib import os_networks \
+        as networks
 from nova.api.openstack.compute.plugins.v3 import networks as networks_v21
-from nova.api.openstack.compute.plugins.v3 import networks_associate as \
-     networks_associate_v21
+from nova.api.openstack.compute.plugins.v3 import networks_associate \
+        as networks_associate_v21
 from nova.api.openstack import extensions
 import nova.context
 from nova import exception

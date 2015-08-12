@@ -65,7 +65,7 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
     @mock.patch("nova.api.openstack.compute.plugins.v3.baremetal_nodes"
                 "._get_ironic_client")
-    @mock.patch("nova.api.openstack.compute.contrib.baremetal_nodes"
+    @mock.patch("nova.api.openstack.compute.legacy_v2.contrib.baremetal_nodes"
                 "._get_ironic_client")
     def test_baremetal_nodes_list(self, mock_get_irc, v2_1_mock_get_irc):
         mock_get_irc.return_value = fake_client()
@@ -77,7 +77,7 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
     @mock.patch("nova.api.openstack.compute.plugins.v3.baremetal_nodes"
                 "._get_ironic_client")
-    @mock.patch("nova.api.openstack.compute.contrib.baremetal_nodes"
+    @mock.patch("nova.api.openstack.compute.legacy_v2.contrib.baremetal_nodes"
                 "._get_ironic_client")
     def test_baremetal_nodes_get(self, mock_get_irc, v2_1_mock_get_irc):
         mock_get_irc.return_value = fake_client()
