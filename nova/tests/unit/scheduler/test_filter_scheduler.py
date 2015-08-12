@@ -23,6 +23,7 @@ from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
+from nova import test  # noqa
 from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import test_scheduler
 
@@ -314,13 +315,17 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_select_destinations_no_valid_host_not_enough(self):
         # Tests that we have fewer hosts available than number of instances
         # requested to build.
+        consumed_hosts = [mock.MagicMock(), mock.MagicMock()]
         with mock.patch.object(self.driver, '_schedule',
-                               return_value=[mock.sentinel.host1]):
+                               return_value=consumed_hosts):
             try:
                 self.driver.select_destinations(
-                    self.context, {'num_instances': 2}, {})
+                    self.context, {'num_instances': 3}, {})
                 self.fail('Expected NoValidHost to be raised.')
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.
                 self.assertIn('reason', e.kwargs)
                 self.assertTrue(len(e.kwargs['reason']) > 0)
+                # Make sure that the consumed hosts have chance to be reverted.
+                for host in consumed_hosts:
+                    self.assertIsNone(host.obj.updated)

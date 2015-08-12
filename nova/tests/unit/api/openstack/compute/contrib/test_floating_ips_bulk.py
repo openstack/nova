@@ -40,7 +40,6 @@ class FloatingIPBulkV21(test.TestCase):
         self.context = context.get_admin_context()
         self.controller = self.floating_ips_bulk.FloatingIPBulkController()
         self.req = fakes.HTTPRequest.blank('')
-        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def _setup_floating_ips(self, ip_range):
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
@@ -69,9 +68,12 @@ class FloatingIPBulkV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_list_ips(self):
+        self._test_list_ips(self.req)
+
+    def _test_list_ips(self, req):
         ip_range = '192.168.1.1/28'
         self._setup_floating_ips(ip_range)
-        res_dict = self.controller.index(self.admin_req)
+        res_dict = self.controller.index(req)
 
         ip_info = [{'address': str(ip_addr),
                     'pool': CONF.default_floating_pool,
@@ -84,8 +86,11 @@ class FloatingIPBulkV21(test.TestCase):
 
         self.assertEqual(res_dict, response)
 
+    def test_list_ips_associated(self):
+        self._test_list_ips_associated(self.req)
+
     @mock.patch('nova.objects.FloatingIPList.get_all')
-    def test_list_ips_associated(self, mock_get):
+    def _test_list_ips_associated(self, req, mock_get):
         instance_uuid = "fake-uuid"
         fixed_address = "10.0.0.1"
         floating_address = "192.168.0.1"
@@ -98,7 +103,7 @@ class FloatingIPBulkV21(test.TestCase):
                                          project_id=None)
         floating_list = objects.FloatingIPList(objects=[floating_ip])
         mock_get.return_value = floating_list
-        res_dict = self.controller.index(self.admin_req)
+        res_dict = self.controller.index(req)
 
         ip_info = [{'address': floating_address,
                     'pool': CONF.default_floating_pool,
@@ -111,23 +116,29 @@ class FloatingIPBulkV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_list_ip_by_host(self):
+        self._test_list_ip_by_host(self.req)
+
+    def _test_list_ip_by_host(self, req):
         ip_range = '192.168.1.1/28'
         self._setup_floating_ips(ip_range)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, self.admin_req, 'host')
+                          self.controller.show, req, 'host')
 
     def test_delete_ips(self):
+        self._test_delete_ips(self.req)
+
+    def _test_delete_ips(self, req):
         ip_range = '192.168.1.0/29'
         self._setup_floating_ips(ip_range)
 
         body = {'ip_range': ip_range}
-        res_dict = self.controller.update(self.req, "delete", body=body)
+        res_dict = self.controller.update(req, "delete", body=body)
 
         response = {"floating_ips_bulk_delete": ip_range}
         self.assertEqual(res_dict, response)
 
         # Check that the IPs are actually deleted
-        res_dict = self.controller.index(self.admin_req)
+        res_dict = self.controller.index(req)
         response = {'floating_ip_info': []}
         self.assertEqual(res_dict, response)
 
@@ -157,3 +168,67 @@ class FloatingIPBulkV21(test.TestCase):
 class FloatingIPBulkV2(FloatingIPBulkV21):
     floating_ips_bulk = fipbulk_v2
     bad_request = webob.exc.HTTPBadRequest
+
+    def setUp(self):
+        super(FloatingIPBulkV2, self).setUp()
+        self.non_admin_req = fakes.HTTPRequest.blank('')
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+
+    def test_list_ips_with_non_admin(self):
+        ip_range = '192.168.1.1/28'
+        self._setup_floating_ips(ip_range)
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.index, self.non_admin_req)
+
+    def test_list_ip_with_non_admin(self):
+        ip_range = '192.168.1.1/28'
+        self._setup_floating_ips(ip_range)
+        self.assertRaises(exception.AdminRequired, self.controller.show,
+                          self.non_admin_req, "host")
+
+    def test_delete_ips(self):
+        self._test_delete_ips(self.admin_req)
+
+    def test_list_ip_by_host(self):
+        self._test_list_ip_by_host(self.admin_req)
+
+    def test_list_ips_associated(self):
+        self._test_list_ips_associated(self.admin_req)
+
+    def test_list_ips(self):
+        self._test_list_ips(self.admin_req)
+
+
+class FloatingIPBulkPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPBulkPolicyEnforcementV21, self).setUp()
+        self.controller = fipbulk_v21.FloatingIPBulkController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "os_compute_api:os-floating-ips-bulk"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_index_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req)
+
+    def test_show_ip_policy_failed(self):
+        self._common_policy_check(self.controller.show, self.req, "host")
+
+    def test_create_policy_failed(self):
+        ip_range = '192.168.1.0/28'
+        body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
+        self._common_policy_check(self.controller.create, self.req, body=body)
+
+    def test_update_policy_failed(self):
+        ip_range = '192.168.1.0/29'
+        body = {'ip_range': ip_range}
+        self._common_policy_check(self.controller.update, self.req,
+                                  "delete", body=body)

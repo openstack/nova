@@ -14,7 +14,6 @@
 #    under the License.
 
 from mox3 import mox
-import pkg_resources
 import six
 
 from nova import context
@@ -42,11 +41,6 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
 
         fake.reset()
         stubs.stubout_session(self.stubs, fake.SessionBase)
-
-        def mock_iter_eps(namespace):
-            return []
-
-        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_eps)
 
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
@@ -88,75 +82,50 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
                 ['fake_vdi_uuid'])
 
 
-def bad_fetcher(image_id):
-    raise test.TestingException("just plain bad.")
-
-
-def another_fetcher(image_id):
-    return "http://www.foobar.com/%s" % image_id
-
-
-class MockEntryPoint(object):
-    name = "torrent_url"
-
-    def load(self):
-        return another_fetcher
-
-
 class LookupTorrentURLTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LookupTorrentURLTestCase, self).setUp()
         self.store = bittorrent.BittorrentStore()
         self.image_id = 'fakeimageid'
 
-    def _mock_iter_none(self, namespace):
-        return []
-
-    def _mock_iter_single(self, namespace):
-        return [MockEntryPoint()]
-
     def test_default_fetch_url_no_base_url_set(self):
         self.flags(torrent_base_url=None,
                    group='xenserver')
-        self.stubs.Set(pkg_resources, 'iter_entry_points',
-                       self._mock_iter_none)
 
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
         self.assertEqual('Cannot create default bittorrent URL without'
-                         ' torrent_base_url set'
-                         ' or torrent URL fetcher extension',
+                         ' xenserver.torrent_base_url configuration option'
+                         ' set.',
                          six.text_type(exc))
 
     def test_default_fetch_url_base_url_is_set(self):
         self.flags(torrent_base_url='http://foo',
                    group='xenserver')
-        self.stubs.Set(pkg_resources, 'iter_entry_points',
-                       self._mock_iter_single)
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('http://foo/fakeimageid.torrent',
                          lookup_fn(self.image_id))
 
-    def test_with_extension(self):
-        self.stubs.Set(pkg_resources, 'iter_entry_points',
-                       self._mock_iter_single)
-
-        lookup_fn = self.store._lookup_torrent_url_fn()
-        self.assertEqual("http://www.foobar.com/%s" % self.image_id,
-                         lookup_fn(self.image_id))
-
-    def test_multiple_extensions_found(self):
-        self.flags(torrent_base_url=None,
+    def test_invalid_base_url_warning_logged(self):
+        self.flags(torrent_base_url='www.foo.com',
                    group='xenserver')
 
-        def mock_iter_multiple(namespace):
-            return [MockEntryPoint(), MockEntryPoint()]
+        # Make sure a warning is logged when an invalid base URL is set,
+        # where invalid means it does not contain any slash characters
+        warnings = []
 
-        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_multiple)
+        def fake_warn(msg):
+            warnings.append(msg)
 
-        exc = self.assertRaises(
-                RuntimeError, self.store._lookup_torrent_url_fn)
-        self.assertEqual('Multiple torrent URL fetcher extensions found.'
-                         ' Failing.',
-                         six.text_type(exc))
+        self.stubs.Set(bittorrent.LOG, 'warn', fake_warn)
+
+        lookup_fn = self.store._lookup_torrent_url_fn()
+        self.assertEqual('fakeimageid.torrent',
+                         lookup_fn(self.image_id))
+
+        self.assertTrue(any('does not contain a slash character' in msg for
+                            msg in warnings),
+                        '_lookup_torrent_url_fn() did not log a warning '
+                        'message when the torrent_base_url did not contain a '
+                        'slash character.')

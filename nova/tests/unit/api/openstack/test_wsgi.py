@@ -13,6 +13,7 @@
 import inspect
 
 import mock
+import six
 import webob
 
 from nova.api.openstack import api_version_request as api_version
@@ -56,7 +57,7 @@ class RequestTest(test.NoDBTestCase):
     def test_cache_and_retrieve_instances(self):
         request = wsgi.Request.blank('/foo')
         instances = []
-        for x in xrange(3):
+        for x in range(3):
             instances.append({'uuid': 'uuid%s' % x})
         # Store 2
         request.cache_db_instances(instances[:2])
@@ -77,7 +78,7 @@ class RequestTest(test.NoDBTestCase):
     def test_cache_and_retrieve_compute_nodes(self):
         request = wsgi.Request.blank('/foo')
         compute_nodes = []
-        for x in xrange(3):
+        for x in range(3):
             compute_nodes.append({'id': 'id%s' % x})
         # Store 2
         request.cache_db_compute_nodes(compute_nodes[:2])
@@ -940,9 +941,9 @@ class ResourceTest(test.NoDBTestCase):
             called.append(2)
 
         ext1 = extension1(None)
-        ext1.next()
+        next(ext1)
         ext2 = extension2(None)
-        ext2.next()
+        next(ext2)
 
         response = resource.post_process_extensions([ext2, ext1],
                                                     None, None, {})
@@ -970,9 +971,9 @@ class ResourceTest(test.NoDBTestCase):
             yield 'foo'
 
         ext1 = extension1(None)
-        ext1.next()
+        next(ext1)
         ext2 = extension2(None)
-        ext2.next()
+        next(ext2)
 
         response = resource.post_process_extensions([ext2, ext1],
                                                     None, None, {})
@@ -1006,7 +1007,7 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
 
-        for hdr, val in response.headers.iteritems():
+        for hdr, val in six.iteritems(response.headers):
             # All headers must be utf8
             self.assertIsInstance(hdr, str)
             self.assertIsInstance(val, str)
@@ -1131,7 +1132,7 @@ class ResponseObjectTest(test.NoDBTestCase):
             response = robj.serialize(request, content_type)
 
             self.assertEqual(response.headers['Content-Type'], content_type)
-            for hdr, val in response.headers.iteritems():
+            for hdr, val in six.iteritems(response.headers):
                 # All headers must be utf8
                 self.assertIsInstance(hdr, str)
                 self.assertIsInstance(val, str)

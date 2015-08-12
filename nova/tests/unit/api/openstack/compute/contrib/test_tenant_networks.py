@@ -59,10 +59,6 @@ def fake_network_api_get_all(context):
         return NETWORKS
 
 
-def fake_network_api_create(context, **kwargs):
-    return NETWORKS
-
-
 class TenantNetworksTestV21(test.NoDBTestCase):
     ctrlr = networks_v21.TenantNetworkController
     validation_error = exception.ValidationError
@@ -78,47 +74,54 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         super(TenantNetworksTestV21, self).tearDown()
         CONF.set_override("use_neutron_default_nets", self.original_value)
 
-    @mock.patch('nova.network.api.API.delete',
-                side_effect=exception.NetworkInUse(network_id=1))
-    def test_network_delete_in_use(self, mock_delete):
-        self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.delete, self.req, 1)
+    def _fake_network_api_create(self, context, **kwargs):
+        self.assertEqual(context.project_id, kwargs['project_id'])
+        return NETWORKS
 
     @mock.patch('nova.quota.QUOTAS.reserve')
     @mock.patch('nova.quota.QUOTAS.rollback')
+    @mock.patch('nova.network.api.API.disassociate')
     @mock.patch('nova.network.api.API.delete')
-    def _test_network_delete_exception(self, ex, expex, delete_mock,
+    def _test_network_delete_exception(self, delete_ex, disassociate_ex, expex,
+                                       delete_mock, disassociate_mock,
                                        rollback_mock, reserve_mock):
         ctxt = self.req.environ['nova.context']
 
         reserve_mock.return_value = 'rv'
-        delete_mock.side_effect = ex
+        if delete_mock:
+            delete_mock.side_effect = delete_ex
+        if disassociate_ex:
+            disassociate_mock.side_effect = disassociate_ex
 
         self.assertRaises(expex, self.controller.delete, self.req, 1)
 
-        delete_mock.assert_called_once_with(ctxt, 1)
+        disassociate_mock.assert_called_once_with(ctxt, 1)
+        if not disassociate_ex:
+            delete_mock.assert_called_once_with(ctxt, 1)
         rollback_mock.assert_called_once_with(ctxt, 'rv')
         reserve_mock.assert_called_once_with(ctxt, networks=-1)
 
     def test_network_delete_exception_network_not_found(self):
         ex = exception.NetworkNotFound(network_id=1)
         expex = webob.exc.HTTPNotFound
-        self._test_network_delete_exception(ex, expex)
+        self._test_network_delete_exception(None, ex, expex)
 
     def test_network_delete_exception_policy_failed(self):
         ex = exception.PolicyNotAuthorized(action='dummy')
         expex = webob.exc.HTTPForbidden
-        self._test_network_delete_exception(ex, expex)
+        self._test_network_delete_exception(ex, None, expex)
 
     def test_network_delete_exception_network_in_use(self):
         ex = exception.NetworkInUse(network_id=1)
         expex = webob.exc.HTTPConflict
-        self._test_network_delete_exception(ex, expex)
+        self._test_network_delete_exception(ex, None, expex)
 
     @mock.patch('nova.quota.QUOTAS.reserve')
     @mock.patch('nova.quota.QUOTAS.commit')
     @mock.patch('nova.network.api.API.delete')
-    def test_network_delete(self, delete_mock, commit_mock, reserve_mock):
+    @mock.patch('nova.network.api.API.disassociate')
+    def test_network_delete(self, disassociate_mock, delete_mock, commit_mock,
+                            reserve_mock):
         ctxt = self.req.environ['nova.context']
 
         reserve_mock.return_value = 'rv'
@@ -132,6 +135,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
             status_int = res.status_int
         self.assertEqual(202, status_int)
 
+        disassociate_mock.assert_called_once_with(ctxt, 1)
         delete_mock.assert_called_once_with(ctxt, 1)
         commit_mock.assert_called_once_with(ctxt, 'rv')
         reserve_mock.assert_called_once_with(ctxt, networks=-1)
@@ -177,7 +181,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         ctxt = self.req.environ['nova.context']
 
         reserve_mock.return_value = 'rv'
-        create_mock.side_effect = fake_network_api_create
+        create_mock.side_effect = self._fake_network_api_create
 
         body = copy.deepcopy(NETWORKS[0])
         del body['id']
@@ -252,6 +256,10 @@ class TenantNetworksTestV21(test.NoDBTestCase):
 class TenantNetworksTestV2(TenantNetworksTestV21):
     ctrlr = networks.NetworkController
     validation_error = webob.exc.HTTPBadRequest
+
+    def setUp(self):
+        super(TenantNetworksTestV2, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def test_network_create_empty_body(self):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,

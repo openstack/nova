@@ -16,7 +16,11 @@
 Tests For weights.
 """
 
+import mock
+
+from nova.scheduler import weights as scheduler_weights
 from nova import test
+from nova.tests.unit.scheduler import fakes
 from nova import weights
 
 
@@ -51,3 +55,19 @@ class TestWeigher(test.NoDBTestCase):
         for seq, result, minval, maxval in map_:
             ret = weights.normalize(seq, minval=minval, maxval=maxval)
             self.assertEqual(tuple(ret), result)
+
+    @mock.patch('nova.weights.BaseWeigher.weigh_objects')
+    def test_only_one_host(self, mock_weigh):
+        host_values = [
+            ('host1', 'node1', {'free_ram_mb': 512}),
+        ]
+        hostinfo = [fakes.FakeHostState(host, node, values)
+                    for host, node, values in host_values]
+
+        weight_handler = scheduler_weights.HostWeightHandler()
+        weighers = [scheduler_weights.ram.RAMWeigher()]
+        weighed_host = weight_handler.get_weighed_objects(weighers,
+                                                          hostinfo, {})
+        self.assertEqual(1, len(weighed_host))
+        self.assertEqual('host1', weighed_host[0].obj.host)
+        self.assertFalse(mock_weigh.called)

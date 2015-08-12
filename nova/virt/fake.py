@@ -197,8 +197,7 @@ class FakeDriver(driver.ComputeDriver):
                block_device_info=None, bad_volumes_callback=None):
         pass
 
-    @staticmethod
-    def get_host_ip_addr():
+    def get_host_ip_addr(self):
         return '192.168.0.1'
 
     def set_admin_password(self, instance, new_pass):
@@ -242,6 +241,9 @@ class FakeDriver(driver.ComputeDriver):
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
+        pass
+
+    def inject_nmi(self, instance):
         pass
 
     def soft_delete(self, instance):
@@ -378,15 +380,15 @@ class FakeDriver(driver.ComputeDriver):
         return volusage
 
     def get_host_cpu_stats(self):
-        stats = {'kernel': 5664160000000L,
-                'idle': 1592705190000000L,
-                'user': 26728850000000L,
-                'iowait': 6121490000000L}
+        stats = {'kernel': 5664160000000,
+                'idle': 1592705190000000,
+                'user': 26728850000000,
+                'iowait': 6121490000000}
         stats['frequency'] = 800
         return stats
 
     def block_stats(self, instance, disk_id):
-        return [0L, 0L, 0L, 0L, None]
+        return [0, 0, 0, 0, None]
 
     def get_console_output(self, context, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
@@ -411,6 +413,11 @@ class FakeDriver(driver.ComputeDriver):
         return ctype.ConsoleSerial(internal_access_path='FAKE',
                                    host='fakerdpconsole.com',
                                    port=6969)
+
+    def get_mks_console(self, context, instance):
+        return ctype.ConsoleMKS(internal_access_path='FAKE',
+                                host='fakemksconsole.com',
+                                port=6969)
 
     def get_console_pool_info(self, console_type):
         return {'address': '127.0.0.1',

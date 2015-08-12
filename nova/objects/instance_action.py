@@ -21,6 +21,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceAction(base.NovaPersistentObject, base.NovaObject,
                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -93,6 +94,7 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_action)
 
 
+@base.NovaObjectRegistry.register
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceAction <= version 1.1
@@ -100,9 +102,9 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceAction'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): InstanceAction was at 1.1 before we added this
+    # NOTE(danms): InstanceAction was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1')]
         }
 
     @base.remotable_classmethod
@@ -112,6 +114,7 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
                           base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -204,13 +207,14 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         self.finish_with_failure(self._context, exc_val=None, exc_tb=None)
 
 
+@base.NovaObjectRegistry.register
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
+    VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
 
     @base.remotable_classmethod

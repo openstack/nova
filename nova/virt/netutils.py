@@ -60,8 +60,8 @@ def _get_first_network(network, version):
     # of a list since we don't want to evaluate the whole list as we can
     # have a lot of subnets
     try:
-        return (i for i in network['subnets']
-                if i['version'] == version).next()
+        return next(i for i in network['subnets']
+                    if i['version'] == version)
     except StopIteration:
         pass
 
@@ -170,10 +170,186 @@ def get_injected_network_template(network_info, use_ipv6=None, template=None,
     if not nets:
         return
 
-    tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
+    tmpl_path, tmpl_file = os.path.split(template)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path),
                              trim_blocks=True)
     template = env.get_template(tmpl_file)
     return template.render({'interfaces': nets,
                             'use_ipv6': ipv6_is_available,
                             'libvirt_virt_type': libvirt_virt_type})
+
+
+def get_network_metadata(network_info, use_ipv6=None):
+    """Gets a more complete representation of the instance network information.
+
+    This data is exposed as network_data.json in the metadata service and
+    the config drive.
+
+    :param network_info: `nova.network.models.NetworkInfo` object describing
+        the network metadata.
+    :param use_ipv6: If False, do not return IPv6 template information
+        even if an IPv6 subnet is present in network_info. Defaults to
+        nova.netconf.use_ipv6.
+    """
+    if not network_info:
+        return
+
+    if use_ipv6 is None:
+        use_ipv6 = CONF.use_ipv6
+
+    # IPv4 or IPv6 networks
+    nets = []
+    # VIFs, physical NICs, or VLANs. Physical NICs will have type 'phy'.
+    links = []
+    # Non-network bound services, such as DNS
+    services = []
+    ifc_num = -1
+    net_num = -1
+
+    for vif in network_info:
+        if not vif.get('network') or not vif['network'].get('subnets'):
+            continue
+
+        network = vif['network']
+        # NOTE(JoshNang) currently, only supports the first IPv4 and first
+        # IPv6 subnet on network, a limitation that also exists in the
+        # network template.
+        subnet_v4 = _get_first_network(network, 4)
+        subnet_v6 = _get_first_network(network, 6)
+
+        ifc_num += 1
+        link = None
+
+        # Get the VIF or physical NIC data
+        if subnet_v4 or subnet_v6:
+            link = _get_eth_link(vif, ifc_num)
+            links.append(link)
+
+        # Add IPv4 and IPv6 networks if they exist
+        if subnet_v4 and subnet_v4.get('ips'):
+            net_num += 1
+            nets.append(_get_nets(vif, subnet_v4, 4, net_num, link['id']))
+            services += [dns for dns in _get_dns_services(subnet_v4)
+                         if dns not in services]
+        if (use_ipv6 and subnet_v6) and subnet_v6.get('ips'):
+            net_num += 1
+            nets.append(_get_nets(vif, subnet_v6, 6, net_num, link['id']))
+            services += [dns for dns in _get_dns_services(subnet_v6)
+                         if dns not in services]
+
+    return {
+        "links": links,
+        "networks": nets,
+        "services": services
+    }
+
+
+def _get_eth_link(vif, ifc_num):
+    """Get a VIF or physical NIC representation.
+
+    :param vif: Neutron VIF
+    :param ifc_num: Interface index for generating name if the VIF's
+        'devname' isn't defined.
+    :return:
+    """
+    link_id = vif.get('devname')
+    if not link_id:
+        link_id = 'interface%d' % ifc_num
+
+    # Use 'phy' for physical links. Ethernet can be confusing
+    if vif.get('type') == 'ethernet':
+        nic_type = 'phy'
+    else:
+        nic_type = vif.get('type')
+
+    link = {
+        'id': link_id,
+        'vif_id': vif['id'],
+        'type': nic_type,
+        'mtu': vif['network'].get('mtu'),
+        'ethernet_mac_address': vif.get('address'),
+    }
+    return link
+
+
+def _get_nets(vif, subnet, version, net_num, link_id):
+    """Get networks for the given VIF and subnet
+
+    :param vif: Neutron VIF
+    :param subnet: Neutron subnet
+    :param version: IP version as an int, either '4' or '6'
+    :param net_num: Network index for generating name of each network
+    :param link_id: Arbitrary identifier for the link the networks are
+        attached to
+    """
+    if subnet.get_meta('dhcp_server') is not None:
+        net_info = {
+            'id': 'network%d' % net_num,
+            'type': 'ipv%d_dhcp' % version,
+            'link': link_id,
+            'network_id': vif['network']['id']
+        }
+        return net_info
+
+    ip = subnet['ips'][0]
+    address = ip['address']
+    if version == 4:
+        netmask = model.get_netmask(ip, subnet)
+    elif version == 6:
+        netmask = str(subnet.as_netaddr().netmask)
+
+    net_info = {
+        'id': 'network%d' % net_num,
+        'type': 'ipv%d' % version,
+        'link': link_id,
+        'ip_address': address,
+        'netmask': netmask,
+        'routes': _get_default_route(version, subnet),
+        'network_id': vif['network']['id']
+    }
+
+    # Add any additional routes beyond the default route
+    for route in subnet['routes']:
+        route_addr = netaddr.IPNetwork(route['cidr'])
+        new_route = {
+            'network': str(route_addr.network),
+            'netmask': str(route_addr.netmask),
+            'gateway': route['gateway']['address']
+        }
+        net_info['routes'].append(new_route)
+
+    return net_info
+
+
+def _get_default_route(version, subnet):
+    """Get a default route for a network
+
+    :param version: IP version as an int, either '4' or '6'
+    :param subnet: Neutron subnet
+    """
+    if subnet.get('gateway') and subnet['gateway'].get('address'):
+        gateway = subnet['gateway']['address']
+    else:
+        return []
+
+    if version == 4:
+        return [{
+            'network': '0.0.0.0',
+            'netmask': '0.0.0.0',
+            'gateway': gateway
+        }]
+    elif version == 6:
+        return [{
+            'network': '::',
+            'netmask': '::',
+            'gateway': gateway
+        }]
+
+
+def _get_dns_services(subnet):
+    """Get the DNS servers for the subnet."""
+    services = []
+    if not subnet.get('dns'):
+        return services
+    return [{'type': 'dns', 'address': ip.get('address')}
+            for ip in subnet['dns']]

@@ -44,3 +44,7 @@ class ConsoleSpice(Console):
 
 class ConsoleSerial(Console):
     pass
+
+
+class ConsoleMKS(Console):
+    pass

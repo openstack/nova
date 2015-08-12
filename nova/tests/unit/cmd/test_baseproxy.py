@@ -14,11 +14,11 @@
 
 import mock
 from oslo_log import log as logging
+from oslo_reports import guru_meditation_report as gmr
 
 from nova.cmd import baseproxy
 from nova import config
 from nova.console import websocketproxy
-from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import test
 from nova import version
 
@@ -47,11 +47,14 @@ class BaseProxyTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch.object(logging, 'setup')
     @mock.patch.object(gmr.TextGuruMeditation, 'setup_autorun')
-    @mock.patch.object(websocketproxy.NovaWebSocketProxy, '__init__',
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.__init__',
                        return_value=None)
-    @mock.patch.object(websocketproxy.NovaWebSocketProxy, 'start_server')
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
     def test_proxy(self, mock_start, mock_init, mock_gmr, mock_log,
                    mock_exists):
+        # Force verbose=False so something else testing nova.cmd.baseproxy
+        # doesn't impact the call to mocked NovaWebSocketProxy.__init__.
+        self.flags(verbose=False)
         baseproxy.proxy('0.0.0.0', '6080')
         mock_log.assert_called_once_with(baseproxy.CONF, 'nova')
         mock_gmr.mock_assert_called_once_with(version)

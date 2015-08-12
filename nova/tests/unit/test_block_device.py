@@ -427,6 +427,18 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         bdm_dict = block_device.BlockDeviceDict(bdm)
         self.assertIsNone(bdm_dict['device_name'])
 
+    def test_init_boolify_delete_on_termination(self):
+        # Make sure that when delete_on_termination is not passed it's
+        # still set to False and not None
+        bdm = {'id': 3, 'instance_uuid': 'fake-instance',
+               'device_name': 'vda',
+               'source_type': 'volume',
+               'destination_type': 'volume',
+               'volume_id': 'fake-volume-id-1',
+               'boot_index': 0}
+        bdm_dict = block_device.BlockDeviceDict(bdm)
+        self.assertEqual(False, bdm_dict['delete_on_termination'])
+
     def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict,
@@ -565,6 +577,34 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             block_device.BlockDeviceDict.from_api(api_dict, True),
             retexp)
 
+    def test_from_api_invalid_source_to_local_mapping_with_string_bi(self):
+        api_dict = {'id': 1,
+            'source_type': 'image',
+            'destination_type': 'local',
+            'uuid': 'fake-volume-id-1',
+            'boot_index': 'aaaa0'}
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict.from_api, api_dict,
+                          False)
+
+    def test_from_api_valid_source_to_local_mapping_with_string_bi(self):
+        api_dict = {'id': 1,
+                    'source_type': 'image',
+                    'destination_type': 'local',
+                    'volume_id': 'fake-volume-id-1',
+                    'uuid': 1,
+                    'boot_index': '0'}
+
+        retexp = block_device.BlockDeviceDict(
+            {'id': 1,
+             'source_type': 'image',
+             'image_id': 1,
+             'destination_type': 'local',
+             'volume_id': 'fake-volume-id-1',
+             'boot_index': 0})
+        self.assertEqual(retexp,
+                         block_device.BlockDeviceDict.from_api(api_dict, True))
+
     def test_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
             self.assertThat(
@@ -606,8 +646,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
 
     def test_image_mapping(self):
         removed_fields = ['id', 'instance_uuid', 'connection_info',
-                          'device_name', 'created_at', 'updated_at',
-                          'deleted_at', 'deleted']
+                          'created_at', 'updated_at', 'deleted_at', 'deleted']
         for bdm in self.new_mapping:
             mapping_bdm = fake_block_device.FakeDbBlockDeviceDict(
                     bdm).get_image_mapping()
@@ -619,12 +658,16 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(snapshot['snapshot_id'], 'new-snapshot-id')
         self.assertEqual(snapshot['source_type'], 'snapshot')
         self.assertEqual(snapshot['destination_type'], 'volume')
+        self.assertEqual(template.volume_size, snapshot['volume_size'])
+        self.assertEqual(template.delete_on_termination,
+                         snapshot['delete_on_termination'])
+        self.assertEqual(template.device_name, snapshot['device_name'])
         for key in ['disk_bus', 'device_type', 'boot_index']:
             self.assertEqual(snapshot[key], template[key])
 
     def test_snapshot_from_bdm(self):
         for bdm in self.new_mapping:
-            self._test_snapshot_from_bdm(bdm)
+            self._test_snapshot_from_bdm(objects.BlockDeviceMapping(**bdm))
 
     def test_snapshot_from_object(self):
         for bdm in self.new_mapping[:-1]:

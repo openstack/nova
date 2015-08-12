@@ -35,7 +35,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
-        context = sg._authorize_context(req)
+        context = req.environ['nova.context']
         authorize(context)
 
         sg_rule = self._from_body(body, 'security_group_default_rule')
@@ -72,7 +72,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     @extensions.expected_errors((400, 404, 501))
     def show(self, req, id):
-        context = sg._authorize_context(req)
+        context = req.environ['nova.context']
         authorize(context)
 
         try:
@@ -91,7 +91,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @extensions.expected_errors((400, 404, 501))
     @wsgi.response(204)
     def delete(self, req, id):
-        context = sg._authorize_context(req)
+        context = req.environ['nova.context']
         authorize(context)
 
         try:
@@ -107,8 +107,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     @extensions.expected_errors((404, 501))
     def index(self, req):
-
-        context = sg._authorize_context(req)
+        context = req.environ['nova.context']
         authorize(context)
 
         ret = {'security_group_default_rules': []}

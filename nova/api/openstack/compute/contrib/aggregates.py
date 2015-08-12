@@ -17,10 +17,12 @@
 
 import datetime
 
+import six
 from webob import exc
 
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import utils
@@ -171,7 +173,7 @@ class AggregateController(object):
             'remove_host': self._remove_host,
             'set_metadata': self._set_metadata,
         }
-        for action, data in body.iteritems():
+        for action, data in six.iteritems(body):
             if action not in _actions.keys():
                 msg = _('Aggregates does not have %s action') % action
                 raise exc.HTTPBadRequest(explanation=msg)
@@ -184,6 +186,13 @@ class AggregateController(object):
         """Adds a host to the specified aggregate."""
         context = _get_context(req)
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         try:
             aggregate = self.api.add_host_to_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.ComputeHostNotFound):
@@ -202,6 +211,13 @@ class AggregateController(object):
         """Removes a host from the specified aggregate."""
         context = _get_context(req)
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.AggregateHostNotFound,

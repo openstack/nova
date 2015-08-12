@@ -33,6 +33,7 @@ from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+import six
 
 from nova import block_device
 from nova import compute
@@ -75,7 +76,7 @@ xenapi_vmops_opts = [
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
+CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -359,7 +360,7 @@ class VMOps(object):
             vdis.update(create_image_vdis)
 
         # Fetch VDI refs now so we don't have to fetch the ref multiple times
-        for vdi in vdis.itervalues():
+        for vdi in six.itervalues(vdis):
             vdi['ref'] = self._session.call_xenapi('VDI.get_by_uuid',
                                                    vdi['uuid'])
         return vdis
@@ -392,6 +393,11 @@ class VMOps(object):
                     vdis[type_] = dict(uuid=vdi_uuid, file=None, osvol=True)
 
         return vdis
+
+    def _update_last_dom_id(self, vm_ref):
+        other_config = self._session.VM.get_other_config(vm_ref)
+        other_config['last_dom_id'] = self._session.VM.get_domid(vm_ref)
+        self._session.VM.set_other_config(vm_ref, other_config)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
@@ -552,6 +558,7 @@ class VMOps(object):
             if power_on:
                 self._start(instance, vm_ref)
                 self._wait_for_instance_to_start(instance, vm_ref)
+                self._update_last_dom_id(vm_ref)
 
         @step
         def configure_booted_instance_step(undo_mgr, vm_ref):
@@ -620,7 +627,7 @@ class VMOps(object):
             vbd_refs.append(vbd_ref)
 
         # Attach original ephemeral disks
-        for userdevice, vdi_ref in orig_vdi_refs.iteritems():
+        for userdevice, vdi_ref in six.iteritems(orig_vdi_refs):
             if userdevice >= DEVICE_EPHEMERAL:
                 vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
                                               userdevice, bootable=False)
@@ -656,7 +663,8 @@ class VMOps(object):
         if rescue:
             rescue_vm_mode = image_meta['properties'].get('vm_mode', None)
             if rescue_vm_mode is None:
-                LOG.debug("Failed to pull vm_mode from rescue_image_ref.")
+                LOG.debug("vm_mode not found in rescue image properties."
+                          "Setting vm_mode to %s", mode, instance=instance)
             else:
                 mode = vm_mode.canonicalize(rescue_vm_mode)
 
@@ -701,10 +709,12 @@ class VMOps(object):
                 rescue_auto_disk_config = image_meta['properties'].get(
                                                 'auto_disk_config', None)
                 if rescue_auto_disk_config is None:
-                    LOG.debug("Failed to pull auto_disk_config value from"
-                              "image.")
+                    LOG.debug("auto_disk_config value not found in"
+                              "rescue image_properties. Setting value to %s",
+                              auto_disk_config, instance=instance)
                 else:
-                    auto_disk_config = rescue_auto_disk_config
+                    auto_disk_config = strutils.bool_from_string(
+                            rescue_auto_disk_config)
 
             if auto_disk_config:
                 LOG.debug("Auto configuring disk, attempting to "
@@ -744,7 +754,7 @@ class VMOps(object):
             ephemeral_vdis = vdis.get('ephemerals')
             if ephemeral_vdis:
                 # attach existing (migrated) ephemeral disks
-                for userdevice, ephemeral_vdi in ephemeral_vdis.iteritems():
+                for userdevice, ephemeral_vdi in six.iteritems(ephemeral_vdis):
                     vm_utils.create_vbd(self._session, vm_ref,
                                         ephemeral_vdi['ref'],
                                         userdevice, bootable=False)
@@ -1168,7 +1178,7 @@ class VMOps(object):
 
     def _ensure_not_resize_down_ephemeral(self, instance, flavor):
         old_gb = instance["ephemeral_gb"]
-        new_gb = flavor["ephemeral_gb"]
+        new_gb = flavor.ephemeral_gb
 
         if old_gb > new_gb:
             reason = _("Can't resize down ephemeral disks.")
@@ -1191,7 +1201,7 @@ class VMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         old_gb = instance['root_gb']
-        new_gb = flavor['root_gb']
+        new_gb = flavor.root_gb
         resize_down = old_gb > new_gb
 
         if new_gb == 0 and old_gb != 0:
@@ -1742,7 +1752,7 @@ class VMOps(object):
             if dom is None or dom not in counters:
                 continue
             vifs_bw = bw.setdefault(name, {})
-            for vif_num, vif_data in counters[dom].iteritems():
+            for vif_num, vif_data in six.iteritems(counters[dom]):
                 mac = vif_map[vif_num]
                 vif_data['mac_address'] = mac
                 vifs_bw[mac] = vif_data
@@ -1750,7 +1760,7 @@ class VMOps(object):
 
     def get_console_output(self, instance):
         """Return last few lines of instance console."""
-        dom_id = self._get_dom_id(instance, check_rescue=True)
+        dom_id = self._get_last_dom_id(instance, check_rescue=True)
 
         try:
             raw_console_data = self._session.call_plugin('console',
@@ -1781,7 +1791,7 @@ class VMOps(object):
 
         # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
         return ctype.ConsoleVNC(
-            host=CONF.vncserver_proxyclient_address,
+            host=CONF.vnc.vncserver_proxyclient_address,
             port=80,
             internal_access_path=path)
 
@@ -1997,6 +2007,13 @@ class VMOps(object):
         if not domid or domid == -1:
             raise exception.InstanceNotFound(instance_id=instance['name'])
         return domid
+
+    def _get_last_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
+        other_config = self._session.call_xenapi("VM.get_other_config", vm_ref)
+        if 'last_dom_id' not in other_config:
+            raise exception.InstanceNotFound(instance_id=instance['name'])
+        return other_config['last_dom_id']
 
     def _add_to_param_xenstore(self, vm_ref, key, val):
         """Takes a key/value pair and adds it to the xenstore parameter

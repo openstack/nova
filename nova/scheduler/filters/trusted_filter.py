@@ -223,7 +223,8 @@ class ComputeAttestationCache(object):
 
     def _update_cache(self):
         self._invalidate_caches()
-        states = self.attestservice.do_attestation(self.compute_nodes.keys())
+        states = self.attestservice.do_attestation(
+            list(self.compute_nodes.keys()))
         if states is None:
             return
         for state in states:

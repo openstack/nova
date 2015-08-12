@@ -47,7 +47,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
             'conductor', manager='nova.conductor.manager.ConductorManager')
 
     def _wait_for_state_change(self, server, from_status):
-        for i in xrange(0, 50):
+        for i in range(0, 50):
             server = self.api.get_server(server['id'])
             if server['status'] != from_status:
                 break
@@ -465,7 +465,7 @@ class ServersTest(ServersTestBase):
 
         # Cleanup
         self._delete_server(created_server_id)
-        for server_id in server_map.iterkeys():
+        for server_id in server_map:
             self._delete_server(server_id)
 
     def test_create_server_with_injected_files(self):

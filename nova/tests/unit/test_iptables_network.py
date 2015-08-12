@@ -15,6 +15,8 @@
 #    under the License.
 """Unit Tests for network code."""
 
+import six
+
 from nova.network import linux_net
 from nova import test
 
@@ -100,9 +102,9 @@ class IptablesManagerTestCase(test.NoDBTestCase):
         self.assertFalse(table.dirty)
 
     def test_clean_tables_no_apply(self):
-        for table in self.manager.ipv4.itervalues():
+        for table in six.itervalues(self.manager.ipv4):
             table.dirty = False
-        for table in self.manager.ipv6.itervalues():
+        for table in six.itervalues(self.manager.ipv6):
             table.dirty = False
 
         def error_apply():

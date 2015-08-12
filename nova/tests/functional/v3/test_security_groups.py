@@ -13,8 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.network.security_group import neutron_driver
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 def fake_get(*args, **kwargs):
@@ -59,6 +65,23 @@ def fake_create_security_group(self, context, name, description):
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-security-groups'
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(SecurityGroupsJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.security_groups.'
+            'Security_groups')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips_mac.'
+            'Extended_ips_mac')
+        return f
 
     def setUp(self):
         self.flags(security_group_api=('neutron'))
@@ -91,6 +114,8 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_server_detail(self):
@@ -98,6 +123,8 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('servers-detail-resp', subs, response, 200)
 
     def _get_create_subs(self):

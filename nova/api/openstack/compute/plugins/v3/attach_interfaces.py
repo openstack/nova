@@ -128,8 +128,7 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworkNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("The requested functionality is not supported.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.InterfaceAttachFailed as e:
             raise webob.exc.HTTPInternalServerError(
                 explanation=e.format_message())
@@ -156,8 +155,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("The requested functionality is not supported.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_interface', server_id)
@@ -175,8 +173,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Network driver does not support this function.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         ports = data.get('ports', [])
         results = [entity_maker(port) for port in ports]

@@ -19,6 +19,7 @@ from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
+from nova import objects
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
 
@@ -185,6 +186,15 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
+        host = 'fake-mini'
+        cur_time = timeutils.utcnow()
+        # Adding shelved_* keys in system metadata to verify
+        # whether those are deleted after unshelve call.
+        sys_meta = dict(instance.system_metadata)
+        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
+        sys_meta['shelved_image_id'] = image['id']
+        sys_meta['shelved_host'] = host
+        instance.system_metadata = sys_meta
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
@@ -249,6 +259,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, image=image,
                 filter_properties=filter_properties,
                 node=node)
+        self.assertNotIn('shelved_at', instance.system_metadata)
+        self.assertNotIn('shelved_image_id', instance.system_metadata)
+        self.assertNotIn('shelved_host', instance.system_metadata)
         self.assertEqual(image['id'], self.deleted_image_id)
         self.assertEqual(instance.host, self.compute.host)
 
@@ -315,6 +328,13 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_save.side_effect = check_save
             self.compute.unshelve_instance(self.context, instance, image=None,
                     filter_properties=filter_properties, node=node)
+
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    def test_shelved_poll_none_offloaded(self, mock_get_by_filters):
+        # Test instances are not offloaded when shelved_offload_time is -1
+        CONF.set_override('shelved_offload_time', -1)
+        self.compute._poll_shelved_instances(self.context)
+        self.assertEqual(0, mock_get_by_filters.call_count)
 
     def test_shelved_poll_none_exist(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')

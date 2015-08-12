@@ -32,6 +32,16 @@
     font-weight: normal;
 }
 
+.sp_impl_unknown {
+    color: rgb(170, 170, 170);
+    font-weight: normal;
+}
+
 .sp_impl_summary {
     font-size: 2em;
+}
+
+.sp_cli {
+    font-family: monospace;
+    background-color: #F5F5F5;
 }

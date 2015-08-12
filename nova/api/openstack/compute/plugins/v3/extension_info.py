@@ -15,6 +15,7 @@
 import copy
 
 from oslo_log import log as logging
+import six
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -22,6 +23,7 @@ from nova.api.openstack import wsgi
 
 ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 # NOTE(cyeoh): The following mappings are currently incomplete
 # Having a v2.1 extension loaded can imply that several v2 extensions
@@ -133,7 +135,7 @@ class ExtensionInfoController(wsgi.Controller):
         """Filter extensions list based on policy."""
 
         discoverable_extensions = dict()
-        for alias, ext in self.extension_info.get_extensions().iteritems():
+        for alias, ext in six.iteritems(self.extension_info.get_extensions()):
             authorize = extensions.os_compute_soft_authorizer(alias)
             if authorize(context, action='discoverable'):
                 discoverable_extensions[alias] = ext
@@ -171,9 +173,10 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
+        authorize(context)
 
         sorted_ext_list = sorted(
-            self._get_extensions(context).iteritems())
+            six.iteritems(self._get_extensions(context)))
 
         extensions = []
         for _alias, ext in sorted_ext_list:
@@ -184,6 +187,7 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show
             ext = self._get_extensions(context)[id]

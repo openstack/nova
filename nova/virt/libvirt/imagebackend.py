@@ -14,6 +14,7 @@
 #    under the License.
 
 import abc
+import base64
 import contextlib
 import functools
 import os
@@ -23,6 +24,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import fileutils
 from oslo_utils import strutils
 from oslo_utils import units
 import six
@@ -32,22 +34,22 @@ from nova.i18n import _
 from nova.i18n import _LE, _LI
 from nova import image
 from nova import keymgr
-from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt.disk import api as disk
+from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import dmcrypt
-from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import dmcrypt
+from nova.virt.libvirt.storage import lvm
+from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 __imagebackend_opts = [
     cfg.StrOpt('images_type',
                default='default',
-               help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
-                    ' rbd, default. If default is specified,'
-                    ' then use_cow_images flag is used instead of this one.'),
+               choices=('raw', 'qcow2', 'lvm', 'rbd', 'ploop', 'default'),
+               help='VM Images format. If default is specified, then'
+                    ' use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('images_volume_group',
                help='LVM Volume Group that is used for VM images, when you'
                     ' specify images_type=lvm.'),
@@ -62,9 +64,10 @@ __imagebackend_opts = [
                default='',  # default determined by librados
                help='Path to the ceph configuration file to use'),
     cfg.StrOpt('hw_disk_discard',
-               help='Discard option for nova managed disks (valid options '
-                    'are: ignore, unmap). Need Libvirt(1.0.6) Qemu1.5 '
-                    '(raw format) Qemu1.6(qcow2 format)'),
+               choices=('ignore', 'unmap'),
+               help='Discard option for nova managed disks. Need'
+                    ' Libvirt(1.0.6) Qemu1.5 (raw format) Qemu1.6(qcow2'
+                    ' format)'),
         ]
 
 CONF = cfg.CONF
@@ -77,8 +80,9 @@ CONF.import_opt('cipher', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
 CONF.import_opt('key_size', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
-CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume', group='libvirt')
-CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume', group='libvirt')
+CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
+CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
+                group='libvirt')
 
 LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
@@ -104,7 +108,7 @@ class Image(object):
 
         self.source_type = source_type
         self.driver_format = driver_format
-        self.discard_mode = get_hw_disk_discard(CONF.libvirt.hw_disk_discard)
+        self.discard_mode = CONF.libvirt.hw_disk_discard
         self.is_block_dev = is_block_dev
         self.preallocate = False
 
@@ -139,7 +143,7 @@ class Image(object):
         pass
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-            extra_specs, hypervisor_version):
+                     extra_specs, hypervisor_version):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -147,6 +151,7 @@ class Image(object):
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
         :extra_specs: Instance type extra specs dict.
+        :hypervisor_version: the hypervisor version
         """
         info = vconfig.LibvirtConfigGuestDisk()
         info.source_type = self.source_type
@@ -161,15 +166,19 @@ class Image(object):
         info.driver_name = driver_name
         info.source_path = self.path
 
+        self.disk_qos(info, extra_specs)
+
+        return info
+
+    def disk_qos(self, info, extra_specs):
         tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
             'disk_write_bytes_sec', 'disk_write_iops_sec',
             'disk_total_bytes_sec', 'disk_total_iops_sec']
-        for key, value in extra_specs.iteritems():
+        for key, value in six.iteritems(extra_specs):
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in tune_items:
                     setattr(info, scope[1], value)
-        return info
 
     def libvirt_fs_info(self, target, driver_type=None):
         """Get `LibvirtConfigGuestFilesys` filled for this image.
@@ -334,7 +343,7 @@ class Image(object):
                 with open(self.disk_info_path) as disk_info_file:
                     line = disk_info_file.read().rstrip()
                     dct = _dict_from_line(line)
-                    for path, driver_format in dct.iteritems():
+                    for path, driver_format in six.iteritems(dct):
                         if path == self.path:
                             return driver_format
             driver_format = self._get_driver_format()
@@ -373,6 +382,30 @@ class Image(object):
     def _get_lock_name(self, base):
         """Get an image's name of a base file."""
         return os.path.split(base)[-1]
+
+    def get_model(self, connection):
+        """Get the image information model
+
+        :returns: an instance of nova.virt.image.model.Image
+        """
+        raise NotImplementedError()
+
+    def import_file(self, instance, local_file, remote_name):
+        """Import an image from local storage into this backend.
+
+        Import a local file into the store used by this image type. Note that
+        this is a noop for stores using local disk (the local file is
+        considered "in the store").
+
+        If the image already exists it will be overridden by the new file
+
+        :param local_file: path to the file to import
+        :param remote_name: the name for the file in the store
+        """
+
+        # NOTE(mikal): this is a noop for now for all stores except RBD, but
+        # we should talk about if we want this functionality for everything.
+        pass
 
 
 class Raw(Image):
@@ -424,8 +457,9 @@ class Raw(Image):
             libvirt_utils.copy_image(base, target)
             if size:
                 # class Raw is misnamed, format may not be 'raw' in all cases
-                use_cow = self.driver_format == 'qcow2'
-                disk.extend(target, size, use_cow=use_cow)
+                image = imgmodel.LocalFileImage(target,
+                                                self.driver_format)
+                disk.extend(image, size)
 
         generating = 'image_id' not in kwargs
         if generating:
@@ -447,6 +481,10 @@ class Raw(Image):
     @staticmethod
     def is_file_in_instance_path():
         return True
+
+    def get_model(self, connection):
+        return imgmodel.LocalFileImage(self.path,
+                                       imgmodel.FORMAT_RAW)
 
 
 class Qcow2(Image):
@@ -472,7 +510,8 @@ class Qcow2(Image):
             # This would be keyed on a 'preallocate_images' setting.
             libvirt_utils.create_cow_image(base, target)
             if size:
-                disk.extend(target, size, use_cow=True)
+                image = imgmodel.LocalFileImage(target, imgmodel.FORMAT_QCOW2)
+                disk.extend(image, size)
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
@@ -501,7 +540,9 @@ class Qcow2(Image):
             if not os.path.exists(legacy_base):
                 with fileutils.remove_path_on_error(legacy_base):
                     libvirt_utils.copy_image(base, legacy_base)
-                    disk.extend(legacy_base, legacy_backing_size, use_cow=True)
+                    image = imgmodel.LocalFileImage(legacy_base,
+                                                    imgmodel.FORMAT_QCOW2)
+                    disk.extend(image, legacy_backing_size)
 
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):
@@ -515,6 +556,10 @@ class Qcow2(Image):
     @staticmethod
     def is_file_in_instance_path():
         return True
+
+    def get_model(self, connection):
+        return imgmodel.LocalFileImage(self.path,
+                                       imgmodel.FORMAT_QCOW2)
 
 
 class Lvm(Image):
@@ -635,6 +680,9 @@ class Lvm(Image):
         images.convert_image(self.path, target, out_format,
                              run_as_root=True)
 
+    def get_model(self, connection):
+        return imgmodel.LocalBlockImage(self.path)
+
 
 class Rbd(Image):
 
@@ -655,8 +703,7 @@ class Rbd(Image):
                                  ' images_rbd_pool'
                                  ' flag to use rbd images.'))
         self.pool = CONF.libvirt.images_rbd_pool
-        self.discard_mode = get_hw_disk_discard(
-                CONF.libvirt.hw_disk_discard)
+        self.discard_mode = CONF.libvirt.hw_disk_discard
         self.rbd_user = CONF.libvirt.rbd_user
         self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
@@ -704,6 +751,9 @@ class Rbd(Image):
         if auth_enabled:
             info.auth_secret_type = 'ceph'
             info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
+
+        self.disk_qos(info, extra_specs)
+
         return info
 
     def _can_fallocate(self):
@@ -742,11 +792,6 @@ class Rbd(Image):
         return True
 
     def clone(self, context, image_id_or_uri):
-        if not self.driver.supports_layering():
-            reason = _('installed version of librbd does not support cloning')
-            raise exception.ImageUnacceptable(image_id=image_id_or_uri,
-                                              reason=reason)
-
         image_meta = IMAGE_API.get(context, image_id_or_uri,
                                    include_locations=True)
         locations = image_meta['locations']
@@ -765,6 +810,28 @@ class Rbd(Image):
         reason = _('No image locations are accessible')
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
                                           reason=reason)
+
+    def get_model(self, connection):
+        secret = None
+        if CONF.libvirt.rbd_secret_uuid:
+            secretobj = connection.secretLookupByUUIDString(
+                CONF.libvirt.rbd_secret_uuid)
+            secret = base64.b64encode(secretobj.value())
+
+        hosts, ports = self.driver.get_mon_addrs()
+        servers = [str(':'.join(k)) for k in zip(hosts, ports)]
+
+        return imgmodel.RBDImage(self.rbd_name,
+                                 self.pool,
+                                 self.rbd_user,
+                                 secret,
+                                 servers)
+
+    def import_file(self, instance, local_file, remote_name):
+        name = '%s_%s' % (instance.uuid, remote_name)
+        if self.check_image_exists():
+            self.driver.remove_image(name)
+        self.driver.import_image(local_file, name)
 
 
 class Ploop(Image):
@@ -863,11 +930,3 @@ class Backend(object):
         """
         backend = self.backend(image_type)
         return backend(instance=instance, path=disk_path)
-
-
-def get_hw_disk_discard(hw_disk_discard):
-    """Check valid and get hw_disk_discard value from Conf.
-    """
-    if hw_disk_discard and hw_disk_discard not in ('unmap', 'ignore'):
-        raise RuntimeError(_('Unknown hw_disk_discard=%s') % hw_disk_discard)
-    return hw_disk_discard

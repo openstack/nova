@@ -27,6 +27,7 @@ import decorator
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import units
@@ -43,7 +44,10 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
+from nova import network
+from nova import objects
 from nova import utils
+from nova import version
 from nova.virt import configdrive
 from nova.virt import diagnostics
 from nova.virt import driver
@@ -59,7 +63,7 @@ from nova.virt.vmwareapi import vm_util
 
 vmops_opts = [
     cfg.StrOpt('cache_prefix',
-               help='The prefix for Where cached images are stored. This is '
+               help='The prefix for where cached images are stored. This is '
                     'NOT the full path - just a folder prefix. '
                     'This should only be used when a datastore cache should '
                     'be shared between compute nodes. Note: this should only '
@@ -72,7 +76,7 @@ CONF.register_opts(vmops_opts, 'vmware')
 
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
-CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('enabled', 'nova.vnc', group='vnc')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
@@ -91,7 +95,8 @@ DcInfo = collections.namedtuple('DcInfo',
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
-    def __init__(self, instance, image_info, datastore, dc_info, image_cache):
+    def __init__(self, instance, image_info, datastore, dc_info, image_cache,
+                 extra_specs=None):
 
         # Some methods called during spawn take the instance parameter purely
         # for logging purposes.
@@ -103,6 +108,7 @@ class VirtualMachineInstanceConfigInfo(object):
         self.datastore = datastore
         self.dc_info = dc_info
         self._image_cache = image_cache
+        self._extra_specs = extra_specs
 
     @property
     def cache_image_folder(self):
@@ -163,6 +169,7 @@ class VMwareVMOps(object):
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
+        self._network_api = network.API()
 
     def _get_base_folder(self):
         # Enable more than one compute node to run on the same host
@@ -242,8 +249,37 @@ class VMwareVMOps(object):
             datastore.ref,
             str(uploaded_iso_path))
 
-    def build_virtual_machine(self, instance, image_info, dc_info, datastore,
-                              network_info, extra_specs):
+    def _get_instance_metadata(self, context, instance):
+        flavor = instance.flavor
+        return ('name:%s\n'
+                'userid:%s\n'
+                'username:%s\n'
+                'projectid:%s\n'
+                'projectname:%s\n'
+                'flavor:name:%s\n'
+                'flavor:memory_mb:%s\n'
+                'flavor:vcpus:%s\n'
+                'flavor:ephemeral_gb:%s\n'
+                'flavor:root_gb:%s\n'
+                'flavor:swap:%s\n'
+                'imageid:%s\n'
+                'package:%s\n') % (instance.display_name,
+                                   context.user_id,
+                                   context.user_name,
+                                   context.project_id,
+                                   context.project_name,
+                                   flavor.name,
+                                   flavor.memory_mb,
+                                   flavor.vcpus,
+                                   flavor.ephemeral_gb,
+                                   flavor.root_gb,
+                                   flavor.swap,
+                                   instance.image_ref,
+                                   version.version_string_with_package())
+
+    def build_virtual_machine(self, instance, image_info,
+                              dc_info, datastore, network_info, extra_specs,
+                              metadata):
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            utils.is_neutron(),
@@ -263,28 +299,37 @@ class VMwareVMOps(object):
                                                  vif_infos,
                                                  extra_specs,
                                                  image_info.os_type,
-                                                 profile_spec=profile_spec)
+                                                 profile_spec=profile_spec,
+                                                 metadata=metadata)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, self._root_resource_pool)
         return vm_ref
 
-    def _get_extra_specs(self, flavor):
+    def _get_extra_specs(self, flavor, image_meta=None):
+        image_meta = image_meta or objects.ImageMeta.from_dict({})
         extra_specs = vm_util.ExtraSpecs()
-        for (key, type) in (('cpu_limit', int),
-                            ('cpu_reservation', int),
-                            ('cpu_shares_level', str),
-                            ('cpu_shares_share', int)):
-            value = flavor.extra_specs.get('quota:' + key)
-            if value:
-                setattr(extra_specs.cpu_limits, key, type(value))
+        for resource in ['cpu', 'memory', 'disk_io']:
+            for (key, type) in (('limit', int),
+                                ('reservation', int),
+                                ('shares_level', str),
+                                ('shares_share', int)):
+                value = flavor.extra_specs.get('quota:' + resource + '_' + key)
+                if value:
+                    setattr(getattr(extra_specs, resource + '_limits'),
+                            key, type(value))
         extra_specs.cpu_limits.validate()
+        extra_specs.memory_limits.validate()
+        extra_specs.disk_io_limits.validate()
         hw_version = flavor.extra_specs.get('vmware:hw_version')
         extra_specs.hw_version = hw_version
         if CONF.vmware.pbm_enabled:
             storage_policy = flavor.extra_specs.get('vmware:storage_policy',
                     CONF.vmware.pbm_default_policy)
             extra_specs.storage_policy = storage_policy
+        topology = hardware.get_best_cpu_topology(flavor, image_meta,
+                                                  allow_threads=False)
+        extra_specs.cores_per_socket = topology.cores
         return extra_specs
 
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
@@ -420,6 +465,9 @@ class VMwareVMOps(object):
         self._move_to_cache(vi.dc_info.ref,
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
+        # The size of the image is different from the size of the virtual
+        # disk. We want to use the latter.
+        self._update_image_size(vi)
 
     def _cache_flat_image(self, vi, tmp_image_ds_loc):
         self._move_to_cache(vi.dc_info.ref,
@@ -441,7 +489,7 @@ class VMwareVMOps(object):
                             vi.cache_image_folder)
 
     def _get_vm_config_info(self, instance, image_info,
-                            storage_policy=None):
+                            extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
         if (instance.root_gb != 0 and
@@ -454,7 +502,7 @@ class VMwareVMOps(object):
         datastore = ds_util.get_datastore(self._session,
                                           self._cluster,
                                           self._datastore_regex,
-                                          storage_policy,
+                                          extra_specs.storage_policy,
                                           allowed_ds_types)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
@@ -462,7 +510,8 @@ class VMwareVMOps(object):
                                                 image_info,
                                                 datastore,
                                                 dc_info,
-                                                self._imagecache)
+                                                self._imagecache,
+                                                extra_specs)
 
     def _get_image_callbacks(self, vi):
         disk_type = vi.ii.disk_type
@@ -513,8 +562,8 @@ class VMwareVMOps(object):
                           instance=vi.instance)
                 self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
 
-    def _create_and_attach_ephemeral_disk(self, instance, vm_ref, dc_info,
-                                          size, adapter_type, path):
+    def _create_and_attach_thin_disk(self, instance, vm_ref, dc_info, size,
+                                     adapter_type, path):
         disk_type = constants.DISK_TYPE_THIN
         vm_util.create_virtual_disk(
                 self._session, dc_info.ref,
@@ -535,36 +584,79 @@ class VMwareVMOps(object):
             ephemerals = driver.block_device_info_get_ephemerals(bdi)
             for idx, eph in enumerate(ephemerals):
                 size = eph['size'] * units.Mi
-                at = eph.get('disk_bus', adapter_type)
+                at = eph.get('disk_bus') or adapter_type
                 filename = vm_util.get_ephemeral_name(idx)
                 path = str(ds_obj.DatastorePath(datastore.name, folder,
                                                 filename))
-                self._create_and_attach_ephemeral_disk(instance, vm_ref,
-                                                       dc_info, size,
-                                                       at, path)
+                self._create_and_attach_thin_disk(instance, vm_ref, dc_info,
+                                                  size, at, path)
+
         # There may be block devices defined but no ephemerals. In this case
         # we need to allocate a ephemeral disk if required
         if not ephemerals and instance.ephemeral_gb:
             size = instance.ephemeral_gb * units.Mi
             filename = vm_util.get_ephemeral_name(0)
             path = str(ds_obj.DatastorePath(datastore.name, folder,
-                                            filename))
-            self._create_and_attach_ephemeral_disk(instance, vm_ref,
-                                                   dc_info, size,
-                                                   adapter_type, path)
+                                             filename))
+            self._create_and_attach_thin_disk(instance, vm_ref, dc_info, size,
+                                              adapter_type, path)
+
+    def _create_swap(self, bdi, instance, vm_ref, dc_info, datastore,
+                     folder, adapter_type):
+        swap = None
+        filename = "swap.vmdk"
+        path = str(ds_obj.DatastorePath(datastore.name, folder, filename))
+        if bdi is not None:
+            swap = driver.block_device_info_get_swap(bdi)
+            if driver.swap_is_usable(swap):
+                size = swap['swap_size'] * units.Ki
+                self._create_and_attach_thin_disk(instance, vm_ref, dc_info,
+                                                  size, adapter_type, path)
+            else:
+                # driver.block_device_info_get_swap returns
+                # {'device_name': None, 'swap_size': 0} if swap is None
+                # in block_device_info.  If block_device_info does not contain
+                # a swap device, we need to reset swap to None, so we can
+                # extract the swap_size from the instance's flavor.
+                swap = None
+
+        size = instance.flavor.swap * units.Ki
+        if not swap and size > 0:
+            self._create_and_attach_thin_disk(instance, vm_ref, dc_info, size,
+                                              adapter_type, path)
+
+    def _update_vnic_index(self, context, instance, network_info):
+        if network_info:
+            for index, vif in enumerate(network_info):
+                self._network_api.update_instance_vnic_index(
+                    context, instance, vif, index)
+
+    def _update_image_size(self, vi):
+        """Updates the file size of the specified image."""
+        # The size of the Glance image is different from the deployed VMDK
+        # size for sparse, streamOptimized and OVA images. We need to retrieve
+        # the size of the flat VMDK and update the file_size property of the
+        # image. This ensures that further operations involving size checks
+        # and disk resizing will work as expected.
+        ds_browser = self._get_ds_browser(vi.datastore.ref)
+        flat_file = "%s-flat.vmdk" % vi.ii.image_id
+        new_size = ds_util.file_size(self._session, ds_browser,
+                                     vi.cache_image_folder, flat_file)
+        if new_size is not None:
+            vi.ii.file_size = new_size
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info, block_device_info=None,
-              power_on=True):
+              admin_password, network_info, block_device_info=None):
 
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
-        extra_specs = self._get_extra_specs(instance.flavor)
+        extra_specs = self._get_extra_specs(instance.flavor, image_meta)
 
         vi = self._get_vm_config_info(instance, image_info,
-                                      extra_specs.storage_policy)
+                                      extra_specs)
 
+        metadata = self._get_instance_metadata(context, instance)
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
@@ -572,11 +664,15 @@ class VMwareVMOps(object):
                                             vi.dc_info,
                                             vi.datastore,
                                             network_info,
-                                            extra_specs)
+                                            extra_specs,
+                                            metadata)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
         vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
+
+        # Update the Neutron VNIC index
+        self._update_vnic_index(context, instance, network_info)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -585,7 +681,7 @@ class VMwareVMOps(object):
                                 vm_ref=vm_ref)
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
-        if CONF.vnc_enabled:
+        if CONF.vnc.enabled:
             self._get_and_set_vnc_config(client_factory, instance, vm_ref)
 
         block_device_mapping = []
@@ -605,7 +701,7 @@ class VMwareVMOps(object):
             else:
                 self._use_disk_image_as_full_clone(vm_ref, vi)
 
-        if len(block_device_mapping) > 0:
+        if block_device_mapping:
             msg = "Block device information present: %s" % block_device_info
             # NOTE(mriedem): block_device_info can contain an auth_password
             # so we have to scrub the message before logging it.
@@ -633,14 +729,15 @@ class VMwareVMOps(object):
         self._create_ephemeral(block_device_info, instance, vm_ref,
                                vi.dc_info, vi.datastore, instance.uuid,
                                vi.ii.adapter_type)
+        self._create_swap(block_device_info, instance, vm_ref, vi.dc_info,
+                          vi.datastore, instance.uuid, vi.ii.adapter_type)
 
         if configdrive.required_by(instance):
             self._configure_config_drive(
                     instance, vm_ref, vi.dc_info, vi.datastore,
                     injected_files, admin_password)
 
-        if power_on:
-            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
+        vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""
@@ -701,9 +798,9 @@ class VMwareVMOps(object):
                                     "VirtualMachine", "config.hardware.device")
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
-                                                              client_factory,
-                                                              devices,
-                                                              'ide')
+                                                    client_factory,
+                                                    devices,
+                                                    constants.ADAPTER_TYPE_IDE)
         cdrom_attach_config_spec = vm_util.get_cdrom_attach_config_spec(
                                     client_factory, datastore, file_path,
                                     controller_key, unit_number)
@@ -801,14 +898,12 @@ class VMwareVMOps(object):
                 raise error_util.NoRootDiskDefined()
 
             lst_properties = ["datastore", "summary.config.guestId"]
-            props = self._session._call_method(vim_util,
-                                               "get_object_properties",
-                                               None, vm_ref, "VirtualMachine",
+            props = self._session._call_method(vutil,
+                                               "get_object_properties_dict",
+                                               vm_ref,
                                                lst_properties)
-            query = vm_util.get_values_from_object_properties(self._session,
-                                                              props)
-            os_type = query['summary.config.guestId']
-            datastores = query['datastore']
+            os_type = props['summary.config.guestId']
+            datastores = props['datastore']
             return (vmdk, datastores, os_type)
 
         vmdk, datastores, os_type = _get_vm_and_vmdk_attribs()
@@ -846,13 +941,13 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
                           "summary.guest.toolsRunningStatus"]
-        props = self._session._call_method(vim_util, "get_object_properties",
-                           None, vm_ref, "VirtualMachine",
-                           lst_properties)
-        query = vm_util.get_values_from_object_properties(self._session, props)
-        pwr_state = query['runtime.powerState']
-        tools_status = query['summary.guest.toolsStatus']
-        tools_running_status = query['summary.guest.toolsRunningStatus']
+        props = self._session._call_method(vutil,
+                                           "get_object_properties_dict",
+                                           vm_ref,
+                                           lst_properties)
+        pwr_state = props['runtime.powerState']
+        tools_status = props['summary.guest.toolsStatus']
+        tools_running_status = props['summary.guest.toolsRunningStatus']
 
         # Raise an exception if the VM is not powered On.
         if pwr_state not in ["poweredOn"]:
@@ -881,14 +976,13 @@ class VMwareVMOps(object):
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
-            props = self._session._call_method(vim_util,
-                        "get_object_properties",
-                        None, vm_ref, "VirtualMachine", lst_properties)
-            query = vm_util.get_values_from_object_properties(
-                    self._session, props)
-            pwr_state = query['runtime.powerState']
+            props = self._session._call_method(vutil,
+                                               "get_object_properties_dict",
+                                               vm_ref,
+                                               lst_properties)
+            pwr_state = props['runtime.powerState']
 
-            vm_config_pathname = query.get('config.files.vmPathName')
+            vm_config_pathname = props.get('config.files.vmPathName')
             vm_ds_path = None
             if vm_config_pathname is not None:
                 vm_ds_path = ds_obj.DatastorePath.parse(
@@ -917,7 +1011,7 @@ class VMwareVMOps(object):
                               "datastore %(datastore_name)s",
                               {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
-                    ds_ref_ret = query['datastore']
+                    ds_ref_ret = props['datastore']
                     ds_ref = ds_ref_ret.ManagedObjectReference[0]
                     dc_info = self.get_datacenter_ref_and_name(ds_ref)
                     ds_util.file_delete(self._session,
@@ -948,10 +1042,6 @@ class VMwareVMOps(object):
         2. Un-register.
         3. Delete the contents of the folder holding the VM related data.
         """
-        if instance.task_state == task_states.RESIZE_REVERTING:
-            return
-
-        # If there is a rescue VM then we need to destroy that one too.
         LOG.debug("Destroying instance", instance=instance)
         self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
@@ -1020,7 +1110,7 @@ class VMwareVMOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
         ds_ref = vmdk.device.backing.datastore
-        datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
+        datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         # Get the image details of the instance
@@ -1099,20 +1189,22 @@ class VMwareVMOps(object):
         instance.progress = progress
         instance.save()
 
-    def _resize_vm(self, vm_ref, flavor):
+    def _resize_vm(self, context, instance, vm_ref, flavor, image_meta):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
-        extra_specs = self._get_extra_specs(flavor)
+        extra_specs = self._get_extra_specs(flavor, image_meta)
+        metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
-                                                    int(flavor['vcpus']),
-                                                    int(flavor['memory_mb']),
-                                                    extra_specs)
+                                                    int(flavor.vcpus),
+                                                    int(flavor.memory_mb),
+                                                    extra_specs,
+                                                    metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
-        if (flavor['root_gb'] > instance.root_gb and
-            flavor['root_gb'] > vmdk.capacity_in_bytes / units.Gi):
-            root_disk_in_kb = flavor['root_gb'] * units.Mi
+        if (flavor.root_gb > instance.root_gb and
+            flavor.root_gb > vmdk.capacity_in_bytes / units.Gi):
+            root_disk_in_kb = flavor.root_gb * units.Mi
             ds_ref = vmdk.device.backing.datastore
             dc_info = self.get_datacenter_ref_and_name(ds_ref)
             folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
@@ -1134,20 +1226,27 @@ class VMwareVMOps(object):
                                               vmdk.adapter_type,
                                               vmdk.disk_type, vmdk.path)
 
-    def _remove_ephemerals(self, vm_ref):
+    def _remove_ephemerals_and_swap(self, vm_ref):
         devices = vm_util.get_ephemerals(self._session, vm_ref)
+        swap = vm_util.get_swap(self._session, vm_ref)
+        if swap is not None:
+            devices.append(swap)
+
         if devices:
             vm_util.detach_devices_from_vm(self._session, vm_ref, devices)
 
-    def _resize_create_ephemerals(self, vm_ref, instance, block_device_info):
+    def _resize_create_ephemerals_and_swap(self, vm_ref, instance,
+                                           block_device_info):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
         ds_ref = vmdk.device.backing.datastore
-        datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
+        datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
         self._create_ephemeral(block_device_info, instance, vm_ref,
                                dc_info, datastore, folder, vmdk.adapter_type)
+        self._create_swap(block_device_info, instance, vm_ref, dc_info,
+                          datastore, folder, vmdk.adapter_type)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor):
@@ -1159,8 +1258,9 @@ class VMwareVMOps(object):
                                      uuid=instance.uuid)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor['root_gb'] < instance.root_gb or
-            flavor['root_gb'] < vmdk.capacity_in_bytes / units.Gi):
+        if (flavor.root_gb < instance.root_gb or
+            (flavor.root_gb != 0 and
+             flavor.root_gb < vmdk.capacity_in_bytes / units.Gi)):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
@@ -1179,7 +1279,8 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # 2. Reconfigure the VM properties
-        self._resize_vm(vm_ref, flavor)
+        image_meta = objects.ImageMeta.from_instance(instance)
+        self._resize_vm(context, instance, vm_ref, flavor, image_meta)
 
         self._update_instance_progress(context, instance,
                                        step=2,
@@ -1191,8 +1292,8 @@ class VMwareVMOps(object):
                                        step=3,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        # 4. Purge ephemeral disks
-        self._remove_ephemerals(vm_ref)
+        # 4. Purge ephemeral and swap disks
+        self._remove_ephemerals_and_swap(vm_ref)
         self._update_instance_progress(context, instance,
                                        step=4,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -1223,11 +1324,14 @@ class VMwareVMOps(object):
         vm_util.power_off_instance(self._session, instance, vm_ref)
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
-        extra_specs = self._get_extra_specs(instance.flavor)
+        image_meta = objects.ImageMeta.from_instance(instance)
+        extra_specs = self._get_extra_specs(instance.flavor, image_meta)
+        metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(instance.vcpus),
                                                     int(instance.memory_mb),
-                                                    extra_specs)
+                                                    extra_specs,
+                                                    metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         # Reconfigure the disks if necessary
@@ -1251,8 +1355,9 @@ class VMwareVMOps(object):
                                               vmdk.adapter_type,
                                               vmdk.disk_type, vmdk.path)
         # Reconfigure ephemerals
-        self._remove_ephemerals(vm_ref)
-        self._resize_create_ephemerals(vm_ref, instance, block_device_info)
+        self._remove_ephemerals_and_swap(vm_ref)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
         if power_on:
             vm_util.power_on_instance(self._session, instance)
 
@@ -1263,7 +1368,8 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         # 5. Update ephemerals if necessary
-        self._resize_create_ephemerals(vm_ref, instance, block_device_info)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
 
         self._update_instance_progress(context, instance,
                                        step=5,
@@ -1321,15 +1427,14 @@ class VMwareVMOps(object):
         lst_properties = ["summary.config.numCpu",
                     "summary.config.memorySizeMB",
                     "runtime.powerState"]
-        vm_props = self._session._call_method(vim_util,
-                    "get_object_properties", None, vm_ref, "VirtualMachine",
-                    lst_properties)
-        query = vm_util.get_values_from_object_properties(
-                self._session, vm_props)
-        max_mem = int(query.get('summary.config.memorySizeMB', 0)) * 1024
-        num_cpu = int(query.get('summary.config.numCpu', 0))
+        vm_props = self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref,
+                                              lst_properties)
+        max_mem = int(vm_props.get('summary.config.memorySizeMB', 0)) * 1024
+        num_cpu = int(vm_props.get('summary.config.numCpu', 0))
         return hardware.InstanceInfo(
-            state=VMWARE_POWER_STATES[query['runtime.powerState']],
+            state=VMWARE_POWER_STATES[vm_props['runtime.powerState']],
             max_mem_kb=max_mem,
             mem_kb=max_mem,
             num_cpu=num_cpu)
@@ -1340,14 +1445,13 @@ class VMwareVMOps(object):
         lst_properties = ["summary.config",
                           "summary.quickStats",
                           "summary.runtime"]
-        vm_props = self._session._call_method(vim_util,
-                    "get_object_properties", None, vm_ref, "VirtualMachine",
-                    lst_properties)
-        query = vm_util.get_values_from_object_properties(self._session,
-                                                          vm_props)
+        vm_props = self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref,
+                                              lst_properties)
         data = {}
         # All of values received are objects. Convert them to dictionaries
-        for value in query.values():
+        for value in vm_props.values():
             prop_dict = vim_util.object_to_dict(value, list_depth=1)
             data.update(prop_dict)
         return data
@@ -1555,8 +1659,8 @@ class VMwareVMOps(object):
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
-        vif_model = image_meta.get("hw_vif_model",
-                                   constants.DEFAULT_VIF_MODEL)
+        vif_model = image_meta.properties.get('hw_vif_model',
+                                              constants.DEFAULT_VIF_MODEL)
         vif_model = vm_util.convert_vif_model(vif_model)
         vif_info = vmwarevif.get_vif_dict(self._session, self._cluster,
                                           vif_model, utils.is_neutron(), vif)
@@ -1579,6 +1683,11 @@ class VMwareVMOps(object):
                           e, instance=instance)
                 raise exception.InterfaceAttachFailed(
                         instance_uuid=instance.uuid)
+
+            context = nova_context.get_admin_context()
+            self._network_api.update_instance_vnic_index(
+                context, instance, vif, port_index)
+
         LOG.debug("Reconfigured VM to attach interface", instance=instance)
 
     def detach_interface(self, instance, vif):
@@ -1604,6 +1713,10 @@ class VMwareVMOps(object):
                 msg = _("No device with MAC address %s exists on the "
                         "VM") % vif['address']
                 raise exception.NotFound(msg)
+
+            context = nova_context.get_admin_context()
+            self._network_api.update_instance_vnic_index(
+                context, instance, vif, None)
 
             client_factory = self._session.vim.client.factory
             detach_config_spec = vm_util.get_network_detach_config_spec(
@@ -1642,7 +1755,8 @@ class VMwareVMOps(object):
                 vm_ref, vi.instance,
                 vi.ii.adapter_type, vi.ii.disk_type,
                 str(root_disk_ds_loc),
-                vi.root_gb * units.Mi, False)
+                vi.root_gb * units.Mi, False,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _sized_image_exists(self, sized_disk_ds_loc, ds_ref):
         ds_browser = self._get_ds_browser(ds_ref)
@@ -1715,7 +1829,8 @@ class VMwareVMOps(object):
                 vm_ref, vi.instance,
                 vi.ii.adapter_type, vi.ii.disk_type,
                 str(sized_disk_ds_loc),
-                vi.root_gb * units.Mi, vi.ii.linked_clone)
+                vi.root_gb * units.Mi, vi.ii.linked_clone,
+                disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _use_iso_image(self, vm_ref, vi):
         """Uses cached image as a bootable virtual cdrom."""
@@ -1745,7 +1860,8 @@ class VMwareVMOps(object):
                     vm_ref, vi.instance,
                     vi.ii.adapter_type, vi.ii.disk_type,
                     str(root_disk_ds_loc),
-                    vi.root_gb * units.Mi, linked_clone)
+                    vi.root_gb * units.Mi, linked_clone,
+                    disk_io_limits=vi._extra_specs.disk_io_limits)
 
     def _update_datacenter_cache_from_objects(self, dcs):
         """Updates the datastore/datacenter cache."""
@@ -1812,6 +1928,19 @@ class VMwareVMOps(object):
 
         # NOTE: VM can move hosts in some situations. Debug for admins.
         LOG.debug("VM %(uuid)s is currently on host %(host_name)s",
-                  {'uuid': instance.name, 'host_name': host_name},
+                  {'uuid': instance.uuid, 'host_name': host_name},
                   instance=instance)
         return ctype.ConsoleVNC(**vnc_console)
+
+    def get_mks_console(self, instance):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        ticket = self._session._call_method(self._session.vim,
+                                            'AcquireTicket',
+                                            vm_ref,
+                                            ticketType='mks')
+        thumbprint = ticket.sslThumbprint.replace(':', '').lower()
+        mks_auth = {'ticket': ticket.ticket,
+                    'cfgFile': ticket.cfgFile,
+                    'thumbprint': thumbprint}
+        internal_access_path = jsonutils.dumps(mks_auth)
+        return ctype.ConsoleMKS(ticket.host, ticket.port, internal_access_path)

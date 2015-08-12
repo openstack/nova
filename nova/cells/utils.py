@@ -19,7 +19,8 @@ Cells Utility Methods
 import random
 import sys
 
-from nova import db
+import six
+
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -28,6 +29,10 @@ from nova.objects import base as obj_base
 # Separator used between cell names for the 'full cell name' and routing
 # path
 PATH_CELL_SEP = '!'
+# Flag prepended to a cell name to indicate data shouldn't be synced during
+# an instance save.  There are no illegal chars in a cell name so using the
+# meaningful PATH_CELL_SEP in an invalid way will need to suffice.
+BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
 
@@ -81,7 +86,7 @@ class _CellProxy(object):
             return obj
 
     # dict-ish syntax sugar
-    def iteritems(self):
+    def _iteritems(self):
         """For backwards-compatibility with dict-based objects.
 
         NOTE(sbauza): May be removed in the future.
@@ -95,6 +100,11 @@ class _CellProxy(object):
                     yield name, self.host
                 else:
                     yield name, getattr(self._obj, name)
+
+    if six.PY3:
+        items = _iteritems
+    else:
+        iteritems = _iteritems
 
     def __getattr__(self, key):
         return getattr(self._obj, key)
@@ -130,13 +140,15 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
     if not deleted:
         filters['deleted'] = False
     # Active instances first.
-    instances = db.instance_get_all_by_filters(
-            context, filters, 'deleted', 'asc')
+    instances = objects.InstanceList.get_by_filters(
+            context, filters, sort_key='deleted', sort_dir='asc')
     if shuffle:
+        # NOTE(melwitt): Need a list that supports assignment for shuffle.
+        instances = [instance for instance in instances]
         random.shuffle(instances)
     for instance in instances:
         if uuids_only:
-            yield instance['uuid']
+            yield instance.uuid
         else:
             yield instance
 

@@ -21,6 +21,7 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
@@ -33,7 +34,9 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
+from nova import objects
 from nova import quota
+from nova import utils
 
 osapi_opts = [
     cfg.IntOpt('osapi_max_limit',
@@ -150,8 +153,8 @@ def task_and_vm_state_from_status(statuses):
     vm_states = set()
     task_states = set()
     lower_statuses = [status.lower() for status in statuses]
-    for state, task_map in _STATE_MAP.iteritems():
-        for task_state, mapped_state in task_map.iteritems():
+    for state, task_map in six.iteritems(_STATE_MAP):
+        for task_state, mapped_state in six.iteritems(task_map):
             status_string = mapped_state
             if status_string.lower() in lower_statuses:
                 vm_states.add(state)
@@ -218,13 +221,10 @@ def get_pagination_params(request):
 def _get_int_param(request, param):
     """Extract integer param from request or fail."""
     try:
-        int_param = int(request.GET[param])
-    except ValueError:
-        msg = _('%s param must be an integer') % param
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-    if int_param < 0:
-        msg = _('%s param must be positive') % param
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        int_param = utils.validate_integer(request.GET[param], param,
+                                           min_value=0)
+    except exception.InvalidInput as e:
+        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
     return int_param
 
 
@@ -245,25 +245,14 @@ def limited(items, request, max_limit=CONF.osapi_max_limit):
                     will cause exc.HTTPBadRequest() exceptions to be raised.
     :kwarg max_limit: The maximum number of items to return from 'items'
     """
-    try:
-        offset = int(request.GET.get('offset', 0))
-    except ValueError:
-        msg = _('offset param must be an integer')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+    offset = request.GET.get("offset", 0)
+    limit = request.GET.get('limit', max_limit)
 
     try:
-        limit = int(request.GET.get('limit', max_limit))
-    except ValueError:
-        msg = _('limit param must be an integer')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-
-    if limit < 0:
-        msg = _('limit param must be positive')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
-
-    if offset < 0:
-        msg = _('offset param must be positive')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        offset = utils.validate_integer(offset, "offset", min_value=0)
+        limit = utils.validate_integer(limit, "limit", min_value=0)
+    except exception.InvalidInput as e:
+        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
@@ -333,7 +322,7 @@ def check_img_metadata_properties_quota(context, metadata):
 
     #  check the key length.
     if isinstance(metadata, dict):
-        for key, value in metadata.iteritems():
+        for key, value in six.iteritems(metadata):
             if len(key) == 0:
                 expl = _("Image metadata key cannot be blank")
                 raise webob.exc.HTTPBadRequest(explanation=expl)
@@ -343,16 +332,6 @@ def check_img_metadata_properties_quota(context, metadata):
     else:
         expl = _("Invalid image metadata")
         raise webob.exc.HTTPBadRequest(explanation=expl)
-
-
-def dict_to_query_str(params):
-    # TODO(throughnothing): we should just use urllib.urlencode instead of this
-    # But currently we don't work with urlencoded url's
-    param_str = ""
-    for key, val in params.iteritems():
-        param_str = param_str + '='.join([str(key), str(val)]) + '&'
-
-    return param_str.rstrip('&')
 
 
 def get_networks_for_instance_from_nw_info(nw_info):
@@ -456,7 +435,7 @@ class ViewBuilder(object):
         url = os.path.join(prefix,
                            self._get_project_id(request),
                            collection_name)
-        return "%s?%s" % (url, dict_to_query_str(params))
+        return "%s?%s" % (url, urlparse.urlencode(params))
 
     def _get_href_link(self, request, identifier, collection_name):
         """Return an href string pointing to this object."""
@@ -535,11 +514,23 @@ def get_instance(compute_api, context, instance_id, expected_attrs=None):
         raise exc.HTTPNotFound(explanation=e.format_message())
 
 
+def raise_feature_not_supported(msg=None):
+    if msg is None:
+        msg = _("The requested functionality is not supported.")
+    raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+
+def get_flavor(context, flavor_id):
+    try:
+        return objects.Flavor.get_by_flavor_id(context, flavor_id)
+    except exception.FlavorNotFound as error:
+        raise exc.HTTPNotFound(explanation=error.format_message())
+
+
 def check_cells_enabled(function):
     @functools.wraps(function)
     def inner(*args, **kwargs):
         if not CONF.cells.enable:
-            msg = _("Cells is not enabled.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            raise_feature_not_supported()
         return function(*args, **kwargs)
     return inner

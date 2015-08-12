@@ -1,0 +1,86 @@
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+#
+# This script is executed in the OpenStack CI *tempest-dsvm-cells job.
+# It's used to configure which tempest tests actually get run.  You can find
+# the CI job configuration here:
+#
+# http://git.openstack.org/cgit/openstack-infra/project-config/tree/jenkins/jobs/devstack-gate.yaml
+#
+
+# Construct a regex to use when limiting scope of tempest
+# to avoid features unsupported by Nova Cells.
+r="^(?!.*"
+
+# skip security group tests
+r="$r(?:tempest\.api\.compute\.security_groups.*)"
+
+# skip test that requires security groups
+r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test_compute_with_volumes*)"
+
+# skip aggregates tests
+r="$r|(?:tempest\.api\.compute\.admin\.test_aggregates*)|(?:tempest\.scenario\.test_aggregates_basic_ops*)"
+
+# skip availability zone tests
+r="$r|(?:(tempest\.api\.compute\.)(servers\.|admin\.)(test_availability_zone*))"
+
+# skip fixed-ip tests
+r="$r|(?:tempest\.api\.compute\.admin\.test_fixed_ips*)"
+
+# skip floating-ip tests
+r="$r|(?:tempest\.api\.compute\.floating_ips*)"
+
+# exclude the slow tag
+r="$r|(?:.*\[.*\bslow\b.*\])"
+
+# skip current regressions; when adding new entries to this list, add the bug
+# reference with it since this list should shrink
+r="$r|(?:tempest\.api\.compute\.admin\.test_networks\.NetworksTest\.test_get_network*)"
+r="$r|(?:tempest\.api\.compute\.admin\.test_networks\.NetworksTest\.test_list_all_networks*)"
+r="$r|(?:tempest\.api\.compute\.admin\.test_migrations\.MigrationsAdminTest\.test_list_migrations_in_flavor_resize_situation*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_resize_server_confirm*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_resize_server_confirm_from_stopped*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_resize_server_revert*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_shelve_unshelve_server*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue\.ServerRescueTestJSON*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_disk_config\.ServerDiskConfigTestJSON\.test_resize_server_from_auto_to_manual*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_disk_config\.ServerDiskConfigTestJSON\.test_resize_server_from_manual_to_auto*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestJSON\.test_create_server_with_scheduler_hint_group*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_servers_negative\.ServersNegativeTestJSON\.test_shelve_shelved_server*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestManualDisk\.test_create_server_with_scheduler_hint_group*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_servers\.ServersTestJSON\.test_create_specify_keypair*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_virtual_interfaces\.VirtualInterfacesTestJSON\.test_list_virtual_interfaces*)"
+r="$r|(?:tempest\.api\.compute\.test_networks\.NetworksTestJSON\.test_list_networks*)"
+r="$r|(?:tempest\.scenario\.test_minimum_basic\.TestMinimumBasicScenario\.test_minimum_basic_scenario*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_delete_server\.DeleteServersTestJSON\.test_delete_server_while_in_verify_resize_state*)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue_negative\.ServerRescueNegativeTestJSON*)"
+r="$r|(?:tempest\.scenario\.test_encrypted_cinder_volumes\.TestEncryptedCinderVolumes\.test_encrypted_cinder_volumes_cryptsetup*)"
+r="$r|(?:tempest\.scenario\.test_encrypted_cinder_volumes\.TestEncryptedCinderVolumes\.test_encrypted_cinder_volumes_luks*)"
+r="$r|(?:tempest\.scenario\.test_server_advanced_ops\.TestServerAdvancedOps\.test_resize_server_confirm*)"
+r="$r|(?:tempest\.scenario\.test_shelve_instance\.TestShelveInstance\.test_shelve_instance*)"
+r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_network\.EC2NetworkTest\.test_disassociate_not_associated_floating_ip*)"
+r="$r|(?:tempest\.scenario\.test_server_basic_ops\.TestServerBasicOps\.test_server_basicops*)"
+r="$r|(?:tempest\.scenario\.test_snapshot_pattern\.TestSnapshotPattern\.test_snapshot_pattern*)"
+r="$r|(?:tempest\.api\.compute\.admin\.test_hosts\.HostsAdminTestJSON\.test_show_host_detail*)"
+r="$r|(?:tempest\.api\.compute\.test_tenant_networks\.NetworksTestJSON\.test_list_show_tenant_networks*)"
+r="$r|(?:tempest\.scenario\.test_volume_boot_pattern\.TestVolumeBootPattern\.test_volume_boot_pattern*)"
+r="$r|(?:tempest\.scenario\.test_volume_boot_pattern\.TestVolumeBootPatternV2\.test_volume_boot_pattern*)"
+# https://bugs.launchpad.net/nova/+bug/1445628
+r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test_run_idempotent_instances*)"
+# https://bugs.launchpad.net/nova/+bug/1445629
+r="$r|(?:tempest\.api\.compute.servers\.test_disk_config\.ServerDiskConfigTestJSON\.test_rebuild_server_with_manual_disk_config*)"
+# https://bugs.launchpad.net/nova/+bug/1445631
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\\.test_rebuild_server_in_stop_state*)"
+r="$r).*$"
+
+export DEVSTACK_GATE_TEMPEST_REGEX="$r"

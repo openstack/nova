@@ -29,8 +29,8 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 def _translate_vif_summary_view(_context, vif):
     """Maps keys for VIF summary view."""
     d = {}
-    d['id'] = vif['uuid']
-    d['mac_address'] = vif['address']
+    d['id'] = vif.uuid
+    d['mac_address'] = vif.address
     return d
 
 

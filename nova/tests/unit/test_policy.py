@@ -16,7 +16,7 @@
 """Test of Policy Engine For Nova."""
 
 import os.path
-import StringIO
+from six.moves import StringIO
 
 import mock
 import six.moves.urllib.request as urlrequest
@@ -100,17 +100,17 @@ class PolicyTestCase(test.NoDBTestCase):
         result = policy.enforce(self.context, action, self.target)
         self.assertEqual(result, True)
 
-    @mock.patch.object(urlrequest, 'urlopen',
-                       return_value=StringIO.StringIO("True"))
+    @mock.patch.object(urlrequest, 'urlopen')
     def test_enforce_http_true(self, mock_urlrequest):
+        mock_urlrequest.return_value = StringIO("True")
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
         self.assertEqual(result, True)
 
-    @mock.patch.object(urlrequest, 'urlopen',
-                       return_value=StringIO.StringIO("False"))
+    @mock.patch.object(urlrequest, 'urlopen')
     def test_enforce_http_false(self, mock_urlrequest):
+        mock_urlrequest.return_value = StringIO("False")
         action = "example:get_http"
         target = {}
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,

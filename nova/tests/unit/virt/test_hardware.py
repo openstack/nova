@@ -22,7 +22,6 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
-from nova.objects import instance as instance_obj
 from nova.pci import stats
 from nova import test
 from nova.virt import hardware as hw
@@ -357,11 +356,11 @@ class VCPUTopologyTest(test.NoDBTestCase):
         ]
 
         for topo_test in testdata:
+            image_meta = objects.ImageMeta.from_dict(topo_test["image"])
             if type(topo_test["expect"]) == tuple:
                 (preferred,
                  maximum) = hw._get_cpu_topology_constraints(
-                     topo_test["flavor"],
-                     topo_test["image"])
+                     topo_test["flavor"], image_meta)
 
                 self.assertEqual(topo_test["expect"][0], preferred.sockets)
                 self.assertEqual(topo_test["expect"][1], preferred.cores)
@@ -373,7 +372,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 self.assertRaises(topo_test["expect"],
                                   hw._get_cpu_topology_constraints,
                                   topo_test["flavor"],
-                                  topo_test["image"])
+                                  image_meta)
 
     def test_possible_topologies(self):
         testdata = [
@@ -460,32 +459,6 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 "maxthreads": 4,
                 "expect": exception.ImageVCPULimitsRangeImpossible,
             },
-            {
-                "allow_threads": True,
-                "specified_threads": 2,
-                "vcpus": 8,
-                "maxsockets": 4,
-                "maxcores": 2,
-                "maxthreads": 4,
-                "expect": [
-                    [4, 1, 2],
-                    [2, 2, 2],
-                ]
-            },
-            {
-                "allow_threads": False,
-                "specified_threads": 2,
-                "vcpus": 8,
-                "maxsockets": 8,
-                "maxcores": 8,
-                "maxthreads": 2,
-                "expect": [
-                    [8, 1, 1],
-                    [4, 2, 1],
-                    [2, 4, 1],
-                    [1, 8, 1],
-                ]
-            },
         ]
 
         for topo_test in testdata:
@@ -497,8 +470,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                                         sockets=topo_test["maxsockets"],
                                         cores=topo_test["maxcores"],
                                         threads=topo_test["maxthreads"]),
-                        topo_test["allow_threads"],
-                        topo_test.get("specified_threads")):
+                        topo_test["allow_threads"]):
                     actual.append([topology.sockets,
                                    topology.cores,
                                    topology.threads])
@@ -512,8 +484,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                                       sockets=topo_test["maxsockets"],
                                       cores=topo_test["maxcores"],
                                       threads=topo_test["maxthreads"]),
-                                  topo_test["allow_threads"],
-                                  topo_test.get("specified_threads"))
+                                  topo_test["allow_threads"])
 
     def test_sorting_topologies(self):
         testdata = [
@@ -591,8 +562,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 objects.VirtCPUTopology(sockets=topo_test["maxsockets"],
                                         cores=topo_test["maxcores"],
                                         threads=topo_test["maxthreads"]),
-                topo_test["allow_threads"],
-                None)
+                topo_test["allow_threads"])
 
             tops = hw._sort_possible_cpu_topologies(
                 possible,
@@ -764,6 +734,46 @@ class VCPUTopologyTest(test.NoDBTestCase):
                                 sockets=1, cores=1, threads=4))]),
                 "expect": [2, 1, 2]
             },
+            {  # NUMA needs threads, but more than limit in flavor - the
+               # least amount of threads which divides into the vcpu
+               # count wins. So with desired 4, max of 3, and
+               # vcpu count of 4, we should get 2 threads.
+                "allow_threads": True,
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_max_sockets": "5",
+                    "hw:cpu_max_cores": "2",
+                    "hw:cpu_max_threads": "3",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "numa_topology": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_topology=objects.VirtCPUTopology(
+                                sockets=1, cores=1, threads=4))]),
+                "expect": [2, 1, 2]
+            },
+            {  # NUMA needs threads, but thread count does not
+               # divide into flavor vcpu count, so we must
+               # reduce thread count to closest divisor
+                "allow_threads": True,
+                "flavor": objects.Flavor(vcpus=6, memory_mb=2048,
+                                         extra_specs={
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "numa_topology": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_topology=objects.VirtCPUTopology(
+                                sockets=1, cores=1, threads=4))]),
+                "expect": [2, 1, 3]
+            },
             {  # NUMA needs different number of threads per cell - the least
                # amount of threads wins
                 "allow_threads": True,
@@ -787,9 +797,10 @@ class VCPUTopologyTest(test.NoDBTestCase):
         ]
 
         for topo_test in testdata:
+            image_meta = objects.ImageMeta.from_dict(topo_test["image"])
             topology = hw._get_desirable_cpu_topologies(
                 topo_test["flavor"],
-                topo_test["image"],
+                image_meta,
                 topo_test["allow_threads"],
                 topo_test.get("numa_topology"))[0]
 
@@ -857,6 +868,30 @@ class NUMATopologyTest(test.NoDBTestCase):
                     "hw:numa_mem.2": "512",
                 }),
                 "image": {
+                },
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
+                        objects.InstanceNUMACell(
+                            id=1, cpuset=set([4, 6]), memory=512),
+                        objects.InstanceNUMACell(
+                            id=2, cpuset=set([5, 7]), memory=512)
+                    ]),
+            },
+            {
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
+                }),
+                "image": {
+                    "properties": {
+                        "hw_numa_nodes": 3,
+                        "hw_numa_cpus.0": "0-3",
+                        "hw_numa_mem.0": "1024",
+                        "hw_numa_cpus.1": "4,6",
+                        "hw_numa_mem.1": "512",
+                        "hw_numa_cpus.2": "5,7",
+                        "hw_numa_mem.2": "512",
+                    },
                 },
                 "expect": objects.InstanceNUMATopology(cells=
                     [
@@ -1052,18 +1087,20 @@ class NUMATopologyTest(test.NoDBTestCase):
         ]
 
         for testitem in testdata:
+            image_meta = objects.ImageMeta.from_dict(testitem["image"])
             if testitem["expect"] is None:
                 topology = hw.numa_get_constraints(
-                    testitem["flavor"], testitem["image"])
+                    testitem["flavor"], image_meta)
                 self.assertIsNone(topology)
             elif type(testitem["expect"]) == type:
                 self.assertRaises(testitem["expect"],
                                   hw.numa_get_constraints,
                                   testitem["flavor"],
-                                  testitem["image"])
+                                  image_meta)
             else:
                 topology = hw.numa_get_constraints(
-                    testitem["flavor"], testitem["image"])
+                    testitem["flavor"], image_meta)
+                self.assertIsNotNone(topology)
                 self.assertEqual(len(testitem["expect"].cells),
                                  len(topology.cells))
                 for i in range(len(topology.cells)):
@@ -1470,26 +1507,21 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
     def test_flavor(self):
         flavor = objects.Flavor(vcpus=8, memory_mb=2048,
                                 extra_specs={"hw:serial_port_count": 3})
-        num_ports = hw.get_number_of_serial_ports(flavor, None)
+        image_meta = objects.ImageMeta.from_dict({})
+        num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
         self.assertEqual(3, num_ports)
 
     def test_image_meta(self):
         flavor = objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={})
-        image_meta = {"properties": {"hw_serial_port_count": 2}}
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties": {"hw_serial_port_count": 2}})
         num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
         self.assertEqual(2, num_ports)
 
     def test_flavor_invalid_value(self):
         flavor = objects.Flavor(vcpus=8, memory_mb=2048,
                                 extra_specs={"hw:serial_port_count": 'foo'})
-        image_meta = {"properties": {}}
-        self.assertRaises(exception.ImageSerialPortNumberInvalid,
-                          hw.get_number_of_serial_ports,
-                          flavor, image_meta)
-
-    def test_image_meta_invalid_value(self):
-        flavor = objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={})
-        image_meta = {"properties": {"hw_serial_port_count": 'bar'}}
+        image_meta = objects.ImageMeta.from_dict({})
         self.assertRaises(exception.ImageSerialPortNumberInvalid,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
@@ -1497,14 +1529,16 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
     def test_image_meta_smaller_than_flavor(self):
         flavor = objects.Flavor(vcpus=8, memory_mb=2048,
                                 extra_specs={"hw:serial_port_count": 3})
-        image_meta = {"properties": {"hw_serial_port_count": 2}}
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties": {"hw_serial_port_count": 2}})
         num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
         self.assertEqual(2, num_ports)
 
     def test_flavor_smaller_than_image_meta(self):
         flavor = objects.Flavor(vcpus=8, memory_mb=2048,
                                 extra_specs={"hw:serial_port_count": 3})
-        image_meta = {"properties": {"hw_serial_port_count": 4}}
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties": {"hw_serial_port_count": 4}})
         self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
@@ -1526,10 +1560,10 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             cells=[
                 objects.InstanceNUMACell(
                     id=0, cpuset=set([0, 1]), memory=256, pagesize=2048,
-                    cpu_pinning={1: 3, 0: 4}),
+                    cpu_pinning={0: 1, 0: 1}),
                 objects.InstanceNUMACell(
                     id=1, cpuset=set([2]), memory=256, pagesize=2048,
-                    cpu_pinning={2: 5}),
+                    cpu_pinning={2: 3}),
         ])
         self.context = context.RequestContext('fake-user',
                                               'fake-project')
@@ -1658,7 +1692,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         fake_uuid = str(uuid.uuid4())
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                                     numa_topology=self.instancetopo)
-        instance_dict = instance_obj.compat_instance(instance)
+        instance_dict = base_obj.obj_to_primitive(instance)
         instance_numa_topo = hw.instance_topology_from_instance(instance_dict)
         for expected_cell, actual_cell in zip(self.instancetopo.cells,
                                               instance_numa_topo.cells):
@@ -1697,7 +1731,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
     def _test_get_requested_mempages_pagesize(self, spec=None, props=None):
         flavor = objects.Flavor(vcpus=16, memory_mb=2048,
                                 extra_specs=spec or {})
-        image_meta = {"properties": props or {}}
+        image_meta = objects.ImageMeta.from_dict({"properties": props or {}})
         return hw._numa_get_pagesize_constraints(flavor, image_meta)
 
     def test_get_requested_mempages_pagesize_from_flavor_swipe(self):
@@ -1724,6 +1758,27 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
             exception.MemoryPageSizeInvalid,
             self._test_get_requested_mempages_pagesize,
             {"hw:mem_page_size": "foo"})
+
+        self.assertRaises(
+            exception.MemoryPageSizeInvalid,
+            self._test_get_requested_mempages_pagesize,
+            {"hw:mem_page_size": "-42"})
+
+    def test_get_requested_mempages_pagesizes_from_flavor_suffix_sweep(self):
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "2048KB"}))
+
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "2MB"}))
+
+        self.assertEqual(
+            1048576,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "1GB"}))
 
     def test_get_requested_mempages_pagesize_from_image_flavor_any(self):
         self.assertEqual(

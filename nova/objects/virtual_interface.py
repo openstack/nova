@@ -19,9 +19,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
-                       base.NovaObjectDictCompat):
+@base.NovaObjectRegistry.register
+class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -36,7 +35,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     def _from_db_object(context, vif, db_vif):
         for field in vif.fields:
-            vif[field] = db_vif[field]
+            setattr(vif, field, db_vif[field])
         vif._context = context
         vif.obj_reset_changes()
         return vif
@@ -80,14 +79,15 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
         db.virtual_interface_delete_by_instance(context, instance_uuid)
 
 
+@base.NovaObjectRegistry.register
 class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
     fields = {
         'objects': fields.ListOfObjectsField('VirtualInterface'),
     }
-    child_versions = {
-        '1.0': '1.0',
+    obj_relationships = {
+        'objects': [('1.0', '1.0')],
     }
 
     @base.remotable_classmethod

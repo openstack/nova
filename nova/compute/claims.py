@@ -189,9 +189,9 @@ class Claim(NopClaim):
             self.context, self.instance['uuid'])
 
         if pci_requests.requests:
-            can_claim = self.tracker.pci_tracker.stats.support_requests(
-                pci_requests.requests)
-            if not can_claim:
+            devs = self.tracker.pci_tracker.claim_instance(self.context,
+                                                           self.instance)
+            if not devs:
                 return _('Claim pci failed.')
 
     def _test_ext_resources(self, limits):
@@ -259,33 +259,35 @@ class Claim(NopClaim):
                        'requested': requested})
 
 
-class ResizeClaim(Claim):
-    """Claim used for holding resources for an incoming resize/migration
-    operation.
+class MoveClaim(Claim):
+    """Claim used for holding resources for an incoming move operation.
+
+    Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
     def __init__(self, context, instance, instance_type, image_meta, tracker,
                  resources, overhead=None, limits=None):
         self.context = context
         self.instance_type = instance_type
         self.image_meta = image_meta
-        super(ResizeClaim, self).__init__(context, instance, tracker,
-                                          resources, overhead=overhead,
-                                          limits=limits)
+        super(MoveClaim, self).__init__(context, instance, tracker,
+                                         resources, overhead=overhead,
+                                         limits=limits)
         self.migration = None
 
     @property
     def disk_gb(self):
-        return (self.instance_type['root_gb'] +
-                self.instance_type['ephemeral_gb'])
+        return (self.instance_type.root_gb +
+                self.instance_type.ephemeral_gb)
 
     @property
     def memory_mb(self):
-        return self.instance_type['memory_mb'] + self.overhead['memory_mb']
+        return self.instance_type.memory_mb + self.overhead['memory_mb']
 
     @property
     def numa_topology(self):
+        image_meta = objects.ImageMeta.from_dict(self.image_meta)
         return hardware.numa_get_constraints(
-            self.instance_type, self.image_meta)
+            self.instance_type, image_meta)
 
     def _test_pci(self):
         pci_requests = objects.InstancePCIRequests.\
@@ -306,7 +308,7 @@ class ResizeClaim(Claim):
         been aborted.
         """
         LOG.debug("Aborting claim: %s" % self, instance=self.instance)
-        self.tracker.drop_resize_claim(
+        self.tracker.drop_move_claim(
             self.context,
             self.instance, instance_type=self.instance_type,
             image_meta=self.image_meta)

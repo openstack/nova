@@ -24,6 +24,7 @@ It is used via a single directive in the .rst file
 
 import re
 
+import six
 from six.moves import configparser
 
 from docutils import nodes
@@ -57,7 +58,7 @@ class SupportMatrixFeature(object):
                   STATUS_CONDITION, STATUS_OPTIONAL]
 
     def __init__(self, key, title, status=STATUS_OPTIONAL,
-                 group=None, notes=None):
+                 group=None, notes=None, cli=[]):
         # A unique key (eg 'foo.bar.wizz') to identify the feature
         self.key = key
         # A human friendly short title for the feature
@@ -73,6 +74,8 @@ class SupportMatrixFeature(object):
         # 'name' dict key is the value from SupportMatrixTarget.key
         # for the hypervisor in question
         self.implementations = {}
+        # A list of CLI commands which are related to that feature
+        self.cli = cli
 
 
 class SupportMatrixImplementation(object):
@@ -80,8 +83,10 @@ class SupportMatrixImplementation(object):
     STATUS_COMPLETE = "complete"
     STATUS_PARTIAL = "partial"
     STATUS_MISSING = "missing"
+    STATUS_UKNOWN = "unknown"
 
-    STATUS_ALL = [STATUS_COMPLETE, STATUS_PARTIAL, STATUS_MISSING]
+    STATUS_ALL = [STATUS_COMPLETE, STATUS_PARTIAL, STATUS_MISSING,
+                  STATUS_UKNOWN]
 
     def __init__(self, status=STATUS_MISSING, notes=None):
         # One of the status constants detailing the implementation
@@ -111,7 +116,7 @@ class SupportMatrixTarget(object):
 class SupportMatrixDirective(rst.Directive):
 
     option_spec = {
-        'support-matrix': unicode,
+        'support-matrix': six.text_type,
     }
 
     def run(self):
@@ -205,11 +210,15 @@ class SupportMatrixDirective(rst.Directive):
             notes = None
             if cfg.has_option(section, "notes"):
                 notes = cfg.get(section, "notes")
+            cli = []
+            if cfg.has_option(section, "cli"):
+                cli = cfg.get(section, "cli")
             feature = SupportMatrixFeature(section,
                                            title,
                                            status,
                                            group,
-                                           notes)
+                                           notes,
+                                           cli)
 
             # Now we've got the basic feature details, we must process
             # the hypervisor driver implementation for each feature
@@ -255,6 +264,7 @@ class SupportMatrixDirective(rst.Directive):
         content = []
         self._build_summary(matrix, content)
         self._build_details(matrix, content)
+        self._build_notes(content)
         return content
 
     def _build_summary(self, matrix, content):
@@ -345,12 +355,14 @@ class SupportMatrixDirective(rst.Directive):
                 impltxt.append(implref)
 
                 status = ""
-                if impl.status == "complete":
+                if impl.status == SupportMatrixImplementation.STATUS_COMPLETE:
                     status = u"\u2714"
-                elif impl.status == "missing":
+                elif impl.status == SupportMatrixImplementation.STATUS_MISSING:
                     status = u"\u2716"
-                elif impl.status == "partial":
+                elif impl.status == SupportMatrixImplementation.STATUS_PARTIAL:
                     status = u"\u2714"
+                elif impl.status == SupportMatrixImplementation.STATUS_UKNOWN:
+                    status = u"?"
 
                 implref.append(nodes.literal(
                     text=status,
@@ -396,6 +408,11 @@ class SupportMatrixDirective(rst.Directive):
                 para.append(nodes.inline(text=feature.notes))
             item.append(para)
 
+            if feature.cli:
+                item.append(self._create_cli_paragraph(feature))
+
+            para_divers = nodes.paragraph()
+            para_divers.append(nodes.strong(text="drivers:"))
             # A sub-list giving details of each hypervisor target
             impls = nodes.bullet_list()
             for key in feature.implementations:
@@ -412,11 +429,74 @@ class SupportMatrixDirective(rst.Directive):
                                   ids=[id]),
                 ]
                 if impl.notes is not None:
-                    subitem.append(nodes.paragraph(text=impl.notes))
+                    subitem.append(self._create_notes_paragraph(impl.notes))
                 impls.append(subitem)
 
-            item.append(impls)
+            para_divers.append(impls)
+            item.append(para_divers)
             details.append(item)
+
+    def _build_notes(self, content):
+        """Constructs a list of notes content for the support matrix.
+
+        This is generated as a bullet list.
+        """
+        notestitle = nodes.subtitle(text="Notes")
+        notes = nodes.bullet_list()
+
+        content.append(notestitle)
+        content.append(notes)
+
+        NOTES = [
+                "Virtuozzo was formerly named Parallels in this document"
+                ]
+
+        for note in NOTES:
+            item = nodes.list_item()
+            item.append(nodes.strong(text=note))
+            notes.append(item)
+
+    def _create_cli_paragraph(self, feature):
+        ''' Create a paragraph which represents the CLI commands of the feature
+
+        The paragraph will have a bullet list of CLI commands.
+        '''
+        para = nodes.paragraph()
+        para.append(nodes.strong(text="CLI commands:"))
+        commands = nodes.bullet_list()
+        for c in feature.cli.split(";"):
+            cli_command = nodes.list_item()
+            cli_command += nodes.literal(text=c, classes=["sp_cli"])
+            commands.append(cli_command)
+        para.append(commands)
+        return para
+
+    def _create_notes_paragraph(self, notes):
+        """ Constructs a paragraph which represents the implementation notes
+
+        The paragraph consists of text and clickable URL nodes if links were
+        given in the notes.
+        """
+        para = nodes.paragraph()
+        # links could start with http:// or https://
+        link_idxs = [m.start() for m in re.finditer('https?://', notes)]
+        start_idx = 0
+        for link_idx in link_idxs:
+            # assume the notes start with text (could be empty)
+            para.append(nodes.inline(text=notes[start_idx:link_idx]))
+            # create a URL node until the next text or the end of the notes
+            link_end_idx = notes.find(" ", link_idx)
+            if link_end_idx == -1:
+                # In case the notes end with a link without a blank
+                link_end_idx = len(notes)
+            uri = notes[link_idx:link_end_idx + 1]
+            para.append(nodes.reference("", uri, refuri=uri))
+            start_idx = link_end_idx + 1
+
+        # get all text after the last link (could be empty) or all of the
+        # text if no link was given
+        para.append(nodes.inline(text=notes[start_idx:]))
+        return para
 
 
 def setup(app):

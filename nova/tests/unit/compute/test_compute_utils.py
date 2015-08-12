@@ -25,7 +25,6 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 import six
-import testtools
 
 from nova.compute import flavors
 from nova.compute import power_state
@@ -36,9 +35,9 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
+from nova.network import model
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova.objects import instance as instance_obj
 from nova import rpc
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -47,9 +46,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 import nova.tests.unit.image.fake
-from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
-from nova import utils
 from nova.virt import driver
 
 CONF = cfg.CONF
@@ -104,7 +101,7 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, self.instance['uuid'])
         return compute_utils.get_device_name_for_instance(
-                self.context, self.instance, bdms, device)
+            self.instance, bdms, device)
 
     @staticmethod
     def _fake_bdm(device):
@@ -289,14 +286,10 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
                   'source_type': 'blank',
                   'destination_type': 'volume',
                   'boot_index': -1})])
-        self.flavor = {'swap': 4}
         self.instance = {'uuid': 'fake_instance', 'ephemeral_gb': 2}
         self.is_libvirt = False
         self.root_device_name = '/dev/vda'
         self.update_called = False
-
-        def fake_extract_flavor(instance):
-            return self.flavor
 
         def fake_driver_matches(driver_string):
             if driver_string == 'libvirt.LibvirtDriver':
@@ -306,10 +299,6 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.patchers = []
         self.patchers.append(
                 mock.patch.object(objects.BlockDeviceMapping, 'save'))
-        self.patchers.append(
-                mock.patch.object(
-                    flavors, 'extract_flavor',
-                    new=mock.Mock(side_effect=fake_extract_flavor)))
         self.patchers.append(
                 mock.patch.object(driver,
                                   'compute_driver_matches',
@@ -440,29 +429,31 @@ class UsageInfoTestCase(test.TestCase):
 
     def _create_instance(self, params=None):
         """Create a test instance."""
-        params = params or {}
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        sys_meta = flavors.save_flavor_info({}, flavor)
-        inst = {}
-        inst['image_ref'] = 1
-        inst['reservation_id'] = 'r-fakeres'
-        inst['user_id'] = self.user_id
-        inst['project_id'] = self.project_id
-        inst['instance_type_id'] = flavor['id']
-        inst['system_metadata'] = sys_meta
-        inst['ami_launch_index'] = 0
-        inst['root_gb'] = 0
-        inst['ephemeral_gb'] = 0
-        inst['info_cache'] = {'network_info': '[]'}
-        inst.update(params)
-        return db.instance_create(self.context, inst)['id']
+        net_info = model.NetworkInfo([])
+        info_cache = objects.InstanceInfoCache(network_info=net_info)
+        inst = objects.Instance(context=self.context,
+                                image_ref=1,
+                                reservation_id='r-fakeres',
+                                user_id=self.user_id,
+                                project_id=self.project_id,
+                                instance_type_id=flavor.id,
+                                flavor=flavor,
+                                old_flavor=None,
+                                new_flavor=None,
+                                system_metadata={},
+                                ami_launch_index=0,
+                                root_gb=0,
+                                ephemeral_gb=0,
+                                info_cache=info_cache)
+        if params:
+            inst.update(params)
+        inst.create()
+        return inst
 
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                                              expected_attrs=[
-                                                  'system_metadata'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -498,9 +489,7 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -508,9 +497,6 @@ class UsageInfoTestCase(test.TestCase):
         instance.system_metadata.update(sys_metadata)
         instance.save()
         self.compute.terminate_instance(self.context, instance, [], [])
-        instance = objects.Instance.get_by_id(
-                self.context.elevated(read_deleted='yes'), instance_id,
-                expected_attrs=['system_metadata'])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -537,9 +523,7 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         self.compute.terminate_instance(self.context, instance, [], [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
@@ -565,9 +549,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_usage(self):
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -635,147 +617,6 @@ class UsageInfoTestCase(test.TestCase):
                                                     "create.start",
                                                     aggregate_payload)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
-
-
-class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(ComputeGetImageMetadataTestCase, self).setUp()
-        self.context = context.RequestContext('fake', 'fake')
-
-        self.image = {
-            "min_ram": 10,
-            "min_disk": 1,
-            "disk_format": "raw",
-            "container_format": "bare",
-            "properties": {},
-        }
-
-        self.mock_image_api = mock.Mock()
-        self.mock_image_api.get.return_value = self.image
-
-        self.ctx = context.RequestContext('fake', 'fake')
-
-        sys_meta = {
-            'image_min_ram': 10,
-            'image_min_disk': 1,
-            'image_disk_format': 'raw',
-            'image_container_format': 'bare',
-        }
-
-        flavor = objects.Flavor(
-                 id=0,
-                 name='m1.fake',
-                 memory_mb=10,
-                 vcpus=1,
-                 root_gb=1,
-                 ephemeral_gb=1,
-                 flavorid='0',
-                 swap=1,
-                 rxtx_factor=0.0,
-                 vcpu_weight=None)
-
-        instance = fake_instance.fake_db_instance(
-            memory_mb=0, root_gb=0,
-            system_metadata=sys_meta)
-        self.instance_obj = objects.Instance._from_db_object(
-            self.ctx, objects.Instance(), instance,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
-        with mock.patch.object(self.instance_obj, 'save'):
-            self.instance_obj.set_flavor(flavor)
-
-    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
-    def test_get_image_meta(self, mock_get):
-        mock_get.return_value = objects.Flavor(extra_specs={})
-        image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
-
-        self.image['properties'] = 'DONTCARE'
-        self.assertThat(self.image, matchers.DictMatches(image_meta))
-
-    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
-    def test_get_image_meta_with_image_id_none(self, mock_flavor_get):
-        mock_flavor_get.return_value = objects.Flavor(extra_specs={})
-        self.image['properties'] = {'fake_property': 'fake_value'}
-
-        inst = self.instance_obj
-
-        with mock.patch.object(flavors,
-                               "extract_flavor") as mock_extract_flavor:
-            with mock.patch.object(utils, "get_system_metadata_from_image"
-                                   ) as mock_get_sys_metadata:
-                image_meta = compute_utils.get_image_metadata(
-                    self.ctx, self.mock_image_api, None, inst)
-
-                self.assertEqual(0, self.mock_image_api.get.call_count)
-                self.assertEqual(0, mock_extract_flavor.call_count)
-                self.assertEqual(0, mock_get_sys_metadata.call_count)
-                self.assertNotIn('fake_property', image_meta['properties'])
-
-        # Checking mock_image_api_get is called with 0 image_id
-        # as 0 is a valid image ID
-        image_meta = compute_utils.get_image_metadata(self.ctx,
-                                                      self.mock_image_api,
-                                                      0, self.instance_obj)
-        self.assertEqual(1, self.mock_image_api.get.call_count)
-        self.assertIn('fake_property', image_meta['properties'])
-
-    def _test_get_image_meta_exception(self, error):
-        self.mock_image_api.get.side_effect = error
-
-        image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
-
-        self.image['properties'] = 'DONTCARE'
-        # NOTE(danms): The trip through system_metadata will stringify things
-        for key in self.image:
-            self.image[key] = str(self.image[key])
-        self.assertThat(self.image, matchers.DictMatches(image_meta))
-
-    def test_get_image_meta_no_image(self):
-        error = exception.ImageNotFound(image_id='fake-image')
-        self._test_get_image_meta_exception(error)
-
-    def test_get_image_meta_not_authorized(self):
-        error = exception.ImageNotAuthorized(image_id='fake-image')
-        self._test_get_image_meta_exception(error)
-
-    def test_get_image_meta_bad_request(self):
-        error = exception.Invalid()
-        self._test_get_image_meta_exception(error)
-
-    def test_get_image_meta_unexpected_exception(self):
-        error = test.TestingException()
-        with testtools.ExpectedException(test.TestingException):
-            self._test_get_image_meta_exception(error)
-
-    def test_get_image_meta_no_image_system_meta(self):
-        for k in self.instance_obj.system_metadata.keys():
-            if k.startswith('image_'):
-                del self.instance_obj.system_metadata[k]
-
-        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as get:
-            get.return_value = objects.Flavor(extra_specs={})
-            image_meta = compute_utils.get_image_metadata(
-                self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
-
-        self.image['properties'] = 'DONTCARE'
-        self.assertThat(self.image, matchers.DictMatches(image_meta))
-
-    def test_get_image_meta_no_image_no_image_system_meta(self):
-        e = exception.ImageNotFound(image_id='fake-image')
-        self.mock_image_api.get.side_effect = e
-
-        for k in self.instance_obj.system_metadata.keys():
-            if k.startswith('image_'):
-                del self.instance_obj.system_metadata[k]
-
-        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as get:
-            get.return_value = objects.Flavor(extra_specs={})
-            image_meta = compute_utils.get_image_metadata(
-                self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
-
-        expected = {'properties': 'DONTCARE'}
-        self.assertThat(expected, matchers.DictMatches(image_meta))
 
 
 class ComputeUtilsGetValFromSysMetadata(test.NoDBTestCase):

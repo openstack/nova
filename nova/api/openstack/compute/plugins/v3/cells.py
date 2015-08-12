@@ -45,7 +45,7 @@ def _filter_keys(item, keys):
     """Filters all model attributes except for keys
     item is a dict
     """
-    return {k: v for k, v in item.iteritems() if k in keys}
+    return {k: v for k, v in six.iteritems(item) if k in keys}
 
 
 def _fixup_cell_info(cell_info, keys):
@@ -177,7 +177,6 @@ class CellsController(wsgi.Controller):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
 
-        authorize(context)
         authorize(context, action="delete")
 
         try:
@@ -242,7 +241,6 @@ class CellsController(wsgi.Controller):
         """Create a child cell entry."""
         context = req.environ['nova.context']
 
-        authorize(context)
         authorize(context, action="create")
 
         cell = body['cell']
@@ -260,7 +258,6 @@ class CellsController(wsgi.Controller):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
 
-        authorize(context)
         authorize(context, action="update")
 
         cell = body['cell']
@@ -295,7 +292,6 @@ class CellsController(wsgi.Controller):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
 
-        authorize(context)
         authorize(context, action="sync_instances")
 
         project_id = body.pop('project_id', None)

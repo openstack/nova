@@ -14,8 +14,10 @@
 
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.contrib import fixed_ips as fixed_ips_v2
 from nova.api.openstack.compute.plugins.v3 import fixed_ips as fixed_ips_v21
+from nova.api.openstack import wsgi as os_wsgi
 from nova import context
 from nova import db
 from nova import exception
@@ -119,6 +121,7 @@ class FixedIpTestV21(test.NoDBTestCase):
 
     fixed_ips = fixed_ips_v21
     url = '/v2/fake/os-fixed-ips'
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def setUp(self):
         super(FixedIpTestV21, self).setUp()
@@ -139,14 +142,20 @@ class FixedIpTestV21(test.NoDBTestCase):
     def _get_unreserve_action(self):
         return self.controller.unreserve
 
+    def _get_reserved_status(self, address):
+        return {}
+
     def test_fixed_ips_get(self):
         req = fakes.HTTPRequest.blank('%s/192.168.1.1' % self.url)
+        req.api_version_request = api_version_request.APIVersionRequest(
+                                        self.wsgi_api_version)
         res_dict = self.controller.show(req, '192.168.1.1')
         response = {'fixed_ip': {'cidr': '192.168.1.0/24',
                                  'hostname': None,
                                  'host': None,
                                  'address': '192.168.1.1'}}
-        self.assertEqual(response, res_dict)
+        response['fixed_ip'].update(self._get_reserved_status('192.168.1.1'))
+        self.assertEqual(response, res_dict, self.wsgi_api_version)
 
     def test_fixed_ips_get_bad_ip_fail(self):
         req = fakes.HTTPRequest.blank('%s/10.0.0.1' % self.url)
@@ -242,3 +251,14 @@ class FixedIpTestV2(FixedIpTestV21):
 
     def _get_unreserve_action(self):
         return self.controller.action
+
+
+class FixedIpTestV24(FixedIpTestV21):
+
+    wsgi_api_version = '2.4'
+
+    def _get_reserved_status(self, address):
+        for fixed_ip in fake_fixed_ips:
+            if address == fixed_ip['address']:
+                return {'reserved': fixed_ip['reserved']}
+        self.fail('Invalid address: %s' % address)

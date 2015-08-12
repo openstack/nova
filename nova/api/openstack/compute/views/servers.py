@@ -19,6 +19,7 @@ import hashlib
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
@@ -279,5 +280,10 @@ class ViewBuilderV3(ViewBuilder):
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
+
+        if (request.api_version_request >=
+                api_version_request.APIVersionRequest("2.9")):
+            server["server"]["locked"] = (True if instance["locked_by"]
+                                          else False)
 
         return server

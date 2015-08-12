@@ -1,5 +1,0 @@
-{
-    "changePassword" : {
-        "adminPass" : "%(password)s"
-    }
-}

@@ -41,9 +41,8 @@ def compare_pci_device_attributes(obj_a, obj_b):
     return True
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class PciDevice(base.NovaPersistentObject, base.NovaObject,
-                base.NovaObjectDictCompat):
+@base.NovaObjectRegistry.register
+class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     """Object to represent a PCI device on a compute node.
 
@@ -97,8 +96,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
         'address': fields.StringField(),
         'vendor_id': fields.StringField(),
         'product_id': fields.StringField(),
-        'dev_type': fields.StringField(),
-        'status': fields.StringField(),
+        'dev_type': fields.PciDeviceTypeField(),
+        'status': fields.PciDeviceStatusField(),
         'dev_id': fields.StringField(nullable=True),
         'label': fields.StringField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
@@ -129,7 +128,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
 
         for k, v in dev_dict.items():
             if k in self.fields.keys():
-                self[k] = v
+                setattr(self, k, v)
             else:
                 # Note (yjiang5) extra_info.update does not update
                 # obj_what_changed, set it explicitely
@@ -152,7 +151,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
     def _from_db_object(context, pci_device, db_dev):
         for key in pci_device.fields:
             if key != 'extra_info':
-                pci_device[key] = db_dev[key]
+                setattr(pci_device, key, db_dev[key])
             else:
                 extra_info = db_dev.get("extra_info")
                 pci_device.extra_info = jsonutils.loads(extra_info)
@@ -180,16 +179,16 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
         """
         pci_device = cls()
         pci_device.update_device(dev_dict)
-        pci_device.status = 'available'
+        pci_device.status = fields.PciDeviceStatus.AVAILABLE
         return pci_device
 
     @base.remotable
     def save(self):
-        if self.status == 'removed':
-            self.status = 'deleted'
+        if self.status == fields.PciDeviceStatus.REMOVED:
+            self.status = fields.PciDeviceStatus.DELETED
             db.pci_device_destroy(self._context, self.compute_node_id,
                                   self.address)
-        elif self.status != 'deleted':
+        elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])
@@ -200,20 +199,20 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
                 self._from_db_object(self._context, self, db_pci)
 
 
+@base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1
     # Version 1.1: PciDevice 1.2
-    VERSION = '1.1'
+    # Version 1.2: PciDevice 1.3
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): PciDevice was at 1.1 before we added this
-        '1.1': '1.2',
-        '1.2': '1.3',
+    # NOTE(danms): PciDevice was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1'), ('1.1', '1.2'), ('1.2', '1.3')],
         }
 
     def __init__(self, *args, **kwargs):

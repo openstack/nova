@@ -496,6 +496,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         obj.system_version = "6.6.6"
         obj.system_serial = "123456"
         obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+        obj.system_family = "Anvils"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -506,6 +507,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
                 <entry name="version">6.6.6</entry>
                 <entry name="serial">123456</entry>
                 <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+                <entry name="family">Anvils</entry>
               </system>
             </sysinfo>
         """)
@@ -516,6 +518,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         obj.system_manufacturer = "Acme"
         obj.system_product = "Wile Coyote"
         obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+        obj.system_family = "Anvils"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -527,6 +530,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
                 <entry name="manufacturer">Acme</entry>
                 <entry name="product">Wile Coyote</entry>
                 <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+                <entry name="family">Anvils</entry>
               </system>
             </sysinfo>
         """)
@@ -1187,6 +1191,24 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
                 <inbound average="1024000" peak="10240000" burst="1024000"/>
                 <outbound average="1024000" peak="10240000" burst="1024000"/>
               </bandwidth>
+            </interface>""")
+
+    def test_config_driver_options(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "ethernet"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.target_dev = "vnet0"
+        obj.driver_name = "vhost"
+        obj.vhost_queues = 4
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="ethernet">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver name="vhost" queues="4"/>
+              <target dev="vnet0"/>
             </interface>""")
 
     def test_config_bridge(self):
@@ -2325,7 +2347,7 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
             <hugepages>
               <page size="2048" unit="KiB" nodeset="2-3"/>
             </hugepages>
-            <nosharedpages/>
+            <nosharepages/>
             <locked/>
           </memoryBacking>""")
 

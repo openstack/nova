@@ -21,6 +21,7 @@ from oslo_utils import netutils
 from oslo_utils import timeutils
 import routes
 import six
+from six.moves import range
 import webob
 import webob.dec
 import webob.request
@@ -42,6 +43,8 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.netconf
 from nova.network import api as network_api
+from nova import objects
+from nova.objects import base
 from nova import quota
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
@@ -102,9 +105,12 @@ def wsgi_app(inner_app_v2=None, fake_auth_context=None,
 
 
 def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
-        use_no_auth=False, ext_mgr=None, init_only=None):
+        use_no_auth=False, ext_mgr=None, init_only=None, v2_compatible=False):
     if not inner_app_v21:
         inner_app_v21 = compute.APIRouterV21(init_only)
+
+    if v2_compatible:
+        inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
 
     if use_no_auth:
         api_v21 = openstack_api.FaultWrapper(auth.NoAuthMiddlewareV3(
@@ -120,6 +126,7 @@ def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v21
     mapper['/v2.1'] = api_v21
+    mapper['/'] = openstack_api.FaultWrapper(versions.Versions())
     return mapper
 
 
@@ -251,14 +258,14 @@ class FakeToken(object):
     def __init__(self, **kwargs):
         FakeToken.id_count += 1
         self.id = FakeToken.id_count
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             setattr(self, k, v)
 
 
 class FakeRequestContext(context.RequestContext):
     def __init__(self, *args, **kwargs):
         kwargs['auth_token'] = kwargs.get('auth_token', 'fake_auth_token')
-        return super(FakeRequestContext, self).__init__(*args, **kwargs)
+        super(FakeRequestContext, self).__init__(*args, **kwargs)
 
 
 class HTTPRequest(os_wsgi.Request):
@@ -383,6 +390,13 @@ def fake_instance_get(**kwargs):
     return _return_server
 
 
+def fake_compute_get(**kwargs):
+    def _return_server_obj(context, uuid, want_objects=False,
+                           expected_attrs=None):
+        return stub_instance_obj(context, **kwargs)
+    return _return_server_obj
+
+
 def fake_actions_to_locked_server(self, context, instance, *args, **kwargs):
     raise exc.InstanceIsLocked(instance_uuid=instance['uuid'])
 
@@ -410,7 +424,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
         if 'sort_dirs' in kwargs:
             kwargs.pop('sort_dirs')
 
-        for i in xrange(num_servers):
+        for i in range(num_servers):
             uuid = get_fake_uuid(i)
             server = stub_instance(id=i + 1, uuid=uuid,
                     **kwargs)
@@ -426,7 +440,23 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
     return _return_servers
 
 
-def stub_instance(id, user_id=None, project_id=None, host=None,
+def fake_compute_get_all(num_servers=5, **kwargs):
+    def _return_servers_objs(context, search_opts=None, limit=None,
+                             marker=None, want_objects=False,
+                             expected_attrs=None, sort_keys=None,
+                             sort_dirs=None):
+        db_insts = fake_instance_get_all_by_filters()(None,
+                                                      limit=limit,
+                                                      marker=marker)
+        expected = ['metadata', 'system_metadata', 'flavor',
+                    'info_cache', 'security_groups']
+        return base.obj_make_list(context, objects.InstanceList(),
+                                  objects.Instance, db_insts,
+                                  expected_attrs=expected)
+    return _return_servers_objs
+
+
+def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   node=None, vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", name=None, key_name='',
@@ -478,14 +508,13 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
 
     info_cache = create_info_cache(nw_cache)
 
-    if instance_type is not None:
-        flavorinfo = jsonutils.dumps({
-            'cur': instance_type.obj_to_primitive(),
-            'old': None,
-            'new': None,
-        })
-    else:
-        flavorinfo = None
+    if instance_type is None:
+        instance_type = flavors.get_default_flavor()
+    flavorinfo = jsonutils.dumps({
+        'cur': instance_type.obj_to_primitive(),
+        'old': None,
+        'new': None,
+    })
 
     instance = {
         "id": int(id),
@@ -518,7 +547,6 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "user_data": user_data,
         "reservation_id": reservation_id,
         "mac_address": "",
-        "scheduled_at": timeutils.utcnow(),
         "launched_at": launched_at,
         "terminated_at": terminated_at,
         "availability_zone": availability_zone,
@@ -556,6 +584,17 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
     instance['info_cache']['instance_uuid'] = instance['uuid']
 
     return instance
+
+
+def stub_instance_obj(ctxt, *args, **kwargs):
+    db_inst = stub_instance(*args, **kwargs)
+    expected = ['metadata', 'system_metadata', 'flavor',
+                'info_cache', 'security_groups']
+    inst = objects.Instance._from_db_object(ctxt, objects.Instance(),
+                                            db_inst,
+                                            expected_attrs=expected)
+    inst.fault = None
+    return inst
 
 
 def stub_volume(id, **kwargs):

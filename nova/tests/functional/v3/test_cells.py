@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_config import cfg
+from six.moves import range
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import state
@@ -62,7 +63,7 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                     return cell
             raise exception.CellNotFound(cell_name=cell_name)
 
-        for x in xrange(num_cells):
+        for x in range(num_cells):
             cell = models.Cell()
             our_id = self.cells_next_id
             self.cells_next_id += 1

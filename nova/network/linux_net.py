@@ -29,6 +29,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
@@ -36,7 +37,6 @@ import six
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova.openstack.common import fileutils
 from nova import paths
 from nova.pci import utils as pci_utils
 from nova import utils
@@ -394,7 +394,7 @@ class IptablesManager(object):
             elif ip_version == 6:
                 tables = self.ipv6
 
-            for table, chains in builtin_chains[ip_version].iteritems():
+            for table, chains in six.iteritems(builtin_chains[ip_version]):
                 for chain in chains:
                     tables[table].add_chain(chain)
                     tables[table].add_rule(chain, '-j $%s' % (chain,),
@@ -426,11 +426,11 @@ class IptablesManager(object):
         self.apply()
 
     def dirty(self):
-        for table in self.ipv4.itervalues():
+        for table in six.itervalues(self.ipv4):
             if table.dirty:
                 return True
         if CONF.use_ipv6:
-            for table in self.ipv6.itervalues():
+            for table in six.itervalues(self.ipv6):
                 if table.dirty:
                     return True
         return False
@@ -461,7 +461,7 @@ class IptablesManager(object):
                                                 run_as_root=True,
                                                 attempts=5)
             all_lines = all_tables.split('\n')
-            for table_name, table in tables.iteritems():
+            for table_name, table in six.iteritems(tables):
                 start, end = self._find_table(all_lines, table_name)
                 all_lines[start:end] = self._modify_rules(
                         all_lines[start:end], table, table_name)
@@ -1549,9 +1549,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @staticmethod
     @utils.synchronized('lock_vlan', external=True)
-    def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None):
+    def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None,
+                    interface=None):
         """Create a vlan unless it already exists."""
-        interface = 'vlan%s' % vlan_num
+        if interface is None:
+            interface = 'vlan%s' % vlan_num
         if not device_exists(interface):
             LOG.debug('Starting VLAN interface %s', interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
@@ -1599,7 +1601,13 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """
         if not device_exists(bridge):
             LOG.debug('Starting Bridge %s', bridge)
-            _execute('brctl', 'addbr', bridge, run_as_root=True)
+            out, err = _execute('brctl', 'addbr', bridge,
+                                check_exit_code=False, run_as_root=True)
+            if (err and err != "device %s already exists; can't create "
+                               "bridge with the same name\n" % (bridge)):
+                msg = _('Failed to add bridge: %s') % err
+                raise exception.NovaException(msg)
+
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
             _execute('brctl', 'stp', bridge, 'off', run_as_root=True)

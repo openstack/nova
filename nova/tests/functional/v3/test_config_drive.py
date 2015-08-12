@@ -13,13 +13,38 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-config-drive'
+    extra_extensions_to_load = ["os-access-ips"]
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ConfigDriveSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.config_drive.Config_drive')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips_mac.'
+            'Extended_ips_mac')
+        return f
 
     def setUp(self):
         super(ConfigDriveSampleJsonTest, self).setUp()
@@ -34,6 +59,8 @@ class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-config-drive-get-resp', subs,
                               response, 200)
 
@@ -44,5 +71,7 @@ class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('servers-config-drive-details-resp',
                               subs, response, 200)

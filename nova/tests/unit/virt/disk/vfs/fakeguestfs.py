@@ -61,7 +61,7 @@ class GuestFS(object):
         if file == "/some/fail/file":
             raise RuntimeError("%s: No such file or directory", file)
 
-        self.drives.append((file, kwargs['format']))
+        self.drives.append((file, kwargs))
 
     def add_drive(self, file, format=None, *args, **kwargs):
         self.add_drive_opts(file, format=None, *args, **kwargs)

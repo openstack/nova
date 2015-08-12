@@ -23,19 +23,21 @@ In this section you will find information on Nova's command line utilities.
 Reference
 ---------
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    nova-all
    nova-api-ec2
    nova-api-metadata
    nova-api-os-compute
    nova-api
+   nova-cells
    nova-cert
    nova-compute
    nova-conductor
    nova-console
    nova-consoleauth
    nova-dhcpbridge
+   nova-idmapshift
    nova-manage
    nova-network
    nova-novncproxy

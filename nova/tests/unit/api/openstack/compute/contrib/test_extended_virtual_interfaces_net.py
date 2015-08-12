@@ -19,22 +19,29 @@ import webob
 from nova.api.openstack.compute.contrib import extended_virtual_interfaces_net
 from nova import compute
 from nova import network
+from nova.objects import virtual_interface as vif_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
+EXPECTED_NET_UUIDS = [123,
+                      456]
 
-FAKE_VIFS = [{'uuid': '00000000-0000-0000-0000-00000000000000000',
-              'address': '00-00-00-00-00-00',
-              'net_uuid': '00000000-0000-0000-0000-00000000000000001'},
-             {'uuid': '11111111-1111-1111-1111-11111111111111111',
-              'address': '11-11-11-11-11-11',
-              'net_uuid': '11111111-1111-1111-1111-11111111111111112'}]
 
-EXPECTED_NET_UUIDS = ['00000000-0000-0000-0000-00000000000000001',
-                      '11111111-1111-1111-1111-11111111111111112']
+def _generate_fake_vifs(context):
+    vif = vif_obj.VirtualInterface(context=context)
+    vif.address = '00-00-00-00-00-00'
+    vif.net_uuid = 123
+    vif.uuid = '00000000-0000-0000-0000-00000000000000000'
+    fake_vifs = [vif]
+    vif = vif_obj.VirtualInterface(context=context)
+    vif.address = '11-11-11-11-11-11'
+    vif.net_uuid = 456
+    vif.uuid = '11111111-1111-1111-1111-11111111111111111'
+    fake_vifs.append(vif)
+    return fake_vifs
 
 
 def compute_api_get(self, context, instance_id, expected_attrs=None,
@@ -43,14 +50,14 @@ def compute_api_get(self, context, instance_id, expected_attrs=None,
 
 
 def get_vifs_by_instance(self, context, instance_id):
-    return FAKE_VIFS
+    return _generate_fake_vifs(context)
 
 
 def get_vif_by_mac_address(self, context, mac_address):
     if mac_address == "00-00-00-00-00-00":
-        return {'net_uuid': '00000000-0000-0000-0000-00000000000000001'}
+        return _generate_fake_vifs(context)[0]
     else:
-        return {'net_uuid': '11111111-1111-1111-1111-11111111111111112'}
+        return _generate_fake_vifs(context)[1]
 
 
 class ExtendedServerVIFNetTest(test.NoDBTestCase):

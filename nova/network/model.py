@@ -26,7 +26,7 @@ from nova.i18n import _
 
 def ensure_string_keys(d):
     # http://bugs.python.org/issue4978
-    return {str(k): v for k, v in d.iteritems()}
+    return {str(k): v for k, v in six.iteritems(d)}
 
 # Constants for the 'vif_type' field in VIF class
 VIF_TYPE_OVS = 'ovs'
@@ -38,10 +38,13 @@ VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'
 VIF_TYPE_HW_VEB = 'hw_veb'
 VIF_TYPE_MLNX_DIRECT = 'mlnx_direct'
+VIF_TYPE_IB_HOSTDEV = 'ib_hostdev'
 VIF_TYPE_MIDONET = 'midonet'
 VIF_TYPE_VHOSTUSER = 'vhostuser'
 VIF_TYPE_VROUTER = 'vrouter'
 VIF_TYPE_OTHER = 'other'
+VIF_TYPE_TAP = 'tap'
+VIF_TYPE_MACVTAP = 'macvtap'
 
 # Constants for dictionary keys in the 'vif_details' field in the VIF
 # class
@@ -49,11 +52,20 @@ VIF_DETAILS_PORT_FILTER = 'port_filter'
 VIF_DETAILS_OVS_HYBRID_PLUG = 'ovs_hybrid_plug'
 VIF_DETAILS_PHYSICAL_NETWORK = 'physical_network'
 
-# The following two constants define the SR-IOV related fields in the
-# 'vif_details'. 'profileid' should be used for VIF_TYPE_802_QBH,
-# 'vlan' for VIF_TYPE_HW_VEB
+# The following constant defines an SR-IOV related parameter in the
+# 'vif_details'. 'profileid' should be used for VIF_TYPE_802_QBH
 VIF_DETAILS_PROFILEID = 'profileid'
+
+# The following constant defines an SR-IOV and macvtap related parameter in
+# the 'vif_details'. 'vlan' should be used for VIF_TYPE_HW_VEB or
+# VIF_TYPE_MACVTAP
 VIF_DETAILS_VLAN = 'vlan'
+
+# The following three constants define the macvtap related fields in
+# the 'vif_details'.
+VIF_DETAILS_MACVTAP_SOURCE = 'macvtap_source'
+VIF_DETAILS_MACVTAP_MODE = 'macvtap_mode'
+VIF_DETAILS_PHYS_INTERFACE = 'physical_interface'
 
 # Constants for vhost-user related fields in 'vif_details'.
 # Sets mode on vhost-user socket, valid values are 'client'
@@ -64,6 +76,10 @@ VIF_DETAILS_VHOSTUSER_SOCKET = 'vhostuser_socket'
 # Specifies whether vhost-user socket should be plugged
 # into ovs bridge. Valid values are True and False
 VIF_DETAILS_VHOSTUSER_OVS_PLUG = 'vhostuser_ovs_plug'
+
+# Constants for dictionary keys in the 'vif_details' field that are
+# valid for VIF_TYPE_TAP.
+VIF_DETAILS_TAP_MAC_ADDRESS = 'mac_address'
 
 # Define supported virtual NIC types. VNIC_TYPE_DIRECT and VNIC_TYPE_MACVTAP
 # are used for SR-IOV ports
@@ -80,6 +96,24 @@ VIF_MODEL_E1000 = 'e1000'
 VIF_MODEL_E1000E = 'e1000e'
 VIF_MODEL_NETFRONT = 'netfront'
 VIF_MODEL_SPAPR_VLAN = 'spapr-vlan'
+
+VIF_MODEL_SRIOV = 'sriov'
+VIF_MODEL_VMXNET = 'vmxnet'
+VIF_MODEL_VMXNET3 = 'vmxnet3'
+
+VIF_MODEL_ALL = (
+    VIF_MODEL_VIRTIO,
+    VIF_MODEL_NE2K_PCI,
+    VIF_MODEL_PCNET,
+    VIF_MODEL_RTL8139,
+    VIF_MODEL_E1000,
+    VIF_MODEL_E1000E,
+    VIF_MODEL_NETFRONT,
+    VIF_MODEL_SPAPR_VLAN,
+    VIF_MODEL_SRIOV,
+    VIF_MODEL_VMXNET,
+    VIF_MODEL_VMXNET3,
+)
 
 # Constant for max length of network interface names
 # eg 'bridge' in the Network class or 'devname' in

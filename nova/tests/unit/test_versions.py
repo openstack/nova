@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import __builtin__
-import StringIO
-
 from oslo_config import cfg
+import six
+from six.moves import builtins
 
 from nova import test
 from nova import version
@@ -35,7 +34,7 @@ class VersionTestCase(test.NoDBTestCase):
 
     def test_release_file(self):
         version.loaded = False
-        real_open = __builtin__.open
+        real_open = builtins.open
         real_find_file = cfg.CONF.find_file
 
         def fake_find_file(self, name):
@@ -49,11 +48,11 @@ class VersionTestCase(test.NoDBTestCase):
 vendor = ACME Corporation
 product = ACME Nova
 package = 1337"""
-                return StringIO.StringIO(data)
+                return six.StringIO(data)
 
             return real_open(path, *args, **kwargs)
 
-        self.stubs.Set(__builtin__, 'open', fake_open)
+        self.stubs.Set(builtins, 'open', fake_open)
         self.stubs.Set(cfg.ConfigOpts, 'find_file', fake_find_file)
 
         self.assertEqual(version.vendor_string(), "ACME Corporation")

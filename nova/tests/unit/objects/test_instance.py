@@ -14,10 +14,10 @@
 
 import datetime
 
-import iso8601
 import mock
 from mox3 import mox
 import netaddr
+from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
@@ -29,12 +29,12 @@ from nova.network import model as network_model
 from nova import notifications
 from nova import objects
 from nova.objects import base
+from nova.objects import fields
 from nova.objects import instance
 from nova.objects import instance_info_cache
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
-from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
@@ -48,26 +48,28 @@ from nova.tests.unit.objects import test_vcpu_model
 class _TestInstanceObject(object):
     @property
     def fake_instance(self):
-        fake_instance = fakes.stub_instance(id=2,
-                                            access_ipv4='1.2.3.4',
-                                            access_ipv6='::1')
-        fake_instance['cell_name'] = 'api!child'
-        fake_instance['scheduled_at'] = None
-        fake_instance['terminated_at'] = None
-        fake_instance['deleted_at'] = None
-        fake_instance['created_at'] = None
-        fake_instance['updated_at'] = None
-        fake_instance['launched_at'] = (
-            fake_instance['launched_at'].replace(
-                tzinfo=iso8601.iso8601.Utc(), microsecond=0))
-        fake_instance['deleted'] = False
-        fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
-        fake_instance['security_groups'] = []
-        fake_instance['pci_devices'] = []
-        fake_instance['user_id'] = self.context.user_id
-        fake_instance['project_id'] = self.context.project_id
-        fake_instance['tags'] = []
-        return fake_instance
+        db_inst = fake_instance.fake_db_instance(id=2,
+                                                 access_ip_v4='1.2.3.4',
+                                                 access_ip_v6='::1')
+        db_inst['uuid'] = '34fd7606-2ed5-42c7-ad46-76240c088801'
+        db_inst['cell_name'] = 'api!child'
+        db_inst['terminated_at'] = None
+        db_inst['deleted_at'] = None
+        db_inst['created_at'] = None
+        db_inst['updated_at'] = None
+        db_inst['launched_at'] = datetime.datetime(1955, 11, 12,
+                                                   22, 4, 0)
+        db_inst['deleted'] = False
+        db_inst['security_groups'] = []
+        db_inst['pci_devices'] = []
+        db_inst['user_id'] = self.context.user_id
+        db_inst['project_id'] = self.context.project_id
+        db_inst['tags'] = []
+
+        db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
+                                     instance_uuid=db_inst['uuid'])
+
+        return db_inst
 
     def test_datetime_deserialization(self):
         red_letter_date = timeutils.parse_isotime(
@@ -117,7 +119,6 @@ class _TestInstanceObject(object):
                                              expected_attrs=[])
         for attr in instance.INSTANCE_OPTIONAL_ATTRS:
             self.assertFalse(inst.obj_attr_is_set(attr))
-        self.assertRemotes()
 
     def test_get_with_expected(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -131,7 +132,7 @@ class _TestInstanceObject(object):
         exp_cols.remove('pci_requests')
         exp_cols.remove('vcpu_model')
         exp_cols.remove('ec2_ids')
-        exp_cols = filter(lambda x: 'flavor' not in x, exp_cols)
+        exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model'])
 
@@ -166,13 +167,7 @@ class _TestInstanceObject(object):
             self.context, 'uuid',
             expected_attrs=instance.INSTANCE_OPTIONAL_ATTRS)
         for attr in instance.INSTANCE_OPTIONAL_ATTRS:
-            if 'flavor' in attr:
-                # FIXME(danms): This isn't implemented yet, but is handled
-                # in the lazy-load code, so code can act like it is (although
-                # this test is being pedantic).
-                continue
             self.assertTrue(inst.obj_attr_is_set(attr))
-        self.assertRemotes()
 
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'instance_get')
@@ -183,7 +178,6 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_id(self.context, 'instid')
         self.assertEqual(inst.uuid, self.fake_instance['uuid'])
-        self.assertRemotes()
 
     def test_load(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -201,14 +195,13 @@ class _TestInstanceObject(object):
                                 ).AndReturn(fake_inst2)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid)
-        self.assertFalse(hasattr(inst, '_metadata'))
+        self.assertFalse(hasattr(inst, '_obj_metadata'))
         meta = inst.metadata
         self.assertEqual(meta, {'foo': 'bar'})
-        self.assertTrue(hasattr(inst, '_metadata'))
+        self.assertTrue(hasattr(inst, '_obj_metadata'))
         # Make sure we don't run load again
         meta2 = inst.metadata
         self.assertEqual(meta2, {'foo': 'bar'})
-        self.assertRemotes()
 
     def test_load_invalid(self):
         inst = instance.Instance(context=self.context, uuid='fake-uuid')
@@ -227,12 +220,12 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, 'fake-uuid')
         self.assertEqual(inst.id, fake_instance['id'])
-        self.assertEqual(inst.launched_at, fake_instance['launched_at'])
+        self.assertEqual(inst.launched_at.replace(tzinfo=None),
+                         fake_instance['launched_at'])
         self.assertEqual(str(inst.access_ip_v4),
                          fake_instance['access_ip_v4'])
         self.assertEqual(str(inst.access_ip_v6),
                          fake_instance['access_ip_v6'])
-        self.assertRemotes()
 
     def test_refresh(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -257,7 +250,6 @@ class _TestInstanceObject(object):
         self.assertEqual(inst.host, 'orig-host')
         inst.refresh()
         self.assertEqual(inst.host, 'new-host')
-        self.assertRemotes()
         self.assertEqual(set([]), inst.obj_what_changed())
 
     def test_refresh_does_not_recurse(self):
@@ -319,7 +311,6 @@ class _TestInstanceObject(object):
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates,
-                update_cells=False,
                 columns_to_join=['info_cache', 'security_groups',
                                  'system_metadata', 'extra', 'extra.flavor']
                 ).AndReturn((old_ref, new_ref))
@@ -330,12 +321,8 @@ class _TestInstanceObject(object):
                     exp_vm_state, exp_task_state, admin_reset)
         elif cell_type == 'compute':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
-            expected = ['info_cache', 'security_groups', 'system_metadata',
-                        'flavor', 'new_flavor', 'old_flavor']
-            new_ref_obj = objects.Instance._from_db_object(self.context,
-                          objects.Instance(), new_ref, expected_attrs=expected)
-            instance_ref_p = base.obj_to_primitive(new_ref_obj)
-            cells_api_mock.instance_update_at_top(self.context, instance_ref_p)
+            cells_api_mock.instance_update_at_top(self.context,
+                                                  mox.IsA(instance.Instance))
         notifications.send_update(self.context, mox.IgnoreArg(),
                                   mox.IgnoreArg())
 
@@ -405,7 +392,7 @@ class _TestInstanceObject(object):
                                 use_slave=False
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
-                self.context, fake_uuid, expected_updates, update_cells=False,
+                self.context, fake_uuid, expected_updates,
                 columns_to_join=['info_cache', 'security_groups',
                                  'system_metadata', 'extra', 'extra.flavor']
                 ).AndReturn((old_ref, new_ref))
@@ -432,6 +419,17 @@ class _TestInstanceObject(object):
             inst.pci_requests = None
             inst.save()
             self.assertTrue(save_mock.called)
+
+    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch.object(objects.Instance, '_from_db_object')
+    def test_save_skip_scheduled_at(self, mock_fdo, mock_update):
+        mock_update.return_value = None, None
+        inst = instance.Instance(context=self.context, id=123)
+        inst.uuid = 'foo'
+        inst.scheduled_at = None
+        inst.save()
+        self.assertNotIn('scheduled_at',
+                         mock_update.call_args_list[0][0][2])
 
     @mock.patch('nova.db.instance_update_and_get_original')
     @mock.patch.object(objects.Instance, '_from_db_object')
@@ -465,8 +463,19 @@ class _TestInstanceObject(object):
             context=self.context, id=123, uuid='fake-uuid')
         inst.numa_topology = fake_obj_numa_topology
         inst.save()
+
+        # NOTE(sdague): the json representation of nova object for
+        # NUMA isn't stable from a string comparison
+        # perspective. There are sets which get converted to lists,
+        # and based on platform differences may show up in different
+        # orders. So we can't have mock do the comparison. Instead
+        # manually compare the final parameter using our json equality
+        # operator which does the right thing here.
         mock_extra_update.assert_called_once_with(
-            self.context, inst.uuid, {'numa_topology': jsonified})
+            self.context, inst.uuid, mock.ANY)
+        called_arg = mock_extra_update.call_args_list[0][0][2]['numa_topology']
+        self.assertJsonEqual(called_arg, jsonified)
+
         mock_extra_update.reset_mock()
         inst.numa_topology = None
         inst.save()
@@ -483,7 +492,7 @@ class _TestInstanceObject(object):
         actual_args = mock_update.call_args
         self.assertEqual(self.context, actual_args[0][0])
         self.assertEqual(inst.uuid, actual_args[0][1])
-        self.assertEqual(actual_args[0][2].keys(), ['vcpu_model'])
+        self.assertEqual(list(actual_args[0][2].keys()), ['vcpu_model'])
         self.assertJsonEqual(jsonutils.dumps(
                 test_vcpu_model.fake_vcpumodel.obj_to_primitive()),
                              actual_args[0][2]['vcpu_model'])
@@ -492,6 +501,84 @@ class _TestInstanceObject(object):
         inst.save()
         mock_update.assert_called_once_with(
             self.context, inst.uuid, {'vcpu_model': None})
+
+    def test_save_flavor_skips_unchanged_flavors(self):
+        inst = objects.Instance(context=self.context,
+                                flavor=objects.Flavor())
+        inst.obj_reset_changes()
+        with mock.patch('nova.db.instance_extra_update_by_uuid') as mock_upd:
+            inst.save()
+            self.assertFalse(mock_upd.called)
+
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    def _test_skip_cells_sync_helper(self, mock_db_update, mock_update_at_top,
+            mock_update_from_api, cell_type):
+        self.flags(enable=True, cell_type=cell_type, group='cells')
+        inst = fake_instance.fake_instance_obj(self.context, cell_name='fake')
+        inst.vm_state = 'foo'
+        inst.task_state = 'bar'
+        inst.cell_name = 'foo!bar@baz'
+
+        old_ref = dict(base.obj_to_primitive(inst), vm_state='old',
+                task_state='old')
+        new_ref = dict(old_ref, vm_state='foo', task_state='bar')
+        newer_ref = dict(new_ref, vm_state='bar', task_state='foo')
+        mock_db_update.side_effect = [(old_ref, new_ref), (new_ref, newer_ref)]
+
+        with inst.skip_cells_sync():
+            inst.save()
+
+        mock_update_at_top.assert_has_calls([])
+        mock_update_from_api.assert_has_calls([])
+
+        inst.vm_state = 'bar'
+        inst.task_state = 'foo'
+
+        def fake_update_from_api(context, instance, expected_vm_state,
+                expected_task_state, admin_state_reset):
+            self.assertEqual('foo!bar@baz', instance.cell_name)
+
+        # This is re-mocked so that cell_name can be checked above.  Since
+        # instance objects have no equality testing assert_called_once_with
+        # doesn't work.
+        with mock.patch.object(cells_rpcapi.CellsAPI,
+                'instance_update_from_api',
+                side_effect=fake_update_from_api) as fake_update_from_api:
+            inst.save()
+
+        self.assertEqual('foo!bar@baz', inst.cell_name)
+        if cell_type == 'compute':
+            mock_update_at_top.assert_called_once_with(self.context, mock.ANY)
+            # Compare primitives since we can't check instance object equality
+            expected_inst_p = base.obj_to_primitive(inst)
+            actual_inst = mock_update_at_top.call_args[0][1]
+            actual_inst_p = base.obj_to_primitive(actual_inst)
+            self.assertEqual(expected_inst_p, actual_inst_p)
+            self.assertFalse(fake_update_from_api.called)
+        elif cell_type == 'api':
+            self.assertFalse(mock_update_at_top.called)
+            fake_update_from_api.assert_called_once_with(self.context,
+                    mock.ANY, None, None, False)
+
+        expected_calls = [
+                mock.call(self.context, inst.uuid,
+                    {'vm_state': 'foo', 'task_state': 'bar',
+                     'cell_name': 'foo!bar@baz'},
+                    columns_to_join=['system_metadata', 'extra',
+                        'extra.flavor']),
+                mock.call(self.context, inst.uuid,
+                    {'vm_state': 'bar', 'task_state': 'foo'},
+                    columns_to_join=['system_metadata',
+                        'extra', 'extra.flavor'])]
+        mock_db_update.assert_has_calls(expected_calls)
+
+    def test_skip_cells_api(self):
+        self._test_skip_cells_sync_helper(cell_type='api')
+
+    def test_skip_cells_compute(self):
+        self._test_skip_cells_sync_helper(cell_type='compute')
 
     def test_get_deleted(self):
         fake_inst = dict(self.fake_instance, id=123, deleted=123)
@@ -654,8 +741,8 @@ class _TestInstanceObject(object):
              'vendor_id': 'v1',
              'numa_node': 0,
              'product_id': 'p1',
-             'dev_type': 't',
-             'status': 'allocated',
+             'dev_type': fields.PciDeviceType.STANDARD,
+             'status': fields.PciDeviceStatus.ALLOCATED,
              'dev_id': 'i',
              'label': 'l',
              'instance_uuid': fake_uuid,
@@ -672,8 +759,8 @@ class _TestInstanceObject(object):
              'vendor_id': 'v',
              'numa_node': 1,
              'product_id': 'p',
-             'dev_type': 't',
-             'status': 'allocated',
+             'dev_type': fields.PciDeviceType.STANDARD,
+             'status': fields.PciDeviceStatus.ALLOCATED,
              'dev_id': 'i',
              'label': 'l',
              'instance_uuid': fake_uuid,
@@ -709,7 +796,6 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
                                              expected_attrs=['fault'])
         self.assertEqual(fake_faults[0], dict(inst.fault.items()))
-        self.assertRemotes()
 
     @mock.patch('nova.objects.EC2Ids.get_by_instance')
     @mock.patch('nova.db.instance_get_by_uuid')
@@ -725,7 +811,6 @@ class _TestInstanceObject(object):
         mock_ec2.assert_called_once_with(self.context, mock.ANY)
 
         self.assertEqual(fake_ec2_ids.instance_id, inst.ec2_ids.instance_id)
-        self.assertRemotes()
 
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
@@ -743,6 +828,22 @@ class _TestInstanceObject(object):
         self.assertEqual(set([which]), inst.obj_what_changed())
         inst.obj_reset_changes()
         self.assertEqual(set(), inst.obj_what_changed())
+
+    def test_create_skip_scheduled_at(self):
+        self.mox.StubOutWithMock(db, 'instance_create')
+        vals = {'host': 'foo-host',
+                'memory_mb': 128,
+                'system_metadata': {'foo': 'bar'},
+                'extra': {}}
+        fake_inst = fake_instance.fake_db_instance(**vals)
+        db.instance_create(self.context, vals).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance(context=self.context,
+                                 host='foo-host', memory_mb=128,
+                                 scheduled_at=None,
+                                 system_metadata={'foo': 'bar'})
+        inst.create()
+        self.assertEqual(inst.host, 'foo-host')
 
     def test_metadata_change_tracking(self):
         self._test_metadata_change_tracking('metadata')
@@ -815,8 +916,7 @@ class _TestInstanceObject(object):
                                  project_id=self.context.project_id,
                                  host='foo-host')
         inst.create()
-        self.assertRaises(exception.ObjectActionError, inst.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, inst.create)
 
     def test_create_with_special_things(self):
         self.mox.StubOutWithMock(db, 'instance_create')
@@ -878,6 +978,28 @@ class _TestInstanceObject(object):
         self.assertRaises(exception.ObjectActionError,
                           inst.destroy)
 
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
+    @mock.patch.object(db, 'instance_destroy')
+    def test_destroy_cell_sync_to_top(self, mock_destroy, mock_destroy_at_top):
+        self.flags(enable=True, cell_type='compute', group='cells')
+        fake_inst = fake_instance.fake_db_instance(deleted=True)
+        mock_destroy.return_value = fake_inst
+        inst = instance.Instance(context=self.context, id=1, uuid='fake-uuid')
+        inst.destroy()
+        mock_destroy_at_top.assert_called_once_with(self.context, mock.ANY)
+        actual_inst = mock_destroy_at_top.call_args[0][1]
+        self.assertIsInstance(actual_inst, objects.Instance)
+
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
+    @mock.patch.object(db, 'instance_destroy')
+    def test_destroy_no_cell_sync_to_top(self, mock_destroy,
+                                         mock_destroy_at_top):
+        fake_inst = fake_instance.fake_db_instance(deleted=True)
+        mock_destroy.return_value = fake_inst
+        inst = instance.Instance(context=self.context, id=1, uuid='fake-uuid')
+        inst.destroy()
+        self.assertFalse(mock_destroy_at_top.called)
+
     def test_name_does_not_trigger_lazy_loads(self):
         values = {'user_id': self.context.user_id,
                   'project_id': self.context.project_id,
@@ -915,9 +1037,9 @@ class _TestInstanceObject(object):
         expected = {}
         for key in unicode_attributes:
             inst[key] = u'\u2603'
-            expected[key] = '?'
+            expected[key] = b'?'
         primitive = inst.obj_to_primitive(target_version='1.6')
-        self.assertEqual(expected, primitive['nova_object.data'])
+        self.assertJsonEqual(expected, primitive['nova_object.data'])
         self.assertEqual('1.6', primitive['nova_object.version'])
 
     def test_compat_pci_devices(self):
@@ -1087,90 +1209,6 @@ class _TestInstanceObject(object):
             self.context, uuid, expected_attrs=['pci_requests'])
         self.assertTrue(inst.obj_attr_is_set('pci_requests'))
 
-    def test_migrate_flavor(self):
-        flavor = flavors.get_default_flavor()
-        flavor.extra_specs = {'speed': '88mph',
-                              'hw:numa_cpus.1': '1'}
-        flavor.save()
-        flavor.extra_specs['hw:numa_cpus.1'] = 123
-        old_flavor = flavors.get_default_flavor()
-        values = {'project_id': self.context.project_id,
-                  'system_metadata': {}}
-        flavors.save_flavor_info(values['system_metadata'], flavor)
-        flavors.save_flavor_info(values['system_metadata'], old_flavor, 'old_')
-        db_inst = db.instance_create(self.context, values)
-        inst = objects.Instance.get_by_uuid(self.context, db_inst['uuid'],
-                                            expected_attrs=['flavor'])
-
-        # The system_metadata flavor should be gone
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-
-        # The flavors should all be set, and match what we expect
-        self.assertEqual(flavor['flavorid'], inst.flavor.flavorid)
-        self.assertEqual(old_flavor['flavorid'], inst.old_flavor.flavorid)
-        self.assertTrue(inst.obj_attr_is_set('new_flavor'))
-        self.assertIsNone(inst.new_flavor)
-
-        # inst.flavor should have merged extra_specs, with its overridden
-        # value for hw:numa_cpus.1
-        self.assertEqual('88mph', inst.flavor.extra_specs['speed'])
-        self.assertEqual('123', inst.flavor.extra_specs['hw:numa_cpus.1'])
-
-        # inst.old_flavor did not have an overridden version
-        self.assertEqual('88mph', inst.old_flavor.extra_specs['speed'])
-        self.assertEqual('1', inst.old_flavor.extra_specs['hw:numa_cpus.1'])
-
-    def test_migrate_flavor_save_load(self):
-        flavor = flavors.get_default_flavor()
-        values = {'project_id': self.context.project_id,
-                  'system_metadata': {}}
-        flavors.save_flavor_info(values['system_metadata'], flavor)
-        db_inst = db.instance_create(self.context, values)
-        inst = objects.Instance.get_by_uuid(self.context, db_inst['uuid'],
-                                            expected_attrs=['flavor'])
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        self.assertTrue(inst.obj_attr_is_set('flavor'))
-        inst.display_name = 'foo'
-        inst.save()
-        inst = objects.Instance.get_by_uuid(self.context, db_inst['uuid'],
-                                            expected_attrs=['flavor'])
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        self.assertTrue(inst.obj_attr_is_set('flavor'))
-        extra = db.instance_extra_get_by_instance_uuid(self.context,
-                                                       db_inst['uuid'],
-                                                       columns=['flavor'])
-        self.assertIsNotNone(extra['flavor'])
-
-    def test_migrate_flavor_on_save_when_not_loaded_on_get(self):
-        flavor = flavors.get_default_flavor()
-        values = {'project_id': self.context.project_id,
-                  'system_metadata': {}}
-        flavors.save_flavor_info(values['system_metadata'], flavor)
-        db_inst = db.instance_create(self.context, values)
-        inst = objects.Instance.get_by_uuid(self.context, db_inst['uuid'])
-        self.assertFalse(inst.obj_attr_is_set('system_metadata'))
-        self.assertEqual(flavor['flavorid'], inst.get_flavor().flavorid)
-        self.assertTrue(inst.obj_attr_is_set('system_metadata'))
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        inst.save()
-        inst = objects.Instance.get_by_uuid(self.context, inst.uuid,
-                                            expected_attrs=['system_metadata'])
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        extra = db.instance_extra_get_by_instance_uuid(self.context,
-                                                       db_inst['uuid'],
-                                                       columns=['flavor'])
-        self.assertIsNotNone(extra['flavor'])
-
-    def test_lazy_load_flavor_from_existing_sysmeta(self):
-        flavor = flavors.get_default_flavor()
-        # NOTE(danms): Don't set a context to prove we don't require one
-        # in the case where we're loading purely from sysmeta
-        inst = objects.Instance()
-        inst.system_metadata = flavors.save_flavor_info({}, flavor)
-        self.assertEqual(flavor.flavorid, inst.flavor.flavorid)
-        self.assertTrue(inst.obj_attr_is_set('flavor'))
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-
     def test_backport_flavor(self):
         flavor = flavors.get_default_flavor()
         inst = objects.Instance(context=self.context, flavor=flavor,
@@ -1181,32 +1219,31 @@ class _TestInstanceObject(object):
         self.assertIn('instance_type_id',
                       primitive['nova_object.data']['system_metadata'])
 
-    def test_migrate_flavor_older_instance(self):
-        flavor = flavors.get_default_flavor()
-        flavorinfo = jsonutils.dumps({'cur': flavor.obj_to_primitive(),
-                                      'old': None, 'new': None})
-        db_inst = {'extra': {'flavor': flavorinfo}}
-        inst = objects.Instance(system_metadata={})
-        inst.VERSION = '1.17'
-        inst._maybe_migrate_flavor(db_inst, ['flavor', 'system_metadata'])
-        self.assertIn('instance_type_id', inst.system_metadata)
-
-    def test_migrate_flavor_instance_no_extra(self):
-        flavor = flavors.get_default_flavor()
-        db_inst = {'extra': None}
-        inst = objects.Instance(
-                system_metadata=flavors.save_flavor_info({}, flavor))
-        result = inst._maybe_migrate_flavor(db_inst,
-                                            ['flavor', 'system_metadata'])
-        self.assertTrue(result, 'Flavor not migrated')
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        self.assertTrue(inst.obj_attr_is_set('flavor'))
-        self.assertEqual(flavor.flavorid, inst.flavor.flavorid)
-
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
-    pass
+    def test_save_objectfield_missing_instance_row(self):
+        # NOTE(danms): Do this here and not in the remote test because
+        # we're mocking out obj_attr_is_set() without the thing actually
+        # being set, which confuses the heck out of the serialization
+        # stuff.
+        error = db_exc.DBReferenceError('table', 'constraint', 'key',
+                                        'key_table')
+        instance = fake_instance.fake_instance_obj(self.context)
+        fields_with_save_methods = [field for field in instance.fields
+                                    if hasattr(instance, '_save_%s' % field)]
+        for field in fields_with_save_methods:
+            @mock.patch.object(instance, '_save_%s' % field)
+            @mock.patch.object(instance, 'obj_attr_is_set')
+            def _test(mock_is_set, mock_save_field):
+                mock_is_set.return_value = True
+                mock_save_field.side_effect = error
+                instance.obj_reset_changes(fields=[field])
+                instance._changed_fields.add(field)
+                self.assertRaises(exception.InstanceNotFound,
+                                  instance.save)
+                instance.obj_reset_changes(fields=[field])
+            _test()
 
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
@@ -1223,6 +1260,8 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
 
         class OldInstance(objects.Instance):
             VERSION = '1.17'
+
+        base.NovaObjectRegistry.register(OldInstance)
 
         inst = OldInstance.get_by_uuid(self.context, inst.uuid)
         self.assertFalse(inst.obj_attr_is_set('system_metadata'))
@@ -1242,6 +1281,8 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
         class OldInstance(objects.Instance):
             VERSION = '1.17'
 
+        base.NovaObjectRegistry.register(OldInstance)
+
         inst = OldInstance.get_by_uuid(self.context, inst.uuid,
                                        expected_attrs=['system_metadata'])
         self.assertTrue(inst.obj_attr_is_set('system_metadata'))
@@ -1251,24 +1292,24 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
 
 class _TestInstanceListObject(object):
     def fake_instance(self, id, updates=None):
-        fake_instance = fakes.stub_instance(id=2,
-                                            access_ipv4='1.2.3.4',
-                                            access_ipv6='::1')
-        fake_instance['scheduled_at'] = None
-        fake_instance['terminated_at'] = None
-        fake_instance['deleted_at'] = None
-        fake_instance['created_at'] = None
-        fake_instance['updated_at'] = None
-        fake_instance['launched_at'] = (
-            fake_instance['launched_at'].replace(
-                tzinfo=iso8601.iso8601.Utc(), microsecond=0))
-        fake_instance['info_cache'] = {'network_info': '[]',
-                                       'instance_uuid': fake_instance['uuid']}
-        fake_instance['security_groups'] = []
-        fake_instance['deleted'] = 0
+        db_inst = fake_instance.fake_db_instance(id=2,
+                                                 access_ip_v4='1.2.3.4',
+                                                 access_ip_v6='::1')
+        db_inst['terminated_at'] = None
+        db_inst['deleted_at'] = None
+        db_inst['created_at'] = None
+        db_inst['updated_at'] = None
+        db_inst['launched_at'] = datetime.datetime(1955, 11, 12,
+                                                   22, 4, 0)
+        db_inst['security_groups'] = []
+        db_inst['deleted'] = 0
+
+        db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
+                                     instance_uuid=db_inst['uuid'])
+
         if updates:
-            fake_instance.update(updates)
-        return fake_instance
+            db_inst.update(updates)
+        return db_inst
 
     def test_get_all_by_filters(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
@@ -1285,7 +1326,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_all_by_filters_sorted(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
@@ -1304,7 +1344,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     @mock.patch.object(db, 'instance_get_all_by_filters_sort')
     @mock.patch.object(db, 'instance_get_all_by_filters')
@@ -1358,7 +1397,6 @@ class _TestInstanceListObject(object):
         self.assertEqual(1, len(inst_list))
         self.assertIsInstance(inst_list.objects[0], instance.Instance)
         self.assertEqual(inst_list.objects[0].uuid, fakes[1]['uuid'])
-        self.assertRemotes()
 
     def test_get_by_host(self):
         fakes = [self.fake_instance(1),
@@ -1374,7 +1412,6 @@ class _TestInstanceListObject(object):
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
             self.assertEqual(inst_list.objects[i]._context, self.context)
         self.assertEqual(inst_list.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_get_by_host_and_node(self):
         fakes = [self.fake_instance(1),
@@ -1389,7 +1426,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_by_host_and_not_type(self):
         fakes = [self.fake_instance(1),
@@ -1404,7 +1440,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     @mock.patch('nova.objects.instance._expected_cols')
     @mock.patch('nova.db.instance_get_all')
@@ -1419,7 +1454,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_hung_in_rebooting(self):
         fakes = [self.fake_instance(1),
@@ -1434,7 +1468,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_active_by_window_joined(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
@@ -1460,7 +1493,6 @@ class _TestInstanceListObject(object):
         for fake, obj in zip(fakes, inst_list.objects):
             self.assertIsInstance(obj, instance.Instance)
             self.assertEqual(obj.uuid, fake['uuid'])
-        self.assertRemotes()
 
     def test_with_fault(self):
         fake_insts = [
@@ -1483,7 +1515,7 @@ class _TestInstanceListObject(object):
                                                       use_slave=False)
         self.assertEqual(2, len(instances))
         self.assertEqual(fake_faults['fake-uuid'][0],
-                         dict(instances[0].fault.iteritems()))
+                         dict(instances[0].fault))
         self.assertIsNone(instances[1].fault)
 
     def test_fill_faults(self):
@@ -1516,7 +1548,7 @@ class _TestInstanceListObject(object):
         inst_list._context = self.context
         inst_list.objects = insts
         faulty = inst_list.fill_faults()
-        self.assertEqual(faulty, ['uuid1'])
+        self.assertEqual(list(faulty), ['uuid1'])
         self.assertEqual(inst_list[0].fault.message,
                          db_faults['uuid1'][0]['message'])
         self.assertIsNone(inst_list[1].fault)
@@ -1564,21 +1596,3 @@ class TestInstanceObjectMisc(test.TestCase):
         self.assertEqual(['metadata', 'extra', 'extra.numa_topology'],
                          instance._expected_cols(['metadata',
                                                   'numa_topology']))
-
-    def test_compat_instance(self):
-        inst = objects.Instance(id=123)
-        inst.flavor = flavors.get_default_flavor()
-        inst.old_flavor = flavors.get_default_flavor()
-        inst.new_flavor = None
-        db_inst = instance.compat_instance(inst)
-        self.assertEqual(inst.id, db_inst['id'])
-        self.assertEqual(inst.flavor.flavorid,
-            db_inst['system_metadata']['instance_type_flavorid'])
-        self.assertEqual(inst.old_flavor.flavorid,
-            db_inst['system_metadata']['old_instance_type_flavorid'])
-        self.assertNotIn('new_instance_type_id',
-            db_inst['system_metadata'])
-
-    def test_compat_instance_noninstance(self):
-        self.assertEqual(mock.sentinel.noninstance,
-                         instance.compat_instance(mock.sentinel.noninstance))

@@ -27,7 +27,3 @@ class Driver(object):
     def is_up(self, member):
         """Check whether the given member is up."""
         raise NotImplementedError()
-
-    def get_all(self, group_id):
-        """Returns ALL members of the given group."""
-        raise NotImplementedError()

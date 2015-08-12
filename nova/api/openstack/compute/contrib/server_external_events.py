@@ -55,6 +55,11 @@ class ServerExternalEventsController(wsgi.Controller):
             client_event = dict(_event)
             event = objects.InstanceExternalEvent(context)
 
+            status = client_event.get('status', 'completed')
+            if status not in external_event_obj.EVENT_STATUSES:
+                raise webob.exc.HTTPBadRequest(
+                    _('Invalid event status `%s\'') % status)
+
             try:
                 event.instance_uuid = client_event.pop('server_uuid')
                 event.name = client_event.pop('name')
@@ -69,10 +74,6 @@ class ServerExternalEventsController(wsgi.Controller):
                        ', '.join(client_event.keys()))
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-            if event.status not in external_event_obj.EVENT_STATUSES:
-                raise webob.exc.HTTPBadRequest(
-                    _('Invalid event status `%s\'') % event.status)
-
             instance = instances.get(event.instance_uuid)
             if not instance:
                 try:
@@ -82,7 +83,7 @@ class ServerExternalEventsController(wsgi.Controller):
                 except exception.InstanceNotFound:
                     LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
                               'instance %(instance_uuid)s',
-                              dict(event.iteritems()))
+                              dict(event))
                     _event['status'] = 'failed'
                     _event['code'] = 404
                     result = 207
@@ -96,7 +97,7 @@ class ServerExternalEventsController(wsgi.Controller):
                     accepted_instances.add(instance)
                     LOG.info(_LI('Creating event %(name)s:%(tag)s for '
                                  'instance %(instance_uuid)s'),
-                              dict(event.iteritems()))
+                              dict(event))
                     # NOTE: as the event is processed asynchronously verify
                     # whether 202 is a more suitable response code than 200
                     _event['status'] = 'completed'

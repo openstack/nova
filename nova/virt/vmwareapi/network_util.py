@@ -150,7 +150,7 @@ def check_if_vlan_interface_exists(session, vlan_interface, cluster=None):
 
 
 def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
-    """Get the vlan id and vswicth associated with the port group."""
+    """Get the vlan id and vswitch associated with the port group."""
     host_mor = vm_util.get_host_ref(session, cluster)
     port_grps_on_host_ret = session._call_method(vim_util,
                 "get_dynamic_property", host_mor,
@@ -165,6 +165,7 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
         if p_gp.spec.name == pg_name:
             p_grp_vswitch_name = p_gp.vswitch.split("-")[-1]
             return p_gp.spec.vlanId, p_grp_vswitch_name
+    return None, None
 
 
 def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):

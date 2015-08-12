@@ -42,6 +42,7 @@ from nova.i18n import _LW
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.image import model as imgmodel
 from nova.virt import images
 
 
@@ -172,15 +173,28 @@ def get_disk_size(path):
     return images.qemu_img_info(path).virtual_size
 
 
-def extend(image, size, use_cow=False):
-    """Increase image to size."""
-    if not can_resize_image(image, size):
+def extend(image, size):
+    """Increase image to size.
+
+    :param image: instance of nova.virt.image.model.Image
+    :param size: image size in bytes
+    """
+
+    # Currently can only resize FS in local images
+    if not isinstance(image, imgmodel.LocalImage):
         return
 
-    utils.execute('qemu-img', 'resize', image, size)
+    if not can_resize_image(image.path, size):
+        return
+
+    utils.execute('qemu-img', 'resize', image.path, size)
+
+    if (image.format != imgmodel.FORMAT_RAW and
+        not CONF.resize_fs_using_block_device):
+        return
 
     # if we can't access the filesystem, we can't do anything more
-    if not is_image_extendable(image, use_cow):
+    if not is_image_extendable(image):
         return
 
     def safe_resize2fs(dev, run_as_root=False, finally_call=lambda: None):
@@ -193,22 +207,24 @@ def extend(image, size, use_cow=False):
             finally_call()
 
     # NOTE(vish): attempts to resize filesystem
-    if use_cow:
-        if CONF.resize_fs_using_block_device:
-            # in case of non-raw disks we can't just resize the image, but
-            # rather the mounted device instead
-            mounter = mount.Mount.instance_for_format(
-                image, None, None, 'qcow2')
-            if mounter.get_dev():
-                safe_resize2fs(mounter.device,
-                               run_as_root=True,
-                               finally_call=mounter.unget_dev)
+    if image.format != imgmodel.FORMAT_RAW:
+        # in case of non-raw disks we can't just resize the image, but
+        # rather the mounted device instead
+        mounter = mount.Mount.instance_for_format(
+            image, None, None)
+        if mounter.get_dev():
+            safe_resize2fs(mounter.device,
+                           run_as_root=True,
+                           finally_call=mounter.unget_dev)
     else:
-        safe_resize2fs(image)
+        safe_resize2fs(image.path)
 
 
 def can_resize_image(image, size):
-    """Check whether we can resize the container image file."""
+    """Check whether we can resize the container image file.
+    :param image: path to local image file
+    :param size: the image size in bytes
+    """
     LOG.debug('Checking if we can resize image %(image)s. '
               'size=%(size)s', {'image': image, 'size': size})
 
@@ -221,16 +237,18 @@ def can_resize_image(image, size):
     return True
 
 
-def is_image_extendable(image, use_cow=False):
+def is_image_extendable(image):
     """Check whether we can extend the image."""
-    LOG.debug('Checking if we can extend filesystem inside %(image)s. '
-              'CoW=%(use_cow)s', {'image': image, 'use_cow': use_cow})
+    LOG.debug('Checking if we can extend filesystem inside %(image)s.',
+              {'image': image})
 
-    # Check the image is unpartitioned
-    if use_cow:
+    # For anything except a local raw file we must
+    # go via the VFS layer
+    if (not isinstance(image, imgmodel.LocalImage) or
+        image.format != imgmodel.FORMAT_RAW):
         fs = None
         try:
-            fs = vfs.VFS.instance_for_image(image, 'qcow2', None)
+            fs = vfs.VFS.instance_for_image(image, None)
             fs.setup(mount=False)
             if fs.get_image_fs() in SUPPORTED_FS_TO_EXTEND:
                 return True
@@ -251,7 +269,7 @@ def is_image_extendable(image, use_cow=False):
     else:
         # For raw, we can directly inspect the file system
         try:
-            utils.execute('e2label', image)
+            utils.execute('e2label', image.path)
         except processutils.ProcessExecutionError as e:
             LOG.debug('Unable to determine label for image %(image)s with '
                       'error %(error)s. Cannot resize.',
@@ -267,12 +285,18 @@ class _DiskImage(object):
 
     tmp_prefix = 'openstack-disk-mount-tmp'
 
-    def __init__(self, image, partition=None, use_cow=False, mount_dir=None):
+    def __init__(self, image, partition=None, mount_dir=None):
+        """Create a new _DiskImage object instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number within the image
+        :param mount_dir: the directory to mount the image on
+        """
+
         # These passed to each mounter
-        self.image = image
         self.partition = partition
         self.mount_dir = mount_dir
-        self.use_cow = use_cow
+        self.image = image
 
         # Internal
         self._mkdir = False
@@ -326,14 +350,10 @@ class _DiskImage(object):
             self.mount_dir = tempfile.mkdtemp(prefix=self.tmp_prefix)
             self._mkdir = True
 
-        imgfmt = "raw"
-        if self.use_cow:
-            imgfmt = "qcow2"
-
         mounter = mount.Mount.instance_for_format(self.image,
                                                   self.mount_dir,
-                                                  self.partition,
-                                                  imgfmt)
+                                                  self.partition)
+
         if mounter.do_mount():
             self._mounter = mounter
             return self._mounter.device
@@ -362,8 +382,17 @@ class _DiskImage(object):
 # Public module functions
 
 def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
-                files=None, partition=None, use_cow=False, mandatory=()):
+                files=None, partition=None, mandatory=()):
     """Inject the specified items into a disk image.
+
+    :param image: instance of nova.virt.image.model.Image
+    :param key: the SSH public key to inject
+    :param net: the network configuration to inject
+    :param metadata: the user metadata to inject
+    :param admin_password: the root password to set
+    :param files: the files to copy into the image
+    :param partition: the partition number to access
+    :param mandatory: the list of parameters which must not fail to inject
 
     If an item name is not specified in the MANDATORY iterable, then a warning
     is logged on failure to inject that item, rather than raising an exception.
@@ -378,14 +407,11 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
     """
     LOG.debug("Inject data image=%(image)s key=%(key)s net=%(net)s "
               "metadata=%(metadata)s admin_password=<SANITIZED> "
-              "files=%(files)s partition=%(partition)s use_cow=%(use_cow)s",
+              "files=%(files)s partition=%(partition)s",
               {'image': image, 'key': key, 'net': net, 'metadata': metadata,
-               'files': files, 'partition': partition, 'use_cow': use_cow})
-    fmt = "raw"
-    if use_cow:
-        fmt = "qcow2"
+               'files': files, 'partition': partition})
     try:
-        fs = vfs.VFS.instance_for_image(image, fmt, partition)
+        fs = vfs.VFS.instance_for_image(image, partition)
         fs.setup()
     except Exception as e:
         # If a mandatory item is passed to this function,
@@ -405,15 +431,18 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
         fs.teardown()
 
 
-def setup_container(image, container_dir, use_cow=False):
+def setup_container(image, container_dir):
     """Setup the LXC container.
+
+    :param image: instance of nova.virt.image.model.Image
+    :param container_dir: directory to mount the image at
 
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container.
 
     Returns path of image device which is mounted to the container directory.
     """
-    img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
+    img = _DiskImage(image=image, mount_dir=container_dir)
     dev = img.mount()
     if dev is None:
         LOG.error(_LE("Failed to mount container filesystem '%(image)s' "

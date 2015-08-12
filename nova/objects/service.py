@@ -27,6 +27,7 @@ LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Service(base.NovaPersistentObject, base.NovaObject,
               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -42,7 +43,10 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.10: Changes behaviour of loading compute_node
     # Version 1.11: Added get_by_host_and_binary
     # Version 1.12: ComputeNode version 1.11
-    VERSION = '1.12'
+    # Version 1.13: Added last_seen_up
+    # Version 1.14: Added forced_down
+    # Version 1.15: ComputeNode version 1.12
+    VERSION = '1.15'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -54,16 +58,22 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         'disabled_reason': fields.StringField(nullable=True),
         'availability_zone': fields.StringField(nullable=True),
         'compute_node': fields.ObjectField('ComputeNode'),
-        }
+        'last_seen_up': fields.DateTimeField(nullable=True),
+        'forced_down': fields.BooleanField(),
+    }
 
     obj_relationships = {
         'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
                          ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10'),
-                         ('1.12', '1.11')],
+                         ('1.12', '1.11'), ('1.15', '1.12')],
     }
 
     def obj_make_compatible(self, primitive, target_version):
         _target_version = utils.convert_version_to_tuple(target_version)
+        if _target_version < (1, 14) and 'forced_down' in primitive:
+            del primitive['forced_down']
+        if _target_version < (1, 13) and 'last_seen_up' in primitive:
+            del primitive['last_seen_up']
         if _target_version < (1, 10):
             target_compute_version = self.obj_calculate_child_version(
                 target_version, 'compute_node')
@@ -179,6 +189,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db.service_destroy(self._context, self.id)
 
 
+@base.NovaObjectRegistry.register
 class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2
@@ -192,24 +203,21 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.8: Service version 1.10
     # Version 1.9: Added get_by_binary() and Service version 1.11
     # Version 1.10: Service version 1.12
-    VERSION = '1.10'
+    # Version 1.11: Service version 1.13
+    # Version 1.12: Service version 1.14
+    # Version 1.13: Service version 1.15
+    VERSION = '1.13'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
         }
-    child_versions = {
-        '1.0': '1.2',
-        # NOTE(danms): Service was at 1.2 before we added this
-        '1.1': '1.3',
-        '1.2': '1.4',
-        '1.3': '1.5',
-        '1.4': '1.6',
-        '1.5': '1.7',
-        '1.6': '1.8',
-        '1.7': '1.9',
-        '1.8': '1.10',
-        '1.9': '1.11',
-        '1.10': '1.12',
+    # NOTE(danms): Service was at 1.2 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.2'), ('1.1', '1.3'), ('1.2', '1.4'),
+                    ('1.3', '1.5'), ('1.4', '1.6'), ('1.5', '1.7'),
+                    ('1.6', '1.8'), ('1.7', '1.9'), ('1.8', '1.10'),
+                    ('1.9', '1.11'), ('1.10', '1.12'), ('1.11', '1.13'),
+                    ('1.12', '1.14'), ('1.13', '1.15')],
         }
 
     @base.remotable_classmethod

@@ -40,6 +40,7 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
 
         # Up (equal)
         now_mock.return_value = fts_func(fake_now)
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time)
         service_ref['created_at'] = fts_func(fake_now - self.down_time)
 
@@ -47,32 +48,24 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         self.assertTrue(result)
 
         # Up
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time + 1)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
         service_ref['created_at'] = fts_func(fake_now - self.down_time + 1)
         result = self.servicegroup_api.service_is_up(service_ref)
         self.assertTrue(result)
 
         # Down
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time - 3)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time - 3)
         service_ref['created_at'] = fts_func(fake_now - self.down_time - 3)
         result = self.servicegroup_api.service_is_up(service_ref)
         self.assertFalse(result)
 
-    @mock.patch.object(objects.ServiceList, 'get_by_topic')
-    def test_get_all(self, ga_mock):
-        hosts = ['fake-host1', 'fake-host2', 'fake-host3']
-        service_refs = objects.ServiceList(objects=[
-            objects.Service(host=host, topic='compute') for host in hosts])
-        ga_mock.return_value = service_refs
-        with mock.patch.object(self.servicegroup_api._driver,
-                'is_up', side_effect=[
-                    None,
-                    True,  # fake host 2 is enabled, all others disabled
-                    None
-                    ]):
-            services = self.servicegroup_api.get_all('compute')
-        self.assertEqual(['fake-host2'], services)
-        ga_mock.assert_called_once_with(mock.ANY, 'compute')
+        # "last_seen_up" says down, "updated_at" says up.
+        # This can happen if we do a service disable/enable while it's down.
+        service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
+        result = self.servicegroup_api.service_is_up(service_ref)
+        self.assertFalse(result)
 
     def test_join(self):
         service = mock.MagicMock(report_interval=1)

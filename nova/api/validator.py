@@ -70,7 +70,7 @@ def validate_image_path(val):
     if val[0] == '/':
         return False
 
-    # make sure the image path if rfc3986 compliant
+    # make sure the image path is rfc3986 compliant
     # prepend '/' to make input validate
     if not validate_url_path('/' + val):
         return False
@@ -81,7 +81,7 @@ def validate_image_path(val):
 def validate_user_data(user_data):
     """Check if the user_data is encoded properly."""
     try:
-        user_data = base64.b64decode(user_data)
+        base64.b64decode(user_data)
     except TypeError:
         return False
     return True

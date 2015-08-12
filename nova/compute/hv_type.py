@@ -38,6 +38,7 @@ KVM = "kvm"
 LXC = "lxc"
 OPENVZ = "openvz"
 PARALLELS = "parallels"
+VIRTUOZZO = "vz"
 PHYP = "phyp"
 QEMU = "qemu"
 TEST = "test"
@@ -64,6 +65,7 @@ ALL = (
     TEST,
     UML,
     VBOX,
+    VIRTUOZZO,
     VMWARE,
     XEN,
     ZVM,
@@ -95,9 +97,6 @@ def canonicalize(name):
 
     if newname == "xapi":
         newname = XEN
-    elif newname == "powervm":
-        # TODO(mriedem): Remove the translation shim in the 2015.2 'L' release.
-        newname = PHYP
 
     if not is_valid(newname):
         raise exception.InvalidHypervisorVirtType(hv_type=name)

@@ -3,70 +3,57 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# Andre Campos Bezerra <andrecbezerra@gmail.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-05-02 06:18+0000\n"
-"PO-Revision-Date: 2015-05-02 01:00+0000\n"
+"POT-Creation-Date: 2015-08-05 06:20+0000\n"
+"PO-Revision-Date: 2015-07-23 20:46+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/nova/"
+"Language-Team: Portuguese (Brazil) (http://www.transifex.com/openstack/nova/"
 "language/pt_BR/)\n"
 "Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 1.3\n"
+"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #, python-format
-msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "Iniciando o nó %(topic)s (versão %(version)s)"
+msgid "%(action_str)s instance"
+msgstr "Instância %(action_str)s"
+
+#, python-format
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr "%(id)s (%(base_file)s): gerando soma de verificação"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s atendendo no %(host)s:%(port)s"
 
-msgid "Stopping WSGI server."
-msgstr "Parando o servidor WSGI."
-
-msgid "WSGI server has stopped."
-msgstr "O servidor WSGI foi interrompido."
+#, python-format
+msgid "%(url)s returned with HTTP %(status)d"
+msgstr "%(url)s retornado com HTTP %(status)d"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgid "Active base files: %s"
+msgstr "Arquivos base ativos: %s"
+
+#, python-format
+msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
-"Solicitação não autorizada para o controlador=%(controller)s e a ação="
-"%(action)s"
+"Incluindo o grupo de segurança %(security_group_id)s na porta %(port_id)s"
+
+msgid "Allocate address"
+msgstr "Alocar endereço"
 
 #, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Criar captura instantânea do volume %s"
+msgid "Associate address %(public_ip)s to instance %(instance_id)s"
+msgstr "Associar endereço %(public_ip)s à instância %(instance_id)s"
 
-#, python-format
-msgid "Create key pair %s"
-msgstr "Criar par de chaves %s"
-
-#, python-format
-msgid "Import key %s"
-msgstr "Importar chave %s"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Remover par de chaves %s"
-
-#, python-format
-msgid "Get console output for instance %s"
-msgstr "Obter saída do console para instância %s"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "Criar volume a partir da captura instantânea %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Criar volume de %s GB"
+msgid "Attach interface"
+msgstr "Anexar interface"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
@@ -74,225 +61,15 @@ msgstr ""
 "Conectar volume %(volume_id)s à instância %(instance_id)s em %(device)s"
 
 #, python-format
-msgid "Detach volume %s"
-msgstr "Desanexar volume %s"
-
-msgid "Allocate address"
-msgstr "Alocar endereço"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Liberar endereço %s"
-
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Associar endereço %(public_ip)s à instância %(instance_id)s"
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Desatribuir endereço %s"
-
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Reiniciar instância %r"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "Removendo o registro da imagem %s"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Imagem registrada %(image_location)s com o ID %(image_id)s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "Atualizando publicidade da imagem %s"
-
-msgid "Timestamp is invalid."
-msgstr "O Registro de Data e Hora é inválido."
-
-#, python-format
-msgid "%(url)s returned with HTTP %(status)d"
-msgstr "%(url)s retornado com HTTP %(status)d"
-
-#, python-format
-msgid "Fault thrown: %s"
-msgstr "Falha lançada: %s"
-
-#, python-format
-msgid "HTTP exception thrown: %s"
-msgstr "Exceção de HTTP lançada: %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Excluir captura instantânea com o id: %s"
-
-msgid "Attach interface"
-msgstr "Anexar interface"
-
-#, python-format
-msgid "Detach interface %s"
-msgstr "Remover interface %s"
-
-#, python-format
-msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "Colocando o host %(host_name)s em modo de manutenção %(mode)s."
-
-#, python-format
-msgid "Enabling host %s."
-msgstr "Ativando o host %s."
-
-#, python-format
-msgid "Disabling host %s."
-msgstr "Desativando o host %s."
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Excluir o volume com o ID: %s"
-
-#, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
 msgstr "Conectar volume %(volume_id)s à instância %(server_id)s em %(device)s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Criar captura instantânea a partir do volume %s"
-
-#, python-format
-msgid ""
-"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
-"%(since_str)s"
-msgstr ""
-"Forçando uma sincronização de instâncias, project_id=%(projid_str)s, "
-"updated_since=%(since_str)s"
-
-#, python-format
-msgid ""
-"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
-msgstr ""
-"Nenhuma célula disponível ao planejar. Nova tentativa em %(sleep_time)s "
-"segundo(s)"
-
-msgid "instance termination disabled"
-msgstr "rescisão de instância desativada"
-
-#, python-format
-msgid "Create Security Group %s"
-msgstr "Criar Grupo de Segurança %s"
-
-#, python-format
-msgid "Delete security group %s"
-msgstr "Excluir grupo de segurança %s"
-
-msgid "Claim successful"
-msgstr "Solicitação bem-sucedida"
-
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"Excluindo a instância uma vez que seu host (%(instance_host)s) não é igual "
-"ao nosso host (%(our_host)s)."
-
-msgid ""
-"Instance has been marked deleted already, removing it from the hypervisor."
-msgstr "A instância já foi marcada como deletada. removendo do hypervisor."
-
-msgid "Instance found in migrating state during startup. Resetting task_state"
-msgstr ""
-"Instância localizada ao migrar o estado durante a inicialização. "
-"Reconfigurando task_state"
-
-msgid "Rebooting instance after nova-compute restart."
-msgstr "Reinicializando instância após reinício de nova-compute."
-
-msgid "Starting instance..."
-msgstr "Iniciando a instância..."
-
-#, python-format
-msgid "%(action_str)s instance"
-msgstr "Instância %(action_str)s"
-
-msgid "Rebuilding instance"
-msgstr "Reconstruindo a instância"
-
-msgid "disk on shared storage, recreating using existing disk"
-msgstr "disco em armazenamento compartilhado; recriando usando disco existente"
-
-#, python-format
-msgid "bringing vm to original state: '%s'"
-msgstr "trazendo a vm para o estado original: '%s'"
-
-#, python-format
-msgid "Detaching from volume api: %s"
-msgstr "Removendo da API do volume: %s"
-
-msgid "Rebooting instance"
-msgstr "Reinicializando instância"
-
-msgid "instance snapshotting"
-msgstr "fazendo a captura instantânea da instância"
-
-msgid "Root password set"
-msgstr "Senha raiz configurada"
-
-msgid "Rescuing"
-msgstr "Resgatando"
-
-msgid "Unrescuing"
-msgstr "Cancelando o resgate"
-
-msgid "Migrating"
-msgstr "Migrando"
-
-msgid "Pausing"
-msgstr "Pausando"
-
-msgid "Unpausing"
-msgstr "Cancelando a pausa"
-
-msgid "Retrieving diagnostics"
-msgstr "Recuperando diagnósticos"
-
-msgid "Resuming"
-msgstr "Continuando"
-
-msgid "Get console output"
-msgstr "Obter saída de console"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "Anexando volume %(volume_id)s a %(mountpoint)s"
 
-#, python-format
-msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "Remover o volume %(volume_id)s do ponto de montagem %(mp)s"
-
-msgid "_post_live_migration() is started.."
-msgstr "_post_live_migration() foi iniciada.."
-
-msgid ""
-"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" This error can be safely ignored."
-msgstr ""
-"Você pode ver o erro \"libvirt: Erro de QEMU: Domínio não localizado: nenhum "
-"domínio com o nome correspondente.\" Esse erro pode ser seguramente ignorado."
-
-msgid "Post operation of migration started"
-msgstr "Pós-operação de migração iniciada"
-
-#, python-format
-msgid ""
-"Found %(migration_count)d unconfirmed migrations older than "
-"%(confirm_window)d seconds"
-msgstr ""
-"Localizadas %(migration_count)d migrações desconfiguradas mais antigas que "
-"%(confirm_window)d segundos"
+msgid "Attempted to unfilter instance which is not filtered"
+msgstr "Tentou cancelar a filtragem da instância que não foi filtrada"
 
 #, python-format
 msgid ""
@@ -302,33 +79,24 @@ msgstr ""
 "confirmando automaticamente a migração %(migration_id)s para a instância "
 "%(instance_uuid)s"
 
-#, python-format
-msgid "Error auto-confirming resize: %s. Will retry later."
-msgstr ""
-"Erro ao confirmar automaticamente o redimensionamento: %s. Tentará novamente "
-"mais tarde."
+msgid "Automatically hard rebooting"
+msgstr "Reinicializando a frio automaticamente"
+
+msgid "Beginning cold snapshot process"
+msgstr "Iniciando processo de captura instantânea a frio"
+
+msgid "Beginning live snapshot process"
+msgstr "Começando o processo de captura instantânea em tempo real"
 
 #, python-format
-msgid ""
-"Running instance usage audit for host %(host)s from %(begin_time)s to "
-"%(end_time)s. %(number_instances)s instances."
-msgstr ""
-"Executando auditoria de uso da instância para o host %(host)s de "
-"%(begin_time)s até %(end_time)s. %(number_instances)s instâncias."
+msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
+msgstr "Inicializando com o volume %(volume_id)s em %(mountpoint)s"
 
-msgid "Updating bandwidth usage cache"
-msgstr "Atualizando o cache de uso de largura da banda"
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "Chamada setup_basic_filtering em nwfilter"
 
-#, python-format
-msgid ""
-"During the sync_power process the instance has moved from host %(src)s to "
-"host %(dst)s"
-msgstr ""
-"Durante o processo sync_power, a instância foi movida do host %(src)s para o "
-"host %(dst)s"
-
-msgid "Reclaiming deleted instance"
-msgstr "Reclamando instância excluída"
+msgid "Claim successful"
+msgstr "Solicitação bem-sucedida"
 
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
@@ -339,168 +107,8 @@ msgid "Compute_service record updated for %(host)s:%(node)s"
 msgstr "Registro Compute_service atualizado para %(host)s:%(node)s"
 
 #, python-format
-msgid "Updating from migration %s"
-msgstr "Atualizando a partir da migração %s"
-
-#, python-format
-msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr ""
-"designar novamente o IP flutuante %(address)s a partir da instância "
-"%(instance_id)s"
-
-#, python-format
-msgid "Loading network driver '%s'"
-msgstr "Carregando driver de rede '%s'"
-
-#, python-format
-msgid "deleted %s"
-msgstr "excluído %s"
-
-#, python-format
-msgid "Adding security group %(security_group_id)s to port %(port_id)s"
-msgstr ""
-"Incluindo o grupo de segurança %(security_group_id)s na porta %(port_id)s"
-
-#, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "Backdoor de Eventlet escutando na porta %(port)s pelo processo %(pid)d"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "Ignorando tarefa periódica %(task)s porque seu intervalo é negativo"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "Ignorando tarefa periódica %(task)s porque ela está desativada"
-
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "%s capturadas, saindo"
-
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "Processo pai saiu inesperadamente, saindo"
-
-#, python-format
-msgid "Child caught %s, exiting"
-msgstr "Filho capturado %s, terminando"
-
-msgid "Forking too fast, sleeping"
-msgstr "Bifurcação muito rápida, suspendendo"
-
-#, python-format
-msgid "Started child %d"
-msgstr "Filho %d iniciado"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "Iniciando %d trabalhadores"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "%(pid)d filho eliminado pelo sinal %(sig)d"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "Filho %(pid)s encerrando com status %(code)d"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "%s capturado, parando filhos"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "Aguardando em %d filhos para sair"
-
-#, python-format
-msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr "Removendo o nó de cálculo inativo %(host)s:%(node)s do planejador"
-
-#, python-format
-msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "Inicializando com o volume %(volume_id)s em %(mountpoint)s"
-
-#, python-format
-msgid "Loading compute driver '%s'"
-msgstr "Carregando driver de cálculo '%s'"
-
-msgid "Attempted to unfilter instance which is not filtered"
-msgstr "Tentou cancelar a filtragem da instância que não foi filtrada"
-
-msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr "Falha na alocação de dispositivo. Tentar novamente em 2 segundos."
-
-#, python-format
-msgid "Loop mount error: %s"
-msgstr "Erro na montagem do loop: %s"
-
-#, python-format
-msgid "NBD mount error: %s"
-msgstr "erro de montagem NBD: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "O nome do iniciador ISCSI não pode ser localizado. Escolher o padrão"
-
-msgid "Spawning new instance"
-msgstr "Executando spawn de nova instância"
-
-#, python-format
-msgid "Creating config drive at %(path)s"
-msgstr "Criando unidade de configuração em %(path)s"
-
-msgid "During wait destroy, instance disappeared."
-msgstr "Durante a espera da destruição, a instância desapareceu."
-
-msgid "Instance destroyed successfully."
-msgstr "Instância destruída com êxito."
-
-msgid "Instance may be started again."
-msgstr "A instância pode ser iniciada novamente."
-
-msgid "Going to destroy instance again."
-msgstr "Destruindo a instância novamente."
-
-msgid "Beginning live snapshot process"
-msgstr "Começando o processo de captura instantânea em tempo real"
-
-msgid "Beginning cold snapshot process"
-msgstr "Iniciando processo de captura instantânea a frio"
-
-msgid "Snapshot extracted, beginning image upload"
-msgstr "Captura instantânea extraída, iniciando upload da imagem"
-
-msgid "Snapshot image upload complete"
-msgstr "Upload da imagem de captura instantânea concluído"
-
-msgid "Instance soft rebooted successfully."
-msgstr "Reinicialização virtual da instância bem-sucedida."
-
-msgid "Instance shutdown successfully."
-msgstr "A instância foi encerrada com êxito."
-
-msgid "Instance may have been rebooted during soft reboot, so return now."
-msgstr ""
-"A instância pode ter sido reinicializada durante a reinicialização virtual, "
-"portanto retorne agora."
-
-msgid "Instance rebooted successfully."
-msgstr "Instância reinicializada com êxito."
-
-msgid "Instance spawned successfully."
-msgstr "Feito spawn da instância com êxito."
-
-#, python-format
-msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr "dados: %(data)r, fpath: %(fpath)r"
-
-#, python-format
-msgid "Truncated console log returned, %d bytes ignored"
-msgstr "Log do console truncado retornado, %d bytes ignorados"
-
-msgid "Creating image"
-msgstr "Criando imagem"
-
-msgid "Using config drive"
-msgstr "Usando unidade de configuração"
+msgid "Corrupt base files: %s"
+msgstr "Arquivos base corrompidos: %s"
 
 #, python-format
 msgid ""
@@ -510,56 +118,154 @@ msgstr ""
 "Não foi possível localizar o domínio em libvirt para a instância %s. Não é "
 "possível obter estatísticas do bloco para o dispositivo"
 
-msgid "Instance running successfully."
-msgstr "Instância executando com êxito."
+#, python-format
+msgid "Create Security Group %s"
+msgstr "Criar Grupo de Segurança %s"
 
-msgid "Called setup_basic_filtering in nwfilter"
-msgstr "Chamada setup_basic_filtering em nwfilter"
+#, python-format
+msgid "Create key pair %s"
+msgstr "Criar par de chaves %s"
+
+#, python-format
+msgid "Create snapshot from volume %s"
+msgstr "Criar captura instantânea a partir do volume %s"
+
+#, python-format
+msgid "Create snapshot of volume %s"
+msgstr "Criar captura instantânea do volume %s"
+
+#, python-format
+msgid "Create volume from snapshot %s"
+msgstr "Criar volume a partir da captura instantânea %s"
+
+#, python-format
+msgid "Create volume of %s GB"
+msgstr "Criar volume de %s GB"
+
+#, python-format
+msgid "Creating config drive at %(path)s"
+msgstr "Criando unidade de configuração em %(path)s"
+
+msgid "Creating image"
+msgstr "Criando imagem"
+
+#, python-format
+msgid "De-registering image %s"
+msgstr "Removendo o registro da imagem %s"
+
+#, python-format
+msgid "Delete key pair %s"
+msgstr "Remover par de chaves %s"
+
+#, python-format
+msgid "Delete security group %s"
+msgstr "Excluir grupo de segurança %s"
+
+#, python-format
+msgid "Delete snapshot with id: %s"
+msgstr "Excluir captura instantânea com o id: %s"
+
+#, python-format
+msgid "Delete volume with id: %s"
+msgstr "Excluir o volume com o ID: %s"
+
+#, python-format
+msgid "Deleting orphan compute node %s"
+msgstr "Deletando nó de computação orfão %s"
+
+#, python-format
+msgid "Deletion of %s failed"
+msgstr "Exclusão de %s falhou."
+
+msgid "Destroyed the VM"
+msgstr "VM destruída"
+
+msgid "Destroying VM"
+msgstr "Destruindo VM"
+
+#, python-format
+msgid "Detach interface %s"
+msgstr "Remover interface %s"
+
+#, python-format
+msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
+msgstr "Remover o volume %(volume_id)s do ponto de montagem %(mp)s"
+
+#, python-format
+msgid "Detach volume %s"
+msgstr "Desanexar volume %s"
+
+#, python-format
+msgid "Detaching from volume api: %s"
+msgstr "Removendo da API do volume: %s"
+
+msgid "Device allocation failed. Will retry in 2 seconds."
+msgstr "Falha na alocação de dispositivo. Tentar novamente em 2 segundos."
+
+#, python-format
+msgid "Disabling host %s."
+msgstr "Desativando o host %s."
+
+#, python-format
+msgid "Disassociate address %s"
+msgstr "Desatribuir endereço %s"
+
+#, python-format
+msgid "Disconnecting stale VDI %s from compute domU"
+msgstr "Desconectando VDI antigo %s do domU de cálculo"
+
+#, python-format
+msgid ""
+"During the sync_power process the instance has moved from host %(src)s to "
+"host %(dst)s"
+msgstr ""
+"Durante o processo sync_power, a instância foi movida do host %(src)s para o "
+"host %(dst)s"
+
+msgid "During wait destroy, instance disappeared."
+msgstr "Durante a espera da destruição, a instância desapareceu."
+
+#, python-format
+msgid "Enabling host %s."
+msgstr "Ativando o host %s."
 
 msgid "Ensuring static filters"
 msgstr "Assegurando filtros estáticos"
 
 #, python-format
-msgid "Writing stored info to %s"
-msgstr "Gravando informações armazenadas em %s"
+msgid "Error auto-confirming resize: %s. Will retry later."
+msgstr ""
+"Erro ao confirmar automaticamente o redimensionamento: %s. Tentará novamente "
+"mais tarde."
+
+#, python-format
+msgid "Error in handshake: %s"
+msgstr "Erro no handshake: %s"
+
+#, python-format
+msgid "Failed to mount filesystem (expected for non-linux instances): %s"
+msgstr ""
+"Falha ao montar sistema de arquivos (esperado para instâncias não linux): %s"
+
+#, python-format
+msgid "Fault thrown: %s"
+msgstr "Falha lançada: %s"
+
+#, python-format
+msgid "Filter %s returned 0 hosts"
+msgstr "Filtro %s retornou 0 hosts"
+
+#, python-format
+msgid "Floating IP %s is not associated. Ignore."
+msgstr "IP Flutuante %s não está associado. Ignorando."
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
+"%(since_str)s"
 msgstr ""
-"imagem %(id)s em (%(base_file)s): verificação de imagem ignorada, nenhum "
-"hash armazenado"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): gerando soma de verificação"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): checking"
-msgstr "imagem %(id)s em (%(base_file)s): verificando"
-
-#, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
-"%(remote)d on other nodes sharing this instance storage"
-msgstr ""
-"imagem %(id)s em (%(base_file)s): em uso: neste nó %(local)d local, "
-"%(remote)d em outros nós que compartilham esse armazenamento de instância"
-
-#, python-format
-msgid "Active base files: %s"
-msgstr "Arquivos base ativos: %s"
-
-#, python-format
-msgid "Corrupt base files: %s"
-msgstr "Arquivos base corrompidos: %s"
-
-#, python-format
-msgid "Removable base files: %s"
-msgstr "Arquivos base removíveis: %s"
-
-msgid "Destroyed the VM"
-msgstr "VM destruída"
+"Forçando uma sincronização de instâncias, project_id=%(projid_str)s, "
+"updated_since=%(since_str)s"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
@@ -567,25 +273,34 @@ msgstr ""
 "Localizadas %(instance_count)d reinicializações interrompidas há mais de "
 "%(timeout)d segundos"
 
-msgid "Automatically hard rebooting"
-msgstr "Reinicializando a frio automaticamente"
-
+#, python-format
 msgid ""
-"XenServer tools installed in this image are capable of network injection.  "
-"Networking files will not bemanipulated"
+"Found %(migration_count)d unconfirmed migrations older than "
+"%(confirm_window)d seconds"
 msgstr ""
-"As ferramentas XenServer instaladas nesta imagem são capazes de injeção de "
-"rede. Os arquivos de rede não serão manipulados"
+"Localizadas %(migration_count)d migrações desconfiguradas mais antigas que "
+"%(confirm_window)d segundos"
 
-msgid ""
-"XenServer tools are present in this image but are not capable of network "
-"injection"
-msgstr ""
-"As ferramentas XenServer estão presentes nesta imagem, mas não são capazes "
-"de injeção de rede"
+msgid "Get console output"
+msgstr "Obter saída de console"
 
-msgid "XenServer tools are not installed in this image"
-msgstr "As ferramentas XenServer não estão instaladas nesta imagem"
+#, python-format
+msgid "Get console output for instance %s"
+msgstr "Obter saída do console para instância %s"
+
+msgid "Going to destroy instance again."
+msgstr "Destruindo a instância novamente."
+
+msgid "Got request to destroy instance"
+msgstr "Recebido requisição para destruir instância"
+
+#, python-format
+msgid "HTTP exception thrown: %s"
+msgstr "Exceção de HTTP lançada: %s"
+
+#, python-format
+msgid "Import key %s"
+msgstr "Importar chave %s"
 
 #, python-format
 msgid ""
@@ -596,27 +311,89 @@ msgstr ""
 "banco de dados: supondo que seja uma VM do trabalhador e ignorando a "
 "migração de ping para um novo ost"
 
-#, python-format
-msgid "VBD %s already detached"
-msgstr "VBD %s já removido"
+msgid "Instance already shutdown."
+msgstr "Instância já está desligada."
+
+msgid "Instance destroyed successfully."
+msgstr "Instância destruída com êxito."
+
+msgid "Instance disappeared during terminate"
+msgstr "Instância desapareceu durante exclusão"
+
+msgid "Instance found in migrating state during startup. Resetting task_state"
+msgstr ""
+"Instância localizada ao migrar o estado durante a inicialização. "
+"Reconfigurando task_state"
+
+msgid ""
+"Instance has been marked deleted already, removing it from the hypervisor."
+msgstr "A instância já foi marcada como deletada. removendo do hypervisor."
+
+msgid "Instance is already in deleting state, ignoring this request"
+msgstr "Instância já está sendo deletada, ignorando requisição"
+
+msgid "Instance is already powered off in the hypervisor when stop is called."
+msgstr ""
+"Instância já foi desligada no hypervisor quando a pausa foi requisitada."
+
+msgid "Instance is not found during confirmation"
+msgstr "Instância não foi encontrada durante confirmação"
+
+msgid "Instance may be started again."
+msgstr "A instância pode ser iniciada novamente."
+
+msgid "Instance may have been confirmed during delete"
+msgstr "Instância pode ter sido confirmada durante exclusão"
+
+msgid "Instance may have been rebooted during soft reboot, so return now."
+msgstr ""
+"A instância pode ter sido reinicializada durante a reinicialização virtual, "
+"portanto retorne agora."
+
+msgid "Instance rebooted successfully."
+msgstr "Instância reinicializada com êxito."
+
+msgid "Instance running successfully."
+msgstr "Instância executando com êxito."
+
+msgid "Instance shutdown successfully."
+msgstr "A instância foi encerrada com êxito."
+
+msgid "Instance soft rebooted successfully."
+msgstr "Reinicialização virtual da instância bem-sucedida."
+
+msgid "Instance spawned successfully."
+msgstr "Feito spawn da instância com êxito."
 
 #, python-format
-msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "Desconectando VDI antigo %s do domU de cálculo"
+msgid "Invalid request: %s"
+msgstr "Solicitação inválida: %s"
+
+#, python-format
+msgid "Loaded extensions: %s"
+msgstr "Extensões carregadas: %s"
+
+#, python-format
+msgid "Loading compute driver '%s'"
+msgstr "Carregando driver de cálculo '%s'"
+
+#, python-format
+msgid "Loading network driver '%s'"
+msgstr "Carregando driver de rede '%s'"
+
+#, python-format
+msgid "Loop mount error: %s"
+msgstr "Erro na montagem do loop: %s"
 
 msgid "Manipulating interface files directly"
 msgstr "Manipulando arquivos de interface diretamente"
 
+msgid "Migrating"
+msgstr "Migrando"
+
 #, python-format
-msgid "Failed to mount filesystem (expected for non-linux instances): %s"
-msgstr ""
-"Falha ao montar sistema de arquivos (esperado para instâncias não linux): %s"
-
-msgid "Starting halted instance found during reboot"
-msgstr "Iniciar instância parada localizado durante a reinicialização"
-
-msgid "Destroying VM"
-msgstr "Destruindo VM"
+msgid "Mounted volume: %s"
+msgstr "Volume montado: %s"
 
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
@@ -624,29 +401,256 @@ msgstr ""
 "Ponto de montagem %(mountpoint)s desanexada da instância %(instance_name)s"
 
 #, python-format
-msgid "Error in handshake: %s"
-msgstr "Erro no handshake: %s"
+msgid "NBD mount error: %s"
+msgstr "erro de montagem NBD: %s"
 
 #, python-format
-msgid "Invalid request: %s"
-msgstr "Solicitação inválida: %s"
+msgid ""
+"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
+msgstr ""
+"Nenhuma célula disponível ao planejar. Nova tentativa em %(sleep_time)s "
+"segundo(s)"
+
+msgid "Pausing"
+msgstr "Pausando"
+
+msgid "Post operation of migration started"
+msgstr "Pós-operação de migração iniciada"
 
 #, python-format
-msgid "Request: %s"
-msgstr "Solicitação: %s"
+msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
+msgstr "Colocando o host %(host_name)s em modo de manutenção %(mode)s."
 
 #, python-format
-msgid "Request made with missing token: %s"
-msgstr "Solicitação feita com token ausente: %s"
+msgid "Reboot instance %r"
+msgstr "Reiniciar instância %r"
+
+msgid "Rebooting instance"
+msgstr "Reinicializando instância"
+
+msgid "Rebooting instance after nova-compute restart."
+msgstr "Reinicializando instância após reinício de nova-compute."
+
+msgid "Rebuilding instance"
+msgstr "Reconstruindo a instância"
+
+msgid "Reclaiming deleted instance"
+msgstr "Reclamando instância excluída"
+
+#, python-format
+msgid "Registered image %(image_location)s with id %(image_id)s"
+msgstr "Imagem registrada %(image_location)s com o ID %(image_id)s"
+
+#, python-format
+msgid "Release address %s"
+msgstr "Liberar endereço %s"
+
+#, python-format
+msgid "Removable base files: %s"
+msgstr "Arquivos base removíveis: %s"
+
+#, python-format
+msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
+msgstr "Removendo o nó de cálculo inativo %(host)s:%(node)s do planejador"
 
 #, python-format
 msgid "Request made with invalid token: %s"
 msgstr "Solicitação feita com token inválido: %s"
 
 #, python-format
-msgid "Unexpected error: %s"
-msgstr "Erro inesperado: %s"
+msgid "Request made with missing token: %s"
+msgstr "Solicitação feita com token ausente: %s"
+
+#, python-format
+msgid "Request: %s"
+msgstr "Solicitação: %s"
+
+msgid "Rescuing"
+msgstr "Resgatando"
+
+msgid "Resuming"
+msgstr "Continuando"
+
+msgid "Retrieving diagnostics"
+msgstr "Recuperando diagnósticos"
+
+msgid "Root password set"
+msgstr "Senha raiz configurada"
+
+#, python-format
+msgid ""
+"Running instance usage audit for host %(host)s from %(begin_time)s to "
+"%(end_time)s. %(number_instances)s instances."
+msgstr ""
+"Executando auditoria de uso da instância para o host %(host)s de "
+"%(begin_time)s até %(end_time)s. %(number_instances)s instâncias."
+
+msgid "Snapshot extracted, beginning image upload"
+msgstr "Captura instantânea extraída, iniciando upload da imagem"
+
+msgid "Snapshot image upload complete"
+msgstr "Upload da imagem de captura instantânea concluído"
+
+msgid "Soft shutdown succeeded."
+msgstr "Desligamento suave feito com sucesso."
+
+msgid "Spawning new instance"
+msgstr "Executando spawn de nova instância"
+
+#, python-format
+msgid "Starting %(topic)s node (version %(version)s)"
+msgstr "Iniciando o nó %(topic)s (versão %(version)s)"
+
+msgid "Starting halted instance found during reboot"
+msgstr "Iniciar instância parada localizado durante a reinicialização"
+
+msgid "Starting instance..."
+msgstr "Iniciando a instância..."
 
 #, python-format
 msgid "Starting nova-xvpvncproxy node (version %s)"
 msgstr "Iniciando o nodo nova-xvpvncproxy (versão %s)"
+
+msgid "Stopping WSGI server."
+msgstr "Parando o servidor WSGI."
+
+msgid "The ISCSI initiator name can't be found. Choosing the default one"
+msgstr "O nome do iniciador ISCSI não pode ser localizado. Escolher o padrão"
+
+msgid "The imported VM was unregistered"
+msgstr "A VM importada não foi registrada"
+
+msgid "Timestamp is invalid."
+msgstr "O Registro de Data e Hora é inválido."
+
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr "Log do console truncado retornado, %d bytes ignorados"
+
+#, python-format
+msgid ""
+"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgstr ""
+"Solicitação não autorizada para o controlador=%(controller)s e a ação="
+"%(action)s"
+
+#, python-format
+msgid "Unexpected error: %s"
+msgstr "Erro inesperado: %s"
+
+msgid "Unpausing"
+msgstr "Cancelando a pausa"
+
+msgid "Unrescuing"
+msgstr "Cancelando o resgate"
+
+msgid "Updating bandwidth usage cache"
+msgstr "Atualizando o cache de uso de largura da banda"
+
+#, python-format
+msgid "Updating from migration %s"
+msgstr "Atualizando a partir da migração %s"
+
+#, python-format
+msgid "Updating image %s publicity"
+msgstr "Atualizando publicidade da imagem %s"
+
+msgid "Using config drive"
+msgstr "Usando unidade de configuração"
+
+msgid "V3 API has been disabled by configuration"
+msgstr "API V3 foi desabilitada por configuração"
+
+#, python-format
+msgid "VBD %s already detached"
+msgstr "VBD %s já removido"
+
+msgid "WSGI server has stopped."
+msgstr "O servidor WSGI foi interrompido."
+
+#, python-format
+msgid "Writing stored info to %s"
+msgstr "Gravando informações armazenadas em %s"
+
+msgid "XenServer tools are not installed in this image"
+msgstr "As ferramentas XenServer não estão instaladas nesta imagem"
+
+msgid ""
+"XenServer tools are present in this image but are not capable of network "
+"injection"
+msgstr ""
+"As ferramentas XenServer estão presentes nesta imagem, mas não são capazes "
+"de injeção de rede"
+
+msgid ""
+"XenServer tools installed in this image are capable of network injection.  "
+"Networking files will not bemanipulated"
+msgstr ""
+"As ferramentas XenServer instaladas nesta imagem são capazes de injeção de "
+"rede. Os arquivos de rede não serão manipulados"
+
+msgid ""
+"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
+"with matching name.\" This error can be safely ignored."
+msgstr ""
+"Você pode ver o erro \"libvirt: Erro de QEMU: Domínio não localizado: nenhum "
+"domínio com o nome correspondente.\" Esse erro pode ser seguramente ignorado."
+
+msgid "_post_live_migration() is started.."
+msgstr "_post_live_migration() foi iniciada.."
+
+#, python-format
+msgid "bringing vm to original state: '%s'"
+msgstr "trazendo a vm para o estado original: '%s'"
+
+#, python-format
+msgid "data: %(data)r, fpath: %(fpath)r"
+msgstr "dados: %(data)r, fpath: %(fpath)r"
+
+#, python-format
+msgid "deleted %s"
+msgstr "excluído %s"
+
+msgid "disk on shared storage, recreating using existing disk"
+msgstr "disco em armazenamento compartilhado; recriando usando disco existente"
+
+msgid "findmnt tool is not installed"
+msgstr "Ferramenta findmnt não está instalada."
+
+#, python-format
+msgid "image %(id)s at (%(base_file)s): checking"
+msgstr "imagem %(id)s em (%(base_file)s): verificando"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr ""
+"imagem %(id)s em (%(base_file)s): verificação de imagem ignorada, nenhum "
+"hash armazenado"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
+"%(remote)d on other nodes sharing this instance storage"
+msgstr ""
+"imagem %(id)s em (%(base_file)s): em uso: neste nó %(local)d local, "
+"%(remote)d em outros nós que compartilham esse armazenamento de instância"
+
+msgid "instance snapshotting"
+msgstr "fazendo a captura instantânea da instância"
+
+msgid "instance termination disabled"
+msgstr "rescisão de instância desativada"
+
+msgid "nova-conductor connection established successfully"
+msgstr "conexão com nova-conductor estabelecida com sucesso"
+
+#, python-format
+msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
+msgstr ""
+"designar novamente o IP flutuante %(address)s a partir da instância "
+"%(instance_id)s"
+
+#, python-format
+msgid "vol=%s"
+msgstr "vol=%s"

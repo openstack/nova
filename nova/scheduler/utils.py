@@ -27,10 +27,8 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova.i18n import _, _LE, _LW
-from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance as instance_obj
 from nova import rpc
 
 
@@ -64,10 +62,24 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
             instance_type = flavors.extract_flavor(instance)
 
     if isinstance(instance, objects.Instance):
-        instance = instance_obj.compat_instance(instance)
+        instance = obj_base.obj_to_primitive(instance)
+        # obj_to_primitive doesn't copy this enough, so be sure
+        # to detach our metadata blob because we modify it below.
+        instance['system_metadata'] = dict(instance.get('system_metadata', {}))
 
     if isinstance(instance_type, objects.Flavor):
         instance_type = obj_base.obj_to_primitive(instance_type)
+        # NOTE(danms): Replicate this old behavior because the
+        # scheduler RPC interface technically expects it to be
+        # there. Remove this when we bump the scheduler RPC API to
+        # v5.0
+        try:
+            flavors.save_flavor_info(instance.get('system_metadata', {}),
+                                     instance_type)
+        except KeyError:
+            # If the flavor isn't complete (which is legit with a
+            # flavor object, just don't put it in the request spec
+            pass
 
     request_spec = {
             'image': image or {},
@@ -92,19 +104,12 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
     LOG.warning(_LW('Setting instance to %s state.'), state,
                 instance_uuid=instance_uuid)
 
-    # update instance state and notify on the transition
-    # NOTE(hanlind): the send_update() call below is going to want to
-    # know about the flavor, so we need to join the appropriate things
-    # here and objectify the results.
-    (old_ref, new_ref) = db.instance_update_and_get_original(
-        context, instance_uuid, updates,
-        columns_to_join=['system_metadata'])
-    inst_obj = objects.Instance._from_db_object(
-        context, objects.Instance(), new_ref,
-        expected_attrs=['system_metadata'])
-    notifications.send_update(context, old_ref, inst_obj, service=service)
+    instance = objects.Instance(context=context, uuid=instance_uuid,
+                                **updates)
+    instance.obj_reset_changes(['uuid'])
+    instance.save()
     compute_utils.add_instance_fault_from_exc(context,
-            inst_obj, ex, sys.exc_info())
+            instance, ex, sys.exc_info())
 
     payload = dict(request_spec=request_spec,
                     instance_properties=properties,
@@ -169,7 +174,7 @@ def populate_retry(filter_properties, instance_uuid):
                % {'max_attempts': max_attempts,
                   'instance_uuid': instance_uuid,
                   'exc': exc})
-        raise exception.NoValidHost(reason=msg)
+        raise exception.MaxRetriesExceeded(reason=msg)
 
 
 def _log_compute_error(instance_uuid, retry):

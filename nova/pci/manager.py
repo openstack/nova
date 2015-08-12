@@ -18,11 +18,10 @@ import collections
 
 from oslo_log import log as logging
 
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
+from nova.objects import fields
 from nova.pci import device
 from nova.pci import stats
 from nova.virt import hardware
@@ -65,12 +64,12 @@ class PciDevTracker(object):
         self.allocations = collections.defaultdict(list)
         self.claims = collections.defaultdict(list)
         for dev in self.pci_devs:
-            uuid = dev['instance_uuid']
-            if dev['status'] == 'claimed':
+            uuid = dev.instance_uuid
+            if dev.status == fields.PciDeviceStatus.CLAIMED:
                 self.claims[uuid].append(dev)
-            elif dev['status'] == 'allocated':
+            elif dev.status == fields.PciDeviceStatus.ALLOCATED:
                 self.allocations[uuid].append(dev)
-            elif dev['status'] == 'available':
+            elif dev.status == fields.PciDeviceStatus.AVAILABLE:
                 self.stats.add_device(dev)
 
     @property
@@ -84,7 +83,7 @@ class PciDevTracker(object):
                     dev.save()
 
         self.pci_devs = [dev for dev in self.pci_devs
-                         if dev['status'] != 'deleted']
+                         if dev.status != fields.PciDeviceStatus.DELETED]
 
     @property
     def pci_stats(self):
@@ -103,11 +102,11 @@ class PciDevTracker(object):
         or removed while assigned.
         """
 
-        exist_addrs = set([dev['address'] for dev in self.pci_devs])
+        exist_addrs = set([dev.address for dev in self.pci_devs])
         new_addrs = set([dev['address'] for dev in devices])
 
         for existed in self.pci_devs:
-            if existed['address'] in exist_addrs - new_addrs:
+            if existed.address in exist_addrs - new_addrs:
                 try:
                     device.remove(existed)
                 except exception.PciDeviceInvalidStatus as e:
@@ -119,16 +118,17 @@ class PciDevTracker(object):
                                  'pci_exception': e.format_message()})
                     # Note(yjiang5): remove the device by force so that
                     # db entry is cleaned in next sync.
-                    existed.status = 'removed'
+                    existed.status = fields.PciDeviceStatus.REMOVED
                 else:
                     # Note(yjiang5): no need to update stats if an assigned
                     # device is hot removed.
                     self.stats.remove_device(existed)
             else:
                 new_value = next((dev for dev in devices if
-                    dev['address'] == existed['address']))
+                    dev['address'] == existed.address))
                 new_value['compute_node_id'] = self.node_id
-                if existed['status'] in ('claimed', 'allocated'):
+                if existed.status in (fields.PciDeviceStatus.CLAIMED,
+                                      fields.PciDeviceStatus.ALLOCATED):
                     # Pci properties may change while assigned because of
                     # hotplug or config changes. Although normally this should
                     # not happen.
@@ -167,7 +167,8 @@ class PciDevTracker(object):
         devs = self.stats.consume_requests(pci_requests.requests,
                                            instance_cells)
         if not devs:
-            raise exception.PciDeviceRequestFailed(pci_requests)
+            return None
+
         for dev in devs:
             device.claim(dev, instance)
         if instance_numa_topology and any(
@@ -181,9 +182,25 @@ class PciDevTracker(object):
         for dev in devs:
             device.allocate(dev, instance)
 
+    def allocate_instance(self, instance):
+        devs = self.claims.pop(instance['uuid'], [])
+        self._allocate_instance(instance, devs)
+        if devs:
+            self.allocations[instance['uuid']] += devs
+
+    def claim_instance(self, context, instance):
+        if not self.pci_devs:
+            return
+
+        devs = self._claim_instance(context, instance)
+        if devs:
+            self.claims[instance['uuid']] = devs
+            return devs
+        return None
+
     def _free_device(self, dev, instance=None):
         device.free(dev, instance)
-        stale = self.stale.pop(dev['address'], None)
+        stale = self.stale.pop(dev.address, None)
         if stale:
             dev.update_device(stale)
         self.stats.add_device(dev)
@@ -195,40 +212,27 @@ class PciDevTracker(object):
         # information, not the claimed one. So we can't use
         # instance['pci_devices'] to check the devices to be freed.
         for dev in self.pci_devs:
-            if (dev['status'] in ('claimed', 'allocated') and
-                    dev['instance_uuid'] == instance['uuid']):
-                self._free_device(dev)
+            if dev.status in (fields.PciDeviceStatus.CLAIMED,
+                              fields.PciDeviceStatus.ALLOCATED):
+                if dev.instance_uuid == instance['uuid']:
+                    self._free_device(dev)
 
-    def update_pci_for_instance(self, context, instance):
-        """Update instance's pci usage information.
+    def free_instance(self, context, instance):
+        if self.allocations.pop(instance['uuid'], None):
+            self._free_instance(instance)
+        elif self.claims.pop(instance['uuid'], None):
+            self._free_instance(instance)
 
-        The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
+    def update_pci_for_instance(self, context, instance, sign):
+        """Update PCI usage information if devices are de/allocated.
         """
+        if not self.pci_devs:
+            return
 
-        uuid = instance['uuid']
-        vm_state = instance['vm_state']
-        task_state = instance['task_state']
-
-        if vm_state == vm_states.DELETED:
-            if self.allocations.pop(uuid, None):
-                self._free_instance(instance)
-            elif self.claims.pop(uuid, None):
-                self._free_instance(instance)
-        elif task_state == task_states.RESIZE_MIGRATED:
-            devs = self.allocations.pop(uuid, None)
-            if devs:
-                self._free_instance(instance)
-        elif task_state == task_states.RESIZE_FINISH:
-            devs = self.claims.pop(uuid, None)
-            if devs:
-                self._allocate_instance(instance, devs)
-                self.allocations[uuid] = devs
-        elif (uuid not in self.allocations and
-               uuid not in self.claims):
-            devs = self._claim_instance(context, instance)
-            if devs:
-                self._allocate_instance(instance, devs)
-                self.allocations[uuid] = devs
+        if sign == -1:
+            self.free_instance(context, instance)
+        if sign == 1:
+            self.allocate_instance(instance)
 
     def update_pci_for_migration(self, context, instance, sign=1):
         """Update instance's pci usage information when it is migrated.

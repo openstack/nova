@@ -47,6 +47,7 @@ def ids_from_server_group(context, server_group):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Quotas(base.NovaObject,
              base.NovaObjectDictCompat):
     # Version 1.0: initial version
@@ -144,6 +145,7 @@ class Quotas(base.NovaObject,
         db.quota_update(context, project_id, resource, limit, user_id=user_id)
 
 
+@base.NovaObjectRegistry.register
 class QuotasNoOp(Quotas):
     def reserve(context, expire=None, project_id=None, user_id=None,
                 **deltas):

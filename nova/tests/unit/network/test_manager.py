@@ -280,17 +280,12 @@ class FlatNetworkTestCase(test.TestCase):
             self.assertThat(vif_dict, matchers.DictMatches(check))
 
     def test_validate_networks(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_address')
 
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                '192.168.1.100'),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
 
         ip = dict(test_fixed_ip.fake_fixed_ip, **fixed_ips[1])
         ip['network'] = dict(test_network.fake_network,
@@ -313,14 +308,10 @@ class FlatNetworkTestCase(test.TestCase):
         self.network.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_valid_fixed_ipv6(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_address')
 
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                '2001:db9:0:1::10')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **networks[1])])
 
         ip = dict(test_fixed_ip.fake_fixed_ip, **fixed_ips[2])
         ip['network'] = dict(test_network.fake_network,
@@ -409,15 +400,10 @@ class FlatNetworkTestCase(test.TestCase):
         self.network.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_invalid_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                '192.168.1.100.1'),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100.1')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -425,16 +411,10 @@ class FlatNetworkTestCase(test.TestCase):
                           requested_networks)
 
     def test_validate_networks_empty_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                ''),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -442,16 +422,10 @@ class FlatNetworkTestCase(test.TestCase):
                           self.context, requested_networks)
 
     def test_validate_networks_none_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                None),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                None)]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
 
         self.network.validate_networks(self.context, requested_networks)
@@ -804,6 +778,29 @@ class FlatNetworkTestCase(test.TestCase):
                 net['id'])
             self.assertEqual(fip.virtual_interface_id, vif.id)
 
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch.object(db, 'virtual_interface_get_by_instance_and_network',
+                       return_value=None)
+    @mock.patch('nova.objects.fixed_ip.FixedIP')
+    def test_allocate_fixed_ip_add_vif_fails(self, mock_fixedip,
+                                             mock_get_vif, mock_instance_get):
+        # Tests that we don't try to do anything with fixed IPs if
+        # _add_virtual_interface fails.
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance_get.return_value = instance
+        network = {'cidr': '24', 'id': 1,
+                   'uuid': '398399b3-f696-4859-8695-a6560e14cb02'}
+        vif_error = exception.VirtualInterfaceMacAddressException()
+        # mock out quotas because we don't care in this test
+        with mock.patch.object(self.network, 'quotas_cls', objects.QuotasNoOp):
+            with mock.patch.object(self.network, '_add_virtual_interface',
+                                   side_effect=vif_error):
+                self.assertRaises(
+                    exception.VirtualInterfaceMacAddressException,
+                    self.network.allocate_fixed_ip, self.context,
+                    '9d2ee1e3-ffad-4e5f-81ff-c96dd97b0ee0', network)
+        self.assertFalse(mock_fixedip.called, str(mock_fixedip.mock_calls))
+
 
 class FlatDHCPNetworkTestCase(test.TestCase):
 
@@ -906,18 +903,6 @@ class VlanNetworkTestCase(test.TestCase):
         network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network,
                                        vpn=True)
-
-    def test_vpn_allocate_fixed_ip_no_network_id(self):
-        network = dict(networks[0])
-        network['vpn_private_address'] = '192.168.0.2'
-        network['id'] = None
-        instance = db.instance_create(self.context, {})
-        self.assertRaises(exception.FixedIpNotFoundForNetwork,
-                self.network.allocate_fixed_ip,
-                self.context_admin,
-                instance['uuid'],
-                network,
-                vpn=True)
 
     def test_allocate_fixed_ip(self):
         self.stubs.Set(self.network,
@@ -1030,6 +1015,22 @@ class VlanNetworkTestCase(test.TestCase):
                                                instance.uuid,
                                                1, reserved=True)
 
+    @mock.patch.object(db, 'virtual_interface_get_by_instance_and_network',
+                       return_value=None)
+    @mock.patch('nova.objects.fixed_ip.FixedIP')
+    def test_allocate_fixed_ip_add_vif_fails(self, mock_fixedip,
+                                             mock_get_vif):
+        # Tests that we don't try to do anything with fixed IPs if
+        # _add_virtual_interface fails.
+        vif_error = exception.VirtualInterfaceMacAddressException()
+        with mock.patch.object(self.network, '_add_virtual_interface',
+                               side_effect=vif_error):
+            self.assertRaises(exception.VirtualInterfaceMacAddressException,
+                              self.network.allocate_fixed_ip, self.context,
+                              '9d2ee1e3-ffad-4e5f-81ff-c96dd97b0ee0',
+                              networks[0])
+        self.assertFalse(mock_fixedip.called, str(mock_fixedip.mock_calls))
+
     def test_create_networks_too_big(self):
         self.assertRaises(ValueError, self.network.create_networks, None,
                           num_networks=4094, vlan_start=1)
@@ -1105,23 +1106,31 @@ class VlanNetworkTestCase(test.TestCase):
         error_msg = 'vlan must be an integer'
         self.assertIn(error_msg, six.text_type(exc))
 
-    @mock.patch('nova.db.network_get')
-    def test_validate_networks(self, net_get):
-        def network_get(_context, network_id, project_only='allow_none'):
-            return dict(test_network.fake_network, **networks[network_id])
+    def test_vlan_multiple_without_dhcp_server(self):
+        networks = self.network.create_networks(
+                          self.context_admin, label="fake", num_networks=2,
+                          vlan_start=100, cidr='192.168.3.1/24',
+                          network_size=100)
 
-        net_get.side_effect = network_get
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
+        self.assertEqual(networks[0]["dhcp_server"], "192.168.3.1")
+        self.assertEqual(networks[1]["dhcp_server"], "192.168.3.129")
+
+    def test_vlan_multiple_with_dhcp_server(self):
+        networks = self.network.create_networks(
+                          self.context_admin, label="fake", num_networks=2,
+                          vlan_start=100, cidr='192.168.3.1/24',
+                          network_size=100, dhcp_server='192.168.3.1')
+
+        self.assertEqual(networks[0]["dhcp_server"], "192.168.3.1")
+        self.assertEqual(networks[1]["dhcp_server"], "192.168.3.1")
+
+    def test_validate_networks(self):
         self.mox.StubOutWithMock(db, "fixed_ip_get_by_address")
 
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                '192.168.1.100'),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
 
         db_fixed1 = dict(test_fixed_ip.fake_fixed_ip,
                          network_id=networks[1]['id'],
@@ -1155,15 +1164,10 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_invalid_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                                '192.168.1.100.1'),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100.1')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -1171,14 +1175,8 @@ class VlanNetworkTestCase(test.TestCase):
                           requested_networks)
 
     def test_validate_networks_empty_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', ''),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '')]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -1186,14 +1184,8 @@ class VlanNetworkTestCase(test.TestCase):
                           self.context, requested_networks)
 
     def test_validate_networks_none_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', None),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)]
-        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(
-                    [dict(test_network.fake_network, **net)
-                     for net in networks])
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
 
@@ -1939,14 +1931,14 @@ class VlanNetworkTestCase(test.TestCase):
 
 class _TestDomainObject(object):
     def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             self.__setattr__(k, v)
 
 
 class FakeNetwork(object):
     def __init__(self, **kwargs):
         self.vlan = None
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             self.__setattr__(k, v)
 
     def __getitem__(self, item):
@@ -3143,21 +3135,14 @@ class FloatingIPTestCase(test.TestCase):
                           name1, zone)
 
     def test_floating_dns_domains_public(self):
-        zone1 = "testzone"
         domain1 = "example.org"
         domain2 = "example.com"
         address1 = '10.10.10.10'
         entryname = 'testentry'
 
-        context_admin = context.RequestContext('testuser', 'testproject',
-                                               is_admin=True)
-
-        self.assertRaises(exception.AdminRequired,
-                          self.network.create_public_dns_domain, self.context,
-                          domain1, zone1)
-        self.network.create_public_dns_domain(context_admin, domain1,
+        self.network.create_public_dns_domain(self.context, domain1,
                                               'testproject')
-        self.network.create_public_dns_domain(context_admin, domain2,
+        self.network.create_public_dns_domain(self.context, domain2,
                                               'fakeproject')
 
         domains = self.network.get_dns_domains(self.context)
@@ -3174,11 +3159,8 @@ class FloatingIPTestCase(test.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0], address1)
 
-        self.assertRaises(exception.AdminRequired,
-                          self.network.delete_dns_domain, self.context,
-                          domain1)
-        self.network.delete_dns_domain(context_admin, domain1)
-        self.network.delete_dns_domain(context_admin, domain2)
+        self.network.delete_dns_domain(self.context, domain1)
+        self.network.delete_dns_domain(self.context, domain2)
 
         # Verify that deleting the domain deleted the associated entry
         entries = self.network.get_dns_entries_by_name(self.context,
@@ -3391,23 +3373,13 @@ class InstanceDNSTestCase(test.TestCase):
         zone1 = 'testzone'
         domain1 = 'example.org'
 
-        context_admin = context.RequestContext('testuser', 'testproject',
-                                              is_admin=True)
-
-        self.assertRaises(exception.AdminRequired,
-                          self.network.create_private_dns_domain, self.context,
-                          domain1, zone1)
-
-        self.network.create_private_dns_domain(context_admin, domain1, zone1)
+        self.network.create_private_dns_domain(self.context, domain1, zone1)
         domains = self.network.get_dns_domains(self.context)
         self.assertEqual(len(domains), 1)
         self.assertEqual(domains[0]['domain'], domain1)
         self.assertEqual(domains[0]['availability_zone'], zone1)
 
-        self.assertRaises(exception.AdminRequired,
-                          self.network.delete_dns_domain, self.context,
-                          domain1)
-        self.network.delete_dns_domain(context_admin, domain1)
+        self.network.delete_dns_domain(self.context, domain1)
 
 
 domain1 = "example.org"
@@ -3491,3 +3463,138 @@ class LdapDNSTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NotFound,
                           self.driver.delete_entry,
                           name1, domain1)
+
+
+class NetworkManagerNoDBTestCase(test.NoDBTestCase):
+    """Tests nova.network.manager.NetworkManager without a database."""
+
+    def setUp(self):
+        super(NetworkManagerNoDBTestCase, self).setUp()
+        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.manager = network_manager.NetworkManager()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_not_associated(self, mock_fip_get_by_addr):
+        # Tests that the method is a no-op when the fixed IP is not associated
+        # to an instance.
+        fip = objects.FixedIP._from_db_object(
+            self.context, objects.FixedIP(), fake_network.next_fixed_ip(1))
+        fip.instance_uuid = None
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_allocated(self, mock_fip_get_by_addr):
+        # Tests that the fixed IP is not disassociated if it's allocated.
+        fip = objects.FixedIP._from_db_object(
+            self.context, objects.FixedIP(), fake_network.next_fixed_ip(1))
+        fip.leased = False
+        fip.allocated = True
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address')
+    def test_release_fixed_ip_mac_matches_associated_instance(self,
+                                                        mock_vif_get_by_addr,
+                                                        mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the mac passed to
+        # release_fixed_ip matches the VIF which has the same instance_uuid
+        # as the instance associated to the FixedIP object. Also tests
+        # that the fixed IP is marked as not leased in the database if it was
+        # currently leased.
+        instance = fake_instance.fake_instance_obj(self.context)
+        fip = fake_network.next_fixed_ip(1)
+        fip['instance_uuid'] = instance.uuid
+        fip['leased'] = True
+        vif = fip['virtual_interface']
+        vif['instance_uuid'] = instance.uuid
+        vif = objects.VirtualInterface._from_db_object(
+                    self.context, objects.VirtualInterface(), vif)
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+        mock_vif_get_by_addr.return_value = vif
+
+        with mock.patch.object(fip, 'save') as mock_fip_save:
+            with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+                self.manager.release_fixed_ip(
+                    self.context, fip.address, vif.address)
+
+        mock_fip_save.assert_called_once_with()
+        self.assertFalse(fip.leased)
+        mock_vif_get_by_addr.assert_called_once_with(self.context, vif.address)
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address',
+                       return_value=None)
+    def test_release_fixed_ip_vif_not_found_for_mac(self, mock_vif_get_by_addr,
+                                                    mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the fixed IP is marked
+        # as deallocated and there is no VIF found in the database for the mac
+        # passed in.
+        fip = fake_network.next_fixed_ip(1)
+        fip['leased'] = False
+        mac = fip['virtual_interface']['address']
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address, mac)
+
+        mock_vif_get_by_addr.assert_called_once_with(self.context, mac)
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_no_mac(self, mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the fixed IP is
+        # deallocated and there is no mac address passed in (like before
+        # the network rpc api version bump to pass it in).
+        fip = fake_network.next_fixed_ip(1)
+        fip['leased'] = False
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address')
+    def test_release_fixed_ip_mac_mismatch_associated_instance(self,
+                                                        mock_vif_get_by_addr,
+                                                        mock_fip_get_by_addr):
+        # Tests that the fixed IP is not disassociated when the VIF for the mac
+        # passed to release_fixed_ip does not have an instance_uuid that
+        # matches fixed_ip.instance_uuid.
+        old_instance = fake_instance.fake_instance_obj(self.context)
+        new_instance = fake_instance.fake_instance_obj(self.context)
+        fip = fake_network.next_fixed_ip(1)
+        fip['instance_uuid'] = new_instance.uuid
+        fip['leased'] = False
+        vif = fip['virtual_interface']
+        vif['instance_uuid'] = old_instance.uuid
+        vif = objects.VirtualInterface._from_db_object(
+                    self.context, objects.VirtualInterface(), vif)
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+        mock_vif_get_by_addr.return_value = vif
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(
+                self.context, fip.address, vif.address)
+
+        mock_vif_get_by_addr.assert_called_once_with(self.context, vif.address)
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))

@@ -20,6 +20,7 @@ import os
 import re
 
 from oslo_log import log as logging
+import six
 
 from nova import exception
 from nova.i18n import _LE
@@ -48,7 +49,7 @@ def pci_device_prop_match(pci_dev, specs):
 
     """
     def _matching_devices(spec):
-        return all(pci_dev.get(k) == v for k, v in spec.iteritems())
+        return all(pci_dev.get(k) == v for k, v in six.iteritems(spec))
 
     return any(_matching_devices(spec) for spec in specs)
 

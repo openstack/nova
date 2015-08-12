@@ -25,7 +25,9 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_utils import timeutils
+import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
@@ -47,7 +49,6 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.openstack.common import versionutils
 from nova import quota
 from nova import servicegroup
 from nova import utils
@@ -65,8 +66,9 @@ ec2_opts = [
                help='The port of the EC2 API server'),
     cfg.StrOpt('ec2_scheme',
                default='http',
+               choices=('http', 'https'),
                help='The protocol to use when connecting to the EC2 API '
-                    'server (http, https)'),
+                    'server'),
     cfg.StrOpt('ec2_path',
                default='/',
                help='The path prefix used to call the ec2 API server'),
@@ -574,7 +576,7 @@ class CloudController(object):
     def _cidr_args_split(self, kwargs):
         cidr_args_split = []
         cidrs = kwargs['ip_ranges']
-        for key, cidr in cidrs.iteritems():
+        for key, cidr in six.iteritems(cidrs):
             mykwargs = kwargs.copy()
             del mykwargs['ip_ranges']
             mykwargs['cidr_ip'] = cidr['cidr_ip']
@@ -584,7 +586,7 @@ class CloudController(object):
     def _groups_args_split(self, kwargs):
         groups_args_split = []
         groups = kwargs['groups']
-        for key, group in groups.iteritems():
+        for key, group in six.iteritems(groups):
             mykwargs = kwargs.copy()
             del mykwargs['groups']
             if 'group_name' in group:
@@ -726,7 +728,7 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
-        if isinstance(group_name, unicode):
+        if isinstance(group_name, six.text_type):
             group_name = utils.utf8(group_name)
         if CONF.ec2_strict_validation:
             # EC2 specification gives constraints for name and description:
@@ -1231,7 +1233,7 @@ class CloudController(object):
             i['keyName'] = instance.key_name
             i['tagSet'] = []
 
-            for k, v in utils.instance_meta(instance).iteritems():
+            for k, v in six.iteritems(utils.instance_meta(instance)):
                 i['tagSet'].append({'key': k, 'value': v})
 
             client_token = self._get_client_token(context, instance_uuid)

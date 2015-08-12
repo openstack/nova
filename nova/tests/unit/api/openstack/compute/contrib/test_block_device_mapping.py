@@ -17,6 +17,7 @@ import mock
 from mox3 import mox
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from six.moves import range
 from webob import exc
 
 from nova.api.openstack.compute import extensions
@@ -313,7 +314,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
         def _validate_bdm(*args, **kwargs):
             self.validation_fail_test_validate_called = True
-            ex, kargs = ex_iter.next()
+            ex, kargs = next(ex_iter)
             raise ex(**kargs)
 
         def _instance_destroy(*args, **kwargs):
@@ -322,7 +323,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
         self.stubs.Set(objects.Instance, 'destroy', _instance_destroy)
 
-        for _unused in xrange(len(bdm_exceptions)):
+        for _unused in range(len(bdm_exceptions)):
             params = {block_device_mapping.ATTRIBUTE_NAME:
                       [self.bdm[0].copy()]}
             self.assertRaises(exc.HTTPBadRequest,

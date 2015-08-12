@@ -1,5 +1,0 @@
-{
-  "metadata" : {
-    "foo" : "%(value)s"
-  }
-}

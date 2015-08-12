@@ -24,6 +24,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -197,6 +198,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         return len(instances)
 
 
+@base.NovaObjectRegistry.register
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
@@ -211,15 +213,11 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
         }
-    child_versions = {
-        '1.0': '1.3',
-        # NOTE(danms): InstanceGroup was at 1.3 before we added this
-        '1.1': '1.4',
-        '1.2': '1.5',
-        '1.3': '1.6',
-        '1.4': '1.7',
-        '1.5': '1.8',
-        '1.6': '1.9',
+    # NOTE(danms): InstanceGroup was at 1.3 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.3'), ('1.1', '1.4'), ('1.2', '1.5'),
+                    ('1.3', '1.6'), ('1.4', '1.7'), ('1.5', '1.8'),
+                    ('1.6', '1.9')],
         }
 
     @base.remotable_classmethod

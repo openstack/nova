@@ -136,9 +136,6 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertNotIn('imageRef', kwargs)
             return old_create(*args, **kwargs)
 
-        def _validate_bdm(*args, **kwargs):
-            pass
-
         self.stubs.Set(compute_api.API, 'create', create)
         self.mox.ReplayAll()
         self._test_create(params, no_image=True)

@@ -12,13 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import mock
+import netaddr
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import base
 from nova.objects import compute_node
 from nova.objects import hv_spec
 from nova.objects import service
@@ -41,7 +45,10 @@ fake_numa_topology = objects.NUMATopology(
                                 mempages=[], pinned_cpus=set([]),
                                 siblings=[])])
 fake_numa_topology_db_format = fake_numa_topology._to_json()
-fake_hv_spec = hv_spec.HVSpec(arch='foo', hv_type='bar', vm_mode='foobar')
+fake_supported_instances = [('x86_64', 'kvm', 'hvm')]
+fake_hv_spec = hv_spec.HVSpec(arch=fake_supported_instances[0][0],
+                              hv_type=fake_supported_instances[0][1],
+                              vm_mode=fake_supported_instances[0][2])
 fake_supported_hv_specs = [fake_hv_spec]
 # for backward compatibility, each supported instance object
 # is stored as a list in the database
@@ -81,25 +88,52 @@ fake_compute_node = {
 # that all computes are running latest DB version with host field in it.
 fake_old_compute_node = fake_compute_node.copy()
 del fake_old_compute_node['host']
+# resources are passed from the virt drivers and copied into the compute_node
+fake_resources = {
+    'vcpus': 2,
+    'memory_mb': 1024,
+    'local_gb': 10,
+    'cpu_info': 'fake-info',
+    'vcpus_used': 1,
+    'memory_mb_used': 512,
+    'local_gb_used': 4,
+    'numa_topology': fake_numa_topology_db_format,
+    'hypervisor_type': 'fake-type',
+    'hypervisor_version': 1,
+    'hypervisor_hostname': 'fake-host',
+    'disk_available_least': 256,
+    'host_ip': fake_host_ip,
+    'supported_instances': fake_supported_instances
+}
+fake_compute_with_resources = objects.ComputeNode(
+    vcpus=fake_resources['vcpus'],
+    memory_mb=fake_resources['memory_mb'],
+    local_gb=fake_resources['local_gb'],
+    cpu_info=fake_resources['cpu_info'],
+    vcpus_used=fake_resources['vcpus_used'],
+    memory_mb_used=fake_resources['memory_mb_used'],
+    local_gb_used =fake_resources['local_gb_used'],
+    numa_topology=fake_resources['numa_topology'],
+    hypervisor_type=fake_resources['hypervisor_type'],
+    hypervisor_version=fake_resources['hypervisor_version'],
+    hypervisor_hostname=fake_resources['hypervisor_hostname'],
+    disk_available_least=fake_resources['disk_available_least'],
+    host_ip=netaddr.IPAddress(fake_resources['host_ip']),
+    supported_hv_specs=fake_supported_hv_specs,
+)
 
 
 class _TestComputeNodeObject(object):
     def supported_hv_specs_comparator(self, expected, obj_val):
         obj_val = [inst.to_list() for inst in obj_val]
-        self.json_comparator(expected, obj_val)
+        self.assertJsonEqual(expected, obj_val)
 
     def pci_device_pools_comparator(self, expected, obj_val):
         obj_val = obj_val.obj_to_primitive()
-        self.json_loads_comparator(expected, obj_val)
-
-    def json_loads_comparator(self, expected, obj_val):
-        # NOTE(edleafe): This is necessary because the dumps() version of the
-        # PciDevicePoolList doesn't maintain ordering, so the output string
-        # doesn't always match.
-        self.assertEqual(jsonutils.loads(expected), obj_val)
+        self.assertJsonEqual(expected, obj_val)
 
     def comparators(self):
-        return {'stats': self.json_comparator,
+        return {'stats': self.assertJsonEqual,
                 'host_ip': self.str_comparator,
                 'supported_hv_specs': self.supported_hv_specs_comparator,
                 'pci_device_pools': self.pci_device_pools_comparator,
@@ -282,8 +316,7 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
         compute.create()
-        self.assertRaises(exception.ObjectActionError, compute.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, compute.create)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
@@ -313,7 +346,7 @@ class _TestComputeNodeObject(object):
     def test_set_id_failure(self, db_mock):
         compute = compute_node.ComputeNode(context=self.context)
         compute.create()
-        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)
 
     def test_destroy(self):
@@ -424,6 +457,43 @@ class _TestComputeNodeObject(object):
         compute.pci_device_pools = fake_pci_device_pools.fake_pool_list
         primitive = compute.obj_to_primitive(target_version='1.8')
         self.assertNotIn('pci_device_pools', primitive)
+
+    def test_update_from_virt_driver(self):
+        # copy in case the update has a side effect
+        resources = copy.deepcopy(fake_resources)
+        compute = compute_node.ComputeNode()
+        compute.update_from_virt_driver(resources)
+        expected = fake_compute_with_resources
+        self.assertTrue(base.obj_equal_prims(expected, compute))
+
+    def test_update_from_virt_driver_missing_field(self):
+        # NOTE(pmurray): update_from_virt_driver does not require
+        # all fields to be present in resources. Validation of the
+        # resources data structure would be done in a different method.
+        resources = copy.deepcopy(fake_resources)
+        del resources['vcpus']
+        compute = compute_node.ComputeNode()
+        compute.update_from_virt_driver(resources)
+        expected = fake_compute_with_resources.obj_clone()
+        del expected.vcpus
+        self.assertTrue(base.obj_equal_prims(expected, compute))
+
+    def test_update_from_virt_driver_extra_field(self):
+        # copy in case the update has a side effect
+        resources = copy.deepcopy(fake_resources)
+        resources['extra_field'] = 'nonsense'
+        compute = compute_node.ComputeNode()
+        compute.update_from_virt_driver(resources)
+        expected = fake_compute_with_resources
+        self.assertTrue(base.obj_equal_prims(expected, compute))
+
+    def test_update_from_virt_driver_bad_value(self):
+        # copy in case the update has a side effect
+        resources = copy.deepcopy(fake_resources)
+        resources['vcpus'] = 'nonsense'
+        compute = compute_node.ComputeNode()
+        self.assertRaises(ValueError,
+                          compute.update_from_virt_driver, resources)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

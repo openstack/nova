@@ -119,7 +119,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 
     # NOTE(vish): Internally, flavorid is stored as a string but it comes
     #             in through json as an integer, so we convert it here.
-    flavorid = unicode(flavorid)
+    flavorid = six.text_type(flavorid)
 
     # ensure leading/trailing whitespaces not present.
     if flavorid.strip() != flavorid:
@@ -352,7 +352,7 @@ def delete_flavor_info(metadata, *prefixes):
     # NUMA-related ones that we need to avoid an uglier alternative. This
     # should be replaced by a general split-out of flavor information from
     # system_metadata very soon.
-    for key in metadata.keys():
+    for key in list(metadata.keys()):
         for prefix in prefixes:
             if key.startswith('%sinstance_type_extra_' % prefix):
                 del metadata[key]

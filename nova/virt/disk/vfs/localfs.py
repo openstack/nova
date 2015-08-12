@@ -21,8 +21,7 @@ from oslo_utils import excutils
 from nova import exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.disk.mount import loop
-from nova.virt.disk.mount import nbd
+from nova.virt.disk.mount import api as mount_api
 from nova.virt.disk.vfs import api as vfs
 
 LOG = logging.getLogger(__name__)
@@ -54,8 +53,15 @@ class VFSLocalFS(vfs.VFS):
     raw, it will use the loopback mount impl, otherwise it will
     use the qemu-nbd impl.
     """
-    def __init__(self, imgfile, imgfmt="raw", partition=None, imgdir=None):
-        super(VFSLocalFS, self).__init__(imgfile, imgfmt, partition)
+    def __init__(self, image, partition=None, imgdir=None):
+        """Create a new local VFS instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number of access
+        :param imgdir: the directory to mount the image at
+        """
+
+        super(VFSLocalFS, self).__init__(image, partition)
 
         self.imgdir = imgdir
         self.mount = None
@@ -63,16 +69,9 @@ class VFSLocalFS(vfs.VFS):
     def setup(self, mount=True):
         self.imgdir = tempfile.mkdtemp(prefix="openstack-vfs-localfs")
         try:
-            if self.imgfmt == "raw":
-                LOG.debug("Using LoopMount")
-                mnt = loop.LoopMount(self.imgfile,
-                                     self.imgdir,
-                                     self.partition)
-            else:
-                LOG.debug("Using NbdMount")
-                mnt = nbd.NbdMount(self.imgfile,
-                                   self.imgdir,
-                                   self.partition)
+            mnt = mount_api.Mount.instance_for_format(self.image,
+                                                      self.imgdir,
+                                                      self.partition)
             if mount:
                 if not mnt.do_mount():
                     raise exception.NovaException(mnt.error)
@@ -164,6 +163,7 @@ class VFSLocalFS(vfs.VFS):
             out, err = utils.execute('blkid', '-o',
                                      'value', '-s',
                                      'TYPE', self.mount.device,
-                                     run_as_root=True)
+                                     run_as_root=True,
+                                     check_exit_code=[0, 2])
             return out.strip()
         return ""

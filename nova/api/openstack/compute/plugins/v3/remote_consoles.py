@@ -21,7 +21,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 
 
 ALIAS = "os-remote-consoles"
@@ -31,8 +30,14 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         self.compute_api = compute.API(skip_policy_check=True)
+        self.handlers = {'vnc': self.compute_api.get_vnc_console,
+                         'spice': self.compute_api.get_spice_console,
+                         'rdp': self.compute_api.get_rdp_console,
+                         'serial': self.compute_api.get_serial_console,
+                         'mks': self.compute_api.get_mks_console}
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
+    @wsgi.Controller.api_version("2.1", "2.5")
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getVNCConsole')
     @validation.schema(remote_consoles.get_vnc_console)
@@ -56,11 +61,11 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get vnc console, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
+    @wsgi.Controller.api_version("2.1", "2.5")
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSPICEConsole')
     @validation.schema(remote_consoles.get_spice_console)
@@ -84,12 +89,11 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get spice console, "
-                    "functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
+    @wsgi.Controller.api_version("2.1", "2.5")
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getRDPConsole')
     @validation.schema(remote_consoles.get_rdp_console)
@@ -115,11 +119,11 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get rdp console, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
+    @wsgi.Controller.api_version("2.1", "2.5")
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSerialConsole')
     @validation.schema(remote_consoles.get_serial_console)
@@ -145,11 +149,38 @@ class RemoteConsolesController(wsgi.Controller):
                 exception.SocketPortRangeExhaustedException) as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get serial console, "
-                    "functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
+
+    @wsgi.Controller.api_version("2.6")
+    @extensions.expected_errors((400, 404, 409, 501))
+    @validation.schema(remote_consoles.create_v26, "2.6", "2.7")
+    @validation.schema(remote_consoles.create_v28, "2.8")
+    def create(self, req, server_id, body):
+        context = req.environ['nova.context']
+        authorize(context)
+        instance = common.get_instance(self.compute_api, context, server_id)
+        protocol = body['remote_console']['protocol']
+        console_type = body['remote_console']['type']
+        try:
+            handler = self.handlers.get(protocol)
+            output = handler(context, instance, console_type)
+            return {'remote_console': {'protocol': protocol,
+                                       'type': console_type,
+                                       'url': output['url']}}
+
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except (exception.ConsoleTypeUnavailable,
+                exception.ImageSerialPortNumberInvalid,
+                exception.ImageSerialPortNumberExceedFlavorValue,
+                exception.SocketPortRangeExhaustedException) as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
 
 
 class RemoteConsoles(extensions.V3APIExtensionBase):
@@ -164,4 +195,10 @@ class RemoteConsoles(extensions.V3APIExtensionBase):
         return [extension]
 
     def get_resources(self):
-        return []
+        parent = {'member_name': 'server',
+                  'collection_name': 'servers'}
+        resources = [
+            extensions.ResourceExtension(
+                'remote-consoles', RemoteConsolesController(), parent=parent,
+                member_name='remote-console')]
+        return resources

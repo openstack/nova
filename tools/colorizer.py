@@ -268,7 +268,7 @@ class NovaTestResult(testtools.TestResult):
         self.stopTestRun()
 
     def stopTestRun(self):
-        for cls in list(self.results.iterkeys()):
+        for cls in list(self.results):
             self.writeTestCase(cls)
         self.stream.writeln()
         self.writeSlowTests()

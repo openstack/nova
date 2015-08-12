@@ -56,3 +56,16 @@ class InstanceMapping(API_BASE):
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
             nullable=False)
     project_id = Column(String(255), nullable=False)
+
+
+class HostMapping(API_BASE):
+    """Contains mapping of a compute host to which cell it is in"""
+    __tablename__ = "host_mappings"
+    __table_args__ = (Index('host_idx', 'host'),
+                      schema.UniqueConstraint('host',
+                        name='uniq_host_mappings0host'))
+
+    id = Column(Integer, primary_key=True)
+    cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
+            nullable=False)
+    host = Column(String(255), nullable=False)

@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
+from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -65,11 +66,16 @@ class QuotaSetsController(wsgi.Controller):
         return dict(quota_set=result)
 
     def _validate_quota_limit(self, resource, limit, minimum, maximum):
-        # NOTE: -1 is a flag value for unlimited
-        if limit < -1:
+        # NOTE: -1 is a flag value for unlimited, maximum value is limited
+        # by SQL standard integer type `INT` which is `0x7FFFFFFF`, it's a
+        # general value for SQL, using a hardcoded value here is not a
+        # `nice` way, but it seems like the only way for now:
+        # http://dev.mysql.com/doc/refman/5.0/en/integer-types.html
+        # http://www.postgresql.org/docs/9.1/static/datatype-numeric.html
+        if limit < -1 or limit > db.MAX_INT:
             msg = (_("Quota limit %(limit)s for %(resource)s "
-                     "must be -1 or greater.") %
-                   {'limit': limit, 'resource': resource})
+                     "must be in the range of -1 and %(max)s.") %
+                   {'limit': limit, 'resource': resource, 'max': db.MAX_INT})
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         def conv_inf(value):
@@ -116,6 +122,15 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize_update(context)
+        try:
+            # NOTE(alex_xu): back-compatible with db layer hard-code admin
+            # permission checks. This has to be left only for API v2.0 because
+            # this version has to be stable even if it means that only admins
+            # can call this method while the policy could be changed.
+            nova.context.require_admin_context(context)
+        except exception.AdminRequired:
+            raise webob.exc.HTTPForbidden()
+
         project_id = id
 
         bad_keys = []
@@ -137,6 +152,9 @@ class QuotaSetsController(wsgi.Controller):
             user_id = params.get('user_id', [None])[0]
 
         try:
+            # NOTE(alex_xu): back-compatible with db layer hard-code admin
+            # permission checks.
+            nova.context.authorize_project_context(context, id)
             settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
                                                          user_id=user_id)
         except exception.Forbidden:
@@ -161,7 +179,7 @@ class QuotaSetsController(wsgi.Controller):
                 force_update = strutils.bool_from_string(value)
             elif key not in NON_QUOTA_KEYS and value:
                 try:
-                    value = utils.validate_integer(value, key)
+                    utils.validate_integer(value, key)
                 except exception.InvalidInput as e:
                     raise webob.exc.HTTPBadRequest(
                         explanation=e.format_message())
@@ -199,8 +217,6 @@ class QuotaSetsController(wsgi.Controller):
             except exception.QuotaExists:
                 objects.Quotas.update_limit(context, project_id,
                                             key, value, user_id=user_id)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
         values = self._get_quotas(context, id, user_id=user_id)
         return self._format_quota_set(None, values)
 
@@ -220,6 +236,12 @@ class QuotaSetsController(wsgi.Controller):
                 raise webob.exc.HTTPNotFound()
             try:
                 nova.context.authorize_project_context(context, id)
+                # NOTE(alex_xu): back-compatible with db layer hard-code admin
+                # permission checks. This has to be left only for API v2.0
+                # because this version has to be stable even if it means that
+                # only admins can call this method while the policy could be
+                # changed.
+                nova.context.require_admin_context(context)
                 if user_id:
                     QUOTAS.destroy_all_by_project_and_user(context,
                                                            id, user_id)

@@ -22,6 +22,7 @@ from nova.virt import hardware
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceNUMACell(base.NovaObject,
                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -90,7 +91,7 @@ class InstanceNUMACell(base.NovaObject,
         if threads == 1:
             threads = 0
 
-        return map(set, zip(*[iter(cpu_list)] * threads))
+        return list(map(set, zip(*[iter(cpu_list)] * threads)))
 
     @property
     def cpu_pinning_requested(self):
@@ -109,11 +110,13 @@ class InstanceNUMACell(base.NovaObject,
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceNUMATopology(base.NovaObject,
                            base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Takes into account pagesize
-    VERSION = '1.1'
+    # Version 1.2: InstanceNUMACell 1.2
+    VERSION = '1.2'
 
     fields = {
         # NOTE(danms): The 'id' field is no longer used and should be
@@ -124,7 +127,7 @@ class InstanceNUMATopology(base.NovaObject,
         }
 
     obj_relationships = {
-        'cells': [('1.0', '1.0')],
+        'cells': [('1.0', '1.0'), ('1.2', '1.2')],
     }
 
     @classmethod

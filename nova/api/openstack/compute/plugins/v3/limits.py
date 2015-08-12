@@ -22,6 +22,7 @@ from nova import quota
 
 QUOTAS = quota.QUOTAS
 ALIAS = 'limits'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class LimitsController(wsgi.Controller):
@@ -31,6 +32,7 @@ class LimitsController(wsgi.Controller):
     def index(self, req):
         """Return all global and rate limit information."""
         context = req.environ['nova.context']
+        authorize(context)
         project_id = req.params.get('tenant_id', context.project_id)
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)

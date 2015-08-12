@@ -32,6 +32,8 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -49,7 +51,6 @@ def return_server_not_found(*arg, **kwarg):
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
-                                     update_cells=True,
                                      columns_to_join=None,
                                      ):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
@@ -57,7 +58,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
     return (inst, inst)
 
 
-def instance_update(context, instance_uuid, kwargs, update_cells=True):
+def instance_update(context, instance_uuid, kwargs):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
     return inst
 
@@ -717,12 +718,12 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         def _fake_resize(obj, context, instance, flavor_id):
             self.resize_called += 1
-            raise raised.next()
+            raise next(raised)
 
         self.stubs.Set(compute_api.API, 'resize', _fake_resize)
 
         for call_no in range(len(exceptions)):
-            next_exception = expected.next()
+            next_exception = next(expected)
             actual = self.assertRaises(next_exception,
                                        self.controller._action_resize,
                                        self.req, FAKE_UUID, body=body)
@@ -1011,8 +1012,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(bdms[0]['source_type'], 'snapshot')
         self.assertEqual(bdms[0]['destination_type'], 'volume')
         self.assertEqual(bdms[0]['snapshot_id'], snapshot['id'])
-        for fld in ('connection_info', 'id',
-                    'instance_uuid', 'device_name'):
+        self.assertEqual('/dev/vda', bdms[0]['device_name'])
+        for fld in ('connection_info', 'id', 'instance_uuid'):
             self.assertNotIn(fld, bdms[0])
         for k in extra_properties.keys():
             self.assertEqual(properties[k], extra_properties[k])
@@ -1308,3 +1309,55 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         self.mox.ReplayAll()
 
         self.controller._action_rebuild(self.req, FAKE_UUID, body)
+
+    def test_create_vol_backed_img_snapshotting_policy_blocks_project(self):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on project
+        """
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        rule_name = "compute:snapshot_volume_backed"
+        rules = {
+                rule_name:
+                common_policy.parse_rule("project_id:no_id"),
+                "compute:get":
+                common_policy.parse_rule("")
+        }
+        policy.set_rules(rules)
+        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                               return_value=True):
+            exc = self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller._action_create_image,
+                              self.req, FAKE_UUID, body=body)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())
+
+    def test_create_vol_backed_img_snapshotting_policy_blocks_role(self):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on role
+        """
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        rule_name = "compute:snapshot_volume_backed"
+        rules = {
+                rule_name:
+                common_policy.parse_rule("role:no_role"),
+                "compute:get":
+                common_policy.parse_rule("")
+        }
+        policy.set_rules(rules)
+        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                               return_value=True):
+            exc = self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller._action_create_image,
+                              self.req, FAKE_UUID, body=body)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())

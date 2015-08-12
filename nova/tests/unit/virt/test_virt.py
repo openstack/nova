@@ -17,6 +17,7 @@ import io
 import os
 
 import mock
+import six
 
 from nova import test
 from nova import utils
@@ -120,7 +121,7 @@ class FakeMount(object):
 
 class TestDiskImage(test.NoDBTestCase):
     def mock_proc_mounts(self, mock_open):
-        response = io.StringIO(unicode(PROC_MOUNTS_CONTENTS))
+        response = io.StringIO(six.text_type(PROC_MOUNTS_CONTENTS))
         mock_open.return_value = response
 
     @mock.patch('__builtin__.open')
@@ -130,7 +131,7 @@ class TestDiskImage(test.NoDBTestCase):
         mountdir = '/mnt/fake_rootfs'
         fakemount = FakeMount(image, mountdir, None)
 
-        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+        def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
         self.stubs.Set(mount.Mount, 'instance_for_format',
@@ -148,7 +149,7 @@ class TestDiskImage(test.NoDBTestCase):
         mountdir = '/mnt/fake_rootfs'
         fakemount = FakeMount(image, mountdir, None)
 
-        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+        def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
         self.stubs.Set(mount.Mount, 'instance_for_format',
@@ -168,7 +169,7 @@ class TestDiskImage(test.NoDBTestCase):
         mountdir = '/mnt/fake_rootfs'
         fakemount = FakeMount(image, mountdir, None)
 
-        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+        def fake_instance_for_format(image, mountdir, partition):
             return fakemount
 
         self.stubs.Set(mount.Mount, 'instance_for_format',
@@ -199,8 +200,8 @@ class TestVirtDisk(test.NoDBTestCase):
         def proc_mounts(self, mount_point):
             return None
 
-        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
-            return FakeMount(imgfile, mountdir, partition)
+        def fake_instance_for_format(image, mountdir, partition):
+            return FakeMount(image, mountdir, partition)
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)

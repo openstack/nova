@@ -181,6 +181,9 @@ class FloatingIPActionController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
         if not cached_nwinfo:
+            LOG.warning(
+                _LW('Info cache is %r during associate') % instance.info_cache,
+                instance=instance)
             msg = _('No nw_info cache associated with instance')
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
@@ -202,8 +205,8 @@ class FloatingIPActionController(wsgi.Controller):
 
         if not fixed_address:
             try:
-                fixed_address = (ip['address'] for ip in fixed_ips if
-                                 netaddr.valid_ipv4(ip['address'])).next()
+                fixed_address = next(ip['address'] for ip in fixed_ips
+                                     if netaddr.valid_ipv4(ip['address']))
             except StopIteration:
                 msg = _('Unable to associate floating ip %(address)s '
                         'to any fixed IPs for instance %(id)s. '

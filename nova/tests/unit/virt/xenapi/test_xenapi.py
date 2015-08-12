@@ -31,6 +31,7 @@ from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
+import six
 import testtools
 
 from nova.compute import api as compute_api
@@ -50,6 +51,7 @@ from nova import objects
 from nova.objects import base
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_processutils
@@ -203,27 +205,19 @@ def stub_vm_utils_with_vdi_attached_here(function):
     return decorated_function
 
 
-def get_create_system_metadata(context, instance_type_id):
-    flavor = db.flavor_get(context, instance_type_id)
-    return flavors.save_flavor_info({}, flavor)
-
-
-def create_instance_with_system_metadata(context, instance_values, obj=False):
+def create_instance_with_system_metadata(context, instance_values):
     inst = objects.Instance(context=context,
                             system_metadata={})
     for k, v in instance_values.items():
         setattr(inst, k, v)
-    with mock.patch.object(inst, 'save'):
-        inst.set_flavor(objects.Flavor.get_by_id(
-            context,
-            instance_values['instance_type_id']))
+    inst.flavor = objects.Flavor.get_by_id(context,
+                                           instance_values['instance_type_id'])
+    inst.old_flavor = None
+    inst.new_flavor = None
     inst.create()
     inst.pci_devices = objects.PciDeviceList(objects=[])
 
-    if obj:
-        return inst
-    else:
-        return base.obj_to_primitive(inst)
+    return inst
 
 
 class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
@@ -377,7 +371,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_list_instance_uuids(self):
         uuids = []
-        for x in xrange(1, 4):
+        for x in range(1, 4):
             instance = self._create_instance()
             uuids.append(instance['uuid'])
         instance_uuids = self.conn.list_instance_uuids()
@@ -600,7 +594,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vm_info = conn.get_info({'name': name})
         # Get XenAPI record for VM
         vms = [rec for ref, rec
-               in xenapi_fake.get_all_records('VM').iteritems()
+               in six.iteritems(xenapi_fake.get_all_records('VM'))
                if not rec['is_control_domain']]
         vm = vms[0]
         self.vm_info = vm_info
@@ -747,11 +741,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                 # NOTE(danms): xenapi test stubs have flavor 5 with no
                 # vcpu_weight
                 flavor.vcpu_weight = None
-            with mock.patch.object(instance, 'save'):
-                instance.set_flavor(flavor)
+            instance.flavor = flavor
             instance.create()
         else:
-            instance = objects.Instance.get_by_id(self.context, instance_id)
+            instance = objects.Instance.get_by_id(self.context, instance_id,
+                                                  expected_attrs=['flavor'])
 
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         if empty_dns:
@@ -1257,6 +1251,12 @@ iface eth0 inet6 static
         self._test_spawn_fails_silently_with(exception.AgentError,
                                              value=error)
 
+    def test_spawn_sets_last_dom_id(self):
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
+        self.assertEqual(self.vm['domid'],
+                         self.vm['other_config']['last_dom_id'])
+
     def test_rescue(self):
         instance = self._create_instance(spawn=False, obj=True)
         xenapi_fake.create_vm(instance['name'], 'Running')
@@ -1552,16 +1552,12 @@ iface eth0 inet6 static
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
-        inst_obj = objects.Instance.get_by_uuid(
-            self.context, instance['uuid'],
-            expected_attrs=['system_metadata', 'metadata', 'info_cache',
-                            'security_groups'])
         if spawn:
-            self.conn.spawn(self.context, inst_obj, image_meta, [], 'herp',
+            self.conn.spawn(self.context, instance, image_meta, [], 'herp',
                             network_info)
         if obj:
-            return inst_obj
-        return instance
+            return instance
+        return base.obj_to_primitive(instance)
 
     def test_destroy_clean_up_kernel_and_ramdisk(self):
         def fake_lookup_kernel_ramdisk(session, vm_ref):
@@ -1625,7 +1621,7 @@ class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
         self._test_encryption('\n\nMessage with leading newlines.')
 
     def test_encrypt_really_long_message(self):
-        self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
+        self._test_encryption(''.join(['abcd' for i in range(1024)]))
 
 
 # FIXME(sirp): convert this to use XenAPITestBaseNoDB
@@ -1683,7 +1679,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        flavor = {"root_gb": 80, 'ephemeral_gb': 0}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
+                                             ephemeral_gb=0)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(conn._session, instance['name'])
         self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
@@ -1695,7 +1692,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        flavor = {"root_gb": 80, 'ephemeral_gb': 0}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
+                                             ephemeral_gb=0)
 
         def fake_raise(*args, **kwargs):
             raise exception.MigrationError(reason='test failure')
@@ -1709,7 +1707,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def test_migrate_disk_and_power_off_throws_on_zero_gb_resize_down(self):
         instance = db.instance_create(self.context, self.instance_values)
-        flavor = {"root_gb": 0, 'ephemeral_gb': 0}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
+                                             ephemeral_gb=0)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ResizeError,
                           conn.migrate_disk_and_power_off,
@@ -1717,7 +1716,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           'fake_dest', flavor, None)
 
     def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self):
-        flavor = {"root_gb": 0, 'ephemeral_gb': 0}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
+                                             ephemeral_gb=0)
         values = copy.copy(self.instance_values)
         values["root_gb"] = 0
         values["ephemeral_gb"] = 0
@@ -1733,8 +1733,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values,
-                                                        obj=True)
+                                                        self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
         self.fake_finish_revert_migration_called = False
@@ -1784,8 +1783,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def _test_finish_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values,
-                                                        obj=True)
+                                                        self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
 
@@ -1822,8 +1820,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         values = copy.copy(self.instance_values)
         values["root_gb"] = 0
         values["ephemeral_gb"] = 0
-        instance = create_instance_with_system_metadata(self.context, values,
-                                                        obj=True)
+        instance = create_instance_with_system_metadata(self.context, values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -1839,8 +1836,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def test_finish_migrate_no_resize_vdi(self):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values,
-                                                        obj=True)
+                                                        self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -1861,6 +1857,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance = db.instance_create(self.context, instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = db.flavor_get_by_name(self.context, 'm1.small')
+        flavor = fake_flavor.fake_flavor_obj(self.context, **flavor)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):
@@ -1879,6 +1876,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance = db.instance_create(self.context, instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = db.flavor_get_by_name(self.context, 'm1.small')
+        flavor = fake_flavor.fake_flavor_obj(self.context, **flavor)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):
@@ -2310,8 +2308,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         disk_image_type = vm_utils.ImageType.DISK_VHD
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values,
-                                                        obj=True)
+                                                        self.instance_values)
         vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
         vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
 
@@ -2448,8 +2445,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         # Test swap disk generation.
         instance_values = dict(self.instance_values, instance_type_id=5)
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values,
-                                                        obj=True)
+                                                        instance_values)
 
         def fake_generate_swap(*args, **kwargs):
             self.called = True
@@ -2461,8 +2457,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         # Test ephemeral disk generation.
         instance_values = dict(self.instance_values, instance_type_id=4)
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values,
-                                                        obj=True)
+                                                        instance_values)
 
         def fake_generate_ephemeral(*args):
             self.called = True
@@ -2475,8 +2470,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         instance_values.pop('kernel_id')
         instance_values.pop('ramdisk_id')
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values,
-                                                        obj=True)
+                                                        instance_values)
 
         def fake_generate_ephemeral(*args):
             pass
@@ -2523,7 +2517,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBaseNoDB):
 
     @classmethod
     def _fake_list_vms(cls, session):
-        return cls.FAKE_VMS.iteritems()
+        return six.iteritems(cls.FAKE_VMS)
 
     @staticmethod
     def _fake_fetch_bandwidth_mt(session):
@@ -2965,7 +2959,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
 def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                                                          'fake_host2'],
                                          'avail_zone2': ['fake_host3'], }):
-    for avail_zone, hosts in values.iteritems():
+    for avail_zone, hosts in six.iteritems(values):
         for service_host in hosts:
             db.service_create(context,
                               {'host': service_host,
@@ -3000,7 +2994,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         values = {'name': 'test_aggr',
                   'metadata': {'availability_zone': 'test_zone',
                   pool_states.POOL_FLAG: 'XenAPI'}}
-        self.aggr = db.aggregate_create(self.context, values)
+        self.aggr = objects.Aggregate(context=self.context, id=1,
+                                      **values)
         self.fake_metadata = {pool_states.POOL_FLAG: 'XenAPI',
                               'master_compute': 'host',
                               'availability_zone': 'fake_zone',
@@ -3244,18 +3239,17 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                        fake_driver_add_to_aggregate)
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
-        db.aggregate_metadata_add(self.context, self.aggr['id'], metadata)
-        db.aggregate_host_add(self.context, self.aggr['id'], 'fake_host')
+        self.aggr.metadata = metadata
+        self.aggr.hosts = ['fake_host']
 
         self.assertRaises(exception.AggregateError,
                           self.compute.add_aggregate_host,
                           self.context, host="fake_host",
-                          aggregate=jsonutils.to_primitive(self.aggr),
+                          aggregate=self.aggr,
                           slave_info=None)
-        excepted = db.aggregate_get(self.context, self.aggr['id'])
-        self.assertEqual(excepted['metadetails'][pool_states.KEY],
+        self.assertEqual(self.aggr.metadata[pool_states.KEY],
                 pool_states.ERROR)
-        self.assertEqual(excepted['hosts'], [])
+        self.assertEqual(self.aggr.hosts, ['fake_host'])
 
 
 class MockComputeAPI(object):

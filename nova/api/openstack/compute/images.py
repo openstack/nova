@@ -115,10 +115,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
 
         try:
             images = self._image_api.get_all(context, filters=filters,
@@ -135,10 +132,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
         try:
             images = self._image_api.get_all(context, filters=filters,
                                              **page_params)

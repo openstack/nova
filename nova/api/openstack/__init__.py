@@ -21,6 +21,7 @@ WSGI middleware for OpenStack API controllers.
 from oslo_config import cfg
 from oslo_log import log as logging
 import routes
+import six
 import stevedore
 import webob.dec
 import webob.exc
@@ -41,8 +42,10 @@ from nova import wsgi as base_wsgi
 
 api_opts = [
         cfg.BoolOpt('enabled',
-                    default=False,
-                    help='Whether the V3 API is enabled or not'),
+                    default=True,
+                    help='DEPRECATED: Whether the V3 API is enabled or not. '
+                    'This option will be removed in the 14.0.0 "N" release.',
+                    deprecated_for_removal=True),
         cfg.ListOpt('extensions_blacklist',
                     default=[],
                     help='A list of v3 API extensions to never load. '
@@ -90,7 +93,7 @@ class FaultWrapper(base_wsgi.Middleware):
                                   status, webob.exc.HTTPInternalServerError)()
 
     def _error(self, inner, req):
-        LOG.exception(_LE("Caught error: %s"), unicode(inner))
+        LOG.exception(_LE("Caught error: %s"), six.text_type(inner))
 
         safe = getattr(inner, 'safe', False)
         headers = getattr(inner, 'headers', None)
@@ -125,6 +128,47 @@ class FaultWrapper(base_wsgi.Middleware):
             return req.get_response(self.application)
         except Exception as ex:
             return self._error(ex, req)
+
+
+class LegacyV2CompatibleWrapper(base_wsgi.Middleware):
+
+    def _filter_request_headers(self, req):
+        """For keeping same behavior with v2 API, ignores microversions
+        HTTP header X-OpenStack-Nova-API-Version in the request.
+        """
+
+        if wsgi.API_VERSION_REQUEST_HEADER in req.headers:
+            del req.headers[wsgi.API_VERSION_REQUEST_HEADER]
+        return req
+
+    def _filter_response_headers(self, response):
+        """For keeping same behavior with v2 API, filter out microversions
+        HTTP header and microversions field in header 'Vary'.
+        """
+
+        if wsgi.API_VERSION_REQUEST_HEADER in response.headers:
+            del response.headers[wsgi.API_VERSION_REQUEST_HEADER]
+
+        if 'Vary' in response.headers:
+            vary_headers = response.headers['Vary'].split(',')
+            filtered_vary = []
+            for vary in vary_headers:
+                vary = vary.strip()
+                if vary == wsgi.API_VERSION_REQUEST_HEADER:
+                    continue
+                filtered_vary.append(vary)
+            if filtered_vary:
+                response.headers['Vary'] = ','.join(filtered_vary)
+            else:
+                del response.headers['Vary']
+        return response
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        req.set_legacy_v2()
+        req = self._filter_request_headers(req)
+        response = req.get_response(self.application)
+        return self._filter_response_headers(response)
 
 
 class APIMapper(routes.Mapper):

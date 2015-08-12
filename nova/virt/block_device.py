@@ -19,10 +19,13 @@ import operator
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+import six
 
 from nova import block_device
+from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LI
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.volume import encryptors
@@ -134,7 +137,7 @@ class DriverBlockDevice(dict):
         raise NotImplementedError()
 
     def save(self):
-        for attr_name, key_name in self._update_on_save.iteritems():
+        for attr_name, key_name in six.iteritems(self._update_on_save):
             lookup_name = key_name or attr_name
             if self[lookup_name] != getattr(self._bdm_obj, attr_name):
                 setattr(self._bdm_obj, attr_name, self[lookup_name])
@@ -204,7 +207,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             raise _InvalidType
 
         self.update(
-            {k: v for k, v in self._bdm_obj.iteritems()
+            {k: v for k, v in six.iteritems(self._bdm_obj)
              if k in self._new_fields | set(['delete_on_termination'])}
         )
         self['mount_device'] = self._bdm_obj.device_name
@@ -224,7 +227,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,
-               do_check_attach=True, do_driver_attach=False):
+               do_check_attach=True, do_driver_attach=False, **kwargs):
         volume = volume_api.get(context, self.volume_id)
         if do_check_attach:
             volume_api.check_attach(context, volume, instance=instance)
@@ -261,6 +264,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     volume_api.terminate_connection(context, volume_id,
                                                     connector)
         self['connection_info'] = connection_info
+        if self.volume_size is None:
+            self.volume_size = volume.get('size')
 
         mode = 'rw'
         if 'data' in connection_info:
@@ -302,6 +307,19 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             pass
         super(DriverVolumeBlockDevice, self).save()
 
+    def _call_wait_func(self, context, wait_func, volume_api, volume_id):
+        try:
+            wait_func(context, volume_id)
+        except exception.VolumeNotCreated:
+            with excutils.save_and_reraise_exception():
+                if self['delete_on_termination']:
+                    try:
+                        volume_api.delete(context, volume_id)
+                    except Exception as exc:
+                        LOG.warn(_LW('Failed to delete volume: %(volume_id)s '
+                                     'due to %(exc)s'),
+                                 {'volume_id': volume_id, 'exc': exc})
+
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
@@ -318,7 +336,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
             vol = volume_api.create(context, self.volume_size, '', '',
                                     snapshot, availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
@@ -341,7 +359,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
                                     '', '', image_id=self.image_id,
                                     availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
@@ -363,7 +381,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
             vol = volume_api.create(context, self.volume_size, vol_name, '',
                                     availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
@@ -408,9 +426,11 @@ def convert_all_volumes(*volume_bdms):
     source_volume = convert_volumes(volume_bdms)
     source_snapshot = convert_snapshots(volume_bdms)
     source_image = convert_images(volume_bdms)
+    source_blank = convert_blanks(volume_bdms)
 
     return [vol for vol in
-            itertools.chain(source_volume, source_snapshot, source_image)]
+            itertools.chain(source_volume, source_snapshot,
+                            source_image, source_blank)]
 
 
 def convert_volume(volume_bdm):

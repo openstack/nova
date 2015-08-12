@@ -21,8 +21,10 @@ from nova.compute import task_states
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.pci import manager as pci_manager
 from nova import test
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt import fake
@@ -181,6 +183,37 @@ class VMOpsTestCase(VMOpsTestBase):
         hard_shutdown_vm.assert_called_once_with(self._vmops._session,
                 self.instance, vm_ref)
 
+    @mock.patch.object(vm_utils, 'try_auto_configure_disk')
+    @mock.patch.object(vm_utils, 'create_vbd',
+            side_effect=test.TestingException)
+    def test_attach_disks_rescue_auto_disk_config_false(self, create_vbd,
+            try_auto_config):
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image_meta = {'properties': {'auto_disk_config': 'false'}}
+        vdis = {'root': {'ref': 'fake-ref'}}
+        self.assertRaises(test.TestingException, self._vmops._attach_disks,
+                instance, image_meta=image_meta, vm_ref=None,
+                name_label=None, vdis=vdis, disk_image_type='fake',
+                network_info=[], rescue=True)
+        self.assertFalse(try_auto_config.called)
+
+    @mock.patch.object(vm_utils, 'try_auto_configure_disk')
+    @mock.patch.object(vm_utils, 'create_vbd',
+            side_effect=test.TestingException)
+    def test_attach_disks_rescue_auto_disk_config_true(self, create_vbd,
+            try_auto_config):
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image_meta = {'properties': {'auto_disk_config': 'true'}}
+        vdis = {'root': {'ref': 'fake-ref'}}
+        self.assertRaises(test.TestingException, self._vmops._attach_disks,
+                instance, image_meta=image_meta, vm_ref=None,
+                name_label=None, vdis=vdis, disk_image_type='fake',
+                network_info=[], rescue=True)
+        try_auto_config.assert_called_once_with(self._vmops._session,
+                'fake-ref', instance.flavor.root_gb)
+
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
     def test_inject_auto_disk_config_when_present(self):
@@ -200,20 +233,20 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_console_output_works(self):
-        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
         instance = {"name": "dummy"}
-        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(42)
+        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
         self.mox.ReplayAll()
 
         self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
 
     def test_get_console_output_throws_nova_exception(self):
-        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
         instance = {"name": "dummy"}
         # dom_id=0 used to trigger exception in fake XenAPI
-        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(0)
+        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(0)
         self.mox.ReplayAll()
 
         self.assertRaises(exception.NovaException,
@@ -278,6 +311,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_remove_hostname')
         self.mox.StubOutWithMock(self.vmops.firewall_driver,
                                  'apply_instance_filter')
+        self.mox.StubOutWithMock(self.vmops, '_update_last_dom_id')
 
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
@@ -349,7 +383,7 @@ class SpawnTestCase(VMOpsTestBase):
                 'address': '00:00.0',
                 'vendor_id': '1234',
                 'product_id': 'abcd',
-                'dev_type': 'type-PCI',
+                'dev_type': fields.PciDeviceType.STANDARD,
                 'status': 'available',
                 'dev_id': 'devid',
                 'label': 'label',
@@ -389,6 +423,7 @@ class SpawnTestCase(VMOpsTestBase):
                                                  steps)
         self.vmops._start(instance, vm_ref)
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
+        self.vmops._update_last_dom_id(vm_ref)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -505,6 +540,7 @@ class SpawnTestCase(VMOpsTestBase):
         if power_on:
             self.vmops._start(instance, vm_ref)
             self.vmops._wait_for_instance_to_start(instance, vm_ref)
+            self.vmops._update_last_dom_id(vm_ref)
 
         self.vmops.firewall_driver.apply_instance_filter(instance,
                                                          network_info)
@@ -720,10 +756,15 @@ class DestroyTestCase(VMOpsTestBase):
 @mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_down')
 @mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_up')
 class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
+    def setUp(self):
+        super(MigrateDiskAndPowerOffTestCase, self).setUp()
+        self.context = context.RequestContext('user', 'project')
+
     def test_migrate_disk_and_power_off_works_down(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"root_gb": 2, "ephemeral_gb": 0, "uuid": "uuid"}
-        flavor = {"root_gb": 1, "ephemeral_gb": 0}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=1,
+                                             ephemeral_gb=0)
 
         self.vmops.migrate_disk_and_power_off(None, instance, None,
                 flavor, None)
@@ -734,7 +775,8 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
     def test_migrate_disk_and_power_off_works_up(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"root_gb": 1, "ephemeral_gb": 1, "uuid": "uuid"}
-        flavor = {"root_gb": 2, "ephemeral_gb": 2}
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=2,
+                                             ephemeral_gb=2)
 
         self.vmops.migrate_disk_and_power_off(None, instance, None,
                 flavor, None)
@@ -745,7 +787,7 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
     def test_migrate_disk_and_power_off_resize_down_ephemeral_fails(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"ephemeral_gb": 2}
-        flavor = {"ephemeral_gb": 1}
+        flavor = fake_flavor.fake_flavor_obj(self.context, ephemeral_gb=1)
 
         self.assertRaises(exception.ResizeError,
                           self.vmops.migrate_disk_and_power_off,

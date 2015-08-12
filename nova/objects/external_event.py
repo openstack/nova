@@ -29,6 +29,7 @@ EVENT_STATUSES = ['failed', 'completed', 'in-progress']
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@obj_base.NovaObjectRegistry.register
 class InstanceExternalEvent(obj_base.NovaObject,
                             obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -37,8 +38,8 @@ class InstanceExternalEvent(obj_base.NovaObject,
 
     fields = {
         'instance_uuid': fields.UUIDField(),
-        'name': fields.StringField(),
-        'status': fields.StringField(),
+        'name': fields.EnumField(valid_values=EVENT_NAMES),
+        'status': fields.EnumField(valid_values=EVENT_STATUSES),
         'tag': fields.StringField(nullable=True),
         'data': fields.DictOfStringsField(),
         }

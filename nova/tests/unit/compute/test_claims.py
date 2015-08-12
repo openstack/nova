@@ -36,7 +36,7 @@ class FakeResourceHandler(object):
 
     def test_resources(self, usage, limits):
         self.test_called = True
-        self.usage_is_itype = usage.get('name') is 'fakeitype'
+        self.usage_is_itype = usage.get('name') == 'fakeitype'
         return []
 
 
@@ -51,7 +51,7 @@ class DummyTracker(object):
     def abort_instance_claim(self, *args, **kwargs):
         self.icalled = True
 
-    def drop_resize_claim(self, *args, **kwargs):
+    def drop_move_claim(self, *args, **kwargs):
         self.rcalled = True
 
     def new_pci_tracker(self):
@@ -112,7 +112,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'ephemeral_gb': 2
         }
         instance_type.update(**kwargs)
-        return instance_type
+        return objects.Flavor(**instance_type)
 
     def _fake_resources(self, values=None):
         resources = {
@@ -363,10 +363,10 @@ class ClaimTestCase(test.NoDBTestCase):
         return claim
 
 
-class ResizeClaimTestCase(ClaimTestCase):
+class MoveClaimTestCase(ClaimTestCase):
 
     def setUp(self):
-        super(ResizeClaimTestCase, self).setUp()
+        super(MoveClaimTestCase, self).setUp()
         self.instance = self._fake_instance()
         self.get_numa_constraint_patch = None
 
@@ -378,9 +378,9 @@ class ResizeClaimTestCase(ClaimTestCase):
         with mock.patch(
                 'nova.virt.hardware.numa_get_constraints',
                 return_value=numa_constraint):
-            return claims.ResizeClaim('context', self.instance, instance_type,
-                                      {}, self.tracker, self.resources,
-                                      overhead=overhead, limits=limits)
+            return claims.MoveClaim('context', self.instance, instance_type,
+                                     {}, self.tracker, self.resources,
+                                     overhead=overhead, limits=limits)
 
     def _set_pci_request(self, claim):
         request = [{'count': 1,

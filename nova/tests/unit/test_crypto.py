@@ -17,12 +17,14 @@ Tests for Crypto module.
 """
 
 import os
-import StringIO
 
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
 import mock
 from mox3 import mox
 from oslo_concurrency import processutils
 import paramiko
+import six
 
 from nova import crypto
 from nova import db
@@ -57,18 +59,26 @@ class X509Test(test.TestCase):
             self.flags(ca_path=tmpdir)
             project_id = "fake"
             crypto.ensure_ca_filesystem()
+
             cert = crypto.fetch_ca(project_id)
             public_key = os.path.join(tmpdir, "public.pem")
             with open(public_key, 'w') as keyfile:
                 keyfile.write(cert)
+
             text = "some @#!%^* test text"
+            process_input = text.encode("ascii") if six.PY3 else text
             enc, _err = utils.execute('openssl',
                                      'rsautl',
                                      '-certin',
                                      '-encrypt',
                                      '-inkey', '%s' % public_key,
-                                     process_input=text)
+                                     process_input=process_input,
+                                     binary=True)
+
             dec = crypto.decrypt_text(project_id, enc)
+            self.assertIsInstance(dec, bytes)
+            if six.PY3:
+                dec = dec.decode('ascii')
             self.assertEqual(text, dec)
 
     @mock.patch.object(utils, 'execute',
@@ -224,48 +234,28 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
                                           'rsautl',
                                           '-decrypt',
                                           '-inkey', sshkey,
-                                          process_input=text)
+                                          process_input=text,
+                                          binary=True)
                 return dec
             except processutils.ProcessExecutionError as exc:
                 raise exception.DecryptionFailure(reason=exc.stderr)
 
     def test_ssh_encrypt_decrypt_text(self):
         enc = crypto.ssh_encrypt_text(self.pubkey, self.text)
-        self.assertNotEqual(enc, self.text)
+        self.assertIsInstance(enc, bytes)
+        # Comparison between bytes and str raises a TypeError
+        # when using python3 -bb
+        if six.PY2:
+            self.assertNotEqual(enc, self.text)
         result = self._ssh_decrypt_text(self.prikey, enc)
+        self.assertIsInstance(result, bytes)
+        if six.PY3:
+            result = result.decode('utf-8')
         self.assertEqual(result, self.text)
 
     def test_ssh_encrypt_failure(self):
         self.assertRaises(exception.EncryptionFailure,
                           crypto.ssh_encrypt_text, '', self.text)
-
-
-class ConversionTests(test.TestCase):
-    k1 = ("ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA4CqmrxfU7x4sJrubpMNxeglul+d"
-          "ByrsicnvQcHDEjPzdvoz+BaoAG9bjCA5mCeTBIISsVTVXz/hxNeiuBV6LH/UR/c"
-          "27yl53ypN+821ImoexQZcKItdnjJ3gVZlDob1f9+1qDVy63NJ1c+TstkrCTRVeo"
-          "9VyE7RpdSS4UCiBe8Xwk3RkedioFxePrI0Ktc2uASw2G0G2Rl7RN7KZOJbCivfF"
-          "LQMAOu6e+7fYvuE1gxGHHj7dxaBY/ioGOm1W4JmQ1V7AKt19zTBlZKduN8FQMSF"
-          "r35CDlvoWs0+OP8nwlebKNCi/5sdL8qiSLrAcPB4LqdkAf/blNSVA2Yl83/c4lQ"
-          "== test@test")
-
-    k2 = ("-----BEGIN PUBLIC KEY-----\n"
-          "MIIBIDANBgkqhkiG9w0BAQEFAAOCAQ0AMIIBCAKCAQEA4CqmrxfU7x4sJrubpMNx\n"
-          "eglul+dByrsicnvQcHDEjPzdvoz+BaoAG9bjCA5mCeTBIISsVTVXz/hxNeiuBV6L\n"
-          "H/UR/c27yl53ypN+821ImoexQZcKItdnjJ3gVZlDob1f9+1qDVy63NJ1c+TstkrC\n"
-          "TRVeo9VyE7RpdSS4UCiBe8Xwk3RkedioFxePrI0Ktc2uASw2G0G2Rl7RN7KZOJbC\n"
-          "ivfFLQMAOu6e+7fYvuE1gxGHHj7dxaBY/ioGOm1W4JmQ1V7AKt19zTBlZKduN8FQ\n"
-          "MSFr35CDlvoWs0+OP8nwlebKNCi/5sdL8qiSLrAcPB4LqdkAf/blNSVA2Yl83/c4\n"
-          "lQIBIw==\n"
-          "-----END PUBLIC KEY-----\n")
-
-    def test_convert_keys(self):
-        result = crypto.convert_from_sshrsa_to_pkcs8(self.k1)
-        self.assertEqual(result, self.k2)
-
-    def test_convert_failure(self):
-        self.assertRaises(exception.EncryptionFailure,
-                          crypto.convert_from_sshrsa_to_pkcs8, '')
 
 
 class KeyPairTest(test.TestCase):
@@ -344,19 +334,23 @@ class KeyPairTest(test.TestCase):
         fingerprint = crypto.generate_fingerprint(self.ecdsa_pub)
         self.assertEqual(self.ecdsa_fp, fingerprint)
 
-    def test_generate_key_pair(self):
+    def test_generate_key_pair_2048_bits(self):
         (private_key, public_key, fingerprint) = crypto.generate_key_pair()
-        raw_pub = public_key.split(' ')[1].decode('base64')
-        pkey = paramiko.rsakey.RSAKey(None, raw_pub)
-        self.assertEqual(2048, pkey.get_bits())
+        pub_bytes = public_key.encode('utf-8')
+        pkey = serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        self.assertEqual(2048, pkey.key_size)
 
-        bits = 4096
+    def test_generate_key_pair_1024_bits(self):
+        bits = 1024
         (private_key, public_key, fingerprint) = crypto.generate_key_pair(bits)
-        raw_pub = public_key.split(' ')[1].decode('base64')
-        pkey = paramiko.rsakey.RSAKey(None, raw_pub)
-        self.assertEqual(bits, pkey.get_bits())
+        pub_bytes = public_key.encode('utf-8')
+        pkey = serialization.load_ssh_public_key(
+            pub_bytes, backends.default_backend())
+        self.assertEqual(bits, pkey.key_size)
 
-        keyin = StringIO.StringIO()
+    def test_generate_key_pair_mocked_private_key(self):
+        keyin = six.StringIO()
         keyin.write(self.rsa_prv)
         keyin.seek(0)
         key = paramiko.RSAKey.from_private_key(keyin)

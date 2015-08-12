@@ -13,9 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+import mock
 from mox3 import mox
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
+
+from six.moves import range
 
 from nova import context
 from nova import exception
@@ -45,6 +48,100 @@ class TestNeutronDriver(test.NoDBTestCase):
 
         sg_api = neutron_driver.SecurityGroupAPI()
         sg_api.list(self.context, project=project_id)
+
+    def test_list_with_all_tenants_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context,
+                        project=project_id,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with()
+
+    def test_list_without_all_tenants_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id)
+
+            mock_list_secgroup.assert_called_once_with(tenant_id=project_id)
+
+    def test_list_with_all_tenants_sec_name_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_group_names = ['secgroup_ssh']
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id,
+                        names=security_group_names,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                name=security_group_names,
+                tenant_id=project_id)
+
+    def test_list_with_all_tenants_sec_name_ids_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_group_names = ['secgroup_ssh']
+        security_group_ids = ['id1']
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id,
+                        names=security_group_names,
+                        ids=security_group_ids,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                name=security_group_names,
+                id=security_group_ids,
+                tenant_id=project_id)
+
+    def test_list_with_all_tenants_not_admin(self):
+        search_opts = {'all_tenants': 1}
+        security_groups_list = {'security_groups': []}
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(self.context, project=self.context.tenant,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                tenant_id=self.context.tenant)
 
     def test_get_with_name_duplicated(self):
         sg_name = 'web_server'
@@ -93,6 +190,20 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         self.assertRaises(exception.SecurityGroupNotFound,
                           sg_api.get, self.context, name=sg_name)
+
+    def test_create_security_group_with_bad_request(self):
+        name = 'test-security-group'
+        description = None
+        body = {'security_group': {'name': name,
+                                   'description': description}}
+        message = "Invalid input. Reason: 'None' is not a valid string."
+        self.moxed_client.create_security_group(
+            body).AndRaise(n_exc.BadRequest(message=message))
+        self.mox.ReplayAll()
+        sg_api = neutron_driver.SecurityGroupAPI()
+        self.assertRaises(exception.Invalid,
+                          sg_api.create_security_group, self.context, name,
+                          description)
 
     def test_create_security_group_exceed_quota(self):
         name = 'test-security-group'
@@ -222,7 +333,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         device_ids = []
         ports = []
         sg_bindings = {}
-        for i in xrange(0, num_servers):
+        for i in range(0, num_servers):
             server_id = "server-%d" % i
             port_id = "port-%d" % i
             servers.append({'id': server_id})
@@ -232,7 +343,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                           'security_groups': [sg1_id, sg2_id]})
             sg_bindings[server_id] = [{'name': 'wol'}, {'name': 'eor'}]
 
-        for x in xrange(0, num_servers, max_query):
+        for x in range(0, num_servers, max_query):
             self.moxed_client.list_ports(
                        device_id=device_ids[x:x + max_query]).\
                        AndReturn({'ports': ports[x:x + max_query]})

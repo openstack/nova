@@ -22,8 +22,11 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
+from oslo_service import periodic_task
 from oslo_utils import importutils
 from oslo_utils import timeutils
+import six
+from six.moves import range
 
 from nova.cells import messaging
 from nova.cells import state as cells_state
@@ -35,7 +38,6 @@ from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import periodic_task
 
 cell_manager_opts = [
         cfg.StrOpt('driver',
@@ -74,7 +76,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.34')
+    target = oslo_messaging.Target(version='1.36')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '
@@ -82,7 +84,10 @@ class CellsManager(manager.Manager):
                         'less testing than the rest of Nova. This may change '
                         'in the future, but current deployers should be aware '
                         'that the use of it in production right now may be '
-                        'risky.'))
+                        'risky. Also note that cells does not currently '
+                        'support rolling upgrades, it is assumed that cells '
+                        'deployments are upgraded lockstep so n-1 cells '
+                        'compatibility does not work.'))
         # Mostly for tests.
         cell_state_manager = kwargs.pop('cell_state_manager', None)
         super(CellsManager, self).__init__(service_name='cells',
@@ -148,7 +153,7 @@ class CellsManager(manager.Manager):
 
         def _next_instance():
             try:
-                instance = self.instances_to_heal.next()
+                instance = next(self.instances_to_heal)
             except StopIteration:
                 if info['updated_list']:
                     return
@@ -162,14 +167,14 @@ class CellsManager(manager.Manager):
                         uuids_only=True)
                 info['updated_list'] = True
                 try:
-                    instance = self.instances_to_heal.next()
+                    instance = next(self.instances_to_heal)
                 except StopIteration:
                     return
             return instance
 
         rd_context = ctxt.elevated(read_deleted='yes')
 
-        for i in xrange(CONF.cells.instance_update_num_instances):
+        for i in range(CONF.cells.instance_update_num_instances):
             while True:
                 # Yield to other greenthreads
                 time.sleep(0)
@@ -177,7 +182,7 @@ class CellsManager(manager.Manager):
                 if not instance_uuid:
                     return
                 try:
-                    instance = self.db.instance_get_by_uuid(rd_context,
+                    instance = objects.Instance.get_by_uuid(rd_context,
                             instance_uuid)
                 except exception.InstanceNotFound:
                     continue
@@ -188,7 +193,7 @@ class CellsManager(manager.Manager):
         """Broadcast an instance_update or instance_destroy message up to
         parent cells.
         """
-        if instance['deleted']:
+        if instance.deleted:
             self.instance_destroy_at_top(ctxt, instance)
         else:
             self.instance_update_at_top(ctxt, instance)
@@ -398,7 +403,7 @@ class CellsManager(manager.Manager):
         totals = {}
         for response in responses:
             data = response.value_or_raise()
-            for key, val in data.iteritems():
+            for key, val in six.iteritems(data):
                 totals.setdefault(key, 0)
                 totals[key] += val
         return totals
@@ -426,11 +431,11 @@ class CellsManager(manager.Manager):
     def validate_console_port(self, ctxt, instance_uuid, console_port,
                               console_type):
         """Validate console port with child cell compute node."""
-        instance = self.db.instance_get_by_uuid(ctxt, instance_uuid)
-        if not instance['cell_name']:
+        instance = objects.Instance.get_by_uuid(ctxt, instance_uuid)
+        if not instance.cell_name:
             raise exception.InstanceUnknownCell(instance_uuid=instance_uuid)
         response = self.msg_runner.validate_console_port(ctxt,
-                instance['cell_name'], instance_uuid, console_port,
+                instance.cell_name, instance_uuid, console_port,
                 console_type)
         return response.value_or_raise()
 
@@ -518,9 +523,12 @@ class CellsManager(manager.Manager):
         """Resume an instance in its cell."""
         self.msg_runner.resume_instance(ctxt, instance)
 
-    def terminate_instance(self, ctxt, instance):
+    def terminate_instance(self, ctxt, instance, delete_type='delete'):
         """Delete an instance in its cell."""
-        self.msg_runner.terminate_instance(ctxt, instance)
+        # NOTE(rajesht): The `delete_type` parameter is passed so that it will
+        # be routed to destination cell, where instance deletion will happen.
+        self.msg_runner.terminate_instance(ctxt, instance,
+                                           delete_type=delete_type)
 
     def soft_delete_instance(self, ctxt, instance):
         """Soft-delete an instance in its cell."""

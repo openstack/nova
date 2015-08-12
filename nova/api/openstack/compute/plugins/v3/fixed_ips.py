@@ -28,6 +28,17 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FixedIPController(wsgi.Controller):
+
+    @wsgi.Controller.api_version('2.1', '2.3')
+    def _fill_reserved_status(self, req, fixed_ip, fixed_ip_info):
+        # NOTE(mriedem): To be backwards compatible, < 2.4 version does not
+        # show anything about reserved status.
+        pass
+
+    @wsgi.Controller.api_version('2.4')     # noqa
+    def _fill_reserved_status(self, req, fixed_ip, fixed_ip_info):
+        fixed_ip_info['fixed_ip']['reserved'] = fixed_ip.reserved
+
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given fixed ip."""
@@ -57,6 +68,8 @@ class FixedIPController(wsgi.Controller):
         else:
             fixed_ip_info['fixed_ip']['hostname'] = None
             fixed_ip_info['fixed_ip']['host'] = None
+
+        self._fill_reserved_status(req, fixed_ip, fixed_ip_info)
 
         return fixed_ip_info
 

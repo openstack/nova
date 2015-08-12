@@ -36,7 +36,9 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import versionutils
 import six
+from six.moves import range
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
@@ -46,23 +48,23 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
-from nova.openstack.common import versionutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import hardware
+from nova.virt.image import model as imgmodel
 from nova.virt import netutils
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
-
 
 LOG = logging.getLogger(__name__)
 
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
                default='all',
+               choices=('all', 'some', 'none'),
                help='Cache glance images locally. `all` will cache all'
                     ' images, `some` will only cache images that have the'
                     ' image_property `cache_in_nova=True`, and `none` turns'
@@ -102,8 +104,8 @@ xenapi_vm_utils_opts = [
                     'should try once and no retry'),
     cfg.StrOpt('torrent_images',
                default='none',
-               help='Whether or not to download images via Bit Torrent '
-                    '(all|some|none).'),
+               choices=('all', 'some', 'none'),
+               help='Whether or not to download images via Bit Torrent.'),
     cfg.StrOpt('ipxe_network_name',
                help='Name of network to use for booting iPXE ISOs'),
     cfg.StrOpt('ipxe_boot_menu_url',
@@ -382,7 +384,7 @@ def _should_retry_unplug_vbd(err):
 def unplug_vbd(session, vbd_ref, this_vm_ref):
     # make sure that perform at least once
     max_attempts = max(0, CONF.xenserver.num_vbd_unplug_retries) + 1
-    for num_attempt in xrange(1, max_attempts + 1):
+    for num_attempt in range(1, max_attempts + 1):
         try:
             if num_attempt > 1:
                 greenthread.sleep(1)
@@ -596,7 +598,7 @@ def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
     session.call_xenapi('VDI.set_name_description', vdi_ref, description)
 
     other_config = _get_vdi_other_config(vdi_type, instance=instance)
-    for key, value in other_config.iteritems():
+    for key, value in six.iteritems(other_config):
         if key not in existing_other_config:
             session.call_xenapi(
                     "VDI.add_to_other_config", vdi_ref, key, value)
@@ -908,7 +910,7 @@ def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
 
 
 def resize_disk(session, instance, vdi_ref, flavor):
-    size_gb = flavor['root_gb']
+    size_gb = flavor.root_gb
     if size_gb == 0:
         reason = _("Can't resize a disk to 0 GB.")
         raise exception.ResizeError(reason=reason)
@@ -1331,7 +1333,7 @@ def create_image(context, session, instance, name_label, image_id,
              {'image_id': image_id, 'cache': cache, 'downloaded': downloaded,
               'duration': duration})
 
-    for vdi_type, vdi in vdis.iteritems():
+    for vdi_type, vdi in six.iteritems(vdis):
         vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
         _set_vdi_info(session, vdi_ref, vdi_type, name_label, vdi_type,
                       instance)
@@ -1351,7 +1353,7 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
         vdis = _fetch_disk_image(context, session, instance, name_label,
                                  image_id, image_type)
 
-    for vdi_type, vdi in vdis.iteritems():
+    for vdi_type, vdi in six.iteritems(vdis):
         vdi_uuid = vdi['uuid']
         LOG.debug("Fetched VDIs of type '%(vdi_type)s' with UUID"
                   " '%(vdi_uuid)s'",
@@ -1366,7 +1368,7 @@ def _make_uuid_stack():
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
     # pass them as arguments
-    return [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
+    return [str(uuid.uuid4()) for i in range(MAX_VDI_CHAIN_SIZE)]
 
 
 def _image_uses_bittorrent(context, instance):
@@ -2099,7 +2101,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     # Its possible that other coalesce operation happen, so we need
     # to consider the full chain, rather than just the most recent parent.
     good_parent_uuids = vdi_uuid_list[1:]
-    for i in xrange(max_attempts):
+    for i in range(max_attempts):
         # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
         # matches the underlying VHDs.
         # This can also kick XenServer into performing a pending coalesce.
@@ -2146,7 +2148,7 @@ def _remap_vbd_dev(dev):
 
 def _wait_for_device(dev):
     """Wait for device node to appear."""
-    for i in xrange(0, CONF.xenserver.block_device_creation_timeout):
+    for i in range(0, CONF.xenserver.block_device_creation_timeout):
         dev_path = utils.make_dev_path(dev)
         if os.path.exists(dev_path):
             return
@@ -2290,9 +2292,6 @@ def _write_partition(session, virtual_size, dev):
               ' to %(dev_path)s...',
               {'primary_first': primary_first, 'primary_last': primary_last,
                'dev_path': dev_path})
-
-    def execute(*cmd, **kwargs):
-        return utils.execute(*cmd, **kwargs)
 
     _make_partition(session, dev, "%ds" % primary_first, "%ds" % primary_last)
     LOG.debug('Writing partition table %s done.', dev_path)
@@ -2463,9 +2462,15 @@ def _mounted_processing(device, key, net, metadata):
             try:
                 # This try block ensures that the umount occurs
                 if not agent.find_guest_agent(tmpdir):
-                    vfs = vfsimpl.VFSLocalFS(imgfile=None,
-                                             imgfmt=None,
-                                             imgdir=tmpdir)
+                    # TODO(berrange) passing in a None filename is
+                    # rather dubious. We shouldn't be re-implementing
+                    # the mount/unmount logic here either, when the
+                    # VFSLocalFS impl has direct support for mount
+                    # and unmount handling if it were passed a
+                    # non-None filename
+                    vfs = vfsimpl.VFSLocalFS(
+                        imgmodel.LocalFileImage(None, imgmodel.FORMAT_RAW),
+                        imgdir=tmpdir)
                     LOG.info(_LI('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we

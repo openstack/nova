@@ -71,13 +71,13 @@ def _build_metadata_by_host(aggregates, hosts=None):
         for host in aggregate.hosts:
             if hosts and host not in hosts:
                 continue
-            metadata[host].add(aggregate.metadata.values()[0])
+            metadata[host].add(list(aggregate.metadata.values())[0])
     return metadata
 
 
 def set_availability_zones(context, services):
     # Makes sure services isn't a sqlalchemy object
-    services = [dict(service.iteritems()) for service in services]
+    services = [dict(service) for service in services]
     hosts = set([service['host'] for service in services])
     aggregates = objects.AggregateList.get_by_metadata_key(context,
             'availability_zone', hosts=hosts)

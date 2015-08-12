@@ -304,6 +304,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'compute_host': self.compute.host,
             'text': text,
             'int': '[0-9]+',
+            'user_id': text,
         }
 
     def _get_response(self, url, method, body=None, strip_version=False,

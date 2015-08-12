@@ -16,6 +16,7 @@
 """The hosts admin extension."""
 
 from oslo_log import log as logging
+import six
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -119,8 +120,15 @@ class HostController(object):
                 raise webob.exc.HTTPBadRequest(explanation=msg % orig_val)
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         # See what the user wants to 'update'
-        params = {k.strip().lower(): v for k, v in body.iteritems()}
+        params = {k.strip().lower(): v for k, v in six.iteritems(body)}
         orig_status = status = params.pop('status', None)
         orig_maint_mode = maint_mode = params.pop('maintenance_mode', None)
         # Validate the request
@@ -193,6 +201,11 @@ class HostController(object):
         """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
         try:
             result = self.api.host_power_action(context, host_name=host_name,
                     action=action)
@@ -275,6 +288,13 @@ class HostController(object):
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         context = req.environ['nova.context']
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         host_name = id
         try:
             compute_node = (
@@ -282,9 +302,6 @@ class HostController(object):
                     context, host_name))
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.AdminRequired:
-            msg = _("Describe-resource is admin only functionality")
-            raise webob.exc.HTTPForbidden(explanation=msg)
         instances = self.api.instance_get_all_by_host(context, host_name)
         resources = [self._get_total_resources(host_name, compute_node)]
         resources.append(self._get_used_now_resources(host_name,
@@ -293,7 +310,7 @@ class HostController(object):
                                                                   instances))
         by_proj_resources = self._get_resources_by_project(host_name,
                                                            instances)
-        for resource in by_proj_resources.itervalues():
+        for resource in six.itervalues(by_proj_resources):
             resources.append({'resource': resource})
         return {'host': resources}
 

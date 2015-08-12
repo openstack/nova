@@ -75,7 +75,7 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
         cmd.extend([self.dev_path])
 
         utils.execute(*cmd, process_input=passphrase,
-                      check_exit_code=True, run_as_root=True)
+                      check_exit_code=True, run_as_root=True, attempts=3)
 
     def _open_volume(self, passphrase, **kwargs):
         """Opens the LUKS partition on the volume using the specified

@@ -23,6 +23,7 @@ from oslo_log import log as logging
 
 from nova.i18n import _
 from nova.virt import driver
+from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
@@ -35,6 +36,12 @@ LOG = logging.getLogger(__name__)
 
 
 class HyperVDriver(driver.ComputeDriver):
+    capabilities = {
+        "has_imagecache": False,
+        "supports_recreate": False,
+        "supports_migrate_to_same_host": True
+    }
+
     def __init__(self, virtapi):
         super(HyperVDriver, self).__init__(virtapi)
 
@@ -48,6 +55,10 @@ class HyperVDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         self._vmops.restart_vm_log_writers()
+        event_handler = eventhandler.InstanceEventHandler(
+            state_change_callback=self.emit_event,
+            running_state_callback=self._vmops.log_vm_serial_output)
+        event_handler.start_listener()
 
     def list_instance_uuids(self):
         return self._vmops.list_instance_uuids()

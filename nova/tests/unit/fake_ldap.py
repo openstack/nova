@@ -24,6 +24,8 @@ library to work with nova.
 import fnmatch
 
 from oslo_serialization import jsonutils
+import six
+from six.moves import range
 
 
 class Store(object):
@@ -140,7 +142,7 @@ def _paren_groups(source):
     count = 0
     start = 0
     result = []
-    for pos in xrange(len(source)):
+    for pos in range(len(source)):
         if source[pos] == '(':
             if count == 0:
                 start = pos
@@ -311,11 +313,11 @@ class FakeLDAP(object):
             # get the attributes from the store
             attrs = store.hgetall(key)
             # turn the values from the store into lists
-            attrs = {k: _from_json(v) for k, v in attrs.iteritems()}
+            attrs = {k: _from_json(v) for k, v in six.iteritems(attrs)}
             # filter the objects by query
             if not query or _match_query(query, attrs):
                 # filter the attributes by fields
-                attrs = {k: v for k, v in attrs.iteritems()
+                attrs = {k: v for k, v in six.iteritems(attrs)
                          if not fields or k in fields}
                 objects.append((key[len(self.__prefix):], attrs))
         return objects

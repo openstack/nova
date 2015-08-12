@@ -40,6 +40,7 @@ class IOThread(native_threading.Thread):
         try:
             self._copy()
         except IOError as err:
+            self._stopped.set()
             # Invalid argument error means that the vm console pipe was closed,
             # probably the vm was stopped. The worker can stop it's execution.
             if err.errno != errno.EINVAL:
@@ -67,3 +68,6 @@ class IOThread(native_threading.Thread):
     def join(self):
         self._stopped.set()
         super(IOThread, self).join()
+
+    def is_active(self):
+        return not self._stopped.isSet()

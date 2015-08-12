@@ -173,7 +173,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertEqual(1, dom.isActive())
         dom.destroy()
         try:
-            dom = conn.lookupByName('testname')
+            conn.lookupByName('testname')
         except libvirt.libvirtError as e:
             self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_NO_DOMAIN)
             self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_QEMU)

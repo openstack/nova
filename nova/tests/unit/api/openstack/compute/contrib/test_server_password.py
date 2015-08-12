@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from oslo_config import cfg
 
 from nova.api.metadata import password
@@ -65,7 +67,8 @@ class ServerPasswordTestV21(test.NoDBTestCase):
         self.assertEqual(res['password'], 'fakepass')
 
     def test_reset_password(self):
-        eval(self.delete_call)(self.fake_req, 'fake')
+        with mock.patch('nova.objects.Instance._save_flavor'):
+            eval(self.delete_call)(self.fake_req, 'fake')
         self.assertEqual(eval(self.delete_call).wsgi_code, 204)
 
         res = self.controller.index(self.fake_req, 'fake')

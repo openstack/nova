@@ -26,6 +26,7 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.cells import rpcapi as cells_rpcapi
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import rpc
@@ -43,7 +44,7 @@ def _filter_keys(item, keys):
     item is a dict
 
     """
-    return {k: v for k, v in item.iteritems() if k in keys}
+    return {k: v for k, v in six.iteritems(item) if k in keys}
 
 
 def _fixup_cell_info(cell_info, keys):
@@ -173,6 +174,9 @@ class Controller(object):
 
         authorize(context)
         authorize(context, action="delete")
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
 
         try:
             num_deleted = self.cells_rpcapi.cell_delete(context, id)
@@ -253,6 +257,9 @@ class Controller(object):
 
         authorize(context)
         authorize(context, action="create")
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
 
         if 'cell' not in body:
             msg = _("No cell information in request")
@@ -276,6 +283,9 @@ class Controller(object):
 
         authorize(context)
         authorize(context, action="update")
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
 
         if 'cell' not in body:
             msg = _("No cell information in request")

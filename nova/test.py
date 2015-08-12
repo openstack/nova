@@ -20,6 +20,8 @@ Allows overriding of flags for use of fakes, and some black magic for
 inline callbacks.
 
 """
+import contextlib
+
 import datetime
 import eventlet
 eventlet.monkey_patch(os=False)
@@ -66,6 +68,14 @@ logging.setup(CONF, 'nova')
 objects.register_all()
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
+
+if six.PY3:
+    @contextlib.contextmanager
+    def nested(*contexts):
+        with contextlib.ExitStack() as stack:
+            yield [stack.enter_context(c) for c in contexts]
+else:
+    nested = contextlib.nested
 
 
 class SampleNetworks(fixtures.Fixture):
@@ -233,7 +243,7 @@ class TestCase(testtools.TestCase):
         # registry.
         objects_base.NovaObject.indirection_api = None
         self._base_test_obj_backup = copy.copy(
-            objects_base.NovaObject._obj_classes)
+            objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
         # NOTE(mnaser): All calls to utils.is_neutron() are cached in
@@ -251,7 +261,8 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.PoisonFunctions())
 
     def _restore_obj_registry(self):
-        objects_base.NovaObject._obj_classes = self._base_test_obj_backup
+        objects_base.NovaObjectRegistry._registry._obj_classes = \
+                self._base_test_obj_backup
 
     def _clear_attrs(self):
         # Delete attributes that don't start with _ so they don't pin
@@ -269,7 +280,7 @@ class TestCase(testtools.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
-        for k, v in kw.iteritems():
+        for k, v in six.iteritems(kw):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
@@ -278,49 +289,75 @@ class TestCase(testtools.TestCase):
         return svc.service
 
     def assertJsonEqual(self, expected, observed):
+        """Asserts that 2 complex data structures are json equivalent.
+
+        We use data structures which serialize down to json throughout
+        the code, and often times we just need to know that these are
+        json equivalent. This means that list order is not important,
+        and should be sorted.
+
+        Because this is a recursive set of assertions, when failure
+        happens we want to expose both the local failure and the
+        global view of the 2 data structures being compared. So a
+        MismatchError which includes the inner failure as the
+        mismatch, and the passed in expected / observed as matchee /
+        matcher.
+
+        """
         if isinstance(expected, six.string_types):
             expected = jsonutils.loads(expected)
         if isinstance(observed, six.string_types):
             observed = jsonutils.loads(observed)
 
-        def sort(what):
-            return sorted(what,
-                          key=lambda x: str(x) if isinstance(
-                              x, set) or isinstance(x,
-                                                    datetime.datetime) else x)
+        def sort_key(x):
+            if isinstance(x, (set, list)) or isinstance(x, datetime.datetime):
+                return str(x)
+            if isinstance(x, dict):
+                items = ((sort_key(key), sort_key(value))
+                         for key, value in x.items())
+                return sorted(items)
+            return x
 
         def inner(expected, observed):
             if isinstance(expected, dict) and isinstance(observed, dict):
                 self.assertEqual(len(expected), len(observed))
-                expected_keys = sorted(expected.iterkeys())
-                observed_keys = sorted(expected.iterkeys())
+                expected_keys = sorted(expected)
+                observed_keys = sorted(observed)
                 self.assertEqual(expected_keys, observed_keys)
 
-                expected_values_iter = iter(sort(expected.values()))
-                observed_values_iter = iter(sort(observed.values()))
-
-                for i in range(len(expected)):
-                    inner(expected_values_iter.next(),
-                        observed_values_iter.next())
+                for key in list(six.iterkeys(expected)):
+                    inner(expected[key], observed[key])
             elif (isinstance(expected, (list, tuple, set)) and
                       isinstance(observed, (list, tuple, set))):
                 self.assertEqual(len(expected), len(observed))
 
-                expected_values_iter = iter(sort(expected))
-                observed_values_iter = iter(sort(observed))
+                expected_values_iter = iter(sorted(expected, key=sort_key))
+                observed_values_iter = iter(sorted(observed, key=sort_key))
 
                 for i in range(len(expected)):
-                    inner(expected_values_iter.next(),
-                        observed_values_iter.next())
+                    inner(next(expected_values_iter),
+                          next(observed_values_iter))
             else:
                 self.assertEqual(expected, observed)
 
-        inner(expected, observed)
+        try:
+            inner(expected, observed)
+        except testtools.matchers.MismatchError as e:
+            inner_mismatch = e.mismatch
+            # inverting the observed / expected because testtools
+            # error messages assume expected is second. Possibly makes
+            # reading the error messages less confusing.
+            raise testtools.matchers.MismatchError(observed, expected,
+                                          inner_mismatch, verbose=True)
 
     def assertPublicAPISignatures(self, baseinst, inst):
         def get_public_apis(inst):
             methods = {}
-            for (name, value) in inspect.getmembers(inst, inspect.ismethod):
+
+            def findmethods(object):
+                return inspect.ismethod(object) or inspect.isfunction(object)
+
+            for (name, value) in inspect.getmembers(inst, findmethods):
                 if name.startswith("_"):
                     continue
                 methods[name] = value
@@ -384,3 +421,35 @@ class BaseHookTestCase(NoDBTestCase):
     def assert_has_hook(self, expected_name, func):
         self.assertTrue(hasattr(func, '__hook_name__'))
         self.assertEqual(expected_name, func.__hook_name__)
+
+
+class MatchType(object):
+    """Matches any instance of a specified type
+
+    The MatchType class is a helper for use with the
+    mock.assert_called_with() method that lets you
+    assert that a particular parameter has a specific
+    data type. It enables strict check than the built
+    in mock.ANY helper, and is the equivalent of the
+    mox.IsA() function from the legacy mox library
+
+    Example usage could be:
+
+      mock_some_method.assert_called_once_with(
+            "hello",
+            MatchType(objects.Instance),
+            mock.ANY,
+            "world",
+            MatchType(objects.KeyPair))
+    """
+    def __init__(self, wanttype):
+        self.wanttype = wanttype
+
+    def __eq__(self, other):
+        return type(other) == self.wanttype
+
+    def __ne__(self, other):
+        return type(other) != self.wanttype
+
+    def __repr__(self):
+        return "<MatchType:" + str(self.wanttype) + ">"

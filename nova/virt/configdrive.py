@@ -20,12 +20,12 @@ import shutil
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import fileutils
 from oslo_utils import strutils
 from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _LW
-from nova.openstack.common import fileutils
 from nova import utils
 from nova import version
 
@@ -34,7 +34,8 @@ LOG = logging.getLogger(__name__)
 configdrive_opts = [
     cfg.StrOpt('config_drive_format',
                default='iso9660',
-               help='Config drive format. One of iso9660 (default) or vfat'),
+               choices=('iso9660', 'vfat'),
+               help='Config drive format.'),
     # force_config_drive is a string option, to allow for future behaviors
     #  (e.g. use config_drive based on image properties)
     cfg.StrOpt('force_config_drive',

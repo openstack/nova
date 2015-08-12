@@ -18,6 +18,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
+import six
 
 from nova import exception
 from nova.i18n import _
@@ -85,13 +86,15 @@ class BlockDeviceDict(dict):
         self._validate(bdm_dict)
         if bdm_dict.get('device_name'):
             bdm_dict['device_name'] = prepend_dev(bdm_dict['device_name'])
+        bdm_dict['delete_on_termination'] = bool(
+            bdm_dict.get('delete_on_termination'))
         # NOTE (ndipanov): Never default db fields
         self.update({field: None for field in self._fields - do_not_default})
-        self.update(list(bdm_dict.iteritems()))
+        self.update(list(six.iteritems(bdm_dict)))
 
     def _validate(self, bdm_dict):
         """Basic data format validations."""
-        dict_fields = set(key for key, _ in bdm_dict.iteritems())
+        dict_fields = set(key for key, _ in six.iteritems(bdm_dict))
 
         # Check that there are no bogus fields
         if not (dict_fields <=
@@ -137,7 +140,7 @@ class BlockDeviceDict(dict):
         non_computable_fields = set(['boot_index', 'disk_bus',
                                      'guest_format', 'device_type'])
 
-        new_bdm = {fld: val for fld, val in legacy_bdm.iteritems()
+        new_bdm = {fld: val for fld, val in six.iteritems(legacy_bdm)
                    if fld in copy_over_fields}
 
         virt_name = legacy_bdm.get('virtual_name')
@@ -194,8 +197,11 @@ class BlockDeviceDict(dict):
                         details=_("Missing device UUID."))
                 api_dict[source_type + '_id'] = device_uuid
             if source_type == 'image' and destination_type == 'local':
-                boot_index = api_dict.get('boot_index', -1)
-
+                try:
+                    boot_index = int(api_dict.get('boot_index', -1))
+                except ValueError:
+                    raise exception.InvalidBDMFormat(
+                        details=_("Boot index is invalid."))
                 # if this bdm is generated from --image ,then
                 # source_type = image and destination_type = local is allowed
                 if not (image_uuid_specified and boot_index == 0):
@@ -235,7 +241,7 @@ class BlockDeviceDict(dict):
         return legacy_block_device
 
     def get_image_mapping(self):
-        drop_fields = (set(['connection_info', 'device_name']) |
+        drop_fields = (set(['connection_info']) |
                        self._db_only_fields)
         mapping_dict = dict(self)
         for fld in drop_fields:
@@ -271,10 +277,23 @@ def create_image_bdm(image_ref, boot_index=0):
          'destination_type': 'local'})
 
 
+def create_blank_bdm(size, guest_format=None):
+    return BlockDeviceDict(
+        {'source_type': 'blank',
+         'delete_on_termination': True,
+         'device_type': 'disk',
+         'boot_index': -1,
+         'destination_type': 'local',
+         'guest_format': guest_format,
+         'volume_size': size})
+
+
 def snapshot_from_bdm(snapshot_id, template):
     """Create a basic volume snapshot BDM from a given template bdm."""
 
-    copy_from_template = ['disk_bus', 'device_type', 'boot_index']
+    copy_from_template = ('disk_bus', 'device_type', 'boot_index',
+                          'delete_on_termination', 'volume_size',
+                          'device_name')
     snapshot_dict = {'source_type': 'snapshot',
                      'destination_type': 'volume',
                      'snapshot_id': snapshot_id}
@@ -433,7 +452,7 @@ def new_format_is_ephemeral(bdm):
 
 def get_root_bdm(bdms):
     try:
-        return (bdm for bdm in bdms if bdm.get('boot_index', -1) == 0).next()
+        return next(bdm for bdm in bdms if bdm.get('boot_index', -1) == 0)
     except StopIteration:
         return None
 

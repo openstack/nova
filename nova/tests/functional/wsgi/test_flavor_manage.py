@@ -14,6 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import six
+
 from nova import context
 from nova import db
 from nova import exception as ex
@@ -38,31 +40,33 @@ def rand_flavor(**kwargs):
 class FlavorManageFullstack(test.TestCase):
     """Tests for flavors manage administrative command.
 
-    Extention: os-flavors-manage
+    Extension: os-flavors-manage
 
     os-flavors-manage adds a set of admin functions to the flavors
-    resource for create and delete of flavors.
+    resource for the creation and deletion of flavors.
 
     POST /v2/flavors:
 
-    {
-        'name': NAME, # string, required unique
-        'id': ID, # string, required unique
-        'ram': RAM, # in MB, required
-        'vcpus': VCPUS, # int value, required
-        'disk': DISK, # in GB, required
-        'OS-FLV-EXT-DATA:ephemeral', # in GB, ephemeral disk size
-        'is_public': IS_PUBLIC, # boolean
-        'swap': SWAP, # in GB?
-        'rxtx_factor': RXTX, # ???
-    }
+    ::
+
+        {
+            'name': NAME, # string, required unique
+            'id': ID, # string, required unique
+            'ram': RAM, # in MB, required
+            'vcpus': VCPUS, # int value, required
+            'disk': DISK, # in GB, required
+            'OS-FLV-EXT-DATA:ephemeral', # in GB, ephemeral disk size
+            'is_public': IS_PUBLIC, # boolean
+            'swap': SWAP, # in GB?
+            'rxtx_factor': RXTX, # ???
+        }
 
     Returns Flavor
 
     DELETE /v2/flavors/ID
 
 
-    Functional Test Scope::
+    Functional Test Scope:
 
     This test starts the wsgi stack for the nova api services, uses an
     in memory database to ensure the path through the wsgi layer to
@@ -89,7 +93,7 @@ class FlavorManageFullstack(test.TestCase):
             'id': 'flavorid',
             'swap': 'swap'
         }
-        for k, v in mapping.iteritems():
+        for k, v in six.iteritems(mapping):
             if k in flav:
                 self.assertEqual(flav[k], flavdb[v],
                                  "%s != %s" % (flav, flavdb))
@@ -97,7 +101,7 @@ class FlavorManageFullstack(test.TestCase):
     def assertFlavorAPIEqual(self, flav, flavapi):
         # for all keys in the flavor, ensure they are correctly set in
         # flavapi response.
-        for k, v in flav.iteritems():
+        for k, v in six.iteritems(flav):
             if k in flavapi:
                 self.assertEqual(flav[k], flavapi[k],
                                  "%s != %s" % (flav, flavapi))

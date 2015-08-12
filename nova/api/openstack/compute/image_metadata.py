@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -55,7 +56,7 @@ class Controller(object):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
         if 'metadata' in body:
-            for key, value in body['metadata'].iteritems():
+            for key, value in six.iteritems(body['metadata']):
                 image['properties'][key] = value
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])

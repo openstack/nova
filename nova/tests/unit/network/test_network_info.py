@@ -134,7 +134,7 @@ class FixedIPTests(test.NoDBTestCase):
 
     def test_add_floating_ip_repeatedly_only_one_instance(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
-        for i in xrange(10):
+        for i in range(10):
             fixed_ip.add_floating_ip('192.168.1.101')
         self.assertEqual(fixed_ip['floating_ips'], ['192.168.1.101'])
 
@@ -199,7 +199,7 @@ class SubnetTests(test.NoDBTestCase):
         subnet = fake_network_cache_model.new_subnet()
         route1 = fake_network_cache_model.new_route()
         route2 = fake_network_cache_model.new_route({'cidr': '1.1.1.1/24'})
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_route(route2)
         self.assertEqual(subnet['routes'], [route1, route2])
 
@@ -214,7 +214,7 @@ class SubnetTests(test.NoDBTestCase):
 
     def test_add_dns_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_dns(fake_network_cache_model.new_ip(
                     dict(address='9.9.9.9')))
         self.assertEqual(subnet['dns'],
@@ -236,7 +236,7 @@ class SubnetTests(test.NoDBTestCase):
 
     def test_add_ip_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_ip(fake_network_cache_model.new_fixed_ip(
                         dict(address='192.168.1.102')))
         self.assertEqual(subnet['ips'],
@@ -293,7 +293,7 @@ class NetworkTests(test.NoDBTestCase):
 
     def test_add_subnet_a_lot(self):
         network = fake_network_cache_model.new_network()
-        for i in xrange(10):
+        for i in range(10):
             network.add_subnet(fake_network_cache_model.new_subnet(
                     dict(cidr='0.0.0.0')))
         self.assertEqual(network['subnets'],
@@ -846,3 +846,347 @@ iface eth1 inet static
                 use_ipv6=True, gateway=False, two_interfaces=True,
                 libvirt_virt_type='lxc')
         self.assertEqual(expected, template)
+
+
+class TestNetworkMetadata(test.NoDBTestCase):
+    def setUp(self):
+        super(TestNetworkMetadata, self).setUp()
+        self.netinfo = model.NetworkInfo([fake_network_cache_model.new_vif(
+            {'type': 'ethernet'})])
+
+        # Give this vif ipv4 and ipv6 dhcp subnets
+        ipv4_subnet = fake_network_cache_model.new_subnet(version=4)
+        ipv6_subnet = fake_network_cache_model.new_subnet(version=6)
+
+        self.netinfo[0]['network']['subnets'][0] = ipv4_subnet
+        self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
+        self.netinfo[0]['network']['mtu'] = 1500
+
+    def test_get_network_metadata_json(self):
+
+        net_metadata = netutils.get_network_metadata(self.netinfo,
+                                                     use_ipv6=True)
+
+        # Physical Ethernet
+        self.assertEqual(
+            {
+                'id': 'interface0',
+                'type': 'phy',
+                'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
+                'vif_id': 1,
+                'mtu': 1500
+            },
+            net_metadata['links'][0])
+
+        # IPv4 Network
+        self.assertEqual(
+            {
+                'id': 'network0',
+                'link': 'interface0',
+                'type': 'ipv4',
+                'ip_address': '10.10.0.2',
+                'netmask': '255.255.255.0',
+                'routes': [
+                    {
+                        'network': '0.0.0.0',
+                        'netmask': '0.0.0.0',
+                        'gateway': '10.10.0.1'
+                    },
+                    {
+                        'network': '0.0.0.0',
+                        'netmask': '255.255.255.0',
+                        'gateway': '192.168.1.1'
+                    }
+                ],
+                'network_id': 1
+            },
+            net_metadata['networks'][0])
+
+        self.assertEqual(
+            {
+                'id': 'network1',
+                'link': 'interface0',
+                'type': 'ipv6',
+                'ip_address': 'fd00::2',
+                'netmask': 'ffff:ffff:ffff::',
+                'routes': [
+                    {
+                        'network': '::',
+                        'netmask': '::',
+                        'gateway': 'fd00::1'
+                    },
+                    {
+                        'network': '::',
+                        'netmask': 'ffff:ffff:ffff::',
+                        'gateway': 'fd00::1:1'
+                    }
+                ],
+                'network_id': 1
+            },
+            net_metadata['networks'][1])
+
+    def test_get_network_metadata_json_dhcp(self):
+        ipv4_subnet = fake_network_cache_model.new_subnet(
+            subnet_dict=dict(dhcp_server='1.1.1.1'), version=4)
+        ipv6_subnet = fake_network_cache_model.new_subnet(
+            subnet_dict=dict(dhcp_server='1234:567::'), version=6)
+
+        self.netinfo[0]['network']['subnets'][0] = ipv4_subnet
+        self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
+        net_metadata = netutils.get_network_metadata(self.netinfo,
+                                                     use_ipv6=True)
+
+        # IPv4 Network
+        self.assertEqual(
+            {
+                'id': 'network0',
+                'link': 'interface0',
+                'type': 'ipv4_dhcp',
+                'network_id': 1
+            },
+            net_metadata['networks'][0])
+
+        # IPv6 Network
+        self.assertEqual(
+            {
+                'id': 'network1',
+                'link': 'interface0',
+                'type': 'ipv6_dhcp',
+                'network_id': 1
+            },
+            net_metadata['networks'][1])
+
+    def test__get_nets(self):
+        expected_net = {
+            'id': 'network0',
+            'ip_address': '10.10.0.2',
+            'link': 1,
+            'netmask': '255.255.255.0',
+            'network_id': 1,
+            'routes': [
+                {
+                    'gateway': '10.10.0.1',
+                    'netmask': '0.0.0.0',
+                    'network': '0.0.0.0'},
+                {
+                    'gateway': '192.168.1.1',
+                    'netmask': '255.255.255.0',
+                    'network': '0.0.0.0'}],
+            'type': 'ipv4'
+        }
+        net = netutils._get_nets(
+            self.netinfo[0], self.netinfo[0]['network']['subnets'][0], 4, 0, 1)
+        self.assertEqual(expected_net, net)
+
+    def test__get_eth_link(self):
+        expected_link = {
+            'id': 'interface0',
+            'vif_id': 1,
+            'type': 'vif',
+            'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
+            'mtu': 1500
+        }
+        self.netinfo[0]['type'] = 'vif'
+        link = netutils._get_eth_link(self.netinfo[0], 0)
+        self.assertEqual(expected_link, link)
+
+    def test__get_eth_link_physical(self):
+        expected_link = {
+            'id': 'interface1',
+            'vif_id': 1,
+            'type': 'phy',
+            'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
+            'mtu': 1500
+        }
+        link = netutils._get_eth_link(self.netinfo[0], 1)
+        self.assertEqual(expected_link, link)
+
+    def test__get_default_route(self):
+        v4_expected = [{
+            'network': '0.0.0.0',
+            'netmask': '0.0.0.0',
+            'gateway': '10.10.0.1',
+        }]
+        v6_expected = [{
+            'network': '::',
+            'netmask': '::',
+            'gateway': 'fd00::1'
+        }]
+        v4 = netutils._get_default_route(
+            4, self.netinfo[0]['network']['subnets'][0])
+        self.assertEqual(v4_expected, v4)
+
+        v6 = netutils._get_default_route(
+            6, self.netinfo[0]['network']['subnets'][1])
+        self.assertEqual(v6_expected, v6)
+
+        # Test for no gateway
+        self.netinfo[0]['network']['subnets'][0]['gateway'] = None
+        no_route = netutils._get_default_route(
+            4, self.netinfo[0]['network']['subnets'][0])
+        self.assertEqual([], no_route)
+
+    def test__get_dns_services(self):
+        expected_dns = [
+            {'type': 'dns', 'address': '1.2.3.4'},
+            {'type': 'dns', 'address': '2.3.4.5'},
+            {'type': 'dns', 'address': '3.4.5.6'}
+        ]
+        subnet = fake_network_cache_model.new_subnet(version=4)
+        subnet['dns'].append(fake_network_cache_model.new_ip(
+            {'address': '3.4.5.6'}))
+        dns = netutils._get_dns_services(subnet)
+        self.assertEqual(expected_dns, dns)
+
+    def test_get_network_metadata(self):
+        expected_json = {
+            "links": [
+                {
+                    "ethernet_mac_address": "aa:aa:aa:aa:aa:aa",
+                    "id": "interface0",
+                    "type": "phy",
+                    "vif_id": 1,
+                    "mtu": 1500
+                },
+                {
+                    "ethernet_mac_address": "aa:aa:aa:aa:aa:ab",
+                    "id": "interface1",
+                    "type": "phy",
+                    "vif_id": 1,
+                    "mtu": 1500
+                },
+            ],
+            "networks": [
+                {
+                    "id": "network0",
+                    "ip_address": "10.10.0.2",
+                    "link": "interface0",
+                    "netmask": "255.255.255.0",
+                    "network_id":
+                        "00000000-0000-0000-0000-000000000000",
+                    "routes": [
+                        {
+                            "gateway": "10.10.0.1",
+                            "netmask": "0.0.0.0",
+                            "network": "0.0.0.0"
+                        },
+                        {
+                            "gateway": "192.168.1.1",
+                            "netmask": "255.255.255.0",
+                            "network": "0.0.0.0"
+                        }
+                    ],
+                    "type": "ipv4"
+                },
+                {
+                   'id': 'network1',
+                   'ip_address': 'fd00::2',
+                   'link': 'interface0',
+                   'netmask': 'ffff:ffff:ffff::',
+                   'network_id': '00000000-0000-0000-0000-000000000000',
+                   'routes': [{'gateway': 'fd00::1',
+                               'netmask': '::',
+                               'network': '::'},
+                              {'gateway': 'fd00::1:1',
+                               'netmask': 'ffff:ffff:ffff::',
+                               'network': '::'}],
+                   'type': 'ipv6'
+                },
+                {
+                    "id": "network2",
+                    "ip_address": "192.168.0.2",
+                    "link": "interface1",
+                    "netmask": "255.255.255.0",
+                    "network_id":
+                        "11111111-1111-1111-1111-111111111111",
+                    "routes": [
+                        {
+                            "gateway": "192.168.0.1",
+                            "netmask": "0.0.0.0",
+                            "network": "0.0.0.0"
+                        }
+                    ],
+                    "type": "ipv4"
+                }
+            ],
+            'services': [
+                {'address': '1.2.3.4', 'type': 'dns'},
+                {'address': '2.3.4.5', 'type': 'dns'},
+                {'address': '1:2:3:4::', 'type': 'dns'},
+                {'address': '2:3:4:5::', 'type': 'dns'}
+            ]
+        }
+
+        self.netinfo[0]['network']['id'] = (
+            '00000000-0000-0000-0000-000000000000')
+
+        # Add a second NIC
+        self.netinfo.append(fake_network_cache_model.new_vif({
+            'type': 'ethernet', 'address': 'aa:aa:aa:aa:aa:ab'}))
+
+        address = fake_network_cache_model.new_ip({'address': '192.168.0.2'})
+        gateway_address = fake_network_cache_model.new_ip(
+            {'address': '192.168.0.1'})
+
+        ipv4_subnet = fake_network_cache_model.new_subnet(
+            {'cidr': '192.168.0.0/24', 'gateway': gateway_address,
+             'ips': [address], 'routes': []})
+
+        self.netinfo[1]['network']['id'] = (
+            '11111111-1111-1111-1111-111111111111')
+
+        self.netinfo[1]['network']['subnets'][0] = ipv4_subnet
+        self.netinfo[1]['network']['mtu'] = 1500
+
+        network_json = netutils.get_network_metadata(self.netinfo)
+        self.assertEqual(expected_json, network_json)
+
+    def test_get_network_metadata_no_ipv4(self):
+        expected_json = {
+            "services": [
+                {
+                    "type": "dns",
+                    "address": "1:2:3:4::"
+                },
+                {
+                    "type": "dns",
+                    "address": "2:3:4:5::"
+                }
+            ],
+            "networks": [
+                {
+                    "network_id": 1,
+                    "type": "ipv6",
+                    "netmask": "ffff:ffff:ffff::",
+                    "link": "interface0",
+                    "routes": [
+                        {
+                            "netmask": "::",
+                            "network": "::",
+                            "gateway": "fd00::1"
+                        },
+                        {
+                            "netmask": "ffff:ffff:ffff::",
+                            "network": "::",
+                            "gateway": "fd00::1:1"
+                        }
+                    ],
+                    "ip_address": "fd00::2",
+                    "id": "network0"
+                }
+            ],
+            "links": [
+                {
+                    "ethernet_mac_address": "aa:aa:aa:aa:aa:aa",
+                    "mtu": 1500,
+                    "type": "phy",
+                    "id": "interface0",
+                    "vif_id": 1
+                }
+            ]
+        }
+
+        # drop the ipv4 subnet
+        self.netinfo[0]['network']['subnets'].pop(0)
+        network_json = netutils.get_network_metadata(self.netinfo)
+        self.assertEqual(expected_json, network_json)

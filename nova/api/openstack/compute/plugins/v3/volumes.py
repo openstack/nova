@@ -131,7 +131,7 @@ class VolumeController(wsgi.Controller):
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 404))
     @validation.schema(volumes_schema.create)
     def create(self, req, body):
         """Creates a new volume."""
@@ -145,7 +145,10 @@ class VolumeController(wsgi.Controller):
         snapshot_id = vol.get('snapshot_id', None)
 
         if snapshot_id is not None:
-            snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+            try:
+                snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+            except exception.SnapshotNotFound as e:
+                raise exc.HTTPNotFound(explanation=e.format_message())
         else:
             snapshot = None
 

@@ -19,6 +19,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -73,6 +74,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
                              db.security_group_get(self._context, self.id))
 
 
+@base.NovaObjectRegistry.register
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              SecurityGroup <= version 1.1
@@ -81,9 +83,9 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroup'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): SecurityGroup was at 1.1 before we added this
+    # NOTE(danms): SecurityGroup was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1')],
         }
 
     def __init__(self, *args, **kwargs):

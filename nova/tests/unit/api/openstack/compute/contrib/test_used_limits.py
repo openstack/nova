@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova.api.openstack.compute.contrib import used_limits as used_limits_v2
 from nova.api.openstack.compute.plugins.v3 import used_limits as \
     used_limits_v21
@@ -66,7 +68,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         }
         limits = {}
         expected_abs_limits = []
-        for display_name, q in quota_map.iteritems():
+        for display_name, q in six.iteritems(quota_map):
             limits[q] = {'limit': len(display_name),
                          'in_use': len(display_name) / 2,
                          'reserved': len(display_name) / 3}

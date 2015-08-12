@@ -49,13 +49,13 @@ variables / types used
       'root' -> disk_info
 
 
- * 'disk_info': a tuple specifying disk configuration
+ * 'disk_info': a dict specifying disk configuration
 
-   It contains the following 3 fields
+   It contains the following 3 required fields
 
-      (disk bus, disk dev, device type)
+      bus (disk_bus), dev (disk_dev), type (device_type)
 
-   and possibly these optional fields: ('format',)
+   and possibly these optional fields: ('format', 'boot_index')
 
  * 'disk_bus': the guest bus type ('ide', 'virtio', 'scsi', etc)
 
@@ -73,6 +73,7 @@ import itertools
 import operator
 
 from oslo_config import cfg
+import six
 
 from nova import block_device
 from nova.compute import arch
@@ -80,7 +81,6 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
-from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -447,24 +447,8 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
                                  root_bdm, {}, disk_bus)
 
 
-def default_device_names(virt_type, context, instance, root_device_name,
-                         ephemerals, swap, block_device_mapping,
+def default_device_names(virt_type, context, instance, block_device_info,
                          image_meta):
-
-    block_device_info = {
-        'root_device_name': root_device_name,
-        'swap': driver_block_device.get_swap(
-            driver_block_device.convert_swap(swap)),
-        'ephemerals': driver_block_device.convert_ephemerals(ephemerals),
-        'block_device_mapping': (
-            driver_block_device.convert_volumes(
-                block_device_mapping) +
-            driver_block_device.convert_snapshots(
-                block_device_mapping) +
-            driver_block_device.convert_blanks(
-                block_device_mapping))
-    }
-
     get_disk_info(virt_type, instance, image_meta, block_device_info)
 
     for driver_bdm in itertools.chain(block_device_info['ephemerals'],
@@ -511,16 +495,7 @@ def get_disk_mapping(virt_type, instance,
        Returns the guest disk mapping for the devices.
     """
 
-    inst_type = instance.get_flavor()
-
     mapping = {}
-
-    pre_assigned_device_names = \
-    [block_device.strip_dev(get_device_name(bdm)) for bdm in itertools.chain(
-        driver.block_device_info_get_ephemerals(block_device_info),
-        [driver.block_device_info_get_swap(block_device_info)],
-        driver.block_device_info_get_mapping(block_device_info))
-     if get_device_name(bdm)]
 
     if rescue:
         rescue_info = get_next_disk_info(mapping,
@@ -533,6 +508,15 @@ def get_disk_mapping(virt_type, instance,
         mapping['disk'] = os_info
 
         return mapping
+
+    inst_type = instance.get_flavor()
+
+    pre_assigned_device_names = \
+    [block_device.strip_dev(get_device_name(bdm)) for bdm in itertools.chain(
+        driver.block_device_info_get_ephemerals(block_device_info),
+        [driver.block_device_info_get_swap(block_device_info)],
+        driver.block_device_info_get_mapping(block_device_info))
+     if get_device_name(bdm)]
 
     # NOTE (ndipanov): root_bdm can be None when we boot from image
     # as there is no driver represenation of local targeted images
@@ -554,6 +538,12 @@ def get_disk_mapping(virt_type, instance,
     if not root_bdm and not block_device.volume_in_mapping(root_info['dev'],
                                                            block_device_info):
         mapping['disk'] = root_info
+    elif root_bdm:
+        # NOTE (ft): If device name is not set in root bdm, root_info has a
+        # generated one. We have to copy device name to root bdm to prevent its
+        # second generation in loop through bdms. If device name is already
+        # set, nothing is changed.
+        update_bdm(root_bdm, root_info)
 
     default_eph = has_default_ephemeral(instance, disk_bus, block_device_info,
                                         mapping)
@@ -637,7 +627,7 @@ def get_disk_info(virt_type, instance, image_meta,
 
 
 def get_boot_order(disk_info):
-    boot_mapping = (info for name, info in disk_info['mapping'].iteritems()
+    boot_mapping = (info for name, info in six.iteritems(disk_info['mapping'])
                     if name != 'root' and info.get('boot_index') is not None)
     boot_devs_dup = (BOOT_DEV_FOR_TYPE[dev['type']] for dev in
                      sorted(boot_mapping,

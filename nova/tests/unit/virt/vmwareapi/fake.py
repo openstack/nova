@@ -27,6 +27,7 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
+import six
 
 from nova import exception
 from nova.virt.vmwareapi import constants
@@ -986,7 +987,7 @@ def create_vm(uuid=None, name=None,
     if vm_path.rel_path == '':
         vm_path = vm_path.join(name, name + '.vmx')
 
-    for key, value in _db_content["Datastore"].iteritems():
+    for key, value in six.iteritems(_db_content["Datastore"]):
         if value.get('summary.name') == vm_path.datastore:
             ds = key
             break
@@ -1402,6 +1403,7 @@ class FakeVim(object):
             for file in matched_files:
                 matched = DataObject()
                 matched.path = file
+                matched.fileSize = 1024
                 result.file.append(matched)
             task_mdo = create_task(method, "success", result=result)
         else:

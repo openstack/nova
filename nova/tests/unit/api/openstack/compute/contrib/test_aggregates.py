@@ -668,3 +668,16 @@ class AggregateTestCaseV2(AggregateTestCaseV21):
         # This test is to ensure that this doesn't occur again.
         self.assertRaises(KeyError, eval(self.add_host), self.req, "1",
                           body={"add_host": {"host": "host1"}})
+
+    def test_add_host_to_aggregate_with_non_admin(self):
+        rule_name = "compute_extension:aggregates"
+        self.policy.set_rules({rule_name: ""})
+        self.assertRaises(exception.AdminRequired, self.controller._add_host,
+                          self.user_req, '1', {'host': 'fake_host'})
+
+    def test_remove_host_from_aggregate_with_non_admin(self):
+        rule_name = "compute_extension:aggregates"
+        self.policy.set_rules({rule_name: ""})
+        self.assertRaises(exception.AdminRequired,
+                          self.controller._remove_host, self.user_req,
+                          '1', {'host': 'fake_host'})

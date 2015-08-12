@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -88,14 +89,18 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
     @base.remotable
     def save(self, update_cells=True):
         if 'network_info' in self.obj_what_changed():
+            if update_cells:
+                stale_instance = self.obj_clone()
             nw_info_json = self.fields['network_info'].to_primitive(
                 self, 'network_info', self.network_info)
             rv = db.instance_info_cache_update(self._context,
                                                self.instance_uuid,
                                                {'network_info': nw_info_json})
             self._from_db_object(self._context, self, rv)
-            if update_cells and rv:
-                self._info_cache_cells_update(self._context, rv)
+            if update_cells:
+                # Send a copy of ourselves before updates are applied so
+                # that cells can tell what changed.
+                self._info_cache_cells_update(self._context, stale_instance)
         self.obj_reset_changes()
 
     @base.remotable

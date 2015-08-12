@@ -184,3 +184,30 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('/extensions/servers')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
                           req, 'servers')
+
+
+class ExtensionInfoPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ExtensionInfoPolicyEnforcementV21, self).setUp()
+        ext_info = plugins.LoadedExtensionInfo()
+        ext_info.extensions = fake_extensions
+        self.controller = extension_info.ExtensionInfoController(ext_info)
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _test_extension_policy_failed(self, action, *args):
+        rule_name = "os_compute_api:extensions"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            getattr(self.controller, action), self.req, *args)
+
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_extension_index_policy_failed(self):
+        self._test_extension_policy_failed('index')
+
+    def test_extension_show_policy_failed(self):
+        self._test_extension_policy_failed('show', 1)

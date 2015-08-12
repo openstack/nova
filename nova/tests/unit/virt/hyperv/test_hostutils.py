@@ -32,10 +32,10 @@ class FakeCPUSpec(object):
 class HostUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V hostutils class."""
 
-    _FAKE_MEMORY_TOTAL = 1024L
-    _FAKE_MEMORY_FREE = 512L
-    _FAKE_DISK_SIZE = 1024L
-    _FAKE_DISK_FREE = 512L
+    _FAKE_MEMORY_TOTAL = 1024
+    _FAKE_MEMORY_FREE = 512
+    _FAKE_DISK_SIZE = 1024
+    _FAKE_DISK_FREE = 512
     _FAKE_VERSION_GOOD = '6.2.0'
     _FAKE_VERSION_BAD = '6.1.9'
 

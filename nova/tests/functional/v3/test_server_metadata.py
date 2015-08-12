@@ -13,17 +13,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ServersMetadataJsonTest(test_servers.ServersSampleBase):
     extends_name = 'core_only'
     sample_dir = 'server-metadata'
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
 
     def _create_and_set(self, subs):
         uuid = self._post_server()
-        response = self._do_put('%s/servers/%s/metadata' %
-                                (self.api.project_id, uuid),
+        response = self._do_put('/servers/%s/metadata' % uuid,
                                 'server-metadata-all-req',
                                 subs)
         self._verify_response('server-metadata-all-resp', subs, response, 200)

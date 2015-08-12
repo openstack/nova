@@ -15,6 +15,8 @@
 
 import mock
 
+import six
+
 from nova import exception
 from nova import objects
 from nova.pci import stats
@@ -112,7 +114,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertNotEqual(self.pci_stats, pci_stats2)
 
     def test_object_create(self):
-        m = objects.pci_device_pool.from_pci_stats(self.pci_stats.pools)
+        m = self.pci_stats.to_device_pools_obj()
         new_stats = stats.PciDeviceStats(m)
 
         self.assertEqual(len(new_stats.pools), 3)
@@ -150,16 +152,15 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
     def test_consume_requests_empty(self):
         devs = self.pci_stats.consume_requests([])
         self.assertEqual(0, len(devs))
 
     def test_consume_requests_failed(self):
-        self.assertRaises(exception.PciDeviceRequestFailed,
-            self.pci_stats.consume_requests,
-            pci_requests_multiple)
+        self.assertIsNone(self.pci_stats.consume_requests(
+                          pci_requests_multiple))
 
     def test_support_requests_numa(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0),
@@ -185,13 +186,11 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests, cells)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
     def test_consume_requests_numa_failed(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
-        self.assertRaises(exception.PciDeviceRequestFailed,
-            self.pci_stats.consume_requests,
-            pci_requests, cells)
+        self.assertIsNone(self.pci_stats.consume_requests(pci_requests, cells))
 
     def test_consume_requests_no_numa_info(self):
         cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
@@ -200,7 +199,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_request, cells)
         self.assertEqual(1, len(devs))
         self.assertEqual(set(['v3']),
-                         set([dev['vendor_id'] for dev in devs]))
+                         set([dev.vendor_id for dev in devs]))
 
 
 @mock.patch.object(whitelist, 'get_pci_devices_filter')
@@ -248,7 +247,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.assertEqual(product_id, pool['product_id'])
         self.assertEqual(count, pool['count'])
         if tags:
-            for k, v in tags.iteritems():
+            for k, v in six.iteritems(tags):
                 self.assertEqual(v, pool[k])
 
     def _assertPools(self):
@@ -284,7 +283,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         devs = self.pci_stats.consume_requests(pci_requests)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['0071', '0072']),
-                         set([dev['product_id'] for dev in devs]))
+                         set([dev.product_id for dev in devs]))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 2)
         self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071', 3,
                                 physical_network='physnet1')

@@ -17,8 +17,8 @@ import mock
 import oslo_messaging as messaging
 
 from nova import context
-from nova import exception
 from nova import objects
+from nova.objects import pci_device_pool
 from nova.scheduler import client as scheduler_client
 from nova.scheduler.client import query as scheduler_query_client
 from nova.scheduler.client import report as scheduler_report_client
@@ -37,38 +37,18 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
 
         self.client = scheduler_report_client.SchedulerReportClient()
 
-    @mock.patch.object(objects.ComputeNode, '__new__')
-    def test_update_compute_node_works(self, mock_cn):
-        stats = {"id": 1, "foo": "bar",
-                 "pci_device_pools": [{"vendor_id": "foo",
-                                       "product_id": "foo",
-                                       "count": 1,
-                                       "a": "b"}]}
-        self.client.update_resource_stats(self.context,
-                                          ('fakehost', 'fakenode'),
-                                          stats)
-        mock_cn.assert_called_once_with(objects.ComputeNode,
-                                        context=self.context,
-                                        id=1)
-        cn = mock_cn()
-        cn.obj_reset_changes.assert_called_once_with()
-        self.assertEqual("b", cn.pci_device_pools[0].tags["a"])
-        cn.save.assert_called_once_with()
-        self.assertEqual('bar', cn.foo)
-
-    def test_update_compute_node_raises(self):
-        stats = {"foo": "bar"}
-        self.assertRaises(exception.ComputeHostNotCreated,
-                          self.client.update_resource_stats,
-                          self.context, ('fakehost', 'fakenode'), stats)
-
-    @mock.patch('nova.objects.ComputeNode.save')
-    def test_update_resource_stats_pci_device_pools_none(self, mock_save):
-        stats = {"id": 1, "foo": "bar",
-                 "pci_device_pools": None}
-        self.client.update_resource_stats(self.context,
-                                          ('fakehost', 'fakenode'),
-                                          stats)
+    @mock.patch.object(objects.ComputeNode, 'save')
+    def test_update_resource_stats_saves(self, mock_save):
+        cn = objects.ComputeNode()
+        cn.host = 'fakehost'
+        cn.hypervisor_hostname = 'fakenode'
+        cn.pci_device_pools = pci_device_pool.from_pci_stats(
+            [{"vendor_id": "foo",
+              "product_id": "foo",
+              "count": 1,
+              "a": "b"}])
+        self.client.update_resource_stats(cn)
+        mock_save.assert_called_once_with()
 
 
 class SchedulerQueryClientTestCase(test.NoDBTestCase):
@@ -178,8 +158,7 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     def test_update_resource_stats(self, mock_update_resource_stats):
         self.assertIsNone(self.client.reportclient.instance)
 
-        self.client.update_resource_stats('ctxt', 'fake_name', 'fake_stats')
+        self.client.update_resource_stats(mock.sentinel.cn)
 
         self.assertIsNotNone(self.client.reportclient.instance)
-        mock_update_resource_stats.assert_called_once_with(
-            'ctxt', 'fake_name', 'fake_stats')
+        mock_update_resource_stats.assert_called_once_with(mock.sentinel.cn)

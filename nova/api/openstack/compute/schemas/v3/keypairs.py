@@ -53,6 +53,28 @@ create_v22 = {
     'additionalProperties': False,
 }
 
+create_v210 = {
+    'type': 'object',
+    'properties': {
+        'keypair': {
+            'type': 'object',
+            'properties': {
+                'name': parameter_types.name,
+                'type': {
+                    'type': 'string',
+                    'enum': ['ssh', 'x509']
+                },
+                'public_key': {'type': 'string'},
+                'user_id': {'type': 'string'},
+            },
+            'required': ['name'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['keypair'],
+    'additionalProperties': False,
+}
+
 server_create = {
     'key_name': parameter_types.name,
 }

@@ -19,6 +19,7 @@ import sys
 
 import mock
 from oslo_config import cfg
+from six.moves import range
 
 from nova.compute import flavors
 import nova.context
@@ -145,11 +146,15 @@ def get_test_network_info(count=1):
 
         return vif
 
-    return network_model.NetworkInfo([current() for x in xrange(0, count)])
+    return network_model.NetworkInfo([current() for x in range(0, count)])
 
 
 def is_osx():
     return platform.mac_ver()[0] != ''
+
+
+def is_linux():
+    return platform.system() == 'Linux'
 
 
 def coreutils_readlink_available():

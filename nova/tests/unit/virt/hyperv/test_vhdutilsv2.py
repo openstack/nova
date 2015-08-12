@@ -23,11 +23,11 @@ from nova.virt.hyperv import vmutils
 class VHDUtilsV2TestCase(test_vhdutils.VHDUtilsBaseTestCase):
     """Unit tests for the Hyper-V VHDUtilsV2 class."""
 
-    _FAKE_BLOCK_SIZE = 33554432L
+    _FAKE_BLOCK_SIZE = 33554432
     _FAKE_LOG_SIZE = 1048576
     _FAKE_LOGICAL_SECTOR_SIZE = 4096
     _FAKE_METADATA_SIZE = 1048576
-    _FAKE_PHYSICAL_SECTOR_SIZE = 4096L
+    _FAKE_PHYSICAL_SECTOR_SIZE = 4096
 
     def setUp(self):
         super(VHDUtilsV2TestCase, self).setUp()

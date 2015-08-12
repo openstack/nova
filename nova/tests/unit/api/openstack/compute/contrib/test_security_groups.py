@@ -28,7 +28,6 @@ from nova import context as context_maker
 import nova.db
 from nova import exception
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -42,6 +41,13 @@ FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
 class AttrDict(dict):
     def __getattr__(self, k):
         return self[k]
+
+
+def security_group_request_template(**kwargs):
+    sg = kwargs.copy()
+    sg.setdefault('name', 'test')
+    sg.setdefault('description', 'test-description')
+    return sg
 
 
 def security_group_template(**kwargs):
@@ -150,7 +156,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertEqual(result['security_groups']['in_use'], in_use)
 
     def test_create_security_group(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         res_dict = self.controller.create(req, {'security_group': sg})
@@ -159,17 +165,17 @@ class TestSecurityGroupsV21(test.TestCase):
                          'test-description')
 
     def test_create_security_group_with_no_name(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         del sg['name']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, sg)
+                          self.controller.create, req, {'security_group': sg})
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_no_description(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         del sg['description']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -179,7 +185,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_empty_description(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         sg['description'] = ""
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -189,12 +195,12 @@ class TestSecurityGroupsV21(test.TestCase):
         except webob.exc.HTTPBadRequest as exc:
             self.assertEqual('description has a minimum character requirement'
                              ' of 1.', exc.explanation)
-        except exception.InvalidInput as exc:
+        except exception.InvalidInput:
             self.fail('Should have raised BadRequest exception instead of')
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_blank_name(self):
-        sg = security_group_template(name='')
+        sg = security_group_request_template(name='')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -203,7 +209,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_whitespace_name(self):
-        sg = security_group_template(name=' ')
+        sg = security_group_request_template(name=' ')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -212,7 +218,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_blank_description(self):
-        sg = security_group_template(description='')
+        sg = security_group_request_template(description='')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -221,7 +227,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_whitespace_description(self):
-        sg = security_group_template(description=' ')
+        sg = security_group_request_template(description=' ')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -230,7 +236,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_duplicate_name(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
 
         # FIXME: Stub out _get instead of creating twice
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -259,7 +265,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_above_255_characters_name(self):
-        sg = security_group_template(name='1234567890' * 26)
+        sg = security_group_request_template(name='1234567890' * 26)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -268,7 +274,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_above_255_characters_description(self):
-        sg = security_group_template(description='1234567890' * 26)
+        sg = security_group_request_template(description='1234567890' * 26)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -277,7 +283,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_non_string_name(self):
-        sg = security_group_template(name=12)
+        sg = security_group_request_template(name=12)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -286,7 +292,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_non_string_description(self):
-        sg = security_group_template(description=12)
+        sg = security_group_request_template(description=12)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -298,11 +304,11 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         for num in range(1, CONF.quota_security_groups):
             name = 'test%s' % num
-            sg = security_group_template(name=name)
+            sg = security_group_request_template(name=name)
             res_dict = self.controller.create(req, {'security_group': sg})
             self.assertEqual(res_dict['security_group']['name'], name)
 
-        sg = security_group_template()
+        sg = security_group_request_template()
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
                           req, {'security_group': sg})
 
@@ -570,7 +576,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertTrue(self.called)
 
     def test_delete_security_group_by_admin(self):
-        sg = security_group_template(id=2, rules=[])
+        sg = security_group_request_template()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.controller.create(req, {'security_group': sg})
@@ -1329,30 +1335,29 @@ def fake_compute_get_all(*args, **kwargs):
     base = {'id': 1, 'description': 'foo', 'user_id': 'bar',
             'project_id': 'baz', 'deleted': False, 'deleted_at': None,
             'updated_at': None, 'created_at': None}
-    db_list = [
-        fakes.stub_instance(
-            1, uuid=UUID1,
+    inst_list = [
+        fakes.stub_instance_obj(
+            None, 1, uuid=UUID1,
             security_groups=[dict(base, **{'name': 'fake-0-0'}),
                              dict(base, **{'name': 'fake-0-1'})]),
-        fakes.stub_instance(
-            2, uuid=UUID2,
+        fakes.stub_instance_obj(
+            None, 2, uuid=UUID2,
             security_groups=[dict(base, **{'name': 'fake-1-0'}),
                              dict(base, **{'name': 'fake-1-1'})])
     ]
 
-    return instance_obj._make_instance_list(args[1],
-                                            objects.InstanceList(),
-                                            db_list,
-                                            ['metadata', 'system_metadata',
-                                             'security_groups', 'info_cache'])
+    return objects.InstanceList(objects=inst_list)
 
 
 def fake_compute_get(*args, **kwargs):
-    inst = fakes.stub_instance(1, uuid=UUID3,
-                               security_groups=[{'name': 'fake-2-0'},
-                                                {'name': 'fake-2-1'}])
-    return fake_instance.fake_instance_obj(args[1],
-               expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS, **inst)
+    secgroups = objects.SecurityGroupList()
+    secgroups.objects = [
+        objects.SecurityGroup(name='fake-2-0'),
+        objects.SecurityGroup(name='fake-2-1'),
+    ]
+    inst = fakes.stub_instance_obj(None, 1, uuid=UUID3)
+    inst.security_groups = secgroups
+    return inst
 
 
 def fake_compute_create(*args, **kwargs):

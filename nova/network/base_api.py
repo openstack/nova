@@ -39,7 +39,8 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         if nw_info is None:
             nw_info = impl._get_instance_nw_info(context, instance)
 
-        LOG.debug('Updating cache with info: %s', nw_info)
+        LOG.debug('Updating instance_info_cache with network_info: %s',
+                  nw_info, instance=instance)
 
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
@@ -61,7 +62,6 @@ def refresh_cache(f):
 
     @functools.wraps(f)
     def wrapper(self, context, *args, **kwargs):
-        res = f(self, context, *args, **kwargs)
         try:
             # get the instance from arguments (or raise ValueError)
             instance = kwargs.get('instance')
@@ -72,6 +72,9 @@ def refresh_cache(f):
             raise Exception(msg)
 
         with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            # We need to call the wrapped function with the lock held to ensure
+            # that it can call _get_instance_nw_info safely.
+            res = f(self, context, *args, **kwargs)
             update_instance_cache_with_nw_info(self, context, instance,
                                                nw_info=res)
         # return the original function's return value
@@ -237,6 +240,19 @@ class NetworkAPI(base.Base):
 
     def get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            result = self._get_instance_nw_info(context, instance, **kwargs)
+            # NOTE(comstud): Don't update API cell with new info_cache every
+            # time we pull network info for an instance.  The periodic healing
+            # of info_cache causes too many cells messages.  Healing the API
+            # will happen separately.
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=result,
+                                               update_cells=False)
+        return result
+
+    def _get_instance_nw_info(self, context, instance, **kwargs):
+        """Template method, so a subclass can implement for neutron/network."""
         raise NotImplementedError()
 
     def create_pci_requests_for_sriov_ports(self, context,
@@ -328,3 +344,17 @@ class NetworkAPI(base.Base):
         :param host: The host which network should be cleanup for instance.
         """
         raise NotImplementedError()
+
+    def update_instance_vnic_index(self, context, instance, vif, index):
+        """Update instance vnic index.
+
+        When the 'VNIC index' extension is supported this method will update
+        the vnic index of the instance on the port. A instance may have more
+        than one vnic.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param vif: The VIF in question.
+        :param index: The index on the instance for the VIF.
+        """
+        pass

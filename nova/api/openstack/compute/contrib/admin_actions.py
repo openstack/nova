@@ -29,6 +29,7 @@ from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -45,8 +46,6 @@ class AdminActionsController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-
-    # TODO(bcwaldon): These action names should be prefixed with 'os-'
 
     @wsgi.action('pause')
     def _pause(self, req, id, body):
@@ -264,14 +263,10 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            rotation = int(rotation)
-        except ValueError:
-            msg = _("createBackup attribute 'rotation' must be an integer")
-            raise exc.HTTPBadRequest(explanation=msg)
-        if rotation < 0:
-            msg = _("createBackup attribute 'rotation' must be greater "
-                    "than or equal to zero")
-            raise exc.HTTPBadRequest(explanation=msg)
+            rotation = utils.validate_integer(rotation, "rotation",
+                                              min_value=0)
+        except exception.InvalidInput as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         props = {}
         metadata = entity.get('metadata', {})

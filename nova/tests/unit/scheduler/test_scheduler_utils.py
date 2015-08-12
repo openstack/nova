@@ -15,18 +15,17 @@
 """
 Tests For Scheduler Utils
 """
-import contextlib
 import uuid
 
 import mock
 from mox3 import mox
 from oslo_config import cfg
+import six
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
-from nova import notifications
 from nova import objects
 from nova import rpc
 from nova.scheduler import utils as scheduler_utils
@@ -71,35 +70,16 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             mock_get.assert_called_once_with()
         self.assertIsInstance(request_spec['instance_properties'], dict)
 
-    def test_set_vm_state_and_notify(self):
+    @mock.patch.object(rpc, 'get_notifier', return_value=mock.Mock())
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_set_vm_state_and_notify(self, mock_save, mock_add, mock_get):
         expected_uuid = 'fake-uuid'
         request_spec = dict(instance_properties=dict(uuid='other-uuid'))
         updates = dict(vm_state='fake-vm-state')
         service = 'fake-service'
         method = 'fake-method'
         exc_info = 'exc_info'
-
-        self.mox.StubOutWithMock(compute_utils,
-                                 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(notifications, 'send_update')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-
-        self.mox.StubOutWithMock(rpc, 'get_notifier')
-        notifier = self.mox.CreateMockAnything()
-        rpc.get_notifier(service).AndReturn(notifier)
-
-        old_ref = 'old_ref'
-        new_ref = 'new_ref'
-        inst_obj = 'inst_obj'
-
-        db.instance_update_and_get_original(
-            self.context, expected_uuid, updates,
-            columns_to_join=['system_metadata']).AndReturn((old_ref, new_ref))
-        notifications.send_update(self.context, old_ref, inst_obj,
-                                  service=service)
-        compute_utils.add_instance_fault_from_exc(
-                self.context,
-                inst_obj, exc_info, mox.IsA(tuple))
 
         payload = dict(request_spec=request_spec,
                        instance_properties=request_spec.get(
@@ -109,20 +89,23 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                        method=method,
                        reason=exc_info)
         event_type = '%s.%s' % (service, method)
-        notifier.error(self.context, event_type, payload)
 
-        self.mox.ReplayAll()
-
-        with mock.patch.object(objects.Instance, '_from_db_object',
-                               return_value=inst_obj):
-            scheduler_utils.set_vm_state_and_notify(self.context,
-                                                    expected_uuid,
-                                                    service,
-                                                    method,
-                                                    updates,
-                                                    exc_info,
-                                                    request_spec,
-                                                    db)
+        scheduler_utils.set_vm_state_and_notify(self.context,
+                                                expected_uuid,
+                                                service,
+                                                method,
+                                                updates,
+                                                exc_info,
+                                                request_spec,
+                                                db)
+        mock_save.assert_called_once_with()
+        mock_add.assert_called_once_with(self.context, mock.ANY,
+                                         exc_info, mock.ANY)
+        self.assertIsInstance(mock_add.call_args[0][1], objects.Instance)
+        self.assertIsInstance(mock_add.call_args[0][3], tuple)
+        mock_get.return_value.error.assert_called_once_with(self.context,
+                                                            event_type,
+                                                            payload)
 
     def _test_populate_filter_props(self, host_state_obj=True,
                                     with_retry=True,
@@ -210,11 +193,11 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         msg = 'The exception text was preserved!'
         filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
                                             exc=[msg]))
-        nvh = self.assertRaises(exception.NoValidHost,
+        nvh = self.assertRaises(exception.MaxRetriesExceeded,
                                 scheduler_utils.populate_retry,
                                 filter_properties, 'fake-uuid')
         # make sure 'msg' is a substring of the complete exception text
-        self.assertIn(msg, nvh.message)
+        self.assertIn(msg, six.text_type(nvh))
 
     def _check_parse_options(self, opts, sep, converter, expected):
         good = scheduler_utils.parse_options(opts,
@@ -265,7 +248,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     def _get_group_details(self, group, policy=None):
         group_hosts = ['hostB']
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',
@@ -314,7 +297,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group.members = [instance.uuid]
         group.policies = [policy]
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',

@@ -18,6 +18,7 @@ Tests for availability zones
 """
 
 from oslo_config import cfg
+import six
 
 from nova import availability_zones as az
 from nova import context
@@ -125,7 +126,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
         az.set_availability_zones(self.context, services)
-        self.assertIsInstance(services[0]['host'], unicode)
+        self.assertIsInstance(services[0]['host'], six.text_type)
         cached_key = az._make_cache_key(services[0]['host'])
         self.assertIsInstance(cached_key, str)
         self._destroy_service(service)

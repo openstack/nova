@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_versionedobjects import base as ovo
+
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -18,7 +20,10 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
+# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
+@base.NovaObjectRegistry.register
+class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
+                      ovo.VersionedObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -107,6 +112,7 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
         self._destroy_in_db(self._context, self.instance_uuid)
 
 
+@base.NovaObjectRegistry.register
 class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -114,8 +120,8 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceMapping'),
         }
-    child_versions = {
-        '1.0': '1.0',
+    obj_relationships = {
+        'objects': [('1.0', '1.0')],
         }
 
     @staticmethod

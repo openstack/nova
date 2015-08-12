@@ -48,7 +48,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                    host_username='test_username',
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
@@ -66,7 +66,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'ramdisk_id': '1',
             'mac_addresses': [{'address': 'de:ad:be:ef:be:ef'}],
             'memory_mb': 8192,
-            'flavor': 'm1.large',
+            'flavor': objects.Flavor(vcpus=4, extra_specs={}),
             'instance_type_id': 0,
             'vcpus': 4,
             'root_gb': 80,
@@ -82,7 +82,9 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         }
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
-        self.test_instance.flavor = objects.Flavor(extra_specs={})
+        self.test_instance.flavor = objects.Flavor(vcpus=4, memory_mb=8192,
+                                                   ephemeral_gb=0, swap=0,
+                                                   extra_specs={})
 
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)
@@ -122,7 +124,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.unit.image.fake.FakeImageService_reset()
 
-    def _spawn_vm(self, injected_files=None, admin_password=None,
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata',
+                       return_value='fake_metadata')
+    def _spawn_vm(self, fake_get_instance_meta,
+                  injected_files=None, admin_password=None,
                   block_device_info=None):
 
         injected_files = injected_files or []

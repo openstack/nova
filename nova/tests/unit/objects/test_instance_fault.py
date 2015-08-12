@@ -110,10 +110,10 @@ class _TestInstanceFault(object):
         self._test_create(True)
 
     def test_create_already_created(self):
-        fault = instance_fault.InstanceFault()
+        fault = instance_fault.InstanceFault(context=self.context)
         fault.id = 1
         self.assertRaises(exception.ObjectActionError,
-                          fault.create, self.context)
+                          fault.create)
 
 
 class TestInstanceFault(test_objects._LocalTest,

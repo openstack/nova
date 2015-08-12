@@ -18,11 +18,11 @@
 import six
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'flavorextraspecs')
@@ -32,7 +32,7 @@ class FlavorExtraSpecsController(object):
     """The flavor extra specs API controller for the OpenStack API."""
 
     def _get_extra_specs(self, context, flavor_id):
-        flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+        flavor = common.get_flavor(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
 
     def _check_body(self, body):
@@ -54,7 +54,7 @@ class FlavorExtraSpecsController(object):
         except exception.InvalidInput as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
-        for key, value in specs.iteritems():
+        for key, value in six.iteritems(specs):
             try:
                 utils.check_string_length(key, 'extra_specs key',
                                           min_length=1, max_length=255)
@@ -80,8 +80,9 @@ class FlavorExtraSpecsController(object):
         self._check_body(body)
         specs = body.get('extra_specs')
         self._check_extra_specs(specs)
+        flavor = common.get_flavor(context, flavor_id)
+
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
             flavor.save()
         except exception.FlavorExtraSpecUpdateCreateFailed as e:
@@ -100,8 +101,8 @@ class FlavorExtraSpecsController(object):
         if len(body) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
+        flavor = common.get_flavor(context, flavor_id)
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **body)
             flavor.save()
         except exception.FlavorExtraSpecUpdateCreateFailed as e:
@@ -114,11 +115,10 @@ class FlavorExtraSpecsController(object):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
         authorize(context, action='show')
+        flavor = common.get_flavor(context, flavor_id)
+
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             return {id: flavor.extra_specs[id]}
-        except exception.FlavorNotFound as error:
-            raise exc.HTTPNotFound(explanation=error.format_message())
         except KeyError:
             msg = _("Flavor %(flavor_id)s has no extra specs with "
                     "key %(key)s.") % dict(flavor_id=flavor_id,
@@ -129,8 +129,9 @@ class FlavorExtraSpecsController(object):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
+        flavor = common.get_flavor(context, flavor_id)
+
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             del flavor.extra_specs[id]
             flavor.save()
         except (exception.FlavorNotFound,

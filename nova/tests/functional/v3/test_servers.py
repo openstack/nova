@@ -66,6 +66,7 @@ class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     extra_extensions_to_load = ["os-access-ips"]
     _api_version = 'v2'
+    request_api_version = None
 
     def _get_flags(self):
         f = super(ServersSampleBase, self)._get_flags()
@@ -84,7 +85,8 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_get(self):
         uuid = self.test_servers_post()
-        response = self._do_get('servers/%s' % uuid)
+        response = self._do_get('servers/%s' % uuid,
+                                api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -96,14 +98,16 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_list(self):
         uuid = self._post_server()
-        response = self._do_get('servers')
+        response = self._do_get('servers',
+                                api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['id'] = uuid
         self._verify_response('servers-list-resp', subs, response, 200)
 
     def test_servers_details(self):
         uuid = self._post_server()
-        response = self._do_get('servers/detail')
+        response = self._do_get('servers/detail',
+                                api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -112,6 +116,14 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
         self._verify_response('servers-details-resp', subs, response, 200)
+
+
+class ServersSampleJson29Test(ServersSampleJsonTest):
+    request_api_version = '2.9'
+    # NOTE(gmann): microversion tests do not need to run for v2 API
+    # so defining scenarios only for v2.9 which will run the original tests
+    # by appending '(v2_9)' in test_id.
+    scenarios = [('v2_9', {})]
 
 
 class ServerSortKeysJsonTests(ServersSampleBase):

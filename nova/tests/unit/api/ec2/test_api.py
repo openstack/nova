@@ -18,7 +18,7 @@
 
 import random
 import re
-import StringIO
+from six.moves import StringIO
 
 import boto
 import boto.connection
@@ -28,8 +28,9 @@ from boto import exception as boto_exc
 if hasattr(boto.connection, 'HTTPResponse'):
     httplib = boto.connection
 else:
-    import httplib
+    from six.moves import http_client as httplib
 import fixtures
+from oslo_utils import versionutils
 import webob
 
 from nova.api import auth
@@ -38,7 +39,6 @@ from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova import context
 from nova import exception
-from nova.openstack.common import versionutils
 from nova import test
 from nova.tests.unit import matchers
 
@@ -47,7 +47,7 @@ class FakeHttplibSocket(object):
     """a fake socket implementation for httplib.HTTPResponse, trivial."""
     def __init__(self, response_string):
         self.response_string = response_string
-        self._buffer = StringIO.StringIO(response_string)
+        self._buffer = StringIO(response_string)
 
     def makefile(self, _mode, _other):
         """Returns the socket's internal buffer."""
@@ -451,7 +451,7 @@ class ApiEc2TestCase(test.TestCase):
                 self.assertEqual(e.status, 400, 'Expected status to be 400')
                 self.assertIn(message, e.error_message)
             else:
-                raise self.failureException, 'EC2ResponseError not raised'
+                raise self.failureException('EC2ResponseError not raised')
 
         # Invalid CIDR address
         _assert('Invalid CIDR', 'tcp', 80, 81, '0.0.0.0/0444')

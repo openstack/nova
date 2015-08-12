@@ -20,9 +20,9 @@ import tempfile
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_utils import fileutils
 
 from nova import context
-from nova.openstack.common import fileutils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils

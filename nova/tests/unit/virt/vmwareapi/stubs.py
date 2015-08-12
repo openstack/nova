@@ -17,9 +17,6 @@
 Stubouts for the test suite
 """
 
-import contextlib
-
-import mock
 from oslo_vmware import exceptions as vexc
 
 from nova.tests.unit.virt.vmwareapi import fake
@@ -77,40 +74,3 @@ def set_stubs(stubs):
     stubs.Set(driver.VMwareAPISession, "vim", fake_vim_prop)
     stubs.Set(driver.VMwareAPISession, "_is_vim_object",
               fake_is_vim_object)
-
-
-def fake_suds_context(calls=None):
-    """Generate a suds client which automatically mocks all SOAP method calls.
-
-    Calls are stored in <calls>, indexed by the name of the call. If you need
-    to mock the behaviour of specific API calls you can pre-populate <calls>
-    with appropriate Mock objects.
-    """
-
-    calls = calls or {}
-
-    class fake_factory(object):
-        def create(self, name):
-            return mock.NonCallableMagicMock(name=name)
-
-    class fake_service(object):
-        def __getattr__(self, attr_name):
-            if attr_name in calls:
-                return calls[attr_name]
-
-            mock_call = mock.MagicMock(name=attr_name)
-            calls[attr_name] = mock_call
-            return mock_call
-
-    class fake_client(object):
-        def __init__(self, wdsl_url, **kwargs):
-            self.service = fake_service()
-            self.factory = fake_factory()
-
-    return contextlib.nested(
-        mock.patch('suds.client.Client', fake_client),
-
-        # As we're not connecting to a real host there's no need to wait
-        # between retries
-        mock.patch.object(driver, 'TIME_BETWEEN_API_CALL_RETRIES', 0)
-    )

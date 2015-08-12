@@ -17,6 +17,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import context as nova_context
@@ -51,11 +52,8 @@ class FlavorAccessController(object):
         # NOTE(alex_xu): back-compatible with db layer hard-code admin
         # permission checks.
         nova_context.require_admin_context(context)
-        try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
-        except exception.FlavorNotFound:
-            explanation = _("Flavor not found.")
-            raise webob.exc.HTTPNotFound(explanation=explanation)
+
+        flavor = common.get_flavor(context, flavor_id)
 
         # public flavor to all projects
         if flavor.is_public:

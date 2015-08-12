@@ -321,3 +321,8 @@ class VMUtilsV2(vmutils.VMUtils):
                      if sasd.ResourceSubType == self._DVD_DISK_RES_SUB_TYPE]
 
         return dvd_paths
+
+    def _get_instance_notes(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+        vmsettings = self._get_vm_setting_data(vm)
+        return [note for note in vmsettings.Notes if note]

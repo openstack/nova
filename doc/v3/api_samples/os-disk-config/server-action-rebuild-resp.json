@@ -1,6 +1,8 @@
 {
     "server": {
         "OS-DCF:diskConfig": "AUTO",
+        "accessIPv4": "",
+        "accessIPv6": "",
         "addresses": {
             "private": [
                 {
@@ -15,7 +17,7 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/flavors/1",
+                    "href": "http://openstack.example.com/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
@@ -26,18 +28,18 @@
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
         },
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
+                "href": "http://openstack.example.com/v2/openstack/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
+                "href": "http://openstack.example.com/openstack/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
                 "rel": "bookmark"
             }
         ],

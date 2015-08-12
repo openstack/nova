@@ -13,14 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
-
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.i18n import _
 
 
 ALIAS = "os-server-diagnostics"
@@ -49,8 +46,7 @@ class ServerDiagnosticsController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics', server_id)
         except NotImplementedError:
-            msg = _("Unable to get diagnostics, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
 
 class ServerDiagnostics(extensions.V3APIExtensionBase):

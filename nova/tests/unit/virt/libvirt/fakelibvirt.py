@@ -17,6 +17,7 @@ import uuid
 
 import fixtures
 from lxml import etree
+import six
 
 from nova.compute import arch
 from nova.virt.libvirt import config as vconfig
@@ -52,6 +53,7 @@ VIR_DOMAIN_BLOCK_REBASE_SHALLOW = 1
 VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT = 2
 VIR_DOMAIN_BLOCK_REBASE_COPY = 8
 
+VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC = 1
 VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT = 2
 
 VIR_DOMAIN_EVENT_ID_LIFECYCLE = 0
@@ -106,6 +108,7 @@ VIR_FROM_NWFILTER = 330
 VIR_FROM_REMOTE = 340
 VIR_FROM_RPC = 345
 VIR_FROM_NODEDEV = 666
+VIR_ERR_INVALID_ARG = 8
 VIR_ERR_NO_SUPPORT = 3
 VIR_ERR_XML_DETAIL = 350
 VIR_ERR_NO_DOMAIN = 420
@@ -133,6 +136,8 @@ VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE = 64
 
 # blockCommit flags
 VIR_DOMAIN_BLOCK_COMMIT_RELATIVE = 4
+# blockRebase flags
+VIR_DOMAIN_BLOCK_REBASE_RELATIVE = 8
 
 
 VIR_CONNECT_LIST_DOMAINS_ACTIVE = 1
@@ -525,6 +530,9 @@ class Domain(object):
     def undefine(self):
         self._connection._undefine(self)
 
+    def isPersistent(self):
+        return True
+
     def undefineFlags(self, flags):
         self.undefine()
         if flags & VIR_DOMAIN_UNDEFINE_MANAGED_SAVE:
@@ -567,7 +575,7 @@ class Domain(object):
                 long(self._def['memory']),
                 long(self._def['memory']),
                 self._def['vcpu'],
-                123456789L]
+                123456789]
 
     def migrateToURI(self, desturi, flags, dname, bandwidth):
         raise make_libvirtError(
@@ -582,6 +590,9 @@ class Domain(object):
                 "Migration always fails for fake libvirt!",
                 error_code=VIR_ERR_INTERNAL_ERROR,
                 error_domain=VIR_FROM_QEMU)
+
+    def migrateSetMaxDowntime(self, downtime):
+        pass
 
     def attachDevice(self, xml):
         disk_info = _parse_disk_info(etree.fromstring(xml))
@@ -604,8 +615,11 @@ class Domain(object):
         disk_info['_attached'] = True
         return disk_info in self._def['devices']['disks']
 
-    def detachDeviceFlags(self, xml, _flags):
+    def detachDeviceFlags(self, xml, flags):
         self.detachDevice(xml)
+
+    def setUserPassword(self, user, password, flags=0):
+        pass
 
     def XMLDesc(self, flags):
         disks = ''
@@ -713,7 +727,7 @@ class Domain(object):
     def vcpus(self):
         vcpus = ([], [])
         for i in range(0, self._def['vcpu']):
-            vcpus[0].append((i, 1, 120405L, i))
+            vcpus[0].append((i, 1, 120405, i))
             vcpus[1].append((True, True, True, True))
         return vcpus
 
@@ -726,11 +740,36 @@ class Domain(object):
     def blockJobInfo(self, disk, flags):
         return {}
 
+    def blockJobAbort(self, disk, flags):
+        pass
+
+    def blockResize(self, disk, size):
+        pass
+
+    def blockRebase(self, disk, base, bandwidth=0, flags=0):
+        if (not base) and (flags and VIR_DOMAIN_BLOCK_REBASE_RELATIVE):
+            raise make_libvirtError(
+                    libvirtError,
+                    'flag VIR_DOMAIN_BLOCK_REBASE_RELATIVE is '
+                    'valid only with non-null base',
+                    error_code=VIR_ERR_INVALID_ARG,
+                    error_domain=VIR_FROM_QEMU)
+        return 0
+
+    def blockCommit(self, disk, base, top, flags):
+        return 0
+
     def jobInfo(self):
         return []
 
     def jobStats(self, flags=0):
         return {}
+
+    def injectNMI(self, flags=0):
+        return 0
+
+    def abortJob(self):
+        pass
 
 
 class DomainSnapshot(object):
@@ -754,8 +793,8 @@ class Connection(object):
 
         uri_whitelist = ['qemu:///system',
                          'qemu:///session',
-                         'lxc:///',     # from LibvirtDriver.uri()
-                         'xen:///',     # from LibvirtDriver.uri()
+                         'lxc:///',     # from LibvirtDriver._uri()
+                         'xen:///',     # from LibvirtDriver._uri()
                          'uml:///system',
                          'test:///default',
                          'parallels:///system']
@@ -802,7 +841,7 @@ class Connection(object):
 
         dom._id = -1
 
-        for (k, v) in self._running_vms.iteritems():
+        for (k, v) in six.iteritems(self._running_vms):
             if v == dom:
                 del self._running_vms[k]
                 self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STOPPED, 0)
@@ -1171,10 +1210,10 @@ class Connection(object):
 
     def getCPUStats(self, cpuNum, flag):
         if cpuNum < 2:
-            return {'kernel': 5664160000000L,
-                    'idle': 1592705190000000L,
-                    'user': 26728850000000L,
-                    'iowait': 6121490000000L}
+            return {'kernel': 5664160000000,
+                    'idle': 1592705190000000,
+                    'user': 26728850000000,
+                    'iowait': 6121490000000}
         else:
             raise make_libvirtError(
                     libvirtError,

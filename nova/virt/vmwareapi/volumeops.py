@@ -42,7 +42,7 @@ class VMwareVolumeOps(object):
     def attach_disk_to_vm(self, vm_ref, instance,
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
-                          device_name=None):
+                          device_name=None, disk_io_limits=None):
         """Attach disk to VM by reconfiguration."""
         instance_name = instance.name
         client_factory = self._session.vim.client.factory
@@ -58,7 +58,7 @@ class VMwareVolumeOps(object):
         vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
                                     client_factory, disk_type, vmdk_path,
                                     disk_size, linked_clone, controller_key,
-                                    unit_number, device_name)
+                                    unit_number, device_name, disk_io_limits)
         if controller_spec:
             vmdk_attach_config_spec.deviceChange.append(controller_spec)
 
@@ -367,7 +367,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             self._attach_volume_vmdk(connection_info, instance, adapter_type)
         elif driver_type == 'iscsi':
             self._attach_volume_iscsi(connection_info, instance, adapter_type)
@@ -542,7 +542,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume detach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             self._detach_volume_vmdk(connection_info, instance)
         elif driver_type == 'iscsi':
             self._detach_volume_iscsi(connection_info, instance)
@@ -555,7 +555,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Root volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             data = connection_info['data']
             # Get the volume ref

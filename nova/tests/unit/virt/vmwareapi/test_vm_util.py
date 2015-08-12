@@ -151,8 +151,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_resize_spec_with_limits(self):
         vcpus = 2
         memory_mb = 2048
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_resize_spec(fake_factory,
@@ -203,14 +203,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_lsilogic_controller_spec(self):
         # Test controller spec returned for lsiLogic sas adapter type
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
-                          adapter_type="lsiLogicsas")
+                          adapter_type=constants.ADAPTER_TYPE_LSILOGICSAS)
         self.assertEqual("ns0:VirtualLsiLogicSASController",
                          config_spec.device.obj_name)
 
     def test_paravirtual_controller_spec(self):
         # Test controller spec returned for paraVirtual adapter type
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
-                          adapter_type="paraVirtual")
+                          adapter_type=constants.ADAPTER_TYPE_PARAVIRTUAL)
         self.assertEqual("ns0:ParaVirtualSCSIController",
                          config_spec.device.obj_name)
 
@@ -243,7 +243,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', return_value=devices):
             vmdk = vm_util.get_vmdk_info(session, None)
-            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(constants.ADAPTER_TYPE_LSILOGICSAS,
+                             vmdk.adapter_type)
             self.assertEqual('[test_datastore] uuid/ephemeral_0.vmdk',
                              vmdk.path)
             self.assertEqual(512, vmdk.capacity_in_bytes)
@@ -255,7 +256,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', return_value=devices):
             vmdk = vm_util.get_vmdk_info(session, None, uuid='uuid')
-            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(constants.ADAPTER_TYPE_LSILOGICSAS,
+                             vmdk.adapter_type)
             self.assertEqual(n_filename, vmdk.path)
             self.assertEqual(1024, vmdk.capacity_in_bytes)
             self.assertEqual(devices[0], vmdk.device)
@@ -275,12 +277,15 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         # Test for the adapter_type to be used in vmdk descriptor
         # Adapter type in vmdk descriptor is same for LSI-SAS, LSILogic
         # and ParaVirtual
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogic")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogicsas")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
-        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("paraVirtual")
-        self.assertEqual("lsiLogic", vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.DEFAULT_ADAPTER_TYPE)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.ADAPTER_TYPE_LSILOGICSAS)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type(
+            constants.ADAPTER_TYPE_PARAVIRTUAL)
+        self.assertEqual(constants.DEFAULT_ADAPTER_TYPE, vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("dummyAdapter")
         self.assertEqual("dummyAdapter", vmdk_adapter_type)
 
@@ -374,9 +379,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         factory = fake.FakeFactory()
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
-                                                            factory,
-                                                            devices,
-                                                            'lsiLogic')
+                                                factory,
+                                                devices,
+                                                constants.DEFAULT_ADAPTER_TYPE)
         self.assertEqual(1000, controller_key)
         self.assertEqual(8, unit_number)
         self.assertIsNone(controller_spec)
@@ -497,6 +502,38 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_detach_virtual_disk_destroy_spec(self):
         self._test_detach_virtual_disk_spec(destroy_disk=True)
 
+    def _create_vm_config_spec(self):
+        fake_factory = fake.FakeFactory()
+        spec = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        spec.name = self._instance.uuid
+        spec.instanceUuid = self._instance.uuid
+        spec.deviceChange = []
+        spec.numCPUs = 2
+
+        spec.version = None
+        spec.memoryMB = 2048
+        spec.guestId = 'otherGuest'
+        spec.extraConfig = []
+
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = self._instance.uuid
+        extra_config.key = 'nvp.vm-uuid'
+        spec.extraConfig.append(extra_config)
+        spec.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        spec.files.vmPathName = '[fake-datastore]'
+
+        spec.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        spec.managedBy.extensionKey = 'org.openstack.compute'
+        spec.managedBy.type = 'instance'
+
+        spec.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        spec.tools.afterPowerOn = True
+        spec.tools.afterResume = True
+        spec.tools.beforeGuestReboot = True
+        spec.tools.beforeGuestShutdown = True
+        spec.tools.beforeGuestStandby = True
+        return spec
+
     def test_get_vm_create_spec(self):
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
@@ -505,40 +542,33 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             'fake-datastore', [],
                                             extra_specs)
 
-        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
-        expected.name = self._instance.uuid
-        expected.instanceUuid = self._instance.uuid
-        expected.deviceChange = []
-        expected.numCPUs = 2
+        expected = self._create_vm_config_spec()
+        self.assertEqual(expected, result)
 
         expected.version = None
         expected.memoryMB = 2048
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.extraConfig = []
 
-        extra_config = fake_factory.create("ns0:OptionValue")
-        extra_config.value = self._instance.uuid
-        extra_config.key = 'nvp.vm-uuid'
-        expected.extraConfig.append(extra_config)
-        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
-        expected.files.vmPathName = '[fake-datastore]'
+    def test_get_vm_create_spec_with_serial_port(self):
+        extra_specs = vm_util.ExtraSpecs()
+        fake_factory = fake.FakeFactory()
+        self.flags(serial_port_service_uri='foobar', group='vmware')
+        self.flags(serial_port_proxy_uri='telnet://example.com:31337',
+                   group='vmware')
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
 
-        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
-        expected.managedBy.extensionKey = 'org.openstack.compute'
-        expected.managedBy.type = 'instance'
-
-        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
-        expected.tools.afterPowerOn = True
-        expected.tools.afterResume = True
-        expected.tools.beforeGuestReboot = True
-        expected.tools.beforeGuestShutdown = True
-        expected.tools.beforeGuestStandby = True
-
+        serial_port_spec = vm_util.create_serial_port_spec(fake_factory)
+        expected = self._create_vm_config_spec()
+        expected.deviceChange = [serial_port_spec]
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_allocations(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
-                                       cpu_reservation=6)
+        cpu_limits = vm_util.Limits(limit=7,
+                                    reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -547,7 +577,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         expected.deviceChange = []
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.instanceUuid = self._instance.uuid
         expected.memoryMB = self._instance.memory_mb
         expected.name = self._instance.uuid
@@ -584,7 +614,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_limit(self):
-        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        cpu_limits = vm_util.Limits(limit=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -611,7 +641,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.type = 'instance'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
 
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.afterPowerOn = True
@@ -632,7 +662,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_share(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        cpu_limits = vm_util.Limits(shares_level='high')
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -661,7 +691,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.extensionKey = 'org.openstack.compute'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
 
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.beforeGuestStandby = True
@@ -681,8 +711,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_share_custom(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
-                                       cpu_shares_share=1948)
+        cpu_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=1948)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -709,7 +739,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.managedBy.type = 'instance'
 
         expected.version = None
-        expected.guestId = 'otherGuest'
+        expected.guestId = constants.DEFAULT_OS_TYPE
         expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
         expected.tools.beforeGuestStandby = True
         expected.tools.beforeGuestReboot = True
@@ -725,6 +755,47 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         cpu_allocation.shares.shares = 1948
         expected.cpuAllocation = cpu_allocation
         expected.numCPUs = 2
+        self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_metadata(self):
+        extra_specs = vm_util.ExtraSpecs()
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs,
+                                            metadata='fake-metadata')
+
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.name = self._instance.uuid
+        expected.instanceUuid = self._instance.uuid
+        expected.deviceChange = []
+        expected.numCPUs = 2
+
+        expected.version = None
+        expected.memoryMB = 2048
+        expected.guestId = 'otherGuest'
+        expected.annotation = 'fake-metadata'
+        expected.extraConfig = []
+
+        extra_config = fake_factory.create("ns0:OptionValue")
+        extra_config.value = self._instance.uuid
+        extra_config.key = 'nvp.vm-uuid'
+        expected.extraConfig.append(extra_config)
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+
         self.assertEqual(expected, result)
 
     def test_create_vm(self):
@@ -924,15 +995,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.VirtualMachine())
         return fake_objects
-
-    def test_get_values(self):
-        objects = self._create_fake_vm_objects()
-        query = vm_util.get_values_from_object_properties(
-            fake.FakeObjectRetrievalSession(objects), objects)
-        self.assertEqual('poweredOn', query['runtime.powerState'])
-        self.assertEqual('guestToolsRunning',
-                         query['summary.guest.toolsRunningStatus'])
-        self.assertEqual('toolsOk', query['summary.guest.toolsStatus'])
 
     def test_reconfigure_vm(self):
         session = fake.FakeSession()
@@ -1227,14 +1289,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           devices,
                           self._instance)
 
-    def test_validate_cpu_limits(self):
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high',
-                                       cpu_shares_share=1948)
+    def test_validate_limits(self):
+        limits = vm_util.Limits(shares_level='high',
+                                shares_share=1948)
         self.assertRaises(exception.InvalidInput,
-                          cpu_limits.validate)
-        cpu_limits = vm_util.CpuLimits(cpu_shares_level='fira')
+                          limits.validate)
+        limits = vm_util.Limits(shares_level='fira')
         self.assertRaises(exception.InvalidInput,
-                          cpu_limits.validate)
+                          limits.validate)
 
     def test_get_vm_create_spec_with_console_delay(self):
         extra_specs = vm_util.ExtraSpecs()
@@ -1279,6 +1341,122 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.tools.beforeGuestStandby = True
 
         self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_cores_per_socket(self):
+        extra_specs = vm_util.ExtraSpecs(cores_per_socket=4)
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.deviceChange = []
+        expected.guestId = 'otherGuest'
+        expected.instanceUuid = self._instance.uuid
+        expected.memoryMB = self._instance.memory_mb
+        expected.name = self._instance.uuid
+        expected.numCPUs = self._instance.vcpus
+        expected.numCoresPerSocket = 4
+        expected.version = None
+
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        expected.extraConfig = []
+        extra_config = fake_factory.create('ns0:OptionValue')
+        extra_config.key = 'nvp.vm-uuid'
+        extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_memory_allocations(self):
+        memory_limits = vm_util.Limits(limit=7,
+                                       reservation=6)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.deviceChange = []
+        expected.guestId = 'otherGuest'
+        expected.instanceUuid = self._instance.uuid
+        expected.memoryMB = self._instance.memory_mb
+        expected.name = self._instance.uuid
+        expected.numCPUs = self._instance.vcpus
+        expected.version = None
+
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        memory_allocation = fake_factory.create('ns0:ResourceAllocationInfo')
+        memory_allocation.limit = 7
+        memory_allocation.reservation = 6
+        memory_allocation.shares = fake_factory.create('ns0:SharesInfo')
+        memory_allocation.shares.level = 'normal'
+        memory_allocation.shares.shares = 0
+        expected.memoryAllocation = memory_allocation
+
+        expected.extraConfig = []
+        extra_config = fake_factory.create('ns0:OptionValue')
+        extra_config.key = 'nvp.vm-uuid'
+        extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        self.assertEqual(expected, result)
+
+    def test_get_swap(self):
+        vm_ref = 'fake-vm-ref'
+
+        # Root disk
+        controller_key = 1000
+        root_disk = fake.VirtualDisk()
+        root_disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = '[test_datastore] uuid/uuid.vmdk'
+        root_disk.capacityInBytes = 1048576
+        root_disk.backing = disk_backing
+
+        # Swap disk
+        swap_disk = fake.VirtualDisk()
+        swap_disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = "swap"
+        swap_disk.capacityInBytes = 1024
+        swap_disk.backing = disk_backing
+        devices = [root_disk, swap_disk]
+
+        session = fake.FakeSession()
+        with mock.patch.object(session, '_call_method',
+                               return_value=devices) as mock_call:
+            device = vm_util.get_swap(session, vm_ref)
+
+            mock_call.assert_called_once_with(mock.ANY,
+                "get_dynamic_property", vm_ref, "VirtualMachine",
+                "config.hardware.device")
+            self.assertEqual(swap_disk, device)
 
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)

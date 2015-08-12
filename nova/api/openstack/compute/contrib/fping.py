@@ -18,6 +18,7 @@ import itertools
 import os
 
 from oslo_config import cfg
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -113,7 +114,7 @@ class FpingController(object):
             ip_list += ips
         alive_ips = self.fping(ip_list)
         res = []
-        for instance_uuid, ips in instance_ips.iteritems():
+        for instance_uuid, ips in six.iteritems(instance_ips):
             res.append({
                 "id": instance_uuid,
                 "project_id": instance_projects[instance_uuid],

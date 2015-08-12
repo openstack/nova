@@ -13,11 +13,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-server-usage'
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ServerUsageSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.server_usage.Server_usage')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips_mac.'
+            'Extended_ips_mac')
+        return f
 
     def setUp(self):
         """setUp method for server usage."""
@@ -29,6 +51,8 @@ class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         subs['id'] = self.uuid
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_details(self):
@@ -36,4 +60,6 @@ class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         subs['id'] = self.uuid
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('servers-detail-resp', subs, response, 200)

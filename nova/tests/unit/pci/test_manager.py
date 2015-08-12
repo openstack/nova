@@ -18,12 +18,11 @@ import copy
 import mock
 
 import nova
-from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
-from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.pci import device
 from nova.pci import manager
 from nova import test
@@ -37,7 +36,7 @@ fake_pci = {
     'product_id': 'p',
     'vendor_id': 'v',
     'request_id': None,
-    'status': 'available',
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'numa_node': 0}
 fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
@@ -55,8 +54,8 @@ fake_db_dev = {
     'vendor_id': 'v',
     'product_id': 'p',
     'numa_node': 1,
-    'dev_type': 't',
-    'status': 'available',
+    'dev_type': fields.PciDeviceType.STANDARD,
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'dev_id': 'i',
     'label': 'l',
     'instance_uuid': None,
@@ -145,11 +144,11 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                          copy.deepcopy(fake_pci_2), copy.deepcopy(fake_pci_3)]
         self.tracker.set_hvdevs(fake_pci_devs)
         self.assertEqual(len(self.tracker.pci_devs), 4)
-        self.assertEqual(set([dev['address'] for
+        self.assertEqual(set([dev.address for
                               dev in self.tracker.pci_devs]),
                          set(['0000:00:00.1', '0000:00:00.2',
                               '0000:00:00.3', '0000:00:00.4']))
-        self.assertEqual(set([dev['vendor_id'] for
+        self.assertEqual(set([dev.vendor_id for
                               dev in self.tracker.pci_devs]),
                          set(['v', 'v1', 'v2']))
 
@@ -158,14 +157,14 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
                          copy.deepcopy(fake_pci_v2)]
         self.tracker.set_hvdevs(fake_pci_devs)
-        self.assertEqual(set([dev['vendor_id'] for
+        self.assertEqual(set([dev.vendor_id for
                              dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
 
     def test_set_hvdev_remove(self):
         self.tracker.set_hvdevs([fake_pci])
         self.assertEqual(len([dev for dev in self.tracker.pci_devs
-                              if dev['status'] == 'removed']),
+                              if dev.status == 'removed']),
                          2)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
@@ -182,24 +181,31 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_update_pci_for_instance_active(self, mock_get):
+
         self._create_pci_requests_object(mock_get, fake_pci_requests)
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.claim_instance(None, self.inst)
+        self.assertEqual(len(self.tracker.claims[self.inst['uuid']]), 2)
+        self.tracker.update_pci_for_instance(None, self.inst, sign=1)
+        self.assertEqual(len(self.tracker.allocations[self.inst['uuid']]), 2)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
-        self.assertEqual(free_devs[0]['vendor_id'], 'v')
+        self.assertEqual(free_devs[0].vendor_id, 'v')
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_update_pci_for_instance_fail(self, mock_get):
         pci_requests = copy.deepcopy(fake_pci_requests)
         pci_requests[0]['count'] = 4
         self._create_pci_requests_object(mock_get, pci_requests)
-        self.assertRaises(exception.PciDeviceRequestFailed,
-                          self.tracker.update_pci_for_instance,
-                          None,
-                          self.inst)
+        self.tracker.claim_instance(None, self.inst)
+        self.assertEqual(len(self.tracker.claims[self.inst['uuid']]), 0)
+        devs = self.tracker.update_pci_for_instance(None,
+                                                    self.inst,
+                                                    sign=1)
+        self.assertEqual(len(self.tracker.allocations[self.inst['uuid']]), 0)
+        self.assertIsNone(devs)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_update_pci_for_instance_with_numa(self, mock_get):
+    def test_pci_claim_instance_with_numa(self, mock_get):
         fake_db_dev_3 = dict(fake_db_dev_1, id=4, address='0000:00:00.4')
         fake_devs_numa = copy.deepcopy(fake_db_devs)
         fake_devs_numa.append(fake_db_dev_3)
@@ -211,60 +217,33 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.inst.numa_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([1, 2]), memory=512)])
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.claim_instance(None, self.inst)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(2, len(free_devs))
-        self.assertEqual('v1', free_devs[0]['vendor_id'])
-        self.assertEqual('v1', free_devs[1]['vendor_id'])
+        self.assertEqual('v1', free_devs[0].vendor_id)
+        self.assertEqual('v1', free_devs[1].vendor_id)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_update_pci_for_instance_with_numa_fail(self, mock_get):
+    def test_pci_claim_instance_with_numa_fail(self, mock_get):
         self._create_pci_requests_object(mock_get, fake_pci_requests)
         self.inst.numa_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([1, 2]), memory=512)])
-        self.assertRaises(exception.PciDeviceRequestFailed,
-                          self.tracker.update_pci_for_instance,
-                          None,
-                          self.inst)
+        self.assertIsNone(self.tracker.claim_instance(None, self.inst))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_update_pci_for_instance_deleted(self, mock_get):
         self._create_pci_requests_object(mock_get, fake_pci_requests)
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.claim_instance(None, self.inst)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
         self.inst.vm_state = vm_states.DELETED
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.update_pci_for_instance(None, self.inst, -1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
-        self.assertEqual(set([dev['vendor_id'] for
+        self.assertEqual(set([dev.vendor_id for
                               dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_update_pci_for_instance_resize_source(self, mock_get):
-        self._create_pci_requests_object(mock_get, fake_pci_requests)
-        self.tracker.update_pci_for_instance(None, self.inst)
-        free_devs = self.tracker.pci_stats.get_free_devs()
-        self.assertEqual(len(free_devs), 1)
-        self.inst.task_state = task_states.RESIZE_MIGRATED
-        self.tracker.update_pci_for_instance(None, self.inst)
-        free_devs = self.tracker.pci_stats.get_free_devs()
-        self.assertEqual(len(free_devs), 3)
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_update_pci_for_instance_resize_dest(self, mock_get):
-        self._create_pci_requests_object(mock_get, fake_pci_requests)
-        self.tracker.update_pci_for_migration(None, self.inst)
-        free_devs = self.tracker.pci_stats.get_free_devs()
-        self.assertEqual(len(free_devs), 1)
-        self.assertEqual(len(self.tracker.claims['fake-inst-uuid']), 2)
-        self.assertNotIn('fake-inst-uuid', self.tracker.allocations)
-        self.inst.task_state = task_states.RESIZE_FINISH
-        self.tracker.update_pci_for_instance(None, self.inst)
-        self.assertEqual(len(self.tracker.allocations['fake-inst-uuid']), 2)
-        self.assertNotIn('fake-inst-uuid', self.tracker.claims)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_update_pci_for_migration_in(self, mock_get):
@@ -272,7 +251,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.tracker.update_pci_for_migration(None, self.inst)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
-        self.assertEqual(free_devs[0]['vendor_id'], 'v')
+        self.assertEqual(free_devs[0].vendor_id, 'v')
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_update_pci_for_migration_out(self, mock_get):
@@ -281,7 +260,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.tracker.update_pci_for_migration(None, self.inst, sign=-1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
-        self.assertEqual(set([dev['vendor_id'] for
+        self.assertEqual(set([dev.vendor_id for
                               dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
 
@@ -316,19 +295,21 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
         self._create_pci_requests_object(mock_get,
             [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.claim_instance(None, self.inst)
+        self.tracker.update_pci_for_instance(None, self.inst, sign=1)
         self._create_pci_requests_object(mock_get,
             [{'count': 1, 'spec': [{'vendor_id': 'v1'}]}])
-        self.tracker.update_pci_for_instance(None, inst_2)
+        self.tracker.claim_instance(None, inst_2)
+        self.tracker.update_pci_for_instance(None, inst_2, sign=1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
-        self.assertEqual(free_devs[0]['vendor_id'], 'v')
+        self.assertEqual(free_devs[0].vendor_id, 'v')
 
         self.tracker.clean_usage([self.inst], [migr], [orph])
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 2)
         self.assertEqual(
-            set([dev['vendor_id'] for dev in free_devs]),
+            set([dev.vendor_id for dev in free_devs]),
             set(['v', 'v1']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
@@ -340,7 +321,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
         self._create_pci_requests_object(mock_get,
             [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
-        self.tracker.update_pci_for_instance(None, self.inst)
+        self.tracker.claim_instance(None, self.inst)
+        self.tracker.update_pci_for_instance(None, self.inst, sign=1)
         self._create_pci_requests_object(mock_get,
             [{'count': 1, 'spec': [{'vendor_id': 'v1'}]}])
         self.tracker.update_pci_for_migration(None, inst_2)
@@ -350,7 +332,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 2)
         self.assertEqual(
-            set([dev['vendor_id'] for dev in free_devs]),
+            set([dev.vendor_id for dev in free_devs]),
             set(['v', 'v1']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
@@ -366,7 +348,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(3, len(free_devs))
         self.assertEqual(
-            set([dev['address'] for dev in free_devs]),
+            set([dev.address for dev in free_devs]),
             set(['0000:00:00.1', '0000:00:00.2', '0000:00:00.3']))
 
 

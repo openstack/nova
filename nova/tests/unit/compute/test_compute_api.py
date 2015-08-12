@@ -51,6 +51,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit.objects import test_service
+from nova import utils
 from nova.volume import cinder
 
 
@@ -873,7 +874,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                             reservations=cast_reservations)
             elif delete_type in ['delete', 'force_delete']:
                 rpcapi.terminate_instance(self.context, inst, [],
-                                          reservations=cast_reservations)
+                                          reservations=cast_reservations,
+                                          delete_type=delete_type)
 
         if commit_quotas:
             # Local delete or when we're testing API cell.
@@ -984,7 +986,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi.terminate_instance(
                     self.context, inst,
                     mox.IsA(objects.BlockDeviceMappingList),
-                    reservations=None)
+                    reservations=None, delete_type='delete')
         else:
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
@@ -1008,16 +1010,16 @@ class _ComputeAPIUnitTestMixIn(object):
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
 
+    def _fake_do_delete(context, instance, bdms,
+                        rservations=None, local=False):
+        pass
+
     def test_local_delete_with_deleted_volume(self):
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 42, 'volume_id': 'volume_id',
                  'source_type': 'volume', 'destination_type': 'volume',
                  'delete_on_termination': False}))]
-
-        def _fake_do_delete(context, instance, bdms,
-                           rservations=None, local=False):
-            pass
 
         inst = self._create_instance_obj()
         inst._context = self.context
@@ -1057,7 +1059,41 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
-                                       _fake_do_delete)
+                                       self._fake_do_delete)
+
+    def test_local_delete_without_info_cache(self):
+        inst = self._create_instance_obj()
+
+        with contextlib.nested(
+            mock.patch.object(inst, 'destroy'),
+            mock.patch.object(self.context, 'elevated'),
+            mock.patch.object(self.compute_api.network_api,
+                              'deallocate_for_instance'),
+            mock.patch.object(db, 'instance_system_metadata_get'),
+            mock.patch.object(compute_utils,
+                              'notify_about_instance_usage')
+        ) as (
+            inst_destroy, context_elevated, net_api_deallocate_for_instance,
+            db_instance_system_metadata_get, notify_about_instance_usage
+        ):
+
+            compute_utils.notify_about_instance_usage(
+                        self.compute_api.notifier, self.context,
+                        inst, 'delete.start')
+            self.context.elevated().MultipleTimes().AndReturn(self.context)
+            if self.cell_type != 'api':
+                self.compute_api.network_api.deallocate_for_instance(
+                            self.context, inst)
+
+            inst.destroy()
+            compute_utils.notify_about_instance_usage(
+                        self.compute_api.notifier, self.context,
+                        inst, 'delete.end',
+                        system_metadata=inst.system_metadata)
+            inst.info_cache = None
+            self.compute_api._local_delete(self.context, inst, [],
+                                           'delete',
+                                           self._fake_do_delete)
 
     def test_delete_disabled(self):
         inst = self._create_instance_obj()
@@ -1233,7 +1269,9 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, delta, fake_inst).AndReturn(fake_quotas)
 
         exc = exception.UnexpectedTaskStateError(
-            actual=task_states.RESIZE_REVERTING, expected=None)
+            instance_uuid=fake_inst['uuid'],
+            actual={'task_state': task_states.RESIZE_REVERTING},
+            expected={'task_state': [None]})
         fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
         fake_quotas.rollback()
@@ -1329,6 +1367,10 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.assertEqual(new_flavor.id,
                                      mig.new_instance_type_id)
                     self.assertEqual('finished', mig.status)
+                    if new_flavor.id != current_flavor.id:
+                        self.assertEqual('resize', mig.migration_type)
+                    else:
+                        self.assertEqual('migration', mig.migration_type)
 
                 self.stubs.Set(objects, 'Migration', _get_migration)
                 self.mox.StubOutWithMock(self.context, 'elevated')
@@ -1715,23 +1757,52 @@ class _ComputeAPIUnitTestMixIn(object):
                                   min_disk=None,
                                   create_fails=False,
                                   instance_vm_state=vm_states.ACTIVE):
+        params = dict(locked=True)
+        instance = self._create_instance_obj(params=params)
+        instance.vm_state = instance_vm_state
+
         # 'cache_in_nova' is for testing non-inheritable properties
         # 'user_id' should also not be carried from sys_meta into
         # image property...since it should be set explicitly by
         # _create_image() in compute api.
-        fake_sys_meta = dict(image_foo='bar', blah='bug?',
-                             image_cache_in_nova='dropped',
-                             cache_in_nova='dropped',
-                             user_id='meow')
-        if with_base_ref:
-            fake_sys_meta['image_base_image_ref'] = 'fake-base-ref'
-        params = dict(system_metadata=fake_sys_meta, locked=True)
-        instance = self._create_instance_obj(params=params)
-        instance.vm_state = instance_vm_state
-        fake_sys_meta.update(instance.system_metadata)
+        fake_image_meta = {
+            'is_public': True,
+            'name': 'base-name',
+            'properties': {
+                'user_id': 'meow',
+                'foo': 'bar',
+                'blah': 'bug?',
+                'cache_in_nova': 'dropped',
+            },
+        }
+        image_type = is_snapshot and 'snapshot' or 'backup'
+        sent_meta = {
+            'is_public': False,
+            'name': 'fake-name',
+            'properties': {
+                'user_id': self.context.user_id,
+                'instance_uuid': instance.uuid,
+                'image_type': image_type,
+                'foo': 'bar',
+                'blah': 'bug?',
+                'cow': 'moo',
+                'cat': 'meow',
+            },
+
+        }
+        if is_snapshot:
+            if min_ram is not None:
+                fake_image_meta['min_ram'] = min_ram
+                sent_meta['min_ram'] = min_ram
+            if min_disk is not None:
+                fake_image_meta['min_disk'] = min_disk
+                sent_meta['min_disk'] = min_disk
+        else:
+            sent_meta['properties']['backup_type'] = 'fake-backup-type'
+
         extra_props = dict(cow='moo', cat='meow')
 
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(self.compute_api.image_api,
                                  'create')
         self.mox.StubOutWithMock(instance, 'save')
@@ -1747,40 +1818,12 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.is_volume_backed_instance(self.context,
                 instance).AndReturn(False)
 
-        image_type = is_snapshot and 'snapshot' or 'backup'
-
-        expected_sys_meta = dict(fake_sys_meta)
-        expected_sys_meta.pop('cache_in_nova')
-        expected_sys_meta.pop('image_cache_in_nova')
-        expected_sys_meta.pop('user_id')
-        expected_sys_meta['foo'] = expected_sys_meta.pop('image_foo')
-        if with_base_ref:
-            expected_sys_meta['base_image_ref'] = expected_sys_meta.pop(
-                    'image_base_image_ref')
-
-        expected_props = {'instance_uuid': instance.uuid,
-                          'user_id': self.context.user_id,
-                          'image_type': image_type}
-        expected_props.update(extra_props)
-        expected_props.update(expected_sys_meta)
-        expected_meta = {'name': 'fake-name',
-                         'is_public': False,
-                         'properties': expected_props}
-        if is_snapshot:
-            if min_ram is not None:
-                expected_meta['min_ram'] = min_ram
-            if min_disk is not None:
-                expected_meta['min_disk'] = min_disk
-        else:
-            expected_props['backup_type'] = 'fake-backup-type'
-
-        compute_utils.get_image_metadata(
-            self.context, self.compute_api.image_api,
-            FAKE_IMAGE_REF, instance).AndReturn(expected_meta)
+        utils.get_image_from_system_metadata(
+            instance.system_metadata).AndReturn(fake_image_meta)
 
         fake_image = dict(id='fake-image-id')
         mock_method = self.compute_api.image_api.create(
-                self.context, expected_meta)
+                self.context, sent_meta)
         if create_fails:
             mock_method.AndRaise(test.TestingException())
         else:
@@ -1985,7 +2028,8 @@ class _ComputeAPIUnitTestMixIn(object):
              'image_id': None, 'volume_id': None, 'disk_bus': None,
              'volume_size': None, 'source_type': 'snapshot',
              'device_type': None, 'snapshot_id': '1-snapshot',
-             'destination_type': 'volume', 'delete_on_termination': None})
+             'device_name': '/dev/vda',
+             'destination_type': 'volume', 'delete_on_termination': False})
 
         # All the db_only fields and the volume ones are removed
         self.compute_api.snapshot_volume_backed(
@@ -2774,6 +2818,14 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.create, self.context, None, None)
         api = compute_api.API(skip_policy_check=True)
         api.create(self.context, None, None)
+
+    @mock.patch.object(compute_api.API, '_get_instances_by_filters')
+    def test_tenant_to_project_conversion(self, mock_get):
+        mock_get.return_value = []
+        api = compute_api.API()
+        api.get_all(self.context, search_opts={'tenant_id': 'foo'})
+        filters = mock_get.call_args_list[0][0][1]
+        self.assertEqual({'project_id': 'foo'}, filters)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

@@ -20,7 +20,6 @@
 
 import errno
 import os
-import platform
 import re
 
 from lxml import etree
@@ -31,11 +30,10 @@ from oslo_log import log as logging
 from nova.compute import arch
 from nova.i18n import _
 from nova.i18n import _LI
-from nova.i18n import _LW
-from nova.storage import linuxscsi
 from nova import utils
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt.volume import remotefs
 from nova.virt import volumeutils
 
 libvirt_opts = [
@@ -57,110 +55,6 @@ def execute(*args, **kwargs):
 
 def get_iscsi_initiator():
     return volumeutils.get_iscsi_initiator()
-
-
-def get_fc_hbas():
-    """Get the Fibre Channel HBA information."""
-    out = None
-    try:
-        out, err = execute('systool', '-c', 'fc_host', '-v',
-                           run_as_root=True)
-    except processutils.ProcessExecutionError as exc:
-        # This handles the case where rootwrap is used
-        # and systool is not installed
-        # 96 = nova.cmd.rootwrap.RC_NOEXECFOUND:
-        if exc.exit_code == 96:
-            LOG.warn(_LW("systool is not installed"))
-        return []
-    except OSError as exc:
-        # This handles the case where rootwrap is NOT used
-        # and systool is not installed
-        if exc.errno == errno.ENOENT:
-            LOG.warn(_LW("systool is not installed"))
-        return []
-
-    if out is None:
-        raise RuntimeError(_("Cannot find any Fibre Channel HBAs"))
-
-    lines = out.split('\n')
-    # ignore the first 2 lines
-    lines = lines[2:]
-    hbas = []
-    hba = {}
-    lastline = None
-    for line in lines:
-        line = line.strip()
-        # 2 newlines denotes a new hba port
-        if line == '' and lastline == '':
-            if len(hba) > 0:
-                hbas.append(hba)
-                hba = {}
-        else:
-            val = line.split('=')
-            if len(val) == 2:
-                key = val[0].strip().replace(" ", "")
-                value = val[1].strip()
-                hba[key] = value.replace('"', '')
-        lastline = line
-
-    return hbas
-
-
-def get_fc_hbas_info():
-    """Get Fibre Channel WWNs and device paths from the system, if any."""
-    # Note modern linux kernels contain the FC HBA's in /sys
-    # and are obtainable via the systool app
-    hbas = get_fc_hbas()
-    hbas_info = []
-    for hba in hbas:
-        # Systems implementing the S390 architecture support virtual HBAs
-        # may be online, or offline. This function should only return
-        # virtual HBAs in the online state
-        if (platform.machine() in (arch.S390, arch.S390X) and
-                              hba['port_state'].lower() != 'online'):
-            continue
-
-        wwpn = hba['port_name'].replace('0x', '')
-        wwnn = hba['node_name'].replace('0x', '')
-        device_path = hba['ClassDevicepath']
-        device = hba['ClassDevice']
-        hbas_info.append({'port_name': wwpn,
-                          'node_name': wwnn,
-                          'host_device': device,
-                          'device_path': device_path})
-    return hbas_info
-
-
-def get_fc_wwpns():
-    """Get Fibre Channel WWPNs from the system, if any."""
-    # Note modern linux kernels contain the FC HBA's in /sys
-    # and are obtainable via the systool app
-    hbas = get_fc_hbas()
-
-    wwpns = []
-    if hbas:
-        for hba in hbas:
-            if hba['port_state'] == 'Online':
-                wwpn = hba['port_name'].replace('0x', '')
-                wwpns.append(wwpn)
-
-    return wwpns
-
-
-def get_fc_wwnns():
-    """Get Fibre Channel WWNNs from the system, if any."""
-    # Note modern linux kernels contain the FC HBA's in /sys
-    # and are obtainable via the systool app
-    hbas = get_fc_hbas()
-
-    wwnns = []
-    if hbas:
-        for hba in hbas:
-            if hba['port_state'] == 'Online':
-                wwnn = hba['node_name'].replace('0x', '')
-                wwnns.append(wwnn)
-
-    return wwnns
 
 
 def create_image(disk_format, path, size):
@@ -238,7 +132,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
                         return 'qemu'
                     else:
                         raise
-                except processutils.ProcessExecutionError as exc:
+                except processutils.ProcessExecutionError:
                     LOG.debug("xend is not started")
                     # libvirt will try to use libxl toolstack
                     return 'qemu'
@@ -290,13 +184,16 @@ def get_disk_backing_file(path, basename=True):
     return backing_file
 
 
-def copy_image(src, dest, host=None, receive=False):
+def copy_image(src, dest, host=None, receive=False,
+               on_execute=None, on_completion=None):
     """Copy a disk image to an existing directory
 
     :param src: Source image
     :param dest: Destination path
     :param host: Remote host
     :param receive: Reverse the rsync direction
+    :param on_execute: Callback method to store pid of process in cache
+    :param on_completion: Callback method to remove pid of process from cache
     """
 
     if not host:
@@ -310,19 +207,10 @@ def copy_image(src, dest, host=None, receive=False):
             src = "%s:%s" % (utils.safe_ip_format(host), src)
         else:
             dest = "%s:%s" % (utils.safe_ip_format(host), dest)
-        # Try rsync first as that can compress and create sparse dest files.
-        # Note however that rsync currently doesn't read sparse files
-        # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918
-        # At least network traffic is mitigated with compression.
-        try:
-            # Do a relatively light weight test first, so that we
-            # can fall back to scp, without having run out of space
-            # on the destination for example.
-            execute('rsync', '--sparse', '--compress', '--dry-run', src, dest)
-        except processutils.ProcessExecutionError:
-            execute('scp', src, dest)
-        else:
-            execute('rsync', '--sparse', '--compress', src, dest)
+
+        remote_filesystem_driver = remotefs.RemoteFilesystem()
+        remote_filesystem_driver.copy_file(src, dest,
+            on_execute=on_execute, on_completion=on_completion)
 
 
 def write_to_file(path, contents, umask=None):
@@ -577,7 +465,7 @@ def is_mounted(mount_path, source=None):
 
         utils.execute(*check_cmd)
         return True
-    except processutils.ProcessExecutionError as exc:
+    except processutils.ProcessExecutionError:
         return False
     except OSError as exc:
         # info since it's not required to have this tool.
@@ -588,51 +476,3 @@ def is_mounted(mount_path, source=None):
 
 def is_valid_hostname(hostname):
     return re.match(r"^[\w\-\.:]+$", hostname)
-
-
-def perform_unit_add_for_s390(device_number, target_wwn, lun):
-    """Write the LUN to the port's unit_add attribute."""
-    # NOTE If LUN scanning is turned off on systems following the s390,
-    # or s390x architecture LUNs need to be added to the configuration
-    # using the unit_add call. The unit_add call may fail if a target_wwn
-    # is not accessible for the HBA specified by the device_number.
-    # This can be an expected situation in multipath configurations.
-    # This method will thus only log a warning message in case the
-    # unit_add call fails.
-    LOG.debug("perform unit_add for s390: device_number=(%(device_num)s) "
-              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
-                {'device_num': device_number,
-                 'target_wwn': target_wwn,
-                 'target_lun': lun})
-    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_add" %
-                           (device_number, target_wwn))
-    try:
-        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
-    except processutils.ProcessExecutionError as exc:
-            LOG.warn(_LW("unit_add call failed; exit code (%(code)s), "
-                         "stderr (%(stderr)s)"),
-                         {'code': exc.exit_code, 'stderr': exc.stderr})
-
-
-def perform_unit_remove_for_s390(device_number, target_wwn, lun):
-    """Write the LUN to the port's unit_remove attribute."""
-    # If LUN scanning is turned off on systems following the s390, or s390x
-    # architecture LUNs need to be removed from the configuration using the
-    # unit_remove call. The unit_remove call may fail if the LUN is not
-    # part of the configuration anymore. This may be an expected situation.
-    # For exmple, if LUN scanning is turned on.
-    # This method will thus only log a warning message in case the
-    # unit_remove call fails.
-    LOG.debug("perform unit_remove for s390: device_number=(%(device_num)s) "
-              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
-                {'device_num': device_number,
-                 'target_wwn': target_wwn,
-                 'target_lun': lun})
-    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_remove" %
-                           (device_number, target_wwn))
-    try:
-        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
-    except processutils.ProcessExecutionError as exc:
-            LOG.warn(_LW("unit_remove call failed; exit code (%(code)s), "
-                         "stderr (%(stderr)s)"),
-                         {'code': exc.exit_code, 'stderr': exc.stderr})

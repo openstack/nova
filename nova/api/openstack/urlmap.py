@@ -14,10 +14,15 @@
 #    under the License.
 
 import re
-import urllib2
 
 from oslo_log import log as logging
 import paste.urlmap
+import six
+
+if six.PY3:
+    from urllib import request as urllib2
+else:
+    import urllib2
 
 from nova.api.openstack import wsgi
 
@@ -93,7 +98,7 @@ def parse_options_header(value):
         return '', {}
 
     parts = _tokenize(';' + value)
-    name = parts.next()[0]
+    name = next(parts)[0]
     extra = dict(parts)
     return name, extra
 
@@ -285,6 +290,6 @@ class URLMap(paste.urlmap.URLMap):
             environ['nova.best_content_type'] = mime_type
             return app(environ, start_response)
 
-        LOG.debug('Could not find application for %s', environ.PATH_INFO)
+        LOG.debug('Could not find application for %s', environ['PATH_INFO'])
         environ['paste.urlmap_object'] = self
         return self.not_found_application(environ, start_response)

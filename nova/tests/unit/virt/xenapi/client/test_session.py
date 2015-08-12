@@ -114,7 +114,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         callback = None
         retry_cb = mock.Mock()
         with mock.patch.object(self.session, 'call_plugin_serialized',
-                autospec=True) as call_plugin_serialized:
+                spec=True) as call_plugin_serialized:
             call_plugin_serialized.side_effect = exc
             self.assertRaises(exception.PluginRetriesExceeded,
                     self.session.call_plugin_serialized_with_retry, plugin, fn,
@@ -132,7 +132,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         callback = None
         retry_cb = mock.Mock()
         with mock.patch.object(self.session, 'call_plugin_serialized',
-                autospec=True) as call_plugin_serialized:
+                spec=True) as call_plugin_serialized:
             call_plugin_serialized.side_effect = exc
             self.assertRaises(socket.error,
                     self.session.call_plugin_serialized_with_retry, plugin, fn,
@@ -149,7 +149,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         callback = None
         retry_cb = mock.Mock()
         with mock.patch.object(self.session, 'call_plugin_serialized',
-                autospec=True) as call_plugin_serialized:
+                spec=True) as call_plugin_serialized:
             call_plugin_serialized.side_effect = exc
             self.assertRaises(exception.PluginRetriesExceeded,
                     self.session.call_plugin_serialized_with_retry, plugin, fn,

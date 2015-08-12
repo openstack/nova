@@ -36,7 +36,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesSampleJsonTests, self).setUp()
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         self.flags(enabled=True, group='rdp')
         self.flags(enabled=True, group='serial_console')
@@ -83,3 +83,58 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
             "((ws?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
         self._verify_response('get-serial-console-post-resp', subs,
                               response, 200)
+
+
+class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
+    extra_extensions_to_load = ["os-access-ips"]
+    request_api_version = '2.6'
+    extension_name = "os-remote-consoles"
+    # NOTE(gmann): microversion tests do not need to run for v2 API
+    # so defining scenarios only for v2.6 which will run the original tests
+    # by appending '(v2_6)' in test_id.
+    scenarios = [('v2_6', {})]
+    _api_version = 'v2'
+
+    def setUp(self):
+        super(ConsolesV26SampleJsonTests, self).setUp()
+        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+
+    def test_create_console(self):
+        # NOTE(rgerganov): set temporary to None to avoid duplicating server
+        # templates in the v2.6 folder
+        ConsolesV26SampleJsonTests.request_api_version = None
+        uuid = self._post_server()
+        ConsolesV26SampleJsonTests.request_api_version = '2.6'
+
+        body = {'protocol': 'vnc', 'type': 'novnc'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-vnc-console-req', body,
+                                 api_version='2.6')
+        subs = self._get_regexes()
+        subs["url"] = self.http_regex
+        self._verify_response('create-vnc-console-resp', subs, response, 200)
+
+
+class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
+    extension_name = "os-remote-consoles"
+    _api_version = 'v3'
+
+    def setUp(self):
+        super(ConsolesV28SampleJsonTests, self).setUp()
+        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+        self.flags(enabled=True, group='mks')
+
+    def test_create_mks_console(self):
+        # NOTE(rgerganov): set temporary to None to avoid duplicating server
+        # templates in the v2.8 folder
+        ConsolesV28SampleJsonTests.request_api_version = None
+        uuid = self._post_server()
+        ConsolesV28SampleJsonTests.request_api_version = '2.8'
+
+        body = {'protocol': 'mks', 'type': 'webmks'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-mks-console-req', body,
+                                 api_version='2.8')
+        subs = self._get_regexes()
+        subs["url"] = self.http_regex
+        self._verify_response('create-mks-console-resp', subs, response, 200)

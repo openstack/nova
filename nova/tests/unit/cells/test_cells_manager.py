@@ -21,6 +21,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
+from six.moves import range
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
@@ -229,6 +230,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
             call_info['get_instances'] += 1
             return iter(instances)
 
+        @staticmethod
         def instance_get_by_uuid(context, uuid):
             return instances[int(uuid[-1]) - 1]
 
@@ -238,7 +240,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
         self.stubs.Set(cells_utils, 'get_instances_to_sync',
                 get_instances_to_sync)
-        self.stubs.Set(self.cells_manager.db, 'instance_get_by_uuid',
+        self.stubs.Set(objects.Instance, 'get_by_uuid',
                 instance_get_by_uuid)
         self.stubs.Set(self.cells_manager, '_sync_instance',
                 sync_instance)
@@ -279,7 +281,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         expected_response = []
         # 3 cells... so 3 responses.  Each response is a list of services.
         # Manager should turn these into a single list of responses.
-        for i in xrange(3):
+        for i in range(3):
             cell_name = 'path!to!cell%i' % i
             services = []
             for service in FAKE_SERVICES:
@@ -405,7 +407,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         # 3 cells... so 3 responses.  Each response is a list of task log
         # entries. Manager should turn these into a single list of
         # task log entries.
-        for i in xrange(num):
+        for i in range(num):
             cell_name = 'path!to!cell%i' % i
             task_logs = []
             for task_log in FAKE_TASK_LOGS:
@@ -468,7 +470,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         expected_response = []
         # 3 cells... so 3 responses.  Each response is a list of computes.
         # Manager should turn these into a single list of responses.
-        for i in xrange(3):
+        for i in range(3):
             cell_name = 'path!to!cell%i' % i
             compute_nodes = []
             for compute_node in FAKE_COMPUTE_NODES:
@@ -607,17 +609,16 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_validate_console_port(self):
         instance_uuid = 'fake-instance-uuid'
         cell_name = 'fake-cell-name'
-        instance = {'cell_name': cell_name}
+        instance = objects.Instance(cell_name=cell_name)
         console_port = 'fake-console-port'
         console_type = 'fake-console-type'
 
         self.mox.StubOutWithMock(self.msg_runner,
                                  'validate_console_port')
-        self.mox.StubOutWithMock(self.cells_manager.db,
-                                 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(objects.Instance, 'get_by_uuid')
         fake_response = self._get_fake_response()
 
-        self.cells_manager.db.instance_get_by_uuid(self.ctxt,
+        objects.Instance.get_by_uuid(self.ctxt,
                 instance_uuid).AndReturn(instance)
         self.msg_runner.validate_console_port(self.ctxt, cell_name,
                 instance_uuid, console_port,
@@ -784,10 +785,12 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_terminate_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'terminate_instance')
-        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance')
+        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance',
+                                           delete_type='delete')
         self.mox.ReplayAll()
         self.cells_manager.terminate_instance(self.ctxt,
-                                              instance='fake-instance')
+                                              instance='fake-instance',
+                                              delete_type='delete')
 
     def test_soft_delete_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'soft_delete_instance')

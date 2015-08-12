@@ -44,7 +44,7 @@ class ConsolesController(wsgi.Controller):
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
-        except exception.InstanceNotReady as e:
+        except exception.InstanceNotReady:
             raise webob.exc.HTTPConflict(
                     explanation=_('Instance not yet ready'))
         except exception.InstanceNotFound as e:

@@ -19,7 +19,6 @@ Utility functions for Image transfer and manipulation.
 
 import os
 import tarfile
-import tempfile
 
 from lxml import etree
 from oslo_config import cfg
@@ -27,10 +26,12 @@ from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
+import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LI
 from nova import image
+from nova.objects import fields
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
 
@@ -45,8 +46,6 @@ LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
 
 QUEUE_BUFFER_SIZE = 10
-
-LINKED_CLONE_PROPERTY = 'vmware_linked_clone'
 
 
 class VMwareImage(object):
@@ -68,7 +67,8 @@ class VMwareImage(object):
             disk_type (str): type of disk in thin, thick, etc
             container_format (str): container format (bare or ova)
             file_type (str): vmdk or iso
-            linked_clone(bool): use linked clone, or don't
+            linked_clone (bool): use linked clone, or don't
+            vif_model (str): virtual machine network interface
         """
         self.image_id = image_id
         self.file_size = file_size
@@ -107,48 +107,66 @@ class VMwareImage(object):
         return self.container_format == constants.CONTAINER_FORMAT_OVA
 
     @classmethod
-    def from_image(cls, image_id, image_meta=None):
+    def from_image(cls, image_id, image_meta):
         """Returns VMwareImage, the subset of properties the driver uses.
 
         :param image_id - image id of image
-        :param image_meta - image metadata we are working with
+        :param image_meta - image metadata object we are working with
         :return: vmware image object
         :rtype: nova.virt.vmwareapi.images.VmwareImage
         """
-        if image_meta is None:
-            image_meta = {}
-
-        properties = image_meta.get("properties", {})
+        properties = image_meta.properties
 
         # calculate linked_clone flag, allow image properties to override the
         # global property set in the configurations.
-        image_linked_clone = properties.get(LINKED_CLONE_PROPERTY,
+        image_linked_clone = properties.get('img_linked_clone',
                                             CONF.vmware.use_linked_clone)
 
         # catch any string values that need to be interpreted as boolean values
         linked_clone = strutils.bool_from_string(image_linked_clone)
 
+        if image_meta.obj_attr_is_set('container_format'):
+            container_format = image_meta.container_format
+        else:
+            container_format = None
+
         props = {
             'image_id': image_id,
             'linked_clone': linked_clone,
-            'container_format': image_meta.get('container_format')
+            'container_format': container_format
         }
 
-        if 'size' in image_meta:
-            props['file_size'] = image_meta['size']
-        if 'disk_format' in image_meta:
-            props['file_type'] = image_meta['disk_format']
+        if image_meta.obj_attr_is_set('size'):
+            props['file_size'] = image_meta.size
+        if image_meta.obj_attr_is_set('disk_format'):
+            props['file_type'] = image_meta.disk_format
+        hw_disk_bus = properties.get('hw_disk_bus')
+        if hw_disk_bus:
+            mapping = {
+                fields.SCSIModel.LSILOGIC:
+                constants.DEFAULT_ADAPTER_TYPE,
+                fields.SCSIModel.LSISAS1068:
+                constants.ADAPTER_TYPE_LSILOGICSAS,
+                fields.SCSIModel.BUSLOGIC:
+                constants.ADAPTER_TYPE_BUSLOGIC,
+                fields.SCSIModel.VMPVSCSI:
+                constants.ADAPTER_TYPE_PARAVIRTUAL,
+            }
+            if hw_disk_bus == fields.DiskBus.IDE:
+                props['adapter_type'] = constants.ADAPTER_TYPE_IDE
+            elif hw_disk_bus == fields.DiskBus.SCSI:
+                hw_scsi_model = properties.get('hw_scsi_model')
+                props['adapter_type'] = mapping.get(hw_scsi_model)
 
         props_map = {
-            'vmware_ostype': 'os_type',
-            'vmware_adaptertype': 'adapter_type',
-            'vmware_disktype': 'disk_type',
+            'os_distro': 'os_type',
+            'hw_disk_type': 'disk_type',
             'hw_vif_model': 'vif_model'
         }
 
-        for k, v in props_map.iteritems():
-            if k in properties:
-                props[v] = properties[k]
+        for k, v in six.iteritems(props_map):
+            if properties.obj_attr_is_set(k):
+                props[v] = properties.get(k)
 
         return cls(**props)
 
@@ -308,7 +326,7 @@ def _build_shadow_vm_config_spec(session, name, size_kb, disk_type, ds_name):
 
     create_spec = cf.create('ns0:VirtualMachineConfigSpec')
     create_spec.name = name
-    create_spec.guestId = 'otherGuest'
+    create_spec.guestId = constants.DEFAULT_OS_TYPE
     create_spec.numCPUs = 1
     create_spec.memoryMB = 128
     create_spec.deviceChange = [controller_spec, disk_spec]
@@ -398,49 +416,42 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
         session, vm_name, ds_name)
 
     read_iter = IMAGE_API.download(context, image_ref)
-    ova_fd, ova_path = tempfile.mkstemp()
+    read_handle = rw_handles.ImageReadHandle(read_iter)
 
-    try:
-        # NOTE(arnaud): Look to eliminate first writing OVA to file system
-        with os.fdopen(ova_fd, 'w') as fp:
-            for chunk in read_iter:
-                fp.write(chunk)
-        with tarfile.open(ova_path, mode="r") as tar:
-            vmdk_name = None
-            for tar_info in tar:
-                if tar_info and tar_info.name.endswith(".ovf"):
-                    extracted = tar.extractfile(tar_info.name)
-                    xmlstr = extracted.read()
-                    vmdk_name = get_vmdk_name_from_ovf(xmlstr)
-                elif vmdk_name and tar_info.name.startswith(vmdk_name):
-                    # Actual file name is <vmdk_name>.XXXXXXX
-                    extracted = tar.extractfile(tar_info.name)
-                    write_handle = rw_handles.VmdkWriteHandle(
-                        session,
-                        session._host,
-                        session._port,
-                        res_pool_ref,
-                        vm_folder_ref,
-                        vm_import_spec,
-                        file_size)
-                    start_transfer(context,
-                                   extracted,
-                                   file_size,
-                                   write_file_handle=write_handle)
-                    extracted.close()
-                    LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
-                        {'image_ref': instance.image_ref}, instance=instance)
-                    imported_vm_ref = write_handle.get_imported_vm()
-                    session._call_method(session.vim, "UnregisterVM",
-                                         imported_vm_ref)
-                    LOG.info(_LI("The imported VM was unregistered"),
-                             instance=instance)
-                    return
-            raise exception.ImageUnacceptable(
-                reason=_("Extracting vmdk from OVA failed."),
-                image_id=image_ref)
-    finally:
-        os.unlink(ova_path)
+    with tarfile.open(mode="r|", fileobj=read_handle) as tar:
+        vmdk_name = None
+        for tar_info in tar:
+            if tar_info and tar_info.name.endswith(".ovf"):
+                extracted = tar.extractfile(tar_info)
+                xmlstr = extracted.read()
+                vmdk_name = get_vmdk_name_from_ovf(xmlstr)
+            elif vmdk_name and tar_info.name.startswith(vmdk_name):
+                # Actual file name is <vmdk_name>.XXXXXXX
+                extracted = tar.extractfile(tar_info)
+                write_handle = rw_handles.VmdkWriteHandle(
+                    session,
+                    session._host,
+                    session._port,
+                    res_pool_ref,
+                    vm_folder_ref,
+                    vm_import_spec,
+                    file_size)
+                start_transfer(context,
+                               extracted,
+                               file_size,
+                               write_file_handle=write_handle)
+                extracted.close()
+                LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
+                    {'image_ref': instance.image_ref}, instance=instance)
+                imported_vm_ref = write_handle.get_imported_vm()
+                session._call_method(session.vim, "UnregisterVM",
+                                     imported_vm_ref)
+                LOG.info(_LI("The imported VM was unregistered"),
+                         instance=instance)
+                return
+        raise exception.ImageUnacceptable(
+            reason=_("Extracting vmdk from OVA failed."),
+            image_id=image_ref)
 
 
 def upload_image_stream_optimized(context, image_id, instance, session,
@@ -460,11 +471,11 @@ def upload_image_stream_optimized(context, image_id, instance, session,
     # Otherwise, the image service client will use the VM's disk capacity
     # which will not be the image size after upload, since it is converted
     # to a stream-optimized sparse disk.
-    image_metadata = {'disk_format': 'vmdk',
+    image_metadata = {'disk_format': constants.DISK_FORMAT_VMDK,
                       'is_public': metadata['is_public'],
                       'name': metadata['name'],
                       'status': 'active',
-                      'container_format': 'bare',
+                      'container_format': constants.CONTAINER_FORMAT_BARE,
                       'size': 0,
                       'properties': {'vmware_image_version': 1,
                                      'vmware_disktype': 'streamOptimized',

@@ -29,10 +29,11 @@ import eventlet.wsgi
 import greenlet
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_log import loggers
+from oslo_service import service
 from oslo_utils import excutils
 from paste import deploy
 import routes.middleware
+import six
 import webob.dec
 import webob.exc
 
@@ -50,6 +51,11 @@ wsgi_opts = [
                  'generate log lines. The following values can be formatted '
                  'into it: client_ip, date_time, request_line, status_code, '
                  'body_length, wall_seconds.'),
+    cfg.StrOpt('secure_proxy_ssl_header',
+               help='The HTTP header used to determine the scheme for the '
+                    'original request, even if it was removed by an SSL '
+                    'terminating proxy. Typical value is '
+                    '"HTTP_X_FORWARDED_PROTO".'),
     cfg.StrOpt('ssl_ca_file',
                help="CA certificate file to use to verify "
                     "connecting clients"),
@@ -86,7 +92,7 @@ CONF.register_opts(wsgi_opts)
 LOG = logging.getLogger(__name__)
 
 
-class Server(object):
+class Server(service.ServiceBase):
     """Server class to manage a WSGI server, serving a WSGI application."""
 
     default_pool_size = CONF.wsgi_default_pool_size
@@ -115,7 +121,6 @@ class Server(object):
         self.pool_size = pool_size or self.default_pool_size
         self._pool = eventlet.GreenPool(self.pool_size)
         self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
-        self._wsgi_logger = loggers.WritableLogger(self._logger)
         self._use_ssl = use_ssl
         self._max_url_len = max_url_len
         self.client_socket_timeout = CONF.client_socket_timeout or None
@@ -221,7 +226,7 @@ class Server(object):
             'site': self.app,
             'protocol': self._protocol,
             'custom_pool': self._pool,
-            'log': self._wsgi_logger,
+            'log': self._logger,
             'log_format': CONF.wsgi_log_format,
             'debug': False,
             'keepalive': CONF.wsgi_keep_alive,
@@ -274,7 +279,12 @@ class Server(object):
 
 
 class Request(webob.Request):
-    pass
+    def __init__(self, environ, *args, **kwargs):
+        if CONF.secure_proxy_ssl_header:
+            scheme = environ.get(CONF.secure_proxy_ssl_header)
+            if scheme:
+                environ['wsgi.url_scheme'] = scheme
+        super(Request, self).__init__(environ, *args, **kwargs)
 
 
 class Application(object):
@@ -422,7 +432,7 @@ class Debug(Middleware):
         resp = req.get_response(self.application)
 
         print(('*' * 40) + ' RESPONSE HEADERS')
-        for (key, value) in resp.headers.iteritems():
+        for (key, value) in six.iteritems(resp.headers):
             print(key, '=', value)
         print()
 

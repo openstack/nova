@@ -16,6 +16,7 @@
 import datetime
 
 from oslo_utils import timeutils
+import six
 
 
 class ViewBuilder(object):
@@ -58,7 +59,7 @@ class ViewBuilder(object):
 
         """
         limits = {}
-        for name, value in absolute_limits.iteritems():
+        for name, value in six.iteritems(absolute_limits):
             if name in self.limit_names and value is not None:
                 for limit_name in self.limit_names[name]:
                     limits[limit_name] = value

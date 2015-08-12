@@ -89,10 +89,12 @@ class _TestNUMA(object):
                                     mempages=[])
         numacell.pin_cpus(set([2, 3]))
         self.assertEqual(set([4]), numacell.free_cpus)
+        self.assertRaises(exception.CPUPinningUnknown,
+                          numacell.pin_cpus, set([1, 55]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus, set([1, 4]))
-        self.assertRaises(exception.CPUPinningInvalid,
-                          numacell.pin_cpus, set([1, 6]))
+        self.assertRaises(exception.CPUPinningUnknown,
+                          numacell.unpin_cpus, set([1, 55]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.unpin_cpus, set([1, 4]))
         numacell.unpin_cpus(set([1, 2, 3]))

@@ -15,7 +15,6 @@
 
 
 import contextlib
-import cStringIO
 import hashlib
 import os
 import time
@@ -27,6 +26,7 @@ from oslo_log import formatters
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
+from six.moves import cStringIO
 
 from nova import conductor
 from nova import context
@@ -47,7 +47,7 @@ CONF.import_opt('host', 'nova.netconf')
 def intercept_log_messages():
     try:
         mylog = logging.getLogger('nova')
-        stream = cStringIO.StringIO()
+        stream = cStringIO()
         handler = logging.logging.StreamHandler(stream)
         handler.setFormatter(formatters.ContextFormatter())
         mylog.logger.addHandler(handler)
@@ -824,7 +824,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         def fake_get_all_by_filters(context, *args, **kwargs):
             was['called'] = True
             instances = []
-            for x in xrange(2):
+            for x in range(2):
                 instances.append(fake_instance.fake_db_instance(
                                                         image_ref='1',
                                                         uuid=x,

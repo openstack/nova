@@ -31,6 +31,7 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 ALL_SUPPORTED_DS_TYPES = frozenset([constants.DATASTORE_TYPE_VMFS,
                                     constants.DATASTORE_TYPE_NFS,
+                                    constants.DATASTORE_TYPE_NFS41,
                                     constants.DATASTORE_TYPE_VSAN])
 
 
@@ -145,17 +146,6 @@ def get_datastore(session, cluster, datastore_regex=None,
             % datastore_regex.pattern)
     else:
         raise exception.DatastoreNotFound()
-
-
-def get_datastore_by_ref(session, ds_ref):
-    lst_properties = ["summary.type", "summary.name",
-                      "summary.capacity", "summary.freeSpace"]
-    props = session._call_method(vim_util, "get_object_properties",
-                                 None, ds_ref, "Datastore", lst_properties)
-    query = vm_util.get_values_from_object_properties(session, props)
-    return ds_obj.Datastore(ds_ref, query["summary.name"],
-                            capacity=query["summary.capacity"],
-                            freespace=query["summary.freeSpace"])
 
 
 def _get_allowed_datastores(data_stores, datastore_regex):
@@ -346,6 +336,11 @@ def search_datastore_spec(client_factory, file_name):
     """Builds the datastore search spec."""
     search_spec = client_factory.create('ns0:HostDatastoreBrowserSearchSpec')
     search_spec.matchPattern = [file_name]
+    search_spec.details = client_factory.create('ns0:FileQueryFlags')
+    search_spec.details.fileOwner = False
+    search_spec.details.fileSize = True
+    search_spec.details.fileType = False
+    search_spec.details.modification = False
     return search_spec
 
 
@@ -366,6 +361,20 @@ def file_exists(session, ds_browser, ds_path, file_name):
     file_exists = (getattr(task_info.result, 'file', False) and
                    task_info.result.file[0].path == file_name)
     return file_exists
+
+
+def file_size(session, ds_browser, ds_path, file_name):
+    """Returns the size of the specified file."""
+    client_factory = session.vim.client.factory
+    search_spec = search_datastore_spec(client_factory, file_name)
+    search_task = session._call_method(session.vim,
+                                       "SearchDatastore_Task",
+                                       ds_browser,
+                                       datastorePath=str(ds_path),
+                                       searchSpec=search_spec)
+    task_info = session._wait_for_task(search_task)
+    if hasattr(task_info.result, 'file'):
+        return task_info.result.file[0].fileSize
 
 
 def mkdir(session, ds_path, dc_ref):

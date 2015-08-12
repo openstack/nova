@@ -25,9 +25,11 @@ import warnings
 import fixtures
 from oslo_config import cfg
 from oslo_messaging import conffixture as messaging_conffixture
+import six
 
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
+from nova import exception
 from nova.objects import base as obj_base
 from nova import rpc
 from nova import service
@@ -282,7 +284,7 @@ class ConfPatcher(fixtures.Fixture):
 
     def setUp(self):
         super(ConfPatcher, self).setUp()
-        for k, v in self.args.iteritems():
+        for k, v in six.iteritems(self.args):
             self.addCleanup(CONF.clear_override, k, self.group)
             CONF.set_override(k, v, self.group)
 
@@ -339,11 +341,11 @@ class OSAPIFixture(fixtures.Fixture):
             'debug': True
         }
         self.useFixture(ConfPatcher(**conf_overrides))
-        osapi = service.WSGIService("osapi_compute")
-        osapi.start()
-        self.addCleanup(osapi.stop)
+        self.osapi = service.WSGIService("osapi_compute")
+        self.osapi.start()
+        self.addCleanup(self.osapi.stop)
         self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
-            'host': osapi.host, 'port': osapi.port,
+            'host': self.osapi.host, 'port': self.osapi.port,
             'api_version': self.api_version})
         self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
         self.admin_api = client.TestOpenStackClient(
@@ -402,3 +404,35 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.orig_indirection_api = obj_base.NovaObject.indirection_api
         obj_base.NovaObject.indirection_api = self.indirection_api
         self.addCleanup(self.cleanup)
+
+
+class SpawnIsSynchronousFixture(fixtures.Fixture):
+    """Patch and restore the spawn_n utility method to be synchronous"""
+
+    def setUp(self):
+        super(SpawnIsSynchronousFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))
+
+
+class BannedDBSchemaOperations(fixtures.Fixture):
+    """Ban some operations for migrations"""
+    def __init__(self, banned_resources=None):
+        super(BannedDBSchemaOperations, self).__init__()
+        self._banned_resources = banned_resources or []
+
+    @staticmethod
+    def _explode(resource, op):
+        raise exception.DBNotAllowed(
+            'Operation %s.%s() is not allowed in a database migration' % (
+                resource, op))
+
+    def setUp(self):
+        super(BannedDBSchemaOperations, self).setUp()
+        for thing in self._banned_resources:
+            self.useFixture(fixtures.MonkeyPatch(
+                'sqlalchemy.%s.drop' % thing,
+                lambda *a, **k: self._explode(thing, 'drop')))
+            self.useFixture(fixtures.MonkeyPatch(
+                'sqlalchemy.%s.alter' % thing,
+                lambda *a, **k: self._explode(thing, 'alter')))

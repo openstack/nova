@@ -12,17 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
+import contextlib
 
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
+from nova.cells import utils as cells_utils
 from nova.compute import flavors
-from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _LE
@@ -80,8 +81,7 @@ def _expected_cols(expected_attrs):
                     if field in expected_attrs]
     if complex_cols:
         simple_cols.append('extra')
-    simple_cols = filter(lambda x: x not in _INSTANCE_EXTRA_FIELDS,
-                         simple_cols)
+    simple_cols = [x for x in simple_cols if x not in _INSTANCE_EXTRA_FIELDS]
     if (any([flavor in expected_attrs
              for flavor in ['flavor', 'old_flavor', 'new_flavor']]) and
             'system_metadata' not in simple_cols):
@@ -93,43 +93,8 @@ def _expected_cols(expected_attrs):
     return simple_cols + complex_cols
 
 
-def compat_instance(instance):
-    """Create a dict-like instance structure from an objects.Instance.
-
-    This is basically the same as nova.objects.base.obj_to_primitive(),
-    except that it includes some instance-specific details, like stashing
-    flavor information in system_metadata.
-
-    If you have a function (or RPC client) that needs to see the instance
-    as a dict that has flavor information in system_metadata, use this
-    to appease it (while you fix said thing).
-
-    :param instance: a nova.objects.Instance instance
-    :returns: a dict-based instance structure
-    """
-    if not isinstance(instance, objects.Instance):
-        return instance
-
-    db_instance = copy.deepcopy(base.obj_to_primitive(instance))
-
-    flavor_attrs = [('', 'flavor'), ('old_', 'old_flavor'),
-                    ('new_', 'new_flavor')]
-    for prefix, attr in flavor_attrs:
-        flavor = (instance.obj_attr_is_set(attr) and
-                  getattr(instance, attr) or None)
-        if flavor:
-            # NOTE(danms): If flavor is unset or None, don't
-            # copy it into the primitive's system_metadata
-            db_instance['system_metadata'] = \
-                flavors.save_flavor_info(
-                    db_instance.get('system_metadata', {}),
-                    flavor, prefix)
-        if attr in db_instance:
-            del db_instance[attr]
-    return db_instance
-
-
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Instance(base.NovaPersistentObject, base.NovaObject,
                base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -151,10 +116,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.15: PciDeviceList 1.1
     # Version 1.16: Added pci_requests
     # Version 1.17: Added tags
-    # Version 1.18: Added flavor, old_flavor, new_flavor
+    # Version 1.18: Added flavor, old_flavor, new_flavor, will use
+    #               PciDeviceList version 1.2
     # Version 1.19: Added vcpu_model
     # Version 1.20: Added ec2_ids
-    VERSION = '1.20'
+    # Version 1.21: TagList 1.1
+    # Version 1.22: InstanceNUMATopology 1.2
+    VERSION = '1.22'
 
     fields = {
         'id': fields.IntegerField(),
@@ -190,6 +158,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         'reservation_id': fields.StringField(nullable=True),
 
+        # NOTE(sbiswas7): this field is depcrecated,
+        # will be removed in instance v2.0
         'scheduled_at': fields.DateTimeField(nullable=True),
         'launched_at': fields.DateTimeField(nullable=True),
         'terminated_at': fields.DateTimeField(nullable=True),
@@ -255,13 +225,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     obj_extra_fields = ['name']
 
     obj_relationships = {
-        'fault': [('1.0', '1.0')],
+        'fault': [('1.0', '1.0'), ('1.13', '1.2')],
         'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
         'security_groups': [('1.2', '1.0')],
-        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1')],
-        'numa_topology': [('1.14', '1.0')],
+        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
+        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1'), ('1.22', '1.2')],
         'pci_requests': [('1.16', '1.1')],
-        'tags': [('1.17', '1.0')],
+        'tags': [('1.17', '1.0'), ('1.21', '1.1')],
         'flavor': [('1.18', '1.1')],
         'old_flavor': [('1.18', '1.1')],
         'new_flavor': [('1.18', '1.1')],
@@ -353,52 +323,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 base_name = self.uuid
         return base_name
 
-    @staticmethod
-    def _migrate_flavor(instance):
-        """Migrate a fractional flavor to a full one stored in extra.
-
-        This method migrates flavor information stored in an instance's
-        system_metadata to instance_extra. Since the information in the
-        former is not complete, we must attempt to fetch the original
-        flavor by id to merge its extra_specs with what we store.
-
-        This is a transitional tool and can be removed in a later release
-        once we can ensure that everyone has migrated their instances
-        (likely the L release).
-        """
-
-        # NOTE(danms): Always use admin context and read_deleted=yes here
-        # because we need to make sure we can look up our original flavor
-        # and try to reconstruct extra_specs, even if it has been deleted
-        ctxt = context.get_admin_context(read_deleted='yes')
-
-        instance.flavor = flavors.extract_flavor(instance)
-        flavors.delete_flavor_info(instance.system_metadata, '')
-
-        for ftype in ('old', 'new'):
-            attrname = '%s_flavor' % ftype
-            prefix = '%s_' % ftype
-
-            try:
-                flavor = flavors.extract_flavor(instance, prefix)
-                setattr(instance, attrname, flavor)
-                flavors.delete_flavor_info(instance.system_metadata, prefix)
-            except KeyError:
-                setattr(instance, attrname, None)
-
-        # NOTE(danms): Merge in the extra_specs from the original flavor
-        # since they weren't stored with the instance.
-        for flv in (instance.flavor, instance.new_flavor, instance.old_flavor):
-            if flv is not None:
-                try:
-                    db_flavor = objects.Flavor.get_by_flavor_id(ctxt,
-                                                                flv.flavorid)
-                except exception.FlavorNotFound:
-                    continue
-                extra_specs = dict(db_flavor.extra_specs)
-                extra_specs.update(flv.get('extra_specs', {}))
-                flv.extra_specs = extra_specs
-
     def _flavor_from_db(self, db_flavor):
         """Load instance flavor information from instance_extra."""
 
@@ -417,60 +341,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self.new_flavor = None
         self.obj_reset_changes(['flavor', 'old_flavor', 'new_flavor'])
 
-    def _maybe_migrate_flavor(self, db_inst, expected_attrs):
-        """Determine the proper place and format for flavor loading.
-
-        This method loads the flavor information into the instance. If
-        the information is already migrated to instance_extra, then we
-        load that. If it is in system_metadata, we migrate it to extra.
-        If, however, we're loading an instance for an older client and
-        the flavor has already been migrated, we need to stash it back
-        into system metadata, which we do here.
-
-        This is transitional and can be removed when we remove
-        _migrate_flavor().
-        """
-
-        version = utils.convert_version_to_tuple(self.VERSION)
-        flavor_requested = any(
-            [flavor in expected_attrs
-             for flavor in ('flavor', 'old_flavor', 'new_flavor')])
-        flavor_implied = (version < (1, 18) and
-                          'system_metadata' in expected_attrs)
-        # NOTE(danms): This is compatibility logic. If the flavor
-        # attributes were requested, then we do this load/migrate
-        # logic. However, if the instance is old, we might need to
-        # do it anyway in order to satisfy our sysmeta-based contract.
-        if not (flavor_requested or flavor_implied):
-            return False
-
-        migrated_flavor = False
-        if flavor_implied:
-            # This instance is from before flavors were migrated out of
-            # system_metadata. Make sure that we honor that.
-            if db_inst['extra']['flavor'] is not None:
-                self._flavor_from_db(db_inst['extra']['flavor'])
-                sysmeta = self.system_metadata
-                flavors.save_flavor_info(sysmeta, self.flavor)
-                del self.flavor
-                if self.old_flavor:
-                    flavors.save_flavor_info(sysmeta, self.old_flavor, 'old_')
-                    del self.old_flavor
-                if self.new_flavor:
-                    flavors.save_flavor_info(sysmeta, self.new_flavor, 'new_')
-                    del self.new_flavor
-                self.system_metadata = sysmeta
-        else:
-            # Migrate the flavor from system_metadata to extra,
-            # if needed
-            instance_extra = db_inst.get('extra') or {}
-            if instance_extra.get('flavor') is not None:
-                self._flavor_from_db(db_inst['extra']['flavor'])
-            elif 'instance_type_id' in self.system_metadata:
-                self._migrate_flavor(self)
-                migrated_flavor = True
-        return migrated_flavor
-
     @staticmethod
     def _from_db_object(context, instance, db_inst, expected_attrs=None):
         """Method to help with migration to objects.
@@ -488,8 +358,17 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 instance.deleted = db_inst['deleted'] == db_inst['id']
             elif field == 'cleaned':
                 instance.cleaned = db_inst['cleaned'] == 1
+            elif field == 'scheduled_at':
+                instance.scheduled_at = None
             else:
                 instance[field] = db_inst[field]
+
+        # NOTE(danms): We can be called with a dict instead of a
+        # SQLAlchemy object, so we have to be careful here
+        if hasattr(db_inst, '__dict__'):
+            have_extra = 'extra' in db_inst.__dict__ and db_inst['extra']
+        else:
+            have_extra = 'extra' in db_inst and db_inst['extra']
 
         if 'metadata' in expected_attrs:
             instance['metadata'] = utils.instance_meta(db_inst)
@@ -500,13 +379,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 objects.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
         if 'numa_topology' in expected_attrs:
-            instance._load_numa_topology(
-                db_inst.get('extra').get('numa_topology'))
+            if have_extra:
+                instance._load_numa_topology(
+                    db_inst['extra'].get('numa_topology'))
+            else:
+                instance.numa_topology = None
         if 'pci_requests' in expected_attrs:
-            instance._load_pci_requests(
-                db_inst.get('extra').get('pci_requests'))
+            if have_extra:
+                instance._load_pci_requests(
+                    db_inst['extra'].get('pci_requests'))
+            else:
+                instance.pci_requests = None
         if 'vcpu_model' in expected_attrs:
-            instance._load_vcpu_model(db_inst.get('extra').get('vcpu_model'))
+            if have_extra:
+                instance._load_vcpu_model(
+                    db_inst['extra'].get('vcpu_model'))
+            else:
+                instance.vcpu_model = None
         if 'ec2_ids' in expected_attrs:
             instance._load_ec2_ids()
         if 'info_cache' in expected_attrs:
@@ -521,8 +410,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                                     instance.info_cache,
                                                     db_inst['info_cache'])
 
-        migrated_flavor = instance._maybe_migrate_flavor(db_inst,
-                                                         expected_attrs)
+        if any([x in expected_attrs for x in ('flavor',
+                                              'old_flavor',
+                                              'new_flavor')]):
+            if have_extra and db_inst['extra'].get('flavor'):
+                instance._flavor_from_db(db_inst['extra']['flavor'])
 
         # TODO(danms): If we are updating these on a backlevel instance,
         # we'll end up sending back new versions of these objects (see
@@ -545,13 +437,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             instance['tags'] = tags
 
         instance.obj_reset_changes()
-        if migrated_flavor:
-            # NOTE(danms): If we migrated the flavor above, we need to make
-            # sure we know that flavor and system_metadata have been
-            # touched so that the next save will update them. We can remove
-            # this when we remove _migrate_flavor().
-            instance._changed_fields.add('system_metadata')
-            instance._changed_fields.add('flavor')
         return instance
 
     @base.remotable_classmethod
@@ -583,6 +468,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         updates = self.obj_get_changes()
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
+        if 'scheduled_at' in updates:
+            # NOTE(sbiswas7): 'scheduled_at' is not present in models.
+            del updates['scheduled_at']
         if 'security_groups' in updates:
             updates['security_groups'] = [x.name for x in
                                           updates['security_groups']]
@@ -637,6 +525,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             constraint = None
 
+        cell_type = cells_opts.get_cell_type()
+        if cell_type is not None:
+            stale_instance = self.obj_clone()
+
         try:
             db_inst = db.instance_destroy(self._context, self.uuid,
                                           constraint=constraint)
@@ -644,6 +536,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',
                                               reason='host changed')
+        if cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.instance_destroy_at_top(self._context, stale_instance)
         delattr(self, base.get_attrname('id'))
 
     def _save_info_cache(self, context):
@@ -682,6 +577,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         pass
 
     def _save_flavor(self, context):
+        if not any([x in self.obj_what_changed() for x in
+                    ('flavor', 'old_flavor', 'new_flavor')]):
+            return
         # FIXME(danms): We can do this smarterly by updating this
         # with all the other extra things at the same time
         flavor_info = {
@@ -720,32 +618,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(hanlind): Read-only so no need to save this.
         pass
 
-    def _maybe_upgrade_flavor(self):
-        # NOTE(danms): We may have regressed to flavors stored in sysmeta,
-        # so we have to merge back in here. That could happen if we pass
-        # a converted instance to an older node, which still stores the
-        # flavor in sysmeta, which then calls save(). We need to not
-        # store that flavor info back into sysmeta after we've already
-        # converted it.
-        if (not self.obj_attr_is_set('system_metadata') or
-                'instance_type_id' not in self.system_metadata):
-            return
-
-        LOG.debug('Transforming legacy flavors on save', instance=self)
-        for ftype in ('', 'old_', 'new_'):
-            attr = '%sflavor' % ftype
-            try:
-                flavor = flavors.extract_flavor(self, prefix=ftype)
-                flavors.delete_flavor_info(self.system_metadata, ftype)
-                # NOTE(danms): This may trigger a lazy-load of the flavor
-                # information, but only once and it avoids re-fetching and
-                # re-migrating the original flavor.
-                getattr(self, attr).update(flavor)
-            except AttributeError:
-                setattr(self, attr, flavor)
-            except KeyError:
-                setattr(self, attr, None)
-
     @base.remotable
     def save(self, expected_vm_state=None,
              expected_task_state=None, admin_state_reset=False):
@@ -765,9 +637,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         of task_state/vm_state
 
         """
+        # Store this on the class because _cell_name_blocks_sync is useless
+        # after the db update call below.
+        self._sync_cells = not self._cell_name_blocks_sync()
+
         context = self._context
         cell_type = cells_opts.get_cell_type()
-        if cell_type == 'api' and self.cell_name:
+
+        if cell_type is not None:
             # NOTE(comstud): We need to stash a copy of ourselves
             # before any updates are applied.  When we call the save
             # methods on nested objects, we will lose any changes to
@@ -779,18 +656,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # authoritative for their view of vm_state and task_state.
             stale_instance = self.obj_clone()
 
+        cells_update_from_api = (cell_type == 'api' and self.cell_name and
+                                 self._sync_cells)
+
+        if cells_update_from_api:
             def _handle_cell_update_from_api():
                 cells_api = cells_rpcapi.CellsAPI()
                 cells_api.instance_update_from_api(context, stale_instance,
-                        expected_vm_state,
-                        expected_task_state,
-                        admin_state_reset)
-        else:
-            stale_instance = None
+                            expected_vm_state,
+                            expected_task_state,
+                            admin_state_reset)
 
-        self._maybe_upgrade_flavor()
         updates = {}
         changes = self.obj_what_changed()
+        if 'scheduled_at' in changes:
+            # NOTE(sbiswas7): Since 'scheduled_at' is removed from models,
+            # we need to discard it.
+            changes.remove('scheduled_at')
 
         for field in self.fields:
             # NOTE(danms): For object fields, we construct and call a
@@ -802,11 +684,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 except AttributeError:
                     LOG.exception(_LE('No save handler for %s'), field,
                                   instance=self)
+                except db_exc.DBReferenceError:
+                    # NOTE(melwitt): This will happen if we instance.save()
+                    # before an instance.create() and FK constraint fails.
+                    # In practice, this occurs in cells during a delete of
+                    # an unscheduled instance. Otherwise, it could happen
+                    # as a result of bug.
+                    raise exception.InstanceNotFound(instance_id=self.uuid)
             elif field in changes:
-                updates[field] = self[field]
+                if (field == 'cell_name' and self[field] is not None and
+                        self[field].startswith(cells_utils.BLOCK_SYNC_FLAG)):
+                    updates[field] = self[field].replace(
+                            cells_utils.BLOCK_SYNC_FLAG, '', 1)
+                else:
+                    updates[field] = self[field]
 
         if not updates:
-            if stale_instance:
+            if cells_update_from_api:
                 _handle_cell_update_from_api()
             return
 
@@ -844,23 +738,22 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             expected_attrs.append('system_metadata')
             expected_attrs.append('flavor')
         old_ref, inst_ref = db.instance_update_and_get_original(
-                context, self.uuid, updates, update_cells=False,
+                context, self.uuid, updates,
                 columns_to_join=_expected_cols(expected_attrs))
-
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
+
+        if cells_update_from_api:
+            _handle_cell_update_from_api()
+        elif cell_type == 'compute':
+            if self._sync_cells:
+                cells_api = cells_rpcapi.CellsAPI()
+                cells_api.instance_update_at_top(context, stale_instance)
 
         # NOTE(danms): We have to be super careful here not to trigger
         # any lazy-loads that will unmigrate or unbackport something. So,
         # make a copy of the instance for notifications first.
         new_ref = self.obj_clone()
-
-        if stale_instance:
-            _handle_cell_update_from_api()
-        elif cell_type == 'compute':
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.instance_update_at_top(context,
-                                             base.obj_to_primitive(new_ref))
 
         notifications.send_update(context, old_ref, new_ref)
         self.obj_reset_changes()
@@ -975,16 +868,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
 
-        if ('flavor' in attrname and
-                self.obj_attr_is_set('system_metadata') and
-                'instance_type_id' in self.system_metadata):
-            # NOTE(danms): Looks like we're loading a flavor, and that
-            # should be doable without a context, so do this before the
-            # orphan check below.
-            self._migrate_flavor(self)
-            if self.obj_attr_is_set(attrname):
-                return
-
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
@@ -1061,6 +944,49 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if not md_was_changed:
             self.obj_reset_changes(['metadata'])
 
+    def _cell_name_blocks_sync(self):
+        if (self.obj_attr_is_set('cell_name') and
+                self.cell_name is not None and
+                self.cell_name.startswith(cells_utils.BLOCK_SYNC_FLAG)):
+            return True
+        return False
+
+    def _normalize_cell_name(self):
+        """Undo skip_cell_sync()'s cell_name modification if applied"""
+
+        if not self.obj_attr_is_set('cell_name') or self.cell_name is None:
+            return
+        cn_changed = 'cell_name' in self.obj_what_changed()
+        if self.cell_name.startswith(cells_utils.BLOCK_SYNC_FLAG):
+            self.cell_name = self.cell_name.replace(
+                    cells_utils.BLOCK_SYNC_FLAG, '', 1)
+            # cell_name is not normally an empty string, this means it was None
+            # or unset before cells_utils.BLOCK_SYNC_FLAG was applied.
+            if len(self.cell_name) == 0:
+                self.cell_name = None
+        if not cn_changed:
+            self.obj_reset_changes(['cell_name'])
+
+    @contextlib.contextmanager
+    def skip_cells_sync(self):
+        """Context manager to save an instance without syncing cells.
+
+        Temporarily disables the cells syncing logic, if enabled.  This should
+        only be used when saving an instance that has been passed down/up from
+        another cell in order to avoid passing it back to the originator to be
+        re-saved.
+        """
+        cn_changed = 'cell_name' in self.obj_what_changed()
+        if not self.obj_attr_is_set('cell_name') or self.cell_name is None:
+            self.cell_name = ''
+        self.cell_name = '%s%s' % (cells_utils.BLOCK_SYNC_FLAG, self.cell_name)
+        if not cn_changed:
+            self.obj_reset_changes(['cell_name'])
+        try:
+            yield
+        finally:
+            self._normalize_cell_name()
+
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     get_fault = expected_attrs and 'fault' in expected_attrs
@@ -1087,6 +1013,7 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
+@base.NovaObjectRegistry.register
 class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added use_slave to get_by_host
@@ -1107,31 +1034,24 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.15: Instance <= version 1.19
     # Version 1.16: Added get_all() method
     # Version 1.17: Instance <= version 1.20
-    VERSION = '1.17'
+    # Version 1.18: Instance <= version 1.21
+    # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
+    # Version 1.20: Instance <= version 1.22
+    VERSION = '1.20'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
     }
-    child_versions = {
-        '1.1': '1.9',
-        # NOTE(danms): Instance was at 1.9 before we added this
-        '1.2': '1.11',
-        '1.3': '1.11',
-        '1.4': '1.12',
-        '1.5': '1.12',
-        '1.6': '1.13',
-        '1.7': '1.13',
-        '1.8': '1.14',
-        '1.9': '1.15',
-        '1.10': '1.16',
-        '1.11': '1.16',
-        '1.12': '1.16',
-        '1.13': '1.17',
-        '1.14': '1.18',
-        '1.15': '1.19',
-        '1.16': '1.19',
-        '1.17': '1.20',
-        }
+    # NOTE(danms): Instance was at 1.9 before we added this
+    obj_relationships = {
+        'objects': [('1.1', '1.9'), ('1.2', '1.11'), ('1.3', '1.11'),
+                    ('1.4', '1.12'), ('1.5', '1.12'), ('1.6', '1.13'),
+                    ('1.7', '1.13'), ('1.8', '1.14'), ('1.9', '1.15',),
+                    ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
+                    ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
+                    ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
+                    ('1.19', '1.21'), ('1.20', '1.22')],
+    }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,

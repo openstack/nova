@@ -19,12 +19,14 @@ import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import units
+import unittest2
 
 from nova import exception
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import ioutils
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import vmutils
 
@@ -779,13 +781,14 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_set_vm_state.assert_called_once_with(
             mock_instance, constants.HYPERV_VM_STATE_ENABLED)
 
-    def _test_power_off(self, timeout):
+    def _test_power_off(self, timeout, set_state_expected=True):
         instance = fake_instance.fake_instance_obj(self.context)
         with mock.patch.object(self._vmops, '_set_vm_state') as mock_set_state:
             self._vmops.power_off(instance, timeout)
 
-            mock_set_state.assert_called_once_with(
-                instance, constants.HYPERV_VM_STATE_DISABLED)
+            if set_state_expected:
+                mock_set_state.assert_called_once_with(
+                    instance, constants.HYPERV_VM_STATE_DISABLED)
 
     def test_power_off_hard(self):
         self._test_power_off(timeout=0)
@@ -806,6 +809,11 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_soft_shutdown.assert_called_once_with(
             instance, 1, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(mock_set_state.called)
+
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._soft_shutdown")
+    def test_power_off_unexisting_instance(self, mock_soft_shutdown):
+        mock_soft_shutdown.side_effect = exception.NotFound
+        self._test_power_off(timeout=1, set_state_expected=False)
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps._set_vm_state')
     def test_power_on(self, mock_set_vm_state):
@@ -887,6 +895,44 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_VM_NAME, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(result)
 
+    @mock.patch.object(ioutils, 'IOThread')
+    def _test_log_vm_serial_output(self, mock_io_thread,
+                                   worker_running=False,
+                                   worker_exists=False):
+        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
+            mock.sentinel.log_path, )
+        fake_instance_uuid = 'fake-uuid'
+        fake_existing_worker = mock.Mock()
+        fake_existing_worker.is_active.return_value = worker_running
+        fake_log_writers = {fake_instance_uuid: fake_existing_worker}
+        self._vmops._vm_log_writers = (
+            fake_log_writers if worker_exists else {})
+
+        self._vmops.log_vm_serial_output(mock.sentinel.instance_name,
+                                         fake_instance_uuid)
+
+        if not (worker_exists and worker_running):
+            expected_pipe_path = r'\\.\pipe\%s' % fake_instance_uuid
+            expected_current_worker = mock_io_thread.return_value
+            expected_current_worker.start.assert_called_once_with()
+            mock_io_thread.assert_called_once_with(
+                expected_pipe_path, mock.sentinel.log_path,
+                self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
+        else:
+            expected_current_worker = fake_existing_worker
+        self.assertEqual(expected_current_worker,
+                        self._vmops._vm_log_writers[fake_instance_uuid])
+
+    def test_log_vm_serial_output_unexisting_worker(self):
+        self._test_log_vm_serial_output()
+
+    def test_log_vm_serial_output_worker_stopped(self):
+        self._test_log_vm_serial_output(worker_exists=True)
+
+    def test_log_vm_serial_output_worker_running(self):
+        self._test_log_vm_serial_output(worker_exists=True,
+                                        worker_running=True)
+
     def test_copy_vm_console_logs(self):
         fake_local_paths = (mock.sentinel.FAKE_PATH,
                             mock.sentinel.FAKE_PATH_ARCHIVED)
@@ -926,6 +972,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
         fake_iothread.return_value.start.assert_called_once_with()
 
+    @unittest2.skip('mock_open in 1.2 read only works once 1475661')
     @mock.patch("os.path.exists")
     def test_get_console_output(self, fake_path_exists):
         mock_instance = fake_instance.fake_instance_obj(self.context)
@@ -935,7 +982,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_PATH, mock.sentinel.FAKE_PATH_ARCHIVED)
 
         with mock.patch('nova.virt.hyperv.vmops.open',
-                        mock.mock_open(read_data=self.FAKE_LOG), create=True):
+                        mock.mock_open(read_data=self.FAKE_LOG),
+                        create=True):
             instance_log = self._vmops.get_console_output(mock_instance)
             # get_vm_console_log_paths returns 2 paths.
             self.assertEqual(self.FAKE_LOG * 2, instance_log)
@@ -1019,12 +1067,17 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_copy = self._vmops._pathutils.copyfile
         mock_get_dvd_disk_paths = self._vmops._vmutils.get_vm_dvd_disk_paths
         mock_get_dvd_disk_paths.return_value = fake_paths
+        self._vmops._pathutils.get_instance_dir.return_value = (
+            mock.sentinel.FAKE_DEST_PATH)
 
         self._vmops.copy_vm_dvd_disks(mock.sentinel.FAKE_VM_NAME,
-                                      mock.sentinel.FAKE_DEST)
+                                      mock.sentinel.FAKE_DEST_HOST)
 
         mock_get_dvd_disk_paths.assert_called_with(mock.sentinel.FAKE_VM_NAME)
+        self._vmops._pathutils.get_instance_dir.assert_called_once_with(
+            mock.sentinel.FAKE_VM_NAME,
+            remote_server=mock.sentinel.FAKE_DEST_HOST)
         mock_copy.has_calls(mock.call(mock.sentinel.FAKE_DVD_PATH1,
-                                      mock.sentinel.FAKE_DEST),
+                                      mock.sentinel.FAKE_DEST_PATH),
                             mock.call(mock.sentinel.FAKE_DVD_PATH2,
-                                      mock.sentinel.FAKE_DEST))
+                                      mock.sentinel.FAKE_DEST_PATH))

@@ -24,6 +24,7 @@ from nova.objects import fields
 from nova import utils
 
 
+@base.NovaObjectRegistry.register
 class PciDevicePool(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added numa_node field
@@ -53,8 +54,7 @@ class PciDevicePool(base.NovaObject):
         pool.product_id = pool_dict.pop("product_id")
         pool.numa_node = pool_dict.pop("numa_node", None)
         pool.count = pool_dict.pop("count")
-        pool.tags = {}
-        pool.tags.update(pool_dict)
+        pool.tags = pool_dict
         return pool
 
     # NOTE(sbauza): Before using objects, pci stats was a list of
@@ -68,6 +68,7 @@ class PciDevicePool(base.NovaObject):
         return pci_pool
 
 
+@base.NovaObjectRegistry.register
 class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevicePool <= 1.0
@@ -76,10 +77,9 @@ class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     fields = {
              'objects': fields.ListOfObjectsField('PciDevicePool'),
              }
-    child_versions = {
-            '1.0': '1.0',
-            '1.1': '1.1',
-            }
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
+        }
 
 
 def from_pci_stats(pci_stats):

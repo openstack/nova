@@ -22,6 +22,7 @@ from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
 from nova.virt.disk import api as diskapi
 from nova.virt.disk.vfs import guestfs as vfsguestfs
+from nova.virt.image import model as imgmodel
 
 
 class VirtDiskTest(test.NoDBTestCase):
@@ -30,31 +31,42 @@ class VirtDiskTest(test.NoDBTestCase):
         self.useFixture(
                 fixtures.MonkeyPatch('nova.virt.disk.vfs.guestfs.guestfs',
                                      fakeguestfs))
+        self.file = imgmodel.LocalFileImage("/some/file",
+                                            imgmodel.FORMAT_QCOW2)
 
     def test_inject_data(self):
-        self.assertTrue(diskapi.inject_data("/some/file", use_cow=True))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_QCOW2)))
 
-        self.assertTrue(diskapi.inject_data("/some/file",
-                                            mandatory=('files',)))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            mandatory=('files',)))
 
-        self.assertTrue(diskapi.inject_data("/some/file", key="mysshkey",
-                                            mandatory=('key',)))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            key="mysshkey",
+            mandatory=('key',)))
 
         os_name = os.name
         os.name = 'nt'  # Cause password injection to fail
         self.assertRaises(exception.NovaException,
                           diskapi.inject_data,
-                          "/some/file", admin_password="p",
+                          imgmodel.LocalFileImage("/some/file",
+                                                  imgmodel.FORMAT_RAW),
+                          admin_password="p",
                           mandatory=('admin_password',))
-        self.assertFalse(diskapi.inject_data("/some/file", admin_password="p"))
+        self.assertFalse(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            admin_password="p"))
         os.name = os_name
 
-        self.assertFalse(diskapi.inject_data("/some/fail/file",
-                                             key="mysshkey"))
+        self.assertFalse(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/fail/file", imgmodel.FORMAT_RAW),
+            key="mysshkey"))
 
     def test_inject_data_key(self):
 
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         diskapi._inject_key_into_fs("mysshkey", vfs)
@@ -75,7 +87,7 @@ class VirtDiskTest(test.NoDBTestCase):
 
     def test_inject_data_key_with_selinux(self):
 
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         vfs.make_path("etc/selinux")
@@ -109,7 +121,7 @@ class VirtDiskTest(test.NoDBTestCase):
 
     def test_inject_data_key_with_selinux_append_with_newline(self):
 
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         vfs.replace_file("/etc/rc.d/rc.local", "#!/bin/sh\necho done")
@@ -131,7 +143,7 @@ class VirtDiskTest(test.NoDBTestCase):
 
     def test_inject_net(self):
 
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         diskapi._inject_net_into_fs("mynetconfig", vfs)
@@ -146,7 +158,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_inject_metadata(self):
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
         metadata = {"foo": "bar", "eek": "wizz"}
         metadata = OrderedDict(sorted(metadata.items()))
@@ -163,7 +175,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_inject_admin_password(self):
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         def fake_salt():
@@ -219,7 +231,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_inject_files_into_fs(self):
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         diskapi._inject_files_into_fs([("/path/to/not/exists/file",
@@ -244,7 +256,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_inject_files_into_fs_dir_exists(self):
-        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs = vfsguestfs.VFSGuestFS(self.file)
         vfs.setup()
 
         called = {'make_path': False}

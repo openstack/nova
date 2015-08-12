@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
+import six
 
 from nova.api.openstack.compute.schemas.v3 import quota_classes
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-import nova.context
 from nova import db
 from nova import exception
 from nova import quota
@@ -61,31 +60,25 @@ class QuotaClassSetsController(wsgi.Controller):
 
         return dict(quota_class_set=result)
 
-    @extensions.expected_errors(403)
+    @extensions.expected_errors(())
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
-        try:
-            nova.context.authorize_quota_class_context(context, id)
-            values = QUOTAS.get_class_quotas(context, id)
-            return self._format_quota_set(id, values)
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        authorize(context, action='show', target={'quota_class': id})
+        values = QUOTAS.get_class_quotas(context, id)
+        return self._format_quota_set(id, values)
 
-    @extensions.expected_errors((403))
+    @extensions.expected_errors(())
     @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='update', target={'quota_class': id})
         quota_class = id
 
-        for key, value in body['quota_class_set'].iteritems():
+        for key, value in six.iteritems(body['quota_class_set']):
             try:
                 db.quota_class_update(context, quota_class, key, value)
             except exception.QuotaClassNotFound:
                 db.quota_class_create(context, quota_class, key, value)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values)

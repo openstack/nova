@@ -28,6 +28,7 @@ import stevedore
 import webob
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
@@ -273,7 +274,7 @@ class ServersController(wsgi.Controller):
 
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
-                self._get_server_search_options())
+                self._get_server_search_options(req))
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
@@ -354,12 +355,14 @@ class ServersController(wsgi.Controller):
             except ValueError as err:
                 raise exception.InvalidInput(six.text_type(err))
 
+        elevated = None
         if 'all_tenants' in search_opts:
             if is_detail:
                 authorize(context, action="detail:get_all_tenants")
             else:
                 authorize(context, action="index:get_all_tenants")
             del search_opts['all_tenants']
+            elevated = context.elevated()
         else:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
@@ -369,7 +372,7 @@ class ServersController(wsgi.Controller):
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
         try:
-            instance_list = self.compute_api.get_all(context,
+            instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
                     want_objects=True, expected_attrs=['pci_devices'],
                     sort_keys=sort_keys, sort_dirs=sort_dirs)
@@ -563,7 +566,7 @@ class ServersController(wsgi.Controller):
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)
-        except ValueError as error:
+        except ValueError:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -623,6 +626,7 @@ class ServersController(wsgi.Controller):
                 exception.PortRequiresFixedIP,
                 exception.NetworkRequiresSubnet,
                 exception.NetworkNotFound,
+                exception.NetworkDuplicated,
                 exception.InvalidBDMSnapshot,
                 exception.InvalidBDMVolume,
                 exception.InvalidBDMImage,
@@ -907,7 +911,7 @@ class ServersController(wsgi.Controller):
         if not image_href and create_kwargs.get('block_device_mapping'):
             return ''
         elif image_href:
-            return self._image_uuid_from_href(unicode(image_href))
+            return self._image_uuid_from_href(six.text_type(image_href))
         else:
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1030,6 +1034,7 @@ class ServersController(wsgi.Controller):
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
+                authorize(context, action="create_image:allow_volume_backed")
                 img = instance.image_ref
                 if not img:
                     properties = bdms.root_metadata(
@@ -1073,10 +1078,14 @@ class ServersController(wsgi.Controller):
             password = utils.generate_password()
         return password
 
-    def _get_server_search_options(self):
+    def _get_server_search_options(self, req):
         """Return server search options allowed by non-admin."""
-        return ('reservation_id', 'name', 'status', 'image', 'flavor',
-                'ip', 'changes-since', 'all_tenants')
+        opt_list = ('reservation_id', 'name', 'status', 'image', 'flavor',
+                    'ip', 'changes-since', 'all_tenants')
+        req_ver = req.api_version_request
+        if req_ver > api_version_request.APIVersionRequest("2.4"):
+            opt_list += ('ip6',)
+        return opt_list
 
     def _get_instance(self, context, instance_uuid):
         try:

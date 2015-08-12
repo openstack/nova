@@ -19,13 +19,18 @@ Manage hosts in the current zone.
 
 import collections
 import time
-import UserDict
+try:
+    from collections import UserDict as IterableUserDict   # Python 3
+except ImportError:
+    from UserDict import IterableUserDict                  # Python 2
+
 
 import iso8601
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+import six
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -51,6 +56,7 @@ host_manager_opts = [
                   'RetryFilter',
                   'AvailabilityZoneFilter',
                   'RamFilter',
+                  'DiskFilter',
                   'ComputeFilter',
                   'ComputeCapabilitiesFilter',
                   'ImagePropertiesFilter',
@@ -75,7 +81,7 @@ LOG = logging.getLogger(__name__)
 HOST_INSTANCE_SEMAPHORE = "host_instance"
 
 
-class ReadOnlyDict(UserDict.IterableUserDict):
+class ReadOnlyDict(IterableUserDict):
     """A read-only dict."""
     def __init__(self, source=None):
         self.data = {}
@@ -447,7 +453,7 @@ class HostManager(object):
         def _strip_ignore_hosts(host_map, hosts_to_ignore):
             ignored_hosts = []
             for host in hosts_to_ignore:
-                for (hostname, nodename) in host_map.keys():
+                for (hostname, nodename) in list(host_map.keys()):
                     if host == hostname:
                         del host_map[(hostname, nodename)]
                         ignored_hosts.append(host)
@@ -457,7 +463,7 @@ class HostManager(object):
 
         def _match_forced_hosts(host_map, hosts_to_force):
             forced_hosts = []
-            for (hostname, nodename) in host_map.keys():
+            for (hostname, nodename) in list(host_map.keys()):
                 if hostname not in hosts_to_force:
                     del host_map[(hostname, nodename)]
                 else:
@@ -473,7 +479,7 @@ class HostManager(object):
 
         def _match_forced_nodes(host_map, nodes_to_force):
             forced_nodes = []
-            for (hostname, nodename) in host_map.keys():
+            for (hostname, nodename) in list(host_map.keys()):
                 if nodename not in nodes_to_force:
                     del host_map[(hostname, nodename)]
                 else:
@@ -512,7 +518,7 @@ class HostManager(object):
                 # NOTE(deva): Skip filters when forcing host or node
                 if name_to_cls_map:
                     return name_to_cls_map.values()
-            hosts = name_to_cls_map.itervalues()
+            hosts = six.itervalues(name_to_cls_map)
 
         return self.filter_handler.get_filtered_objects(filters,
                 hosts, filter_properties, index)
@@ -557,7 +563,7 @@ class HostManager(object):
             host_state.aggregates = [self.aggs_by_id[agg_id] for agg_id in
                                      self.host_aggregates_map[
                                          host_state.host]]
-            host_state.update_service(dict(service.iteritems()))
+            host_state.update_service(dict(service))
             self._add_instance_info(context, compute, host_state)
             seen_nodes.add(state_key)
 
@@ -569,7 +575,7 @@ class HostManager(object):
                          "from scheduler"), {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
-        return self.host_state_map.itervalues()
+        return six.itervalues(self.host_state_map)
 
     def _add_instance_info(self, context, compute, host_state):
         """Adds the host instance info to the host_state object.

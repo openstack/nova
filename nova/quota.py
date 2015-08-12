@@ -247,7 +247,7 @@ class DbQuotaDriver(object):
         # Use the project quota for default user quota.
         proj_quotas = project_quotas or db.quota_get_all_by_project(
             context, project_id)
-        for key, value in proj_quotas.iteritems():
+        for key, value in six.iteritems(proj_quotas):
             if key not in user_quotas.keys():
                 user_quotas[key] = value
         user_usages = None
@@ -526,7 +526,7 @@ class DbQuotaDriver(object):
         # Set up the reservation expiration
         if expire is None:
             expire = CONF.reservation_expire
-        if isinstance(expire, (int, long)):
+        if isinstance(expire, six.integer_types):
             expire = datetime.timedelta(seconds=expire)
         if isinstance(expire, datetime.timedelta):
             expire = timeutils.utcnow() + expire

@@ -16,6 +16,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -37,7 +38,10 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     def _from_db_object(context, bw_usage, db_bw_usage):
         for field in bw_usage.fields:
-            bw_usage[field] = db_bw_usage[field]
+            if field == 'instance_uuid':
+                bw_usage[field] = db_bw_usage['uuid']
+            else:
+                bw_usage[field] = db_bw_usage[field]
         bw_usage._context = context
         bw_usage.obj_reset_changes()
         return bw_usage
@@ -65,6 +69,7 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_bw_usage)
 
 
+@base.NovaObjectRegistry.register
 class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_uuids
@@ -73,10 +78,8 @@ class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('BandwidthUsage'),
     }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
-        '1.2': '1.2',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')],
     }
 
     @base.serialize_args

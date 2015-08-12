@@ -25,7 +25,9 @@ from eventlet import timeout as etimeout
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import loopingcall
 from oslo_utils import excutils
+from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -33,8 +35,6 @@ from oslo_utils import uuidutils
 from nova.api.metadata import base as instance_metadata
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova.openstack.common import fileutils
-from nova.openstack.common import loopingcall
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import hardware
@@ -537,11 +537,22 @@ class VMOps(object):
         LOG.debug("Power off instance", instance=instance)
         if retry_interval <= 0:
             retry_interval = SHUTDOWN_TIME_INCREMENT
-        if timeout and self._soft_shutdown(instance, timeout, retry_interval):
-            return
 
-        self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_DISABLED)
+        try:
+            if timeout and self._soft_shutdown(instance,
+                                               timeout,
+                                               retry_interval):
+                return
+
+            self._set_vm_state(instance,
+                               constants.HYPERV_VM_STATE_DISABLED)
+        except exception.NotFound:
+            # The manager can call the stop API after receiving instance
+            # power off events. If this is triggered when the instance
+            # is being deleted, it might attempt to power off an unexisting
+            # instance. We'll just pass in this case.
+            LOG.debug("Instance not found. Skipping power off",
+                      instance=instance)
 
     def power_on(self, instance, block_device_info=None):
         """Power on the specified instance."""
@@ -624,11 +635,20 @@ class VMOps(object):
             instance_name)[0]
         pipe_path = r'\\.\pipe\%s' % instance_uuid
 
-        vm_log_writer = ioutils.IOThread(pipe_path, console_log_path,
-                                         self._MAX_CONSOLE_LOG_FILE_SIZE)
-        self._vm_log_writers[instance_uuid] = vm_log_writer
+        @utils.synchronized(pipe_path)
+        def log_serial_output():
+            vm_log_writer = self._vm_log_writers.get(instance_uuid)
+            if vm_log_writer and vm_log_writer.is_active():
+                LOG.debug("Instance %s log writer is already running.",
+                          instance_name)
+            else:
+                vm_log_writer = ioutils.IOThread(
+                    pipe_path, console_log_path,
+                    self._MAX_CONSOLE_LOG_FILE_SIZE)
+                vm_log_writer.start()
+                self._vm_log_writers[instance_uuid] = vm_log_writer
 
-        vm_log_writer.start()
+        log_serial_output()
 
     def get_console_output(self, instance):
         console_log_paths = (
@@ -693,5 +713,7 @@ class VMOps(object):
 
     def copy_vm_dvd_disks(self, vm_name, dest_host):
         dvd_disk_paths = self._vmutils.get_vm_dvd_disk_paths(vm_name)
+        dest_path = self._pathutils.get_instance_dir(
+            vm_name, remote_server=dest_host)
         for path in dvd_disk_paths:
-            self._pathutils.copyfile(path, dest_host)
+            self._pathutils.copyfile(path, dest_path)

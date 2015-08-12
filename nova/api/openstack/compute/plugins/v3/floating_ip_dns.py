@@ -17,6 +17,7 @@ import urllib
 from oslo_utils import netutils
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import floating_ip_dns
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -95,8 +96,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
         try:
             domains = self.network_api.get_dns_domains(context)
         except NotImplementedError:
-            msg = _("Unable to create dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         domainlist = [_create_domain_entry(domain['domain'],
                                          domain.get('scope'),
@@ -111,7 +111,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="domain:update")
         fqdomain = _unquote_domain(id)
         entry = body['domain_entry']
         scope = entry['scope']
@@ -135,8 +135,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
         try:
             create_dns_domain(context, fqdomain, area)
         except NotImplementedError:
-            msg = _("Unable to create dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return _translate_domain_entry_view({'domain': fqdomain,
                                              'scope': scope,
@@ -147,15 +146,14 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def delete(self, req, id):
         """Delete the domain identified by id."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="domain:delete")
         domain = _unquote_domain(id)
 
         # Delete the whole domain
         try:
             self.network_api.delete_dns_domain(context, domain)
         except NotImplementedError:
-            msg = _("Unable to delete dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
@@ -189,8 +187,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
                                                                    id,
                                                                    domain)
         except NotImplementedError:
-            msg = _("Unable to get dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         if not entries:
             explanation = _("DNS entries not found.")
@@ -229,8 +226,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
                 self.network_api.modify_dns_entry(context, name,
                                                   address, domain)
         except NotImplementedError:
-            msg = _("Unable to update dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return _translate_dns_entry_view({'ip': address,
                                           'name': name,
@@ -249,8 +245,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
         try:
             self.network_api.delete_dns_entry(context, name, domain)
         except NotImplementedError:
-            msg = _("Unable to delete dns domain")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 

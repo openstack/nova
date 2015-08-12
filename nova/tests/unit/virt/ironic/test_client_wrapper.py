@@ -71,7 +71,9 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'os_tenant_name': CONF.ironic.admin_tenant_name,
                     'os_service_type': 'baremetal',
                     'os_endpoint_type': 'public',
-                    'ironic_url': CONF.ironic.api_endpoint}
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
@@ -82,7 +84,9 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
         expected = {'os_auth_token': 'fake-token',
-                    'ironic_url': CONF.ironic.api_endpoint}
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
@@ -96,7 +100,20 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         mock_get_client.return_value = FAKE_CLIENT
         self.assertRaises(exception.NovaException, self.ironicclient.call,
                           "node.list")
-        self.assertEqual(2, test_obj.call_count)
+        self.assertEqual(3, test_obj.call_count)
+
+    @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
+    @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
+    def test_call_with_api_max_retries_neg_conf_val(self, mock_get_client,
+                                                    mock_multi_getattr):
+        cfg.CONF.set_default('api_max_retries', -1, 'ironic')
+        test_obj = mock.Mock()
+        test_obj.side_effect = ironic_exception.HTTPServiceUnavailable
+        mock_multi_getattr.return_value = test_obj
+        mock_get_client.return_value = FAKE_CLIENT
+        self.assertRaises(exception.NovaException, self.ironicclient.call,
+                          "node.list")
+        self.assertEqual(1, test_obj.call_count)
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')

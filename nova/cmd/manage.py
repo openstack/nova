@@ -62,6 +62,7 @@ import urllib
 import decorator
 import netaddr
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
@@ -289,7 +290,7 @@ class ProjectCommands(object):
             quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        for key, value in quota.iteritems():
+        for key, value in six.iteritems(quota):
             if value['limit'] < 0 or value['limit'] is None:
                 value['limit'] = 'unlimited'
             print(print_format % (key, value['limit'], value['in_use'],
@@ -543,7 +544,7 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range."""
-        kwargs = {k: v for k, v in locals().iteritems()
+        kwargs = {k: v for k, v in six.iteritems(locals())
                   if v and k != "self"}
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
@@ -908,6 +909,31 @@ class DbCommands(object):
         """Sync the database up to the most recent version."""
         return migration.db_sync(version)
 
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    def expand(self, dry_run):
+        """Expand database schema."""
+        return migration.db_expand(dry_run)
+
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    def migrate(self, dry_run):
+        """Migrate database schema."""
+        return migration.db_migrate(dry_run)
+
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    @args('--force-experimental-contract', action='store_true',
+          dest='force_experimental_contract',
+          help="Force experimental contract operation to run *VOLATILE*")
+    def contract(self, dry_run, force_experimental_contract=False):
+        """Contract database schema."""
+        if force_experimental_contract:
+            return migration.db_contract(dry_run)
+        print('The "contract" command is experimental and potentially '
+              'dangerous. As such, it is disabled by default. Enable using '
+              '"--force-experimental".')
+
     def version(self):
         """Print the current database version."""
         print(migration.db_version())
@@ -954,24 +980,6 @@ class DbCommands(object):
         if not records_found:
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
-
-    @args('--max-number', metavar='<number>', dest='max_number',
-          help='Maximum number of instances to consider')
-    @args('--force', action='store_true', dest='force',
-          help='Force instances to migrate (even if they may be performing '
-               'another operation). Warning, this is potentially dangerous.')
-    def migrate_flavor_data(self, max_number=None, force=False):
-        if max_number is not None:
-            max_number = int(max_number)
-            if max_number < 0:
-                print(_('Must supply a positive value for max_number'))
-                return(1)
-        admin_context = context.get_admin_context()
-        flavor_cache = {}
-        match, done = db.migrate_flavor_data(admin_context, max_number,
-                                             flavor_cache, force)
-        print(_('%(total)i instances matched query, %(done)i completed') %
-              {'total': match, 'done': done})
 
 
 class ApiDbCommands(object):
@@ -1041,7 +1049,7 @@ class AgentBuildCommands(object):
 
             buildlist.append(agent_build)
 
-        for key, buildlist in by_hypervisor.iteritems():
+        for key, buildlist in six.iteritems(by_hypervisor):
             if hypervisor and key != hypervisor:
                 continue
 
@@ -1244,11 +1252,64 @@ class CellCommands(object):
                 '-' * 5, '-' * 10))
 
 
+class CellV2Commands(object):
+    """Commands for managing cells v2."""
+
+    @args('--cell_uuid', metavar='<cell_uuid>', help='The cell uuid')
+    @args('--limit', metavar='<limit>',
+          help='Maximum number of instances to map')
+    @args('--marker', metavar='<marker',
+          help='The last updated instance UUID')
+    @args('--verbose', metavar='<verbose>',
+          help='Provide output for the registration')
+    def map_instances(self, cell_uuid=None, limit=None,
+                      marker=None, verbose=0):
+        if limit is not None:
+            limit = int(limit)
+            if limit < 0:
+                print('Must supply a positive value for limit')
+                return(1)
+        ctxt = context.get_admin_context(read_deleted='yes')
+        if cell_uuid is None:
+            raise Exception(_("cell_uuid must be set"))
+        else:
+            # Validate the the cell exists
+            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        filters = {}
+        instances = objects.InstanceList.get_by_filters(
+                ctxt, filters, sort_key='created_at', sort_dir='asc',
+                limit=limit, marker=marker)
+        if verbose:
+            fmt = "%s instances retrieved to be mapped to cell %s"
+            print(fmt % (len(instances), cell_uuid))
+
+        mapped = 0
+        for instance in instances:
+            try:
+                mapping = objects.InstanceMapping(ctxt)
+                mapping.instance_uuid = instance.uuid
+                mapping.cell_id = cell_mapping.id
+                mapping.project_id = instance.project_id
+                mapping.create()
+            except db_exc.DBDuplicateEntry:
+                if verbose:
+                    print("%s already mapped to cell" % instance.uuid)
+                continue
+            mapped += 1
+
+        fmt = "%s instances registered to cell %s"
+        print(fmt % (mapped, cell_mapping.uuid))
+        if instances:
+            instance = instances[-1]
+            print('Next marker: - %s' % instance.uuid)
+
+
 CATEGORIES = {
     'account': AccountCommands,
     'agent': AgentBuildCommands,
     'api_db': ApiDbCommands,
     'cell': CellCommands,
+    'cell_v2': CellV2Commands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
     'floating': FloatingIpCommands,

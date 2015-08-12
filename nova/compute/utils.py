@@ -21,6 +21,7 @@ import traceback
 import netifaces
 from oslo_config import cfg
 from oslo_log import log
+import six
 
 from nova import block_device
 from nova.compute import power_state
@@ -55,7 +56,7 @@ def exception_to_dict(fault):
     # just because there is an unexpected error retrieving the message
     except Exception:
         try:
-            message = unicode(fault)
+            message = six.text_type(fault)
         except Exception:
             message = None
     if not message:
@@ -76,7 +77,7 @@ def _get_fault_details(exc_info, error_code):
         tb = exc_info[2]
         if tb:
             details = ''.join(traceback.format_tb(tb))
-    return unicode(details)
+    return six.text_type(details)
 
 
 def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
@@ -91,7 +92,7 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     fault_obj.create()
 
 
-def get_device_name_for_instance(context, instance, bdms, device):
+def get_device_name_for_instance(instance, bdms, device):
     """Validates (or generates) a device name for instance.
 
     This method is a wrapper for get_next_device_name that gets the list
@@ -193,34 +194,6 @@ def _get_unused_letter(used_letters):
     # NOTE(vish): prepend ` so all shorter sequences sort first
     letters.sort(key=lambda x: x.rjust(2, '`'))
     return letters[0]
-
-
-def get_image_metadata(context, image_api, image_id_or_uri, instance):
-    image_system_meta = {}
-    # In case of boot from volume, image_id_or_uri may be None or ''
-    if image_id_or_uri is not None and image_id_or_uri != '':
-        # If the base image is still available, get its metadata
-        try:
-            image = image_api.get(context, image_id_or_uri)
-        except (exception.ImageNotAuthorized,
-                exception.ImageNotFound,
-                exception.Invalid) as e:
-            LOG.warning(_LW("Can't access image %(image_id)s: %(error)s"),
-                        {"image_id": image_id_or_uri, "error": e},
-                        instance=instance)
-        else:
-            flavor = instance.get_flavor()
-            image_system_meta = utils.get_system_metadata_from_image(image,
-                                                                     flavor)
-
-    # Get the system metadata from the instance
-    system_meta = utils.instance_sys_meta(instance)
-
-    # Merge the metadata from the instance with the image's, if any
-    system_meta.update(image_system_meta)
-
-    # Convert the system metadata to image metadata
-    return utils.get_image_from_system_metadata(system_meta)
 
 
 def get_value_from_system_metadata(instance, key, type, default):
@@ -374,27 +347,13 @@ def get_nw_info_for_instance(instance):
     return instance.info_cache.network_info
 
 
-def has_audit_been_run(context, conductor, host, timestamp=None):
-    begin, end = utils.last_completed_audit_period(before=timestamp)
-    task_log = conductor.task_log_get(context, "instance_usage_audit",
-                                      begin, end, host)
-    if task_log:
-        return True
-    else:
-        return False
+def refresh_info_cache_for_instance(context, instance):
+    """Refresh the info cache for an instance.
 
-
-def start_instance_usage_audit(context, conductor, begin, end, host,
-                               num_instances):
-    conductor.task_log_begin_task(context, "instance_usage_audit", begin,
-                                  end, host, num_instances,
-                                  "Instance usage audit started...")
-
-
-def finish_instance_usage_audit(context, conductor, begin, end, host, errors,
-                                message):
-    conductor.task_log_end_task(context, "instance_usage_audit", begin, end,
-                                host, errors, message)
+    :param instance: The instance object.
+    """
+    if instance.info_cache is not None:
+        instance.info_cache.refresh()
 
 
 def usage_volume_info(vol_usage):
@@ -461,6 +420,13 @@ def get_machine_ips():
         except ValueError:
             pass
     return addresses
+
+
+def remove_shelved_keys_from_system_metadata(instance):
+    # Delete system_metadata for a shelved instance
+    for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
+        if key in instance.system_metadata:
+            del (instance.system_metadata[key])
 
 
 class EventReporter(object):

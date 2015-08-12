@@ -16,23 +16,21 @@
 Test suite for the Hyper-V driver and related APIs.
 """
 
-import os
-import shutil
 import time
 import uuid
 
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_utils import fileutils
 from oslo_utils import units
+import six
 
 from nova.api.metadata import base as instance_metadata
 from nova import context
 from nova import db
-from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import fileutils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
@@ -141,6 +139,7 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(fake.PathUtils, 'copyfile')
         self._mox.StubOutWithMock(fake.PathUtils, 'rmtree')
         self._mox.StubOutWithMock(fake.PathUtils, 'copy')
+        self._mox.StubOutWithMock(fake.PathUtils, 'move_folder_files')
         self._mox.StubOutWithMock(fake.PathUtils, 'remove')
         self._mox.StubOutWithMock(fake.PathUtils, 'rename')
         self._mox.StubOutWithMock(fake.PathUtils, 'makedirs')
@@ -404,7 +403,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                      target_lun, target_portal, True)
 
         vmutils.VMUtils.create_nic(mox.Func(self._check_vm_name),
-                mox.IsA(str), mox.IsA(unicode)).InAnyOrder()
+                mox.IsA(str), mox.IsA(six.text_type)).InAnyOrder()
 
         if setup_vif_mocks_func:
             setup_vif_mocks_func()
@@ -464,7 +463,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
 
             m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
-                mox.IsA(unicode), mox.IsA(object))
+                mox.IsA(six.text_type), mox.IsA(object))
             m.AndReturn(1025)
 
             vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
@@ -511,7 +510,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
             if not (cow and vhd_format == constants.DISK_FORMAT_VHD):
                 m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
-                    mox.IsA(unicode), mox.IsA(object))
+                    mox.IsA(six.text_type), mox.IsA(object))
                 m.AndReturn(1025)
                 vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
                                              is_file_max_size=False)
@@ -788,322 +787,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self.assertEqual(fake_my_block_ip, data.get('ip'))
         self.assertEqual(fake_host, data.get('host'))
         self.assertEqual(fake_initiator, data.get('initiator'))
-
-    def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
-                                                     copy_exception=False,
-                                                     size_exception=False):
-        self._instance = self._get_instance()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        self._instance['root_gb'] = 10
-
-        fake_local_ip = '10.0.0.1'
-        if same_host:
-            fake_dest_ip = fake_local_ip
-        else:
-            fake_dest_ip = '10.0.0.2'
-
-        if size_exception:
-            flavor = 'm1.tiny'
-        else:
-            flavor = 'm1.small'
-
-        flavor = db.flavor_get_by_name(self._context, flavor)
-
-        if not size_exception:
-            fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
-            fake_revert_path = os.path.join(self._test_instance_dir, '_revert')
-
-            func = mox.Func(self._check_instance_name)
-            vmutils.VMUtils.set_vm_state(func,
-                                         constants.HYPERV_VM_STATE_DISABLED)
-
-            self._setup_delete_vm_log_mocks()
-
-            m = vmutils.VMUtils.get_vm_storage_paths(func)
-            m.AndReturn(([fake_root_vhd_path], []))
-
-            m = hostutils.HostUtils.get_local_ips()
-            m.AndReturn([fake_local_ip])
-
-            m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-            m.AndReturn(self._test_instance_dir)
-
-            m = pathutils.PathUtils.get_instance_migr_revert_dir(
-                self._instance.name, remove_dir=True)
-            m.AndReturn(fake_revert_path)
-
-            if same_host:
-                fake.PathUtils.makedirs(mox.IsA(str))
-
-            m = fake.PathUtils.copy(fake_root_vhd_path, mox.IsA(str))
-            if copy_exception:
-                m.AndRaise(shutil.Error('Simulated copy error'))
-                m = fake.PathUtils.get_instance_dir(mox.IsA(str),
-                                                    mox.IsA(str),
-                                                    remove_dir=True)
-                m.AndReturn(self._test_instance_dir)
-            else:
-                fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
-                destroy_disks = True
-                if same_host:
-                    fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
-                    destroy_disks = False
-
-                self._setup_destroy_mocks(False)
-
-                if destroy_disks:
-                    m = fake.PathUtils.get_instance_dir(mox.IsA(str),
-                                                        mox.IsA(str),
-                                                        remove_dir=True)
-                    m.AndReturn(self._test_instance_dir)
-
-        return (self._instance, fake_dest_ip, network_info, flavor)
-
-    def test_migrate_disk_and_power_off(self):
-        (instance,
-         fake_dest_ip,
-         network_info,
-         flavor) = self._setup_test_migrate_disk_and_power_off_mocks()
-
-        self._mox.ReplayAll()
-        self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, flavor,
-                                              network_info)
-        self._mox.VerifyAll()
-
-    def test_migrate_disk_and_power_off_same_host(self):
-        args = self._setup_test_migrate_disk_and_power_off_mocks(
-            same_host=True)
-        (instance, fake_dest_ip, network_info, flavor) = args
-
-        self._mox.ReplayAll()
-        self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, flavor,
-                                              network_info)
-        self._mox.VerifyAll()
-
-    def test_migrate_disk_and_power_off_copy_exception(self):
-        args = self._setup_test_migrate_disk_and_power_off_mocks(
-            copy_exception=True)
-        (instance, fake_dest_ip, network_info, flavor) = args
-
-        self._mox.ReplayAll()
-        self.assertRaises(shutil.Error, self._conn.migrate_disk_and_power_off,
-                          self._context, instance, fake_dest_ip,
-                          flavor, network_info)
-        self._mox.VerifyAll()
-
-    def test_migrate_disk_and_power_off_smaller_root_vhd_size_exception(self):
-        args = self._setup_test_migrate_disk_and_power_off_mocks(
-            size_exception=True)
-        (instance, fake_dest_ip, network_info, flavor) = args
-
-        self._mox.ReplayAll()
-        self.assertRaises(exception.InstanceFaultRollback,
-                          self._conn.migrate_disk_and_power_off,
-                          self._context, instance, fake_dest_ip,
-                          flavor, network_info)
-        self._mox.VerifyAll()
-
-    def _mock_attach_config_drive(self, instance, config_drive_format):
-        instance['config_drive'] = True
-        self._mox.StubOutWithMock(fake.PathUtils, 'lookup_configdrive_path')
-        m = fake.PathUtils.lookup_configdrive_path(
-            mox.Func(self._check_instance_name))
-
-        if config_drive_format in constants.DISK_FORMAT_MAP:
-            m.AndReturn(self._test_instance_dir + '/configdrive.' +
-                        config_drive_format)
-        else:
-            m.AndReturn(None)
-
-        m = vmutils.VMUtils.attach_ide_drive(
-            mox.Func(self._check_instance_name),
-            mox.IsA(str),
-            mox.IsA(int),
-            mox.IsA(int),
-            mox.IsA(str))
-        m.WithSideEffects(self._add_disk).InAnyOrder()
-
-    def _verify_attach_config_drive(self, config_drive_format):
-        if config_drive_format == constants.DISK_FORMAT.lower():
-            self.assertEqual(self._instance_disks[1],
-                self._test_instance_dir + '/configdrive.' +
-                config_drive_format)
-        elif config_drive_format == constants.DVD_FORMAT.lower():
-            self.assertEqual(self._instance_dvds[0],
-                self._test_instance_dir + '/configdrive.' +
-                config_drive_format)
-
-    def _test_finish_migration(self, power_on, ephemeral_storage=False,
-                               config_drive=False,
-                               config_drive_format='iso'):
-        self._instance = self._get_instance()
-        self._instance.memory_mb = 100
-        self._instance.vcpus = 2
-        self._instance['system_metadata'] = {}
-        self._instance['old_flavor'] = objects.Flavor(root_gb=5)
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        m.AndReturn(self._test_instance_dir)
-
-        self._mox.StubOutWithMock(fake.PathUtils, 'exists')
-        m = fake.PathUtils.exists(mox.IsA(unicode))
-        m.AndReturn(True)
-
-        fake_parent_vhd_path = (os.path.join('FakeParentPath', '%s.vhd' %
-                                self._instance["image_ref"]))
-
-        m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
-        m.AndReturn({'ParentPath': fake_parent_vhd_path,
-                     'MaxInternalSize': 1})
-        m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
-            mox.IsA(unicode), mox.IsA(object))
-        m.AndReturn(1025)
-
-        vhdutils.VHDUtils.reconnect_parent_vhd(mox.IsA(str), mox.IsA(unicode))
-
-        m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(unicode))
-        m.AndReturn({'MaxInternalSize': 1024})
-
-        m = fake.PathUtils.exists(mox.IsA(unicode))
-        m.AndReturn(True)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        if ephemeral_storage:
-            return m.AndReturn(self._test_instance_dir)
-        else:
-            m.AndReturn(None)
-
-        self._set_vm_name(self._instance.name)
-        self._setup_create_instance_mocks(None, False,
-                                          ephemeral_storage=ephemeral_storage)
-
-        if power_on:
-            vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                         constants.HYPERV_VM_STATE_ENABLED)
-            self._setup_log_vm_output_mocks()
-
-        if config_drive:
-            self._mock_attach_config_drive(self._instance,
-                                           config_drive_format)
-
-        self._mox.ReplayAll()
-
-        image_meta = {'properties': {constants.IMAGE_PROP_VM_GEN:
-                                     constants.IMAGE_PROP_VM_GEN_1}}
-        self._conn.finish_migration(self._context, None,
-                                    self._instance, "",
-                                    network_info, image_meta, False, None,
-                                    power_on)
-        self._mox.VerifyAll()
-
-        if config_drive:
-            self._verify_attach_config_drive(config_drive_format)
-
-    def test_finish_migration_power_on(self):
-        self._test_finish_migration(True)
-
-    def test_finish_migration_power_off(self):
-        self._test_finish_migration(False)
-
-    def test_finish_migration_with_ephemeral_storage(self):
-        self._test_finish_migration(False, ephemeral_storage=True)
-
-    def test_finish_migration_attach_config_drive_iso(self):
-        self._test_finish_migration(False, config_drive=True,
-            config_drive_format=constants.DVD_FORMAT.lower())
-
-    def test_finish_migration_attach_config_drive_vhd(self):
-        self._test_finish_migration(False, config_drive=True,
-            config_drive_format=constants.DISK_FORMAT.lower())
-
-    def test_confirm_migration(self):
-        self._instance = self._get_instance()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        pathutils.PathUtils.get_instance_migr_revert_dir(
-            self._instance.name,
-            remove_dir=True)
-        self._mox.ReplayAll()
-        self._conn.confirm_migration(None, self._instance, network_info)
-        self._mox.VerifyAll()
-
-    def _test_finish_revert_migration(self, power_on, ephemeral_storage=False,
-                                      config_drive=False,
-                                      config_drive_format='iso'):
-        self._instance = self._get_instance()
-        self._instance.memory_mb = 100
-        self._instance.vcpus = 2
-        self._instance['system_metadata'] = {}
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
-                            self._instance.name)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str),
-                                            create_dir=False,
-                                            remove_dir=True)
-        m.AndReturn(self._test_instance_dir)
-
-        m = pathutils.PathUtils.get_instance_migr_revert_dir(
-            self._instance.name)
-        m.AndReturn(fake_revert_path)
-        fake.PathUtils.rename(fake_revert_path, mox.IsA(str))
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        m.AndReturn(self._test_instance_dir)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        if ephemeral_storage:
-            m.AndReturn(self._test_instance_dir)
-        else:
-            m.AndReturn(None)
-
-        m = imagecache.ImageCache.get_image_details(mox.IsA(object),
-                                                    mox.IsA(object))
-        m.AndReturn({'properties': {constants.IMAGE_PROP_VM_GEN:
-                                    constants.IMAGE_PROP_VM_GEN_1}})
-
-        self._set_vm_name(self._instance.name)
-        self._setup_create_instance_mocks(None, False,
-                                          ephemeral_storage=ephemeral_storage)
-
-        if power_on:
-            vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                         constants.HYPERV_VM_STATE_ENABLED)
-            self._setup_log_vm_output_mocks()
-
-        if config_drive:
-            self._mock_attach_config_drive(self._instance, config_drive_format)
-
-        self._mox.ReplayAll()
-        self._conn.finish_revert_migration(self._context, self._instance,
-                                           network_info, None,
-                                           power_on)
-        self._mox.VerifyAll()
-
-        if config_drive:
-            self._verify_attach_config_drive(config_drive_format)
-
-    def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(True)
-
-    def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(False)
-
-    def test_finish_revert_migration_with_ephemeral_storage(self):
-        self._test_finish_revert_migration(False, ephemeral_storage=True)
-
-    def test_finish_revert_migration_attach_config_drive_iso(self):
-        self._test_finish_revert_migration(False, config_drive=True,
-            config_drive_format=constants.DVD_FORMAT.lower())
-
-    def test_finish_revert_migration_attach_config_drive_vhd(self):
-        self._test_finish_revert_migration(False, config_drive=True,
-            config_drive_format=constants.DISK_FORMAT.lower())
 
     def test_plug_vifs(self):
         # Check to make sure the method raises NotImplementedError.

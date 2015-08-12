@@ -27,6 +27,7 @@ FIXED_IP_OPTIONAL_ATTRS = ['instance', 'network', 'virtual_interface',
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@obj_base.NovaObjectRegistry.register
 class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
               obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -40,7 +41,9 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     # Version 1.8: Instance 1.18
     # Version 1.9: Instance 1.19
     # Version 1.10: Instance 1.20
-    VERSION = '1.10'
+    # Version 1.11: Instance 1.21
+    # Version 1.12: Instance 1.22, FloatingIPList 1.9
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(),
@@ -66,10 +69,11 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     obj_relationships = {
         'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
                      ('1.6', '1.16'), ('1.7', '1.17'), ('1.8', '1.18'),
-                     ('1.9', '1.19'), ('1.10', '1.20')],
+                     ('1.9', '1.19'), ('1.10', '1.20'), ('1.11', '1.21'),
+                     ('1.12', '1.22')],
         'network': [('1.0', '1.2')],
         'virtual_interface': [('1.1', '1.0')],
-        'floating_ips': [('1.5', '1.7')],
+        'floating_ips': [('1.5', '1.7'), ('1.11', '1.8'), ('1.12', '1.9')],
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -203,6 +207,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self.obj_reset_changes(['instance_uuid', 'instance'])
 
 
+@obj_base.NovaObjectRegistry.register
 class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_network()
@@ -215,23 +220,19 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.8: FixedIP <= version 1.8
     # Version 1.9: FixedIP <= version 1.9
     # Version 1.10: FixedIP <= version 1.10
-    VERSION = '1.10'
+    # Version 1.11: FixedIP <= version 1.11
+    # Version 1.12: FixedIP <= version 1.12
+    VERSION = '1.12'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
-        '1.2': '1.2',
-        '1.3': '1.3',
-        '1.4': '1.4',
-        '1.5': '1.5',
-        '1.6': '1.6',
-        '1.7': '1.7',
-        '1.8': '1.8',
-        '1.9': '1.9',
-        '1.10': '1.10',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2'),
+                    ('1.3', '1.3'), ('1.4', '1.4'), ('1.5', '1.5'),
+                    ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
+                    ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
+                    ('1.12', '1.12')],
         }
 
     @obj_base.remotable_classmethod

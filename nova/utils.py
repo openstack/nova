@@ -18,7 +18,9 @@
 """Utilities and helper functions."""
 
 import contextlib
+import copy
 import datetime
+import errno
 import functools
 import hashlib
 import hmac
@@ -46,7 +48,9 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
+from oslo_utils import units
 import six
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -80,19 +84,6 @@ utils_opts = [
                help='Explicitly specify the temporary working directory'),
 ]
 
-""" This group is for very specific reasons.
-
-If you're:
-- Working around an issue in a system tool (e.g. libvirt or qemu) where the fix
-  is in flight/discussed in that community.
-- The tool can be/is fixed in some distributions and rather than patch the code
-  those distributions can trivially set a config option to get the "correct"
-  behavior.
-This is a good place for your workaround.
-
-Please use with care!
-Document the BugID that your workaround is paired with."""
-
 workarounds_opts = [
     cfg.BoolOpt('disable_rootwrap',
                 default=False,
@@ -101,14 +92,16 @@ workarounds_opts = [
                      'https://bugs.launchpad.net/nova/+bug/1415106'),
     cfg.BoolOpt('disable_libvirt_livesnapshot',
                 default=True,
-                help='When using libvirt 1.2.2 fails live snapshots '
+                help='When using libvirt 1.2.2 live snapshots fail '
                      'intermittently under load.  This config option provides '
-                     'mechanism to disable livesnapshot while this is '
+                     'a mechanism to enable live snapshot while this is '
                      'resolved.  See '
                      'https://bugs.launchpad.net/nova/+bug/1334398'),
     cfg.BoolOpt('destroy_after_evacuate',
                 default=True,
-                help='Whether to destroy instances on startup when we suspect '
+                deprecated_for_removal=True,
+                help='DEPRECATED: Whether to destroy '
+                     'instances on startup when we suspect '
                      'they have previously been evacuated. This can result in '
                       'data loss if undesired. See '
                       'https://launchpad.net/bugs/1419785'),
@@ -133,6 +126,23 @@ workarounds_opts = [
                      "the Nova database they will have to be synchronized "
                      "manually. See https://bugs.launchpad.net/bugs/1444630"),
     ]
+""" The workarounds_opts group is for very specific reasons.
+
+If you're:
+
+ - Working around an issue in a system tool (e.g. libvirt or qemu) where the
+   fix is in flight/discussed in that community.
+ - The tool can be/is fixed in some distributions and rather than patch the
+   code those distributions can trivially set a config option to get the
+   "correct" behavior.
+
+Then this is a good place for your workaround.
+
+.. warning::
+
+  Please use with care! Document the BugID that your workaround is paired with.
+"""
+
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
@@ -158,6 +168,23 @@ SM_IMAGE_PROP_PREFIX = "image_"
 SM_INHERITABLE_KEYS = (
     'min_ram', 'min_disk', 'disk_format', 'container_format',
 )
+# Keys which hold large structured data that won't fit in the
+# size constraints of the system_metadata table, so we avoid
+# storing and/or loading them.
+SM_SKIP_KEYS = (
+    # Legacy names
+    'mappings', 'block_device_mapping',
+    # Modern names
+    'img_mappings', 'img_block_device_mapping',
+)
+# Image attributes which Cinder stores in volume image metadata
+# as regular properties
+VIM_IMAGE_ATTRIBUTES = (
+    'image_id', 'image_name', 'size', 'checksum',
+    'container_format', 'disk_format', 'min_ram', 'min_disk',
+)
+
+_FILE_CACHE = {}
 
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
@@ -249,7 +276,7 @@ def novadir():
 
 def generate_uid(topic, size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-    choices = [random.choice(characters) for _x in xrange(size)]
+    choices = [random.choice(characters) for _x in range(size)]
     return '%s-%s' % (topic, ''.join(choices))
 
 
@@ -384,7 +411,7 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
 
     # then fill with random characters from all symbol groups
     symbols = ''.join(symbolgroups)
-    password.extend([r.choice(symbols) for _i in xrange(length)])
+    password.extend([r.choice(symbols) for _i in range(length)])
 
     # finally shuffle to ensure first x characters aren't from a
     # predictable group
@@ -424,7 +451,7 @@ def utf8(value):
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
 
     """
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
         return value.encode('utf-8')
     assert isinstance(value, str)
     return value
@@ -552,6 +579,12 @@ def monkey_patch():
     # If CONF.monkey_patch is not True, this function do nothing.
     if not CONF.monkey_patch:
         return
+    if six.PY3:
+        def is_method(obj):
+            # Unbound methods became regular functions on Python 3
+            return inspect.ismethod(obj) or inspect.isfunction(obj)
+    else:
+        is_method = inspect.ismethod
     # Get list of modules and decorators
     for module_and_decorator in CONF.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
@@ -560,15 +593,15 @@ def monkey_patch():
         __import__(module)
         # Retrieve module information using pyclbr
         module_data = pyclbr.readmodule_ex(module)
-        for key in module_data.keys():
+        for key, value in module_data.items():
             # set the decorator for the class methods
-            if isinstance(module_data[key], pyclbr.Class):
+            if isinstance(value, pyclbr.Class):
                 clz = importutils.import_class("%s.%s" % (module, key))
-                for method, func in inspect.getmembers(clz, inspect.ismethod):
+                for method, func in inspect.getmembers(clz, is_method):
                     setattr(clz, method,
                         decorator("%s.%s.%s" % (module, key, method), func))
             # set the decorator for the function
-            if isinstance(module_data[key], pyclbr.Function):
+            if isinstance(value, pyclbr.Function):
                 func = importutils.import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,
                     decorator("%s.%s" % (module, key), func))
@@ -600,8 +633,11 @@ def make_dev_path(dev, partition=None, base='/dev'):
 
 def sanitize_hostname(hostname):
     """Return a hostname which conforms to RFC-952 and RFC-1123 specs."""
-    if isinstance(hostname, unicode):
+    if isinstance(hostname, six.text_type):
+        # Remove characters outside the Unicode range U+0000-U+00FF
         hostname = hostname.encode('latin-1', 'ignore')
+        if six.PY3:
+            hostname = hostname.decode('latin-1')
 
     hostname = re.sub('[ _]', '-', hostname)
     hostname = re.sub('[^\w.-]+', '', hostname)
@@ -609,27 +645,6 @@ def sanitize_hostname(hostname):
     hostname = hostname.strip('.-')
 
     return hostname
-
-
-def read_cached_file(filename, cache_info, reload_func=None):
-    """Read from a file if it has been modified.
-
-    :param cache_info: dictionary to hold opaque cache.
-    :param reload_func: optional function to be called with data when
-                        file is reloaded due to a modification.
-
-    :returns: data from file
-
-    """
-    mtime = os.path.getmtime(filename)
-    if not cache_info or mtime != cache_info.get('mtime'):
-        LOG.debug("Reloading cached file %s", filename)
-        with open(filename) as fap:
-            cache_info['data'] = fap.read()
-        cache_info['mtime'] = mtime
-        if reload_func:
-            reload_func(cache_info['data'])
-    return cache_info['data']
 
 
 @contextlib.contextmanager
@@ -817,7 +832,10 @@ def last_bytes(file_like_object, num):
     try:
         file_like_object.seek(-num, os.SEEK_END)
     except IOError as e:
-        if e.errno == 22:
+        # seek() fails with EINVAL when trying to go before the start of the
+        # file. It means that num is larger than the file size, so just
+        # go to the start.
+        if e.errno == errno.EINVAL:
             file_like_object.seek(0, os.SEEK_SET)
         else:
             raise
@@ -826,17 +844,18 @@ def last_bytes(file_like_object, num):
     return (file_like_object.read(), remaining)
 
 
-def metadata_to_dict(metadata):
+def metadata_to_dict(metadata, filter_deleted=False):
     result = {}
     for item in metadata:
-        if not item.get('deleted'):
-            result[item['key']] = item['value']
+        if not filter_deleted and item.get('deleted'):
+            continue
+        result[item['key']] = item['value']
     return result
 
 
 def dict_to_metadata(metadata):
     result = []
-    for key, value in metadata.iteritems():
+    for key, value in six.iteritems(metadata):
         result.append(dict(key=key, value=value))
     return result
 
@@ -854,19 +873,20 @@ def instance_sys_meta(instance):
     if isinstance(instance['system_metadata'], dict):
         return instance['system_metadata']
     else:
-        return metadata_to_dict(instance['system_metadata'])
+        return metadata_to_dict(instance['system_metadata'],
+                                filter_deleted=True)
 
 
 def get_wrapped_function(function):
     """Get the method at the bottom of a stack of decorators."""
-    if not hasattr(function, 'func_closure') or not function.func_closure:
+    if not hasattr(function, '__closure__') or not function.__closure__:
         return function
 
     def _get_wrapped_function(function):
-        if not hasattr(function, 'func_closure') or not function.func_closure:
+        if not hasattr(function, '__closure__') or not function.__closure__:
             return None
 
-        for closure in function.func_closure:
+        for closure in function.__closure__:
             func = closure.cell_contents
 
             deeper_func = _get_wrapped_function(func)
@@ -973,6 +993,29 @@ def validate_integer(value, name, min_value=None, max_value=None):
     return value
 
 
+def spawn(func, *args, **kwargs):
+    """Passthrough method for eventlet.spawn.
+
+    This utility exists so that it can be stubbed for testing without
+    interfering with the service spawns.
+
+    It will also grab the context from the threadlocal store and add it to
+    the store on the new thread.  This allows for continuity in logging the
+    context when using this method to spawn a new thread.
+    """
+    _context = common_context.get_current()
+
+    @functools.wraps(func)
+    def context_wrapper(*args, **kwargs):
+        # NOTE: If update_store is not called after spawn it won't be
+        # available for the logger to pull from threadlocal storage.
+        if _context is not None:
+            _context.update_store()
+        return func(*args, **kwargs)
+
+    return eventlet.spawn(context_wrapper, *args, **kwargs)
+
+
 def spawn_n(func, *args, **kwargs):
     """Passthrough method for eventlet.spawn_n.
 
@@ -1010,7 +1053,7 @@ def convert_version_to_int(version):
         if isinstance(version, six.string_types):
             version = convert_version_to_tuple(version)
         if isinstance(version, tuple):
-            return reduce(lambda x, y: (x * 1000) + y, version)
+            return six.moves.reduce(lambda x, y: (x * 1000) + y, version)
     except Exception:
         msg = _("Hypervisor version %s is invalid.") % version
         raise exception.NovaException(msg)
@@ -1022,9 +1065,9 @@ def convert_version_to_str(version_int):
     while version_int != 0:
         version_number = version_int - (version_int // factor * factor)
         version_numbers.insert(0, str(version_number))
-        version_int = version_int / factor
+        version_int = version_int // factor
 
-    return reduce(lambda x, y: "%s.%s" % (x, y), version_numbers)
+    return six.moves.reduce(lambda x, y: "%s.%s" % (x, y), version_numbers)
 
 
 def convert_version_to_tuple(version_str):
@@ -1075,8 +1118,11 @@ def get_system_metadata_from_image(image_meta, flavor=None):
     system_meta = {}
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
-    for key, value in image_meta.get('properties', {}).iteritems():
-        new_value = safe_truncate(unicode(value), 255)
+    for key, value in six.iteritems(image_meta.get('properties', {})):
+        if key in SM_SKIP_KEYS:
+            continue
+
+        new_value = safe_truncate(six.text_type(value), 255)
         system_meta[prefix_format % key] = new_value
 
     for key in SM_INHERITABLE_KEYS:
@@ -1101,9 +1147,9 @@ def get_image_from_system_metadata(system_meta):
     properties = {}
 
     if not isinstance(system_meta, dict):
-        system_meta = metadata_to_dict(system_meta)
+        system_meta = metadata_to_dict(system_meta, filter_deleted=True)
 
-    for key, value in system_meta.iteritems():
+    for key, value in six.iteritems(system_meta):
         if value is None:
             continue
 
@@ -1112,12 +1158,12 @@ def get_image_from_system_metadata(system_meta):
         if key.startswith(SM_IMAGE_PROP_PREFIX):
             key = key[len(SM_IMAGE_PROP_PREFIX):]
 
+        if key in SM_SKIP_KEYS:
+            continue
+
         if key in SM_INHERITABLE_KEYS:
             image_meta[key] = value
         else:
-            # Skip properties that are non-inheritable
-            if key in CONF.non_inheritable_image_properties:
-                continue
             properties[key] = value
 
     image_meta['properties'] = properties
@@ -1125,8 +1171,38 @@ def get_image_from_system_metadata(system_meta):
     return image_meta
 
 
+def get_image_metadata_from_volume(volume):
+    properties = copy.copy(volume.get('volume_image_metadata', {}))
+    image_meta = {'properties': properties}
+    # Volume size is no longer related to the original image size,
+    # so we take it from the volume directly. Cinder creates
+    # volumes in Gb increments, and stores size in Gb, whereas
+    # glance reports size in bytes. As we're returning glance
+    # metadata here, we need to convert it.
+    image_meta['size'] = volume.get('size', 0) * units.Gi
+    # NOTE(yjiang5): restore the basic attributes
+    # NOTE(mdbooth): These values come from volume_glance_metadata
+    # in cinder. This is a simple key/value table, and all values
+    # are strings. We need to convert them to ints to avoid
+    # unexpected type errors.
+    for attr in VIM_IMAGE_ATTRIBUTES:
+        val = properties.pop(attr, None)
+        if attr in ('min_ram', 'min_disk'):
+            image_meta[attr] = int(val or 0)
+    # NOTE(yjiang5): Always set the image status as 'active'
+    # and depends on followed volume_api.check_attach() to
+    # verify it. This hack should be harmless with that check.
+    image_meta['status'] = 'active'
+    return image_meta
+
+
 def get_hash_str(base_str):
-    """returns string that represents hash of base_str (in hex format)."""
+    """Returns string that represents MD5 hash of base_str (in hex format).
+
+    If base_str is a Unicode string, encode it to UTF-8.
+    """
+    if isinstance(base_str, six.text_type):
+        base_str = base_str.encode('utf-8')
     return hashlib.md5(base_str).hexdigest()
 
 if hasattr(hmac, 'compare_digest'):
@@ -1263,3 +1339,39 @@ def safe_truncate(value, length):
         except UnicodeDecodeError:
             b_value = b_value[:-1]
     return u_value
+
+
+def read_cached_file(filename, force_reload=False):
+    """Read from a file if it has been modified.
+
+    :param force_reload: Whether to reload the file.
+    :returns: A tuple with a boolean specifying if the data is fresh
+              or not.
+    """
+    global _FILE_CACHE
+
+    if force_reload:
+        delete_cached_file(filename)
+
+    reloaded = False
+    mtime = os.path.getmtime(filename)
+    cache_info = _FILE_CACHE.setdefault(filename, {})
+
+    if not cache_info or mtime > cache_info.get('mtime', 0):
+        LOG.debug("Reloading cached file %s", filename)
+        with open(filename) as fap:
+            cache_info['data'] = fap.read()
+        cache_info['mtime'] = mtime
+        reloaded = True
+    return (reloaded, cache_info['data'])
+
+
+def delete_cached_file(filename):
+    """Delete cached file if present.
+
+    :param filename: filename to delete
+    """
+    global _FILE_CACHE
+
+    if filename in _FILE_CACHE:
+        del _FILE_CACHE[filename]

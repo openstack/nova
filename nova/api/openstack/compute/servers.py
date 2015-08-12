@@ -203,11 +203,13 @@ class Controller(wsgi.Controller):
             except ValueError as err:
                 raise exception.InvalidInput(six.text_type(err))
 
+        elevated = None
         if 'all_tenants' in search_opts:
             policy.enforce(context, 'compute:get_all_tenants',
                            {'project_id': context.project_id,
                             'user_id': context.user_id})
             del search_opts['all_tenants']
+            elevated = context.elevated()
         else:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
@@ -220,7 +222,7 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-server-sort-keys'):
             sort_keys, sort_dirs = common.get_sort_params(req.params)
         try:
-            instance_list = self.compute_api.get_all(context,
+            instance_list = self.compute_api.get_all(elevated or context,
                                                      search_opts=search_opts,
                                                      limit=limit,
                                                      marker=marker,
@@ -325,7 +327,8 @@ class Controller(wsgi.Controller):
                 try:
                     request.address = network.get('fixed_ip', None)
                 except ValueError:
-                    msg = _("Invalid fixed IP address (%s)") % request.address
+                    msg = (_("Invalid fixed IP address (%s)") %
+                           network.get('fixed_ip'))
                     raise exc.HTTPBadRequest(explanation=msg)
 
                 # duplicate networks are allowed only for neutron v2.0
@@ -636,7 +639,7 @@ class Controller(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % error
             raise exc.HTTPBadRequest(explanation=msg)
-        except Exception as error:
+        except Exception:
             # The remaining cases can be handled in a standard fashion.
             self._handle_create_exception(*sys.exc_info())
 
@@ -842,7 +845,7 @@ class Controller(wsgi.Controller):
 
     def _image_ref_from_req_data(self, data):
         try:
-            return unicode(data['server']['imageRef'])
+            return six.text_type(data['server']['imageRef'])
         except (TypeError, KeyError):
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -921,7 +924,7 @@ class Controller(wsgi.Controller):
     def _validate_metadata(self, metadata):
         """Ensure that we can work with the metadata given."""
         try:
-            metadata.iteritems()
+            six.iteritems(metadata)
         except AttributeError:
             msg = _("Unable to parse metadata key/value pairs.")
             LOG.debug(msg)
@@ -1079,6 +1082,10 @@ class Controller(wsgi.Controller):
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
+                policy.enforce(context,
+                        'compute:snapshot_volume_backed',
+                        {'project_id': context.project_id,
+                        'user_id': context.user_id})
                 img = instance.image_ref
                 if not img:
                     properties = bdms.root_metadata(

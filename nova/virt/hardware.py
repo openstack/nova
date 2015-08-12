@@ -18,6 +18,7 @@ import itertools
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import strutils
 from oslo_utils import units
 import six
 
@@ -153,7 +154,7 @@ def get_number_of_serial_ports(flavor, image_meta):
     """Get the number of serial consoles from the flavor or image
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     If flavor extra specs is not set, then any image meta value is permitted.
     If flavour extra specs *is* set, then this provides the default serial
@@ -182,10 +183,8 @@ def get_number_of_serial_ports(flavor, image_meta):
                     num_ports=num_ports, property=property)
         return num_ports
 
-    image_meta_prop = (image_meta or {}).get('properties', {})
-
     flavor_num_ports = get_number(flavor.extra_specs, "hw:serial_port_count")
-    image_num_ports = get_number(image_meta_prop, "hw_serial_port_count")
+    image_num_ports = image_meta.properties.get("hw_serial_port_count", None)
 
     if (flavor_num_ports and image_num_ports) is not None:
         if image_num_ports > flavor_num_ports:
@@ -254,7 +253,7 @@ def _get_cpu_topology_constraints(flavor, image_meta):
     """Get the topology constraints declared in flavor or image
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     Gets the topology constraints from the configuration defined
     in the flavor extra specs or the image metadata. In the flavor
@@ -263,18 +262,18 @@ def _get_cpu_topology_constraints(flavor, image_meta):
      hw:cpu_sockets - preferred socket count
      hw:cpu_cores - preferred core count
      hw:cpu_threads - preferred thread count
-     hw:cpu_maxsockets - maximum socket count
-     hw:cpu_maxcores - maximum core count
-     hw:cpu_maxthreads - maximum thread count
+     hw:cpu_max_sockets - maximum socket count
+     hw:cpu_max_cores - maximum core count
+     hw:cpu_max_threads - maximum thread count
 
     In the image metadata this will look at
 
      hw_cpu_sockets - preferred socket count
      hw_cpu_cores - preferred core count
      hw_cpu_threads - preferred thread count
-     hw_cpu_maxsockets - maximum socket count
-     hw_cpu_maxcores - maximum core count
-     hw_cpu_maxthreads - maximum thread count
+     hw_cpu_max_sockets - maximum socket count
+     hw_cpu_max_cores - maximum core count
+     hw_cpu_max_threads - maximum thread count
 
     The image metadata must be strictly lower than any values
     set in the flavor. All values are, however, optional.
@@ -309,12 +308,10 @@ def _get_cpu_topology_constraints(flavor, image_meta):
                "threads": flvmaxthreads})
 
     # Get any customized limits from the image
-    maxsockets = int(image_meta.get("properties", {})
-                     .get("hw_cpu_max_sockets", flvmaxsockets))
-    maxcores = int(image_meta.get("properties", {})
-                   .get("hw_cpu_max_cores", flvmaxcores))
-    maxthreads = int(image_meta.get("properties", {})
-                     .get("hw_cpu_max_threads", flvmaxthreads))
+    props = image_meta.properties
+    maxsockets = props.get("hw_cpu_max_sockets", flvmaxsockets)
+    maxcores = props.get("hw_cpu_max_cores", flvmaxcores)
+    maxthreads = props.get("hw_cpu_max_threads", flvmaxthreads)
 
     LOG.debug("Image limits %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": maxsockets,
@@ -354,12 +351,9 @@ def _get_cpu_topology_constraints(flavor, image_meta):
 
     # Finally see if the image has provided a preferred
     # topology to use
-    sockets = int(image_meta.get("properties", {})
-                  .get("hw_cpu_sockets", -1))
-    cores = int(image_meta.get("properties", {})
-                .get("hw_cpu_cores", -1))
-    threads = int(image_meta.get("properties", {})
-                  .get("hw_cpu_threads", -1))
+    sockets = props.get("hw_cpu_sockets", -1)
+    cores = props.get("hw_cpu_cores", -1)
+    threads = props.get("hw_cpu_threads", -1)
 
     LOG.debug("Image pref %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": sockets,
@@ -402,13 +396,11 @@ def _get_cpu_topology_constraints(flavor, image_meta):
 
 
 def _get_possible_cpu_topologies(vcpus, maxtopology,
-                                 allow_threads, specified_threads):
+                                 allow_threads):
     """Get a list of possible topologies for a vCPU count
     :param vcpus: total number of CPUs for guest instance
     :param maxtopology: nova.objects.VirtCPUTopology for upper limits
     :param allow_threads: if the hypervisor supports CPU threads
-    :param specified_threads: if there is a specific request for threads we
-                              should attempt to honour
 
     Given a total desired vCPU count and constraints on the
     maximum number of sockets, cores and threads, return a
@@ -429,21 +421,12 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
     maxthreads = min(vcpus, maxtopology.threads)
 
     if not allow_threads:
-        # NOTE (ndipanov): If we don't support threads - it doesn't matter that
-        # they are specified by the NUMA logic.
-        specified_threads = None
         maxthreads = 1
 
     LOG.debug("Build topologies for %(vcpus)d vcpu(s) "
               "%(maxsockets)d:%(maxcores)d:%(maxthreads)d",
               {"vcpus": vcpus, "maxsockets": maxsockets,
                "maxcores": maxcores, "maxthreads": maxthreads})
-
-    def _get_topology_for_vcpus(vcpus, sockets, cores, threads):
-        if threads * cores * sockets == vcpus:
-            return objects.VirtCPUTopology(sockets=sockets,
-                                           cores=cores,
-                                           threads=threads)
 
     # Figure out all possible topologies that match
     # the required vcpus count and satisfy the declared
@@ -454,15 +437,13 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
     possible = []
     for s in range(1, maxsockets + 1):
         for c in range(1, maxcores + 1):
-            if specified_threads:
-                o = _get_topology_for_vcpus(vcpus, s, c, specified_threads)
-                if o is not None:
-                    possible.append(o)
-            else:
-                for t in range(1, maxthreads + 1):
-                    o = _get_topology_for_vcpus(vcpus, s, c, t)
-                    if o is not None:
-                        possible.append(o)
+            for t in range(1, maxthreads + 1):
+                if (t * c * s) != vcpus:
+                    continue
+                possible.append(
+                    objects.VirtCPUTopology(sockets=s,
+                                            cores=c,
+                                            threads=t))
 
     # We want to
     #  - Minimize threads (ie larger sockets * cores is best)
@@ -480,6 +461,48 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
                                                        threads=maxthreads)
 
     return possible
+
+
+def _filter_for_numa_threads(possible, wantthreads):
+    """Filter to topologies which closest match to NUMA threads
+    :param possible: list of nova.objects.VirtCPUTopology
+    :param wantthreads: ideal number of threads
+
+    Determine which topologies provide the closest match to
+    the number of threads desired by the NUMA topology of
+    the instance.
+
+    The possible topologies may not have any entries
+    which match the desired thread count. So this method
+    will find the topologies which have the closest
+    matching count.
+
+    ie if wantthreads is 4 and the possible topologies
+    has entries with 6, 3, 2 or 1 threads, it will
+    return the topologies which have 3 threads, as
+    this is the closest match not greater than 4.
+
+    :returns: list of nova.objects.VirtCPUTopology
+    """
+
+    # First figure out the largest available thread
+    # count which is not greater than wantthreads
+    mostthreads = 0
+    for topology in possible:
+        if topology.threads > wantthreads:
+            continue
+        if topology.threads > mostthreads:
+            mostthreads = topology.threads
+
+    # Now restrict to just those topologies which
+    # match the largest thread count
+    bestthreads = []
+    for topology in possible:
+        if topology.threads != mostthreads:
+            continue
+        bestthreads.append(topology)
+
+    return bestthreads
 
 
 def _sort_possible_cpu_topologies(possible, wanttopology):
@@ -516,24 +539,12 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     return desired
 
 
-def _threads_requested_by_user(flavor, image_meta):
-    keys = ("cpu_threads", "cpu_maxthreads")
-    if any(flavor.extra_specs.get("hw:%s" % key) for key in keys):
-        return True
-
-    if any(image_meta.get("properties", {}).get("hw_%s" % key)
-           for key in keys):
-        return True
-
-    return False
-
-
 def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                                   numa_topology=None):
     """Get desired CPU topologies according to settings
 
     :param flavor: Flavor object to query extra specs from
-    :param image_meta: ImageMeta object to query properties from
+    :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
     :param numa_topology: InstanceNUMATopology object that may contain
                           additional topology constraints (such as threading
@@ -548,12 +559,19 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     """
 
     LOG.debug("Getting desirable topologies for flavor %(flavor)s "
-              "and image_meta %(image_meta)s",
-              {"flavor": flavor, "image_meta": image_meta})
+              "and image_meta %(image_meta)s, allow threads: %(threads)s",
+              {"flavor": flavor, "image_meta": image_meta,
+               "threads": allow_threads})
 
     preferred, maximum = _get_cpu_topology_constraints(flavor, image_meta)
+    LOG.debug("Topology preferred %(preferred)s, maximum %(maximum)s",
+              {"preferred": preferred, "maximum": maximum})
 
-    specified_threads = None
+    possible = _get_possible_cpu_topologies(flavor.vcpus,
+                                            maximum,
+                                            allow_threads)
+    LOG.debug("Possible topologies %s", possible)
+
     if numa_topology:
         min_requested_threads = None
         cell_topologies = [cell.cpu_topology for cell in numa_topology.cells
@@ -561,18 +579,23 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
         if cell_topologies:
             min_requested_threads = min(
                     topo.threads for topo in cell_topologies)
+
         if min_requested_threads:
-            if _threads_requested_by_user(flavor, image_meta):
+            if preferred.threads != -1:
                 min_requested_threads = min(preferred.threads,
                                             min_requested_threads)
+
             specified_threads = max(1, min_requested_threads)
+            LOG.debug("Filtering topologies best for %d threads",
+                      specified_threads)
 
-    possible = _get_possible_cpu_topologies(flavor.vcpus,
-                                            maximum,
-                                            allow_threads,
-                                            specified_threads)
+            possible = _filter_for_numa_threads(possible,
+                                                specified_threads)
+            LOG.debug("Remaining possible topologies %s",
+                      possible)
+
     desired = _sort_possible_cpu_topologies(possible, preferred)
-
+    LOG.debug("Sorted desired topologies %s", desired)
     return desired
 
 
@@ -581,7 +604,7 @@ def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
     """Get best CPU topology according to settings
 
     :param flavor: Flavor object to query extra specs from
-    :param image_meta: ImageMeta object to query properties from
+    :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
     :param numa_topology: InstanceNUMATopology object that may contain
                           additional topology constraints (such as threading
@@ -776,32 +799,11 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     return instance_cell
 
 
-def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
-    """Return the value of propname from flavor or image
-
-    :param flavor: a Flavor object or dict of instance type information
-    :param image_meta: a dict of image information
-
-    :returns: a value or None
-    """
-    flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
-    image_val = (image_meta or {}).get("properties", {}).get("hw_" + propname)
-
-    if flavor_val is not None:
-        if image_val is not None:
-            raise exception.ImageNUMATopologyForbidden(
-                name='hw_' + propname)
-
-        return flavor_val
-    else:
-        return image_val
-
-
 def _numa_get_pagesize_constraints(flavor, image_meta):
     """Return the requested memory page size
 
     :param flavor: a Flavor object to read extra specs from
-    :param image_meta: an Image object to read meta data from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     :raises: MemoryPagesSizeInvalid or MemoryPageSizeForbidden
     :returns: a page size requested or MEMPAGES_*
@@ -818,17 +820,19 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
             try:
                 request = int(request)
             except ValueError:
-                request = 0
+                try:
+                    request = strutils.string_to_bytes(
+                        request, return_int=True) / units.Ki
+                except ValueError:
+                    request = 0
 
         if request <= 0:
             raise exception.MemoryPageSizeInvalid(pagesize=request)
 
         return request
 
-    image_meta_prop = (image_meta or {}).get("properties", {})
-
     flavor_request = flavor.get('extra_specs', {}).get("hw:mem_page_size", "")
-    image_request = image_meta_prop.get("hw_mem_page_size", "")
+    image_request = image_meta.properties.get("hw_mem_page_size", "")
 
     if not flavor_request and image_request:
         raise exception.MemoryPageSizeForbidden(
@@ -851,30 +855,77 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     return pagesize
 
 
-def _numa_get_constraints_manual(nodes, flavor, image_meta):
+def _numa_get_flavor_cpu_map_list(flavor):
+    hw_numa_cpus = []
+    hw_numa_cpus_set = False
+    extra_specs = flavor.get("extra_specs", {})
+    for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
+        cpuprop = "hw:numa_cpus.%d" % cellid
+        if cpuprop not in extra_specs:
+            break
+        hw_numa_cpus.append(
+            parse_cpu_spec(extra_specs[cpuprop]))
+        hw_numa_cpus_set = True
+
+    if hw_numa_cpus_set:
+        return hw_numa_cpus
+
+
+def _numa_get_cpu_map_list(flavor, image_meta):
+    flavor_cpu_list = _numa_get_flavor_cpu_map_list(flavor)
+    image_cpu_list = image_meta.properties.get("hw_numa_cpus", None)
+
+    if flavor_cpu_list is None:
+        return image_cpu_list
+    else:
+        if image_cpu_list is not None:
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_cpus')
+        return flavor_cpu_list
+
+
+def _numa_get_flavor_mem_map_list(flavor):
+    hw_numa_mem = []
+    hw_numa_mem_set = False
+    extra_specs = flavor.get("extra_specs", {})
+    for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
+        memprop = "hw:numa_mem.%d" % cellid
+        if memprop not in extra_specs:
+            break
+        hw_numa_mem.append(int(extra_specs[memprop]))
+        hw_numa_mem_set = True
+
+    if hw_numa_mem_set:
+        return hw_numa_mem
+
+
+def _numa_get_mem_map_list(flavor, image_meta):
+    flavor_mem_list = _numa_get_flavor_mem_map_list(flavor)
+    image_mem_list = image_meta.properties.get("hw_numa_mem", None)
+
+    if flavor_mem_list is None:
+        return image_mem_list
+    else:
+        if image_mem_list is not None:
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_mem')
+        return flavor_mem_list
+
+
+def _numa_get_constraints_manual(nodes, flavor, cpu_list, mem_list):
     cells = []
     totalmem = 0
 
-    availcpus = set(range(flavor['vcpus']))
+    availcpus = set(range(flavor.vcpus))
 
     for node in range(nodes):
-        cpus = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.%d" % node)
-        mem = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_mem.%d" % node)
-
-        # We're expecting both properties set, so
-        # raise an error if either is missing
-        if cpus is None or mem is None:
-            raise exception.ImageNUMATopologyIncomplete()
-
-        mem = int(mem)
-        cpuset = parse_cpu_spec(cpus)
+        mem = mem_list[node]
+        cpuset = cpu_list[node]
 
         for cpu in cpuset:
-            if cpu > (flavor['vcpus'] - 1):
+            if cpu > (flavor.vcpus - 1):
                 raise exception.ImageNUMATopologyCPUOutOfRange(
-                    cpunum=cpu, cpumax=(flavor['vcpus'] - 1))
+                    cpunum=cpu, cpumax=(flavor.vcpus - 1))
 
             if cpu not in availcpus:
                 raise exception.ImageNUMATopologyCPUDuplicates(
@@ -890,33 +941,23 @@ def _numa_get_constraints_manual(nodes, flavor, image_meta):
         raise exception.ImageNUMATopologyCPUsUnassigned(
             cpuset=str(availcpus))
 
-    if totalmem != flavor['memory_mb']:
+    if totalmem != flavor.memory_mb:
         raise exception.ImageNUMATopologyMemoryOutOfRange(
             memsize=totalmem,
-            memtotal=flavor['memory_mb'])
+            memtotal=flavor.memory_mb)
 
     return objects.InstanceNUMATopology(cells=cells)
 
 
-def _numa_get_constraints_auto(nodes, flavor, image_meta):
-    if ((flavor['vcpus'] % nodes) > 0 or
-        (flavor['memory_mb'] % nodes) > 0):
+def _numa_get_constraints_auto(nodes, flavor):
+    if ((flavor.vcpus % nodes) > 0 or
+        (flavor.memory_mb % nodes) > 0):
         raise exception.ImageNUMATopologyAsymmetric()
 
     cells = []
     for node in range(nodes):
-        cpus = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.%d" % node)
-        mem = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_mem.%d" % node)
-
-        # We're not expecting any properties set, so
-        # raise an error if there are any
-        if cpus is not None or mem is not None:
-            raise exception.ImageNUMATopologyIncomplete()
-
-        ncpus = int(flavor['vcpus'] / nodes)
-        mem = int(flavor['memory_mb'] / nodes)
+        ncpus = int(flavor.vcpus / nodes)
+        mem = int(flavor.memory_mb / nodes)
         start = node * ncpus
         cpuset = set(range(start, start + ncpus))
 
@@ -928,7 +969,7 @@ def _numa_get_constraints_auto(nodes, flavor, image_meta):
 
 def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     flavor_pinning = flavor.get('extra_specs', {}).get("hw:cpu_policy")
-    image_pinning = image_meta.get('properties', {}).get("hw_cpu_policy")
+    image_pinning = image_meta.properties.get("hw_cpu_policy")
     if flavor_pinning == "dedicated":
         requested = True
     elif flavor_pinning == "shared":
@@ -950,8 +991,8 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     else:
         single_cell = objects.InstanceNUMACell(
                 id=0,
-                cpuset=set(range(flavor['vcpus'])),
-                memory=flavor['memory_mb'],
+                cpuset=set(range(flavor.vcpus)),
+                memory=flavor.memory_mb,
                 cpu_pinning={})
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
         return numa_topology
@@ -962,30 +1003,52 @@ def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
+
+    May raise exception.ImageNUMATopologyIncomplete() if the
+    image properties are not correctly specified, or
+    exception.ImageNUMATopologyForbidden if an attempt is
+    made to override flavor settings with image properties.
 
     :returns: InstanceNUMATopology or None
     """
-    nodes = _numa_get_flavor_or_image_prop(
-        flavor, image_meta, "numa_nodes")
+
+    nodes = flavor.get('extra_specs', {}).get("hw:numa_nodes")
+    props = image_meta.properties
+    if nodes is not None:
+        if props.obj_attr_is_set("hw_numa_nodes"):
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_nodes')
+        nodes = int(nodes)
+    else:
+        nodes = props.get("hw_numa_nodes")
+
     pagesize = _numa_get_pagesize_constraints(
         flavor, image_meta)
 
     numa_topology = None
     if nodes or pagesize:
-        nodes = nodes and int(nodes) or 1
-        # We'll pick what path to go down based on whether
-        # anything is set for the first node. Both paths
-        # have logic to cope with inconsistent property usage
-        auto = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.0") is None
+        nodes = nodes or 1
 
-        if auto:
+        cpu_list = _numa_get_cpu_map_list(flavor, image_meta)
+        mem_list = _numa_get_mem_map_list(flavor, image_meta)
+
+        # If one property list is specified both must be
+        if ((cpu_list is None and mem_list is not None) or
+            (cpu_list is not None and mem_list is None)):
+            raise exception.ImageNUMATopologyIncomplete()
+
+        # If any node has data set, all nodes must have data set
+        if ((cpu_list is not None and len(cpu_list) != nodes) or
+            (mem_list is not None and len(mem_list) != nodes)):
+            raise exception.ImageNUMATopologyIncomplete()
+
+        if cpu_list is None:
             numa_topology = _numa_get_constraints_auto(
-                nodes, flavor, image_meta)
+                nodes, flavor)
         else:
             numa_topology = _numa_get_constraints_manual(
-                nodes, flavor, image_meta)
+                nodes, flavor, cpu_list, mem_list)
 
         # We currently support same pagesize for all cells.
         [setattr(c, 'pagesize', pagesize) for c in numa_topology.cells]

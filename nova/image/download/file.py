@@ -88,8 +88,8 @@ class FileTransfer(xfer_base.TransferBase):
             group_name = 'image_file_url:' + fs
             conf_group = CONF[group_name]
             if conf_group.id is None:
-                msg = _('The group %s(group_name) must be configured with '
-                        'an id.')
+                msg = _('The group %(group_name)s must be configured with '
+                        'an id.') % {'group_name': group_name}
                 raise exception.ImageDownloadModuleConfigurationError(
                     module=str(self), reason=msg)
             fs_dict[CONF[group_name].id] = CONF[group_name]

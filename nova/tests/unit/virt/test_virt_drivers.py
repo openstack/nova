@@ -84,6 +84,9 @@ class _FakeDriverBackendTestCase(object):
             fake_libvirt_utils
         import nova.tests.unit.virt.libvirt.fakelibvirt as fakelibvirt
 
+        import nova.tests.unit.virt.libvirt.fake_os_brick_connector as \
+            fake_os_brick_connector
+
         sys.modules['libvirt'] = fakelibvirt
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
@@ -107,6 +110,10 @@ class _FakeDriverBackendTestCase(object):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.firewall.libvirt',
             fakelibvirt))
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.connector',
+            fake_os_brick_connector))
 
         fakelibvirt.disable_event_thread(self)
 
@@ -189,7 +196,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
         }
 
     def test_load_new_drivers(self):
-        for cls, driver in self.new_drivers.iteritems():
+        for cls, driver in six.iteritems(self.new_drivers):
             self.flags(compute_driver=cls)
             # NOTE(sdague) the try block is to make it easier to debug a
             # failure by knowing which driver broke
@@ -366,6 +373,11 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.power_on(self.ctxt, instance_ref, network_info, None)
 
     @catch_notimplementederror
+    def test_inject_nmi(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.inject_nmi(instance_ref)
+
+    @catch_notimplementederror
     def test_soft_delete(self):
         instance_ref, network_info = self._get_running_instance(obj=True)
         self.connection.soft_delete(instance_ref)
@@ -459,7 +471,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                           '/dev/sda'))
         self.assertIsNone(
             self.connection.detach_volume(connection_info, instance_ref,
-                                      '/dev/sda'))
+                                          '/dev/sda'))
 
     @catch_notimplementederror
     def test_swap_volume(self):
@@ -580,6 +592,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         serial_console = self.connection.get_serial_console(self.ctxt,
                                                             instance_ref)
         self.assertIsInstance(serial_console, ctype.ConsoleSerial)
+
+    @catch_notimplementederror
+    def test_get_mks_console(self):
+        instance_ref, network_info = self._get_running_instance()
+        mks_console = self.connection.get_mks_console(self.ctxt,
+                                                      instance_ref)
+        self.assertIsInstance(mks_console, ctype.ConsoleMKS)
 
     @catch_notimplementederror
     def test_get_console_pool_info(self):
@@ -769,6 +788,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.get_instance_disk_info(instance_ref,
                                                block_device_info={})
 
+    @catch_notimplementederror
+    def test_get_device_name_for_instance(self):
+        instance, _ = self._get_running_instance()
+        self.connection.get_device_name_for_instance(
+            instance, [], mock.Mock(spec=objects.BlockDeviceMapping))
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
@@ -891,3 +916,16 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.assertEqual(unplug_vifs_mock.call_count, 1)
         unplug_vifs_mock.assert_called_once_with(instance_ref,
                                             network_info, True)
+
+    def test_get_device_name_for_instance(self):
+        self.skipTest("Tested by the nova.tests.unit.virt.libvirt suite")
+
+    @catch_notimplementederror
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    @mock.patch("nova.virt.libvirt.host.Host.has_min_version")
+    def test_set_admin_password(self, ver, mock_image):
+        self.flags(virt_type='kvm', group='libvirt')
+        mock_image.return_value = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        instance, network_info = self._get_running_instance(obj=True)
+        self.connection.set_admin_password(instance, 'p4ssw0rd')

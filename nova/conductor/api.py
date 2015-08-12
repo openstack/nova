@@ -66,47 +66,8 @@ class LocalAPI(object):
         return self._manager.instance_update(context, instance_uuid,
                                              updates, 'compute')
 
-    def instance_get_all_by_host(self, context, host, columns_to_join=None):
-        return self._manager.instance_get_all_by_host(
-            context, host, None, columns_to_join=columns_to_join)
-
-    def instance_get_all_by_host_and_node(self, context, host, node):
-        return self._manager.instance_get_all_by_host(context, host, node,
-                None)
-
-    def migration_get_in_progress_by_host_and_node(self, context, host, node):
-        return self._manager.migration_get_in_progress_by_host_and_node(
-            context, host, node)
-
-    def aggregate_metadata_get_by_host(self, context, host,
-                                       key='availability_zone'):
-        return self._manager.aggregate_metadata_get_by_host(context,
-                                                            host,
-                                                            key)
-
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
-
-    def block_device_mapping_create(self, context, values):
-        return self._manager.block_device_mapping_update_or_create(context,
-                                                                   values,
-                                                                   create=True)
-
-    def block_device_mapping_update(self, context, bdm_id, values):
-        values = dict(values)
-        values['id'] = bdm_id
-        return self._manager.block_device_mapping_update_or_create(
-            context, values, create=False)
-
-    def block_device_mapping_update_or_create(self, context, values):
-        return self._manager.block_device_mapping_update_or_create(context,
-                                                                   values,
-                                                                   create=None)
-
-    def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
-        return self._manager.block_device_mapping_get_all_by_instance(
-            context, instance, legacy)
 
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
@@ -119,33 +80,6 @@ class LocalAPI(object):
 
     def compute_node_create(self, context, values):
         return self._manager.compute_node_create(context, values)
-
-    def compute_node_update(self, context, node, values, prune_stats=False):
-        # NOTE(belliott) ignore prune_stats param, it's no longer relevant
-        return self._manager.compute_node_update(context, node, values)
-
-    def compute_node_delete(self, context, node):
-        return self._manager.compute_node_delete(context, node)
-
-    def task_log_get(self, context, task_name, begin, end, host, state=None):
-        return self._manager.task_log_get(context, task_name, begin, end,
-                                          host, state)
-
-    def task_log_begin_task(self, context, task_name, begin, end, host,
-                            task_items=None, message=None):
-        return self._manager.task_log_begin_task(context, task_name,
-                                                 begin, end, host,
-                                                 task_items, message)
-
-    def task_log_end_task(self, context, task_name, begin, end, host,
-                          errors, message=None):
-        return self._manager.task_log_end_task(context, task_name,
-                                               begin, end, host,
-                                               errors, message)
-
-    def security_groups_trigger_handler(self, context, event, *args):
-        return self._manager.security_groups_trigger_handler(context,
-                                                             event, args)
 
     def security_groups_trigger_members_refresh(self, context, group_ids):
         return self._manager.security_groups_trigger_members_refresh(context,

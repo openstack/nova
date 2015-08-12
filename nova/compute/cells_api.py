@@ -17,6 +17,7 @@
 """Compute API that proxies via Cells Service."""
 
 import oslo_messaging as messaging
+from oslo_utils import excutils
 
 from nova import availability_zones
 from nova import block_device
@@ -205,6 +206,9 @@ class ComputeCellsAPI(compute_api.API):
         """
         pass
 
+    def force_delete(self, context, instance):
+        self._handle_cell_delete(context, instance, 'force_delete')
+
     def soft_delete(self, context, instance):
         self._handle_cell_delete(context, instance, 'soft_delete')
 
@@ -221,9 +225,32 @@ class ComputeCellsAPI(compute_api.API):
                     context, instance.uuid))
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
-            super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
-                                                       method_name,
-                                                       self._do_delete)
+            try:
+                super(ComputeCellsAPI, self)._local_delete(context, instance,
+                                                           bdms, method_name,
+                                                           self._do_delete)
+            except exception.ObjectActionError:
+                # NOTE(alaski): We very likely got here because the host
+                # constraint in instance.destroy() failed.  This likely means
+                # that an update came up from a child cell and cell_name is
+                # set now.  If so try the delete again.
+                with excutils.save_and_reraise_exception() as exc:
+                    try:
+                        instance.refresh()
+                    except exception.InstanceNotFound:
+                        # NOTE(melwitt): If the instance has already been
+                        # deleted by instance_destroy_at_top from a cell,
+                        # instance.refresh() will raise InstanceNotFound.
+                        exc.reraise = False
+                    else:
+                        if instance.cell_name:
+                            exc.reraise = False
+                            self._handle_cell_delete(context, instance,
+                                    method_name)
+            except exception.InstanceNotFound:
+                # NOTE(melwitt): We can get here if anything tries to
+                # lookup the instance after a instance_destroy_at_top hits.
+                pass
             return
 
         method = getattr(super(ComputeCellsAPI, self), method_name)
@@ -234,12 +261,6 @@ class ComputeCellsAPI(compute_api.API):
         """Restore a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).restore(context, instance)
         self._cast_to_cells(context, instance, 'restore')
-
-    @check_instance_cell
-    def force_delete(self, context, instance):
-        """Force delete a previously deleted (but not reclaimed) instance."""
-        super(ComputeCellsAPI, self).force_delete(context, instance)
-        self._cast_to_cells(context, instance, 'force_delete')
 
     @check_instance_cell
     def evacuate(self, context, instance, *args, **kwargs):

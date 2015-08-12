@@ -65,8 +65,7 @@ class _TestAggregateObject(object):
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
         agg.create()
-        self.assertRaises(exception.ObjectActionError, agg.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, agg.create)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'aggregate_update')
@@ -80,13 +79,13 @@ class _TestAggregateObject(object):
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_save_and_create_no_hosts(self):
-        agg = aggregate.Aggregate()
+        agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
         agg.hosts = ['foo', 'bar']
         self.assertRaises(exception.ObjectActionError,
-                          agg.create, self.context)
+                          agg.create)
         self.assertRaises(exception.ObjectActionError,
-                          agg.save, self.context)
+                          agg.save)
 
     def test_update_metadata(self):
         self.mox.StubOutWithMock(db, 'aggregate_metadata_delete')

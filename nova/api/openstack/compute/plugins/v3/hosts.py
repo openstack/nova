@@ -16,15 +16,16 @@
 """The hosts admin extension."""
 
 from oslo_log import log as logging
+import six
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import hosts
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
 
@@ -96,18 +97,22 @@ class HostController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 501))
     @validation.schema(hosts.update)
     def update(self, req, id, body):
-        """:param body: example format {'status': 'enable',
-                                     'maintenance_mode': 'enable'}
-           :returns:
+        """Return booleanized version of body dict.
+
+        :param Request req: The request object (containing 'nova-context'
+                            env var).
+        :param str id: The host name.
+        :param dict body: example format {'host': {'status': 'enable',
+                          'maintenance_mode': 'enable'}}
+        :return: Same dict as body but 'enable' strings for 'status' and
+                 'maintenance_mode' are converted into True, else False.
+        :rtype: dict
         """
         def read_enabled(orig_val):
-            """:param orig_val: A string with either 'enable' or 'disable'. May
-                                be surrounded by whitespace, and case doesn't
-                                matter
-               :returns: True for 'enabled' and False for 'disabled'
-            """
+            # Convert enable/disable str to a bool.
             val = orig_val.strip().lower()
             return val == "enable"
+
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'
@@ -137,8 +142,7 @@ class HostController(wsgi.Controller):
         try:
             result = self.api.set_host_maintenance(context, host_name, mode)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host maintenance mode.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
@@ -160,8 +164,7 @@ class HostController(wsgi.Controller):
             result = self.api.set_host_enabled(context, host_name=host_name,
                                                enabled=enabled)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host disabled status.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
@@ -178,8 +181,7 @@ class HostController(wsgi.Controller):
             result = self.api.host_power_action(context, host_name=host_name,
                                                 action=action)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host power management.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
@@ -247,7 +249,7 @@ class HostController(wsgi.Controller):
                                     instance['ephemeral_gb'])
         return project_map
 
-    @extensions.expected_errors((403, 404))
+    @extensions.expected_errors(404)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
 
@@ -268,12 +270,6 @@ class HostController(wsgi.Controller):
                     context, host_name))
         except exception.ComputeHostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.AdminRequired:
-            # TODO(Alex Xu): The authorization is done by policy,
-            # db layer checking is needless. The db layer checking should
-            # be removed
-            msg = _("Describe-resource is admin only functionality")
-            raise webob.exc.HTTPForbidden(explanation=msg)
         instances = self.api.instance_get_all_by_host(context, host_name)
         resources = [self._get_total_resources(host_name, compute_node)]
         resources.append(self._get_used_now_resources(host_name,
@@ -282,7 +278,7 @@ class HostController(wsgi.Controller):
                                                                   instances))
         by_proj_resources = self._get_resources_by_project(host_name,
                                                            instances)
-        for resource in by_proj_resources.itervalues():
+        for resource in six.itervalues(by_proj_resources):
             resources.append({'resource': resource})
         return {'host': resources}
 

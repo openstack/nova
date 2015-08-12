@@ -21,6 +21,7 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import range
 
 from nova.cells import filters
 from nova.cells import weights
@@ -120,8 +121,7 @@ class CellsScheduler(base.Base):
                     num_instances, i)
 
             instances.append(instance)
-            instance_p = obj_base.obj_to_primitive(instance)
-            self.msg_runner.instance_update_at_top(ctxt, instance_p)
+            self.msg_runner.instance_update_at_top(ctxt, instance)
         return instances
 
     def _create_action_here(self, ctxt, instance_uuids):
@@ -223,7 +223,7 @@ class CellsScheduler(base.Base):
             filter_properties, method, method_kwargs):
         """Pick a cell where we should create a new instance(s)."""
         try:
-            for i in xrange(max(0, CONF.cells.scheduler_retries) + 1):
+            for i in range(max(0, CONF.cells.scheduler_retries) + 1):
                 try:
                     target_cells = self._grab_target_cells(filter_properties)
                     if target_cells is None:
@@ -246,12 +246,11 @@ class CellsScheduler(base.Base):
                           {'instance_uuids': instance_uuids})
             ctxt = message.ctxt
             for instance_uuid in instance_uuids:
-                self.msg_runner.instance_update_at_top(ctxt,
-                            {'uuid': instance_uuid,
-                             'vm_state': vm_states.ERROR})
+                instance = objects.Instance(context=ctxt, uuid=instance_uuid,
+                                            vm_state=vm_states.ERROR)
+                self.msg_runner.instance_update_at_top(ctxt, instance)
                 try:
-                    self.db.instance_update(ctxt,
-                                            instance_uuid,
-                                            {'vm_state': vm_states.ERROR})
+                    instance.vm_state = vm_states.ERROR
+                    instance.save()
                 except Exception:
                     pass

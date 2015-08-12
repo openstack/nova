@@ -18,6 +18,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@obj_base.NovaObjectRegistry.register
 class NetworkRequest(obj_base.NovaObject,
                      obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -57,14 +58,14 @@ class NetworkRequest(obj_base.NovaObject,
             return cls(network_id=network_id, address=address)
 
 
+@obj_base.NovaObjectRegistry.register
 class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('NetworkRequest'),
         }
 
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
     VERSION = '1.1'
 

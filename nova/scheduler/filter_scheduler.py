@@ -23,6 +23,7 @@ import random
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _
@@ -68,6 +69,14 @@ class FilterScheduler(driver.Scheduler):
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
+            # NOTE(Rui Chen): If multiple creates failed, set the updated time
+            # of selected HostState to None so that these HostStates are
+            # refreshed according to database in next schedule, and release
+            # the resource consumed by instance in the process of selecting
+            # host.
+            for host in selected_hosts:
+                host.obj.updated = None
+
             # Log the details but don't put those into the reason since
             # we don't want to give away too much information about our
             # actual environment.
@@ -90,16 +99,6 @@ class FilterScheduler(driver.Scheduler):
         """Fetch options dictionary. Broken out for testing."""
         return self.options.get_configuration()
 
-    def populate_filter_properties(self, request_spec, filter_properties):
-        """Stuff things into filter_properties.  Can be overridden in a
-        subclass to add more data.
-        """
-        # Save useful information from the request spec for filter processing:
-        project_id = request_spec['instance_properties']['project_id']
-        os_type = request_spec['instance_properties']['os_type']
-        filter_properties['project_id'] = project_id
-        filter_properties['os_type'] = os_type
-
     def _schedule(self, context, request_spec, filter_properties):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
@@ -117,9 +116,6 @@ class FilterScheduler(driver.Scheduler):
                                   'config_options': config_options,
                                   'instance_type': instance_type})
 
-        self.populate_filter_properties(request_spec,
-                                        filter_properties)
-
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
         # host, we virtually consume resources on it so subsequent
@@ -132,7 +128,7 @@ class FilterScheduler(driver.Scheduler):
 
         selected_hosts = []
         num_instances = request_spec.get('num_instances', 1)
-        for num in xrange(num_instances):
+        for num in range(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,
                     filter_properties, index=num)

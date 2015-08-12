@@ -14,8 +14,9 @@
 
 import mock
 
+from oslo_versionedobjects import exception as ovo_exc
+
 from nova import db
-from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
@@ -81,7 +82,7 @@ class _TestSecurityGroupRuleObject(object):
     def test_set_id_failure(self, db_mock):
         rule = objects.SecurityGroupRule(context=self.context)
         rule.create()
-        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           rule, 'id', 124)
 
 

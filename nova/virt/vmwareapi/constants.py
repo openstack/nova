@@ -18,6 +18,8 @@ Shared constants across the VMware driver
 
 from nova.network import model as network_model
 
+MIN_VC_VERSION = '5.1.0'
+
 DISK_FORMAT_ISO = 'iso'
 DISK_FORMAT_VMDK = 'vmdk'
 DISK_FORMATS_ALL = [DISK_FORMAT_ISO, DISK_FORMAT_VMDK]
@@ -34,6 +36,7 @@ DISK_TYPE_EAGER_ZEROED_THICK = 'eagerZeroedThick'
 
 DATASTORE_TYPE_VMFS = 'VMFS'
 DATASTORE_TYPE_NFS = 'NFS'
+DATASTORE_TYPE_NFS41 = 'NFS41'
 DATASTORE_TYPE_VSAN = 'vsan'
 
 DEFAULT_VIF_MODEL = network_model.VIF_MODEL_E1000

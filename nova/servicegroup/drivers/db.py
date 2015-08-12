@@ -18,9 +18,7 @@ from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
-from nova import context
 from nova.i18n import _, _LE
-from nova import objects
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -59,7 +57,10 @@ class DbDriver(base.Driver):
         """Moved from nova.utils
         Check whether a service is up based on last heartbeat.
         """
-        last_heartbeat = service_ref['updated_at'] or service_ref['created_at']
+        # Keep checking 'updated_at' if 'last_seen_up' isn't set.
+        # Should be able to use only 'last_seen_up' in the M release
+        last_heartbeat = (service_ref.get('last_seen_up') or
+            service_ref['updated_at'] or service_ref['created_at'])
         if isinstance(last_heartbeat, six.string_types):
             # NOTE(russellb) If this service_ref came in over rpc via
             # conductor, then the timestamp will be a string and needs to be
@@ -77,18 +78,6 @@ class DbDriver(base.Driver):
                       'Elapsed time is %(el)s',
                       {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
-
-    def get_all(self, group_id):
-        """Returns ALL members of the given group
-        """
-        LOG.debug('DB_Driver: get_all members of the %s group', group_id)
-        rs = []
-        ctxt = context.get_admin_context()
-        services = objects.ServiceList.get_by_topic(ctxt, group_id)
-        for service in services:
-            if self.is_up(service):
-                rs.append(service.host)
-        return rs
 
     def _report_state(self, service):
         """Update the state of this service in the datastore."""

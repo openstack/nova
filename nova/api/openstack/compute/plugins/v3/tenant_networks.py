@@ -80,7 +80,7 @@ class TenantNetworkController(wsgi.Controller):
         networks = {}
         for n in self.network_api.get_all(ctx):
             networks[n['id']] = n['label']
-        return [{'id': k, 'label': v} for k, v in networks.iteritems()]
+        return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
 
     @extensions.expected_errors(())
     def index(self, req):
@@ -122,6 +122,7 @@ class TenantNetworkController(wsgi.Controller):
                 QUOTAS.rollback(context, reservation)
 
         try:
+            self.network_api.disassociate(context, id)
             self.network_api.delete(context, id)
         except exception.PolicyNotAuthorized as e:
             _rollback_quota(reservation)
@@ -168,6 +169,8 @@ class TenantNetworkController(wsgi.Controller):
         except exception.OverQuota:
             msg = _("Quota exceeded, too many networks.")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        kwargs['project_id'] = context.project_id
 
         try:
             networks = self.network_api.create(context,

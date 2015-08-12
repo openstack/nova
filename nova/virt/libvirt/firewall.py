@@ -17,6 +17,7 @@
 
 import uuid
 
+from eventlet import greenthread
 from lxml import etree
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -31,6 +32,7 @@ from nova.virt import netutils
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 libvirt = None
 
@@ -269,17 +271,33 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             nic_id = vif['address'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
 
-            try:
-                _nw = self._conn.nwfilterLookupByName(instance_filter_name)
-                _nw.undefine()
-            except libvirt.libvirtError as e:
-                errcode = e.get_error_code()
-                if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
-                    # This happens when the instance filter is still in
-                    # use (ie. when the instance has not terminated properly)
-                    raise
-                LOG.debug('The nwfilter(%s) is not found.',
-                          instance_filter_name, instance=instance)
+            # nwfilters may be defined in a separate thread in the case
+            # of libvirt non-blocking mode, so we wait for completion
+            max_retry = CONF.live_migration_retry_count
+            for cnt in range(max_retry):
+                try:
+                    _nw = self._conn.nwfilterLookupByName(instance_filter_name)
+                    _nw.undefine()
+                    break
+                except libvirt.libvirtError as e:
+                    if cnt == max_retry - 1:
+                        raise
+                    errcode = e.get_error_code()
+                    if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
+                        # This happens when the instance filter is still in use
+                        # (ie. when the instance has not terminated properly)
+                        LOG.info(_LI('Failed to undefine network filter '
+                                     '%(name)s. Try %(cnt)d of '
+                                     '%(max_retry)d.'),
+                                 {'name': instance_filter_name,
+                                  'cnt': cnt + 1,
+                                  'max_retry': max_retry},
+                                 instance=instance)
+                        greenthread.sleep(1)
+                    else:
+                        LOG.debug('The nwfilter(%s) is not found.',
+                                  instance_filter_name, instance=instance)
+                        break
 
     @staticmethod
     def _instance_filter_name(instance, nic_id=None):

@@ -27,24 +27,22 @@ LOG = logging.getLogger(__name__)
 def aggregate_values_from_key(host_state, key_name):
     """Returns a set of values based on a metadata key for a specific host."""
     aggrlist = host_state.aggregates
-    aggregate_vals = set()
-    for aggr in aggrlist:
-        if key_name in aggr.metadata:
-            aggregate_vals.add(aggr.metadata[key_name])
-    return aggregate_vals
+    return {aggr.metadata[key_name]
+              for aggr in aggrlist
+              if key_name in aggr.metadata
+              }
 
 
 def aggregate_metadata_get_by_host(host_state, key=None):
-    """Returns a dict of all metadata for a specific host."""
+    """Returns a dict of all metadata based on a metadata key for a specific
+    host. If the key is not provided, returns a dict of all metadata.
+    """
     aggrlist = host_state.aggregates
     metadata = collections.defaultdict(set)
     for aggr in aggrlist:
-        if key is not None and key not in aggr.metadata:
-            continue
-        for k, v in aggr.metadata.iteritems():
-            values = v.split(',')
-            for value in values:
-                metadata[k].add(value.strip())
+        if key is None or key in aggr.metadata:
+            for k, v in aggr.metadata.items():
+                metadata[k].update(x.strip() for x in v.split(','))
     return metadata
 
 

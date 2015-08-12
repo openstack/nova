@@ -15,6 +15,8 @@ Unit Tests for flavors code
 """
 import time
 
+import six
+
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -54,6 +56,14 @@ DEFAULT_FLAVORS = [
      'vcpu_weight': None, 'id': 4}
 ]
 
+CONTEXT = context.RequestContext('fake', 'fake', is_admin=False)
+
+DEFAULT_FLAVOR_OBJS = [
+    objects.Flavor._obj_from_primitive(CONTEXT, objects.Flavor.VERSION,
+                                       {'nova_object.data': flavor})
+    for flavor in DEFAULT_FLAVORS
+]
+
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
@@ -70,7 +80,7 @@ class InstanceTypeTestCase(test.TestCase):
         """return a flavorid not in the DB."""
         nonexistent_flavor = 2700
         flavor_ids = [value.id for key, value in
-                      flavors.get_all_flavors().iteritems()]
+                      six.iteritems(flavors.get_all_flavors())]
         while nonexistent_flavor in flavor_ids:
             nonexistent_flavor += 1
         else:

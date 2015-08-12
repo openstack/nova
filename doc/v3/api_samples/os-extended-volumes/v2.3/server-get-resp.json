@@ -34,11 +34,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
+                "href": "http://openstack.example.com/v2/openstack/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
+                "href": "http://openstack.example.com/openstack/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "bookmark"
             }
         ],

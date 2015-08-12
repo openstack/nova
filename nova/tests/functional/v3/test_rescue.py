@@ -13,11 +13,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class RescueJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-rescue"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(RescueJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.rescue.Rescue')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_rescue_with_image.'
+            'Extended_rescue_with_image')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips_mac.'
+            'Extended_ips_mac')
+        return f
 
     def _rescue(self, uuid):
         req_subs = {
@@ -43,7 +69,8 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'RESCUE'
-
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
     def test_server_rescue_with_image_ref_specified(self):
@@ -63,7 +90,8 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'RESCUE'
-
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
     def test_server_unrescue(self):
@@ -78,5 +106,6 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'ACTIVE'
-
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
         self._verify_response('server-get-resp-unrescue', subs, response, 200)

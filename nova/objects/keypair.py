@@ -24,6 +24,7 @@ KEYPAIR_TYPE_X509 = 'x509'
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class KeyPair(base.NovaPersistentObject, base.NovaObject,
               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -78,6 +79,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         db.key_pair_destroy(self._context, self.user_id, self.name)
 
 
+@base.NovaObjectRegistry.register
 class KeyPairList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              KeyPair <= version 1.1
@@ -88,11 +90,9 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('KeyPair'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): KeyPair was at 1.1 before we added this
-        '1.1': '1.2',
-        '1.2': '1.3',
+    # NOTE(danms): KeyPair was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1'), ('1.1', '1.2'), ('1.2', '1.3')],
         }
 
     @base.remotable_classmethod

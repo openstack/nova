@@ -1,0 +1,76 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from os_brick.initiator import connector
+from oslo_config import cfg
+from oslo_log import log as logging
+
+from nova import utils
+from nova.virt.libvirt.volume import volume as libvirt_volume
+
+CONF = cfg.CONF
+CONF.import_opt('num_iscsi_scan_tries', 'nova.virt.libvirt.volume.iscsi',
+                group='libvirt')
+
+LOG = logging.getLogger(__name__)
+
+
+class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
+    """Driver to attach Fibre Channel Network volumes to libvirt."""
+
+    def __init__(self, connection):
+        super(LibvirtFibreChannelVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+        # Call the factory here so we can support
+        # more than x86 architectures.
+        self.connector = connector.InitiatorConnector.factory(
+            'FIBRE_CHANNEL', utils._get_root_helper(),
+            use_multipath=CONF.libvirt.iscsi_use_multipath,
+            device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)
+
+    def get_config(self, connection_info, disk_info):
+        """Returns xml for libvirt."""
+        conf = super(LibvirtFibreChannelVolumeDriver,
+                     self).get_config(connection_info, disk_info)
+
+        conf.source_type = "block"
+        conf.source_path = connection_info['data']['device_path']
+        return conf
+
+    def connect_volume(self, connection_info, disk_info):
+        """Attach the volume to instance_name."""
+
+        LOG.debug("Calling os-brick to attach FC Volume")
+        device_info = self.connector.connect_volume(connection_info['data'])
+        LOG.debug("Attached FC volume %s", device_info)
+
+        connection_info['data']['device_path'] = device_info['path']
+        if 'multipath_id' in device_info:
+            connection_info['data']['multipath_id'] = \
+                device_info['multipath_id']
+
+    def disconnect_volume(self, connection_info, disk_dev):
+        """Detach the volume from instance_name."""
+
+        LOG.debug("calling os-brick to detach FC Volume")
+        # TODO(walter-boring) eliminated the need for preserving
+        # multipath_id.  Use scsi_id instead of multipath -ll
+        # This will then eliminate the need to pass anything in
+        # the 2nd param of disconnect_volume and be consistent
+        # with the rest of the connectors.
+        self.connector.disconnect_volume(connection_info['data'],
+                                         connection_info['data'])
+        LOG.debug("Disconnected FC Volume %s", disk_dev)
+
+        super(LibvirtFibreChannelVolumeDriver,
+              self).disconnect_volume(connection_info, disk_dev)

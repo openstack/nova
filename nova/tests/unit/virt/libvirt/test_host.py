@@ -14,21 +14,26 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import uuid
 
 import eventlet
 from eventlet import greenthread
 import mock
 
+from nova.compute import arch
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import driver as libvirt_driver
+from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
 host.libvirt = fakelibvirt
+libvirt_guest.libvirt = fakelibvirt
 
 
 class FakeVirtDomain(object):
@@ -405,6 +410,20 @@ class HostTestCase(test.NoDBTestCase):
 
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
+    @mock.patch.object(host.Host, "_get_domain_by_name")
+    def test_get_guest(self, fake_get_domain):
+        dom = fakelibvirt.virDomain(self.host.get_connection(),
+                                    "<domain id='7'/>")
+
+        fake_get_domain.return_value = dom
+        instance = objects.Instance(id="124")
+
+        guest = self.host.get_guest(instance)
+        self.assertEqual(dom, guest._domain)
+        self.assertIsInstance(guest, libvirt_guest.Guest)
+
+        fake_get_domain.assert_called_once_with("instance-0000007c")
+
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
     def test_list_instance_domains_fast(self, mock_list_all):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
@@ -732,6 +751,116 @@ class HostTestCase(test.NoDBTestCase):
 
         mock_find_secret.return_value = None
         self.host.delete_secret("rbd", "rbdvol")
+
+    def test_get_cpu_count(self):
+        with mock.patch.object(host.Host, "get_connection") as mock_conn:
+            mock_conn().getInfo.return_value = ['zero', 'one', 'two']
+            self.assertEqual('two', self.host.get_cpu_count())
+
+    def test_get_memory_total(self):
+        with mock.patch.object(host.Host, "get_connection") as mock_conn:
+            mock_conn().getInfo.return_value = ['zero', 'one', 'two']
+            self.assertEqual('one', self.host.get_memory_mb_total())
+
+    def test_get_memory_used(self):
+        m = mock.mock_open(read_data="""
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+""")
+        with contextlib.nested(
+                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(host.Host,
+                                  "get_connection"),
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_conn, mock_platform):
+            mock_conn().getInfo.return_value = [
+                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
+
+            self.assertEqual(6866, self.host.get_memory_mb_used())
+
+    def test_get_memory_used_xen(self):
+        self.flags(virt_type='xen', group='libvirt')
+
+        class DiagFakeDomain(object):
+            def __init__(self, id, memmb):
+                self.id = id
+                self.memmb = memmb
+
+            def info(self):
+                return [0, 0, self.memmb * 1024]
+
+            def ID(self):
+                return self.id
+
+            def name(self):
+                return "instance000001"
+
+            def UUIDString(self):
+                return str(uuid.uuid4())
+
+        m = mock.mock_open(read_data="""
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+""")
+
+        with contextlib.nested(
+                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(host.Host,
+                                  "list_instance_domains"),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                  "_conn"),
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_list, mock_conn, mock_platform):
+            mock_list.return_value = [
+                DiagFakeDomain(0, 15814),
+                DiagFakeDomain(1, 750),
+                DiagFakeDomain(2, 1042)]
+            mock_conn.getInfo.return_value = [
+                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
+
+            self.assertEqual(8657, self.host.get_memory_mb_used())
+            mock_list.assert_called_with(only_guests=False)
+
+    def test_get_cpu_stats(self):
+        stats = self.host.get_cpu_stats()
+        self.assertEqual(
+            {'kernel': 5664160000000,
+             'idle': 1592705190000000,
+             'frequency': 800,
+             'user': 26728850000000,
+             'iowait': 6121490000000},
+            stats)
+
+    @mock.patch.object(fakelibvirt.virConnect, "defineXML")
+    def test_write_instance_config(self, mock_defineXML):
+        xml = "<x><name>foo</name></x>"
+        self.host.write_instance_config(xml)
+        mock_defineXML.assert_called_once_with(xml)
+
+    @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
+    def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
+        self.host.device_lookup_by_name("foo")
+        mock_nodeDeviceLookupByName.assert_called_once_with("foo")
+
+    @mock.patch.object(fakelibvirt.virConnect, "listDevices")
+    def test_list_pci_devices(self, mock_listDevices):
+        self.host.list_pci_devices(8)
+        mock_listDevices.assert_called_once_with('pci', 8)
+
+    @mock.patch.object(fakelibvirt.virConnect, "compareCPU")
+    def test_compare_cpu(self, mock_compareCPU):
+        self.host.compare_cpu("cpuxml")
+        mock_compareCPU.assert_called_once_with("cpuxml", 0)
 
 
 class DomainJobInfoTestCase(test.NoDBTestCase):

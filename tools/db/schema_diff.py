@@ -32,12 +32,16 @@ Run like:
 
     MYSQL:
 
-    ./tools/db/schema_diff.py mysql://root@localhost \
+    ./tools/db/schema_diff.py mysql+pymysql://root@localhost \
                               master:latest my_branch:82
 
     POSTGRESQL:
 
     ./tools/db/schema_diff.py postgresql://localhost \
+                              master:latest my_branch:82
+
+    DB2:
+    ./tools/db/schema_diff.py ibm_db_sa://localhost \
                               master:latest my_branch:82
 """
 
@@ -115,6 +119,28 @@ class Postgresql(object):
                 'pg_dump %(name)s > %(dump_filename)s'
                 % {'name': name, 'dump_filename': dump_filename},
                 shell=True)
+
+
+class Ibm_db_sa(object):
+
+    @classmethod
+    def db2cmd(cls, cmd):
+        """Wraps a command to be run under the DB2 instance user."""
+        subprocess.check_call('su - $(db2ilist) -c "%s"' % cmd, shell=True)
+
+    def create(self, name):
+        self.db2cmd('db2 \'create database %s\'' % name)
+
+    def drop(self, name):
+        self.db2cmd('db2 \'drop database %s\'' % name)
+
+    def dump(self, name, dump_filename):
+        self.db2cmd('db2look -d %(name)s -e -o %(dump_filename)s' %
+                    {'name': name, 'dump_filename': dump_filename})
+        # The output file gets dumped to the db2 instance user's home directory
+        # so we have to copy it back to our current working directory.
+        subprocess.check_call('cp /home/$(db2ilist)/%s ./' % dump_filename,
+                              shell=True)
 
 
 def _get_db_driver_class(db_url):

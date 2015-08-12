@@ -74,6 +74,10 @@ def _validate_uri(instance):
                                 require_authority=True)
 
 
+def noop_func(*args, **kwargs):
+    pass
+
+
 class _SchemaValidator(object):
     """A validator class
 
@@ -87,11 +91,14 @@ class _SchemaValidator(object):
     validator = None
     validator_org = jsonschema.Draft4Validator
 
-    def __init__(self, schema):
+    def __init__(self, schema, relax_additional_properties=False):
         validators = {
             'minimum': self._validate_minimum,
             'maximum': self._validate_maximum,
         }
+        if relax_additional_properties:
+            validators['additionalProperties'] = noop_func
+
         validator_cls = jsonschema.validators.extend(self.validator_org,
                                                      validators)
         format_checker = jsonschema.FormatChecker()

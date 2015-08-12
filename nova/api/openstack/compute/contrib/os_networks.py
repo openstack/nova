@@ -20,6 +20,7 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -99,6 +100,9 @@ class NetworkController(wsgi.Controller):
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.associate
+        nova_context.require_admin_context(context)
 
         try:
             self.network_api.associate(context, id, host=None, project=None)
@@ -137,6 +141,9 @@ class NetworkController(wsgi.Controller):
     def create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.create
+        nova_context.require_admin_context(context)
 
         def bad(e):
             return exc.HTTPBadRequest(explanation=e)
@@ -182,6 +189,9 @@ class NetworkController(wsgi.Controller):
     def add(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.associate
+        nova_context.require_admin_context(context)
         if not body:
             raise exc.HTTPUnprocessableEntity()
 

@@ -23,16 +23,21 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 from oslo_vmware import api
-from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim
 from oslo_vmware import vim_util
+import six
 
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import exception
-from nova.i18n import _, _LI, _LW
-from nova.openstack.common import versionutils
+from nova import utils
+from nova.i18n import _, _LI, _LE, _LW
+from nova import objects
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -46,16 +51,25 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               help='Hostname or IP address for connection to VMware VC '
-                    'host.'),
+               help='Hostname or IP address for connection to VMware '
+                    'vCenter host.'),
     cfg.IntOpt('host_port',
                default=443,
-               help='Port for connection to VMware VC host.'),
+               help='Port for connection to VMware vCenter host.'),
     cfg.StrOpt('host_username',
-               help='Username for connection to VMware VC host.'),
+               help='Username for connection to VMware vCenter host.'),
     cfg.StrOpt('host_password',
-               help='Password for connection to VMware VC host.',
+               help='Password for connection to VMware vCenter host.',
                secret=True),
+    cfg.StrOpt('ca_file',
+               help='Specify a CA bundle file to use in verifying the '
+                    'vCenter server certificate.'),
+    cfg.BoolOpt('insecure',
+                default=False,
+                help='If true, the vCenter server certificate is not '
+                     'verified. If false, then the default CA truststore is '
+                     'used for verification. This option is ignored if '
+                     '"ca_file" is set.'),
     cfg.MultiStrOpt('cluster_name',
                     help='Name of a VMware Cluster ComputeResource.'),
     cfg.StrOpt('datastore_regex',
@@ -148,6 +162,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         self._session = VMwareAPISession(scheme=scheme)
 
+        self._check_min_version()
+
         # Update the PBM location if necessary
         if CONF.vmware.pbm_enabled:
             self._update_pbm_location()
@@ -173,7 +189,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # Check if there are any clusters that were specified in the nova.conf
         # but are not in the vCenter, for missing clusters log a warning.
-        clusters_found = [v.get('name') for k, v in self.dict_mors.iteritems()]
+        clusters_found = [v.get('name')
+                          for k, v in six.iteritems(self.dict_mors)]
         missing_clusters = set(self._cluster_names) - set(clusters_found)
         if missing_clusters:
             LOG.warning(_LW("The following clusters could not be found in the "
@@ -197,6 +214,18 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Register the OpenStack extension
         self._register_openstack_extension()
 
+    def _check_min_version(self):
+        min_version = utils.convert_version_to_int(constants.MIN_VC_VERSION)
+        vc_version = vim_util.get_vc_version(self._session)
+        LOG.info(_LI("VMware vCenter version: %s"), vc_version)
+        if min_version > utils.convert_version_to_int(vc_version):
+            # TODO(garyk): enforce this from M
+            LOG.warning(_LW('Running Nova with a VMware vCenter version less '
+                            'than %(version)s is deprecated. The required '
+                            'minimum version of vCenter will be raised to '
+                            '%(version)s in the 13.0.0 release.'),
+                        {'version': constants.MIN_VC_VERSION})
+
     @property
     def need_legacy_block_device_info(self):
         return False
@@ -210,9 +239,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._session.pbm_wsdl_loc_set(pbm_wsdl_loc)
 
     def _validate_configuration(self):
-        if CONF.vmware.use_linked_clone is None:
-            raise vexc.UseLinkedCloneConfigurationFault()
-
         if CONF.vmware.pbm_enabled:
             if not CONF.vmware.pbm_default_policy:
                 raise error_util.PbmDefaultPolicyUnspecified()
@@ -304,6 +330,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
@@ -332,6 +359,9 @@ class VMwareVCDriver(driver.ComputeDriver):
         # vCenter does not actually run the VNC service
         # itself. You must talk to the VNC host underneath vCenter.
         return self._vmops.get_vnc_console(instance)
+
+    def get_mks_console(self, context, instance):
+        return self._vmops.get_mks_console(instance)
 
     def _update_resources(self):
         """This method creates a dictionary of VMOps, VolumeOps and VCState.
@@ -507,6 +537,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.spawn(context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info)
@@ -552,6 +583,36 @@ class VMwareVCDriver(driver.ComputeDriver):
         if not instance.node:
             return
 
+        # A resize uses the same instance on the VC. We do not delete that
+        # VM in the event of a revert
+        if instance.task_state == task_states.RESIZE_REVERTING:
+            return
+
+        # We need to detach attached volumes
+        if block_device_info is not None:
+            block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+            if block_device_mapping:
+                # Certain disk types, for example 'IDE' do not support hot
+                # plugging. Hence we need to power off the instance and update
+                # the instance state.
+                self._vmops.power_off(instance)
+                # TODO(garyk): update the volumeops to read the state form the
+                # VM instead of relying on a instance flag
+                instance.vm_state = vm_states.STOPPED
+                for disk in block_device_mapping:
+                    connection_info = disk['connection_info']
+                    try:
+                        self.detach_volume(connection_info, instance,
+                                           disk.get('device_name'))
+                    except Exception as e:
+                        with excutils.save_and_reraise_exception():
+                            LOG.error(_LE("Failed to detach %(device_name)s. "
+                                          "Exception: %(exc)s"),
+                                      {'device_name': disk.get('device_name'),
+                                       'exc': e},
+                                      instance=instance)
+
         self._vmops.destroy(instance, destroy_disks)
 
     def pause(self, instance):
@@ -573,6 +634,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
@@ -663,6 +725,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.attach_interface(instance, image_meta, vif)
 
     def detach_interface(self, instance, vif):
@@ -679,7 +742,9 @@ class VMwareAPISession(api.VMwareAPISession):
                  username=CONF.vmware.host_username,
                  password=CONF.vmware.host_password,
                  retry_count=CONF.vmware.api_retry_count,
-                 scheme="https"):
+                 scheme="https",
+                 cacert=CONF.vmware.ca_file,
+                 insecure=CONF.vmware.insecure):
         super(VMwareAPISession, self).__init__(
                 host=host_ip,
                 port=host_port,
@@ -689,8 +754,9 @@ class VMwareAPISession(api.VMwareAPISession):
                 task_poll_interval=CONF.vmware.task_poll_interval,
                 scheme=scheme,
                 create_session=True,
-                wsdl_loc=CONF.vmware.wsdl_location
-                )
+                wsdl_loc=CONF.vmware.wsdl_location,
+                cacert=cacert,
+                insecure=insecure)
 
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""

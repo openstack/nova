@@ -36,7 +36,7 @@ class _TestVirtualInterface(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_get_by_id(self):
         with mock.patch.object(db, 'virtual_interface_get') as get:

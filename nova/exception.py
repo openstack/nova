@@ -28,6 +28,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+import six
 import webob.exc
 
 from nova.i18n import _, _LE
@@ -55,7 +56,7 @@ class ConvertedException(webob.exc.WSGIHTTPException):
 
 def _cleanse_dict(original):
     """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
-    return {k: v for k, v in original.iteritems() if "_pass" not in k}
+    return {k: v for k, v in six.iteritems(original) if "_pass" not in k}
 
 
 def wrap_exception(notifier=None, get_notifier=None):
@@ -122,15 +123,16 @@ class NovaException(Exception):
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
                 LOG.exception(_LE('Exception in string format operation'))
-                for name, value in kwargs.iteritems():
+                for name, value in six.iteritems(kwargs):
                     LOG.error("%s: %s" % (name, value))    # noqa
 
                 if CONF.fatal_exception_format_errors:
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    six.reraise(*exc_info)
                 else:
                     # at least get the core message out if something happened
                     message = self.msg_fmt
 
+        self.message = message
         super(NovaException, self).__init__(message)
 
     def format_message(self):
@@ -185,6 +187,10 @@ class AdminRequired(Forbidden):
 
 class PolicyNotAuthorized(Forbidden):
     msg_fmt = _("Policy doesn't allow %(action)s to be performed.")
+
+
+class VolumeLimitExceeded(Forbidden):
+    msg_fmt = _("Volume resource quota exceeded")
 
 
 class ImageNotActive(NovaException):
@@ -274,7 +280,12 @@ class VolumeUnattached(Invalid):
 class VolumeNotCreated(NovaException):
     msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"
-                " attempts.")
+                " attempts. And its status is %(volume_status)s.")
+
+
+class VolumeEncryptionNotSupported(Invalid):
+    msg_fmt = _("Volume encryption is not supported for %(volume_type)s "
+                "volume %(volume_id)s")
 
 
 class InvalidKeypair(Invalid):
@@ -318,11 +329,6 @@ class InvalidIpProtocol(Invalid):
 
 class InvalidContentType(Invalid):
     msg_fmt = _("Invalid content type %(content_type)s.")
-
-
-class InvalidUnicodeParameter(Invalid):
-    msg_fmt = _("Invalid Parameter: "
-                "Unicode is not supported by the current database.")
 
 
 class InvalidAPIVersionString(Invalid):
@@ -569,6 +575,10 @@ class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
+class BDMNotFound(NotFound):
+    msg_fmt = _("No Block Device Mapping with id %(id)s.")
+
+
 class VolumeBDMNotFound(NotFound):
     msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
 
@@ -745,6 +755,13 @@ class VifDetailsMissingVhostuserSockPath(Invalid):
                 " for vif %(vif_id)s")
 
 
+class VifDetailsMissingMacvtapParameters(Invalid):
+    msg_fmt = _("Parameters %(missing_params)s not present in"
+                " vif_details for vif %(vif_id)s. Check your Neutron"
+                " configuration to validate that the macvtap parameters are"
+                " correct.")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -877,6 +894,10 @@ class NoFloatingIpInterface(NotFound):
 
 class FloatingIpAllocateFailed(NovaException):
     msg_fmt = _("Floating IP allocate failed.")
+
+
+class FloatingIpAssociateFailed(NovaException):
+    msg_fmt = _("Floating IP %(address)s association has failed.")
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
@@ -1153,16 +1174,8 @@ class ClassNotFound(NotFound):
     msg_fmt = _("Class %(class_name)s could not be found: %(exception)s")
 
 
-class NotAllowed(NovaException):
-    msg_fmt = _("Action not allowed.")
-
-
 class InstanceTagNotFound(NotFound):
     msg_fmt = _("Instance %(instance_id)s has no tag '%(tag)s'")
-
-
-class ImageRotationNotAllowed(NovaException):
-    msg_fmt = _("Rotation is not allowed for snapshots")
 
 
 class RotationRequiredForBackup(NovaException):
@@ -1251,6 +1264,10 @@ class InsufficientFreeMemory(NovaException):
 
 class NoValidHost(NovaException):
     msg_fmt = _("No valid host was found. %(reason)s")
+
+
+class MaxRetriesExceeded(NoValidHost):
+    msg_fmt = _("Exceeded maximum number of retries. %(reason)s")
 
 
 class QuotaError(NovaException):
@@ -1357,14 +1374,6 @@ class InvalidAssociation(NotFound):
     msg_fmt = _("Invalid association.")
 
 
-class NodeNotFound(NotFound):
-    msg_fmt = _("Node %(node_id)s could not be found.")
-
-
-class NodeNotFoundByUUID(NotFound):
-    msg_fmt = _("Node with UUID %(node_uuid)s could not be found.")
-
-
 class MarkerNotFound(NotFound):
     msg_fmt = _("Marker %(marker)s could not be found.")
 
@@ -1433,9 +1442,18 @@ class InstanceUserDataMalformed(NovaException):
     msg_fmt = _("User data needs to be valid base 64.")
 
 
-class UnexpectedTaskStateError(NovaException):
-    msg_fmt = _("Unexpected task state: expecting %(expected)s but "
-                "the actual state is %(actual)s")
+class InstanceUpdateConflict(NovaException):
+    msg_fmt = _("Conflict updating instance %(instance_uuid)s. "
+                "Expected: %(expected)s. Actual: %(actual)s")
+
+
+class UnknownInstanceUpdateConflict(InstanceUpdateConflict):
+    msg_fmt = _("Conflict updating instance %(instance_uuid)s, but we were "
+                "unable to determine the cause")
+
+
+class UnexpectedTaskStateError(InstanceUpdateConflict):
+    pass
 
 
 class UnexpectedDeletingTaskStateError(UnexpectedTaskStateError):
@@ -1449,11 +1467,6 @@ class InstanceActionNotFound(NovaException):
 
 class InstanceActionEventNotFound(NovaException):
     msg_fmt = _("Event %(event)s not found for action id %(action_id)s")
-
-
-class UnexpectedVMStateError(NovaException):
-    msg_fmt = _("Unexpected VM state: expecting %(expected)s but "
-                "the actual state is %(actual)s")
 
 
 class CryptoCAFileNotFound(FileNotFound):
@@ -1512,29 +1525,16 @@ class InstanceFaultRollback(NovaException):
         super(InstanceFaultRollback, self).__init__(message % inner_exception)
 
 
-class UnsupportedObjectError(NovaException):
-    msg_fmt = _('Unsupported object type %(objtype)s')
+class InstanceUpdateConflict(NovaException):
+    msg_fmt = _('Conflict updating instance %(instance_uuid)s')
 
 
 class OrphanedObjectError(NovaException):
     msg_fmt = _('Cannot call %(method)s on orphaned %(objtype)s object')
 
 
-class IncompatibleObjectVersion(NovaException):
-    msg_fmt = _('Version %(objver)s of %(objname)s is not supported. The '
-                'maximum supported version is: %(supported)s')
-
-
-class ReadOnlyFieldError(NovaException):
-    msg_fmt = _('Cannot modify readonly field %(field)s')
-
-
 class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
-
-
-class ObjectFieldInvalid(NovaException):
-    msg_fmt = _('Field %(field)s of %(objname)s is not an instance of Field')
 
 
 class CoreAPIMissing(NovaException):
@@ -1560,11 +1560,6 @@ class InstanceGroupNotFound(NotFound):
 
 class InstanceGroupIdExists(NovaException):
     msg_fmt = _("Instance group %(group_uuid)s already exists.")
-
-
-class InstanceGroupMetadataNotFound(NotFound):
-    msg_fmt = _("Instance group %(group_uuid)s has no metadata with "
-                "key %(metadata_key)s.")
 
 
 class InstanceGroupMemberNotFound(NotFound):
@@ -1664,10 +1659,6 @@ class MissingParameter(NovaException):
 
 class PciConfigInvalidWhitelist(Invalid):
     msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
-
-
-class PciTrackerInvalidNodeId(Invalid):
-    msg_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
 
 
 # Cannot be templated, msg needs to be constructed when raised.
@@ -1830,8 +1821,15 @@ class InvalidConnectionInfo(Invalid):
 
 
 class InstanceQuiesceNotSupported(Invalid):
-    msg_fmt = _('Quiescing is not supported in instance %(instance_id)s: '
-                '%(reason)s')
+    msg_fmt = _('Quiescing is not supported in instance %(instance_id)s')
+
+
+class QemuGuestAgentNotEnabled(Invalid):
+    msg_fmt = _('QEMU guest agent is not enabled')
+
+
+class SetAdminPasswdNotSupported(Invalid):
+    msg_fmt = _('Set admin password is not supported')
 
 
 class MemoryPageSizeInvalid(Invalid):
@@ -1856,6 +1854,11 @@ class CPUPinningInvalid(Invalid):
                 "pinned set %(pinned)s")
 
 
+class CPUPinningUnknown(Invalid):
+    msg_fmt = _("CPU set to pin/unpin %(requested)s must be a subset of "
+                "known CPU set %(cpuset)s")
+
+
 class ImageCPUPinningForbidden(Forbidden):
     msg_fmt = _("Image property 'hw_cpu_policy' is not permitted to override "
                 "CPU pinning policy set against the flavor")
@@ -1875,3 +1878,27 @@ class NUMATopologyUnsupported(Invalid):
 
 class MemoryPagesUnsupported(Invalid):
     msg_fmt = _("Host does not support guests with custom memory page sizes")
+
+
+class EnumFieldInvalid(Invalid):
+    msg_fmt = _('%(typename)s in %(fieldname)s is not an instance of Enum')
+
+
+class EnumFieldUnset(Invalid):
+    msg_fmt = _('%(fieldname)s missing field type')
+
+
+class InvalidImageFormat(Invalid):
+    msg_fmt = _("Invalid image format '%(format)s'")
+
+
+class UnsupportedImageModel(Invalid):
+    msg_fmt = _("Image model '%(image)s' is not supported")
+
+
+class DatabaseMigrationError(NovaException):
+    msg_fmt = _("Database migration failed: %(reason)s")
+
+
+class HostMappingNotFound(Invalid):
+    msg_fmt = _("Host '%(name)s' is not mapped to any cell")

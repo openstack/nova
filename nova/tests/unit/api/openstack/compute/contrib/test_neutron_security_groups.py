@@ -12,6 +12,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import six
 import uuid
 
 import mock
@@ -53,7 +54,7 @@ class TestNeutronSecurityGroupsV21(
         TestNeutronSecurityGroupsTestCase):
 
     def _create_sg_template(self, **kwargs):
-        sg = test_security_groups.security_group_template(**kwargs)
+        sg = test_security_groups.security_group_request_template(**kwargs)
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         return self.controller.create(req, {'security_group': sg})
 
@@ -174,7 +175,8 @@ class TestNeutronSecurityGroupsV21(
                                       sg['id'], use_admin_context=True)
         self.controller.delete(req, sg['id'])
 
-    def test_delete_security_group_in_use(self):
+    @mock.patch('nova.compute.utils.refresh_info_cache_for_instance')
+    def test_delete_security_group_in_use(self, refresh_info_cache_mock):
         sg = self._create_sg_template().get('security_group')
         self._create_network()
         db_inst = fakes.stub_instance(id=1, nw_cache=[], security_groups=[])
@@ -398,7 +400,7 @@ class TestNeutronSecurityGroupsV21(
 
 
 class TestNeutronSecurityGroupsV2(TestNeutronSecurityGroupsV21):
-    controller_cls = security_groups.SecurityGroupController
+    secgrp_ctl_cls = security_groups.SecurityGroupController
     server_secgrp_ctl_cls = security_groups.ServerSecurityGroupController
     secgrp_act_ctl_cls = security_groups.SecurityGroupActionController
 
@@ -638,6 +640,14 @@ class MockClient(object):
 
     def create_security_group(self, body=None):
         s = body.get('security_group')
+        if not isinstance(s.get('name', ''), six.string_types):
+            msg = ('BadRequest: Invalid input for name. Reason: '
+                   'None is not a valid string.')
+            raise n_exc.BadRequest(message=msg)
+        if not isinstance(s.get('description.', ''), six.string_types):
+            msg = ('BadRequest: Invalid input for description. Reason: '
+                   'None is not a valid string.')
+            raise n_exc.BadRequest(message=msg)
         if len(s.get('name')) > 255 or len(s.get('description')) > 255:
             msg = 'Security Group name great than 255'
             raise n_exc.NeutronClientException(message=msg, status_code=401)

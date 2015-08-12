@@ -30,6 +30,7 @@ the other libvirt related classes
 import operator
 import os
 import socket
+import sys
 import threading
 
 import eventlet
@@ -41,6 +42,8 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import units
+import six
 
 from nova import context as nova_context
 from nova import exception
@@ -53,6 +56,7 @@ from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import guest
 
 libvirt = None
 
@@ -60,11 +64,17 @@ LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
-native_Queue = patcher.original("Queue")
+native_Queue = patcher.original("queue" if six.PY3 else "Queue")
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
+
+
+# This list is for libvirt hypervisor drivers that need special handling.
+# This is *not* the complete list of supported hypervisor drivers.
+HV_DRIVER_QEMU = "QEMU"
+HV_DRIVER_XEN = "Xen"
 
 
 class DomainJobInfo(object):
@@ -382,25 +392,22 @@ class Host(object):
             event = args[0]
             self._events_delayed.pop(event.uuid, None)
 
-        if self._lifecycle_delay > 0:
-            # Cleanup possible delayed stop events.
-            if event.uuid in self._events_delayed.keys():
-                self._events_delayed[event.uuid].cancel()
-                self._events_delayed.pop(event.uuid, None)
-                LOG.debug("Removed pending event for %s due to "
-                          "lifecycle event", event.uuid)
+        # Cleanup possible delayed stop events.
+        if event.uuid in self._events_delayed.keys():
+            self._events_delayed[event.uuid].cancel()
+            self._events_delayed.pop(event.uuid, None)
+            LOG.debug("Removed pending event for %s due to "
+                      "lifecycle event", event.uuid)
 
-            if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
-                # Delay STOPPED event, as they may be followed by a STARTED
-                # event in case the instance is rebooting
-                id_ = greenthread.spawn_after(self._lifecycle_delay,
-                                              self._event_emit, event)
-                self._events_delayed[event.uuid] = id_
-                # add callback to cleanup self._events_delayed dict after
-                # event was called
-                id_.link(event_cleanup, event)
-            else:
-                self._event_emit(event)
+        if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
+            # Delay STOPPED event, as they may be followed by a STARTED
+            # event in case the instance is rebooting
+            id_ = greenthread.spawn_after(self._lifecycle_delay,
+                                          self._event_emit, event)
+            self._events_delayed[event.uuid] = id_
+            # add callback to cleanup self._events_delayed dict after
+            # event was called
+            id_.link(event_cleanup, event)
         else:
             self._event_emit(event)
 
@@ -544,9 +551,14 @@ class Host(object):
         libvirt.registerErrorHandler(self._libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
         self._init_events()
+        self._initialized = True
 
     def _version_check(self, lv_ver=None, hv_ver=None, hv_type=None,
                        op=operator.lt):
+        """Check libvirt version, hypervisor version, and hypervisor type
+
+        :param hv_type: hypervisor driver from the top of this file.
+        """
         conn = self.get_connection()
         try:
             if lv_ver is not None:
@@ -577,6 +589,7 @@ class Host(object):
         return self._version_check(
             lv_ver=lv_ver, hv_ver=hv_ver, hv_type=hv_type, op=operator.ne)
 
+    # TODO(sahid): needs to be private
     def get_domain(self, instance):
         """Retrieve libvirt domain object for an instance.
 
@@ -592,6 +605,16 @@ class Host(object):
         :returns: a libvirt.Domain object
         """
         return self._get_domain_by_name(instance.name)
+
+    def get_guest(self, instance):
+        """Retrieve libvirt domain object for an instance.
+
+        :param instance: an nova.objects.Instance object
+
+        :returns: a nova.virt.libvirt.Guest object
+        """
+        return guest.Guest(
+            self.get_domain(instance))
 
     def _get_domain_by_id(self, instance_id):
         """Retrieve libvirt domain object given an instance id.
@@ -823,9 +846,10 @@ class Host(object):
     def create_secret(self, usage_type, usage_id, password=None):
         """Create a secret.
 
-        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
+        :param usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
                            'rbd' will be converted to 'ceph'.
-        usage_id: name of resource in secret
+        :param usage_id: name of resource in secret
+        :param password: optional secret value to set
         """
         secret_conf = vconfig.LibvirtConfigSecret()
         secret_conf.ephemeral = False
@@ -865,3 +889,98 @@ class Host(object):
 
     def get_domain_info(self, virt_dom):
         return compat.get_domain_info(libvirt, self, virt_dom)
+
+    def _get_hardware_info(self):
+        """Returns hardware information about the Node.
+
+        Note that the memory size is reported in MiB instead of KiB.
+        """
+        return self.get_connection().getInfo()
+
+    def get_cpu_count(self):
+        """Returns the total numbers of cpu in the host."""
+        return self._get_hardware_info()[2]
+
+    def get_memory_mb_total(self):
+        """Get the total memory size(MB) of physical computer.
+
+        :returns: the total amount of memory(MB).
+        """
+        return self._get_hardware_info()[1]
+
+    def get_memory_mb_used(self):
+        """Get the used memory size(MB) of physical computer.
+
+        :returns: the total usage of memory(MB).
+        """
+        if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
+            return 0
+
+        with open('/proc/meminfo') as fp:
+            m = fp.read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+        if CONF.libvirt.virt_type == 'xen':
+            used = 0
+            for dom in self.list_instance_domains(only_guests=False):
+                try:
+                    dom_mem = int(self.get_domain_info(dom)[2])
+                except libvirt.libvirtError as e:
+                    LOG.warn(_LW("couldn't obtain the memory from domain:"
+                                 " %(uuid)s, exception: %(ex)s") %
+                             {"uuid": dom.UUIDString(), "ex": e})
+                    continue
+                # skip dom0
+                if dom.ID() != 0:
+                    used += dom_mem
+                else:
+                    # the mem reported by dom0 is be greater of what
+                    # it is being used
+                    used += (dom_mem -
+                             (int(m[idx1 + 1]) +
+                              int(m[idx2 + 1]) +
+                              int(m[idx3 + 1])))
+            # Convert it to MB
+            return used / units.Ki
+        else:
+            avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
+            # Convert it to MB
+            return self.get_memory_mb_total() - avail / units.Ki
+
+    def get_cpu_stats(self):
+        """Returns the current CPU state of the host with frequency."""
+        stats = self.get_connection().getCPUStats(
+            libvirt.VIR_NODE_CPU_STATS_ALL_CPUS, 0)
+        # getInfo() returns various information about the host node
+        # No. 3 is the expected CPU frequency.
+        stats["frequency"] = self._get_hardware_info()[3]
+        return stats
+
+    def write_instance_config(self, xml):
+        """Defines a domain, but does not start it.
+
+        :param xml: XML domain definition of the guest.
+
+        :returns: a virDomain instance
+        """
+        return self.get_connection().defineXML(xml)
+
+    def device_lookup_by_name(self, name):
+        """Lookup a node device by its name.
+
+
+        :returns: a virNodeDevice instance
+        """
+        return self.get_connection().nodeDeviceLookupByName(name)
+
+    def list_pci_devices(self, flags=0):
+        """Lookup pci devices.
+
+        :returns: a list of virNodeDevice instance
+        """
+        return self.get_connection().listDevices("pci", flags)
+
+    def compare_cpu(self, xmlDesc, flags=0):
+        """Compares the given CPU description with the host CPU."""
+        return self.get_connection().compareCPU(xmlDesc, flags)

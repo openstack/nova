@@ -32,13 +32,9 @@ def create(node):
     """Create an instance of the appropriate DriverFields class.
 
     :param node: a node object returned from ironicclient
-    :returns: GenericDriverFields or a subclass thereof, as appropriate
-              for the supplied node.
+    :returns: A GenericDriverFields instance.
     """
-    if 'pxe' in node.driver:
-        return PXEDriverFields(node)
-    else:
-        return GenericDriverFields(node)
+    return GenericDriverFields(node)
 
 
 class GenericDriverFields(object):
@@ -66,6 +62,8 @@ class GenericDriverFields(object):
                       'value': str(instance.root_gb)})
         patch.append({'path': '/instance_info/swap_mb', 'op': 'add',
                       'value': str(flavor['swap'])})
+        patch.append({'path': '/instance_info/display_name',
+                      'op': 'add', 'value': instance.display_name})
 
         if instance.ephemeral_gb:
             patch.append({'path': '/instance_info/ephemeral_gb',
@@ -114,78 +112,3 @@ class GenericDriverFields(object):
 
         """
         return []
-
-
-class PXEDriverFields(GenericDriverFields):
-
-    def _get_kernel_ramdisk_dict(self, flavor):
-        """Get the deploy ramdisk and kernel IDs from the flavor.
-
-        :param flavor: the flavor object.
-        :returns: a dict with the pxe options for the deploy ramdisk and
-            kernel if the IDs were found in the flavor, otherwise an empty
-            dict is returned.
-
-        """
-        extra_specs = flavor['extra_specs']
-        deploy_kernel = extra_specs.get('baremetal:deploy_kernel_id')
-        deploy_ramdisk = extra_specs.get('baremetal:deploy_ramdisk_id')
-        deploy_ids = {}
-        if deploy_kernel and deploy_ramdisk:
-            deploy_ids['pxe_deploy_kernel'] = deploy_kernel
-            deploy_ids['pxe_deploy_ramdisk'] = deploy_ramdisk
-        return deploy_ids
-
-    def get_deploy_patch(self, instance, image_meta, flavor,
-                         preserve_ephemeral=None):
-        """Build a patch to add the required fields to deploy a node.
-
-        Build a json-patch to add the required fields to deploy a node
-        using the PXE driver.
-
-        :param instance: the instance object.
-        :param image_meta: the metadata associated with the instance
-                           image.
-        :param flavor: the flavor object.
-        :param preserve_ephemeral: preserve_ephemeral status (bool) to be
-                                   specified during rebuild.
-        :returns: a json-patch with the fields that needs to be updated.
-
-        """
-        patch = super(PXEDriverFields, self).get_deploy_patch(
-                    instance, image_meta, flavor, preserve_ephemeral)
-
-        # TODO(lucasagomes): Remove it in Kilo. This is for backwards
-        # compatibility with Icehouse. If flavor contains both ramdisk
-        # and kernel ids, use them.
-        for key, value in self._get_kernel_ramdisk_dict(flavor).items():
-            patch.append({'path': '/driver_info/%s' % key,
-                          'op': 'add', 'value': value})
-
-        return patch
-
-    def get_cleanup_patch(self, instance, network_info, flavor):
-        """Build a patch to clean up the fields.
-
-        Build a json-patch to remove the fields used to deploy a node
-        using the PXE driver. Note that the fields added to the Node's
-        instance_info don't need to be removed because they are purged
-        during the Node's tear down.
-
-        :param instance: the instance object.
-        :param network_info: the instance network information.
-        :param flavor: the flavor object.
-        :returns: a json-patch with the fields that needs to be updated.
-
-        """
-        patch = super(PXEDriverFields, self).get_cleanup_patch(
-                    instance, network_info, flavor)
-
-        # TODO(lucasagomes): Remove it in Kilo. This is for backwards
-        # compatibility with Icehouse. If flavor contains a ramdisk and
-        # kernel id remove it from nodes as part of the tear down process
-        for key in self._get_kernel_ramdisk_dict(flavor):
-            if key in self.node.driver_info:
-                patch.append({'op': 'remove',
-                              'path': '/driver_info/%s' % key})
-        return patch

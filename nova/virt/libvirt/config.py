@@ -618,6 +618,7 @@ class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
         self.system_version = None
         self.system_serial = None
         self.system_uuid = None
+        self.system_family = None
 
     def format_dom(self):
         sysinfo = super(LibvirtConfigGuestSysinfo, self).format_dom()
@@ -674,6 +675,13 @@ class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
                 system = etree.Element("system")
             info = etree.Element("entry", name="uuid")
             info.text = self.system_uuid
+            system.append(info)
+
+        if self.system_family is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="family")
+            info.text = self.system_family
             system.append(info)
 
         if bios is not None:
@@ -752,7 +760,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", dev=self.source_path))
         elif self.source_type == "mount":
             dev.append(etree.Element("source", dir=self.source_path))
-        elif self.source_type == "network":
+        elif self.source_type == "network" and self.source_protocol:
             source = etree.Element("source", protocol=self.source_protocol)
             if self.source_name is not None:
                 source.set('name', self.source_name)
@@ -1131,6 +1139,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vhostuser_mode = None
         self.vhostuser_path = None
         self.vhostuser_type = None
+        self.vhost_queues = None
         self.vif_inbound_peak = None
         self.vif_inbound_burst = None
         self.vif_inbound_average = None
@@ -1150,7 +1159,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(etree.Element("model", type=self.model))
 
         if self.driver_name:
-            dev.append(etree.Element("driver", name=self.driver_name))
+            drv_elem = etree.Element("driver", name=self.driver_name)
+            if self.vhost_queues is not None:
+                drv_elem.set('queues', str(self.vhost_queues))
+            dev.append(drv_elem)
 
         if self.net_type == "ethernet":
             if self.script is not None:
@@ -1607,7 +1619,7 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
                 hugepages.append(item.format_dom())
             root.append(hugepages)
         if not self.sharedpages:
-            root.append(etree.Element("nosharedpages"))
+            root.append(etree.Element("nosharepages"))
         if self.locked:
             root.append(etree.Element("locked"))
 

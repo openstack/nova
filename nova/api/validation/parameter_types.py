@@ -19,6 +19,8 @@ import copy
 import re
 import unicodedata
 
+import six
+
 
 def _is_printable(char):
     """determine if a unicode code point is printable.
@@ -36,7 +38,7 @@ def _is_printable(char):
 
 def _get_all_chars():
     for i in range(0xFFFF):
-        yield unichr(i)
+        yield six.unichr(i)
 
 # build a regex that matches all printable characters. This allows
 # spaces in the middle of the name. Also note that the regexp below

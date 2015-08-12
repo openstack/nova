@@ -105,7 +105,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               mock.sentinel.instance_uuids)
 
 
-class SchedulerV3PassthroughTestCase(test.TestCase):
+class SchedulerV3PassthroughTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')

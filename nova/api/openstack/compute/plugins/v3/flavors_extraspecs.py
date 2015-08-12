@@ -16,13 +16,13 @@
 import six
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import flavors_extraspecs
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova import utils
 
 ALIAS = 'os-flavor-extra-specs'
@@ -36,13 +36,13 @@ class FlavorExtraSpecsController(wsgi.Controller):
         super(FlavorExtraSpecsController, self).__init__(*args, **kwargs)
 
     def _get_extra_specs(self, context, flavor_id):
-        flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+        flavor = common.get_flavor(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
 
     # NOTE(gmann): Max length for numeric value is being checked
     # explicitly as json schema cannot have max length check for numeric value
     def _check_extra_specs_value(self, specs):
-        for key, value in specs.iteritems():
+        for key, value in six.iteritems(specs):
             try:
                 if isinstance(value, (six.integer_types, float)):
                     value = six.text_type(value)
@@ -70,8 +70,8 @@ class FlavorExtraSpecsController(wsgi.Controller):
 
         specs = body['extra_specs']
         self._check_extra_specs_value(specs)
+        flavor = common.get_flavor(context, flavor_id)
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
             flavor.save()
         except exception.FlavorExtraSpecUpdateCreateFailed as e:
@@ -90,8 +90,8 @@ class FlavorExtraSpecsController(wsgi.Controller):
         if id not in body:
             expl = _('Request body and URI mismatch')
             raise webob.exc.HTTPBadRequest(explanation=expl)
+        flavor = common.get_flavor(context, flavor_id)
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **body)
             flavor.save()
         except exception.FlavorExtraSpecUpdateCreateFailed as e:
@@ -105,11 +105,9 @@ class FlavorExtraSpecsController(wsgi.Controller):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
         authorize(context, action='show')
+        flavor = common.get_flavor(context, flavor_id)
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             return {id: flavor.extra_specs[id]}
-        except exception.FlavorNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except KeyError:
             msg = _("Flavor %(flavor_id)s has no extra specs with "
                     "key %(key)s.") % dict(flavor_id=flavor_id,
@@ -124,8 +122,8 @@ class FlavorExtraSpecsController(wsgi.Controller):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
+        flavor = common.get_flavor(context, flavor_id)
         try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             del flavor.extra_specs[id]
             flavor.save()
         except (exception.FlavorExtraSpecsNotFound,

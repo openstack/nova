@@ -41,7 +41,6 @@ Nova Specific Commandments
 - [N329] Validate that LOG.exception messages use _LE.
 - [N330] Validate that LOG.warning and LOG.warn messages use _LW.
 - [N332] Check that the api_version decorator is the first decorator on a method
-- [N333] Check for oslo library imports use the non-namespaced packages
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
   assertIn/NotIn(A, B, message)
 - [N335] Check for usage of deprecated assertRaisesRegexp
@@ -50,6 +49,7 @@ Nova Specific Commandments
 - [N338] Change assertEqual(A in B, True), assertEqual(True, A in B),
   assertEqual(A in B, False) or assertEqual(False, A in B) to the more specific
   assertIn/NotIn(A, B)
+- [N339] Check common raise_feature_not_supported() is used for v2.1 HTTPNotImplemented response.
 
 Creating Unit Tests
 -------------------
@@ -75,13 +75,13 @@ testr arguments that are needed to tox. For example, you can run:
 --analyze-isolation to its argument list.
 
 Python packages may also have dependencies that are outside of tox's ability
-to install. Please refer to doc/source/devref/development.environment.rst for
+to install. Please refer to ``doc/source/development.environment.rst`` for
 a list of those packages on Ubuntu, Fedora and Mac OS X.
 
 To run a single or restricted set of tests, pass a regex that matches
 the class name containing the tests as an extra ``tox`` argument;
 e.g. ``tox -- TestWSGIServer`` (note the double-hypen) will test all
-WSGI server tests from ``nova/tests/test_wsgi.py``; ``--
+WSGI server tests from ``nova/tests/unit/test_wsgi.py``; ``--
 TestWSGIServer.test_uri_length_limit`` would run just that test, and
 ``-- TestWSGIServer|TestWSGIServerWithSSL`` would run tests from both
 classes.
@@ -97,21 +97,23 @@ http://wiki.openstack.org/testr
 Building Docs
 -------------
 Normal Sphinx docs can be built via the setuptools ``build_sphinx`` command. To
-do this via ``tox``, simply run ``tox -evenv -- python setup.py build_sphinx``,
+do this via ``tox``, simply run ``tox -e docs``,
 which will cause a virtualenv with all of the needed dependencies to be
 created and then inside of the virtualenv, the docs will be created and
 put into doc/build/html.
 
-If you'd like a PDF of the documentation, you'll need LaTeX installed, and
-additionally some fonts. On Ubuntu systems, you can get what you need with::
+Building a PDF of the Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you'd like a PDF of the documentation, you'll need LaTeX and ImageMagick
+installed, and additionally some fonts. On Ubuntu systems, you can get what you
+need with::
 
-    apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+    apt-get install texlive-full imagemagick
 
-Then run ``build_sphinx_latex``, change to the build dir and run ``make``.
-Like so::
+Then you can then use the ``build_latex_pdf.sh`` script in toos/ to take care
+of both the the sphinx latex generation and the latex compilation. For example::
 
-    tox -evenv -- python setup.py build_sphinx_latex
-    cd build/sphinx/latex
-    make
+    tools/build_latex_pdf.sh
 
-You should wind up with a PDF - Nova.pdf.
+The script must be run from the root of the Nova repository and it'll copy the
+output pdf to Nova.pdf in that directory.

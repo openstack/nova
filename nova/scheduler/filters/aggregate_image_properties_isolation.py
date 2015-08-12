@@ -15,6 +15,7 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
@@ -50,7 +51,7 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
         image_props = spec.get('image', {}).get('properties', {})
         metadata = utils.aggregate_metadata_get_by_host(host_state)
 
-        for key, options in metadata.iteritems():
+        for key, options in six.iteritems(metadata):
             if (cfg_namespace and
                     not key.startswith(cfg_namespace + cfg_separator)):
                 continue

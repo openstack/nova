@@ -17,9 +17,11 @@
 import copy
 
 from oslo_log import log as logging
+import six
 
 from nova import exception
 from nova.i18n import _LE
+from nova.objects import pci_device_pool
 from nova.pci import utils
 from nova.pci import whitelist
 
@@ -58,7 +60,7 @@ class PciDeviceStats(object):
         # NOTE(sbauza): Stats are a PCIDevicePoolList object
         self.pools = [pci_pool.to_dict()
                       for pci_pool in stats] if stats else []
-        self.pools.sort(self.pool_cmp)
+        self.pools.sort(key=lambda item: len(item))
 
     def _equal_properties(self, dev, entry, matching_keys):
         return all(dev.get(prop) == entry.get(prop)
@@ -86,7 +88,7 @@ class PciDeviceStats(object):
         if not devspec:
             return
         tags = devspec.get_tags()
-        pool = {k: dev.get(k) for k in self.pool_keys}
+        pool = {k: getattr(dev, k) for k in self.pool_keys}
         if tags:
             pool.update(tags)
         return pool
@@ -100,7 +102,7 @@ class PciDeviceStats(object):
                 dev_pool['count'] = 0
                 dev_pool['devices'] = []
                 self.pools.append(dev_pool)
-                self.pools.sort(self.pool_cmp)
+                self.pools.sort(key=lambda item: len(item))
                 pool = dev_pool
             pool['count'] += 1
             pool['devices'].append(dev)
@@ -157,8 +159,7 @@ class PciDeviceStats(object):
                           " on the compute node semaphore"))
                 for d in range(len(alloc_devices)):
                     self.add_device(alloc_devices.pop())
-                raise exception.PciDeviceRequestFailed(requests=pci_requests)
-
+                return None
             for pool in pools:
                 if pool['count'] >= count:
                     num_alloc = count
@@ -233,15 +234,11 @@ class PciDeviceStats(object):
                                             for r in requests]):
             raise exception.PciDeviceRequestFailed(requests=requests)
 
-    @staticmethod
-    def pool_cmp(dev1, dev2):
-        return len(dev1) - len(dev2)
-
     def __iter__(self):
         # 'devices' shouldn't be part of stats
         pools = []
         for pool in self.pools:
-            tmp = {k: v for k, v in pool.iteritems() if k != 'devices'}
+            tmp = {k: v for k, v in six.iteritems(pool) if k != 'devices'}
             pools.append(tmp)
         return iter(pools)
 
@@ -254,3 +251,8 @@ class PciDeviceStats(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+    def to_device_pools_obj(self):
+        """Return the contents of the pools as a PciDevicePoolList object."""
+        stats = [x for x in self]
+        return pci_device_pool.from_pci_stats(stats)

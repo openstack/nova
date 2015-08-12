@@ -84,8 +84,8 @@ class QuotaClassSetsController(wsgi.Controller):
                 bad_keys.append(key)
                 continue
             try:
-                value = utils.validate_integer(
-                        body['quota_class_set'][key], key)
+                body['quota_class_set'][key] = utils.validate_integer(
+                    body['quota_class_set'][key], key, max_value=db.MAX_INT)
             except exception.InvalidInput as e:
                 raise webob.exc.HTTPBadRequest(
                     explanation=e.format_message())
@@ -94,15 +94,20 @@ class QuotaClassSetsController(wsgi.Controller):
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        for key in quota_class_set.keys():
-            value = utils.validate_integer(
-                        body['quota_class_set'][key], key)
+        try:
+            # NOTE(alex_xu): back-compatible with db layer hard-code admin
+            # permission checks. This has to be left only for API v2.0 because
+            # this version has to be stable even if it means that only admins
+            # can call this method while the policy could be changed.
+            nova.context.require_admin_context(context)
+        except exception.AdminRequired:
+            raise webob.exc.HTTPForbidden()
+
+        for key, value in quota_class_set.items():
             try:
                 db.quota_class_update(context, quota_class, key, value)
             except exception.QuotaClassNotFound:
                 db.quota_class_create(context, quota_class, key, value)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values)

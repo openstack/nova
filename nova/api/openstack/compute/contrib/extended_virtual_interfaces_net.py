@@ -33,7 +33,7 @@ class ExtendedServerVIFNetController(wsgi.Controller):
             for vif in resp_obj.obj['virtual_interfaces']:
                 vif1 = self.network_api.get_vif_by_mac_address(context,
                                                            vif['mac_address'])
-                vif[key] = vif1['net_uuid']
+                vif[key] = vif1.net_uuid
 
 
 class Extended_virtual_interfaces_net(extensions.ExtensionDescriptor):

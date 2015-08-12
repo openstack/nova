@@ -15,6 +15,7 @@
 
 import mock
 from oslo_utils import timeutils
+from six.moves import range
 
 from nova import exception
 from nova.scheduler import caching_scheduler
@@ -104,6 +105,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             "root_gb": 1,
             "ephemeral_gb": 1,
             "vcpus": 1,
+            "swap": 0,
         }
         instance_properties = {
             "os_type": "linux",
@@ -126,6 +128,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             'host_%s' % index,
             'node_%s' % index)
         host_state.free_ram_mb = 50000
+        host_state.free_disk_mb = 4096
         host_state.service = {
             "disabled": False,
             "updated_at": timeutils.utcnow(),
@@ -144,7 +147,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         request_spec = self._get_fake_request_spec()
         host_states = []
-        for x in xrange(hosts):
+        for x in range(hosts):
             host_state = self._get_fake_host_state(x)
             host_states.append(host_state)
         self.driver.all_host_states = host_states
@@ -152,7 +155,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         def run_test():
             a = timeutils.utcnow()
 
-            for x in xrange(requests):
+            for x in range(requests):
                 self.driver.select_destinations(
                     self.context, request_spec, {})
 

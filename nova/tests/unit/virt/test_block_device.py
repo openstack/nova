@@ -16,9 +16,12 @@ import contextlib
 
 import mock
 from oslo_serialization import jsonutils
+import six
 
 from nova import block_device
 from nova import context
+from nova import exception
+from nova.objects import fields
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
@@ -213,7 +216,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertThat(test_bdm, matchers.DictMatches(
             getattr(self, "%s_driver_bdm" % name)))
 
-        for k, v in db_bdm.iteritems():
+        for k, v in six.iteritems(db_bdm):
             field_val = getattr(test_bdm._bdm_obj, k)
             if isinstance(field_val, bool):
                 v = bool(v)
@@ -229,7 +232,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                              getattr(test_bdm._bdm_obj, passthru))
 
         # Make sure that all others raise _invalidType
-        for other_name, cls in self.driver_classes.iteritems():
+        for other_name, cls in six.iteritems(self.driver_classes):
             if other_name == name:
                 continue
             self.assertRaises(driver_block_device._InvalidType,
@@ -238,10 +241,14 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
-            for fld, alias in test_bdm._update_on_save.iteritems():
-                test_bdm[alias or fld] = 'fake_changed_value'
+            for fld, alias in six.iteritems(test_bdm._update_on_save):
+                # We can't set fake values on enums, like device_type,
+                # so skip those.
+                if not isinstance(test_bdm._bdm_obj.fields[fld],
+                                  fields.BaseEnumField):
+                    test_bdm[alias or fld] = 'fake_changed_value'
             test_bdm.save()
-            for fld, alias in test_bdm._update_on_save.iteritems():
+            for fld, alias in six.iteritems(test_bdm._update_on_save):
                 self.assertEqual(test_bdm[alias or fld],
                                  getattr(test_bdm._bdm_obj, fld))
 
@@ -326,6 +333,37 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(6, test_bdm._bdm_obj.id)
         self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
         self.assertEqual(3, test_bdm.volume_size)
+
+    def _test_call_wait_func(self, delete_on_termination, delete_fail=False):
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        test_bdm['delete_on_termination'] = delete_on_termination
+        with mock.patch.object(self.volume_api, 'delete') as vol_delete:
+            wait_func = mock.MagicMock()
+            mock_exception = exception.VolumeNotCreated(volume_id='fake-id',
+                                                        seconds=1,
+                                                        attempts=1,
+                                                        volume_status='error')
+            wait_func.side_effect = mock_exception
+
+            if delete_on_termination and delete_fail:
+                vol_delete.side_effect = Exception()
+
+            self.assertRaises(exception.VolumeNotCreated,
+                              test_bdm._call_wait_func,
+                              context=self.context,
+                              wait_func=wait_func,
+                              volume_api=self.volume_api,
+                              volume_id='fake-id')
+            self.assertEqual(delete_on_termination, vol_delete.called)
+
+    def test_call_wait_delete_volume(self):
+        self._test_call_wait_func(True)
+
+    def test_call_wait_delete_volume_fail(self):
+        self._test_call_wait_func(True, True)
+
+    def test_call_wait_no_delete_volume(self):
+        self._test_call_wait_func(False)
 
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, check_attach=True,
@@ -431,6 +469,23 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         self.volume_api, self.virt_driver)
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
+
+    def test_volume_attach_update_size(self):
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        test_bdm.volume_size = None
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached',
+                  'size': 42}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver)
+        self.assertEqual(expected_conn_info, test_bdm['connection_info'])
+        self.assertEqual(42, test_bdm.volume_size)
 
     def test_volume_attach_check_attach_fails(self):
         test_bdm = self.driver_classes['volume'](
@@ -559,6 +614,43 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         self.virt_driver, wait_func)
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
+    def test_snapshot_attach_fail_volume(self):
+        fail_volume_snapshot = self.snapshot_bdm.copy()
+        fail_volume_snapshot['volume_id'] = None
+        test_bdm = self.driver_classes['snapshot'](fail_volume_snapshot)
+
+        snapshot = {'id': 'fake-volume-id-1',
+                    'attach_status': 'detached'}
+        volume = {'id': 'fake-volume-id-2',
+                  'attach_status': 'detached'}
+
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **{'uuid': 'fake-uuid'})
+        with contextlib.nested(
+            mock.patch.object(self.volume_api, 'get_snapshot',
+                              return_value=snapshot),
+            mock.patch.object(self.volume_api, 'create', return_value=volume),
+            mock.patch.object(self.volume_api, 'delete'),
+        ) as (vol_get_snap, vol_create, vol_delete):
+            wait_func = mock.MagicMock()
+            mock_exception = exception.VolumeNotCreated(volume_id=volume['id'],
+                                                        seconds=1,
+                                                        attempts=1,
+                                                        volume_status='error')
+            wait_func.side_effect = mock_exception
+            self.assertRaises(exception.VolumeNotCreated,
+                              test_bdm.attach, context=self.context,
+                              instance=instance,
+                              volume_api=self.volume_api,
+                              virt_driver=self.virt_driver,
+                              wait_func=wait_func)
+
+            vol_get_snap.assert_called_once_with(
+                self.context, 'fake-snapshot-id-1')
+            vol_create.assert_called_once_with(
+                self.context, 3, '', '', snapshot, availability_zone=None)
+            vol_delete.assert_called_once_with(self.context, volume['id'])
+
     def test_snapshot_attach_volume(self):
         test_bdm = self.driver_classes['snapshot'](
             self.snapshot_bdm)
@@ -603,6 +695,39 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         self.virt_driver, wait_func)
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
+    def test_image_attach_fail_volume(self):
+        fail_volume_image = self.image_bdm.copy()
+        fail_volume_image['volume_id'] = None
+        test_bdm = self.driver_classes['image'](fail_volume_image)
+
+        image = {'id': 'fake-image-id-1'}
+        volume = {'id': 'fake-volume-id-2',
+                  'attach_status': 'detached'}
+
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **{'uuid': 'fake-uuid'})
+        with contextlib.nested(
+            mock.patch.object(self.volume_api, 'create', return_value=volume),
+            mock.patch.object(self.volume_api, 'delete'),
+        ) as (vol_create, vol_delete):
+            wait_func = mock.MagicMock()
+            mock_exception = exception.VolumeNotCreated(volume_id=volume['id'],
+                                                        seconds=1,
+                                                        attempts=1,
+                                                        volume_status='error')
+            wait_func.side_effect = mock_exception
+            self.assertRaises(exception.VolumeNotCreated,
+                              test_bdm.attach, context=self.context,
+                              instance=instance,
+                              volume_api=self.volume_api,
+                              virt_driver=self.virt_driver,
+                              wait_func=wait_func)
+
+            vol_create.assert_called_once_with(
+                self.context, 1, '', '', image_id=image['id'],
+                availability_zone=None)
+            vol_delete.assert_called_once_with(self.context, volume['id'])
+
     def test_image_attach_volume(self):
         test_bdm = self.driver_classes['image'](
             self.image_bdm)
@@ -624,6 +749,38 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver)
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
+
+    def test_blank_attach_fail_volume(self):
+        no_blank_volume = self.blank_bdm.copy()
+        no_blank_volume['volume_id'] = None
+        test_bdm = self.driver_classes['blank'](no_blank_volume)
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **{'uuid': 'fake-uuid'})
+        volume = {'id': 'fake-volume-id-2',
+                  'display_name': 'fake-uuid-blank-vol'}
+
+        with contextlib.nested(
+            mock.patch.object(self.volume_api, 'create', return_value=volume),
+            mock.patch.object(self.volume_api, 'delete'),
+        ) as (vol_create, vol_delete):
+            wait_func = mock.MagicMock()
+            mock_exception = exception.VolumeNotCreated(volume_id=volume['id'],
+                                                        seconds=1,
+                                                        attempts=1,
+                                                        volume_status='error')
+            wait_func.side_effect = mock_exception
+            self.assertRaises(exception.VolumeNotCreated,
+                              test_bdm.attach, context=self.context,
+                              instance=instance,
+                              volume_api=self.volume_api,
+                              virt_driver=self.virt_driver,
+                              wait_func=wait_func)
+
+            vol_create.assert_called_once_with(
+                self.context, test_bdm.volume_size, 'fake-uuid-blank-vol',
+                '', availability_zone=instance.availability_zone)
+            vol_delete.assert_called_once_with(
+                self.context, volume['id'])
 
     def test_blank_attach_volume(self):
         no_blank_volume = self.blank_bdm.copy()
@@ -662,9 +819,12 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual([], converted)
 
         converted = driver_block_device.convert_all_volumes(
-            self.volume_bdm, self.ephemeral_bdm, self.image_bdm)
+            self.volume_bdm, self.ephemeral_bdm, self.image_bdm,
+            self.blank_bdm, self.snapshot_bdm)
         self.assertEqual(converted, [self.volume_driver_bdm,
-                                     self.image_driver_bdm])
+                                     self.image_driver_bdm,
+                                     self.blank_driver_bdm,
+                                     self.snapshot_driver_bdm])
 
     def test_convert_volume(self):
         self.assertIsNone(driver_block_device.convert_volume(self.swap_bdm))
@@ -685,9 +845,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test that the ephemerals work as expected
         test_ephemerals = [self.driver_classes['ephemeral'](
-            self.ephemeral_bdm) for _ in xrange(2)]
+            self.ephemeral_bdm) for _ in range(2)]
         expected = [self.ephemeral_legacy_driver_bdm.copy()
-                             for _ in xrange(2)]
+                             for _ in range(2)]
         expected[0]['virtual_name'] = 'ephemeral0'
         expected[0]['num'] = 0
         expected[1]['virtual_name'] = 'ephemeral1'

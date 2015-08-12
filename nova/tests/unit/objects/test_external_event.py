@@ -28,12 +28,21 @@ class _TestInstanceExternalEventObject(object):
         self.assertEqual('foo', key)
 
     def test_key(self):
-        event = external_event_obj.InstanceExternalEvent(name='foo',
-                                                         tag='bar')
+        event = external_event_obj.InstanceExternalEvent(
+                    name='network-changed',
+                    tag='bar')
         with mock.patch.object(event, 'make_key') as make_key:
             make_key.return_value = 'key'
             self.assertEqual('key', event.key)
-            make_key.assert_called_once_with('foo', 'bar')
+            make_key.assert_called_once_with('network-changed', 'bar')
+
+    def test_event_names(self):
+        for event in external_event_obj.EVENT_NAMES:
+            external_event_obj.InstanceExternalEvent(name=event, tag='bar')
+
+        self.assertRaises(ValueError,
+                          external_event_obj.InstanceExternalEvent,
+                          name='foo', tag='bar')
 
 
 class TestInstanceExternalEventObject(test_objects._LocalTest,

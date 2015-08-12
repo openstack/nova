@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+import six
 
 from nova import db
 from nova import exception
@@ -24,6 +25,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                   base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -38,7 +40,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.9: Added pci_device_pools
     # Version 1.10: Added get_first_node_by_host_for_old_compat()
     # Version 1.11: PciDevicePoolList version 1.1
-    VERSION = '1.11'
+    # Version 1.12: HVSpec version 1.1
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -74,7 +77,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
 
     obj_relationships = {
         'pci_device_pools': [('1.9', '1.0'), ('1.11', '1.1')],
-        'supported_hv_specs': [('1.6', '1.0')],
+        'supported_hv_specs': [('1.6', '1.0'), ('1.12', '1.1')],
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -270,7 +273,31 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                                                              self.service_id)
         return self._cached_service
 
+    def update_from_virt_driver(self, resources):
+        # NOTE(pmurray): the virt driver provides a dict of values that
+        # can be copied into the compute node. The names and representation
+        # do not exactly match.
+        # TODO(pmurray): the resources dict should be formalized.
+        keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
+                "vcpus_used", "memory_mb_used", "local_gb_used",
+                "numa_topology", "hypervisor_type",
+                "hypervisor_version", "hypervisor_hostname",
+                "disk_available_least", "host_ip"]
+        for key in keys:
+            if key in resources:
+                self[key] = resources[key]
 
+        # supported_instances has a different name in compute_node
+        # TODO(pmurray): change virt drivers not to json encode
+        # values they add to the resources dict
+        if 'supported_instances' in resources:
+            si = resources['supported_instances']
+            if isinstance(si, six.string_types):
+                si = jsonutils.loads(si)
+            self.supported_hv_specs = [objects.HVSpec.from_list(s) for s in si]
+
+
+@base.NovaObjectRegistry.register
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2
@@ -285,24 +312,18 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.9 ComputeNode version 1.9
     # Version 1.10 ComputeNode version 1.10
     # Version 1.11 ComputeNode version 1.11
-    VERSION = '1.11'
+    # Version 1.12 ComputeNode version 1.12
+    VERSION = '1.12'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
-    child_versions = {
-        '1.0': '1.2',
-        # NOTE(danms): ComputeNode was at 1.2 before we added this
-        '1.1': '1.3',
-        '1.2': '1.3',
-        '1.3': '1.4',
-        '1.4': '1.5',
-        '1.5': '1.5',
-        '1.6': '1.6',
-        '1.7': '1.7',
-        '1.8': '1.8',
-        '1.9': '1.9',
-        '1.10': '1.10',
-        '1.11': '1.11',
+    # NOTE(danms): ComputeNode was at 1.2 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.2'), ('1.1', '1.3'), ('1.2', '1.3'),
+                    ('1.3', '1.4'), ('1.4', '1.5'), ('1.5', '1.5'),
+                    ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
+                    ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
+                    ('1.12', '1.12')],
         }
 
     @base.remotable_classmethod

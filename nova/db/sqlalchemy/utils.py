@@ -63,7 +63,7 @@ def check_shadow_table(migrate_engine, table_name):
     columns = {c.name: c for c in table.columns}
     shadow_columns = {c.name: c for c in shadow_table.columns}
 
-    for name, column in columns.iteritems():
+    for name, column in columns.items():
         if name not in shadow_columns:
             raise exception.NovaException(
                 _("Missing column %(table)s.%(column)s in shadow table")
@@ -78,7 +78,7 @@ def check_shadow_table(migrate_engine, table_name):
                            'c_type': column.type,
                            'shadow_c_type': shadow_column.type})
 
-    for name, column in shadow_columns.iteritems():
+    for name, column in shadow_columns.items():
         if name not in columns:
             raise exception.NovaException(
                 _("Extra column %(table)s.%(column)s in shadow table")

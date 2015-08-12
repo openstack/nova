@@ -6,11 +6,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(id)s",
+                    "href": "%(host)s/v2/openstack/images/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(id)s",
+                    "href": "%(host)s/openstack/images/%(id)s",
                     "rel": "bookmark"
                 },
                 {
@@ -37,11 +37,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(id)s",
+                    "href": "%(host)s/v2/openstack/images/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(id)s",
+                    "href": "%(host)s/openstack/images/%(id)s",
                     "rel": "bookmark"
                 },
                 {
@@ -67,11 +67,11 @@
             "id": "%(uuid)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(uuid)s",
+                    "href": "%(host)s/v2/openstack/images/%(uuid)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(uuid)s",
+                    "href": "%(host)s/openstack/images/%(uuid)s",
                     "rel": "bookmark"
                 },
                 {
@@ -97,11 +97,11 @@
             "id": "%(uuid)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(uuid)s",
+                    "href": "%(host)s/v2/openstack/images/%(uuid)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(uuid)s",
+                    "href": "%(host)s/openstack/images/%(uuid)s",
                     "rel": "bookmark"
                 },
                 {
@@ -128,11 +128,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(id)s",
+                    "href": "%(host)s/v2/openstack/images/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(id)s",
+                    "href": "%(host)s/openstack/images/%(id)s",
                     "rel": "bookmark"
                 },
                 {
@@ -157,11 +157,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(id)s",
+                    "href": "%(host)s/v2/openstack/images/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(id)s",
+                    "href": "%(host)s/openstack/images/%(id)s",
                     "rel": "bookmark"
                 },
                 {
@@ -186,11 +186,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/%(id)s",
+                    "href": "%(host)s/v2/openstack/images/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/%(id)s",
+                    "href": "%(host)s/openstack/images/%(id)s",
                     "rel": "bookmark"
                 },
                 {

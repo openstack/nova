@@ -79,8 +79,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': True,
-                 'container_format': None,
-                 'disk_format': None,
+                 'container_format': 'bare',
+                 'disk_format': 'raw',
                  'size': '83594576',
                  'properties': {'kernel_id': CONF.null_kernel,
                                 'ramdisk_id': CONF.null_kernel}}

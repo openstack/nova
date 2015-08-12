@@ -24,6 +24,7 @@ from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import sslutils
 from oslo_utils import importutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
@@ -80,7 +81,7 @@ ec2_opts = [
 CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-CONF.import_group('ssl', 'nova.openstack.common.sslutils')
+sslutils.is_enabled(CONF)
 
 
 # Fault Wrapper around all EC2 requests
@@ -572,7 +573,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
     log_fun(log_msg, log_msg_args, context=context)
 
     if ex.args and not message and (not unexpected or status < 500):
-        message = unicode(ex.args[0])
+        message = six.text_type(ex.args[0])
     if unexpected:
         # Log filtered environment for unexpected errors.
         env = req.environ.copy()
