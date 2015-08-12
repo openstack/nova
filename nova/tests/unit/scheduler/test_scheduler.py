@@ -21,20 +21,20 @@ import mock
 
 from nova import context
 from nova import db
-from nova.scheduler import driver
 from nova.scheduler import host_manager
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_server_actions
+from nova.tests.unit.scheduler import fakes
 
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
 
     manager_cls = manager.SchedulerManager
-    driver_cls = driver.Scheduler
-    driver_cls_name = 'nova.scheduler.driver.Scheduler'
+    driver_cls = fakes.FakeScheduler
+    driver_cls_name = 'nova.tests.unit.scheduler.fakes.FakeScheduler'
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
@@ -109,7 +109,7 @@ class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
 
     # So we can subclass this test and re-use tests if we need.
-    driver_cls = driver.Scheduler
+    driver_cls = fakes.FakeScheduler
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
@@ -138,19 +138,9 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(result, ['host2'])
 
 
-class SchedulerDriverBaseTestCase(SchedulerTestCase):
-    """Test cases for base scheduler driver class methods
-       that will fail if the driver is changed.
-    """
-
-    def test_unimplemented_select_destinations(self):
-        self.assertRaises(NotImplementedError,
-                self.driver.select_destinations, self.context, {}, {})
-
-
 class SchedulerInstanceGroupData(test.NoDBTestCase):
 
-    driver_cls = driver.Scheduler
+    driver_cls = fakes.FakeScheduler
 
     def setUp(self):
         super(SchedulerInstanceGroupData, self).setUp()
