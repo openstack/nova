@@ -69,3 +69,18 @@ class HostMapping(API_BASE):
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
             nullable=False)
     host = Column(String(255), nullable=False)
+
+
+class RequestSpec(API_BASE):
+    """Represents the information passed to the scheduler."""
+
+    __tablename__ = 'request_specs'
+    __table_args__ = (
+        Index('request_spec_instance_uuid_idx', 'instance_uuid'),
+        schema.UniqueConstraint('instance_uuid',
+            name='uniq_request_specs0instance_uuid'),
+        )
+
+    id = Column(Integer, primary_key=True)
+    instance_uuid = Column(String(36), nullable=False)
+    spec = Column(Text, nullable=False)
