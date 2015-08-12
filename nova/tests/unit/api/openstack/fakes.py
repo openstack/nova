@@ -105,9 +105,12 @@ def wsgi_app(inner_app_v2=None, fake_auth_context=None,
 
 
 def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
-        use_no_auth=False, ext_mgr=None, init_only=None):
+        use_no_auth=False, ext_mgr=None, init_only=None, v2_compatible=False):
     if not inner_app_v21:
         inner_app_v21 = compute.APIRouterV21(init_only)
+
+    if v2_compatible:
+        inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
 
     if use_no_auth:
         api_v21 = openstack_api.FaultWrapper(auth.NoAuthMiddlewareV3(
@@ -123,6 +126,7 @@ def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v21
     mapper['/v2.1'] = api_v21
+    mapper['/'] = openstack_api.FaultWrapper(versions.Versions())
     return mapper
 
 
