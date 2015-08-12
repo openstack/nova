@@ -106,9 +106,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
     @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
     @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')
     @mock.patch.object(tarfile, 'open')
-    @mock.patch.object(os, 'unlink')
-    def test_fetch_image_ova(self, mock_unlink, mock_tar_open,
-                             mock_write_class, mock_read_class):
+    def test_fetch_image_ova(self, mock_tar_open, mock_write_class,
+                             mock_read_class):
         session = mock.MagicMock()
         ovf_descriptor = None
         ovf_path = os.path.join(os.path.dirname(__file__), 'ovf.xml')
@@ -150,11 +149,11 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             mock_vmdk.name = "Damn_Small_Linux-disk1.vmdk"
 
             def fake_extract(name):
-                if name == mock_ovf.name:
+                if name == mock_ovf:
                     m = mock.MagicMock()
                     m.read.return_value = ovf_descriptor
                     return m
-                elif name == mock_vmdk.name:
+                elif name == mock_vmdk:
                     return mock_read_handle
 
             mock_tar = mock.MagicMock()
@@ -167,13 +166,13 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                     context, instance, session, 'fake-vm', 'fake-datastore',
                     vm_folder_ref, res_pool_ref)
 
+            mock_tar_open.assert_called_once_with(mode='r|',
+                                                  fileobj=mock_read_handle)
             mock_start_transfer.assert_called_once_with(context,
                     mock_read_handle, 512, write_file_handle=mock_write_handle)
 
             mock_call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
-
-            mock_unlink.assert_called_once_with(mock.ANY)
 
     @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
     @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')

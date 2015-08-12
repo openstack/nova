@@ -19,7 +19,6 @@ Utility functions for Image transfer and manipulation.
 
 import os
 import tarfile
-import tempfile
 
 from lxml import etree
 from oslo_config import cfg
@@ -417,49 +416,42 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
         session, vm_name, ds_name)
 
     read_iter = IMAGE_API.download(context, image_ref)
-    ova_fd, ova_path = tempfile.mkstemp()
+    read_handle = rw_handles.ImageReadHandle(read_iter)
 
-    try:
-        # NOTE(arnaud): Look to eliminate first writing OVA to file system
-        with os.fdopen(ova_fd, 'w') as fp:
-            for chunk in read_iter:
-                fp.write(chunk)
-        with tarfile.open(ova_path, mode="r") as tar:
-            vmdk_name = None
-            for tar_info in tar:
-                if tar_info and tar_info.name.endswith(".ovf"):
-                    extracted = tar.extractfile(tar_info.name)
-                    xmlstr = extracted.read()
-                    vmdk_name = get_vmdk_name_from_ovf(xmlstr)
-                elif vmdk_name and tar_info.name.startswith(vmdk_name):
-                    # Actual file name is <vmdk_name>.XXXXXXX
-                    extracted = tar.extractfile(tar_info.name)
-                    write_handle = rw_handles.VmdkWriteHandle(
-                        session,
-                        session._host,
-                        session._port,
-                        res_pool_ref,
-                        vm_folder_ref,
-                        vm_import_spec,
-                        file_size)
-                    start_transfer(context,
-                                   extracted,
-                                   file_size,
-                                   write_file_handle=write_handle)
-                    extracted.close()
-                    LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
-                        {'image_ref': instance.image_ref}, instance=instance)
-                    imported_vm_ref = write_handle.get_imported_vm()
-                    session._call_method(session.vim, "UnregisterVM",
-                                         imported_vm_ref)
-                    LOG.info(_LI("The imported VM was unregistered"),
-                             instance=instance)
-                    return
-            raise exception.ImageUnacceptable(
-                reason=_("Extracting vmdk from OVA failed."),
-                image_id=image_ref)
-    finally:
-        os.unlink(ova_path)
+    with tarfile.open(mode="r|", fileobj=read_handle) as tar:
+        vmdk_name = None
+        for tar_info in tar:
+            if tar_info and tar_info.name.endswith(".ovf"):
+                extracted = tar.extractfile(tar_info)
+                xmlstr = extracted.read()
+                vmdk_name = get_vmdk_name_from_ovf(xmlstr)
+            elif vmdk_name and tar_info.name.startswith(vmdk_name):
+                # Actual file name is <vmdk_name>.XXXXXXX
+                extracted = tar.extractfile(tar_info)
+                write_handle = rw_handles.VmdkWriteHandle(
+                    session,
+                    session._host,
+                    session._port,
+                    res_pool_ref,
+                    vm_folder_ref,
+                    vm_import_spec,
+                    file_size)
+                start_transfer(context,
+                               extracted,
+                               file_size,
+                               write_file_handle=write_handle)
+                extracted.close()
+                LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
+                    {'image_ref': instance.image_ref}, instance=instance)
+                imported_vm_ref = write_handle.get_imported_vm()
+                session._call_method(session.vim, "UnregisterVM",
+                                     imported_vm_ref)
+                LOG.info(_LI("The imported VM was unregistered"),
+                         instance=instance)
+                return
+        raise exception.ImageUnacceptable(
+            reason=_("Extracting vmdk from OVA failed."),
+            image_id=image_ref)
 
 
 def upload_image_stream_optimized(context, image_id, instance, session,
