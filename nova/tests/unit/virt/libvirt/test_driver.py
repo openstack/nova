@@ -1857,6 +1857,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
+                self.assertIsNone(numa_cfg_cell.memAccess)
 
             allnodes = set([cell.id for cell in instance_topology.cells])
             self.assertEqual(allnodes, set(cfg.numatune.memory.nodeset))
@@ -1933,6 +1934,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
+                self.assertIsNone(numa_cfg_cell.memAccess)
 
             allnodes = set([cell.id for cell in instance_topology.cells])
             self.assertEqual(allnodes, set(cfg.numatune.memory.nodeset))
@@ -1944,25 +1946,93 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    def test_get_guest_config_numa_host_mempages_shared(self):
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([0, 1]),
+                    memory=1024, pagesize=2048),
+                objects.InstanceNUMACell(
+                    id=2, cpuset=set([2, 3]),
+                    memory=1024, pagesize=2048)])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = {}
+        flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set',
+                    return_value=set([2, 3, 4, 5])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8))),
+                ):
+            cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
+
+            for instance_cell, numa_cfg_cell, index in zip(
+                    instance_topology.cells,
+                    cfg.cpu.numa.cells,
+                    range(len(instance_topology.cells))):
+                self.assertEqual(index, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
+                self.assertEqual("shared", numa_cfg_cell.memAccess)
+
+            allnodes = [cell.id for cell in instance_topology.cells]
+            self.assertEqual(allnodes, cfg.numatune.memory.nodeset)
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for instance_cell, memnode, index in zip(
+                    instance_topology.cells,
+                    cfg.numatune.memnodes,
+                    range(len(instance_topology.cells))):
+                self.assertEqual(index, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+                self.assertEqual("strict", memnode.mode)
+
     def test_get_cpu_numa_config_from_instance(self):
         topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
             objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=128),
         ])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conf = drvr._get_cpu_numa_config_from_instance(topology)
+        conf = drvr._get_cpu_numa_config_from_instance(topology, True)
 
         self.assertIsInstance(conf, vconfig.LibvirtConfigGuestCPUNUMA)
         self.assertEqual(0, conf.cells[0].id)
         self.assertEqual(set([1, 2]), conf.cells[0].cpus)
         self.assertEqual(131072, conf.cells[0].memory)
+        self.assertEqual("shared", conf.cells[0].memAccess)
         self.assertEqual(1, conf.cells[1].id)
         self.assertEqual(set([3, 4]), conf.cells[1].cpus)
         self.assertEqual(131072, conf.cells[1].memory)
+        self.assertEqual("shared", conf.cells[1].memAccess)
 
     def test_get_cpu_numa_config_from_instance_none(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conf = drvr._get_cpu_numa_config_from_instance(None)
+        conf = drvr._get_cpu_numa_config_from_instance(None, False)
         self.assertIsNone(conf)
 
     @mock.patch.object(host.Host, 'has_version', return_value=True)
@@ -1970,6 +2040,67 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.CPUPinningNotSupported,
                           drvr._has_cpu_policy_support)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
+                       return_value=True)
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_hugepage_support",
+                       return_value=True)
+    @mock.patch.object(host.Host, "get_capabilities")
+    def test_does_not_want_hugepages(self, mock_caps, mock_numa, mock_hp):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([0, 1]),
+                    memory=1024, pagesize=4),
+                objects.InstanceNUMACell(
+                    id=2, cpuset=set([2, 3]),
+                    memory=1024, pagesize=4)])
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        mock_caps.return_value = caps
+
+        host_topology = drvr._get_host_numa_topology()
+
+        self.assertFalse(drvr._wants_hugepages(None, None))
+        self.assertFalse(drvr._wants_hugepages(host_topology, None))
+        self.assertFalse(drvr._wants_hugepages(None, instance_topology))
+        self.assertFalse(drvr._wants_hugepages(host_topology,
+                                               instance_topology))
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
+                       return_value=True)
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_hugepage_support",
+                       return_value=True)
+    @mock.patch.object(host.Host, "get_capabilities")
+    def test_does_want_hugepages(self, mock_caps, mock_numa, mock_hp):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([0, 1]),
+                    memory=1024, pagesize=2048),
+                objects.InstanceNUMACell(
+                    id=2, cpuset=set([2, 3]),
+                    memory=1024, pagesize=2048)])
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        mock_caps.return_value = caps
+
+        host_topology = drvr._get_host_numa_topology()
+
+        self.assertTrue(drvr._wants_hugepages(host_topology,
+                                              instance_topology))
 
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')

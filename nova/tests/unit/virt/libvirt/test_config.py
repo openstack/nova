@@ -285,6 +285,7 @@ class LibvirtConfigGuestCPUNUMATest(LibvirtConfigBaseTest):
         cell.id = 0
         cell.cpus = set([0, 1])
         cell.memory = 1000000
+        cell.memAccess = "shared"
 
         obj.cells.append(cell)
 
@@ -292,14 +293,15 @@ class LibvirtConfigGuestCPUNUMATest(LibvirtConfigBaseTest):
         cell.id = 1
         cell.cpus = set([2, 3])
         cell.memory = 1500000
+        cell.memAccess = "private"
 
         obj.cells.append(cell)
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <numa>
-              <cell id="0" cpus="0-1" memory="1000000"/>
-              <cell id="1" cpus="2-3" memory="1500000"/>
+              <cell id="0" cpus="0-1" memory="1000000" memAccess="shared"/>
+              <cell id="1" cpus="2-3" memory="1500000" memAccess="private"/>
             </numa>
         """)
 
@@ -430,6 +432,7 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         cell.id = 0
         cell.cpus = set([0, 1])
         cell.memory = 1000000
+        cell.memAccess = "private"
 
         numa.cells.append(cell)
 
@@ -446,7 +449,7 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
             <cpu mode="host-model" match="exact">
               <numa>
-                <cell id="0" cpus="0-1" memory="1000000"/>
+                <cell id="0" cpus="0-1" memory="1000000" memAccess="private"/>
                 <cell id="1" cpus="2-3" memory="1500000"/>
               </numa>
             </cpu>
