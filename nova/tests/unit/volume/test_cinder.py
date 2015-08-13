@@ -70,7 +70,6 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(cinder, 'cinderclient')
         self.mox.StubOutWithMock(cinder, '_untranslate_volume_summary_view')
         self.mox.StubOutWithMock(cinder, '_untranslate_snapshot_summary_view')
-        self.mox.StubOutWithMock(cinder, 'get_cinder_client_version')
 
     def test_get(self):
         volume_id = 'volume_id1'
