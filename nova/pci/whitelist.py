@@ -35,7 +35,7 @@ CONF.register_opts(pci_opts)
 LOG = logging.getLogger(__name__)
 
 
-class PciHostDevicesWhiteList(object):
+class Whitelist(object):
 
     """White list class to decide assignable pci devices.
 
@@ -84,7 +84,7 @@ class PciHostDevicesWhiteList(object):
                                each dictionary specifies the pci device
                                properties requirement.
         """
-        super(PciHostDevicesWhiteList, self).__init__()
+        super(Whitelist, self).__init__()
         if whitelist_spec:
             self.specs = self._parse_white_list_from_config(whitelist_spec)
         else:
@@ -106,10 +106,6 @@ class PciHostDevicesWhiteList(object):
                 return spec
 
 
-def get_pci_devices_filter():
-    return PciHostDevicesWhiteList(CONF.pci_passthrough_whitelist)
-
-
 def get_pci_device_devspec(pci_dev):
-    dev_filter = get_pci_devices_filter()
+    dev_filter = Whitelist(CONF.pci_passthrough_whitelist)
     return dev_filter.get_devspec(pci_dev)

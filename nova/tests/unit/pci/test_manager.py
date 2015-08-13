@@ -139,7 +139,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.tracker = manager.PciDevTracker(self.fake_context, node_id=1)
         mock_get_cn.assert_called_once_with(self.fake_context, 1)
 
-    @mock.patch('nova.pci.whitelist.PciHostDevicesWhiteList.device_assignable',
+    @mock.patch('nova.pci.whitelist.Whitelist.device_assignable',
                 return_value=True)
     def test_update_devices_from_hypervisor_resources(self, _mock_dev_assign):
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2)]
