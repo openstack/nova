@@ -113,11 +113,11 @@ def return_flavor_not_found(flavor_id, ctxt=None):
 
 
 class FlavorsTestV21(test.TestCase):
-    _prefix = "/v3"
+    _prefix = "/v2/fake"
     Controller = flavors_v21.FlavorsController
     fake_request = fakes.HTTPRequestV21
-    _rspv = "v3"
-    _fake = ""
+    _rspv = "v2/fake"
+    _fake = "/fake"
 
     def setUp(self):
         super(FlavorsTestV21, self).setUp()
@@ -566,11 +566,8 @@ class FlavorsTestV21(test.TestCase):
 
 
 class FlavorsTestV20(FlavorsTestV21):
-    _prefix = "/v2/fake"
     Controller = flavors_v2.Controller
     fake_request = fakes.HTTPRequest
-    _rspv = "v2/fake"
-    _fake = "/fake"
 
     def _set_expected_body(self, expected, ephemeral, swap, disabled):
         pass
@@ -579,7 +576,7 @@ class FlavorsTestV20(FlavorsTestV21):
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v21.FlavorsController
-    _prefix = "/v3"
+    _prefix = "/v2"
     fake_request = fakes.HTTPRequestV21
 
     def setUp(self):

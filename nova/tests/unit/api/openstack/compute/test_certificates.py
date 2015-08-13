@@ -33,7 +33,7 @@ from nova.tests.unit.api.openstack import fakes
 
 class CertificatesTestV21(test.NoDBTestCase):
     certificates = certificates_v21
-    url = '/v3/os-certificates'
+    url = '/v2/fake/os-certificates'
     certificate_show_extension = 'os_compute_api:os-certificates:show'
     certificate_create_extension = \
         'os_compute_api:os-certificates:create'
@@ -115,6 +115,5 @@ class CertificatesTestV21(test.NoDBTestCase):
 
 class CertificatesTestV2(CertificatesTestV21):
     certificates = certificates_v2
-    url = '/v2/fake/os-certificates'
     certificate_show_extension = 'compute_extension:certificates'
     certificate_create_extension = 'compute_extension:certificates'

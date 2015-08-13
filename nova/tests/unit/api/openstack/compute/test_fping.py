@@ -51,7 +51,7 @@ class FpingTestV21(test.TestCase):
         self.controller = self.controller_cls()
 
     def _get_url(self):
-        return "/v3"
+        return "/v2/1234"
 
     def test_fping_index(self):
         req = fakes.HTTPRequest.blank(self._get_url() + "/os-fping")
@@ -113,9 +113,6 @@ class FpingTestV21(test.TestCase):
 
 class FpingTestV2(FpingTestV21):
     controller_cls = fping.FpingController
-
-    def _get_url(self):
-        return "/v2/1234"
 
 
 class FpingPolicyEnforcementV21(test.NoDBTestCase):

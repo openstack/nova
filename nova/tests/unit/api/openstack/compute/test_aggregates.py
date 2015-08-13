@@ -57,9 +57,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def _set_up(self):
         self.controller = aggregates_v21.AggregateController()
-        self.req = fakes.HTTPRequest.blank('/v3/os-aggregates',
+        self.req = fakes.HTTPRequest.blank('/v2/os-aggregates',
                                            use_admin_context=True)
-        self.user_req = fakes.HTTPRequest.blank('/v3/os-aggregates')
+        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
         self.context = self.req.environ['nova.context']
 
     def setUp(self):
