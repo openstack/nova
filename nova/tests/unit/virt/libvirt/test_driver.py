@@ -4787,7 +4787,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                    device_type=bdm['device_type'])
 
                 mock_get_domain.assert_called_with(instance)
-                mock_get_info.assert_called_with(CONF.libvirt.virt_type,
+                mock_get_info.assert_called_with(instance,
+                                                 CONF.libvirt.virt_type,
                                                  image_meta, bdm)
                 mock_connect_volume.assert_called_with(
                     connection_info, disk_info)
@@ -10793,15 +10794,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(blockinfo, 'get_disk_bus_for_device_type')
         self.mox.StubOutWithMock(blockinfo, 'get_root_info')
 
-        blockinfo.get_disk_bus_for_device_type('fake_libvirt_type',
+        blockinfo.get_disk_bus_for_device_type(instance,
+                                               'fake_libvirt_type',
                                                image_meta,
                                                'disk').InAnyOrder().\
                                                 AndReturn('virtio')
-        blockinfo.get_disk_bus_for_device_type('fake_libvirt_type',
+        blockinfo.get_disk_bus_for_device_type(instance,
+                                               'fake_libvirt_type',
                                                image_meta,
                                                'cdrom').InAnyOrder().\
                                                 AndReturn('ide')
-        blockinfo.get_root_info('fake_libvirt_type',
+        blockinfo.get_root_info(instance, 'fake_libvirt_type',
                                 image_meta, root_bdm,
                                 'virtio', 'ide').AndReturn({'dev': 'vda'})
         self.mox.ReplayAll()

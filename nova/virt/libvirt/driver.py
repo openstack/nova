@@ -1119,8 +1119,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         "required.") % ver
                 raise exception.Invalid(msg)
 
-        disk_info = blockinfo.get_info_from_bdm(CONF.libvirt.virt_type,
-                                                image_meta, bdm)
+        disk_info = blockinfo.get_info_from_bdm(
+            instance, CONF.libvirt.virt_type, image_meta, bdm)
         self._connect_volume(connection_info, disk_info)
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
@@ -4381,7 +4381,7 @@ class LibvirtDriver(driver.ComputeDriver):
             root_disk = block_device.get_root_bdm(block_device_mapping)
             disk_path = root_disk['connection_info']['data']['device_path']
             disk_info = blockinfo.get_info_from_bdm(
-                CONF.libvirt.virt_type, image_meta, root_disk)
+                instance, CONF.libvirt.virt_type, image_meta, root_disk)
             self._connect_volume(root_disk['connection_info'], disk_info)
 
             # Get the system metadata from the instance
@@ -6149,7 +6149,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_info = blockinfo.get_info_from_bdm(
-                CONF.libvirt.virt_type, image_meta, vol)
+                instance, CONF.libvirt.virt_type, image_meta, vol)
             self._connect_volume(connection_info, disk_info)
 
         if is_block_migration and len(block_device_mapping):
@@ -6198,7 +6198,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 res_data['volume'][serial]['connection_info'] = \
                     connection_info
                 disk_info = blockinfo.get_info_from_bdm(
-                    CONF.libvirt.virt_type, image_meta, vol)
+                    instance, CONF.libvirt.virt_type, image_meta, vol)
                 res_data['volume'][serial]['disk_info'] = disk_info
 
         return res_data
@@ -7086,12 +7086,12 @@ class LibvirtDriver(driver.ComputeDriver):
     def default_root_device_name(self, instance, image_meta, root_bdm):
 
         disk_bus = blockinfo.get_disk_bus_for_device_type(
-            CONF.libvirt.virt_type, image_meta, "disk")
+            instance, CONF.libvirt.virt_type, image_meta, "disk")
         cdrom_bus = blockinfo.get_disk_bus_for_device_type(
-            CONF.libvirt.virt_type, image_meta, "cdrom")
+            instance, CONF.libvirt.virt_type, image_meta, "cdrom")
         root_info = blockinfo.get_root_info(
-            CONF.libvirt.virt_type, image_meta, root_bdm, disk_bus,
-            cdrom_bus)
+            instance, CONF.libvirt.virt_type, image_meta,
+            root_bdm, disk_bus, cdrom_bus)
         return block_device.prepend_dev(root_info['dev'])
 
     def default_device_names_for_instance(self, instance, root_device_name,
@@ -7134,8 +7134,8 @@ class LibvirtDriver(driver.ComputeDriver):
         #                 only when it's actually not set on the bd object
         block_device_obj.device_name = None
         disk_info = blockinfo.get_info_from_bdm(
-                CONF.libvirt.virt_type, image_meta, block_device_obj,
-                mapping=instance_info['mapping'])
+            instance, CONF.libvirt.virt_type, image_meta,
+            block_device_obj, mapping=instance_info['mapping'])
         return block_device.prepend_dev(disk_info['dev'])
 
     def is_supported_fs_format(self, fs_type):

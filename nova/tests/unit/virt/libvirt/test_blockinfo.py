@@ -629,6 +629,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                          block_device_info['block_device_mapping'][0])
 
     def test_get_disk_bus(self):
+        instance = objects.Instance(**self.test_instance)
         expected = (
                 (arch.X86_64, 'disk', 'virtio'),
                 (arch.X86_64, 'cdrom', 'ide'),
@@ -647,8 +648,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             with mock.patch.object(blockinfo.libvirt_utils,
                                    'get_arch',
                                    return_value=guestarch):
-                bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                            image_meta, dev)
+                bus = blockinfo.get_disk_bus_for_device_type(
+                    instance, 'kvm', image_meta, dev)
                 self.assertEqual(res, bus)
 
         expected = (
@@ -659,16 +660,14 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         for dbus, cbus, dev, res in expected:
             image_meta = {'properties': {'hw_disk_bus': dbus,
                                          'hw_cdrom_bus': cbus}}
-            bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                                                     image_meta,
-                                                     device_type=dev)
+            bus = blockinfo.get_disk_bus_for_device_type(
+                instance, 'kvm', image_meta, device_type=dev)
             self.assertEqual(res, bus)
 
         image_meta = {'properties': {'hw_disk_bus': 'xen'}}
         self.assertRaises(exception.UnsupportedHardware,
                           blockinfo.get_disk_bus_for_device_type,
-                          'kvm',
-                          image_meta)
+                          instance, 'kvm', image_meta)
 
     def test_success_get_disk_bus_for_disk_dev(self):
         expected = (
@@ -684,11 +683,11 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             self.assertEqual(res, blockinfo.get_disk_bus_for_disk_dev(*args))
 
     def test_fail_get_disk_bus_for_disk_dev_unsupported_virt_type(self):
+        instance = objects.Instance(**self.test_instance)
         image_meta = {}
         self.assertRaises(exception.UnsupportedVirtType,
-                         blockinfo.get_disk_bus_for_device_type,
-                         'kvm1',
-                         image_meta)
+                          blockinfo.get_disk_bus_for_device_type,
+                          instance, 'kvm1', image_meta)
 
     def test_fail_get_disk_bus_for_disk_dev(self):
         self.assertRaises(exception.NovaException,
@@ -709,6 +708,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.assertEqual('disk', config_drive_type)
 
     def test_get_info_from_bdm(self):
+        instance = objects.Instance(**self.test_instance)
         bdms = [{'device_name': '/dev/vds', 'device_type': 'disk',
                  'disk_bus': 'usb', 'swap_size': 4},
                 {'device_type': 'disk', 'guest_format': 'ext4',
@@ -739,7 +739,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         image_meta = {}
         for bdm, expected in zip(bdms, expected):
             self.assertEqual(expected,
-                             blockinfo.get_info_from_bdm('kvm',
+                             blockinfo.get_info_from_bdm(instance,
+                                                         'kvm',
                                                          image_meta,
                                                          bdm))
 
@@ -747,7 +748,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         bdm = {'device_name': '/dev/vda'}
         expected = {'dev': 'vda', 'type': 'disk', 'bus': 'ide'}
         self.assertEqual(
-            expected, blockinfo.get_info_from_bdm('kvm',
+            expected, blockinfo.get_info_from_bdm(instance,
+                                                  'kvm',
                                                   image_meta,
                                                   bdm,
                                                   disk_bus='ide',
@@ -758,10 +760,12 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         with mock.patch.object(blockinfo,
                                'get_disk_bus_for_device_type',
                                return_value='ide') as get_bus:
-            blockinfo.get_info_from_bdm('kvm',
+            blockinfo.get_info_from_bdm(instance,
+                                        'kvm',
                                         image_meta,
                                         bdm)
-            get_bus.assert_called_once_with('kvm', image_meta, 'cdrom')
+            get_bus.assert_called_once_with(instance, 'kvm',
+                                            image_meta, 'cdrom')
 
         # Test that missing device is defaulted as expected
         bdm = {'disk_bus': 'ide', 'device_type': 'cdrom'}
@@ -771,6 +775,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                'find_disk_dev_for_disk_bus',
                                return_value='vdd') as find_dev:
             got = blockinfo.get_info_from_bdm(
+                instance,
                 'kvm',
                 image_meta,
                 bdm,
@@ -807,36 +812,40 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.blockinfo.get_disk_bus_for_disk_dev',
                 return_value='virtio')
     def test_get_root_info_no_bdm(self, mock_get_bus, mock_find_dev):
+        instance = objects.Instance(**self.test_instance)
         image_meta = {}
-        blockinfo.get_root_info('kvm', image_meta, None, 'virtio', 'ide')
+        blockinfo.get_root_info(instance, 'kvm', image_meta, None,
+                                'virtio', 'ide')
         mock_find_dev.assert_called_once_with({}, 'virtio')
 
-        blockinfo.get_root_info('kvm', image_meta, None, 'virtio', 'ide',
-                                 root_device_name='/dev/vda')
+        blockinfo.get_root_info(instance, 'kvm', image_meta, None,
+                                'virtio', 'ide', root_device_name='/dev/vda')
         mock_get_bus.assert_called_once_with('kvm', '/dev/vda')
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_get_root_info_bdm(self, mock_get_info):
+        instance = objects.Instance(**self.test_instance)
         image_meta = {}
         root_bdm = {'mount_device': '/dev/vda',
                     'disk_bus': 'scsi',
                     'device_type': 'disk'}
         # No root_device_name
-        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide')
-        mock_get_info.assert_called_once_with('kvm', image_meta,
+        blockinfo.get_root_info(instance, 'kvm', image_meta, root_bdm,
+                                'virtio', 'ide')
+        mock_get_info.assert_called_once_with(instance, 'kvm', image_meta,
                                               root_bdm, {}, 'virtio')
         mock_get_info.reset_mock()
         # Both device names
-        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide',
-                                root_device_name='sda')
-        mock_get_info.assert_called_once_with('kvm', image_meta,
+        blockinfo.get_root_info(instance, 'kvm', image_meta, root_bdm,
+                                'virtio', 'ide', root_device_name='sda')
+        mock_get_info.assert_called_once_with(instance, 'kvm', image_meta,
                                               root_bdm, {}, 'virtio')
         mock_get_info.reset_mock()
         # Missing device names
         del root_bdm['mount_device']
-        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide',
-                                root_device_name='sda')
-        mock_get_info.assert_called_once_with('kvm',
+        blockinfo.get_root_info(instance, 'kvm', image_meta, root_bdm,
+                                'virtio', 'ide', root_device_name='sda')
+        mock_get_info.assert_called_once_with(instance, 'kvm',
                                               image_meta,
                                               {'device_name': 'sda',
                                                'disk_bus': 'scsi',
