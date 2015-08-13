@@ -40,9 +40,9 @@ from nova.api.openstack.compute import disk_config
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import keypairs
-from nova.api.openstack.compute.schemas.v3 import disk_config \
+from nova.api.openstack.compute.schemas import disk_config \
         as disk_config_schema
-from nova.api.openstack.compute.schemas.v3 import servers as servers_schema
+from nova.api.openstack.compute.schemas import servers as servers_schema
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions

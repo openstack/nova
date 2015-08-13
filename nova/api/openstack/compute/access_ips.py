@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas.v3 import access_ips
+from nova.api.openstack.compute.schemas import access_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 

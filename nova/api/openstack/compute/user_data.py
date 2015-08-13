@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas.v3 import user_data as schema_user_data
+from nova.api.openstack.compute.schemas import user_data as schema_user_data
 from nova.api.openstack import extensions
 
 

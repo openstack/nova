@@ -15,7 +15,7 @@
 
 from oslo_utils import strutils
 
-from nova.api.openstack.compute.schemas.v3 import preserve_ephemeral_rebuild
+from nova.api.openstack.compute.schemas import preserve_ephemeral_rebuild
 from nova.api.openstack import extensions
 
 ALIAS = "os-preserve-ephemeral-rebuild"

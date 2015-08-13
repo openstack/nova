@@ -15,7 +15,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.schemas.v3 import multiple_create as \
+from nova.api.openstack.compute.schemas import multiple_create as \
                                                   schema_multiple_create
 from nova.api.openstack import extensions
 from nova.i18n import _

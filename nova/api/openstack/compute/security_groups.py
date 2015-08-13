@@ -20,7 +20,7 @@ from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import security_groups as \
+from nova.api.openstack.compute.schemas import security_groups as \
                                                   schema_security_groups
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi

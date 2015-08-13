@@ -14,7 +14,7 @@
 
 from oslo_config import cfg
 
-from nova.api.openstack.compute.schemas.v3 import availability_zone as schema
+from nova.api.openstack.compute.schemas import availability_zone as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones

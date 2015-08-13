@@ -18,7 +18,7 @@
 from oslo_utils import strutils
 from webob import exc
 
-from nova.api.openstack.compute.schemas.v3 import block_device_mapping_v1 as \
+from nova.api.openstack.compute.schemas import block_device_mapping_v1 as \
     schema_block_device_mapping
 from nova.api.openstack import extensions
 from nova.i18n import _

@@ -20,7 +20,7 @@ import six
 import webob.exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import hosts
+from nova.api.openstack.compute.schemas import hosts
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

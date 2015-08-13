@@ -18,7 +18,7 @@ import os.path
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import create_backup
+from nova.api.openstack.compute.schemas import create_backup
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation

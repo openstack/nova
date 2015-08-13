@@ -14,7 +14,7 @@
 
 import copy
 
-from nova.api.openstack.compute.schemas.v3 import block_device_mapping_v1
+from nova.api.openstack.compute.schemas import block_device_mapping_v1
 from nova.api.validation import parameter_types
 
 
