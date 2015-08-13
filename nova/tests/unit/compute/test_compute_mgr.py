@@ -539,7 +539,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver, 'plug_vifs',
                 side_effect=exception.VirtualInterfacePlugException(
                     "Unexpected vif_type=binding_failed")),
-            mock.patch.object(self.compute, '_set_instance_error_state')
+            mock.patch.object(self.compute, '_set_instance_obj_error_state')
         ) as (get_admin_context, get_nw_info, plug_vifs, set_error_state):
             self.compute._init_instance(self.context, instance)
             set_error_state.assert_called_once_with(self.context, instance)
@@ -585,7 +585,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute,
-                                 '_set_instance_error_state')
+                                 '_set_instance_obj_error_state')
         self.compute._get_power_state(mox.IgnoreArg(),
                 instance).AndReturn(power_state.SHUTDOWN)
         self.compute._get_power_state(mox.IgnoreArg(),
@@ -598,7 +598,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
                 instance, mox.IgnoreArg(),
                 'fake-bdm').AndRaise(test.TestingException)
-        self.compute._set_instance_error_state(mox.IgnoreArg(), instance)
+        self.compute._set_instance_obj_error_state(mox.IgnoreArg(), instance)
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
 
@@ -664,7 +664,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         mock_delete_instance = _create_patch(self.compute, '_delete_instance')
         mock_set_instance_error_state = _create_patch(
-            self.compute, '_set_instance_error_state')
+            self.compute, '_set_instance_obj_error_state')
         mock_create_reservations = _create_patch(self.compute,
                                                  '_create_reservations')
 
@@ -1448,7 +1448,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         f_instance.info_cache.network_info = []
 
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-        @mock.patch.object(self.compute, '_set_instance_error_state')
+        @mock.patch.object(self.compute, '_set_instance_obj_error_state')
         def do_test(meth, add_fault):
             self.assertRaises(exception.PortNotFound,
                               self.compute.detach_interface,
@@ -2341,7 +2341,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             vm_state=vm_states.ACTIVE, task_state=None)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
-                '_set_instance_error_state')
+                '_set_instance_obj_error_state')
     def test_error_out_instance_on_exception_unknown_with_quotas(self,
                                                                  set_error):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -3737,10 +3737,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               side_effect=exception.ResizeError(reason='')),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(self.instance, 'save'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.migration, 'obj_as_admin',
                               return_value=mock.MagicMock())
-        ) as (meth, fault_create, instance_update,
+        ) as (meth, fault_create, instance_update, instance_save,
               migration_save, migration_obj_as_admin):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
