@@ -50,6 +50,7 @@ Nova Specific Commandments
   assertEqual(A in B, False) or assertEqual(False, A in B) to the more specific
   assertIn/NotIn(A, B)
 - [N339] Check common raise_feature_not_supported() is used for v2.1 HTTPNotImplemented response.
+- [N340] Check nova.utils.spawn() is used instead of greenthread.spawn()
 
 Creating Unit Tests
 -------------------

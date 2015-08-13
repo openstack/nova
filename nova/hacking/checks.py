@@ -96,6 +96,8 @@ api_version_re = re.compile(r"@.*api_version")
 dict_constructor_with_list_copy_re = re.compile(r".*\bdict\((\[)?(\(|\[)")
 decorator_re = re.compile(r"@.*")
 http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")
+greenthread_spawn_re = re.compile(r".*greenthread.spawn\(.*\)")
+greenthread_spawn_n_re = re.compile(r".*greenthread.spawn_n\(.*\)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -520,6 +522,19 @@ def check_http_not_implemented(logical_line, physical_line, filename):
         yield(0, msg)
 
 
+def check_greenthread_spawns(logical_line, physical_line, filename):
+    """Check for use of greenthread.spawn() and greenthread.spawn_n()
+
+    N340
+    """
+    msg = ("N340: Use nova.utils.%(spawn)s() rather than "
+           "greenthread.%(spawn)s()")
+    if re.match(greenthread_spawn_re, logical_line):
+        yield (0, msg % {'spawn': 'spawn'})
+    if re.match(greenthread_spawn_n_re, logical_line):
+        yield (0, msg % {'spawn': 'spawn_n'})
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -546,3 +561,4 @@ def factory(register):
     register(dict_constructor_with_list_copy)
     register(assert_equal_in)
     register(check_http_not_implemented)
+    register(check_greenthread_spawns)

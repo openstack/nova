@@ -534,3 +534,24 @@ class HackingTestCase(test.NoDBTestCase):
         filename = "nova/api/openstack/compute/legacy_v2/test.py"
         self._assert_has_no_errors(code, checks.check_http_not_implemented,
                                    filename=filename)
+
+    def test_check_greenthread_spawns(self):
+        errors = [(1, 0, "N340")]
+
+        code = "greenthread.spawn(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_errors(code, checks.check_greenthread_spawns,
+                                expected_errors=errors)
+
+        code = "greenthread.spawn_n(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_errors(code, checks.check_greenthread_spawns,
+                                expected_errors=errors)
+
+        code = "eventlet.greenthread.spawn(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_errors(code, checks.check_greenthread_spawns,
+                                expected_errors=errors)
+
+        code = "nova.utils.spawn(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_no_errors(code, checks.check_greenthread_spawns)
+
+        code = "nova.utils.spawn_n(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_no_errors(code, checks.check_greenthread_spawns)
