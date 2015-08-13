@@ -2095,7 +2095,9 @@ class ComputeManager(manager.Manager):
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
-        except exception.UnexpectedTaskStateError as e:
+        except (exception.UnexpectedTaskStateError,
+                exception.VolumeLimitExceeded,
+                exception.InvalidBDM) as e:
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
