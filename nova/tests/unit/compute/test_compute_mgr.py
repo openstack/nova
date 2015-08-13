@@ -1568,7 +1568,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
-    def test_check_can_live_migrate_source(self):
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_check_can_live_migrate_source(self, event_mock):
         is_volume_backed = 'volume_backed'
         dest_check_data = dict(foo='bar')
         db_instance = fake_instance.fake_db_instance()
@@ -1598,8 +1599,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.check_can_live_migrate_source(
                 self.context, instance=instance,
                 dest_check_data=dest_check_data)
+        event_mock.assert_called_once_with(
+            self.context, 'compute_check_can_live_migrate_source',
+            instance.uuid)
 
-    def _test_check_can_live_migrate_destination(self, do_raise=False,
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def _test_check_can_live_migrate_destination(self, event_mock,
+                                                 do_raise=False,
                                                  has_mig_data=False):
         db_instance = fake_instance.fake_db_instance(host='fake-host')
         instance = objects.Instance._from_db_object(
@@ -1652,6 +1658,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
         self.assertEqual(expected_result, result)
+        event_mock.assert_called_once_with(
+            self.context, 'compute_check_can_live_migrate_destination',
+            instance.uuid)
 
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()

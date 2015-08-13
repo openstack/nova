@@ -4819,6 +4819,7 @@ class ComputeManager(manager.Manager):
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration, disk_over_commit):
@@ -4853,6 +4854,7 @@ class ComputeManager(manager.Manager):
         return migrate_data
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
@@ -4875,6 +4877,7 @@ class ComputeManager(manager.Manager):
                                                          block_device_info)
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def pre_live_migration(self, context, instance, block_migration, disk,
                            migrate_data):
@@ -4923,6 +4926,7 @@ class ComputeManager(manager.Manager):
         return pre_live_migration_data
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def live_migration(self, context, dest, instance, block_migration,
                        migration, migrate_data):
@@ -5152,6 +5156,7 @@ class ComputeManager(manager.Manager):
                     ctxt, instance.uuid)
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration):
@@ -5266,6 +5271,7 @@ class ComputeManager(manager.Manager):
             migration.save()
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def rollback_live_migration_at_destination(self, context, instance,
                                                destroy_disks,
