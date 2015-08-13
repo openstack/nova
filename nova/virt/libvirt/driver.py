@@ -1956,8 +1956,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             rebase_disk = my_dev
             rebase_base = delete_info['file_to_merge']  # often None
-            if active_protocol is not None:
-                rebase_base = _get_snap_dev(delete_info['file_to_merge'],
+            if (active_protocol is not None) and (rebase_base is not None):
+                rebase_base = _get_snap_dev(rebase_base,
                                             active_disk_object.backing_store)
 
             # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
