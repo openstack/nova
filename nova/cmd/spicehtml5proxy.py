@@ -32,6 +32,8 @@ opts = [
                help='Host on which to listen for incoming requests'),
     cfg.IntOpt('html5proxy_port',
                default=6082,
+               min=1,
+               max=65535,
                help='Port on which to listen for incoming requests'),
     ]
 

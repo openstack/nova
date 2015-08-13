@@ -46,6 +46,8 @@ xvp_opts = [
                help='XVP log file'),
     cfg.IntOpt('console_xvp_multiplex_port',
                default=5900,
+               min=1,
+               max=65535,
                help='Port for XVP to multiplex VNC connections on'),
     ]
 

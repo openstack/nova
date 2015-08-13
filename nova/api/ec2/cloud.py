@@ -63,6 +63,8 @@ ec2_opts = [
                help='The internal IP address of the EC2 API server'),
     cfg.IntOpt('ec2_port',
                default=8773,
+               min=1,
+               max=65535,
                help='The port of the EC2 API server'),
     cfg.StrOpt('ec2_scheme',
                default='http',

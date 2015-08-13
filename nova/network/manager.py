@@ -78,6 +78,8 @@ network_opts = [
                help='FlatDhcp will bridge into this interface if set'),
     cfg.IntOpt('vlan_start',
                default=100,
+               min=1,
+               max=4094,
                help='First VLAN for private networks'),
     cfg.StrOpt('vlan_interface',
                help='VLANs will bridge into this interface if set'),

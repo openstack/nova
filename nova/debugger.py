@@ -38,6 +38,8 @@ def register_cli_opts():
                         'under normal operation. Use at your own risk.'),
 
         cfg.IntOpt('port',
+                    min=1,
+                    max=65535,
                     help='Debug port to connect. Note '
                         'that using the remote debug option changes how '
                         'Nova uses the eventlet library to support async IO. '

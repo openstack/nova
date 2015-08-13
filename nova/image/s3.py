@@ -51,6 +51,8 @@ s3_opts = [
                     'the S3 api'),
     cfg.IntOpt('s3_port',
                default=3333,
+               min=1,
+               max=65535,
                help='Port used when accessing the S3 api'),
     cfg.StrOpt('s3_access_key',
                default='notchecked',

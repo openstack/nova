@@ -32,6 +32,8 @@ opts = [
                help='Host on which to listen for incoming requests'),
     cfg.IntOpt('novncproxy_port',
                default=6080,
+               min=1,
+               max=65535,
                help='Port on which to listen for incoming requests'),
     ]
 
