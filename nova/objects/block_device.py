@@ -299,26 +299,6 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         except StopIteration:
             return
 
-    def root_metadata(self, context, image_api, volume_api):
-        root_bdm = self.root_bdm()
-        if not root_bdm:
-            return {}
-
-        if root_bdm.is_volume:
-            try:
-                volume = volume_api.get(context, root_bdm.volume_id)
-                return volume.get('volume_image_metadata', {})
-            except Exception:
-                raise exception.InvalidBDMVolume(id=root_bdm.id)
-        elif root_bdm.is_image:
-            try:
-                image_meta = image_api.show(context, root_bdm.image_id)
-                return image_meta.get('properties', {})
-            except Exception:
-                raise exception.InvalidBDMImage(id=root_bdm.id)
-        else:
-            return {}
-
 
 def block_device_make_list(context, db_list, **extra_args):
     return base.obj_make_list(context,
