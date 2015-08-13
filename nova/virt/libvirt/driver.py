@@ -31,7 +31,6 @@ import functools
 import glob
 import mmap
 import os
-import random
 import shutil
 import socket
 import sys
@@ -3750,29 +3749,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 context, instance)
 
         if not guest_cpu_numa:
-            # No NUMA topology defined for instance
-            vcpus = flavor.vcpus
-            memory = flavor.memory_mb
-            if topology:
-                # Host is NUMA capable so try to keep the instance in a cell
-                viable_cells_cpus = []
-                for cell in topology.cells:
-                    if vcpus <= len(cell.cpuset) and memory <= cell.memory:
-                        viable_cells_cpus.append(cell.cpuset)
-
-                if not viable_cells_cpus:
-                    # We can't contain the instance in a cell - do nothing for
-                    # now.
-                    # TODO(ndipanov): Attempt to spread the instance accross
-                    # NUMA nodes and expose the topology to the instance as an
-                    # optimisation
-                    return allowed_cpus, None, None
-                else:
-                    pin_cpuset = random.choice(viable_cells_cpus)
-                    return pin_cpuset, None, None
-            else:
-                # We have no NUMA topology in the host either
-                return allowed_cpus, None, None
+            # No NUMA topology defined for instance - let the host kernel deal
+            # with the NUMA effects.
+            # TODO(ndipanov): Attempt to spread the instance
+            # across NUMA nodes and expose the topology to the
+            # instance as an optimisation
+            return allowed_cpus, None, None
         else:
             if topology:
                 # Now get the CpuTune configuration from the numa_topology
