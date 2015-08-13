@@ -1956,11 +1956,71 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_fetch_image_if_missing(
                 is_iso=True)
 
+    def test_get_esx_host_and_cookies(self):
+        datastore = mock.Mock()
+        datastore.get_connected_hosts.return_value = ['fira-host']
+        file_path = mock.Mock()
+
+        def fake_invoke(module, method, *args, **kwargs):
+            if method == 'AcquireGenericServiceTicket':
+                ticket = mock.Mock()
+                ticket.id = 'fira-ticket'
+                return ticket
+            elif method == 'get_object_property':
+                return 'fira-host'
+        with contextlib.nested(
+            mock.patch.object(self._session, 'invoke_api', fake_invoke),
+        ):
+            result = self._vmops._get_esx_host_and_cookies(datastore,
+                                                           'ha-datacenter',
+                                                           file_path)
+            self.assertEqual('fira-host', result[0])
+            cookies = result[1]
+            self.assertEqual(1, len(cookies))
+            self.assertEqual('vmware_cgi_ticket', cookies[0].name)
+            self.assertEqual('"fira-ticket"', cookies[0].value)
+
     @mock.patch.object(images, 'fetch_image')
-    def test_fetch_image_as_file(self, mock_fetch_image):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_esx_host_and_cookies')
+    def test_fetch_image_as_file(self,
+                        mock_get_esx_host_and_cookies,
+                        mock_fetch_image):
         vi = self._make_vm_config_info()
         image_ds_loc = mock.Mock()
+        host = mock.Mock()
+        dc_name = 'ha-datacenter'
+        cookies = mock.Mock()
+        mock_get_esx_host_and_cookies.return_value = host, cookies
         self._vmops._fetch_image_as_file(self._context, vi, image_ds_loc)
+        mock_get_esx_host_and_cookies.assert_called_once_with(
+                vi.datastore,
+                dc_name,
+                image_ds_loc.rel_path)
+        mock_fetch_image.assert_called_once_with(
+                self._context,
+                vi.instance,
+                host,
+                self._session._port,
+                dc_name,
+                self._ds.name,
+                image_ds_loc.rel_path,
+                cookies=cookies)
+
+    @mock.patch.object(images, 'fetch_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_esx_host_and_cookies')
+    def test_fetch_image_as_file_exception(self,
+                                 mock_get_esx_host_and_cookies,
+                                 mock_fetch_image):
+        vi = self._make_vm_config_info()
+        image_ds_loc = mock.Mock()
+        dc_name = 'ha-datacenter'
+        mock_get_esx_host_and_cookies.side_effect = \
+            exception.HostNotFound(host='')
+        self._vmops._fetch_image_as_file(self._context, vi, image_ds_loc)
+        mock_get_esx_host_and_cookies.assert_called_once_with(
+                vi.datastore,
+                dc_name,
+                image_ds_loc.rel_path)
         mock_fetch_image.assert_called_once_with(
                 self._context,
                 vi.instance,
