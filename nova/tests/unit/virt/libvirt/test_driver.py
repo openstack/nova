@@ -12103,6 +12103,50 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               self.drvr.migrate_disk_and_power_off,
               None, ins_ref, '10.0.0.1', flavor_obj, None)
 
+    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '.get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '._is_storage_shared_with')
+    def _test_migrate_disk_and_power_off_backing_file(self,
+                                                      shared_storage,
+                                                      mock_is_shared_storage,
+                                                      mock_get_disk_info,
+                                                      mock_destroy,
+                                                      mock_execute):
+        self.convert_file_called = False
+        flavor = {'root_gb': 20, 'ephemeral_gb': 30, 'swap': 0}
+        flavor_obj = objects.Flavor(**flavor)
+        disk_info = [{'type': 'qcow2', 'path': '/test/disk',
+                      'virt_disk_size': '10737418240',
+                      'backing_file': '/base/disk',
+                      'disk_size': '83886080'}]
+        disk_info_text = jsonutils.dumps(disk_info)
+        mock_get_disk_info.return_value = disk_info_text
+        mock_is_shared_storage.return_value = shared_storage
+
+        def fake_execute(*args, **kwargs):
+            self.assertNotEqual(args[0:2], ['qemu-img', 'convert'])
+
+        mock_execute.side_effect = fake_execute
+
+        instance = self._create_instance()
+
+        out = self.drvr.migrate_disk_and_power_off(
+               context.get_admin_context(), instance, '10.0.0.2',
+               flavor_obj, None)
+
+        self.assertTrue(mock_is_shared_storage.called)
+        mock_destroy.assert_called_once_with(instance)
+        self.assertEqual(out, disk_info_text)
+
+    def test_migrate_disk_and_power_off_shared_storage(self):
+        self._test_migrate_disk_and_power_off_backing_file(True)
+
+    def test_migrate_disk_and_power_off_non_shared_storage(self):
+        self._test_migrate_disk_and_power_off_backing_file(False)
+
     def test_migrate_disk_and_power_off_lvm(self):
         self.flags(images_type='lvm', group='libvirt')
 
