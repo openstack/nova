@@ -8606,11 +8606,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Mock domain
         mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
         mock_domain.info().AndReturn(
-            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+            (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple)
         mock_domain.ID().AndReturn('some_fake_id')
         mock_domain.shutdown()
         mock_domain.info().AndReturn(
-            (libvirt_driver.VIR_DOMAIN_CRASHED,) + info_tuple)
+            (libvirt_guest.VIR_DOMAIN_CRASHED,) + info_tuple)
         mock_domain.ID().AndReturn('some_other_fake_id')
 
         self.mox.ReplayAll()
@@ -8652,8 +8652,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Mock domain
         mock_domain = mock.Mock(fakelibvirt.virDomain)
-        return_values = [(libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple,
-                         (libvirt_driver.VIR_DOMAIN_CRASHED,) + info_tuple]
+        return_values = [(libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple,
+                         (libvirt_guest.VIR_DOMAIN_CRASHED,) + info_tuple]
         mock_domain.info.side_effect = return_values
         mock_domain.ID.return_value = 'some_fake_id'
         mock_domain.shutdown.side_effect = mock.Mock()
@@ -8680,7 +8680,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # setup mocks
         mock_virDomain = mock.Mock(fakelibvirt.virDomain)
         mock_virDomain.info.return_value = (
-            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+            (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple)
         mock_virDomain.ID.return_value = 'some_fake_id'
         mock_virDomain.shutdown.side_effect = fakelibvirt.libvirtError('Err')
 
@@ -8861,12 +8861,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Mock domain
         mock_domain = mock.Mock(fakelibvirt.virDomain)
-        return_infos = [(libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple]
+        return_infos = [(libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple]
         return_shutdowns = [shutdown_count.append("shutdown")]
         retry_countdown = retry_interval
         for x in range(min(seconds_to_shutdown, timeout)):
             return_infos.append(
-                (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+                (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple)
             if retry_countdown == 0:
                 return_shutdowns.append(shutdown_count.append("shutdown"))
                 retry_countdown = retry_interval
@@ -8875,7 +8875,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         if seconds_to_shutdown < timeout:
             return_infos.append(
-                (libvirt_driver.VIR_DOMAIN_SHUTDOWN,) + info_tuple)
+                (libvirt_guest.VIR_DOMAIN_SHUTDOWN,) + info_tuple)
 
         mock_domain.info.side_effect = return_infos
         mock_domain.shutdown.side_effect = return_shutdowns
@@ -9179,6 +9179,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock.ID()
         mock.destroy().AndRaise(ex)
         mock.info().AndRaise(ex)
+        mock.UUIDString()
         self.mox.ReplayAll()
 
         def fake_get_domain(instance):

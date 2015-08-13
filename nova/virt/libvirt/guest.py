@@ -33,15 +33,45 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 
+from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova import utils
+from nova.virt import hardware
+from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
 
 libvirt = None
 
 LOG = logging.getLogger(__name__)
+
+VIR_DOMAIN_NOSTATE = 0
+VIR_DOMAIN_RUNNING = 1
+VIR_DOMAIN_BLOCKED = 2
+VIR_DOMAIN_PAUSED = 3
+VIR_DOMAIN_SHUTDOWN = 4
+VIR_DOMAIN_SHUTOFF = 5
+VIR_DOMAIN_CRASHED = 6
+VIR_DOMAIN_PMSUSPENDED = 7
+
+LIBVIRT_POWER_STATE = {
+    VIR_DOMAIN_NOSTATE: power_state.NOSTATE,
+    VIR_DOMAIN_RUNNING: power_state.RUNNING,
+    # The DOMAIN_BLOCKED state is only valid in Xen.  It means that
+    # the VM is running and the vCPU is idle. So, we map it to RUNNING
+    VIR_DOMAIN_BLOCKED: power_state.RUNNING,
+    VIR_DOMAIN_PAUSED: power_state.PAUSED,
+    # The libvirt API doc says that DOMAIN_SHUTDOWN means the domain
+    # is being shut down. So technically the domain is still
+    # running. SHUTOFF is the real powered off state.  But we will map
+    # both to SHUTDOWN anyway.
+    # http://libvirt.org/html/libvirt-libvirt.html
+    VIR_DOMAIN_SHUTDOWN: power_state.SHUTDOWN,
+    VIR_DOMAIN_SHUTOFF: power_state.SHUTDOWN,
+    VIR_DOMAIN_CRASHED: power_state.CRASHED,
+    VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
+}
 
 
 class Guest(object):
@@ -289,6 +319,48 @@ class Guest(object):
     def set_user_password(self, user, new_pass):
         """Configures a new user password."""
         self._domain.setUserPassword(user, new_pass, 0)
+
+    def _get_domain_info(self, host):
+        """Returns information on Guest
+
+        :param host: a host.Host object with current
+                     connection. Unfortunatly we need to pass it
+                     because of a workaround with < version 1.2..11
+
+        :returns list: [state, maxMem, memory, nrVirtCpu, cpuTime]
+        """
+        return compat.get_domain_info(libvirt, host, self._domain)
+
+    def get_info(self, host):
+        """Retrieve information from libvirt for a specific instance name.
+
+        If a libvirt error is encountered during lookup, we might raise a
+        NotFound exception or Error exception depending on how severe the
+        libvirt error is.
+
+        :returns hardware.InstanceInfo:
+        """
+        try:
+            dom_info = self._get_domain_info(host)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=self.uuid)
+
+            msg = (_('Error from libvirt while getting domain info for '
+                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s') %
+                   {'instance_name': self.name,
+                    'error_code': error_code,
+                    'ex': ex})
+            raise exception.NovaException(msg)
+
+        return hardware.InstanceInfo(
+            state=LIBVIRT_POWER_STATE[dom_info[0]],
+            max_mem_kb=dom_info[1],
+            mem_kb=dom_info[2],
+            num_cpu=dom_info[3],
+            cpu_time_ns=dom_info[4],
+            id=self.id)
 
 
 class BlockDevice(object):

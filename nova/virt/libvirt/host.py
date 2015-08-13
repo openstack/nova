@@ -54,9 +54,8 @@ from nova.i18n import _LW
 from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
-from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import guest
+from nova.virt.libvirt import guest as libvirt_guest
 
 libvirt = None
 
@@ -613,7 +612,7 @@ class Host(object):
 
         :returns: a nova.virt.libvirt.Guest object
         """
-        return guest.Guest(
+        return libvirt_guest.Guest(
             self.get_domain(instance))
 
     def _get_domain_by_id(self, instance_id):
@@ -887,9 +886,6 @@ class Host(object):
         if secret is not None:
             secret.undefine()
 
-    def get_domain_info(self, virt_dom):
-        return compat.get_domain_info(libvirt, self, virt_dom)
-
     def _get_hardware_info(self):
         """Returns hardware information about the Node.
 
@@ -925,7 +921,11 @@ class Host(object):
             used = 0
             for dom in self.list_instance_domains(only_guests=False):
                 try:
-                    dom_mem = int(self.get_domain_info(dom)[2])
+                    # TODO(sahid): we should have method list_guests()
+                    # which returns Guest's objects
+                    guest = libvirt_guest.Guest(dom)
+                    # TODO(sahid): Use get_info...
+                    dom_mem = int(guest._get_domain_info(self)[2])
                 except libvirt.libvirtError as e:
                     LOG.warn(_LW("couldn't obtain the memory from domain:"
                                  " %(uuid)s, exception: %(ex)s") %

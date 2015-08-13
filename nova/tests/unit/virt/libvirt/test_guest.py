@@ -344,6 +344,18 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestHostdev)
         self.assertIsInstance(devs[1], vconfig.LibvirtConfigGuestHostdev)
 
+    def test_get_info(self):
+        self.domain.info.return_value = (1, 2, 3, 4, 5)
+        self.domain.ID.return_value = 6
+        info = self.guest.get_info(self.host)
+        self.domain.info.assert_called_once_with()
+        self.assertEqual(1, info.state)
+        self.assertEqual(2, info.max_mem_kb)
+        self.assertEqual(3, info.mem_kb)
+        self.assertEqual(4, info.num_cpu)
+        self.assertEqual(5, info.cpu_time_ns)
+        self.assertEqual(6, info.id)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
