@@ -30,7 +30,7 @@ class ExtensionsTest(integrated_helpers._IntegratedTestBase):
         f = super(ExtensionsTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         f['osapi_compute_extension'].append(
-            'nova.tests.unit.api.openstack.compute.extensions.'
+            'nova.tests.unit.api.openstack.compute.legacy_v2.extensions.'
             'foxinsocks.Foxinsocks')
         return f
 

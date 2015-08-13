@@ -300,7 +300,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_subclass_with_port(self):
-        cls = ('nova.tests.unit.api.openstack.compute' +
+        cls = ('nova.tests.unit.api.openstack.compute.plugins.v3'
                '.test_servers.NeutronV2Subclass')
         self.flags(network_api_class=cls)
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'

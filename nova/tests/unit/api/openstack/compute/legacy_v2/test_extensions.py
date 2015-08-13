@@ -135,7 +135,7 @@ class ExtensionTestCase(test.TestCase):
     def setUp(self):
         super(ExtensionTestCase, self).setUp()
         ext_list = CONF.osapi_compute_extension[:]
-        fox = ('nova.tests.unit.api.openstack.compute.extensions.'
+        fox = ('nova.tests.unit.api.openstack.compute.legacy_v2.extensions.'
                'foxinsocks.Foxinsocks')
         if fox not in ext_list:
             ext_list.append(fox)
