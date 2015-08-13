@@ -4,13 +4,14 @@
 #
 # Translators:
 # Frédéric <frosmont@free.fr>, 2014
+# Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"POT-Creation-Date: 2015-08-12 06:31+0000\n"
+"PO-Revision-Date: 2015-08-11 08:12+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -311,6 +312,13 @@ msgstr ""
 "updated_since=%(since_str)s"
 
 #, python-format
+msgid ""
+"Forcing direct route to %(cell_name)s because of 'target_cell' scheduler hint"
+msgstr ""
+"Route directe forcée pour %(cell_name)s a cause de de l'indication de "
+"l'ordonnanceur"
+
+#, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr ""
 "Arrêt détecté, %(instance_count)d redémarrée dans les %(timeout)d secondes"
@@ -427,6 +435,10 @@ msgstr "Instance générée avec succès."
 #, python-format
 msgid "Invalid request: %s"
 msgstr "Demande non valide : %s"
+
+#, python-format
+msgid "Loaded extensions: %s"
+msgstr "Extension chargée: %s"
 
 #, python-format
 msgid "Loading compute driver '%s'"
@@ -661,6 +673,10 @@ msgstr ""
 
 msgid "WSGI server has stopped."
 msgstr "Le serveur WSGI a été arrêté."
+
+#, python-format
+msgid "Working on deleting snapshot %s from shelved instance..."
+msgstr "Supression de l'instantané %s de l'instance en attente en cours..."
 
 #, python-format
 msgid "Writing stored info to %s"

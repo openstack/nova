@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-08-12 06:30+0000\n"
+"PO-Revision-Date: 2015-08-12 06:27+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
@@ -2496,9 +2496,6 @@ msgstr ""
 "Bu dosyada image_file_url:<list entry name> kısımlarında yapılandırılmış "
 "dosya sistemleri listesi"
 
-msgid "Live migration can not be used without shared storage."
-msgstr "Canlı göç paylaşımlı depolama olmadan kullanılamaz."
-
 #, python-format
 msgid "Live migration failed: %s"
 msgstr "Canlı göç başarısız: %s"
@@ -3107,9 +3104,6 @@ msgstr ""
 msgid "Only 'updated_since', 'project_id' and 'deleted' are understood."
 msgstr "Yalnızca 'updated_since', 'project_id', ve 'deleted' anlaşıldı."
 
-msgid "Only KVM and QEMU are supported"
-msgstr "Yalnızca KVM ve QEMU destekleniyor"
-
 msgid "Only administrators may list deleted instances"
 msgstr "Yalnızca yöneticiler silinen sunucuları listeleyebilir"
 
@@ -3297,14 +3291,6 @@ msgstr "Sağlanan watchdog eylemi (%(action)s) desteklenmiyor."
 
 msgid "QEMU guest agent is not enabled"
 msgstr "QEMU konuk ajan etkin değil"
-
-#, python-format
-msgid "Quiescing is not supported in instance %(instance_id)s: %(reason)s"
-msgstr "%(instance_id)s: %(reason)s sunucusunda susturma desteklenmiyor"
-
-#, python-format
-msgid "Quiescing requires libvirt version %(version)s or greater"
-msgstr "Susturma libvirt sürümü %(version)s ya da büyüğüne ihtiyaç duyar"
 
 msgid "Quota"
 msgstr "Kota"
@@ -4403,12 +4389,6 @@ msgstr ""
 "%s"
 
 #, python-format
-msgid ""
-"Unexpected VM state: expecting %(expected)s but the actual state is "
-"%(actual)s"
-msgstr "Beklenmedik VM durumu: beklenen %(expected)s ama asıl durum %(actual)s"
-
-#, python-format
 msgid "Unexpected aggregate action %s"
 msgstr "Beklenmedik takım eylemi %s"
 
@@ -4419,13 +4399,6 @@ msgid ""
 msgstr ""
 "Beklenmeyen sysinfo_serial ayarı '%(actual)s'. İzin verilen değerler "
 "%(expect)s'"
-
-#, python-format
-msgid ""
-"Unexpected task state: expecting %(expected)s but the actual state is "
-"%(actual)s"
-msgstr ""
-"Beklenmeyen görev durumu: %(expected)s beklendi ama asıl durum %(actual)s"
 
 msgid "Unexpected type adding stats"
 msgstr "Durum eklemede beklenmedik tür"
@@ -4983,9 +4956,6 @@ msgstr "imageLocation gerekli"
 
 msgid "index"
 msgstr "indis"
-
-msgid "installed version of librbd does not support cloning"
-msgstr "kurulmuş librbd kopyalamayı desteklemiyor"
 
 msgid "instance"
 msgstr "sunucu"

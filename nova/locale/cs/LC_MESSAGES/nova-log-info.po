@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-08-01 08:17+0000\n"
+"POT-Creation-Date: 2015-08-12 06:31+0000\n"
+"PO-Revision-Date: 2015-08-11 12:58+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Language: cs\n"
@@ -223,6 +223,14 @@ msgstr "Vytváření události %(name)s:%(tag)s por instanci %(instance_uuid)s"
 
 msgid "Creating image"
 msgstr "Vytváření obrazu"
+
+#, python-format
+msgid ""
+"Data remaining %(remaining)d bytes, low watermark %(watermark)d bytes "
+"%(last)d seconds ago"
+msgstr ""
+"Zbývající data %(remaining)d bajtů, nejnižší hladina %(watermark)d bajtů "
+"před %(last)d vteřinami"
 
 #, python-format
 msgid "De-registering image %s"
@@ -521,6 +529,11 @@ msgstr ""
 #, python-format
 msgid "Import key %s"
 msgstr "Importovat klíč %s"
+
+#, python-format
+msgid ""
+"Increasing downtime to %(downtime)dms after %(waittime)d sec elapsed time"
+msgstr "Snižování odstávky na %(downtime)dms po uplynutí %(waittime)d vteřin"
 
 #, python-format
 msgid ""
