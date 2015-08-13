@@ -16,11 +16,13 @@ import mock
 from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 
+from nova.compute import manager as compute_manager
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import aggregate
 from nova.objects import service
+from nova import test
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 
@@ -39,6 +41,7 @@ fake_service = {
     'disabled': False,
     'disabled_reason': None,
     'last_seen_up': None,
+    'version': service.SERVICE_VERSION,
     }
 
 OPTIONAL = ['availability_zone', 'compute_node']
@@ -107,17 +110,20 @@ class _TestServiceObject(object):
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')
-        db.service_create(self.context, {'host': 'fake-host'}).AndReturn(
+        db.service_create(self.context, {'host': 'fake-host',
+                                         'version': 1}).AndReturn(
             fake_service)
         self.mox.ReplayAll()
         service_obj = service.Service(context=self.context)
         service_obj.host = 'fake-host'
         service_obj.create()
         self.assertEqual(fake_service['id'], service_obj.id)
+        self.assertEqual(service.SERVICE_VERSION, service_obj.version)
 
     def test_recreate_fails(self):
         self.mox.StubOutWithMock(db, 'service_create')
-        db.service_create(self.context, {'host': 'fake-host'}).AndReturn(
+        db.service_create(self.context, {'host': 'fake-host',
+                                         'version': 1}).AndReturn(
             fake_service)
         self.mox.ReplayAll()
         service_obj = service.Service(context=self.context)
@@ -127,13 +133,15 @@ class _TestServiceObject(object):
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'service_update')
-        db.service_update(self.context, 123, {'host': 'fake-host'}).AndReturn(
+        db.service_update(self.context, 123, {'host': 'fake-host',
+                                              'version': 1}).AndReturn(
             fake_service)
         self.mox.ReplayAll()
         service_obj = service.Service(context=self.context)
         service_obj.id = 123
         service_obj.host = 'fake-host'
         service_obj.save()
+        self.assertEqual(service.SERVICE_VERSION, service_obj.version)
 
     @mock.patch.object(db, 'service_create',
                        return_value=fake_service)
@@ -250,8 +258,10 @@ class _TestServiceObject(object):
 
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     def test_obj_make_compatible_with_juno_computes(self, get_all_by_host):
+        service_attrs = dict(fake_service)
+        del service_attrs['version']
         service_obj = objects.Service(
-            context=self.context, **fake_service)
+            context=self.context, **service_attrs)
         service_obj.binary = 'nova-compute'
         fake_service_dict = fake_service.copy()
         fake_service_dict['binary'] = 'nova-compute'
@@ -275,3 +285,58 @@ class TestServiceObject(test_objects._LocalTest,
 class TestRemoteServiceObject(test_objects._RemoteTest,
                               _TestServiceObject):
     pass
+
+
+class TestServiceVersion(test.TestCase):
+    def _collect_things(self):
+        data = {
+            'compute_rpc': compute_manager.ComputeManager.target.version,
+        }
+        return data
+
+    def test_version(self):
+        calculated = self._collect_things()
+        self.assertEqual(
+            len(service.SERVICE_VERSION_HISTORY), service.SERVICE_VERSION + 1,
+            'Service version %i has no history. Please update '
+            'nova.objects.service.SERVICE_VERSION_HISTORY '
+            'and add %s to it' % (service.SERVICE_VERSION, repr(calculated)))
+        current = service.SERVICE_VERSION_HISTORY[service.SERVICE_VERSION]
+        self.assertEqual(
+            current, calculated,
+            'Changes detected that require a SERVICE_VERSION change. Please '
+            'increment nova.objects.service.SERVICE_VERSION')
+
+    def test_version_in_init(self):
+        self.assertRaises(exception.ObjectActionError,
+                          objects.Service,
+                          version=123)
+
+    def test_version_set_on_init(self):
+        self.assertEqual(service.SERVICE_VERSION,
+                         objects.Service().version)
+
+    def test_version_loaded_from_db(self):
+        fake_version = fake_service['version'] + 1
+        fake_different_service = dict(fake_service)
+        fake_different_service['version'] = fake_version
+        obj = objects.Service()
+        obj._from_db_object(mock.sentinel.context, obj, fake_different_service)
+        self.assertEqual(fake_version, obj.version)
+
+    def test_save_noop_with_only_version(self):
+        o = objects.Service(context=mock.sentinel.context,
+                            id=fake_service['id'])
+        o.obj_reset_changes(['id'])
+        self.assertEqual(set(['version']), o.obj_what_changed())
+        with mock.patch('nova.db.service_update') as mock_update:
+            o.save()
+            self.assertFalse(mock_update.called)
+        o.host = 'foo'
+        with mock.patch('nova.db.service_update') as mock_update:
+            mock_update.return_value = fake_service
+            o.save()
+            mock_update.assert_called_once_with(
+                mock.sentinel.context, fake_service['id'],
+                {'version': service.SERVICE_VERSION,
+                 'host': 'foo'})

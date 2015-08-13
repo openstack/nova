@@ -366,13 +366,15 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.assertEqual(services, result)
 
     def _test_service_get_all(self, fake_filters, **kwargs):
+        service_attrs = dict(test_service.fake_service)
+        del service_attrs['version']
         services = [
             cells_utils.ServiceProxy(
-                objects.Service(**dict(test_service.fake_service, id=1,
+                objects.Service(**dict(service_attrs, id=1,
                                 topic='compute', host='host1')),
                 'cell1'),
             cells_utils.ServiceProxy(
-                objects.Service(**dict(test_service.fake_service, id=2,
+                objects.Service(**dict(service_attrs, id=2,
                                 topic='compute', host='host2')),
                 'cell1')]
         exp_services = []

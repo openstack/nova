@@ -895,6 +895,7 @@ class ServicesCellsTestV21(test.TestCase):
         services_list = []
         for service in fake_services_list:
             service = service.copy()
+            del service['version']
             service_obj = objects.Service(**service)
             service_proxy = cells_utils.ServiceProxy(service_obj, 'cell1')
             services_list.append(service_proxy)
