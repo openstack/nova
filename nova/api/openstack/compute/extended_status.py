@@ -55,7 +55,7 @@ class ExtendedStatusController(wsgi.Controller):
                 self._extend_server(server, db_instance)
 
 
-class ExtendedStatus(extensions.V3APIExtensionBase):
+class ExtendedStatus(extensions.V21APIExtensionBase):
     """Extended Status support."""
 
     name = "ExtendedStatus"

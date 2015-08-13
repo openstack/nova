@@ -303,7 +303,7 @@ class CellsController(wsgi.Controller):
                 updated_since=updated_since, deleted=deleted)
 
 
-class Cells(extensions.V3APIExtensionBase):
+class Cells(extensions.V21APIExtensionBase):
     """Enables cells-related functionality such as adding neighbor cells,
     listing neighbor cells, and getting the capabilities of the local cell.
     """

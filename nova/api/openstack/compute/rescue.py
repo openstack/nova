@@ -99,7 +99,7 @@ class RescueController(wsgi.Controller):
                                                                   id)
 
 
-class Rescue(extensions.V3APIExtensionBase):
+class Rescue(extensions.V21APIExtensionBase):
     """Instance rescue mode."""
 
     name = "Rescue"

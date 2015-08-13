@@ -50,7 +50,7 @@ class FloatingIPPoolsController(wsgi.Controller):
         return _translate_floating_ip_pools_view(pools)
 
 
-class FloatingIpPools(extensions.V3APIExtensionBase):
+class FloatingIpPools(extensions.V21APIExtensionBase):
     """Floating IPs support."""
 
     name = "FloatingIpPools"
@@ -63,7 +63,7 @@ class FloatingIpPools(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

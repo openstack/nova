@@ -85,7 +85,7 @@ class ShelveController(wsgi.Controller):
                                                                   id)
 
 
-class Shelve(exts.V3APIExtensionBase):
+class Shelve(exts.V21APIExtensionBase):
     """Instance shelve mode."""
 
     name = "Shelve"

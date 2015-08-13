@@ -136,7 +136,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
 
 
-class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
+class FlavorsExtraSpecs(extensions.V21APIExtensionBase):
     """Flavors extra specs support."""
     name = 'FlavorExtraSpecs'
     alias = ALIAS

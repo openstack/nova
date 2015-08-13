@@ -200,7 +200,7 @@ class AggregateController(wsgi.Controller):
         return {"aggregate": _aggregate}
 
 
-class Aggregates(extensions.V3APIExtensionBase):
+class Aggregates(extensions.V21APIExtensionBase):
     """Admin-only aggregate administration."""
 
     name = "Aggregates"

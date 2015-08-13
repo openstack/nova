@@ -74,7 +74,7 @@ class ExtensionInfoTest(test.NoDBTestCase):
 
     def test_extension_info_list(self):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce)
-        req = fakes.HTTPRequestV3.blank('/extensions')
+        req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
         self.assertEqual(3, len(res_dict['extensions']))
         for e in res_dict['extensions']:
@@ -89,7 +89,7 @@ class ExtensionInfoTest(test.NoDBTestCase):
 
     def test_extension_info_show(self):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce)
-        req = fakes.HTTPRequestV3.blank('/extensions/ext1-alias')
+        req = fakes.HTTPRequestV21.blank('/extensions/ext1-alias')
         res_dict = self.controller.show(req, 'ext1-alias')
         self.assertEqual(1, len(res_dict))
         self.assertEqual(res_dict['extension']['name'],
@@ -104,7 +104,7 @@ class ExtensionInfoTest(test.NoDBTestCase):
 
     def test_extension_info_list_not_all_discoverable(self):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce_selective)
-        req = fakes.HTTPRequestV3.blank('/extensions')
+        req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
         self.assertEqual(2, len(res_dict['extensions']))
         for e in res_dict['extensions']:

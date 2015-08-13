@@ -49,7 +49,7 @@ class ImageSizeController(wsgi.Controller):
                 self._extend_image(image, image_cached)
 
 
-class ImageSize(extensions.V3APIExtensionBase):
+class ImageSize(extensions.V21APIExtensionBase):
     """Adds image size to image listings."""
 
     name = "ImageSize"

@@ -58,7 +58,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
                  if i in connect_info}}
 
 
-class ConsoleAuthTokens(extensions.V3APIExtensionBase):
+class ConsoleAuthTokens(extensions.V21APIExtensionBase):
     """Console token authentication support."""
     name = "ConsoleAuthTokens"
     alias = ALIAS

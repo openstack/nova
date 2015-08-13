@@ -112,7 +112,7 @@ class ServerDiskConfigController(wsgi.Controller):
             self._show(req, resp_obj)
 
 
-class DiskConfig(extensions.V3APIExtensionBase):
+class DiskConfig(extensions.V21APIExtensionBase):
     """Disk Management Extension."""
 
     name = "DiskConfig"

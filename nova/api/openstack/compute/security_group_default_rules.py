@@ -131,7 +131,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         return sg_rule
 
 
-class SecurityGroupDefaultRules(extensions.V3APIExtensionBase):
+class SecurityGroupDefaultRules(extensions.V21APIExtensionBase):
     """Default rules for security group support."""
     name = "SecurityGroupDefaultRules"
     alias = ALIAS

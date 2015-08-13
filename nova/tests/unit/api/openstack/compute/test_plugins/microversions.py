@@ -124,7 +124,7 @@ class MicroversionsExtendsController3(wsgi.Controller):
         resp_obj.obj['extend_ctrlr3'] = 'val_3'
 
 
-class Microversions(extensions.V3APIExtensionBase):
+class Microversions(extensions.V21APIExtensionBase):
     """Basic Microversions Extension."""
 
     name = "Microversions"

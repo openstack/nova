@@ -319,7 +319,7 @@ class APIRouterV21(base_wsgi.Router):
         def _check_load_extension(ext):
             if (self.init_only is None or ext.obj.alias in
                 self.init_only) and isinstance(ext.obj,
-                                               extensions.V3APIExtensionBase):
+                                               extensions.V21APIExtensionBase):
 
                 # Check whitelist is either empty or if not then the extension
                 # is in the whitelist

@@ -150,7 +150,7 @@ class ImagesController(wsgi.Controller):
         return self._view_builder.detail(req, images)
 
 
-class Images(extensions.V3APIExtensionBase):
+class Images(extensions.V21APIExtensionBase):
     """Proxying API for Images."""
 
     name = "Images"

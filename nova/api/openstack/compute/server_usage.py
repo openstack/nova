@@ -60,7 +60,7 @@ class ServerUsageController(wsgi.Controller):
                 self._extend_server(server, db_instance)
 
 
-class ServerUsage(extensions.V3APIExtensionBase):
+class ServerUsage(extensions.V21APIExtensionBase):
     """Adds launched_at and terminated_at on Servers."""
 
     name = "ServerUsage"

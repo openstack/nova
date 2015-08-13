@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 ALIAS = "os-personality"
 
 
-class Personality(extensions.V3APIExtensionBase):
+class Personality(extensions.V21APIExtensionBase):
     """Personality support."""
 
     name = "Personality"

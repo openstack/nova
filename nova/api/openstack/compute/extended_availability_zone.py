@@ -53,7 +53,7 @@ class ExtendedAZController(wsgi.Controller):
                 self._extend_server(context, server, db_instance)
 
 
-class ExtendedAvailabilityZone(extensions.V3APIExtensionBase):
+class ExtendedAvailabilityZone(extensions.V21APIExtensionBase):
     """Extended Availability Zone support."""
 
     name = "ExtendedAvailabilityZone"

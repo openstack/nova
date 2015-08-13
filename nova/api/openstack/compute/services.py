@@ -199,7 +199,7 @@ class ServiceController(wsgi.Controller):
         return self._perform_action(req, id, body, actions)
 
 
-class Services(extensions.V3APIExtensionBase):
+class Services(extensions.V21APIExtensionBase):
     """Services support."""
 
     name = "Services"

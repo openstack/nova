@@ -36,7 +36,7 @@ class VersionsController(wsgi.Controller):
         return builder.build_version(versions.VERSIONS[id])
 
 
-class Versions(extensions.V3APIExtensionBase):
+class Versions(extensions.V21APIExtensionBase):
     """API Version information."""
 
     name = "Versions"

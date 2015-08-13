@@ -53,7 +53,7 @@ class MigrationsController(wsgi.Controller):
         return {'migrations': output(migrations)}
 
 
-class Migrations(extensions.V3APIExtensionBase):
+class Migrations(extensions.V21APIExtensionBase):
     """Provide data on migrations."""
     name = "Migrations"
     alias = ALIAS

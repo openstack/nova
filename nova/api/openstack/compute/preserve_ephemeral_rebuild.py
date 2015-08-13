@@ -21,7 +21,7 @@ from nova.api.openstack import extensions
 ALIAS = "os-preserve-ephemeral-rebuild"
 
 
-class PreserveEphemeralRebuild(extensions.V3APIExtensionBase):
+class PreserveEphemeralRebuild(extensions.V21APIExtensionBase):
     """Allow preservation of the ephemeral partition on rebuild."""
 
     name = "PreserveEphemeralOnRebuild"

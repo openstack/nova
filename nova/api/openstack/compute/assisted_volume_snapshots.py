@@ -90,7 +90,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             return exc.HTTPNotFound(explanation=e.format_message())
 
 
-class AssistedVolumeSnapshots(extensions.V3APIExtensionBase):
+class AssistedVolumeSnapshots(extensions.V21APIExtensionBase):
     """Assisted volume snapshots."""
 
     name = "AssistedVolumeSnapshots"
@@ -103,7 +103,7 @@ class AssistedVolumeSnapshots(extensions.V3APIExtensionBase):
         return res
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

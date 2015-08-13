@@ -283,7 +283,7 @@ class HostController(wsgi.Controller):
         return {'host': resources}
 
 
-class Hosts(extensions.V3APIExtensionBase):
+class Hosts(extensions.V21APIExtensionBase):
     """Admin-only host administration."""
 
     name = "Hosts"

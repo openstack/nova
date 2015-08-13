@@ -51,7 +51,7 @@ class LimitsController(wsgi.Controller):
         return limits_views.ViewBuilderV3()
 
 
-class Limits(extensions.V3APIExtensionBase):
+class Limits(extensions.V21APIExtensionBase):
     """Limits support."""
 
     name = "Limits"

@@ -280,7 +280,7 @@ class HTTPRequest(os_wsgi.Request):
         return out
 
 
-class HTTPRequestV3(os_wsgi.Request):
+class HTTPRequestV21(os_wsgi.Request):
 
     @staticmethod
     def blank(*args, **kwargs):

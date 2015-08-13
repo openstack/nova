@@ -183,7 +183,7 @@ class RemoteConsolesController(wsgi.Controller):
             common.raise_feature_not_supported()
 
 
-class RemoteConsoles(extensions.V3APIExtensionBase):
+class RemoteConsoles(extensions.V21APIExtensionBase):
     """Interactive Console support."""
     name = "Consoles"
     alias = ALIAS

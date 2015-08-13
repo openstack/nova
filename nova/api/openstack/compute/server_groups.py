@@ -156,7 +156,7 @@ class ServerGroupController(wsgi.Controller):
         return {'server_group': self._format_server_group(context, sg)}
 
 
-class ServerGroups(extensions.V3APIExtensionBase):
+class ServerGroups(extensions.V21APIExtensionBase):
     """Server group support."""
     name = "ServerGroups"
     alias = ALIAS

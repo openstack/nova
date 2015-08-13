@@ -72,7 +72,7 @@ class ConsoleOutputController(wsgi.Controller):
         return {'output': output}
 
 
-class ConsoleOutput(extensions.V3APIExtensionBase):
+class ConsoleOutput(extensions.V21APIExtensionBase):
     """Console log output support, with tailing ability."""
 
     name = "ConsoleOutput"

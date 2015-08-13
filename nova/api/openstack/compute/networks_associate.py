@@ -78,7 +78,7 @@ class NetworkAssociateActionController(wsgi.Controller):
             common.raise_feature_not_supported()
 
 
-class NetworksAssociate(extensions.V3APIExtensionBase):
+class NetworksAssociate(extensions.V21APIExtensionBase):
     """Network association support."""
 
     name = "NetworkAssociationSupport"

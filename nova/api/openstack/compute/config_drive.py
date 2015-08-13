@@ -53,7 +53,7 @@ class ConfigDriveController(wsgi.Controller):
             self._add_config_drive(req, servers)
 
 
-class ConfigDrive(extensions.V3APIExtensionBase):
+class ConfigDrive(extensions.V21APIExtensionBase):
     """Config Drive Extension."""
 
     name = "ConfigDrive"

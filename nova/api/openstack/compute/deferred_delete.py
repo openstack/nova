@@ -62,7 +62,7 @@ class DeferredDeleteController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=e.format_message())
 
 
-class DeferredDelete(extensions.V3APIExtensionBase):
+class DeferredDelete(extensions.V21APIExtensionBase):
     """Instance deferred delete."""
 
     name = "DeferredDelete"

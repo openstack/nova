@@ -1418,7 +1418,7 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def _create_delete_request(self, uuid):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % uuid)
         req.method = 'DELETE'
         return req
 
@@ -1466,7 +1466,7 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_server_instance_if_not_launched(self):
         self.flags(reclaim_instance_interval=3600)
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -1676,7 +1676,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.controller._start_server(req, FAKE_UUID, body)
 
@@ -1686,7 +1686,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._start_server,
@@ -1695,7 +1695,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_start_not_ready(self):
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
@@ -1703,14 +1703,14 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_start_locked_server(self):
         self.stubs.Set(compute_api.API, 'start',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
 
     def test_start_invalid(self):
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_invalid_state)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
@@ -1720,7 +1720,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.controller._stop_server(req, FAKE_UUID, body)
 
@@ -1730,7 +1730,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop='')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._stop_server,
@@ -1739,7 +1739,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_stop_not_ready(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
@@ -1747,14 +1747,14 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_stop_locked_server(self):
         self.stubs.Set(compute_api.API, 'stop',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
     def test_stop_invalid_state(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_invalid_state)
-        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
@@ -1762,7 +1762,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_start_with_bogus_id(self):
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid_not_found)
-        req = fakes.HTTPRequestV3.blank('/servers/test_inst/action')
+        req = fakes.HTTPRequestV21.blank('/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._start_server, req, 'test_inst', body)
@@ -1770,7 +1770,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_stop_with_bogus_id(self):
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid_not_found)
-        req = fakes.HTTPRequestV3.blank('/servers/test_inst/action')
+        req = fakes.HTTPRequestV21.blank('/servers/test_inst/action')
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, req, 'test_inst', body)
@@ -1783,7 +1783,7 @@ class ServersControllerUpdateTest(ControllerTest):
             fake_get = fakes.fake_compute_get(**options)
             self.stubs.Set(compute_api.API, 'get',
                            lambda api, *a, **k: fake_get(*a, **k))
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = jsonutils.dumps(body)
@@ -1889,7 +1889,7 @@ class ServerStatusTest(test.TestCase):
                 fakes.fake_instance_get(vm_state=vm_state,
                                         task_state=task_state))
 
-        request = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        request = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         return self.controller.show(request, FAKE_UUID)
 
     def test_active(self):
@@ -1915,7 +1915,7 @@ class ServerStatusTest(test.TestCase):
         rule = {'compute:reboot':
                 common_policy.parse_rule('role:admin')}
         policy.set_rules(rule)
-        req = fakes.HTTPRequestV3.blank('/servers/1234/action')
+        req = fakes.HTTPRequestV21.blank('/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_reboot, req, '1234',
                 body={'reboot': {'type': 'HARD'}})
@@ -1943,7 +1943,7 @@ class ServerStatusTest(test.TestCase):
         rule = {'compute:confirm_resize':
                 common_policy.parse_rule('role:admin')}
         policy.set_rules(rule)
-        req = fakes.HTTPRequestV3.blank('/servers/1234/action')
+        req = fakes.HTTPRequestV21.blank('/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_confirm_resize, req, '1234', {})
 
@@ -1965,7 +1965,7 @@ class ServerStatusTest(test.TestCase):
         rule = {'compute:revert_resize':
                 common_policy.parse_rule('role:admin')}
         policy.set_rules(rule)
-        req = fakes.HTTPRequestV3.blank('/servers/1234/action')
+        req = fakes.HTTPRequestV21.blank('/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_revert_resize, req, '1234', {})
 
@@ -2424,7 +2424,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequestV21.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -2957,7 +2957,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilderV3()
-        self.request = fakes.HTTPRequestV3.blank("")
+        self.request = fakes.HTTPRequestV21.blank("")
         self.request.context = context.RequestContext('fake', 'fake')
         self.instance = fake_instance.fake_instance_obj(
                     self.request.context,
@@ -3460,7 +3460,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'create', fake_create)
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequestV21.blank('/servers')
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
@@ -3472,7 +3472,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
     def test_update_missing_server(self):
         # Test update with malformed body.
 
-        req = fakes.HTTPRequestV3.blank('/servers/1')
+        req = fakes.HTTPRequestV21.blank('/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
@@ -3493,7 +3493,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
         self.controller = servers.ServersController(extension_info=ext_info)
 
     def _invalid_server_create(self, body):
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequestV21.blank('/servers')
         req.method = 'POST'
 
         self.assertRaises(exception.ValidationError,
@@ -3511,7 +3511,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
         self._invalid_server_create(body=body)
 
     def _unprocessable_server_update(self, body):
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -3529,7 +3529,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
         self._invalid_server_create(body=body)
 
 
-class FakeExt(extensions.V3APIExtensionBase):
+class FakeExt(extensions.V21APIExtensionBase):
     name = "DiskConfig"
     alias = 'os-disk-config'
     version = 1

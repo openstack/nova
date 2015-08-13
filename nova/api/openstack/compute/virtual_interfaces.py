@@ -61,7 +61,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
                            entity_maker=_translate_vif_summary_view)
 
 
-class VirtualInterfaces(extensions.V3APIExtensionBase):
+class VirtualInterfaces(extensions.V21APIExtensionBase):
     """Virtual interface support."""
 
     name = "VirtualInterfaces"

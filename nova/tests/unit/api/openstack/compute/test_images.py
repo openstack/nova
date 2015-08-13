@@ -46,7 +46,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     image_controller_class = images_v21.ImagesController
     url_base = '/v3'
     bookmark_base = ''
-    http_request = fakes.HTTPRequestV3
+    http_request = fakes.HTTPRequestV21
 
     def setUp(self):
         """Run before each test."""

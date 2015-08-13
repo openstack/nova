@@ -64,7 +64,7 @@ class SuspendServerController(wsgi.Controller):
                     'resume', id)
 
 
-class SuspendServer(extensions.V3APIExtensionBase):
+class SuspendServer(extensions.V21APIExtensionBase):
     """Enable suspend/resume server actions."""
 
     name = "SuspendServer"

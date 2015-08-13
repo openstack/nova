@@ -188,7 +188,7 @@ class TenantNetworkController(wsgi.Controller):
         return {"network": network_dict(networks[0])}
 
 
-class TenantNetworks(extensions.V3APIExtensionBase):
+class TenantNetworks(extensions.V21APIExtensionBase):
     """Tenant-based Network Management Extension."""
 
     name = "OSTenantNetworks"

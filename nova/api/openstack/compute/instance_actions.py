@@ -80,7 +80,7 @@ class InstanceActionsController(wsgi.Controller):
         return {'instanceAction': action}
 
 
-class InstanceActions(extensions.V3APIExtensionBase):
+class InstanceActions(extensions.V21APIExtensionBase):
     """View a log of actions and events taken on an instance."""
 
     name = "InstanceActions"
@@ -96,7 +96,7 @@ class InstanceActions(extensions.V3APIExtensionBase):
         return [ext]
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

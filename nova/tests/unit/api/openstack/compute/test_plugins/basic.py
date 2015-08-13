@@ -28,7 +28,7 @@ class BasicController(wsgi.Controller):
         return data
 
 
-class Basic(extensions.V3APIExtensionBase):
+class Basic(extensions.V21APIExtensionBase):
     """Basic Test Extension."""
 
     name = "BasicTest"

@@ -98,7 +98,7 @@ class EvacuateController(wsgi.Controller):
             return {}
 
 
-class Evacuate(extensions.V3APIExtensionBase):
+class Evacuate(extensions.V21APIExtensionBase):
     """Enables server evacuation."""
 
     name = "Evacuate"
