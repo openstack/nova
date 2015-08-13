@@ -3493,6 +3493,58 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_unbind.assert_called_once_with(mock.sentinel.ctx, ['2'],
                                             mock_client)
 
+    @mock.patch('nova.network.neutronv2.api.API.'
+                '_check_external_network_attach')
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
+    @mock.patch('nova.network.neutronv2.api.API.'
+                '_populate_neutron_extension_values')
+    @mock.patch('nova.network.neutronv2.api.API._get_available_networks')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_port_binding_failed_created_port(self, mock_ntrn,
+                                          mock_avail_nets,
+                                          mock_ext_vals,
+                                          mock_has_pbe,
+                                          mock_cena):
+        mock_has_pbe.return_value = True
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_inst = mock.Mock(project_id="proj-1",
+                              availability_zone='zone-1',
+                              uuid='inst-1')
+        mock_avail_nets.return_value = [{'id': 'net-1'}]
+        mock_nc.create_port.return_value = {'port': {'id': 'fake_id',
+                            'tenant_id': mock_inst.project_id,
+                            'binding:vif_type': 'binding_failed'}}
+
+        self.assertRaises(exception.PortBindingFailed,
+                          self.api.allocate_for_instance,
+                          mock.sentinel.ctx,
+                          mock_inst)
+        mock_nc.delete_port.assert_called_once_with('fake_id')
+
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_port_binding_failed_with_request(self, mock_ntrn,
+                                          mock_has_pbe,
+                                          mock_show_port):
+        mock_has_pbe.return_value = True
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_inst = mock.Mock(project_id="proj-1",
+                              availability_zone='zone-1',
+                              uuid='inst-1')
+        mock_show_port.return_value = {
+                            'tenant_id': mock_inst.project_id,
+                            'binding:vif_type': 'binding_failed'}
+        nw_req = objects.NetworkRequestList(
+            objects = [objects.NetworkRequest(port_id='fake_id')])
+
+        self.assertRaises(exception.PortBindingFailed,
+                          self.api.allocate_for_instance,
+                          mock.sentinel.ctx, mock_inst,
+                          requested_networks=nw_req)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 

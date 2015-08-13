@@ -782,6 +782,11 @@ class PortNotFree(Invalid):
     msg_fmt = _("No free port available for instance %(instance)s.")
 
 
+class PortBindingFailed(Invalid):
+    msg_fmt = _("Binding failed for port %(port_id)s, please check neutron "
+                "logs for more information.")
+
+
 class FixedIpExists(NovaException):
     msg_fmt = _("Fixed ip %(address)s already exists.")
 
