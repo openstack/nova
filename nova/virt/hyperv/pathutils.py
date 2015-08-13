@@ -261,8 +261,8 @@ class PathUtils(object):
         except wmi.x_wmi as exc:
             err_msg = (_(
                 'Unable to mount SMBFS share: %(smbfs_share)s '
-                'WMI exception: %(wmi_exc)s'), {'smbfs_share': smbfs_share,
-                                                'wmi_exc': exc})
+                'WMI exception: %(wmi_exc)s') % {'smbfs_share': smbfs_share,
+                                                 'wmi_exc': exc})
             raise vmutils.HyperVException(err_msg)
 
     def unmount_smb_share(self, smbfs_share, force=False):
@@ -285,4 +285,4 @@ class PathUtils(object):
                 # case.
                 if force:
                     raise vmutils.HyperVException(
-                        _("Could not unmount share: %s"), smbfs_share)
+                        _("Could not unmount share: %s") % smbfs_share)
