@@ -1594,6 +1594,34 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 injected_files=None, admin_password=None, bdms=None,
                 detach_block_devices=None, attach_block_devices=None)
 
+    @mock.patch.object(FAKE_CLIENT.node, 'get')
+    def _test_network_binding_host_id(self, is_neutron, mock_get):
+        node_uuid = uuidutils.generate_uuid()
+        hostname = 'ironic-compute'
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node_uuid,
+                                                   host=hostname)
+        if is_neutron:
+            provider = 'neutron'
+            expected = None
+        else:
+            provider = 'none'
+            expected = hostname
+        node = ironic_utils.get_test_node(uuid=node_uuid,
+                                          instance_uuid=self.instance_uuid,
+                                          instance_type_id=5,
+                                          network_provider=provider)
+        mock_get.return_value = node
+
+        host_id = self.driver.network_binding_host_id(self.ctx, instance)
+        self.assertEqual(expected, host_id)
+
+    def test_network_binding_host_id_neutron(self):
+        self._test_network_binding_host_id(True)
+
+    def test_network_binding_host_id_none(self):
+        self._test_network_binding_host_id(False)
+
 
 @mock.patch.object(instance_metadata, 'InstanceMetadata')
 @mock.patch.object(configdrive, 'ConfigDriveBuilder')

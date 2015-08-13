@@ -1202,3 +1202,26 @@ class IronicDriver(virt_driver.ComputeDriver):
                                                      instance)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info(_LI('Instance was successfully rebuilt'), instance=instance)
+
+    def network_binding_host_id(self, context, instance):
+        """Get host ID to associate with network ports.
+
+        This defines the binding:host_id parameter to the port-create
+        calls for Neutron. If using a flat network, use the default behavior
+        and allow the port to bind immediately. If using separate networks
+        for the control plane and tenants, return None here to indicate
+        that the port should not yet be bound; Ironic will make a port-update
+        call to Neutron later to tell Neutron to bind the port.
+
+        :param context:  request context
+        :param instance: nova.objects.instance.Instance that the network
+                         ports will be associated with
+        :returns: a string representing the host ID
+        """
+
+        node = self.ironicclient.call("node.get", instance.node)
+        if getattr(node, 'network_provider', 'none') == 'none':
+            # flat network, go ahead and allow the port to be bound
+            return super(IronicDriver, self).network_binding_host_id(
+                context, instance)
+        return None

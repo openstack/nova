@@ -1602,6 +1602,16 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def network_binding_host_id(self, context, instance):
+        """Get host ID to associate with network ports.
+
+        :param context:  request context
+        :param instance: nova.objects.instance.Instance that the network
+                         ports will be associated with
+        :returns: a string representing the host ID
+        """
+        return instance.get('host')
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

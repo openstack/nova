@@ -1558,6 +1558,7 @@ class ComputeManager(manager.Manager):
             retries = 0
         attempts = retries + 1
         retry_time = 1
+        bind_host_id = self.driver.network_binding_host_id(context, instance)
         for attempt in range(1, attempts + 1):
             try:
                 nwinfo = self.network_api.allocate_for_instance(
@@ -1565,7 +1566,8 @@ class ComputeManager(manager.Manager):
                         requested_networks=requested_networks,
                         macs=macs,
                         security_groups=security_groups,
-                        dhcp_options=dhcp_options)
+                        dhcp_options=dhcp_options,
+                        bind_host_id=bind_host_id)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
                 instance.system_metadata['network_allocated'] = 'True'
@@ -4929,8 +4931,10 @@ class ComputeManager(manager.Manager):
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
         """Use hotplug to add an network adapter to an instance."""
+        bind_host_id = self.driver.network_binding_host_id(context, instance)
         network_info = self.network_api.allocate_port_for_instance(
-            context, instance, port_id, network_id, requested_ip)
+            context, instance, port_id, network_id, requested_ip,
+            bind_host_id=bind_host_id)
         if len(network_info) != 1:
             LOG.error(_LE('allocate_port_for_instance returned %(ports)s '
                           'ports'), {'ports': len(network_info)})

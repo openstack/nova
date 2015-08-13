@@ -286,7 +286,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
                 security_groups=sec_groups,
-                dhcp_options=dhcp_options).AndRaise(test.TestingException())
+                dhcp_options=dhcp_options,
+                bind_host_id=instance.get('host')).AndRaise(
+                    test.TestingException())
 
         self.mox.ReplayAll()
 
@@ -313,7 +315,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
                 security_groups=sec_groups,
-                dhcp_options=dhcp_options).AndRaise(test.TestingException())
+                dhcp_options=dhcp_options,
+                bind_host_id=instance.get('host')).AndRaise(
+                    test.TestingException())
 
         self.mox.ReplayAll()
 

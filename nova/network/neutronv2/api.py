@@ -522,6 +522,7 @@ class API(base_api.NetworkAPI):
             configured with the baremetal hypervisor. It is expected that these
             are already formatted for the neutron v2 api.
             See nova/virt/driver.py:dhcp_options_for_instance for an example.
+        :param bind_host_id: the host ID to attach to the ports being created.
         """
         hypervisor_macs = kwargs.get('macs', None)
 
@@ -545,6 +546,7 @@ class API(base_api.NetworkAPI):
                 reason=msg % instance.uuid)
         requested_networks = kwargs.get('requested_networks')
         dhcp_opts = kwargs.get('dhcp_options', None)
+        bind_host_id = kwargs.get('bind_host_id')
         ports, net_ids, ordered_networks, available_macs = (
             self._process_requested_networks(context,
                 instance, neutron, requested_networks, hypervisor_macs))
@@ -620,11 +622,9 @@ class API(base_api.NetworkAPI):
             port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
             try:
-                self._populate_neutron_extension_values(context,
-                                                        instance,
-                                                        request.pci_request_id,
-                                                        port_req_body,
-                                                        neutron=neutron)
+                self._populate_neutron_extension_values(
+                    context, instance, request.pci_request_id, port_req_body,
+                    neutron=neutron, bind_host_id=bind_host_id)
                 if request.port_id:
                     port = ports[request.port_id]
                     port_client.update_port(port['id'], port_req_body)
@@ -697,7 +697,7 @@ class API(base_api.NetworkAPI):
 
     def _populate_neutron_extension_values(self, context, instance,
                                            pci_request_id, port_req_body,
-                                           neutron=None):
+                                           neutron=None, bind_host_id=None):
         """Populate neutron extension values for the instance.
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
@@ -708,7 +708,7 @@ class API(base_api.NetworkAPI):
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
         if self._has_port_binding_extension(context, neutron=neutron):
-            port_req_body['port']['binding:host_id'] = instance.get('host')
+            port_req_body['port']['binding:host_id'] = bind_host_id
             self._populate_neutron_binding_profile(instance,
                                                    pci_request_id,
                                                    port_req_body)
@@ -764,7 +764,8 @@ class API(base_api.NetworkAPI):
                                             network_model.NetworkInfo([]))
 
     def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None):
+                                   network_id=None, requested_ip=None,
+                                   bind_host_id=None):
         """Allocate a port for the instance."""
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=network_id,
@@ -772,7 +773,8 @@ class API(base_api.NetworkAPI):
                                             port_id=port_id,
                                             pci_request_id=None)])
         return self.allocate_for_instance(context, instance,
-                requested_networks=requested_networks)
+                requested_networks=requested_networks,
+                bind_host_id=bind_host_id)
 
     def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.

@@ -177,7 +177,7 @@ class NetworkAPI(base.Base):
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
                               security_groups=None,
-                              dhcp_options=None):
+                              dhcp_options=None, bind_host_id=None):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
@@ -195,6 +195,7 @@ class NetworkAPI(base.Base):
             configured with the baremetal hypervisor. It is expected that these
             are already formatted for the neutron v2 api.
             See nova/virt/driver.py:dhcp_options_for_instance for an example.
+        :param bind_host_id: the host ID to attach to the ports being created.
         :returns: network info as from get_instance_nw_info() below
         """
         raise NotImplementedError()
@@ -205,7 +206,8 @@ class NetworkAPI(base.Base):
         raise NotImplementedError()
 
     def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None):
+                                   network_id=None, requested_ip=None,
+                                   bind_host_id=None):
         """Allocate port for instance."""
         raise NotImplementedError()
 

@@ -9432,7 +9432,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = objects.Instance(image_ref='foo',
                                     system_metadata={},
-                                    flavor=new_type)
+                                    flavor=new_type,
+                                    host='fake-host')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -9440,7 +9441,8 @@ class ComputeAPITestCase(BaseTestCase):
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
         self.compute.network_api.allocate_port_for_instance(
-            self.context, instance, port_id, network_id, req_ip
+            self.context, instance, port_id, network_id, req_ip,
+            bind_host_id='fake-host'
             ).AndReturn(nwinfo)
         self.mox.ReplayAll()
         vif = self.compute.attach_interface(self.context,
@@ -9458,7 +9460,8 @@ class ComputeAPITestCase(BaseTestCase):
                        uuid='f0000000-0000-0000-0000-000000000000',
                        image_ref='foo',
                        system_metadata={},
-                       flavor=new_type)
+                       flavor=new_type,
+                       host='fake-host')
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
@@ -9478,7 +9481,8 @@ class ComputeAPITestCase(BaseTestCase):
                               self.compute.attach_interface, self.context,
                               instance, network_id, port_id, req_ip)
             mock_allocate.assert_called_once_with(self.context, instance,
-                                                  network_id, port_id, req_ip)
+                                                  network_id, port_id, req_ip,
+                                                  bind_host_id='fake-host')
             mock_deallocate.assert_called_once_with(self.context, instance,
                                                     port_id)
 

@@ -45,6 +45,7 @@ def get_test_node(**kw):
                 'properties': kw.get('properties', {}),
                 'reservation': kw.get('reservation'),
                 'maintenance': kw.get('maintenance', False),
+                'network_provider': kw.get('network_provider'),
                 'extra': kw.get('extra', {}),
                 'updated_at': kw.get('created_at'),
                 'created_at': kw.get('updated_at')})()
