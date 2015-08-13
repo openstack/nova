@@ -760,7 +760,9 @@ class Domain(object):
         return 0
 
     def jobInfo(self):
-        return []
+        # NOTE(danms): This is an array of 12 integers, so just report
+        # something to avoid an IndexError if we look at this
+        return [0] * 12
 
     def jobStats(self, flags=0):
         return {}

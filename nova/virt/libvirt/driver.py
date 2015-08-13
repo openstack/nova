@@ -5475,9 +5475,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if not libvirt_utils.is_valid_hostname(dest):
             raise exception.InvalidHostname(hostname=dest)
 
-        utils.spawn(self._live_migration, context, instance, dest,
-                          post_method, recover_method, block_migration,
-                          migrate_data)
+        self._live_migration(context, instance, dest,
+                             post_method, recover_method, block_migration,
+                             migrate_data)
 
     def _update_xml(self, xml_str, volume, listen_addrs):
         xml_doc = etree.fromstring(xml_str)

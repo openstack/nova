@@ -3867,3 +3867,56 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.flags(enabled=True, group=console)
             self.assertTrue(self.compute._consoles_enabled())
             self.flags(enabled=False, group=console)
+
+    @mock.patch('nova.utils.spawn_n')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_do_live_migration')
+    def _test_max_concurrent_live(self, mock_lm, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+
+        @mock.patch('nova.objects.Migration.save')
+        def _do_it(mock_mig_save):
+            instance = objects.Instance(uuid=str(uuid.uuid4()))
+            migration = objects.Migration()
+            self.compute.live_migration(self.context,
+                                        mock.sentinel.dest,
+                                        instance,
+                                        mock.sentinel.block_migration,
+                                        migration,
+                                        mock.sentinel.migrate_data)
+            self.assertEqual('queued', migration.status)
+            migration.save.assert_called_once_with()
+
+        with mock.patch.object(self.compute,
+                               '_live_migration_semaphore') as mock_sem:
+            for i in (1, 2, 3):
+                _do_it()
+        self.assertEqual(3, mock_sem.__enter__.call_count)
+
+    def test_max_concurrent_live_limited(self):
+        self.flags(max_concurrent_live_migrations=2)
+        self._test_max_concurrent_live()
+
+    def test_max_concurrent_live_unlimited(self):
+        self.flags(max_concurrent_live_migrations=0)
+        self._test_max_concurrent_live()
+
+    def test_max_concurrent_live_semaphore_limited(self):
+        self.flags(max_concurrent_live_migrations=123)
+        self.assertEqual(
+            123,
+            manager.ComputeManager()._live_migration_semaphore.balance)
+
+    def test_max_concurrent_live_semaphore_unlimited(self):
+        self.flags(max_concurrent_live_migrations=0)
+        compute = manager.ComputeManager()
+        self.assertEqual(0, compute._live_migration_semaphore.balance)
+        self.assertIsInstance(compute._live_migration_semaphore,
+                              compute_utils.UnlimitedSemaphore)
+
+    def test_max_concurrent_live_semaphore_negative(self):
+        self.flags(max_concurrent_live_migrations=-2)
+        compute = manager.ComputeManager()
+        self.assertEqual(0, compute._live_migration_semaphore.balance)
+        self.assertIsInstance(compute._live_migration_semaphore,
+                              compute_utils.UnlimitedSemaphore)
