@@ -17,7 +17,7 @@ from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import rescue as rescue_v2
-from nova.api.openstack.compute.plugins.v3 import rescue as rescue_v21
+from nova.api.openstack.compute import rescue as rescue_v21
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception

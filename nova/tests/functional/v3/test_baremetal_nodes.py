@@ -63,7 +63,7 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                       'contrib.baremetal_nodes.Baremetal_nodes')
         return f
 
-    @mock.patch("nova.api.openstack.compute.plugins.v3.baremetal_nodes"
+    @mock.patch("nova.api.openstack.compute.baremetal_nodes"
                 "._get_ironic_client")
     @mock.patch("nova.api.openstack.compute.legacy_v2.contrib.baremetal_nodes"
                 "._get_ironic_client")
@@ -75,7 +75,7 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs = self._get_regexes()
         self._verify_response('baremetal-node-list-resp', subs, response, 200)
 
-    @mock.patch("nova.api.openstack.compute.plugins.v3.baremetal_nodes"
+    @mock.patch("nova.api.openstack.compute.baremetal_nodes"
                 "._get_ironic_client")
     @mock.patch("nova.api.openstack.compute.legacy_v2.contrib.baremetal_nodes"
                 "._get_ironic_client")

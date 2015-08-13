@@ -15,8 +15,8 @@
 import mock
 import webob.exc
 
+from nova.api.openstack.compute import agents as agents_v21
 from nova.api.openstack.compute.legacy_v2.contrib import agents as agents_v2
-from nova.api.openstack.compute.plugins.v3 import agents as agents_v21
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception

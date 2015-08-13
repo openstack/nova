@@ -36,14 +36,14 @@ import webob
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import compute
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import disk_config
-from nova.api.openstack.compute.plugins.v3 import ips
-from nova.api.openstack.compute.plugins.v3 import keypairs
-from nova.api.openstack.compute.plugins.v3 import servers
-from nova.api.openstack.compute.schemas.v3 import disk_config as \
-    disk_config_schema
+from nova.api.openstack.compute import disk_config
+from nova.api.openstack.compute import extension_info
+from nova.api.openstack.compute import ips
+from nova.api.openstack.compute import keypairs
+from nova.api.openstack.compute.schemas.v3 import disk_config \
+        as disk_config_schema
 from nova.api.openstack.compute.schemas.v3 import servers as servers_schema
+from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
@@ -147,7 +147,7 @@ class MockSetAdminPassword(object):
 class Base64ValidationTest(test.TestCase):
     def setUp(self):
         super(Base64ValidationTest, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
     def test_decode_base64(self):
@@ -204,7 +204,7 @@ class ControllerTest(test.TestCase):
         self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update_and_get_original)
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
         self.ips_controller = ips.IPsController()
         policy.reset()
@@ -1502,8 +1502,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                                            vm_state=vm_states.ACTIVE)
 
         self.useFixture(
-            fixtures.MonkeyPatch('nova.api.openstack.compute.plugins.v3.'
-                                 'servers.ServersController._get_instance',
+            fixtures.MonkeyPatch('nova.api.openstack.compute.servers.'
+                                 'ServersController._get_instance',
                                  fake_get))
         fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE)
         self.stubs.Set(compute_api.API, 'get',
@@ -1881,7 +1881,7 @@ class ServerStatusTest(test.TestCase):
         super(ServerStatusTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
     def _get_with_state(self, vm_state, task_state=None):
@@ -1995,7 +1995,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_nw_api(self.stubs)
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
         def instance_create(context, inst):
@@ -2866,7 +2866,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
         self.body = {
@@ -3489,7 +3489,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
 
     def setUp(self):
         super(ServersInvalidRequestTestCase, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
     def _invalid_server_create(self, body):
@@ -3554,7 +3554,7 @@ class TestServersExtensionPoint(test.NoDBTestCase):
     def _test_load_extension_point(self, name):
         setattr(FakeExt, 'server_%s' % name,
                 FakeExt.fake_extension_point)
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         controller = servers.ServersController(extension_info=ext_info)
         self.assertEqual(
             'os-disk-config',
@@ -3583,7 +3583,7 @@ class TestServersExtensionSchema(test.NoDBTestCase):
     def _test_load_extension_schema(self, name):
         setattr(FakeExt, 'get_server_%s_schema' % name,
                 FakeExt.fake_extension_point)
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         controller = servers.ServersController(extension_info=ext_info)
         self.assertTrue(hasattr(controller, '%s_schema_manager' % name))
 
@@ -3666,7 +3666,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ServersPolicyEnforcementV21, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions.update({'os-networks': 'fake'})
         self.controller = servers.ServersController(extension_info=ext_info)
         self.req = fakes.HTTPRequest.blank('')

@@ -16,8 +16,7 @@ import copy
 
 import webob
 
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import extension_info
+from nova.api.openstack.compute import extension_info
 from nova import exception
 from nova import policy
 from nova import test
@@ -69,7 +68,7 @@ class ExtensionInfoTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ExtensionInfoTest, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions = fake_extensions
         self.controller = extension_info.ExtensionInfoController(ext_info)
 
@@ -124,7 +123,7 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
 
     def setUp(self):
         super(ExtensionInfoV21Test, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions = simulated_extension_list
         self.controller = extension_info.ExtensionInfoController(ext_info)
         self.stubs.Set(policy, 'enforce', fake_policy_enforce)
@@ -190,7 +189,7 @@ class ExtensionInfoPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ExtensionInfoPolicyEnforcementV21, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions = fake_extensions
         self.controller = extension_info.ExtensionInfoController(ext_info)
         self.req = fakes.HTTPRequest.blank('')

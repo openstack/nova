@@ -14,9 +14,9 @@
 
 import webob
 
+from nova.api.openstack.compute import cloudpipe as clup_v21
 from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe_update \
         as clup_v2
-from nova.api.openstack.compute.plugins.v3 import cloudpipe as clup_v21
 from nova import db
 from nova import exception
 from nova import test

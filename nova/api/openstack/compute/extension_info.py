@@ -20,6 +20,8 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import exception
+from nova.i18n import _LE
 
 ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
@@ -213,3 +215,35 @@ class ExtensionInfo(extensions.V3APIExtensionBase):
 
     def get_controller_extensions(self):
         return []
+
+
+class LoadedExtensionInfo(object):
+    """Keep track of all loaded API extensions."""
+
+    def __init__(self):
+        self.extensions = {}
+
+    def register_extension(self, ext):
+        if not self._check_extension(ext):
+            return False
+
+        alias = ext.alias
+
+        if alias in self.extensions:
+            raise exception.NovaException("Found duplicate extension: %s"
+                                          % alias)
+        self.extensions[alias] = ext
+        return True
+
+    def _check_extension(self, extension):
+        """Checks for required methods in extension objects."""
+        try:
+            extension.is_valid()
+        except AttributeError:
+            LOG.exception(_LE("Exception loading extension"))
+            return False
+
+        return True
+
+    def get_extensions(self):
+        return self.extensions

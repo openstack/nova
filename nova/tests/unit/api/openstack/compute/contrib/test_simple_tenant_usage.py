@@ -22,7 +22,7 @@ import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import simple_tenant_usage as \
     simple_tenant_usage_v2
-from nova.api.openstack.compute.plugins.v3 import simple_tenant_usage as \
+from nova.api.openstack.compute import simple_tenant_usage as \
     simple_tenant_usage_v21
 from nova.compute import flavors
 from nova.compute import vm_states

@@ -16,8 +16,8 @@
 import mock
 import webob
 
+from nova.api.openstack.compute import deferred_delete as dd_v21
 from nova.api.openstack.compute.legacy_v2.contrib import deferred_delete
-from nova.api.openstack.compute.plugins.v3 import deferred_delete as dd_v21
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception

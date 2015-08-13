@@ -15,8 +15,8 @@
 
 from oslo_config import cfg
 
+from nova.api.openstack.compute import fping
 from nova.api.openstack.compute.legacy_v2.contrib import fping as fping_v2
-from nova.api.openstack.compute.plugins.v3 import fping
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.api.openstack.compute.contrib import test_fping
 from nova import utils

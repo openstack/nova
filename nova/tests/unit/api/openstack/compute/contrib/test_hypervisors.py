@@ -18,10 +18,10 @@ import mock
 import netaddr
 from webob import exc
 
+from nova.api.openstack.compute import hypervisors \
+        as hypervisors_v21
 from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
         as hypervisors_v2
-from nova.api.openstack.compute.plugins.v3 import hypervisors \
-        as hypervisors_v21
 from nova.api.openstack import extensions
 from nova.cells import utils as cells_utils
 from nova import context

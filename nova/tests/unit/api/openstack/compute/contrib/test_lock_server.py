@@ -18,10 +18,9 @@ import webob
 import mock
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.legacy_v2.contrib import (admin_actions as
-                                                lock_server_v2)
-from nova.api.openstack.compute.plugins.v3 import (lock_server as
-                                                   lock_server_v21)
+from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
+        as lock_server_v2
+from nova.api.openstack.compute import lock_server as lock_server_v21
 from nova import context
 from nova import exception
 from nova import test

@@ -17,7 +17,7 @@ import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import server_external_events \
                                                  as server_external_events_v2
-from nova.api.openstack.compute.plugins.v3 import server_external_events \
+from nova.api.openstack.compute import server_external_events \
                                                  as server_external_events_v21
 from nova import exception
 from nova import objects

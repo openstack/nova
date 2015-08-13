@@ -12,10 +12,9 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
-    admin_actions_v2
-from nova.api.openstack.compute.plugins.v3 import admin_actions as \
-    admin_actions_v21
+from nova.api.openstack.compute import admin_actions as admin_actions_v21
+from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
+        as admin_actions_v2
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common

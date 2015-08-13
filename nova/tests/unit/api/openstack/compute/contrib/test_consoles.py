@@ -19,7 +19,7 @@ import webob
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.legacy_v2.contrib import consoles \
     as console_v2
-from nova.api.openstack.compute.plugins.v3 import remote_consoles \
+from nova.api.openstack.compute import remote_consoles \
     as console_v21
 from nova.compute import api as compute_api
 from nova import exception

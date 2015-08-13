@@ -20,7 +20,7 @@ from oslo_config import cfg
 from nova.api.metadata import password
 from nova.api.openstack.compute.legacy_v2.contrib import server_password \
     as server_password_v2
-from nova.api.openstack.compute.plugins.v3 import server_password \
+from nova.api.openstack.compute import server_password \
     as server_password_v21
 from nova import compute
 from nova import exception

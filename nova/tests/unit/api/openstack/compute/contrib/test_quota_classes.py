@@ -15,9 +15,9 @@
 
 import webob
 
+from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2.contrib import quota_classes
-from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import quota_classes \
+from nova.api.openstack.compute import quota_classes \
        as quota_classes_v21
 from nova.api.openstack import extensions
 from nova import exception
@@ -45,7 +45,7 @@ class QuotaClassSetsTestV21(test.TestCase):
         self._setup()
 
     def _setup(self):
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = quota_classes_v21.QuotaClassSetsController(
             extension_info=ext_info)
 
@@ -159,7 +159,7 @@ class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(QuotaClassesPolicyEnforcementV21, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
+        ext_info = extension_info.LoadedExtensionInfo()
         self.controller = quota_classes_v21.QuotaClassSetsController(
             extension_info=ext_info)
         self.req = fakes.HTTPRequest.blank('')

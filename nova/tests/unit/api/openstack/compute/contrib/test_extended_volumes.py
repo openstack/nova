@@ -17,7 +17,7 @@ import mock
 from oslo_serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.plugins.v3 import (extended_volumes
+from nova.api.openstack.compute import (extended_volumes
                                                    as extended_volumes_v21)
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
