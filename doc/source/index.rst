@@ -180,6 +180,15 @@ Advanced testing and guides
     testing/libvirt-numa
     testing/serial-console
 
+Sample Configuration File
+-------------------------
+
+.. toctree::
+    :maxdepth: 1
+
+    sample_config
+
+
 Man Pages
 ----------
 
