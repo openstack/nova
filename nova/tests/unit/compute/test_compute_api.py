@@ -1498,9 +1498,39 @@ class _ComputeAPIUnitTestMixIn(object):
 
         get_flavor_by_flavor_id.return_value = fake_flavor
 
-        self.assertRaises(exception.CannotResizeDisk,
-                          self.compute_api.resize, self.context,
-                          fake_inst, flavor_id='flavor-id')
+        with mock.patch.object(self.compute_api,
+                               'is_volume_backed_instance',
+                               return_value=False):
+            self.assertRaises(exception.CannotResizeDisk,
+                              self.compute_api.resize, self.context,
+                              fake_inst, flavor_id='flavor-id')
+
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch('nova.compute.api.API._resize_cells_support')
+    @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.resize_instance')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_to_zero_disk_flavor_volume_backed(self,
+                                                      get_flavor_by_flavor_id,
+                                                      resize_instance_mock,
+                                                      cells_support_mock,
+                                                      record_mock):
+        params = dict(image_ref='')
+        fake_inst = self._create_instance_obj(params=params)
+
+        fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
+                                          name='foo', root_gb=0)
+
+        get_flavor_by_flavor_id.return_value = fake_flavor
+
+        @mock.patch.object(self.compute_api, 'is_volume_backed_instance',
+                           return_value=True)
+        @mock.patch.object(fake_inst, 'save')
+        def do_test(mock_save, mock_volume):
+            self.compute_api.resize(self.context, fake_inst,
+                                    flavor_id='flavor-id')
+            mock_volume.assert_called_once_with(self.context, fake_inst)
+
+        do_test()
 
     def test_resize_quota_exceeds_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
