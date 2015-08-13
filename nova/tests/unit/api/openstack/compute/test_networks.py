@@ -429,7 +429,7 @@ class NetworksTestV21(test.NoDBTestCase):
         res_dict = self.controller.show(self.admin_req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
 
-    @mock.patch('nova.tests.unit.api.openstack.compute.contrib.test_networks.'
+    @mock.patch('nova.tests.unit.api.openstack.compute.test_networks.'
                 'FakeNetworkAPI.add_network_to_project',
                 side_effect=exception.NoMoreNetworks)
     def test_network_add_no_more_networks_fail(self, mock_add):
@@ -437,7 +437,7 @@ class NetworksTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add,
                           self.req, body={'id': uuid})
 
-    @mock.patch('nova.tests.unit.api.openstack.compute.contrib.test_networks.'
+    @mock.patch('nova.tests.unit.api.openstack.compute.test_networks.'
                 'FakeNetworkAPI.add_network_to_project',
                 side_effect=exception.NetworkNotFoundForUUID(uuid='fake_uuid'))
     def test_network_add_network_not_found_networks_fail(self, mock_add):

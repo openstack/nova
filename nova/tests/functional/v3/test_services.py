@@ -18,7 +18,7 @@ from oslo_utils import timeutils
 
 from nova import db
 from nova.tests.functional.v3 import api_sample_base
-from nova.tests.unit.api.openstack.compute.contrib import test_services
+from nova.tests.unit.api.openstack.compute import test_services
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',

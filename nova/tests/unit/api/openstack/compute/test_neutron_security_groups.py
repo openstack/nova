@@ -32,7 +32,7 @@ from nova.network.neutronv2 import api as neutron_api
 from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
 from nova import test
-from nova.tests.unit.api.openstack.compute.contrib import test_security_groups
+from nova.tests.unit.api.openstack.compute import test_security_groups
 from nova.tests.unit.api.openstack import fakes
 
 

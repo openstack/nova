@@ -23,7 +23,7 @@ from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
 from nova.api.openstack import extensions
 from nova import objects
 from nova import test
-from nova.tests.unit.api.openstack.compute.contrib import test_hypervisors
+from nova.tests.unit.api.openstack.compute import test_hypervisors
 
 TEST_HYPER = test_hypervisors.TEST_HYPERS_OBJ[0].obj_clone()
 TEST_SERVICE = objects.Service(id=1,
