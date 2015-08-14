@@ -15,6 +15,7 @@
 import re
 
 from nova import exception
+from nova.i18n import _
 
 # Define the minimum and maximum version of the API across all of the
 # REST API. The format of the version is:
@@ -108,15 +109,39 @@ class APIVersionRequest(object):
     def is_null(self):
         return self.ver_major == 0 and self.ver_minor == 0
 
-    def __cmp__(self, other):
-        if not isinstance(other, APIVersionRequest):
-            raise TypeError
-        return cmp((self.ver_major, self.ver_minor),
-                   (other.ver_major, other.ver_minor))
+    def _format_type_error(self, other):
+        return TypeError(_("'%(other)s' should be an instance of '%(cls)s'") %
+                         {"other": other, "cls": self.__class__})
 
     def __lt__(self, other):
+        if not isinstance(other, APIVersionRequest):
+            raise self._format_type_error(other)
+
         return ((self.ver_major, self.ver_minor) <
                 (other.ver_major, other.ver_minor))
+
+    def __eq__(self, other):
+        if not isinstance(other, APIVersionRequest):
+            raise self._format_type_error(other)
+
+        return ((self.ver_major, self.ver_minor) ==
+                (other.ver_major, other.ver_minor))
+
+    def __gt__(self, other):
+        if not isinstance(other, APIVersionRequest):
+            raise self._format_type_error(other)
+
+        return ((self.ver_major, self.ver_minor) >
+                (other.ver_major, other.ver_minor))
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __ge__(self, other):
+        return self > other or self == other
 
     def matches(self, min_version, max_version):
         """Returns whether the version object represents a version
