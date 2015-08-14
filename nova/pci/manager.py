@@ -59,10 +59,10 @@ class PciDevTracker(object):
         self.stats = stats.PciDeviceStats()
         self.dev_filter = whitelist.Whitelist(CONF.pci_passthrough_whitelist)
         if node_id:
-            self.pci_devs = list(
-                objects.PciDeviceList.get_by_compute_node(context, node_id))
+            self.pci_devs = objects.PciDeviceList.get_by_compute_node(
+                    context, node_id)
         else:
-            self.pci_devs = []
+            self.pci_devs = objects.PciDeviceList(objects=[])
         self._initial_instance_usage()
 
     def _initial_instance_usage(self):
@@ -86,9 +86,8 @@ class PciDevTracker(object):
             if dev.obj_what_changed():
                 with dev.obj_alternate_context(context):
                     dev.save()
-
-        self.pci_devs = [dev for dev in self.pci_devs
-                         if dev.status != fields.PciDeviceStatus.DELETED]
+                    if dev.status == fields.PciDeviceStatus.DELETED:
+                        self.pci_devs.objects.remove(dev)
 
     @property
     def pci_stats(self):
@@ -170,7 +169,7 @@ class PciDevTracker(object):
             dev['compute_node_id'] = self.node_id
             # NOTE(danms): These devices are created with no context
             dev_obj = objects.PciDevice.create(dev)
-            self.pci_devs.append(dev_obj)
+            self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
 
     def _claim_instance(self, context, instance, prefix=''):
