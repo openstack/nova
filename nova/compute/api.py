@@ -2282,17 +2282,27 @@ class API(base.Base):
     # NOTE(melwitt): We don't check instance lock for snapshot because lock is
     #                intended to prevent accidental change/delete of instances
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
-    def snapshot_volume_backed(self, context, instance, image_meta, name,
+    def snapshot_volume_backed(self, context, instance, name,
                                extra_properties=None):
         """Snapshot the given volume-backed instance.
 
         :param instance: nova.objects.instance.Instance object
-        :param image_meta: metadata for the new image
         :param name: name of the backup or snapshot
         :param extra_properties: dict of extra image properties to include
 
         :returns: the new image metadata
         """
+        # TODO(ft): Get metadata from the instance to avoid waste DB request
+        img = instance.image_ref
+        if not img:
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
+            properties = bdms.root_metadata(
+                    context, self.image_api,
+                    self.volume_api)
+            image_meta = {'properties': properties}
+        else:
+            image_meta = self.image_api.get(context, img)
         image_meta['name'] = name
         image_meta['is_public'] = False
         properties = image_meta['properties']

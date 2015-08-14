@@ -1086,19 +1086,9 @@ class Controller(wsgi.Controller):
                         'compute:snapshot_volume_backed',
                         {'project_id': context.project_id,
                         'user_id': context.user_id})
-                img = instance.image_ref
-                if not img:
-                    properties = bdms.root_metadata(
-                            context, self.compute_api.image_api,
-                            self.compute_api.volume_api)
-                    image_meta = {'properties': properties}
-                else:
-                    image_meta = self.compute_api.image_api.get(context, img)
-
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,
                                                        instance,
-                                                       image_meta,
                                                        image_name,
                                                        extra_properties=props)
             else:

@@ -2010,6 +2010,9 @@ class _ComputeAPIUnitTestMixIn(object):
         def fake_get_all_by_instance(context, instance, use_slave=False):
             return copy.deepcopy(instance_bdms)
 
+        def fake_image_get(context, image_id):
+            return copy.deepcopy(image_meta)
+
         def fake_image_create(context, image_meta, data=None):
             self.assertThat(image_meta, matchers.DictMatches(expect_meta))
 
@@ -2030,6 +2033,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_get_all_by_instance)
+        self.stubs.Set(self.compute_api.image_api, 'get',
+                       fake_image_get)
         self.stubs.Set(self.compute_api.image_api, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',
@@ -2043,7 +2048,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # No block devices defined
         self.compute_api.snapshot_volume_backed(
-            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
+            self.context, instance, 'test-snapshot')
 
         bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'no_device': False, 'volume_id': '1', 'boot_index': 0,
@@ -2063,7 +2068,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # All the db_only fields and the volume ones are removed
         self.compute_api.snapshot_volume_backed(
-            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
+            self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
@@ -2082,7 +2087,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # Check that the mappgins from the image properties are included
         self.compute_api.snapshot_volume_backed(
-            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
+            self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])

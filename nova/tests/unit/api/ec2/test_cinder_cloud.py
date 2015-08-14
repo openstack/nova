@@ -1108,10 +1108,12 @@ class CinderCloudTestCase(test.TestCase):
         (volumes, snapshots) = self._setUpImageSet(
             create_volumes_and_snapshots=True)
 
-        kwargs = {'image_id': 'ami-1',
+        kwargs = {'image_id': 'ami-2',
                   'instance_type': CONF.default_flavor,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
+
+        self.cloud.create_image(self.context, ec2_instance_id)
 
         self.cloud.terminate_instances(self.context, [ec2_instance_id])
         self._restart_compute_service()
