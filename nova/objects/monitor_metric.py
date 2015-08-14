@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova.objects import base
@@ -73,6 +74,19 @@ class MonitorMetricList(base.ObjectListBase, base.NovaObject):
     obj_relationships = {
         'objects': [('1.0', '1.0'), ('1.1', '1.1')],
     }
+
+    @classmethod
+    def from_json(cls, metrics):
+        """Converts a legacy json object into a list of MonitorMetric objs
+        and finally returns of MonitorMetricList
+
+        :param metrics: a string of json serialized objects
+        :returns: a MonitorMetricList Object.
+        """
+        metrics = jsonutils.loads(metrics) if metrics else []
+        metric_list = [
+            MonitorMetric(**metric) for metric in metrics]
+        return MonitorMetricList(objects=metric_list)
 
     # NOTE(jaypipes): This method exists to convert the object to the
     # format expected by the RPC notifier for metrics events.

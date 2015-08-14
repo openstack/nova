@@ -17,6 +17,7 @@ Tests For HostManager
 """
 
 import collections
+import datetime
 
 import mock
 from oslo_config import cfg
@@ -956,15 +957,16 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(host.pci_stats.pools))
 
     def test_resources_consumption_from_compute_node(self):
+        _ts_now = datetime.datetime(2015, 11, 11, 11, 0, 0)
         metrics = [
-            dict(name='res1',
+            dict(name='cpu.frequency',
                  value=1.0,
                  source='source1',
-                 timestamp=None),
-            dict(name='res2',
-                 value="string2",
+                 timestamp=_ts_now),
+            dict(name='numa.membw.current',
+                 numa_membw_values={"0": 10, "1": 43},
                  source='source2',
-                 timestamp=None),
+                 timestamp=_ts_now),
         ]
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
@@ -983,9 +985,11 @@ class HostStateTestCase(test.NoDBTestCase):
         host.update_from_compute_node(compute)
 
         self.assertEqual(len(host.metrics), 2)
-        self.assertEqual(set(['res1', 'res2']), set(host.metrics.keys()))
-        self.assertEqual(1.0, host.metrics['res1'].value)
-        self.assertEqual('source1', host.metrics['res1'].source)
-        self.assertEqual('string2', host.metrics['res2'].value)
-        self.assertEqual('source2', host.metrics['res2'].source)
+        self.assertEqual(1.0, host.metrics.to_list()[0]['value'])
+        self.assertEqual('source1', host.metrics[0].source)
+        self.assertEqual('cpu.frequency', host.metrics[0].name)
+        self.assertEqual('numa.membw.current', host.metrics[1].name)
+        self.assertEqual('source2', host.metrics.to_list()[1]['source'])
+        self.assertEqual({'0': 10, '1': 43},
+                         host.metrics[1].numa_membw_values)
         self.assertIsInstance(host.numa_topology, six.string_types)
