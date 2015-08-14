@@ -111,57 +111,6 @@ class _TestInstancePCIRequests(object):
         self.assertEqual('alias_2', requests.requests[1].alias_name)
         self.assertTrue(requests.requests[1].is_new)
 
-    @mock.patch('nova.db.instance_extra_update_by_uuid')
-    def test_save(self, mock_update):
-        requests = objects.InstancePCIRequests(
-            context=self.context,
-            instance_uuid=FAKE_UUID,
-            requests=[objects.InstancePCIRequest(
-                count=1,
-                spec=[{'foo': 'bar'}, {'baz': 'bat'}],
-                alias_name='alias_1',
-                is_new=False,
-                request_id=FAKE_REQUEST_UUID)])
-        requests.save()
-        self.assertEqual(FAKE_UUID, mock_update.call_args_list[0][0][1])
-        self.assertEqual(
-            [{'count': 1, 'is_new': False,
-              'alias_name': 'alias_1',
-              'spec': [{'foo': 'bar'}, {'baz': 'bat'}],
-              'request_id': FAKE_REQUEST_UUID}],
-            jsonutils.loads(
-                mock_update.call_args_list[0][0][2]['pci_requests']))
-
-    @mock.patch('nova.db.instance_extra_update_by_uuid')
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
-    def test_save_and_reload(self, mock_get, mock_update):
-        database = {}
-
-        def _save(context, uuid, values):
-            database.setdefault(uuid, {'instance_uuid': uuid})
-            database[uuid].update(values)
-
-        def _get(context, uuid, columns):
-            return database.get(uuid, {})
-
-        mock_update.side_effect = _save
-        mock_get.side_effect = _get
-
-        requests = objects.InstancePCIRequests(
-            context=self.context,
-            instance_uuid=FAKE_UUID,
-            requests=[objects.InstancePCIRequest(
-                count=1, is_new=False, alias_name='alias_1',
-                spec=[{'foo': 'bar'}])])
-        requests.save()
-        _requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            self.context, FAKE_UUID)
-
-        self.assertEqual(requests.instance_uuid, _requests.instance_uuid)
-        self.assertEqual(len(requests.requests), len(_requests.requests))
-        self.assertEqual(requests.requests[0].alias_name,
-                         _requests.requests[0].alias_name)
-
     def test_new_compatibility(self):
         request = objects.InstancePCIRequest(is_new=False)
         self.assertFalse(request.new)

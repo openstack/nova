@@ -1130,7 +1130,7 @@ object_data = {
     'InstanceNUMACell': '1.2-535ef30e0de2d6a0d26a71bd58ecafc4',
     'InstanceNUMATopology': '1.2-d944a7d6c21e1c773ffdf09c6d025954',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
-    'InstancePCIRequests': '1.1-fc8d179960869c9af038205a80af2541',
+    'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
     'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
     'Migration': '1.2-8784125bedcea0a9227318511904e853',
