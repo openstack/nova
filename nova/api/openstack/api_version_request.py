@@ -81,9 +81,15 @@ class APIVersionRequest(object):
     """
 
     def __init__(self, version_string=None):
-        """Create an API version request object."""
-        self.ver_major = None
-        self.ver_minor = None
+        """Create an API version request object.
+
+        :param version_string: String representation of APIVersionRequest.
+            Correct format is 'X.Y', where 'X' and 'Y' are int values.
+            None value should be used to create Null APIVersionRequest,
+            which is equal to 0.0
+        """
+        self.ver_major = 0
+        self.ver_minor = 0
 
         if version_string is not None:
             match = re.match(r"^([1-9]\d*)\.([1-9]\d*|0)$",
@@ -100,7 +106,7 @@ class APIVersionRequest(object):
                 % (self.ver_major, self.ver_minor))
 
     def is_null(self):
-        return self.ver_major is None and self.ver_minor is None
+        return self.ver_major == 0 and self.ver_minor == 0
 
     def __cmp__(self, other):
         if not isinstance(other, APIVersionRequest):
