@@ -358,6 +358,10 @@ class API(base_api.NetworkAPI):
             port_client = (neutron if not port_binding else
                            get_client(context, admin=True))
         for port_id in ports:
+            # A port_id is optional in the NetworkRequest object so check here
+            # in case the caller forgot to filter the list.
+            if port_id is None:
+                continue
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             if port_binding:
                 port_req_body['port']['binding:host_id'] = None
