@@ -49,6 +49,8 @@ class AdminPasswordController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.set_admin_password(context, instance, password)
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstancePasswordSetFailed as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as e:

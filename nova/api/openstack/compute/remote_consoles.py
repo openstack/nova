@@ -56,7 +56,8 @@ class RemoteConsolesController(wsgi.Controller):
                                                       console_type)
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceUnknownCell,
+                     exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
@@ -84,7 +85,8 @@ class RemoteConsolesController(wsgi.Controller):
                                                         console_type)
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceUnknownCell,
+                     exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
@@ -114,7 +116,8 @@ class RemoteConsolesController(wsgi.Controller):
                                                       console_type)
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceUnknownCell,
+                     exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
@@ -139,7 +142,8 @@ class RemoteConsolesController(wsgi.Controller):
             output = self.compute_api.get_serial_console(context,
                                                          instance,
                                                          console_type)
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceUnknownCell,
+                     exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())

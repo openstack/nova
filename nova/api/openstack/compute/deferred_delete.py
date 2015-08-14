@@ -42,6 +42,8 @@ class DeferredDeleteController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.restore(context, instance)
+        except exception.InstanceUnknownCell as error:
+            raise webob.exc.HTTPNotFound(explanation=error.format_message())
         except exception.QuotaError as error:
             raise webob.exc.HTTPForbidden(explanation=error.format_message())
         except exception.InstanceInvalidState as state_error:

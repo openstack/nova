@@ -112,6 +112,9 @@ class ServerMetadataController(wsgi.Controller):
                                                              metadata,
                                                              delete)
 
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
 
@@ -150,6 +153,9 @@ class ServerMetadataController(wsgi.Controller):
         server = common.get_instance(self.compute_api, context, server_id)
         try:
             self.compute_api.delete_instance_metadata(context, server, id)
+
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

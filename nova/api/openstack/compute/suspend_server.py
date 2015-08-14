@@ -41,6 +41,8 @@ class SuspendServerController(wsgi.Controller):
         try:
             server = common.get_instance(self.compute_api, context, id)
             self.compute_api.suspend(context, server)
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -57,6 +59,8 @@ class SuspendServerController(wsgi.Controller):
         try:
             server = common.get_instance(self.compute_api, context, id)
             self.compute_api.resume(context, server)
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

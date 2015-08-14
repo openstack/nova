@@ -66,6 +66,8 @@ class CreateBackupController(wsgi.Controller):
         try:
             image = self.compute_api.backup(context, instance, image_name,
                     backup_type, rotation, extra_properties=props)
+        except exception.InstanceUnknownCell as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'createBackup', id)
