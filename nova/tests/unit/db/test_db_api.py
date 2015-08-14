@@ -1011,6 +1011,18 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
                 CONF.api_database)
         mock_facade.get_session.assert_called_once_with()
 
+    @mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid')
+    @mock.patch.object(sqlalchemy_api, '_instances_fill_metadata')
+    @mock.patch('oslo_db.sqlalchemy.utils.paginate_query')
+    def test_instance_get_all_by_filters_paginated_allows_deleted_marker(
+            self, mock_paginate, mock_fill, mock_get):
+        ctxt = mock.MagicMock()
+        ctxt.elevated.return_value = mock.sentinel.elevated
+        sqlalchemy_api.instance_get_all_by_filters_sort(ctxt, {}, marker='foo')
+        mock_get.assert_called_once_with(mock.sentinel.elevated,
+                                         'foo', session=mock.ANY)
+        ctxt.elevated.assert_called_once_with(read_deleted='yes')
+
 
 class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):
@@ -2143,6 +2155,14 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 {'changes-since':
                                                  changes_since})
+        self._assertEqualListsOfInstances([i2], result)
+
+        db.instance_destroy(self.ctxt, i1['uuid'])
+        filters = {}
+        filters['changes-since'] = changes_since
+        filters['marker'] = i1['uuid']
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                filters)
         self._assertEqualListsOfInstances([i2], result)
 
     def test_instance_get_all_by_filters_exact_match(self):

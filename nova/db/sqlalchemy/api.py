@@ -2057,13 +2057,9 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     # paginate query
     if marker is not None:
         try:
-            if deleted:
-                marker = _instance_get_by_uuid(
+            marker = _instance_get_by_uuid(
                     context.elevated(read_deleted='yes'), marker,
                     session=session)
-            else:
-                marker = _instance_get_by_uuid(context,
-                                               marker, session=session)
         except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
     try:
