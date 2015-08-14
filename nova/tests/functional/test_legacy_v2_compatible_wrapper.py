@@ -16,8 +16,8 @@
 from nova.api import openstack
 from nova.api.openstack import compute
 from nova.api.openstack import wsgi
+from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import integrated_helpers
-from nova.tests.functional.v3 import api_paste_fixture
 
 
 class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):

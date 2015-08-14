@@ -17,7 +17,7 @@ import testscenarios
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.v3 import api_paste_fixture
+from nova.tests.functional import api_paste_fixture
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
