@@ -33,6 +33,7 @@ import glob
 import mmap
 import operator
 import os
+import platform
 import shutil
 import sys
 import tempfile
@@ -984,6 +985,8 @@ class LibvirtDriver(driver.ComputeDriver):
             connector["wwnns"] = self._fc_wwnns
             connector["wwpns"] = self._fc_wwpns
 
+        connector['platform'] = platform.machine()
+        connector['os_type'] = sys.platform
         return connector
 
     def _cleanup_resize(self, instance, network_info):
