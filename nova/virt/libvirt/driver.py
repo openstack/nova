@@ -3396,10 +3396,19 @@ class LibvirtDriver(driver.ComputeDriver):
         systemd based containers and can be provided by other
         init systems too, since it is just a plain text file.
         """
+        if not os.path.exists("/etc/machine-id"):
+            msg = _("Unable to get host UUID: /etc/machine-id does not exist")
+            raise exception.NovaException(msg)
+
         with open("/etc/machine-id") as f:
             # We want to have '-' in the right place
             # so we parse & reformat the value
-            return str(uuid.UUID(f.read().split()[0]))
+            lines = f.read().split()
+            if not lines:
+                msg = _("Unable to get host UUID: /etc/machine-id is empty")
+                raise exception.NovaException(msg)
+
+            return str(uuid.UUID(lines[0]))
 
     def _get_host_sysinfo_serial_auto(self):
         if os.path.exists("/etc/machine-id"):
