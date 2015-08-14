@@ -72,6 +72,13 @@ class QuotaClassSetsController(wsgi.Controller):
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
+        try:
+            utils.check_string_length(id, 'quota_class_name',
+                                      min_length=1, max_length=255)
+        except exception.InvalidInput as e:
+                raise webob.exc.HTTPBadRequest(
+                    explanation=e.format_message())
+
         quota_class = id
         bad_keys = []
 
