@@ -24,7 +24,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import simple_tenant_usage as 
     simple_tenant_usage_v2
 from nova.api.openstack.compute import simple_tenant_usage as \
     simple_tenant_usage_v21
-from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -34,7 +33,7 @@ from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova import utils
+from nova.tests.unit import fake_flavor
 
 SERVERS = 5
 TENANTS = 2
@@ -69,11 +68,6 @@ FAKE_INST_TYPE = {'id': 1,
 
 def get_fake_db_instance(start, end, instance_id, tenant_id,
                          vm_state=vm_states.ACTIVE):
-    sys_meta = utils.dict_to_metadata(
-        flavors.save_flavor_info({}, FAKE_INST_TYPE))
-    # NOTE(mriedem): We use fakes.stub_instance since it sets the fields
-    # needed on the db instance for converting it to an object, but we still
-    # need to override system_metadata to use our fake flavor.
     inst = fakes.stub_instance(
             id=instance_id,
             uuid='00000000-0000-0000-0000-00000000000000%02d' % instance_id,
@@ -89,7 +83,6 @@ def get_fake_db_instance(start, end, instance_id, tenant_id,
             vcpus=VCPUS,
             root_gb=ROOT_GB,
             ephemeral_gb=EPHEMERAL_GB,)
-    inst['system_metadata'] = sys_meta
     return inst
 
 
@@ -158,7 +151,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
         req.environ['nova.context'] = self.admin_context
 
         # Make sure that get_active_by_window_joined is only called with
-        # expected_attrs=['system_metadata'].
+        # expected_attrs=['flavor'].
         orig_get_active_by_window_joined = (
             objects.InstanceList.get_active_by_window_joined)
 
@@ -166,7 +159,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
                                     project_id=None, host=None,
                                     expected_attrs=None,
                                     use_slave=False):
-            self.assertEqual(['system_metadata'], expected_attrs)
+            self.assertEqual(['flavor'], expected_attrs)
             return orig_get_active_by_window_joined(context, begin, end,
                                                     project_id, host,
                                                     expected_attrs, use_slave)
@@ -281,13 +274,16 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
                                              tenant_id=self.context.project_id,
                                              vm_state=vm_states.DELETED)
         # convert the fake instance dict to an object
+        flavor = fake_flavor.fake_flavor_obj(self.context, **FAKE_INST_TYPE)
         self.inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), self.baseinst)
+        self.inst_obj.flavor = flavor
 
-    def test_get_flavor_from_non_deleted_with_id_fails(self):
+    @mock.patch('nova.objects.Instance.get_flavor',
+                side_effect=exception.NotFound())
+    def test_get_flavor_from_non_deleted_with_id_fails(self, fake_get_flavor):
         # If an instance is not deleted and missing type information from
-        # system_metadata, then that's a bug
-        self.inst_obj.system_metadata = {}
+        # instance.flavor, then that's a bug
         self.assertRaises(exception.NotFound,
                           self.controller._get_flavor, self.context,
                           self.inst_obj, {})
@@ -295,25 +291,18 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
     @mock.patch('nova.objects.Instance.get_flavor',
                 side_effect=exception.NotFound())
     def test_get_flavor_from_deleted_with_notfound(self, fake_get_flavor):
+        # If the flavor is not found from the instance and the instance is
+        # deleted, attempt to look it up from the DB and if found we're OK.
         self.inst_obj.deleted = 1
         flavor = self.controller._get_flavor(self.context, self.inst_obj, {})
         self.assertEqual(objects.Flavor, type(flavor))
         self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
 
-    def test_get_flavor_from_deleted_with_id(self):
-        # Deleted instances may not have type info in system_metadata,
-        # so verify that they get their type from a lookup of their
-        # instance_type_id
-        self.inst_obj.system_metadata = {}
-        self.inst_obj.deleted = 1
-        flavor = self.controller._get_flavor(self.context, self.inst_obj, {})
-        self.assertEqual(objects.Flavor, type(flavor))
-        self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
-
-    def test_get_flavor_from_deleted_with_id_of_deleted(self):
+    @mock.patch('nova.objects.Instance.get_flavor',
+                side_effect=exception.NotFound())
+    def test_get_flavor_from_deleted_with_id_of_deleted(self, fake_get_flavor):
         # Verify the legacy behavior of instance_type_id pointing to a
         # missing type being non-fatal
-        self.inst_obj.system_metadata = {}
         self.inst_obj.deleted = 1
         self.inst_obj.instance_type_id = 99
         flavor = self.controller._get_flavor(self.context, self.inst_obj, {})

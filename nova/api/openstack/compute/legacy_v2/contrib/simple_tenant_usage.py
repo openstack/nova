@@ -77,7 +77,7 @@ class SimpleTenantUsageController(object):
             return 0
 
     def _get_flavor(self, context, instance, flavors_cache):
-        """Get flavor information from the instance's system_metadata,
+        """Get flavor information from the instance object,
         allowing a fallback to lookup by-id for deleted instances only.
         """
         try:
@@ -106,7 +106,7 @@ class SimpleTenantUsageController(object):
 
         instances = objects.InstanceList.get_active_by_window_joined(
                         context, period_start, period_stop, tenant_id,
-                        expected_attrs=['system_metadata'])
+                        expected_attrs=['flavor'])
         rval = {}
         flavors = {}
 
