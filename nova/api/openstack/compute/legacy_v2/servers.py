@@ -630,8 +630,7 @@ class Controller(wsgi.Controller):
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
             raise exc.HTTPForbidden(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+                explanation=error.format_message())
         except messaging.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}
@@ -797,8 +796,7 @@ class Controller(wsgi.Controller):
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+                explanation=error.format_message())
         except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)

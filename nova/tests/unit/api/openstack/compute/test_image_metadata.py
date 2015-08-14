@@ -272,8 +272,7 @@ class ImageMetaDataTestV21(test.NoDBTestCase):
                           self.controller.delete, req, '100', 'key1')
 
     @mock.patch(CHK_QUOTA_STR,
-                side_effect=webob.exc.HTTPForbidden(
-                        explanation='', headers={'Retry-After': 0}))
+                side_effect=webob.exc.HTTPForbidden(explanation=''))
     @mock.patch('nova.image.api.API.update')
     @mock.patch('nova.image.api.API.get', return_value=get_image_123())
     def test_too_many_metadata_items_on_create(self, _get_mocked,
@@ -289,8 +288,7 @@ class ImageMetaDataTestV21(test.NoDBTestCase):
         self.assertFalse(update_mocked.called)
 
     @mock.patch(CHK_QUOTA_STR,
-                side_effect=webob.exc.HTTPForbidden(
-                        explanation='', headers={'Retry-After': 0}))
+                side_effect=webob.exc.HTTPForbidden(explanation=''))
     @mock.patch('nova.image.api.API.update')
     @mock.patch('nova.image.api.API.get', return_value=get_image_123())
     def test_too_many_metadata_items_on_put(self, _get_mocked,
