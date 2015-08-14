@@ -27,7 +27,8 @@ import testtools
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
 from nova import test
-from nova.tests.functional import api_samples_test_base
+from nova.tests.functional.api_sample_tests.legacy_v2 import \
+    api_samples_test_base
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
