@@ -1565,6 +1565,13 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                                         fake_instance)
             mock_destroy.assert_called_once_with()
 
+    def test_instance_destroy_at_top_incomplete_instance_obj(self):
+        fake_instance = objects.Instance(uuid='fake_uuid')
+        with mock.patch.object(objects.Instance, 'get_by_uuid') as mock_get:
+            self.src_msg_runner.instance_destroy_at_top(self.ctxt,
+                    fake_instance)
+            mock_get.assert_called_once_with(self.ctxt, fake_instance.uuid)
+
     def test_instance_hard_delete_everywhere(self):
         # Reset this, as this is a broadcast down.
         self._setup_attrs(up=False)
