@@ -13,10 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import db
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -197,6 +200,79 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                               self.compute_node_id,
                                               self.address, updates)
                 self._from_db_object(self._context, self, db_pci)
+
+    def claim(self, instance):
+        if self.status != fields.PciDeviceStatus.AVAILABLE:
+            raise exception.PciDeviceInvalidStatus(
+                compute_node_id=self.compute_node_id,
+                address=self.address, status=self.status,
+                hopestatus=[fields.PciDeviceStatus.AVAILABLE])
+        self.status = fields.PciDeviceStatus.CLAIMED
+        self.instance_uuid = instance['uuid']
+
+    def allocate(self, instance):
+        ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
+                       fields.PciDeviceStatus.CLAIMED)
+        if self.status not in ok_statuses:
+            raise exception.PciDeviceInvalidStatus(
+                compute_node_id=self.compute_node_id,
+                address=self.address, status=self.status,
+                hopestatus=ok_statuses)
+        if (self.status == fields.PciDeviceStatus.CLAIMED and
+                self.instance_uuid != instance['uuid']):
+            raise exception.PciDeviceInvalidOwner(
+                compute_node_id=self.compute_node_id,
+                address=self.address, owner=self.instance_uuid,
+                hopeowner=instance['uuid'])
+
+        self.status = fields.PciDeviceStatus.ALLOCATED
+        self.instance_uuid = instance['uuid']
+
+        # Notes(yjiang5): remove this check when instance object for
+        # compute manager is finished
+        if isinstance(instance, dict):
+            if 'pci_devices' not in instance:
+                instance['pci_devices'] = []
+            instance['pci_devices'].append(copy.copy(self))
+        else:
+            instance.pci_devices.objects.append(copy.copy(self))
+
+    def remove(self):
+        if self.status != fields.PciDeviceStatus.AVAILABLE:
+            raise exception.PciDeviceInvalidStatus(
+                compute_node_id=self.compute_node_id,
+                address=self.address, status=self.status,
+                hopestatus=[fields.PciDeviceStatus.AVAILABLE])
+        self.status = fields.PciDeviceStatus.REMOVED
+        self.instance_uuid = None
+        self.request_id = None
+
+    def free(self, instance=None):
+        ok_statuses = (fields.PciDeviceStatus.ALLOCATED,
+                       fields.PciDeviceStatus.CLAIMED)
+        if self.status not in ok_statuses:
+            raise exception.PciDeviceInvalidStatus(
+                compute_node_id=self.compute_node_id,
+                address=self.address, status=self.status,
+                hopestatus=ok_statuses)
+        if instance and self.instance_uuid != instance['uuid']:
+            raise exception.PciDeviceInvalidOwner(
+                compute_node_id=self.compute_node_id,
+                address=self.address, owner=self.instance_uuid,
+                hopeowner=instance['uuid'])
+        old_status = self.status
+        self.status = fields.PciDeviceStatus.AVAILABLE
+        self.instance_uuid = None
+        self.request_id = None
+        if old_status == fields.PciDeviceStatus.ALLOCATED and instance:
+            # Notes(yjiang5): remove this check when instance object for
+            # compute manager is finished
+            existed = next((dev for dev in instance['pci_devices']
+                if dev.id == self.id))
+            if isinstance(instance, dict):
+                instance['pci_devices'].remove(existed)
+            else:
+                instance.pci_devices.objects.remove(existed)
 
 
 @base.NovaObjectRegistry.register

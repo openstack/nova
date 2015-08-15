@@ -29,7 +29,6 @@ from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import virtual_interface as vif_obj
-from nova.pci import device as pci_device
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_pci_device
@@ -442,12 +441,12 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
             _info_cache_for(instance)
-            pci_device.claim(fake_device, instance)
-            pci_device.allocate(fake_device, instance)
+            fake_device.claim(instance)
+            fake_device.allocate(instance)
     else:
         _info_cache_for(instances)
-        pci_device.claim(fake_device, instances)
-        pci_device.allocate(fake_device, instances)
+        fake_device.claim(instances)
+        fake_device.allocate(instances)
     return instances
 
 

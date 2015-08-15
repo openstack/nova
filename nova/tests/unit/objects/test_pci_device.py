@@ -19,6 +19,7 @@ from oslo_utils import timeutils
 
 from nova import context
 from nova import db
+from nova import exception
 from nova.objects import fields
 from nova.objects import instance
 from nova.objects import pci_device
@@ -244,6 +245,95 @@ class _TestPciDeviceObject(object):
         pci_device1.instance_uuid = 'aaa'
         pci_device2.instance_uuid = None
         self.assertNotEqual(pci_device1, pci_device2)
+
+    def test_claim_device(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.claim(self.inst)
+        self.assertEqual(devobj.status,
+                         fields.PciDeviceStatus.CLAIMED)
+        self.assertEqual(devobj.instance_uuid,
+                         self.inst.uuid)
+        self.assertEqual(len(self.inst.pci_devices), 0)
+
+    def test_claim_device_fail(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.status = fields.PciDeviceStatus.ALLOCATED
+        self.assertRaises(exception.PciDeviceInvalidStatus,
+                          devobj.claim, self.inst)
+
+    def test_allocate_device(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.claim(self.inst)
+        devobj.allocate(self.inst)
+        self.assertEqual(devobj.status,
+                         fields.PciDeviceStatus.ALLOCATED)
+        self.assertEqual(devobj.instance_uuid, 'fake-inst-uuid')
+        self.assertEqual(len(self.inst.pci_devices), 1)
+        self.assertEqual(self.inst.pci_devices[0].vendor_id,
+                         'v')
+        self.assertEqual(self.inst.pci_devices[0].status,
+                         fields.PciDeviceStatus.ALLOCATED)
+
+    def test_allocate_device_fail_status(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.status = 'removed'
+        self.assertRaises(exception.PciDeviceInvalidStatus,
+                          devobj.allocate, self.inst)
+
+    def test_allocate_device_fail_owner(self):
+        self._create_fake_instance()
+        inst_2 = instance.Instance()
+        inst_2.uuid = 'fake-inst-uuid-2'
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.claim(self.inst)
+        self.assertRaises(exception.PciDeviceInvalidOwner,
+                          devobj.allocate, inst_2)
+
+    def test_free_claimed_device(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.claim(self.inst)
+        devobj.free(self.inst)
+        self.assertEqual(devobj.status,
+                         fields.PciDeviceStatus.AVAILABLE)
+        self.assertIsNone(devobj.instance_uuid)
+
+    def test_free_allocated_device(self):
+        self._create_fake_instance()
+        ctx = context.get_admin_context()
+        devobj = pci_device.PciDevice._from_db_object(
+                ctx, pci_device.PciDevice(), fake_db_dev)
+        devobj.claim(self.inst)
+        devobj.allocate(self.inst)
+        self.assertEqual(len(self.inst.pci_devices), 1)
+        devobj.free(self.inst)
+        self.assertEqual(len(self.inst.pci_devices), 0)
+        self.assertEqual(devobj.status,
+                         fields.PciDeviceStatus.AVAILABLE)
+        self.assertIsNone(devobj.instance_uuid)
+
+    def test_free_device_fail(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.status = fields.PciDeviceStatus.REMOVED
+        self.assertRaises(exception.PciDeviceInvalidStatus, devobj.free)
+
+    def test_remove_device(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.remove()
+        self.assertEqual(devobj.status, fields.PciDeviceStatus.REMOVED)
+        self.assertIsNone(devobj.instance_uuid)
+
+    def test_remove_device_fail(self):
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj.claim(self.inst)
+        self.assertRaises(exception.PciDeviceInvalidStatus, devobj.remove)
 
 
 class TestPciDeviceObject(test_objects._LocalTest,
