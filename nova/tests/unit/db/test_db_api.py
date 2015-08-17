@@ -6718,6 +6718,13 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                          self.ctxt, 'p1', 'u1'))
 
+    def test_get_project_user_quota_usages_in_order(self):
+        _quota_reserve(self.ctxt, 'p1', 'u1')
+        with mock.patch.object(query.Query, 'order_by') as order_mock:
+            sqlalchemy_api._get_project_user_quota_usages(
+                self.ctxt, None, 'p1', 'u1')
+        self.assertTrue(order_mock.called)
+
     def test_quota_usage_update_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_update,
             self.ctxt, 'p1', 'u1', 'resource', in_use=42)
