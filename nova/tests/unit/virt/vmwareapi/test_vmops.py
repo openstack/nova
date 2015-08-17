@@ -325,6 +325,29 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
                              info)
 
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
+    def test_get_info_instance_deleted(self, mock_get_vm_ref):
+        props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
+                 'runtime.powerState']
+        prop_cpu = vmwareapi_fake.Prop(props[0], 4)
+        prop_mem = vmwareapi_fake.Prop(props[1], 128)
+        prop_state = vmwareapi_fake.Prop(props[2], 'poweredOn')
+        prop_list = [prop_state, prop_mem, prop_cpu]
+        obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
+        result = vmwareapi_fake.FakeRetrieveResult()
+        result.add_object(obj_content)
+
+        def mock_call_method(module, method, *args, **kwargs):
+            raise vexc.ManagedObjectNotFoundException()
+
+        with mock.patch.object(self._session, '_call_method',
+                               mock_call_method):
+            self.assertRaises(exception.InstanceNotFound,
+                              self._vmops.get_info,
+                              self._instance)
+            mock_get_vm_ref.assert_called_once_with(self._session,
+                self._instance)
+
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
         instance_ds_ref.value = "ds-1"
