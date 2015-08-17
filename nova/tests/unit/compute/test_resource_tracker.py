@@ -1167,16 +1167,6 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_claim(self, mock_get):
-        self.claim_method(self.context, self.instance,
-                self.instance_type, limits=self.limits)
-        self._assert(FAKE_VIRT_MEMORY_WITH_OVERHEAD, 'memory_mb_used')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used')
-        self._assert(FAKE_VIRT_VCPUS, 'vcpus_used')
-        self.assertEqual(1, len(self.tracker.tracked_migrations))
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
     def test_abort(self, mock_get):
         try:
             with self.claim_method(self.context, self.instance,
@@ -1232,24 +1222,6 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
         self._assert(0, 'local_gb_used')
         self._assert(0, 'vcpus_used')
         self.assertEqual(0, len(self.tracker.tracked_migrations))
-
-    def test_resize_filter(self):
-        instance = self._fake_instance_obj(vm_state=vm_states.ACTIVE,
-                task_state=task_states.SUSPENDING)
-        self.assertFalse(self.tracker._instance_in_resize_state(instance))
-
-        instance = self._fake_instance_obj(vm_state=vm_states.RESIZED,
-                task_state=task_states.SUSPENDING)
-        self.assertTrue(self.tracker._instance_in_resize_state(instance))
-
-        states = [task_states.RESIZE_PREP, task_states.RESIZE_MIGRATING,
-                  task_states.RESIZE_MIGRATED, task_states.RESIZE_FINISH]
-        for vm_state in [vm_states.ACTIVE, vm_states.STOPPED]:
-            for task_state in states:
-                instance = self._fake_instance_obj(vm_state=vm_state,
-                                                   task_state=task_state)
-                result = self.tracker._instance_in_resize_state(instance)
-                self.assertTrue(result)
 
     @mock.patch.object(objects.Migration, 'save')
     def test_existing_migration(self, save_mock):

@@ -80,6 +80,26 @@ COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 CONF.import_opt('my_ip', 'nova.netconf')
 
 
+def _instance_in_resize_state(instance):
+    """Returns True if the instance is in one of the resizing states.
+
+    :param instance: `nova.objects.Instance` object
+    """
+    vm = instance.vm_state
+    task = instance.task_state
+
+    if vm == vm_states.RESIZED:
+        return True
+
+    if (vm in [vm_states.ACTIVE, vm_states.STOPPED]
+            and task in [task_states.RESIZE_PREP,
+            task_states.RESIZE_MIGRATING, task_states.RESIZE_MIGRATED,
+            task_states.RESIZE_FINISH]):
+        return True
+
+    return False
+
+
 class ResourceTracker(object):
     """Compute helper class for keeping track of resource usage as instances
     are built and destroyed.
@@ -732,7 +752,7 @@ class ResourceTracker(object):
             uuid = instance.uuid
 
             # skip migration if instance isn't in a resize state:
-            if not self._instance_in_resize_state(instance):
+            if not _instance_in_resize_state(instance):
                 LOG.warning(_LW("Instance not resizing, skipping migration."),
                             instance_uuid=uuid)
                 continue
@@ -854,21 +874,6 @@ class ResourceTracker(object):
         if missing_keys:
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
-
-    def _instance_in_resize_state(self, instance):
-        vm = instance['vm_state']
-        task = instance['task_state']
-
-        if vm == vm_states.RESIZED:
-            return True
-
-        if (vm in [vm_states.ACTIVE, vm_states.STOPPED]
-                and task in [task_states.RESIZE_PREP,
-                task_states.RESIZE_MIGRATING, task_states.RESIZE_MIGRATED,
-                task_states.RESIZE_FINISH]):
-            return True
-
-        return False
 
     def _get_instance_type(self, context, instance, prefix,
             instance_type_id=None):
