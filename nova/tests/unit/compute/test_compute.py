@@ -8824,6 +8824,22 @@ class ComputeAPITestCase(BaseTestCase):
             fake_v2_bdms, False)
         self.assertEqual(len(transformed_bdm), 1)
 
+        # Image BDM overrides mappings
+        base_options['image_ref'] = FAKE_IMAGE_REF
+        image_meta = {
+            'properties': {
+                'mappings': [
+                    {'virtual': 'ephemeral0', 'device': 'vdb'}],
+                'bdm_v2': True,
+                'block_device_mapping': [
+                    {'device_name': '/dev/vdb', 'source_type': 'blank',
+                     'destination_type': 'volume', 'volume_size': 1}]}}
+        transformed_bdm = self.compute_api._check_and_transform_bdm(
+            self.context, base_options, {}, image_meta, 1, 1, [], False)
+        self.assertEqual(1, len(transformed_bdm))
+        self.assertEqual('volume', transformed_bdm[0]['destination_type'])
+        self.assertEqual('/dev/vdb', transformed_bdm[0]['device_name'])
+
     def test_volume_size(self):
         ephemeral_size = 2
         swap_size = 3
