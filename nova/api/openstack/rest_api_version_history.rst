@@ -109,7 +109,7 @@ user documentation.
   a lock on the server, ``false`` otherwise.
 
 2.10
----
+----
 
   Added user_id parameter to os-keypairs plugin, as well as a new property
   in the request body, for the create operation.
