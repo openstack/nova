@@ -57,7 +57,7 @@ from nova.objects import base as obj_base
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
-from nova.tests.unit.api.openstack.compute.contrib import (
+from nova.tests.unit.api.openstack.compute import (
     test_neutron_security_groups as test_neutron)
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_block_device
