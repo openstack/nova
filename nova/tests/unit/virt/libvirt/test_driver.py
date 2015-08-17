@@ -8387,7 +8387,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     def test_immediate_delete(self, mock_save):
         def fake_get_domain(instance):
-            raise exception.InstanceNotFound(instance_id=instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         def fake_delete_instance_files(instance):
             pass
@@ -8482,7 +8482,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_get_domain, mock_teardown_container, mock_cleanup):
         self.flags(virt_type='lxc', group='libvirt')
         instance = objects.Instance(**self.test_instance)
-        inf_exception = exception.InstanceNotFound(instance_id=instance.name)
+        inf_exception = exception.InstanceNotFound(instance_id=instance.uuid)
         mock_get_domain.side_effect = inf_exception
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9168,7 +9168,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_undefine_domain_with_not_found_instance(self):
         def fake_get_domain(self, instance):
-            raise exception.InstanceNotFound(instance_id=instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         self.mox.StubOutWithMock(fakelibvirt.libvirtError, "get_error_code")
@@ -10885,7 +10885,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(host.Host, 'get_domain',
                               side_effect=exception.InstanceNotFound(
-                                  instance_id=instance.name)),
+                                  instance_id=instance.uuid)),
             mock.patch.object(drvr, '_disconnect_volume')
         ) as (_get_domain, _disconnect_volume):
             connection_info = {'driver_volume_type': 'fake'}
