@@ -8818,6 +8818,24 @@ class TestDBInstanceTags(test.TestCase):
         expected = [(uuid, tag3), (uuid, tag4), (uuid, tag2)]
         self.assertEqual(set(expected), set(tags))
 
+    @mock.patch('nova.db.sqlalchemy.models.Tag.__table__.insert',
+                return_value=models.Tag.__table__.insert())
+    def test_instance_tag_set_empty_add(self, mock_insert):
+        uuid = self._create_instance()
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+
+        db.instance_tag_set(self.context, uuid, [tag1, tag2])
+
+        # Check insert() was called to insert 'tag1' and 'tag2'
+        mock_insert.assert_called_once_with()
+
+        mock_insert.reset_mock()
+        db.instance_tag_set(self.context, uuid, [tag1])
+
+        # Check insert() wasn't called because there are no tags for creation
+        mock_insert.assert_not_called()
+
     @mock.patch('sqlalchemy.orm.query.Query.delete')
     def test_instance_tag_set_empty_delete(self, mock_delete):
         uuid = self._create_instance()
