@@ -25,7 +25,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-scheduler-hints"
 
     def _get_flags(self):

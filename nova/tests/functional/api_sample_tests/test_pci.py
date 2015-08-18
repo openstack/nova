@@ -89,7 +89,7 @@ class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
-class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extra_extensions_to_load = ['os-hypervisors']
     extension_name = 'os-pci'
@@ -175,7 +175,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                               subs, response, 200)
 
 
-class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-pci"
 

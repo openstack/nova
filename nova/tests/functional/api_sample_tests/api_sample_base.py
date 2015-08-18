@@ -29,7 +29,7 @@ from nova.tests.unit import fake_utils
 CONF = cfg.CONF
 
 
-class ApiSampleTestBaseV3(testscenarios.WithScenarios,
+class ApiSampleTestBaseV21(testscenarios.WithScenarios,
                           api_samples_test_base.ApiSampleTestBase):
     _api_version = 'v2'
     sample_dir = None
@@ -69,8 +69,7 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
         elif (self._test == 'v2' and self._api_version == 'v2'):
             # override /v2 in compatibility mode with v2 legacy
             self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())
-
-        super(ApiSampleTestBaseV3, self).setUp()
+        super(ApiSampleTestBaseV21, self).setUp()
         self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)
         fake_utils.stub_out_utils_spawn_n(self.stubs)

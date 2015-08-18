@@ -22,7 +22,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-used-limits"
     extra_extensions_to_load = ["limits"]

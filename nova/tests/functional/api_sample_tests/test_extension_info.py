@@ -30,7 +30,7 @@ def fake_soft_extension_authorizer(extension_name, core=False):
     return authorize
 
 
-class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     all_extensions = True
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
@@ -44,7 +44,7 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self._verify_response(template, subs, response, 200)
 
 
-class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "extension-info"
     extra_extensions_to_load = ["os-create-backup"]
     # NOTE (gmann): run this tests for v21. and v2.1 compatible mode only

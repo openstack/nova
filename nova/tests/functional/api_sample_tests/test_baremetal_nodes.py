@@ -48,7 +48,7 @@ class fake_client(object):
     node = NodeManager()
 
 
-class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-baremetal-nodes"
 

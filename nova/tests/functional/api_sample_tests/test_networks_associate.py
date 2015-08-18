@@ -23,7 +23,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV3):
+class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-networks-associate"
     extra_extensions_to_load = ["os-networks"]
