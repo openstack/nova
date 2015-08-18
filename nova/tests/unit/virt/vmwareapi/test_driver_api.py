@@ -680,6 +680,25 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             connection_info, self.instance, 'fake-name')
         mock_destroy.assert_called_once_with(self.instance, True)
 
+    @mock.patch.object(vmops.VMwareVMOps, 'power_off',
+                       side_effect=vexc.ManagedObjectNotFoundException())
+    @mock.patch.object(vmops.VMwareVMOps, 'destroy')
+    def test_destroy_with_attached_volumes_missing(self,
+                                                   mock_destroy,
+                                                   mock_power_off):
+        self._create_vm()
+        connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
+        bdm = [{'connection_info': connection_info,
+                'disk_bus': 'fake-bus',
+                'device_name': 'fake-name',
+                'mount_device': '/dev/sdb'}]
+        bdi = {'block_device_mapping': bdm, 'root_device_name': '/dev/sda'}
+        self.assertNotEqual(vm_states.STOPPED, self.instance.vm_state)
+        self.conn.destroy(self.context, self.instance, self.network_info,
+                          block_device_info=bdi)
+        mock_power_off.assert_called_once_with(self.instance)
+        mock_destroy.assert_called_once_with(self.instance, True)
+
     @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
                        side_effect=exception.StorageError(reason='oh man'))
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
