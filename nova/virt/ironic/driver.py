@@ -822,6 +822,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 raise loopingcall.LoopingCallDone()
             if node.provision_state in (ironic_states.NOSTATE,
                                         ironic_states.CLEANING,
+                                        ironic_states.CLEANWAIT,
                                         ironic_states.CLEANFAIL,
                                         ironic_states.AVAILABLE):
                 # From a user standpoint, the node is unprovisioned. If a node

@@ -586,6 +586,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
             {'uuid': uuidutils.generate_uuid(),
              'power_state': ironic_states.POWER_ON,
              'provision_state': ironic_states.CLEANING},
+            # a node in cleaning, waiting for a clean step to finish
+            {'uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_ON,
+             'provision_state': ironic_states.CLEANWAIT},
             # a node in deleting
             {'uuid': uuidutils.generate_uuid(),
              'power_state': ironic_states.POWER_ON,
@@ -1122,13 +1126,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def test_destroy_cleaning(self, mock_cleanup_deploy, mock_node):
+    def _test_destroy_cleaning(self, mock_cleanup_deploy, mock_node,
+                               state=None):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         network_info = 'foo'
 
         node = ironic_utils.get_test_node(
             driver='fake', uuid=node_uuid,
-            provision_state=ironic_states.CLEANING)
+            provision_state=state)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
 
         mock_node.get_by_instance_uuid.return_value = node
@@ -1137,6 +1142,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
         mock_cleanup_deploy.assert_called_with(self.ctx, node, instance,
                                                network_info)
+
+    def test_destroy_cleaning(self):
+        self._test_destroy_cleaning(state=ironic_states.CLEANING)
+
+    def test_destroy_cleanwait(self):
+        self._test_destroy_cleaning(state=ironic_states.CLEANWAIT)
 
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
@@ -1152,11 +1163,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.ctx, instance, None, None)
 
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
-    def test__unprovision_instance(self, mock_validate_inst):
+    def _test__unprovision_instance(self, mock_validate_inst, state=None):
         fake_ironic_client = mock.Mock()
         node = ironic_utils.get_test_node(
             driver='fake',
-            provision_state=ironic_states.CLEANING)
+            provision_state=state)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
         mock_validate_inst.return_value = node
         self.driver._unprovision(fake_ironic_client, instance, node)
@@ -1164,6 +1175,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                    instance)
         fake_ironic_client.call.assert_called_once_with(
             "node.set_provision_state", node.uuid, "deleted")
+
+    def test__unprovision_cleaning(self):
+        self._test__unprovision_instance(state=ironic_states.CLEANING)
+
+    def test__unprovision_cleanwait(self):
+        self._test__unprovision_instance(state=ironic_states.CLEANWAIT)
 
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
     def test__unprovision_fail_max_retries(self, mock_validate_inst):
