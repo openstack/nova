@@ -2467,7 +2467,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_rebuild_default_impl(self):
         def _detach(context, bdms):
-            pass
+            # NOTE(rpodolyaka): check that instance has been powered off by
+            # the time we detach block devices, exact calls arguments will be
+            # checked below
+            self.assertTrue(mock_power_off.called)
+            self.assertFalse(mock_destroy.called)
 
         def _attach(context, instance, bdms, do_check_attach=True):
             return {'block_device_mapping': 'shared_block_storage'}
@@ -2483,11 +2487,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver, 'spawn',
                               side_effect=_spawn),
             mock.patch.object(objects.Instance, 'save',
+                              return_value=None),
+            mock.patch.object(self.compute, '_power_off_instance',
                               return_value=None)
         ) as(
              mock_destroy,
              mock_spawn,
-             mock_save
+             mock_save,
+             mock_power_off
         ):
             instance = fake_instance.fake_instance_obj(self.context)
             instance.task_state = task_states.REBUILDING
@@ -2501,13 +2508,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                detach_block_devices=_detach,
                                                attach_block_devices=_attach,
                                                network_info=None,
-                                               recreate=True,
+                                               recreate=False,
                                                block_device_info=None,
                                                preserve_ephemeral=False)
 
-            self.assertFalse(mock_destroy.called)
             self.assertTrue(mock_save.called)
             self.assertTrue(mock_spawn.called)
+            mock_destroy.assert_called_once_with(
+                self.context, instance,
+                network_info=None, block_device_info=None)
+            mock_power_off.assert_called_once_with(
+                self.context, instance, clean_shutdown=True)
 
     @mock.patch.object(utils, 'last_completed_audit_period',
             return_value=(0, 0))

@@ -2544,10 +2544,13 @@ class ComputeManager(manager.Manager):
             # partitions.
             raise exception.PreserveEphemeralNotSupported()
 
-        detach_block_devices(context, bdms)
-
-        if not recreate:
-            self.driver.destroy(context, instance, network_info,
+        if recreate:
+            detach_block_devices(context, bdms)
+        else:
+            self._power_off_instance(context, instance, clean_shutdown=True)
+            detach_block_devices(context, bdms)
+            self.driver.destroy(context, instance,
+                                network_info=network_info,
                                 block_device_info=block_device_info)
 
         instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
