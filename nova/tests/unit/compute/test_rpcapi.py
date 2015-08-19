@@ -85,6 +85,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         else:
             host = kwargs['instance']['host']
 
+        if method == 'rebuild_instance' and 'node' in expected_kwargs:
+            expected_kwargs['scheduled_node'] = expected_kwargs.pop('node')
+
         with contextlib.nested(
             mock.patch.object(rpcapi.client, rpc_method),
             mock.patch.object(rpcapi.client, 'prepare'),
@@ -301,6 +304,15 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 reboot_type='type')
 
     def test_rebuild_instance(self):
+        self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
+                injected_files='None', image_ref='None', orig_image_ref='None',
+                bdms=[], instance=self.fake_instance_obj, host='new_host',
+                orig_sys_metadata=None, recreate=True, on_shared_storage=True,
+                preserve_ephemeral=True, migration=None, node=None,
+                limits=None, version='4.5')
+
+    def test_rebuild_instance_downgrade(self):
+        self.flags(group='upgrade_levels', compute='4.0')
         self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
                 injected_files='None', image_ref='None', orig_image_ref='None',
                 bdms=[], instance=self.fake_instance_obj, host='new_host',

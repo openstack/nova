@@ -189,6 +189,15 @@ class ResourceTracker(object):
         return claim
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def rebuild_claim(self, context, instance, limits=None, image_meta=None,
+                      migration=None):
+        """Create a claim for a rebuild operation."""
+        instance_type = instance.flavor
+        return self._move_claim(context, instance, instance_type,
+                                move_type='evacuation', limits=limits,
+                                image_meta=image_meta, migration=migration)
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type,
                      image_meta=None, limits=None):
         """Create a claim for a resize or cold-migration move."""

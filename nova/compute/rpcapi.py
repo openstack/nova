@@ -1,5 +1,4 @@
 # Copyright 2013 Red Hat, Inc.
-#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -301,6 +300,8 @@ class ComputeAPI(object):
         * 4.2  - Add migration argument to live_migration()
         * 4.3  - Added get_mks_console method
         * 4.4  - Make refresh_instance_security_rules send an instance object
+        * 4.5  - Add migration, scheduler_node and limits arguments to
+                 rebuild_instance()
     '''
 
     VERSION_ALIASES = {
@@ -606,12 +607,21 @@ class ComputeAPI(object):
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
-            recreate=False, on_shared_storage=False, host=None,
-            preserve_ephemeral=False, kwargs=None):
+            recreate=False, on_shared_storage=False, host=None, node=None,
+            preserve_ephemeral=False, migration=None, limits=None,
+            kwargs=None):
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
-        extra = {'preserve_ephemeral': preserve_ephemeral}
-        version = '4.0'
+        extra = {'preserve_ephemeral': preserve_ephemeral,
+                 'migration': migration,
+                 'scheduled_node': node,
+                 'limits': limits}
+        version = '4.5'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            extra.pop('migration')
+            extra.pop('scheduled_node')
+            extra.pop('limits')
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',

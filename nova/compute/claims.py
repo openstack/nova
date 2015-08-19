@@ -33,8 +33,8 @@ LOG = logging.getLogger(__name__)
 class NopClaim(object):
     """For use with compute drivers that do not support resource tracking."""
 
-    def __init__(self, migration=None):
-        self.migration = migration
+    def __init__(self, *args, **kwargs):
+        self.migration = kwargs.pop('migration', None)
         self.claimed_numa_topology = None
 
     @property

@@ -859,6 +859,7 @@ class ComputeTaskManager(base.Base):
 
         with compute_utils.EventReporter(context, 'rebuild_server',
                                           instance.uuid):
+            node = limits = None
             if not host:
                 # NOTE(lcostantino): Retrieve scheduler filters for the
                 # instance when the feature is available
@@ -872,7 +873,10 @@ class ComputeTaskManager(base.Base):
                     hosts = self.scheduler_client.select_destinations(context,
                                                             request_spec,
                                                             filter_properties)
-                    host = hosts.pop(0)['host']
+                    host_dict = hosts.pop(0)
+                    host, node, limits = (host_dict['host'],
+                                          host_dict['nodename'],
+                                          host_dict['limits'])
                 except exception.NoValidHost as ex:
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
@@ -891,6 +895,14 @@ class ComputeTaskManager(base.Base):
                                         "cannot be rebuilt"),
                                     instance=instance)
 
+            try:
+                migration = objects.Migration.get_by_instance_and_status(
+                    context, instance.uuid, 'accepted')
+            except exception.MigrationNotFoundByStatus:
+                LOG.debug("No migration record for the rebuild/evacuate "
+                          "request.", instance=instance)
+                migration = None
+
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")
 
@@ -905,7 +917,8 @@ class ComputeTaskManager(base.Base):
                     recreate=recreate,
                     on_shared_storage=on_shared_storage,
                     preserve_ephemeral=preserve_ephemeral,
-                    host=host)
+                    migration=migration,
+                    host=host, node=node, limits=limits)
 
 
 class _ConductorManagerV3Proxy(object):

@@ -57,6 +57,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import build_results
+from nova.compute import claims
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
@@ -665,7 +666,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.4')
+    target = messaging.Target(version='4.5')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -2606,7 +2607,8 @@ class ComputeManager(manager.Manager):
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage=None,
-                         preserve_ephemeral=False):
+                         preserve_ephemeral=False, migration=None,
+                         scheduled_node=None, limits=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -2629,18 +2631,92 @@ class ComputeManager(manager.Manager):
                                   files are available or not on the target host
         :param preserve_ephemeral: True if the default ephemeral storage
                                    partition must be preserved on rebuild
+        :param migration: a Migration object if one was created for this
+                          rebuild operation (if it's a part of evacaute)
+        :param scheduled_node: A node of the host chosen by the scheduler. If a
+                               host was specified by the user, this will be
+                               None
+        :param limits: Overcommit limits set by the scheduler. If a host was
+                       specified by the user, this will be None
         """
         context = context.elevated()
 
         LOG.info(_LI("Rebuilding instance"), context=context,
                     instance=instance)
+        if scheduled_node is not None:
+            rt = self._get_resource_tracker(scheduled_node)
+            rebuild_claim = rt.rebuild_claim
+        else:
+            rebuild_claim = claims.NopClaim
+
+        image_meta = {}
+        if image_ref:
+            image_meta = self.image_api.get(context, image_ref)
+
+        # NOTE(mriedem): On a recreate (evacuate), we need to update
+        # the instance's host and node properties to reflect it's
+        # destination node for the recreate.
+        if not scheduled_node:
+            try:
+                compute_node = self._get_compute_info(context, self.host)
+                scheduled_node = compute_node.hypervisor_hostname
+            except exception.ComputeHostNotFound:
+                LOG.exception(_LE('Failed to get compute_info for %s'),
+                                self.host)
+
+        def _fail_migration(migration):
+            if migration:
+                migration.status = 'failed'
+                migration.save()
 
         with self._error_out_instance_on_exception(context, instance):
-            self._do_rebuild_instance(context, instance, orig_image_ref,
-                                      image_ref, injected_files, new_pass,
-                                      orig_sys_metadata, bdms, recreate,
-                                      on_shared_storage,
-                                      preserve_ephemeral)
+            try:
+                claim_ctxt = rebuild_claim(
+                    context, instance, limits=limits, image_meta=image_meta,
+                    migration=migration)
+                self._do_rebuild_instance_with_claim(
+                    claim_ctxt, context, instance, orig_image_ref,
+                    image_ref, injected_files, new_pass, orig_sys_metadata,
+                    bdms, recreate, on_shared_storage, preserve_ephemeral)
+            except exception.ComputeResourcesUnavailable as e:
+                LOG.debug("Could not rebuild instance on this host, not "
+                          "enough resources available.", instance=instance)
+
+                # NOTE(ndipanov): We just abort the build for now and leave a
+                # migration record for potential cleanup later
+                _fail_migration(migration)
+
+                self._notify_about_instance_usage(context, instance,
+                        'rebuild.error', fault=e)
+                raise exception.BuildAbortException(
+                    instance_uuid=instance.uuid, reason=e.format_message())
+            except Exception as e:
+                _fail_migration(migration)
+                self._notify_about_instance_usage(context, instance,
+                        'rebuild.error', fault=e)
+                raise
+            else:
+                instance.apply_migration_context()
+                # NOTE (ndipanov): This save will now update the host and node
+                # attributes making sure that next RT pass is consistent since
+                # it will be based on the instance and not the migration DB
+                # entry.
+                instance.host = self.host
+                instance.node = scheduled_node
+                instance.save()
+                instance.drop_migration_context()
+
+                # NOTE (ndipanov): Mark the migration as done only after we
+                # mark the instance as belonging to this host.
+                if migration:
+                    migration.status = 'done'
+                    migration.save()
+
+    def _do_rebuild_instance_with_claim(self, claim_context, *args, **kwargs):
+        """Helper to avoid deep nesting in the top-level method."""
+
+        with claim_context:
+            self._do_rebuild_instance(*args, **kwargs)
 
     def _do_rebuild_instance(self, context, instance, orig_image_ref,
                              image_ref, injected_files, new_pass,
@@ -2675,21 +2751,6 @@ class ComputeManager(manager.Manager):
                 image_ref = orig_image_ref = instance.image_ref
                 LOG.info(_LI("disk not on shared storage, rebuilding from:"
                                 " '%s'"), str(image_ref))
-
-            # NOTE(mriedem): On a recreate (evacuate), we need to update
-            # the instance's host and node properties to reflect it's
-            # destination node for the recreate.
-            node_name = None
-            try:
-                compute_node = self._get_compute_info(context, self.host)
-                node_name = compute_node.hypervisor_hostname
-            except exception.ComputeHostNotFound:
-                LOG.exception(_LE('Failed to get compute_info for %s'),
-                                self.host)
-            finally:
-                instance.host = self.host
-                instance.node = node_name
-                instance.save()
 
         if image_ref:
             image_meta = self.image_api.get(context, image_ref)

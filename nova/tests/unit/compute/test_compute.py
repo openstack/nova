@@ -11179,11 +11179,17 @@ class EvacuateHostTestCase(BaseTestCase):
         db.instance_destroy(self.context, self.inst.uuid)
         super(EvacuateHostTestCase, self).tearDown()
 
-    def _rebuild(self, on_shared_storage=True):
+    def _rebuild(self, on_shared_storage=True, migration=None,
+                 send_node=False):
         network_api = self.compute.network_api
         ctxt = context.get_admin_context()
         mock_context = mock.Mock()
         mock_context.elevated.return_value = ctxt
+
+        node = limits = None
+        if send_node:
+            node = NODENAME
+            limits = {}
 
         @mock.patch.object(network_api, 'setup_networks_on_host')
         @mock.patch.object(network_api, 'setup_instance_network_on_host')
@@ -11197,7 +11203,8 @@ class EvacuateHostTestCase(BaseTestCase):
             self.compute.rebuild_instance(
                 mock_context, self.inst, orig_image_ref,
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
-                on_shared_storage=on_shared_storage)
+                on_shared_storage=on_shared_storage, migration=migration,
+                scheduled_node=node, limits=limits)
             mock_setup_networks_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
             mock_setup_instance_network_on_host.assert_called_once_with(
@@ -11243,6 +11250,19 @@ class EvacuateHostTestCase(BaseTestCase):
         instance = db.instance_get(self.context, self.inst.id)
         self.assertEqual(instance['host'], self.compute.host)
         self.assertIsNone(instance['node'])
+
+    def test_rebuild_on_host_node_passed(self):
+        patch_get_info = mock.patch.object(self.compute, '_get_compute_info')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        with patch_get_info as get_compute_info, patch_on_disk:
+            self._rebuild(send_node=True)
+            self.assertEqual(0, get_compute_info.call_count)
+
+        # Should be on destination host and node set to what was passed in
+        instance = db.instance_get(self.context, self.inst.id)
+        self.assertEqual(instance['host'], self.compute.host)
+        self.assertEqual(instance['node'], NODENAME)
 
     def test_rebuild_with_instance_in_stopped_state(self):
         """Confirm evacuate scenario updates vm_state to stopped
@@ -11412,6 +11432,79 @@ class EvacuateHostTestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         self._rebuild(on_shared_storage=None)
+
+    def test_rebuild_migration_passed_in(self):
+        migration = mock.Mock(spec=objects.Migration)
+
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        with patch_spawn, patch_on_disk:
+            self._rebuild(migration=migration)
+
+        self.assertEqual('done', migration.status)
+        migration.save.assert_called_once_with()
+
+    def test_rebuild_migration_node_passed_in(self):
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        with patch_spawn, patch_on_disk:
+            self._rebuild(send_node=True)
+
+        migrations = objects.MigrationList.get_in_progress_by_host_and_node(
+            self.context, self.compute.host, NODENAME)
+        self.assertEqual(1, len(migrations))
+        migration = migrations[0]
+        self.assertEqual("evacuation", migration.migration_type)
+        self.assertEqual("pre-migrating", migration.status)
+
+    def test_rebuild_migration_claim_fails(self):
+        migration = mock.Mock(spec=objects.Migration)
+
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        patch_claim = mock.patch.object(
+            self.compute._resource_tracker_dict[NODENAME], 'rebuild_claim',
+            side_effect=exception.ComputeResourcesUnavailable(reason="boom"))
+        with patch_spawn, patch_on_disk, patch_claim:
+            self.assertRaises(exception.BuildAbortException,
+                              self._rebuild, migration=migration,
+                              send_node=True)
+        self.assertEqual("failed", migration.status)
+        migration.save.assert_called_once_with()
+
+    def test_rebuild_fails_migration_failed(self):
+        migration = mock.Mock(spec=objects.Migration)
+
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        patch_claim = mock.patch.object(
+            self.compute._resource_tracker_dict[NODENAME], 'rebuild_claim')
+        patch_rebuild = mock.patch.object(
+            self.compute, '_do_rebuild_instance_with_claim',
+            side_effect=test.TestingException())
+        with patch_spawn, patch_on_disk, patch_claim, patch_rebuild:
+            self.assertRaises(test.TestingException,
+                              self._rebuild, migration=migration,
+                              send_node=True)
+        self.assertEqual("failed", migration.status)
+        migration.save.assert_called_once_with()
+
+    def test_rebuild_numa_migration_context_honoured(self):
+        numa_topology = (
+            test_instance_numa_topology.get_fake_obj_numa_topology(
+                self.context))
+        self.inst.numa_topology = numa_topology
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_on_disk = mock.patch.object(
+            self.compute.driver, 'instance_on_disk', return_value=True)
+        with patch_spawn, patch_on_disk:
+            self._rebuild(send_node=True)
+        self.assertIsNone(self.inst.numa_topology)
+        self.assertIsNone(self.inst.migration_context)
 
 
 class ComputeInjectedFilesTestCase(BaseTestCase):
