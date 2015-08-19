@@ -51,8 +51,10 @@ CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.legacy_v2.servers')
 CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
-CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
-CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
+CONF.import_opt('extensions_blacklist', 'nova.api.openstack',
+                group='osapi_v21')
+CONF.import_opt('extensions_whitelist', 'nova.api.openstack',
+                group='osapi_v21')
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -100,11 +102,12 @@ class ServersController(wsgi.Controller):
             def check_whiteblack_lists(ext):
                 # Check whitelist is either empty or if not then the extension
                 # is in the whitelist
-                if (not CONF.osapi_v3.extensions_whitelist or
-                        ext.obj.alias in CONF.osapi_v3.extensions_whitelist):
+                if (not CONF.osapi_v21.extensions_whitelist or
+                        ext.obj.alias in CONF.osapi_v21.extensions_whitelist):
 
                     # Check the extension is not in the blacklist
-                    if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
+                    extensions_blacklist = CONF.osapi_v21.extensions_blacklist
+                    if ext.obj.alias not in extensions_blacklist:
                         return True
                     else:
                         LOG.warning(_LW("Not loading %s because it is "

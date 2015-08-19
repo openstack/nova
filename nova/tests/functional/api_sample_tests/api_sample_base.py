@@ -54,7 +54,7 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
                 whitelist.update(set(self.extra_extensions_to_load))
 
             CONF.set_override('extensions_whitelist', whitelist,
-                              'osapi_v3')
+                              'osapi_v21')
         expected_middleware = []
         if (not hasattr(self, '_test') or (self._test == 'v2.1')):
             # NOTE(gmann)For v2.1 API testing, override /v2 endpoint with v2.1

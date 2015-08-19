@@ -21,7 +21,7 @@ from nova.api.openstack import wsgi
 
 
 CONF = cfg.CONF
-CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
+CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v21')
 
 LINKS = {
    'v2.0': {
@@ -80,7 +80,7 @@ VERSIONS = {
 class Versions(wsgi.Resource):
     def __init__(self):
         super(Versions, self).__init__(None)
-        if not CONF.osapi_v3.enabled:
+        if not CONF.osapi_v21.enabled:
             del VERSIONS["v2.1"]
 
     def index(self, req, body=None):

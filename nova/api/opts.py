@@ -143,5 +143,5 @@ def list_opts():
              nova.api.openstack.compute.legacy_v2.servers.server_opts,
          )),
         ('neutron', nova.api.metadata.handler.metadata_proxy_opts),
-        ('osapi_v3', nova.api.openstack.api_opts),
+        ('osapi_v21', nova.api.openstack.api_opts),
     ]

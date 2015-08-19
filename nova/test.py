@@ -55,7 +55,7 @@ from nova import utils
 
 
 CONF = cfg.CONF
-CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
+CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v21')
 
 logging.register_options(CONF)
 CONF.set_override('use_stderr', False)
