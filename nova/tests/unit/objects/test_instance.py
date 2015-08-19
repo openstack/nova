@@ -570,8 +570,7 @@ class _TestInstanceObject(object):
                         'extra.flavor']),
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'bar', 'task_state': 'foo'},
-                    columns_to_join=['system_metadata',
-                        'extra', 'extra.flavor'])]
+                    columns_to_join=['system_metadata'])]
         mock_db_update.assert_has_calls(expected_calls)
 
     def test_skip_cells_api(self):
@@ -1248,46 +1247,7 @@ class TestInstanceObject(test_objects._LocalTest,
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
                                _TestInstanceObject):
-    def test_flavor_shows_up_in_lazy_loaded_sysmeta_for_old_instance(self):
-        flavor = flavors.get_default_flavor()
-        inst = objects.Instance(context=self.context,
-                                flavor=flavor,
-                                system_metadata={'foo': 'bar'},
-                                old_flavor=None, new_flavor=None,
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id)
-        inst.create()
-
-        class OldInstance(objects.Instance):
-            VERSION = '1.17'
-
-        base.NovaObjectRegistry.register(OldInstance)
-
-        inst = OldInstance.get_by_uuid(self.context, inst.uuid)
-        self.assertFalse(inst.obj_attr_is_set('system_metadata'))
-        self.assertEqual('bar', inst.system_metadata['foo'])
-        self.assertIn('instance_type_id', inst.system_metadata)
-
-    def test_flavor_shows_up_in_sysmeta_for_old_instance(self):
-        flavor = flavors.get_default_flavor()
-        inst = objects.Instance(context=self.context,
-                                flavor=flavor,
-                                old_flavor=None, new_flavor=None,
-                                user_id=self.context.user_id,
-                                system_metadata={'foo': 'bar'},
-                                project_id=self.context.project_id)
-        inst.create()
-
-        class OldInstance(objects.Instance):
-            VERSION = '1.17'
-
-        base.NovaObjectRegistry.register(OldInstance)
-
-        inst = OldInstance.get_by_uuid(self.context, inst.uuid,
-                                       expected_attrs=['system_metadata'])
-        self.assertTrue(inst.obj_attr_is_set('system_metadata'))
-        self.assertEqual('bar', inst.system_metadata['foo'])
-        self.assertIn('instance_type_id', inst.system_metadata)
+    pass
 
 
 class _TestInstanceListObject(object):
