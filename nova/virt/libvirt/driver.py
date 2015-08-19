@@ -5983,8 +5983,24 @@ class LibvirtDriver(driver.ComputeDriver):
         # Disconnect from volume server
         block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
+        connector = self.get_volume_connector(instance)
+        volume_api = self._volume_api
         for vol in block_device_mapping:
-            connection_info = vol['connection_info']
+            # Retrieve connection info from Cinder's initialize_connection API.
+            # The info returned will be accurate for the source server.
+            volume_id = vol['connection_info']['serial']
+            connection_info = volume_api.initialize_connection(context,
+                                                               volume_id,
+                                                               connector)
+
+            # Pull out multipath_id from the bdm information. The
+            # multipath_id can be placed into the connection info
+            # because it is based off of the volume and will be the
+            # same on the source and destination hosts.
+            if 'multipath_id' in vol['connection_info']['data']:
+                multipath_id = vol['connection_info']['data']['multipath_id']
+                connection_info['data']['multipath_id'] = multipath_id
+
             disk_dev = vol['mount_device'].rpartition("/")[2]
             self._disconnect_volume(connection_info, disk_dev)
 
