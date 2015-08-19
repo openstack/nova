@@ -654,7 +654,7 @@ class NetworkCommands(object):
 
 
 class VmCommands(object):
-    """Class for mangaging VM instances."""
+    """Class for managing VM instances."""
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
