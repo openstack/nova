@@ -30,11 +30,9 @@ from nova import test
 from nova.tests.functional.api_sample_tests.legacy_v2 import \
     api_samples_test_base
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_utils
 from nova.tests.unit.image import fake
-from nova.volume import cinder
 
 CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
@@ -308,26 +306,6 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
 
         self._verify_response('vifs-list-resp', subs, response, 200)
-
-
-class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
-    extension_name = ('nova.api.openstack.compute.legacy_v2.contrib.'
-                      'block_device_mapping_v2_boot.'
-                      'Block_device_mapping_v2_boot')
-
-    def _get_flags(self):
-        f = super(BlockDeviceMappingV2BootJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # We need the volumes extension as well
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.legacy_v2.contrib.volumes.Volumes')
-        return f
-
-    def test_servers_post_with_bdm_v2(self):
-        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
-        self.stubs.Set(cinder.API, 'check_attach',
-                       fakes.stub_volume_check_attach)
-        return self._post_server()
 
 
 class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
