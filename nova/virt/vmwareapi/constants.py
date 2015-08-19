@@ -63,7 +63,7 @@ EXTENSION_TYPE_INSTANCE = 'instance'
 # One adapter has 16 slots but one reserved for controller
 SCSI_MAX_CONNECT_NUMBER = 15
 
-# This list was extracted from the installation iso image for ESX 5.5 Update 1.
+# This list was extracted from the installation iso image for ESX 6.0.
 # It is contained in s.v00, which is gzipped. The list was obtained by
 # searching for the string 'otherGuest' in the uncompressed contents of that
 # file, copying out the full list less the 'family' ids at the end, and sorting
@@ -74,14 +74,17 @@ VALID_OS_TYPES = set([
     'asianux3Guest',
     'asianux4_64Guest',
     'asianux4Guest',
+    'asianux5_64Guest',
     'centos64Guest',
     'centosGuest',
+    'coreos64Guest',
     'darwin10_64Guest',
     'darwin10Guest',
     'darwin11_64Guest',
     'darwin11Guest',
     'darwin12_64Guest',
     'darwin13_64Guest',
+    'darwin14_64Guest',
     'darwin64Guest',
     'darwinGuest',
     'debian4_64Guest',
@@ -92,6 +95,8 @@ VALID_OS_TYPES = set([
     'debian6Guest',
     'debian7_64Guest',
     'debian7Guest',
+    'debian8_64Guest',
+    'debian8Guest',
     'dosGuest',
     'eComStation2Guest',
     'eComStationGuest',
@@ -159,6 +164,7 @@ VALID_OS_TYPES = set([
     'ubuntuGuest',
     'unixWare7Guest',
     'vmkernel5Guest',
+    'vmkernel6Guest',
     'vmkernelGuest',
     'win2000AdvServGuest',
     'win2000ProGuest',
@@ -172,6 +178,9 @@ VALID_OS_TYPES = set([
     'windows8_64Guest',
     'windows8Guest',
     'windows8Server64Guest',
+    'windows9_64Guest',
+    'windows9Guest',
+    'windows9Server64Guest',
     'windowsHyperVGuest',
     'winLonghorn64Guest',
     'winLonghornGuest',
