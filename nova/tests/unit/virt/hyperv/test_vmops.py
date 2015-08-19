@@ -24,6 +24,7 @@ import unittest2
 from nova import exception
 from nova import objects
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_virtual_interface
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
 from nova.virt.hyperv import constants
@@ -45,6 +46,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     FAKE_CONFIG_DRIVE_VHD = 'configdrive.vhd'
     FAKE_UUID = '4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3'
     FAKE_LOG = 'fake_log'
+
+    _WIN_VERSION_6_3 = '6.3.0'
+    _WIN_VERSION_10 = '10.0'
 
     ISO9660 = 'iso9660'
     _FAKE_CONFIGDRIVE_PATH = 'C:/fake_instance_dir/configdrive.vhd'
@@ -629,13 +633,17 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                      mock_disconnect_volumes):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self._vmops._vmutils.vm_exists.return_value = True
+        self._vmops._vif_driver = mock.MagicMock()
 
         self._vmops.destroy(instance=mock_instance,
+                            network_info=[mock.sentinel.fake_vif],
                             block_device_info=mock.sentinel.FAKE_BD_INFO)
 
         self._vmops._vmutils.vm_exists.assert_called_with(
             mock_instance.name)
         mock_power_off.assert_called_once_with(mock_instance)
+        self._vmops._vif_driver.unplug.assert_called_once_with(
+            mock_instance, mock.sentinel.fake_vif)
         self._vmops._vmutils.destroy_vm.assert_called_once_with(
             mock_instance.name)
         mock_disconnect_volumes.assert_called_once_with(
@@ -1079,3 +1087,96 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                                       mock.sentinel.FAKE_DEST_PATH),
                             mock.call(mock.sentinel.FAKE_DVD_PATH2,
                                       mock.sentinel.FAKE_DEST_PATH))
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_state')
+    def test_check_hotplug_available_vm_disabled(self, mock_get_vm_state):
+        fake_vm = fake_instance.fake_instance_obj(self.context)
+        mock_get_vm_state.return_value = constants.HYPERV_VM_STATE_DISABLED
+
+        result = self._vmops._check_hotplug_available(fake_vm)
+
+        self.assertTrue(result)
+        mock_get_vm_state.assert_called_once_with(fake_vm.name)
+        self.assertFalse(
+            self._vmops._hostutils.check_min_windows_version.called)
+        self.assertFalse(self._vmops._vmutils.get_vm_generation.called)
+
+    @mock.patch.object(vmops.VMOps, '_get_vm_state')
+    def _test_check_hotplug_available(
+            self, mock_get_vm_state, expected_result=False,
+            vm_gen=constants.VM_GEN_2, windows_version=_WIN_VERSION_10):
+
+        fake_vm = fake_instance.fake_instance_obj(self.context)
+        mock_get_vm_state.return_value = constants.HYPERV_VM_STATE_ENABLED
+        self._vmops._vmutils.get_vm_generation.return_value = vm_gen
+        fake_check_win_vers = self._vmops._hostutils.check_min_windows_version
+        fake_check_win_vers.return_value = (
+            windows_version == self._WIN_VERSION_10)
+
+        result = self._vmops._check_hotplug_available(fake_vm)
+
+        self.assertEqual(expected_result, result)
+        mock_get_vm_state.assert_called_once_with(fake_vm.name)
+        fake_check_win_vers.assert_called_once_with(10, 0)
+
+    def test_check_if_hotplug_available(self):
+        self._test_check_hotplug_available(expected_result=True)
+
+    def test_check_if_hotplug_available_gen1(self):
+        self._test_check_hotplug_available(
+            expected_result=False, vm_gen=constants.VM_GEN_1)
+
+    def test_check_if_hotplug_available_win_6_3(self):
+        self._test_check_hotplug_available(
+            expected_result=False, windows_version=self._WIN_VERSION_6_3)
+
+    @mock.patch.object(vmops.VMOps, '_check_hotplug_available')
+    def test_attach_interface(self, mock_check_hotplug_available):
+        mock_check_hotplug_available.return_value = True
+        fake_vm = fake_instance.fake_instance_obj(self.context)
+        fake_vif = test_virtual_interface.fake_vif
+        self._vmops._vif_driver = mock.MagicMock()
+
+        self._vmops.attach_interface(fake_vm, fake_vif)
+
+        mock_check_hotplug_available.assert_called_once_with(fake_vm)
+        self._vmops._vif_driver.plug.assert_called_once_with(
+            fake_vm, fake_vif)
+        self._vmops._vmutils.create_nic.assert_called_once_with(
+            fake_vm.name, fake_vif['id'], fake_vif['address'])
+
+    @mock.patch.object(vmops.VMOps, '_check_hotplug_available')
+    def test_attach_interface_failed(self, mock_check_hotplug_available):
+        mock_check_hotplug_available.return_value = False
+        self.assertRaises(exception.InterfaceAttachFailed,
+                          self._vmops.attach_interface,
+                          mock.MagicMock(), mock.sentinel.fake_vif)
+
+    @mock.patch.object(vmops.VMOps, '_check_hotplug_available')
+    def test_detach_interface(self, mock_check_hotplug_available):
+        mock_check_hotplug_available.return_value = True
+        fake_vm = fake_instance.fake_instance_obj(self.context)
+        fake_vif = test_virtual_interface.fake_vif
+        self._vmops._vif_driver = mock.MagicMock()
+
+        self._vmops.detach_interface(fake_vm, fake_vif)
+
+        mock_check_hotplug_available.assert_called_once_with(fake_vm)
+        self._vmops._vif_driver.unplug.assert_called_once_with(
+            fake_vm, fake_vif)
+        self._vmops._vmutils.destroy_nic.assert_called_once_with(
+            fake_vm.name, fake_vif['id'])
+
+    @mock.patch.object(vmops.VMOps, '_check_hotplug_available')
+    def test_detach_interface_failed(self, mock_check_hotplug_available):
+        mock_check_hotplug_available.return_value = False
+        self.assertRaises(exception.InterfaceDetachFailed,
+                          self._vmops.detach_interface,
+                          mock.MagicMock(), mock.sentinel.fake_vif)
+
+    @mock.patch.object(vmops.VMOps, '_check_hotplug_available')
+    def test_detach_interface_missing_instance(self, mock_check_hotplug):
+        mock_check_hotplug.side_effect = exception.NotFound
+        self.assertRaises(exception.InterfaceDetachFailed,
+                          self._vmops.detach_interface,
+                          mock.MagicMock(), mock.sentinel.fake_vif)

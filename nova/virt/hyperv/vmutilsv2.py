@@ -47,6 +47,7 @@ class VMUtilsV2(vmutils.VMUtils):
     _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic SCSI Controller'
     _SERIAL_PORT_RES_SUB_TYPE = 'Microsoft:Hyper-V:Serial Port'
 
+    _VIRTUAL_SYSTEM_SUBTYPE = 'VirtualSystemSubType'
     _VIRTUAL_SYSTEM_TYPE_REALIZED = 'Microsoft:Hyper-V:System:Realized'
     _VIRTUAL_SYSTEM_SUBTYPE_GEN2 = 'Microsoft:Hyper-V:SubType:2'
 
@@ -335,3 +336,11 @@ class VMUtilsV2(vmutils.VMUtils):
         vm = self._lookup_vm_check(vm_name)
         vmsettings = self._get_vm_setting_data(vm)
         return [note for note in vmsettings.Notes if note]
+
+    def get_vm_generation(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+        vssd = self._get_vm_setting_data(vm)
+        if hasattr(vssd, self._VIRTUAL_SYSTEM_SUBTYPE):
+            # expected format: 'Microsoft:Hyper-V:SubType:2'
+            return int(vssd.VirtualSystemSubType.split(':')[-1])
+        return constants.VM_GEN_1
