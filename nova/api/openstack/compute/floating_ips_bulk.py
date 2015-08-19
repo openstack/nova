@@ -152,7 +152,7 @@ class FloatingIPBulkController(wsgi.Controller):
             raise exception.InvalidInput(reason=six.text_type(exc))
 
 
-class FloatingIpsBulk(extensions.V3APIExtensionBase):
+class FloatingIpsBulk(extensions.V21APIExtensionBase):
     """Bulk handling of Floating IPs."""
 
     name = "FloatingIpsBulk"
@@ -165,7 +165,7 @@ class FloatingIpsBulk(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

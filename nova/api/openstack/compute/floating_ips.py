@@ -295,7 +295,7 @@ class FloatingIPActionController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=msg)
 
 
-class FloatingIps(extensions.V3APIExtensionBase):
+class FloatingIps(extensions.V21APIExtensionBase):
     """Floating IPs support."""
 
     name = "FloatingIps"

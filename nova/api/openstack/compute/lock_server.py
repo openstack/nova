@@ -53,7 +53,7 @@ class LockServerController(wsgi.Controller):
         self.compute_api.unlock(context, instance)
 
 
-class LockServer(extensions.V3APIExtensionBase):
+class LockServer(extensions.V21APIExtensionBase):
     """Enable lock/unlock server actions."""
 
     name = "LockServer"

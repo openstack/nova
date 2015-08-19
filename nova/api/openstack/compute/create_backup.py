@@ -83,7 +83,7 @@ class CreateBackupController(wsgi.Controller):
         return resp
 
 
-class CreateBackup(extensions.V3APIExtensionBase):
+class CreateBackup(extensions.V21APIExtensionBase):
     """Create a backup of a server."""
 
     name = "CreateBackup"

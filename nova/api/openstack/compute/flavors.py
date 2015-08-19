@@ -115,7 +115,7 @@ class FlavorsController(wsgi.Controller):
         return limited_flavors
 
 
-class Flavors(extensions.V3APIExtensionBase):
+class Flavors(extensions.V21APIExtensionBase):
     """Flavors Extension."""
     name = "Flavors"
     alias = ALIAS

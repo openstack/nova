@@ -69,7 +69,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
                                     req.api_version_request)
 
 
-class ExtendedServerAttributes(extensions.V3APIExtensionBase):
+class ExtendedServerAttributes(extensions.V21APIExtensionBase):
     """Extended Server Attributes support."""
 
     name = "ExtendedServerAttributes"

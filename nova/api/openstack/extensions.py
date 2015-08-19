@@ -404,7 +404,7 @@ def os_compute_soft_authorizer(extension_name):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class V3APIExtensionBase(object):
+class V21APIExtensionBase(object):
     """Abstract base class for all V3 API extensions.
 
     All V3 API extensions must derive from this class and implement

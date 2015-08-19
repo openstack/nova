@@ -57,7 +57,7 @@ class ServerPasswordController(wsgi.Controller):
         instance.save()
 
 
-class ServerPassword(extensions.V3APIExtensionBase):
+class ServerPassword(extensions.V21APIExtensionBase):
     """Server password support."""
 
     name = "ServerPassword"

@@ -72,7 +72,7 @@ class PauseServerController(wsgi.Controller):
             common.raise_feature_not_supported()
 
 
-class PauseServer(extensions.V3APIExtensionBase):
+class PauseServer(extensions.V21APIExtensionBase):
     """Enable pause/unpause server actions."""
 
     name = "PauseServer"

@@ -82,7 +82,7 @@ class AdminActionsController(wsgi.Controller):
         instance.save(admin_state_reset=True)
 
 
-class AdminActions(extensions.V3APIExtensionBase):
+class AdminActions(extensions.V21APIExtensionBase):
     """Enable admin-only server actions
 
     Actions include: resetNetwork, injectNetworkInfo, os-resetState

@@ -492,7 +492,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
         self._extend_servers(req, list(resp_obj.obj['servers']))
 
 
-class SecurityGroups(extensions.V3APIExtensionBase):
+class SecurityGroups(extensions.V21APIExtensionBase):
     """Security group support."""
     name = "SecurityGroups"
     alias = ALIAS

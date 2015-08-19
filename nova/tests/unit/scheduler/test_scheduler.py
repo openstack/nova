@@ -105,12 +105,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               mock.sentinel.instance_uuids)
 
 
-class SchedulerV3PassthroughTestCase(test.NoDBTestCase):
+class SchedulerV21PassthroughTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
-        super(SchedulerV3PassthroughTestCase, self).setUp()
+        super(SchedulerV21PassthroughTestCase, self).setUp()
         self.manager = manager.SchedulerManager()
         self.proxy = manager._SchedulerManagerV3Proxy(self.manager)
 

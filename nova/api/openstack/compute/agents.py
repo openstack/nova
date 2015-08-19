@@ -157,7 +157,7 @@ class AgentController(wsgi.Controller):
         return {'agent': agent}
 
 
-class Agents(extensions.V3APIExtensionBase):
+class Agents(extensions.V21APIExtensionBase):
     """Agents support."""
 
     name = "Agents"
@@ -170,7 +170,7 @@ class Agents(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

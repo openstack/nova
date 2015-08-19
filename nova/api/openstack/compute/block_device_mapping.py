@@ -29,7 +29,7 @@ ATTRIBUTE_NAME = "block_device_mapping_v2"
 LEGACY_ATTRIBUTE_NAME = "block_device_mapping"
 
 
-class BlockDeviceMapping(extensions.V3APIExtensionBase):
+class BlockDeviceMapping(extensions.V21APIExtensionBase):
     """Block device mapping boot support."""
 
     name = "BlockDeviceMapping"

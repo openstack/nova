@@ -49,7 +49,7 @@ class FlavorRxtxController(wsgi.Controller):
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
-class FlavorRxtx(extensions.V3APIExtensionBase):
+class FlavorRxtx(extensions.V21APIExtensionBase):
     """Support to show the rxtx status of a flavor."""
 
     name = "FlavorRxtx"

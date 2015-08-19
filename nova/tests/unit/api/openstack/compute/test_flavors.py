@@ -115,7 +115,7 @@ def return_flavor_not_found(flavor_id, ctxt=None):
 class FlavorsTestV21(test.TestCase):
     _prefix = "/v3"
     Controller = flavors_v21.FlavorsController
-    fake_request = fakes.HTTPRequestV3
+    fake_request = fakes.HTTPRequestV21
     _rspv = "v3"
     _fake = ""
 
@@ -580,7 +580,7 @@ class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v21.FlavorsController
     _prefix = "/v3"
-    fake_request = fakes.HTTPRequestV3
+    fake_request = fakes.HTTPRequestV21
 
     def setUp(self):
         super(DisabledFlavorsWithRealDBTestV21, self).setUp()

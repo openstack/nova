@@ -65,7 +65,7 @@ class ExtendedVolumesController(wsgi.Controller):
                                     req.api_version_request)
 
 
-class ExtendedVolumes(extensions.V3APIExtensionBase):
+class ExtendedVolumes(extensions.V21APIExtensionBase):
     """Extended Volumes support."""
 
     name = "ExtendedVolumes"

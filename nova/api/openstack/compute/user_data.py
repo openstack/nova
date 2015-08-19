@@ -20,7 +20,7 @@ ALIAS = "os-user-data"
 ATTRIBUTE_NAME = 'user_data'
 
 
-class UserData(extensions.V3APIExtensionBase):
+class UserData(extensions.V21APIExtensionBase):
     """Add user_data to the Create Server API."""
 
     name = "UserData"

@@ -160,7 +160,7 @@ class BareMetalNodeController(wsgi.Controller):
         _no_ironic_proxy("port-delete")
 
 
-class BareMetalNodes(extensions.V3APIExtensionBase):
+class BareMetalNodes(extensions.V21APIExtensionBase):
     """Admin-only bare-metal node administration."""
 
     name = "BareMetalNodes"
@@ -174,7 +174,7 @@ class BareMetalNodes(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

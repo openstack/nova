@@ -49,7 +49,7 @@ class ServerDiagnosticsController(wsgi.Controller):
             common.raise_feature_not_supported()
 
 
-class ServerDiagnostics(extensions.V3APIExtensionBase):
+class ServerDiagnostics(extensions.V21APIExtensionBase):
     """Allow Admins to view server diagnostics through server action."""
 
     name = "ServerDiagnostics"

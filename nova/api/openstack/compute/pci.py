@@ -131,7 +131,7 @@ class PciController(wsgi.Controller):
         return dict(pci_devices=results)
 
 
-class Pci(extensions.V3APIExtensionBase):
+class Pci(extensions.V21APIExtensionBase):
     """Pci access support."""
     name = "PciAccess"
     alias = ALIAS

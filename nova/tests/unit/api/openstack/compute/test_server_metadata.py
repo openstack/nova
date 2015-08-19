@@ -138,7 +138,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.url = '/fake/servers/%s/metadata' % self.uuid
 
     def _get_request(self, param_url=''):
-        return fakes.HTTPRequestV3.blank(self.url + param_url)
+        return fakes.HTTPRequestV21.blank(self.url + param_url)
 
     def test_index(self):
         req = self._get_request()
@@ -704,7 +704,7 @@ class BadStateServerMetaDataTestV21(test.TestCase):
         self.url = '/fake/servers/%s/metadata' % self.uuid
 
     def _get_request(self, param_url=''):
-        return fakes.HTTPRequestV3.blank(self.url + param_url)
+        return fakes.HTTPRequestV21.blank(self.url + param_url)
 
     def test_invalid_state_on_delete(self):
         req = self._get_request('/key2')

@@ -99,7 +99,7 @@ class MigrateServerController(wsgi.Controller):
                     'os-migrateLive', id)
 
 
-class MigrateServer(extensions.V3APIExtensionBase):
+class MigrateServer(extensions.V21APIExtensionBase):
     """Enable migrate and live-migrate server actions."""
 
     name = "MigrateServer"

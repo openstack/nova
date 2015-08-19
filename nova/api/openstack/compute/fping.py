@@ -137,7 +137,7 @@ class FpingController(wsgi.Controller):
         }
 
 
-class Fping(extensions.V3APIExtensionBase):
+class Fping(extensions.V21APIExtensionBase):
     """Fping Management Extension."""
 
     name = "Fping"

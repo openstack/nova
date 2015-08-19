@@ -59,7 +59,7 @@ class AdminPasswordController(wsgi.Controller):
             common.raise_feature_not_supported(msg=msg)
 
 
-class AdminPassword(extensions.V3APIExtensionBase):
+class AdminPassword(extensions.V21APIExtensionBase):
     """Admin password management support."""
 
     name = "AdminPassword"

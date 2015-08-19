@@ -170,7 +170,7 @@ class CloudpipeController(wsgi.Controller):
             nw.save()
 
 
-class Cloudpipe(extensions.V3APIExtensionBase):
+class Cloudpipe(extensions.V21APIExtensionBase):
     """Adds actions to create cloudpipe instances.
 
     When running with the Vlan network mode, you need a mechanism to route
@@ -191,7 +191,7 @@ class Cloudpipe(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

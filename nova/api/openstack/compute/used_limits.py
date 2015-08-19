@@ -70,7 +70,7 @@ class UsedLimitsController(wsgi.Controller):
         return context.project_id
 
 
-class UsedLimits(extensions.V3APIExtensionBase):
+class UsedLimits(extensions.V21APIExtensionBase):
     """Provide data on limited resources that are being used."""
 
     name = "UsedLimits"

@@ -128,7 +128,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
 
 
-class ImageMetadata(extensions.V3APIExtensionBase):
+class ImageMetadata(extensions.V21APIExtensionBase):
     """Image Metadata API."""
     name = "ImageMetadata"
     alias = ALIAS

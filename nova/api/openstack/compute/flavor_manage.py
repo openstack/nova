@@ -90,7 +90,7 @@ class FlavorManageController(wsgi.Controller):
         return self._view_builder.show(req, flavor)
 
 
-class FlavorManage(extensions.V3APIExtensionBase):
+class FlavorManage(extensions.V21APIExtensionBase):
     """Flavor create/delete API support."""
 
     name = "FlavorManage"

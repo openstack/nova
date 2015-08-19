@@ -281,7 +281,7 @@ class Controller(wsgi.Controller):
             self._add_key_name(req, servers)
 
 
-class Keypairs(extensions.V3APIExtensionBase):
+class Keypairs(extensions.V21APIExtensionBase):
     """Keypair Support."""
 
     name = "Keypairs"

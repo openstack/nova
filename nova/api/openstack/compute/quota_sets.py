@@ -171,7 +171,7 @@ class QuotaSetsController(wsgi.Controller):
             QUOTAS.destroy_all_by_project(context, id)
 
 
-class QuotaSets(extensions.V3APIExtensionBase):
+class QuotaSets(extensions.V21APIExtensionBase):
     """Quotas management support."""
 
     name = "Quotas"

@@ -115,7 +115,7 @@ class ServerExternalEventsController(wsgi.Controller):
         return robj
 
 
-class ServerExternalEvents(extensions.V3APIExtensionBase):
+class ServerExternalEvents(extensions.V21APIExtensionBase):
     """Server External Event Triggers."""
 
     name = "ServerExternalEvents"

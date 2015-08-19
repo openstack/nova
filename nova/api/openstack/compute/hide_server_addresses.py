@@ -74,7 +74,7 @@ class Controller(wsgi.Controller):
                 self._perhaps_hide_addresses(instance, server)
 
 
-class HideServerAddresses(extensions.V3APIExtensionBase):
+class HideServerAddresses(extensions.V21APIExtensionBase):
     """Support hiding server addresses in certain states."""
 
     name = 'HideServerAddresses'

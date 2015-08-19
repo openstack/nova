@@ -181,7 +181,7 @@ class HypervisorsController(wsgi.Controller):
         return dict(hypervisor_statistics=stats)
 
 
-class Hypervisors(extensions.V3APIExtensionBase):
+class Hypervisors(extensions.V21APIExtensionBase):
     """Admin-only hypervisor administration."""
 
     name = "Hypervisors"

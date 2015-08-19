@@ -117,7 +117,7 @@ class ServersController(wsgi.Controller):
                     return False
 
             def check_load_extension(ext):
-                if isinstance(ext.obj, extensions.V3APIExtensionBase):
+                if isinstance(ext.obj, extensions.V21APIExtensionBase):
                     # Filter out for the existence of the required
                     # function here rather than on every request. We
                     # don't have a new abstract base class to reduce
@@ -1134,7 +1134,7 @@ def remove_invalid_options(context, search_options, allowed_search_options):
         search_options.pop(opt, None)
 
 
-class Servers(extensions.V3APIExtensionBase):
+class Servers(extensions.V21APIExtensionBase):
     """Servers."""
 
     name = "Servers"

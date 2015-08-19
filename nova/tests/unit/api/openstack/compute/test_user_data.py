@@ -145,7 +145,7 @@ class ServersControllerCreateTest(test.TestCase):
             server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequestV21.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"

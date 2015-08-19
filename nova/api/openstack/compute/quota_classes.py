@@ -93,7 +93,7 @@ class QuotaClassSetsController(wsgi.Controller):
         return self._format_quota_set(None, values)
 
 
-class QuotaClasses(extensions.V3APIExtensionBase):
+class QuotaClasses(extensions.V21APIExtensionBase):
     """Quota classes management support."""
 
     name = "QuotaClasses"

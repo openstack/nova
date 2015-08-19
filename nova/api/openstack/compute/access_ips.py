@@ -60,7 +60,7 @@ class AccessIPsController(wsgi.Controller):
                 self._extend_server(req, server)
 
 
-class AccessIPs(extensions.V3APIExtensionBase):
+class AccessIPs(extensions.V21APIExtensionBase):
     """Access IPs support."""
 
     name = "AccessIPs"

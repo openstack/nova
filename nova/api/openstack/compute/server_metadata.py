@@ -159,7 +159,7 @@ class ServerMetadataController(wsgi.Controller):
                     'delete metadata', server_id)
 
 
-class ServerMetadata(extensions.V3APIExtensionBase):
+class ServerMetadata(extensions.V21APIExtensionBase):
     """Server Metadata API."""
     name = "ServerMetadata"
     alias = ALIAS

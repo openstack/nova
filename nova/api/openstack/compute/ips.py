@@ -59,7 +59,7 @@ class IPsController(wsgi.Controller):
         return self._view_builder.show(networks[id], id)
 
 
-class IPs(extensions.V3APIExtensionBase):
+class IPs(extensions.V21APIExtensionBase):
     """Server addresses."""
 
     name = "Ips"

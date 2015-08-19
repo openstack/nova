@@ -105,7 +105,7 @@ class FixedIPController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
 
-class FixedIps(extensions.V3APIExtensionBase):
+class FixedIps(extensions.V21APIExtensionBase):
     """Fixed IPs support."""
 
     name = "FixedIPs"

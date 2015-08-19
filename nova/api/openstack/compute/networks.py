@@ -175,7 +175,7 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
 
-class Networks(extensions.V3APIExtensionBase):
+class Networks(extensions.V21APIExtensionBase):
     """Admin-only Network Management Extension."""
 
     name = "Networks"

@@ -181,7 +181,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         return {'interfaceAttachments': results}
 
 
-class AttachInterfaces(extensions.V3APIExtensionBase):
+class AttachInterfaces(extensions.V21APIExtensionBase):
     """Attach interface support."""
 
     name = "AttachInterfaces"
@@ -197,7 +197,7 @@ class AttachInterfaces(extensions.V3APIExtensionBase):
         return res
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

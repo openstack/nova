@@ -199,7 +199,7 @@ class ExtensionInfoController(wsgi.Controller):
         return dict(extension=self._translate(ext))
 
 
-class ExtensionInfo(extensions.V3APIExtensionBase):
+class ExtensionInfo(extensions.V21APIExtensionBase):
     """Extension information."""
 
     name = "Extensions"

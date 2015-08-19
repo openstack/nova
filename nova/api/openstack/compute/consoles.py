@@ -107,7 +107,7 @@ class ConsolesController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
 
-class Consoles(extensions.V3APIExtensionBase):
+class Consoles(extensions.V21APIExtensionBase):
     """Consoles."""
 
     name = "Consoles"

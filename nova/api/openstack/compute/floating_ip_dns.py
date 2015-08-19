@@ -250,7 +250,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
-class FloatingIpDns(extensions.V3APIExtensionBase):
+class FloatingIpDns(extensions.V21APIExtensionBase):
     """Floating IP DNS support."""
 
     name = "FloatingIpDns"
@@ -273,7 +273,7 @@ class FloatingIpDns(extensions.V3APIExtensionBase):
         return resources
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

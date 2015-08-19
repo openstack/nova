@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 ALIAS = "os-scheduler-hints"
 
 
-class SchedulerHints(extensions.V3APIExtensionBase):
+class SchedulerHints(extensions.V21APIExtensionBase):
     """Pass arbitrary key/value pairs to the scheduler."""
 
     name = "SchedulerHints"

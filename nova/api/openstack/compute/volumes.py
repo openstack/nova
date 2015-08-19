@@ -530,7 +530,7 @@ class SnapshotController(wsgi.Controller):
         return {'snapshot': retval}
 
 
-class Volumes(extensions.V3APIExtensionBase):
+class Volumes(extensions.V21APIExtensionBase):
     """Volumes support."""
 
     name = "Volumes"

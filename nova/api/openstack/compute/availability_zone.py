@@ -115,7 +115,7 @@ class AvailabilityZoneController(wsgi.Controller):
         return self._describe_availability_zones_verbose(context)
 
 
-class AvailabilityZone(extensions.V3APIExtensionBase):
+class AvailabilityZone(extensions.V21APIExtensionBase):
     """1. Add availability_zone to the Create Server API.
        2. Add availability zones describing.
     """
@@ -131,7 +131,7 @@ class AvailabilityZone(extensions.V3APIExtensionBase):
         return resource
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
+        """It's an abstract function V21APIExtensionBase and the extension
         will not be loaded without it.
         """
         return []

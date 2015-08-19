@@ -142,7 +142,7 @@ class FlavorActionController(wsgi.Controller):
         return _marshall_flavor_access(flavor)
 
 
-class FlavorAccess(extensions.V3APIExtensionBase):
+class FlavorAccess(extensions.V21APIExtensionBase):
     """Flavor access support."""
 
     name = "FlavorAccess"

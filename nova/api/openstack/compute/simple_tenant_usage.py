@@ -269,7 +269,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         return {'tenant_usage': usage}
 
 
-class SimpleTenantUsage(extensions.V3APIExtensionBase):
+class SimpleTenantUsage(extensions.V21APIExtensionBase):
     """Simple tenant usage extension."""
 
     name = "SimpleTenantUsage"

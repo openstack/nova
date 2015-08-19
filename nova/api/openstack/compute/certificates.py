@@ -72,7 +72,7 @@ class CertificatesController(wsgi.Controller):
         return {'certificate': _translate_certificate_view(cert, pk)}
 
 
-class Certificates(extensions.V3APIExtensionBase):
+class Certificates(extensions.V21APIExtensionBase):
     """Certificates support."""
 
     name = "Certificates"
