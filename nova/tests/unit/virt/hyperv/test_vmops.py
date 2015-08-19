@@ -812,7 +812,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch("nova.virt.hyperv.vmops.VMOps._soft_shutdown")
     def test_power_off_unexisting_instance(self, mock_soft_shutdown):
-        mock_soft_shutdown.side_effect = exception.NotFound
+        mock_soft_shutdown.side_effect = (
+            exception.InstanceNotFound('fake_instance_uuid'))
         self._test_power_off(timeout=1, set_state_expected=False)
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps._set_vm_state')
