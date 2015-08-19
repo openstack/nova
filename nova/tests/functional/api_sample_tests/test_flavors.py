@@ -56,3 +56,12 @@ class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('flavors/detail')
         subs = self._get_regexes()
         self._verify_response('flavors-detail-resp', subs, response, 200)
+
+
+class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
+    all_extensions = True
+
+    def _get_flags(self):
+        f = super(FlavorsSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        return f

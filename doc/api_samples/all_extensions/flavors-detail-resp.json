@@ -1,6 +1,10 @@
 {
     "flavors": [
         {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 1,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
             "id": "1",
             "links": [
                 {
@@ -12,9 +16,17 @@
                     "rel": "bookmark"
                 }
             ],
-            "name": "m1.tiny"
+            "name": "m1.tiny",
+            "ram": 512,
+            "rxtx_factor": 1.0,
+            "swap": "",
+            "vcpus": 1
         },
         {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 20,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
             "id": "2",
             "links": [
                 {
@@ -26,9 +38,17 @@
                     "rel": "bookmark"
                 }
             ],
-            "name": "m1.small"
+            "name": "m1.small",
+            "ram": 2048,
+            "rxtx_factor": 1.0,
+            "swap": "",
+            "vcpus": 1
         },
         {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 40,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
             "id": "3",
             "links": [
                 {
@@ -40,9 +60,17 @@
                     "rel": "bookmark"
                 }
             ],
-            "name": "m1.medium"
+            "name": "m1.medium",
+            "ram": 4096,
+            "rxtx_factor": 1.0,
+            "swap": "",
+            "vcpus": 2
         },
         {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 80,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
             "id": "4",
             "links": [
                 {
@@ -54,9 +82,17 @@
                     "rel": "bookmark"
                 }
             ],
-            "name": "m1.large"
+            "name": "m1.large",
+            "ram": 8192,
+            "rxtx_factor": 1.0,
+            "swap": "",
+            "vcpus": 4
         },
         {
+            "OS-FLV-DISABLED:disabled": false,
+            "disk": 160,
+            "OS-FLV-EXT-DATA:ephemeral": 0,
+            "os-flavor-access:is_public": true,
             "id": "5",
             "links": [
                 {
@@ -68,7 +104,11 @@
                     "rel": "bookmark"
                 }
             ],
-            "name": "m1.xlarge"
+            "name": "m1.xlarge",
+            "ram": 16384,
+            "rxtx_factor": 1.0,
+            "swap": "",
+            "vcpus": 8
         }
     ]
 }
