@@ -27,9 +27,12 @@ from nova.api.openstack import extensions
 ext_opts = [
     cfg.ListOpt('osapi_compute_ext_list',
                 default=[],
-                help='Specify list of extensions to load when using osapi_'
-                     'compute_extension option with nova.api.openstack.'
-                     'compute.legacy_v2.contrib.select_extensions'),
+                help='DEPRECATED: Specify list of extensions to load when '
+                     'using osapi_compute_extension option with nova.api.'
+                     'openstack.compute.legacy_v2.contrib.select_extensions '
+                     'This option will be removed in the near future. '
+                     'After that point you have to run all of the API.',
+                deprecated_for_removal=True),
 ]
 CONF = cfg.CONF
 CONF.register_opts(ext_opts)
