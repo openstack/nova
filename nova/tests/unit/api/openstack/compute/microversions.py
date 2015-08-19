@@ -19,7 +19,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova.tests.unit.api.openstack.compute.test_plugins import dummy_schema
+from nova.tests.unit.api.openstack.compute import dummy_schema
 
 ALIAS = 'test-microversions'
 
