@@ -168,7 +168,11 @@ libvirt_opts = [
                help='Migration flags to be set for block migration'),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
-               help='Maximum bandwidth to be used during migration, in Mbps'),
+               help='Maximum bandwidth(in MiB/s) to be used during migration. '
+                    'If set to 0, will choose a suitable default. Some '
+                    'hypervisors do not support this feature and will return '
+                    'an error if bandwidth is not 0. Please refer to the '
+                    'libvirt documentation for further details'),
     cfg.IntOpt('live_migration_downtime',
                default=500,
                help='Maximum permitted downtime, in milliseconds, for live '
