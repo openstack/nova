@@ -15,6 +15,7 @@
 #    under the License.
 #
 
+import copy
 import time
 import uuid
 
@@ -135,8 +136,8 @@ deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
                 'timeout': [cfg.DeprecatedOpt('url_timeout',
                                               group=NEUTRON_GROUP)]}
 
-session.Session.register_conf_options(CONF, NEUTRON_GROUP,
-                                      deprecated_opts=deprecations)
+_neutron_options = session.Session.register_conf_options(
+    CONF, NEUTRON_GROUP, deprecated_opts=deprecations)
 auth.register_conf_options(CONF, NEUTRON_GROUP)
 
 
@@ -149,6 +150,25 @@ soft_external_network_attach_authorize = extensions.soft_core_authorizer(
 
 _SESSION = None
 _ADMIN_AUTH = None
+
+
+def list_opts():
+    list = copy.deepcopy(_neutron_options)
+    list.insert(0, auth.get_common_conf_options()[0])
+    # NOTE(dims): There are a lot of auth plugins, we just generate
+    # the config options for a few common ones
+    plugins = ['password', 'v2password', 'v3password']
+    for name in plugins:
+        for plugin_option in auth.get_plugin_class(name).get_options():
+            found = False
+            for option in list:
+                if option.name == plugin_option.name:
+                    found = True
+                    break
+            if not found:
+                list.append(plugin_option)
+    list.sort(key=lambda x: x.name)
+    return [(NEUTRON_GROUP, list)]
 
 
 def reset_state():
