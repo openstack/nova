@@ -6297,7 +6297,7 @@ class LibvirtDriver(driver.ComputeDriver):
                instance path to use, calculated externally to handle block
                migrating an instance with an old style instance path
            :param disk_info:
-               disk info specified in _get_instance_disk_info
+               disk info specified in _get_instance_disk_info (list of dicts)
            :param fallback_from_host:
                host where we can retrieve images if the glance images are
                not available.
@@ -6421,6 +6421,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_instance_disk_info(self, instance_name, xml,
                                 block_device_info=None):
+        """Get the non-volume disk information from the domain xml
+
+        :param str instance_name: the name of the instance (domain)
+        :param str xml: the libvirt domain xml for the instance
+        :param dict block_device_info: block device info for BDMs
+        :returns disk_info: list of dicts with keys:
+
+          * 'type': the disk type (str)
+          * 'path': the disk path (str)
+          * 'virt_disk_size': the virtual disk size (int)
+          * 'backing_file': backing file of a disk image (str)
+          * 'disk_size': physical disk size (int)
+          * 'over_committed_disk_size': virt_disk_size - disk_size or 0
+        """
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
 
