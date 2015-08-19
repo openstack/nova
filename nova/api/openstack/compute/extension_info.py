@@ -69,8 +69,6 @@ v21_to_v2_extension_list_mapping = {
                    'alias': 'os-extended-rescue-with-image'}],
     'os-extended-status': [{'name': 'ExtendedStatus',
                    'alias': 'OS-EXT-STS'}],
-    'os-virtual-interfaces': [{'name': 'ExtendedVIFNet',
-                               'alias': 'OS-EXT-VIF-NET'}],
     'os-used-limits': [{'name': 'UsedLimitsForAdmin',
                         'alias': 'os-used-limits-for-admin'}],
     'os-volumes': [{'name': 'VolumeAttachmentUpdate',
