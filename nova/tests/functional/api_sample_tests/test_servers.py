@@ -258,3 +258,24 @@ class ServerStartStopJsonTest(ServersSampleBase):
     def test_server_stop(self):
         uuid = self._post_server()
         self._test_server_action(uuid, 'os-stop', 'server-action-stop')
+
+
+class ServersSampleMultiStatusJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.legacy_v2.contrib.'
+            'server_list_multi_status.Server_list_multi_status')
+        return f
+
+    def test_servers_list(self):
+        uuid = self._post_server()
+        response = self._do_get('servers?status=active&status=error')
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        self._verify_response('servers-list-resp', subs, response, 200)
