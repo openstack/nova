@@ -1,8 +1,0 @@
-{
-    "interface": {
-        "address": "aa:aa:aa:aa:aa:aa",
-        "datapath_id": null,
-        "id": 1,
-        "port_no": null
-    }
-}

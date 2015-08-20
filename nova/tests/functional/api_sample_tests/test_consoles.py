@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.console import manager as console_manager  # noqa - only for cfg
 from nova.tests.functional.api_sample_tests import test_servers
 
 

@@ -1,3 +1,0 @@
-{
-    "floating_ips": []
-}
