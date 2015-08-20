@@ -7797,8 +7797,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                    group='libvirt')
 
         def check_setup_container(image, container_dir=None):
+            self.assertIsInstance(image, imgmodel.LocalBlockImage)
             self.assertEqual(image.path, '/dev/path/to/dev')
-            self.assertEqual(image.format, imgmodel.FORMAT_QCOW2)
             return '/dev/nbd1'
 
         bdm = {
@@ -7856,7 +7856,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['root_device_name'] = '/dev/sda'
         instance_ref['ephemeral_gb'] = 0
         instance_ref['uuid'] = uuidutils.generate_uuid()
-        instance_ref['system_metadata']['image_disk_format'] = 'qcow2'
         inst_obj = objects.Instance(**instance_ref)
         image_meta = {}
 
@@ -10684,12 +10683,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
 
-        fmt = imgmodel.FORMAT_RAW
-        if CONF.use_cow_images:
-            fmt = imgmodel.FORMAT_QCOW2
-
         setup_container_call = mock.call(
-            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            mock_image.get_model(),
             container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
@@ -10758,12 +10753,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
 
-        fmt = imgmodel.FORMAT_RAW
-        if CONF.use_cow_images:
-            fmt = imgmodel.FORMAT_QCOW2
-
         setup_container_call = mock.call(
-            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            mock_image.get_model(),
             container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
@@ -10812,12 +10803,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
 
-        fmt = imgmodel.FORMAT_RAW
-        if CONF.use_cow_images:
-            fmt = imgmodel.FORMAT_QCOW2
-
         setup_container_call = mock.call(
-            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            mock_image.get_model(),
             container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
