@@ -472,10 +472,13 @@ def teardown_container(container_dir, container_root_device=None):
                 LOG.debug("Release loop device %s", container_root_device)
                 utils.execute('losetup', '--detach', container_root_device,
                               run_as_root=True, attempts=3)
-            else:
+            elif 'nbd' in container_root_device:
                 LOG.debug('Release nbd device %s', container_root_device)
                 utils.execute('qemu-nbd', '-d', container_root_device,
                               run_as_root=True)
+            else:
+                LOG.debug('No release necessary for block device %s' %
+                          container_root_device)
     except Exception:
         LOG.exception(_LE('Failed to teardown container filesystem'))
 
