@@ -9,21 +9,83 @@
     "compute:create:attach_network": "",
     "compute:create:attach_volume": "",
     "compute:create:forced_host": "is_admin:True",
+
+    "compute:get": "",
     "compute:get_all": "",
     "compute:get_all_tenants": "is_admin:True",
+
+    "compute:update": "",
+
+    "compute:get_instance_metadata": "",
+    "compute:get_all_instance_metadata": "",
+    "compute:get_all_instance_system_metadata": "",
+    "compute:update_instance_metadata": "",
+    "compute:delete_instance_metadata": "",
+
+    "compute:get_instance_faults": "",
+    "compute:get_diagnostics": "",
+    "compute:get_instance_diagnostics": "",
+
     "compute:start": "rule:admin_or_owner",
     "compute:stop": "rule:admin_or_owner",
+
+    "compute:get_lock": "",
+    "compute:lock": "",
+    "compute:unlock": "",
     "compute:unlock_override": "rule:admin_api",
+
+    "compute:get_vnc_console": "",
+    "compute:get_spice_console": "",
+    "compute:get_rdp_console": "",
+    "compute:get_serial_console": "",
+    "compute:get_mks_console": "",
+    "compute:get_console_output": "",
+
+    "compute:reset_network": "",
+    "compute:inject_network_info": "",
+    "compute:add_fixed_ip": "",
+    "compute:remove_fixed_ip": "",
+
+    "compute:attach_volume": "",
+    "compute:detach_volume": "",
+    "compute:swap_volume": "",
+
+    "compute:attach_interface": "",
+    "compute:detach_interface": "",
+
+    "compute:set_admin_password": "",
+
+    "compute:rescue": "",
+    "compute:unrescue": "",
+
+    "compute:suspend": "",
+    "compute:resume": "",
+
+    "compute:pause": "",
+    "compute:unpause": "",
 
     "compute:shelve": "",
     "compute:shelve_offload": "",
-    "compute:snapshot_volume_backed": "",
     "compute:unshelve": "",
+
+    "compute:snapshot": "",
+    "compute:snapshot_volume_backed": "",
+    "compute:backup": "",
+
     "compute:resize": "",
     "compute:confirm_resize": "",
     "compute:revert_resize": "",
+
     "compute:rebuild": "",
     "compute:reboot": "",
+
+    "compute:security_groups:add_to_instance": "",
+    "compute:security_groups:remove_from_instance": "",
+
+    "compute:delete": "",
+    "compute:soft_delete": "",
+    "compute:force_delete": "",
+    "compute:restore": "",
 
     "compute:volume_snapshot_create": "",
     "compute:volume_snapshot_delete": "",
@@ -55,6 +117,7 @@
     "compute_extension:certificates": "",
     "compute_extension:cloudpipe": "rule:admin_api",
     "compute_extension:cloudpipe_update": "rule:admin_api",
+    "compute_extension:config_drive": "",
     "compute_extension:console_output": "",
     "compute_extension:consoles": "",
     "compute_extension:createserverext": "",
@@ -104,6 +167,7 @@
     "compute_extension:networks": "rule:admin_api",
     "compute_extension:networks:view": "",
     "compute_extension:networks_associate": "rule:admin_api",
+    "compute_extension:os-tenant-networks": "",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "rule:admin_api",
     "compute_extension:quotas:delete": "rule:admin_api",
@@ -184,9 +248,25 @@
     "network:create_public_dns_domain": "",
     "network:delete_dns_domain": "",
     "network:attach_external_network": "rule:admin_api",
+    "network:get_vif_by_mac_address": "",
 
     "os_compute_api:servers:detail:get_all_tenants": "is_admin:True",
     "os_compute_api:servers:index:get_all_tenants": "is_admin:True",
+    "os_compute_api:servers:confirm_resize": "",
+    "os_compute_api:servers:create": "",
+    "os_compute_api:servers:create:attach_network": "",
+    "os_compute_api:servers:create:attach_volume": "",
+    "os_compute_api:servers:create:forced_host": "rule:admin_api",
+    "os_compute_api:servers:delete": "",
+    "os_compute_api:servers:update": "",
+    "os_compute_api:servers:detail": "",
+    "os_compute_api:servers:index": "",
+    "os_compute_api:servers:reboot": "",
+    "os_compute_api:servers:rebuild": "",
+    "os_compute_api:servers:resize": "",
+    "os_compute_api:servers:revert_resize": "",
+    "os_compute_api:servers:show": "",
+    "os_compute_api:servers:create_image": "",
     "os_compute_api:servers:create_image:allow_volume_backed": "",
     "os_compute_api:servers:start": "rule:admin_or_owner",
     "os_compute_api:servers:stop": "rule:admin_or_owner",
@@ -226,6 +306,7 @@
     "os_compute_api:os-certificates:discoverable": "",
     "os_compute_api:os-cloudpipe": "rule:admin_api",
     "os_compute_api:os-cloudpipe:discoverable": "",
+    "os_compute_api:os-config-drive": "",
     "os_compute_api:os-consoles:discoverable": "",
     "os_compute_api:os-consoles:create": "",
     "os_compute_api:os-consoles:delete": "",
