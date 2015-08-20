@@ -156,15 +156,6 @@ class ServersSampleBase(ApiSampleTestBaseV2):
             self.__class__._use_common_server_api_samples = orig_value
 
 
-class LimitsSampleJsonTest(ApiSampleTestBaseV2):
-    sample_dir = 'limits'
-
-    def test_limits_get(self):
-        response = self._do_get('limits')
-        subs = self._get_regexes()
-        self._verify_response('limit-get-resp', subs, response, 200)
-
-
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
                       ".extended_ips.Extended_ips")
@@ -211,9 +202,3 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
-    sample_dir = None
-    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
-                      "server_group_quotas.Server_group_quotas")
