@@ -77,7 +77,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.14: Added forced_down
     # Version 1.15: ComputeNode version 1.12
     # Version 1.16: Added version
-    VERSION = '1.16'
+    # Version 1.17: ComputeNode version 1.13
+    VERSION = '1.17'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -97,7 +98,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     obj_relationships = {
         'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
                          ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10'),
-                         ('1.12', '1.11'), ('1.15', '1.12')],
+                         ('1.12', '1.11'), ('1.15', '1.12'), ('1.17', '1.13')],
     }
 
     def __init__(self, *args, **kwargs):
@@ -268,7 +269,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.12: Service version 1.14
     # Version 1.13: Service version 1.15
     # Version 1.14: Service version 1.16
-    VERSION = '1.14'
+    # Version 1.15: Service version 1.17
+    VERSION = '1.15'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -279,7 +281,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
                     ('1.3', '1.5'), ('1.4', '1.6'), ('1.5', '1.7'),
                     ('1.6', '1.8'), ('1.7', '1.9'), ('1.8', '1.10'),
                     ('1.9', '1.11'), ('1.10', '1.12'), ('1.11', '1.13'),
-                    ('1.12', '1.14'), ('1.13', '1.15'), ('1.14', '1.16')],
+                    ('1.12', '1.14'), ('1.13', '1.15'), ('1.14', '1.16'),
+                    ('1.15', '1.17')],
     }
 
     @base.remotable_classmethod
