@@ -75,7 +75,6 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.compute import eventlet_utils
 from nova.tests.unit.compute import fake_resource_tracker
-from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
@@ -9793,128 +9792,50 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute_api.get_instance_diagnostics(self.context, instance)
 
-    def test_secgroup_refresh(self):
-        instance = self._create_fake_instance_obj()
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'refresh_instance_security_rules')
+    def test_refresh_instance_security_rules(self, mock_refresh):
+        inst1 = self._create_fake_instance_obj()
+        inst2 = self._create_fake_instance_obj({'host': None})
 
-        def rule_get(*args, **kwargs):
-            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
-            return [mock_rule]
+        self.security_group_api._refresh_instance_security_rules(
+            self.context, [inst1, inst2])
+        mock_refresh.assert_called_once_with(self.context, inst1.host, inst1)
 
-        @staticmethod
-        def get_by_security_group_id(context, security_group_id):
-            return [instance]
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'refresh_instance_security_rules')
+    def test_refresh_instance_security_rules_empty(self, mock_refresh):
+        self.security_group_api._refresh_instance_security_rules(self.context,
+                                                                 [])
+        self.assertFalse(mock_refresh.called)
 
-        self.stubs.Set(
-                   self.compute_api.db,
-                   'security_group_rule_get_by_security_group_grantee',
-                   rule_get)
+    @mock.patch.object(compute_api.SecurityGroupAPI,
+                       '_refresh_instance_security_rules')
+    @mock.patch.object(objects.InstanceList,
+                       'get_by_grantee_security_group_ids')
+    def test_secgroup_refresh(self, mock_get, mock_refresh):
+        mock_get.return_value = mock.sentinel.instances
 
-        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
-                       get_by_security_group_id)
+        self.security_group_api.trigger_members_refresh(mock.sentinel.ctxt,
+                                                        mock.sentinel.ids)
 
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-        rpcapi.refresh_instance_security_rules(self.context,
-                                               instance['host'],
-                                               instance)
-        self.mox.ReplayAll()
+        mock_get.assert_called_once_with(mock.sentinel.ctxt, mock.sentinel.ids)
+        mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
+                                             mock.sentinel.instances)
 
-        self.security_group_api.trigger_members_refresh(self.context, [1])
+    @mock.patch.object(compute_api.SecurityGroupAPI,
+                       '_refresh_instance_security_rules')
+    @mock.patch.object(objects.InstanceList,
+                       'get_by_security_group_id')
+    def test_secrule_refresh(self, mock_get, mock_refresh):
+        mock_get.return_value = mock.sentinel.instances
 
-    def test_secgroup_refresh_once(self):
-        instance = self._create_fake_instance_obj()
+        self.security_group_api.trigger_rules_refresh(mock.sentinel.ctxt,
+                                                      mock.sentinel.id)
 
-        @staticmethod
-        def get_by_security_group_id(context, security_group_id):
-            return [instance]
-
-        def rule_get(*args, **kwargs):
-            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
-            return [mock_rule]
-
-        self.stubs.Set(
-                   self.compute_api.db,
-                   'security_group_rule_get_by_security_group_grantee',
-                   rule_get)
-
-        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
-                       get_by_security_group_id)
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-        rpcapi.refresh_instance_security_rules(self.context,
-                                               instance.host,
-                                               instance)
-        self.mox.ReplayAll()
-
-        self.security_group_api.trigger_members_refresh(self.context, [1, 2])
-
-    def test_secgroup_refresh_none(self):
-        def rule_get(*args, **kwargs):
-            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
-            return [mock_rule]
-
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': []})
-            return mock_group
-
-        self.stubs.Set(
-                   self.compute_api.db,
-                   'security_group_rule_get_by_security_group_grantee',
-                   rule_get)
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
-
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-
-        self.mox.ReplayAll()
-
-        self.security_group_api.trigger_members_refresh(self.context, [1])
-
-    def test_secrule_refresh(self):
-        instance = self._create_fake_instance_obj()
-
-        @staticmethod
-        def get_by_security_group_id(context, security_group_id):
-            return [instance]
-        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
-                       get_by_security_group_id)
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-        rpcapi.refresh_instance_security_rules(self.context,
-                                               instance['host'],
-                                               instance)
-        self.mox.ReplayAll()
-
-        self.security_group_api.trigger_rules_refresh(self.context, [1])
-
-    def test_secrule_refresh_once(self):
-        instance = self._create_fake_instance_obj()
-
-        @staticmethod
-        def get_by_security_group_id(context, security_group_id):
-            return [instance]
-        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
-                       get_by_security_group_id)
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-        rpcapi.refresh_instance_security_rules(self.context,
-                                               instance['host'],
-                                               instance)
-        self.mox.ReplayAll()
-
-        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
-
-    def test_secrule_refresh_none(self):
-        @staticmethod
-        def get_by_security_group_id(context, security_group_id):
-            return []
-        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
-                       get_by_security_group_id)
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
-        self.mox.ReplayAll()
-
-        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
+        mock_get.assert_called_once_with(mock.sentinel.ctxt, mock.sentinel.id)
+        mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
+                                             mock.sentinel.instances)
 
     def test_live_migrate(self):
         instance, instance_uuid = self._run_instance()

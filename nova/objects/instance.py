@@ -1023,7 +1023,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.18: Instance <= version 1.21
     # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
     # Version 1.20: Instance <= version 1.22
-    VERSION = '1.20'
+    # Version 1.21: New method get_by_grantee_security_group_ids()
+    VERSION = '1.21'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1036,7 +1037,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                     ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
                     ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
                     ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
-                    ('1.19', '1.21'), ('1.20', '1.22')],
+                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22')],
     }
 
     @base.remotable_classmethod
@@ -1151,6 +1152,12 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_by_security_group(cls, context, security_group):
         return cls.get_by_security_group_id(context, security_group.id)
+
+    @base.remotable_classmethod
+    def get_by_grantee_security_group_ids(cls, context, security_group_ids):
+        db_instances = db.instance_get_all_by_grantee_security_groups(
+            context, security_group_ids)
+        return _make_instance_list(context, cls(), db_instances, [])
 
     def fill_faults(self):
         """Batch query the database for our instances' faults.

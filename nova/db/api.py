@@ -719,6 +719,11 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return IMPL.instance_get_all_by_host_and_not_type(context, host, type_id)
 
 
+def instance_get_all_by_grantee_security_groups(context, group_ids):
+    """Get instances with rules granted to them by a list of secgroups ids."""
+    return IMPL.instance_get_all_by_grantee_security_groups(context, group_ids)
+
+
 def instance_floating_address_get_all(context, instance_uuid):
     """Get all floating ip addresses of an instance."""
     return IMPL.instance_floating_address_get_all(context, instance_uuid)

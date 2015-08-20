@@ -2459,6 +2459,61 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(sorted(['metadata', 'system_metadata']),
                          sorted(mock_fill.call_args[1]['manual_joins']))
 
+    def _get_base_values(self):
+        return {
+            'name': 'fake_sec_group',
+            'description': 'fake_sec_group_descr',
+            'user_id': 'fake',
+            'project_id': 'fake',
+            'instances': []
+            }
+
+    def _get_base_rule_values(self):
+        return {
+            'protocol': "tcp",
+            'from_port': 80,
+            'to_port': 8080,
+            'cidr': None,
+            'deleted': 0,
+            'deleted_at': None,
+            'grantee_group': None,
+            'updated_at': None
+            }
+
+    def _create_security_group(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.security_group_create(self.ctxt, v)
+
+    def _create_security_group_rule(self, values):
+        v = self._get_base_rule_values()
+        v.update(values)
+        return db.security_group_rule_create(self.ctxt, v)
+
+    def test_instance_get_all_by_grantee_security_groups(self):
+        instance1 = self.create_instance_with_args()
+        instance2 = self.create_instance_with_args()
+        instance3 = self.create_instance_with_args()
+        secgroup1 = self._create_security_group(
+            {'name': 'fake-secgroup1', 'instances': [instance1]})
+        secgroup2 = self._create_security_group(
+            {'name': 'fake-secgroup2', 'instances': [instance1]})
+        secgroup3 = self._create_security_group(
+            {'name': 'fake-secgroup3', 'instances': [instance2]})
+        secgroup4 = self._create_security_group(
+            {'name': 'fake-secgroup4', 'instances': [instance2, instance3]})
+        self._create_security_group_rule({'grantee_group': secgroup1,
+                                          'parent_group': secgroup3})
+        self._create_security_group_rule({'grantee_group': secgroup2,
+                                          'parent_group': secgroup4})
+        group_ids = [secgroup['id'] for secgroup in [secgroup1, secgroup2]]
+        instances = db.instance_get_all_by_grantee_security_groups(self.ctxt,
+                                                                   group_ids)
+        instance_uuids = [instance['uuid'] for instance in instances]
+        self.assertEqual(len(instances), 2)
+        self.assertIn(instance2['uuid'], instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
+
     def test_instance_get_all_hung_in_rebooting(self):
         # Ensure no instances are returned.
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
