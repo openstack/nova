@@ -89,8 +89,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
         self._load_projects()
 
-    def obj_reset_changes(self, fields=None):
-        super(Flavor, self).obj_reset_changes(fields=fields)
+    def obj_reset_changes(self, fields=None, recursive=False):
+        super(Flavor, self).obj_reset_changes(fields=fields,
+                recursive=recursive)
         if fields is None or 'extra_specs' in fields:
             self._orig_extra_specs = (dict(self.extra_specs)
                                       if self.obj_attr_is_set('extra_specs')
