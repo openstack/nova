@@ -871,6 +871,17 @@ class ProjectTestCase(test.NoDBTestCase):
         self.assertFalse(includes_downgrade, helpful_msg)
 
 
+class ExpandTest(test.NoDBTestCase):
+
+    @mock.patch('nova.db.sqlalchemy.migration._schedule_schema_changes')
+    @mock.patch('nova.db.sqlalchemy.migration._find_migrate_repo')
+    def test_dryrun(self, find_repo, schedule):
+        # we shouldn't lock the sqlalchemy migrate table on a dry run
+        schedule.return_value = [], [], []
+        sa_migration.db_expand(dryrun=True)
+        self.assertEqual([], find_repo.mock_calls)
+
+
 class SchemaChangeSchedulerTest(test.NoDBTestCase):
     def test_add_fk_after_add_column(self):
         exist_meta = sqlalchemy.MetaData()
