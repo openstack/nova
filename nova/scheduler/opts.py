@@ -37,12 +37,10 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             [nova.scheduler.filters.core_filter.cpu_allocation_ratio_opt],
              [nova.scheduler.filters.disk_filter.disk_allocation_ratio_opt],
              [nova.scheduler.filters.io_ops_filter.max_io_ops_per_host_opt],
              [nova.scheduler.filters.num_instances_filter.
                   max_instances_per_host_opt],
-             [nova.scheduler.filters.ram_filter.ram_allocation_ratio_opt],
              [nova.scheduler.scheduler_options.
                   scheduler_json_config_location_opt],
              nova.scheduler.driver.scheduler_driver_opts,

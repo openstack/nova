@@ -24,15 +24,11 @@ from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
-cpu_allocation_ratio_opt = cfg.FloatOpt('cpu_allocation_ratio',
-        default=16.0,
-        help='Virtual CPU to physical CPU allocation ratio which affects '
-             'all CPU filters. This configuration specifies a global ratio '
-             'for CoreFilter. For AggregateCoreFilter, it will fall back to '
-             'this configuration value if no per-aggregate setting found.')
-
 CONF = cfg.CONF
-CONF.register_opt(cpu_allocation_ratio_opt)
+
+# TODO(sbauza): Remove the import once all compute nodes are reporting the
+# allocation ratio to the HostState
+CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
 
 
 class BaseCoreFilter(filters.BaseHostFilter):
