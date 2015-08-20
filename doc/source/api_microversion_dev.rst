@@ -69,6 +69,15 @@ changed. The user contract covers many kinds of information such as:
 
     Example: changing the return code of an API from 501 to 400.
 
+    .. note:: Fixing a bug so that a 400+ code is returned rather than a 500
+      does not require a microversion change. It's assumed that clients are not
+      expected to handle a 500 response and therefore should not need to opt-in
+      to microversion changes that fixes a 500 response from happening.
+      According to the OpenStack API Working Group, a
+      **500 Internal Server Error** should **not** be returned to the user for
+      failures due to user error that can be fixed by changing the request on
+      the client side. See [#f1]_.
+
   - new headers returned on a response
 
 The following flow chart attempts to walk through the process of "do
@@ -126,21 +135,21 @@ we need a microversion".
 
 **Footnotes**
 
-[1] - When fixing 500 errors that previously caused stack traces, try
-to map the new error into the existing set of errors that API call
-could previously return (400 if nothing else is appropriate). Changing
-the set of allowed status codes from a request is changing the
-contract, and should be part of a microversion.
+.. [#f1] When fixing 500 errors that previously caused stack traces, try
+  to map the new error into the existing set of errors that API call
+  could previously return (400 if nothing else is appropriate). Changing
+  the set of allowed status codes from a request is changing the
+  contract, and should be part of a microversion.
 
-The reason why we are so strict on contract is that we'd like
-application writers to be able to know, for sure, what the contract is
-at every microversion in Nova. If they do not, they will need to write
-conditional code in their application to handle ambiguities.
+  The reason why we are so strict on contract is that we'd like
+  application writers to be able to know, for sure, what the contract is
+  at every microversion in Nova. If they do not, they will need to write
+  conditional code in their application to handle ambiguities.
 
-When in doubt, consider application authors. If it would work with no
-client side changes on both Nova versions, you probably don't need a
-microversion. If, on the other hand, there is any ambiguity, a
-microversion is probably needed.
+  When in doubt, consider application authors. If it would work with no
+  client side changes on both Nova versions, you probably don't need a
+  microversion. If, on the other hand, there is any ambiguity, a
+  microversion is probably needed.
 
 
 In Code
