@@ -688,13 +688,15 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
-        self.mox.StubOutWithMock(flavors, 'get_flavor')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'get_inst_attrs_from_migration')
 
         self.context.elevated().AndReturn(self.context)
         objects.Migration.get_by_instance_and_status(
             self.context, inst.uuid, 'post-migrating').AndReturn(migration)
-        flavors.get_flavor(migration.old_instance_type_id).AndReturn(
-            old_flavor)
+        compute_utils.get_inst_attrs_from_migration(
+            migration, inst).AndReturn((old_flavor.vcpus,
+                                        old_flavor.memory_mb))
 
     def _test_delete_resized_part(self, inst):
         migration = objects.Migration._from_db_object(
@@ -707,12 +709,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self.context.elevated().AndReturn(self.context)
         objects.Migration.get_by_instance_and_status(
             self.context, inst.uuid, 'finished').AndReturn(migration)
-        self.compute_api._downsize_quota_delta(self.context, inst
-                                               ).AndReturn('deltas')
+        compute_utils.downsize_quota_delta(self.context,
+                                           inst).AndReturn('deltas')
         fake_quotas = objects.Quotas.from_reservations(self.context,
                                                           ['rsvs'])
-        self.compute_api._reserve_quota_delta(self.context, 'deltas', inst,
-                                              ).AndReturn(fake_quotas)
+        compute_utils.reserve_quota_delta(self.context, 'deltas',
+                                          inst).AndReturn(fake_quotas)
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
         self.compute_api.compute_rpcapi.confirm_resize(
@@ -785,8 +787,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
         self.mox.StubOutWithMock(self.compute_api.servicegroup_api,
                                  'service_is_up')
-        self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(inst.info_cache, 'delete')
@@ -1130,8 +1132,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
-        self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_mig, 'save')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
@@ -1142,14 +1144,14 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Migration.get_by_instance_and_status(
                     self.context, fake_inst['uuid'], 'finished').AndReturn(
                             fake_mig)
-        self.compute_api._downsize_quota_delta(self.context,
-                                               fake_inst).AndReturn('deltas')
+        compute_utils.downsize_quota_delta(self.context,
+                                           fake_inst).AndReturn('deltas')
 
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
 
-        self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                                              fake_inst).AndReturn(fake_quotas)
+        compute_utils.reserve_quota_delta(self.context, 'deltas',
+                                          fake_inst).AndReturn(fake_quotas)
 
         def _check_mig(expected_task_state=None):
             self.assertEqual('confirming', fake_mig.status)
@@ -1190,9 +1192,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
-        self.mox.StubOutWithMock(self.compute_api,
-                                 '_reverse_upsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'reverse_upsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(fake_mig, 'save')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
@@ -1203,14 +1205,14 @@ class _ComputeAPIUnitTestMixIn(object):
         objects.Migration.get_by_instance_and_status(
                 self.context, fake_inst['uuid'], 'finished').AndReturn(
                         fake_mig)
-        self.compute_api._reverse_upsize_quota_delta(
-                self.context, fake_mig).AndReturn('deltas')
+        compute_utils.reverse_upsize_quota_delta(
+            self.context, fake_mig).AndReturn('deltas')
 
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
 
-        self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                                              fake_inst).AndReturn(fake_quotas)
+        compute_utils.reserve_quota_delta(self.context, 'deltas',
+                                          fake_inst).AndReturn(fake_quotas)
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
@@ -1251,9 +1253,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
-        self.mox.StubOutWithMock(self.compute_api,
-                                 '_reverse_upsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'reverse_upsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
 
         self.context.elevated().AndReturn(self.context)
@@ -1261,11 +1263,11 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, fake_inst['uuid'], 'finished').AndReturn(fake_mig)
 
         delta = ['delta']
-        self.compute_api._reverse_upsize_quota_delta(
+        compute_utils.reverse_upsize_quota_delta(
             self.context, fake_mig).AndReturn(delta)
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
-        self.compute_api._reserve_quota_delta(
+        compute_utils.reserve_quota_delta(
             self.context, delta, fake_inst).AndReturn(fake_quotas)
 
         exc = exception.UnexpectedTaskStateError(
@@ -1300,8 +1302,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_inst = self._create_instance_obj(params=params)
 
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
-        self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1327,11 +1329,11 @@ class _ComputeAPIUnitTestMixIn(object):
             fake_quotas = objects.Quotas.from_reservations(self.context,
                                                            resvs)
             if flavor_id_passed:
-                self.compute_api._upsize_quota_delta(
-                        self.context, mox.IsA(objects.Flavor),
-                        mox.IsA(objects.Flavor)).AndReturn('deltas')
-                self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                        fake_inst).AndReturn(fake_quotas)
+                compute_utils.upsize_quota_delta(
+                    self.context, mox.IsA(objects.Flavor),
+                    mox.IsA(objects.Flavor)).AndReturn('deltas')
+                compute_utils.reserve_quota_delta(
+                    self.context, 'deltas', fake_inst).AndReturn(fake_quotas)
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1446,7 +1448,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_invalid_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1469,7 +1471,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_disabled_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1534,8 +1536,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize_quota_exceeds_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
-        self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
+        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         # Should never reach these.
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
@@ -1548,9 +1550,9 @@ class _ComputeAPIUnitTestMixIn(object):
         flavors.get_flavor_by_flavor_id(
                 'flavor-id', read_deleted='no').AndReturn(fake_flavor)
         deltas = dict(resource=0)
-        self.compute_api._upsize_quota_delta(
-                self.context, mox.IsA(objects.Flavor),
-                mox.IsA(objects.Flavor)).AndReturn(deltas)
+        compute_utils.upsize_quota_delta(
+            self.context, mox.IsA(objects.Flavor),
+            mox.IsA(objects.Flavor)).AndReturn(deltas)
         usage = dict(in_use=0, reserved=0)
         quotas = {'resource': 0}
         usages = {'resource': usage}
@@ -1559,9 +1561,9 @@ class _ComputeAPIUnitTestMixIn(object):
                                usages=usages,
                                overs=overs)
 
-        self.compute_api._reserve_quota_delta(self.context, deltas,
-                fake_inst).AndRaise(
-                        exception.OverQuota(**over_quota_args))
+        compute_utils.reserve_quota_delta(self.context, deltas,
+                                          fake_inst).AndRaise(
+            exception.OverQuota(**over_quota_args))
 
         self.mox.ReplayAll()
 
