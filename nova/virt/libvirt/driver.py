@@ -4431,7 +4431,7 @@ class LibvirtDriver(driver.ComputeDriver):
         block_device_mapping = driver.block_device_info_get_mapping(
                                                   block_device_info)
         disk_info = disk_info or {}
-        disk_mapping = disk_info.get('mapping', [])
+        disk_mapping = disk_info.get('mapping', {})
 
         if self._is_booted_from_volume(instance, disk_mapping):
             root_disk = block_device.get_root_bdm(block_device_mapping)
