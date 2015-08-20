@@ -201,34 +201,40 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
         host.update_from_compute_node(self.compute_node)
 
+        self.assertIsNone(host.updated)
         instance = dict(root_gb=10, ephemeral_gb=0, memory_mb=1024, vcpus=1)
         host.consume_from_instance(instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
         self.assertEqual(0, host.free_disk_mb)
+        self.assertIsNotNone(host.updated)
 
     def test_consume_larger_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
         host.update_from_compute_node(self.compute_node)
 
+        self.assertIsNone(host.updated)
         instance = dict(root_gb=20, ephemeral_gb=0, memory_mb=2048, vcpus=2)
         host.consume_from_instance(instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
         self.assertEqual(0, host.free_disk_mb)
+        self.assertIsNotNone(host.updated)
 
     def test_consume_smaller_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
         host.update_from_compute_node(self.compute_node)
 
+        self.assertIsNone(host.updated)
         instance = dict(root_gb=5, ephemeral_gb=0, memory_mb=512, vcpus=1)
         host.consume_from_instance(instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
         self.assertEqual(0, host.free_disk_mb)
+        self.assertIsNotNone(host.updated)
 
 
 class IronicHostManagerTestFilters(test.NoDBTestCase):
