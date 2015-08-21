@@ -82,39 +82,3 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
         if expected_middleware:
             self._check_api_endpoint('/v2', expected_middleware)
-
-    @classmethod
-    def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
-        parts = [dirname]
-        parts.append('api_samples')
-        if cls.all_extensions:
-            parts.append('all_extensions')
-        # Note(gmann): if _use_common_server_api_samples is set to True
-        # then common server sample files present in 'servers' directory
-        # will be used. As of now it is being used for server POST request
-        # to avoid duplicate copy of server req and resp sample files.
-        # Example - ServersSampleBase's _post_server method.
-        elif cls._use_common_server_api_samples:
-            parts.append('servers')
-        else:
-            if cls.sample_dir:
-                parts.append(cls.sample_dir)
-            elif cls.extension_name:
-                parts.append(cls.extension_name)
-            if api_version:
-                parts.append('v' + api_version)
-        parts.append(name + "." + cls.ctype + suffix)
-        return os.path.join(*parts)
-
-    @classmethod
-    def _get_sample(cls, name, api_version=None):
-        dirname = os.path.dirname(os.path.abspath(__file__))
-        dirname = os.path.normpath(os.path.join(dirname,
-                                                "../../../../doc"))
-        return cls._get_sample_path(name, dirname, api_version=api_version)
-
-    @classmethod
-    def _get_template(cls, name, api_version=None):
-        dirname = os.path.dirname(os.path.abspath(__file__))
-        return cls._get_sample_path(name, dirname, suffix='.tpl',
-                                    api_version=api_version)
