@@ -61,6 +61,16 @@ class BaseCoreFilter(filters.BaseHostFilter):
         if vcpus_total > 0:
             host_state.limits['vcpu'] = vcpus_total
 
+            # Do not allow an instance to overcommit against itself, only
+            # against other instances.
+            if instance_vcpus > host_state.vcpus_total:
+                LOG.debug("%(host_state)s does not have %(instance_vcpus)d "
+                      "total cpus before overcommit, it only has %(cpus)d",
+                      {'host_state': host_state,
+                       'instance_vcpus': instance_vcpus,
+                       'cpus': host_state.vcpus_total})
+                return False
+
         free_vcpus = vcpus_total - host_state.vcpus_used
         if free_vcpus < instance_vcpus:
             LOG.debug("%(host_state)s does not have %(instance_vcpus)d "
