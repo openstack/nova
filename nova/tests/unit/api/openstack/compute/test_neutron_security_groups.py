@@ -55,8 +55,7 @@ class TestNeutronSecurityGroupsV21(
 
     def _create_sg_template(self, **kwargs):
         sg = test_security_groups.security_group_request_template(**kwargs)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
-        return self.controller.create(req, {'security_group': sg})
+        return self.controller.create(self.req, body={'security_group': sg})
 
     def _create_network(self):
         body = {'network': {'name': 'net1'}}
