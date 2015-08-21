@@ -127,7 +127,7 @@ class Server(service.ServiceBase):
 
         if backlog < 1:
             raise exception.InvalidInput(
-                    reason='The backlog must be more than 1')
+                    reason=_('The backlog must be more than 0'))
 
         bind_addr = (host, port)
         # TODO(dims): eventlet's green dns/socket module does not actually
