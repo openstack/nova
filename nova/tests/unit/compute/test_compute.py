@@ -11097,11 +11097,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
         super(ComputeInactiveImageTestCase, self).setUp()
 
         def fake_show(meh, context, id, **kwargs):
-            return {'id': id, 'min_disk': None, 'min_ram': None,
-                    'name': 'fake_name',
-                    'status': 'deleted',
-                    'min_ram': 0,
-                    'min_disk': 0,
+            return {'id': id, 'name': 'fake_name', 'status': 'deleted',
+                    'min_ram': 0, 'min_disk': 0,
                     'properties': {'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
