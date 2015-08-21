@@ -81,10 +81,6 @@ class LocalAPI(object):
     def compute_node_create(self, context, values):
         return self._manager.compute_node_create(context, values)
 
-    def security_groups_trigger_members_refresh(self, context, group_ids):
-        return self._manager.security_groups_trigger_members_refresh(context,
-                                                                     group_ids)
-
     def object_backport(self, context, objinst, target_version):
         return self._manager.object_backport(context, objinst, target_version)
 

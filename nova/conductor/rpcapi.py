@@ -180,6 +180,7 @@ class ConductorAPI(object):
     * Remove task_log_get()
     * Remove task_log_begin_task()
     * Remove task_log_end_task()
+    * Remove security_groups_trigger_members_refresh()
 
     """
 
@@ -229,11 +230,6 @@ class ConductorAPI(object):
     def compute_node_create(self, context, values):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_node_create', values=values)
-
-    def security_groups_trigger_members_refresh(self, context, group_ids):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'security_groups_trigger_members_refresh',
-                          group_ids=group_ids)
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
