@@ -16,11 +16,13 @@
 from nova.api import openstack
 from nova.api.openstack import compute
 from nova.api.openstack import wsgi
+from nova.tests.functional.api import client
 from nova.tests.functional import api_paste_fixture
-from nova.tests.functional import integrated_helpers
+from nova.tests.functional import test_servers
+from nova.tests.unit import fake_network
 
 
-class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
+class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
     _api_version = 'v2'
 
     def setUp(self):
@@ -44,3 +46,26 @@ class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
+
+    def test_request_with_pattern_properties_check(self):
+        fake_network.set_stub_network_methods(self.stubs)
+        server = self._build_minimal_create_server_request()
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        self._wait_for_state_change(created_server, 'BUILD')
+        response = self.api.post_server_metadata(created_server['id'],
+                                                 {'a': 'b'})
+        self.assertEqual(response, {'a': 'b'})
+
+    def test_request_with_pattern_properties_with_avoid_metadata(self):
+        fake_network.set_stub_network_methods(self.stubs)
+        server = self._build_minimal_create_server_request()
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        exc = self.assertRaises(client.OpenStackApiException,
+                                self.api.post_server_metadata,
+                                created_server['id'],
+                                {'a': 'b',
+                                 'x' * 300: 'y',
+                                 'h' * 300: 'i'})
+        self.assertEqual(exc.response.status_code, 400)
