@@ -23,7 +23,8 @@ from nova.objects import fields
 class RequestSpec(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: ImageMeta version 1.6
-    VERSION = '1.1'
+    # Version 1.2: SchedulerRetries version 1.1
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -54,7 +55,7 @@ class RequestSpec(base.NovaObject):
         'numa_topology': [('1.0', '1.2')],
         'flavor': [('1.0', '1.1')],
         'pci_requests': [('1.0', '1.1')],
-        'retry': [('1.0', '1.0')],
+        'retry': [('1.0', '1.0'), ('1.2', '1.1')],
         'limits': [('1.0', '1.0')],
         'instance_group': [('1.0', '1.9')],
     }
@@ -216,7 +217,8 @@ class RequestSpec(base.NovaObject):
 @base.NovaObjectRegistry.register
 class SchedulerRetries(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: ComputeNodeList version 1.14
+    VERSION = '1.1'
 
     fields = {
         'num_attempts': fields.IntegerField(),
@@ -226,7 +228,7 @@ class SchedulerRetries(base.NovaObject):
     }
 
     obj_relationships = {
-        'hosts': [('1.0', '1.13')],
+        'hosts': [('1.0', '1.13'), ('1.1', '1.14')],
     }
 
     @classmethod

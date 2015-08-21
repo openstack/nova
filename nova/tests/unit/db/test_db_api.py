@@ -6989,6 +6989,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  pci_stats='',
                                  metrics='',
                                  extra_resources='',
+                                 cpu_allocation_ratio=16.0,
+                                 ram_allocation_ratio=1.5,
                                  stats='', numa_topology='')
         # add some random stats
         self.stats = dict(num_instances=3, num_proj_12345=2,
