@@ -39,7 +39,7 @@ class LibvirtScaleIOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtScaleIOVolumeDriver, self).__init__(connection,
                                                          is_block_dev=False)
         self.connector = connector.InitiatorConnector.factory(
-            'SCALEIO', utils._get_root_helper(),
+            'SCALEIO', utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)
 
     def get_config(self, connection_info, disk_info):

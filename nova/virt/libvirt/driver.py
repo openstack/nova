@@ -1037,7 +1037,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return []
 
     def get_volume_connector(self, instance):
-        root_helper = utils._get_root_helper()
+        root_helper = utils.get_root_helper()
         return connector.get_connector_properties(
             root_helper, CONF.my_block_storage_ip,
             CONF.libvirt.iscsi_use_multipath,

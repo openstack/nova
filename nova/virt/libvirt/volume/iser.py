@@ -37,7 +37,7 @@ class LibvirtISERVolumeDriver(iscsi.LibvirtISCSIVolumeDriver):
         # Call the factory here so we can support
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
-            'ISER', utils._get_root_helper(),
+            'ISER', utils.get_root_helper(),
             use_multipath=CONF.libvirt.iser_use_multipath,
             device_scan_attempts=CONF.libvirt.num_iser_scan_tries,
             transport=self._get_transport())
