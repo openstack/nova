@@ -2786,6 +2786,7 @@ def key_pair_get_all_by_user(context, user_id):
                    all()
 
 
+@require_context
 def key_pair_count_by_user(context, user_id):
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
