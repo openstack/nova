@@ -309,10 +309,11 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
                virt_driver, wait_func=None, do_check_attach=True):
 
         if not self.volume_id:
+            av_zone = instance.availability_zone
             snapshot = volume_api.get_snapshot(context,
                                                self.snapshot_id)
-            vol = volume_api.create(context, self.volume_size,
-                                    '', '', snapshot)
+            vol = volume_api.create(context, self.volume_size, '', '',
+                                    snapshot, availability_zone=av_zone)
             if wait_func:
                 wait_func(context, vol['id'])
 
@@ -332,8 +333,10 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None, do_check_attach=True):
         if not self.volume_id:
+            av_zone = instance.availability_zone
             vol = volume_api.create(context, self.volume_size,
-                                    '', '', image_id=self.image_id)
+                                    '', '', image_id=self.image_id,
+                                    availability_zone=av_zone)
             if wait_func:
                 wait_func(context, vol['id'])
 
@@ -353,7 +356,9 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
                virt_driver, wait_func=None, do_check_attach=True):
         if not self.volume_id:
             vol_name = instance.uuid + '-blank-vol'
-            vol = volume_api.create(context, self.volume_size, vol_name, '')
+            av_zone = instance.availability_zone
+            vol = volume_api.create(context, self.volume_size, vol_name, '',
+                                    availability_zone=av_zone)
             if wait_func:
                 wait_func(context, vol['id'])
 
