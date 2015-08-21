@@ -4435,10 +4435,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if self._is_booted_from_volume(instance, disk_mapping):
             root_disk = block_device.get_root_bdm(block_device_mapping)
-            disk_path = root_disk['connection_info']['data']['device_path']
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type, image_meta, root_disk)
             self._connect_volume(root_disk['connection_info'], disk_info)
+            disk_path = root_disk['connection_info']['data']['device_path']
 
             # Get the system metadata from the instance
             use_cow = instance.system_metadata['image_disk_format'] == 'qcow2'
