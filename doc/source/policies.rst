@@ -54,7 +54,7 @@ As a patch author, you should try to offset the reviewer resources
 spent on your patch by reviewing other patches. If no one does this, the review
 team (cores and otherwise) become spread too thin.
 
-For review guidelines see: https://wiki.openstack.org/wiki/ReviewChecklist
+For review guidelines see: http://docs.openstack.org/infra/manual/developers.html#peer-review
 
 Reverts for Retrospective Vetos
 ===============================
