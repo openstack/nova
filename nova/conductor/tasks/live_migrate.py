@@ -12,6 +12,7 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import oslo_messaging as messaging
 
 from nova.compute import power_state
 from nova.conductor.tasks import base
@@ -141,9 +142,14 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.DestinationHypervisorTooOld()
 
     def _call_livem_checks_on_host(self, destination):
-        self.migrate_data = self.compute_rpcapi.\
-            check_can_live_migrate_destination(self.context, self.instance,
-                destination, self.block_migration, self.disk_over_commit)
+        try:
+            self.migrate_data = self.compute_rpcapi.\
+                check_can_live_migrate_destination(self.context, self.instance,
+                    destination, self.block_migration, self.disk_over_commit)
+        except messaging.MessagingTimeout:
+            msg = _("Timeout while checking if we can live migrate to host: "
+                    "%s") % destination
+            raise exception.MigrationPreCheckError(msg)
 
     def _find_destination(self):
         # TODO(johngarbutt) this retry loop should be shared
