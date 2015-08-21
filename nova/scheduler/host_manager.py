@@ -37,7 +37,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context as context_module
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _LI, _LW
 from nova import objects
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
@@ -482,8 +482,7 @@ class HostManager(object):
                         del host_map[(hostname, nodename)]
                         ignored_hosts.append(host)
             ignored_hosts_str = ', '.join(ignored_hosts)
-            msg = _('Host filter ignoring hosts: %s')
-            LOG.info(msg % ignored_hosts_str)
+            LOG.info(_LI('Host filter ignoring hosts: %s'), ignored_hosts_str)
 
         def _match_forced_hosts(host_map, hosts_to_force):
             forced_hosts = []
@@ -494,11 +493,11 @@ class HostManager(object):
                     forced_hosts.append(hostname)
             if host_map:
                 forced_hosts_str = ', '.join(forced_hosts)
-                msg = _('Host filter forcing available hosts to %s')
+                msg = _LI('Host filter forcing available hosts to %s')
             else:
                 forced_hosts_str = ', '.join(hosts_to_force)
-                msg = _("No hosts matched due to not matching "
-                        "'force_hosts' value of '%s'")
+                msg = _LI("No hosts matched due to not matching "
+                          "'force_hosts' value of '%s'")
             LOG.info(msg % forced_hosts_str)
 
         def _match_forced_nodes(host_map, nodes_to_force):
@@ -510,11 +509,11 @@ class HostManager(object):
                     forced_nodes.append(nodename)
             if host_map:
                 forced_nodes_str = ', '.join(forced_nodes)
-                msg = _('Host filter forcing available nodes to %s')
+                msg = _LI('Host filter forcing available nodes to %s')
             else:
                 forced_nodes_str = ', '.join(nodes_to_force)
-                msg = _("No nodes matched due to not matching "
-                        "'force_nodes' value of '%s'")
+                msg = _LI("No nodes matched due to not matching "
+                          "'force_nodes' value of '%s'")
             LOG.info(msg % forced_nodes_str)
 
         if filter_class_names is None:
