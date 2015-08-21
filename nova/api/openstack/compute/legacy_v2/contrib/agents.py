@@ -89,6 +89,7 @@ class AgentController(object):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
+            utils.validate_integer(id, 'id')
             utils.check_string_length(url, 'url', max_length=255)
             utils.check_string_length(md5hash, 'md5hash', max_length=255)
             utils.check_string_length(version, 'version', max_length=255)
@@ -102,9 +103,6 @@ class AgentController(object):
             agent.url = url
             agent.md5hash = md5hash
             agent.save()
-        except ValueError as ex:
-            msg = _("Invalid request body: %s") % ex
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
@@ -123,6 +121,11 @@ class AgentController(object):
         # NOTE(alex_xu): back-compatible with db layer hard-code admin
         # permission checks.
         nova_context.require_admin_context(context)
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+
         try:
             agent = objects.Agent(context=context, id=id)
             agent.destroy()

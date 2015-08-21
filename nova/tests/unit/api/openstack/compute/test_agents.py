@@ -205,6 +205,10 @@ class AgentsTestV21(test.NoDBTestCase):
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.controller.delete, self.req, 1)
 
+    def test_agents_delete_string_id(self):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.delete, self.req, 'string_id')
+
     def test_agents_list(self):
         res_dict = self.controller.index(self.req)
         agents_list = [{'hypervisor': 'kvm', 'os': 'win',
@@ -297,6 +301,14 @@ class AgentsTestV21(test.NoDBTestCase):
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         self.assertRaises(self.validation_error,
                           self.controller.update, self.req, 1, body=body)
+
+    def test_agents_update_with_string_id(self):
+        body = {'para': {'version': '7.0',
+                'url': 'http://example.com/path/to/resource',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, self.req,
+                          'string_id', body=body)
 
     def _test_agents_update_with_invalid_length(self, key):
         body = {'para': {'version': '7.0',

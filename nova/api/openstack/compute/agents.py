@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova import objects
+from nova import utils
 
 
 ALIAS = "os-agents"
@@ -88,6 +89,11 @@ class AgentController(wsgi.Controller):
         md5hash = para['md5hash']
         version = para['version']
 
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+
         agent = objects.Agent(context=context, id=id)
         agent.obj_reset_changes()
         agent.version = version
@@ -109,12 +115,17 @@ class AgentController(wsgi.Controller):
     # TODO(oomichi): Here should be 204(No Content) instead of 200 by v2.1
     # +microversions because the resource agent has been deleted completely
     # when returning a response.
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((400, 404))
     @wsgi.response(200)
     def delete(self, req, id):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
             agent = objects.Agent(context=context, id=id)
