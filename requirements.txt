@@ -12,7 +12,7 @@ keystonemiddleware>=2.0.0
 lxml>=2.3
 Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7'
 Routes!=2.0,>=1.12.3;python_version!='2.7'
-cryptography>=0.9.1 # Apache-2.0
+cryptography>=1.0 # Apache-2.0
 WebOb>=1.2.3
 greenlet>=0.3.2
 PasteDeploy>=1.5.0
@@ -41,7 +41,7 @@ oslo.log>=1.8.0 # Apache-2.0
 oslo.reports>=0.1.0 # Apache-2.0
 oslo.serialization>=1.4.0 # Apache-2.0
 oslo.utils>=2.0.0 # Apache-2.0
-oslo.db>=2.0 # Apache-2.0
+oslo.db>=2.4.1 # Apache-2.0
 oslo.rootwrap>=2.0.0 # Apache-2.0
 oslo.messaging!=1.17.0,!=1.17.1,>=1.16.0 # Apache-2.0
 oslo.i18n>=1.5.0 # Apache-2.0
