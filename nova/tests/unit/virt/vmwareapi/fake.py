@@ -753,7 +753,7 @@ class HostSystem(ManagedObject):
 
         product = DataObject()
         product.name = "VMware ESXi"
-        product.version = "5.0.0"
+        product.version = constants.MIN_VC_VERSION
         config = DataObject()
         config.product = product
         summary.config = config
