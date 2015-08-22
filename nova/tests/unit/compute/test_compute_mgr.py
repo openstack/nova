@@ -1833,13 +1833,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                           instance_uuid='uuid3',
                                           tag='tag3')]
 
-        # Make sure all the three events are handled despite the exception in
-        # processing event 2
+        # Make sure all the three events are handled despite the exceptions in
+        # processing events 1 and 2
         @mock.patch.object(manager.base_net_api,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface',
                            side_effect=exception.NovaException)
-        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
+                           side_effect=exception.InstanceInfoCacheNotFound(
+                                                    instance_uuid='uuid1'))
         @mock.patch.object(self.compute, '_process_instance_event')
         def do_test(_process_instance_event, get_instance_nw_info,
                     detach_interface, update_instance_cache_with_nw_info):

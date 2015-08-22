@@ -6307,7 +6307,13 @@ class ComputeManager(manager.Manager):
                       {'event': event.key},
                       instance=instance)
             if event.name == 'network-changed':
-                self.network_api.get_instance_nw_info(context, instance)
+                try:
+                    self.network_api.get_instance_nw_info(context, instance)
+                except exception.NotFound as e:
+                    LOG.info(_LI('Failed to process external instance event '
+                                 '%(event)s due to: %(error)s'),
+                             {'event': event.key, 'error': six.text_type(e)},
+                             instance=instance)
             elif event.name == 'network-vif-deleted':
                 self._process_instance_vif_deleted_event(context,
                                                          instance,
