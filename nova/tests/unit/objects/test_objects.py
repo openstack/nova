@@ -1625,3 +1625,13 @@ class TestObjEqualPrims(_BaseTestCase):
         self.assertTrue(base.obj_equal_prims(obj1, obj2, ['bar']),
                         "Objects that only differ in an ignored field "
                         "should be equal")
+
+
+class TestObjMethodOverrides(test.NoDBTestCase):
+    def test_obj_reset_changes(self):
+        args = inspect.getargspec(base.NovaObject.obj_reset_changes)
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
+            self.assertEqual(args,
+                    inspect.getargspec(obj_class.obj_reset_changes))
