@@ -46,10 +46,6 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
 _COMPUTE_NODE_FIXTURES = [
     objects.ComputeNode(
         id=1,
-        # NOTE(jaypipes): Will be removed with the
-        #                 detach-compute-node-from-service blueprint
-        #                 implementation.
-        service_id=1,
         host='fake-host',
         vcpus=_VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
         memory_mb=_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
@@ -79,15 +75,6 @@ _COMPUTE_NODE_FIXTURES = [
         numa_topology=None,
         ),
 ]
-
-_SERVICE_FIXTURE = objects.Service(
-    id=1,
-    host='fake-host',
-    binary='nova-compute',
-    topic='compute',
-    report_count=1,
-    disabled=False,
-    disabled_reason='')
 
 _INSTANCE_TYPE_FIXTURES = {
     1: {
@@ -377,12 +364,11 @@ class TestUpdateAvailableResources(BaseTestCase):
             self.rt.update_available_resource(mock.sentinel.ctx)
         return update_mock
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_no_reserved(self, get_mock, migr_mock,
-                                                    get_cn_mock, service_mock):
+                                                    get_cn_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
@@ -390,7 +376,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = []
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
 
         update_mock = self._update_available_resources()
 
@@ -434,12 +419,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_reserved_disk_and_ram(
-            self, get_mock, migr_mock, get_cn_mock, service_mock):
+            self, get_mock, migr_mock, get_cn_mock):
         self.flags(reserved_host_disk_mb=1024,
                    reserved_host_memory_mb=512)
         self._setup_rt()
@@ -447,7 +431,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = []
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
 
         update_mock = self._update_available_resources()
 
@@ -481,12 +464,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_no_migrations(self, get_mock, migr_mock,
-                                          get_cn_mock, service_mock):
+                                          get_cn_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
@@ -494,7 +476,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = _INSTANCE_FIXTURES
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
 
         update_mock = self._update_available_resources()
 
@@ -539,12 +520,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_orphaned_instances_no_migrations(self, get_mock, migr_mock,
-                                              get_cn_mock, service_mock):
+                                              get_cn_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
@@ -552,7 +532,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = []
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
 
         # Orphaned instances are those that the virt driver has on
         # record as consuming resources on the compute node, but the
@@ -608,14 +587,12 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_source_migration(self, get_mock, get_inst_mock,
-                                           migr_mock, get_cn_mock,
-                                           service_mock):
+                                           migr_mock, get_cn_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the source host not the destination host, and the resource
@@ -633,7 +610,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         migr_obj = _MIGRATION_FIXTURES['source-only']
         migr_mock.return_value = [migr_obj]
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
         # Migration.instance property is accessed in the migration
         # processing code, and this property calls
         # objects.Instance.get_by_uuid, so we have the migration return
@@ -672,13 +648,12 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_dest_migration(self, get_mock, get_inst_mock,
-                                         migr_mock, get_cn_mock, service_mock):
+                                         migr_mock, get_cn_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host not the source host, and the resource
@@ -698,7 +673,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         inst_uuid = migr_obj.instance_uuid
         get_inst_mock.return_value = _MIGRATION_INSTANCE_FIXTURES[inst_uuid]
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
-        service_mock.return_value = _SERVICE_FIXTURE
 
         update_mock = self._update_available_resources()
 
@@ -732,15 +706,13 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_source_and_dest_migration(self, get_mock,
                                                       get_inst_mock, migr_mock,
-                                                      get_cn_mock,
-                                                      service_mock):
+                                                      get_cn_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host AND the source host, and the resource
@@ -754,7 +726,6 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         migr_mock.return_value = [migr_obj]
-        service_mock.return_value = _SERVICE_FIXTURE
         inst_uuid = migr_obj.instance_uuid
         # The resizing instance has already had its instance type
         # changed to the *new* instance type (the bigger one, instance type 2)
@@ -821,49 +792,30 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(create_mock.called)
         self.assertFalse(self.rt.disabled)
 
-    @mock.patch('nova.objects.Service.get_by_compute_host')
-    def test_no_found_service_disabled(self, service_mock):
-        self._setup_rt()
-
-        service_mock.side_effect = exc.NotFound
-        resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
-
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
-
-        self.assertTrue(self.rt.disabled)
-        self.assertIsNone(self.rt.compute_node)
-
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_compute_node_loaded(self, get_mock, service_mock, create_mock):
+    def test_compute_node_loaded(self, get_mock, create_mock):
         self._setup_rt()
 
         def fake_get_node(_ctx, host, node):
             res = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
             return res
 
-        service_mock.return_value = _SERVICE_FIXTURE
         get_mock.side_effect = fake_get_node
         resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
 
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
-        service_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host')
         get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                          'fake-node')
         self.assertFalse(create_mock.called)
         self.assertFalse(self.rt.disabled)
 
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_compute_node_created_on_empty(self, get_mock, service_mock,
-                                           create_mock):
+    def test_compute_node_created_on_empty(self, get_mock, create_mock):
         self._setup_rt()
 
-        service_obj = _SERVICE_FIXTURE
-        service_mock.return_value = service_obj
         get_mock.side_effect = exc.NotFound
 
         resources = {
@@ -902,10 +854,6 @@ class TestInitComputeNode(BaseTestCase):
             hypervisor_type=resources['hypervisor_type'],
             hypervisor_version=resources['hypervisor_version'],
             hypervisor_hostname=resources['hypervisor_hostname'],
-            # NOTE(jaypipes): This will go away once
-            #                 detach-compute-node-from-service blueprint
-            #                 is done
-            service_id=1,
             # NOTE(sbauza): ResourceTracker adds host field
             host='fake-host',
         )
@@ -913,7 +861,6 @@ class TestInitComputeNode(BaseTestCase):
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
         self.assertFalse(self.rt.disabled)
-        service_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host')
         get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                          'fake-node')
         create_mock.assert_called_once_with()
