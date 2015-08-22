@@ -176,9 +176,6 @@ class DecoratorTestCase(test.TestCase):
     def test_require_context_decorator_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_context)
 
-    def test_require_admin_context_decorator_wraps_functions_properly(self):
-        self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
-
     def test_require_deadlock_retry_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(
             oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True))

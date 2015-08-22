@@ -199,20 +199,6 @@ def get_backend():
     return sys.modules[__name__]
 
 
-def require_admin_context(f):
-    """Decorator to require admin request context.
-
-    The first argument to the wrapped function must be the context.
-
-    """
-
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        nova.context.require_admin_context(args[0])
-        return f(*args, **kwargs)
-    return wrapper
-
-
 def require_context(f):
     """Decorator to require *any* user or admin context.
 
