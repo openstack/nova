@@ -319,18 +319,24 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _do_get(self, url, strip_version=False, api_version=None):
         return self._get_response(url, 'GET', strip_version=strip_version,
-                                  api_version=api_version)
+                                  api_version=(api_version or
+                                               self.request_api_version))
 
     def _do_post(self, url, name, subs, method='POST', api_version=None):
         body = self._read_template(name) % subs
         sample = self._get_sample(name, self.request_api_version)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
-        return self._get_response(url, method, body, api_version=api_version)
+        return self._get_response(url, method, body,
+                                  api_version=(api_version or
+                                               self.request_api_version))
 
     def _do_put(self, url, name, subs, api_version=None):
         return self._do_post(url, name, subs, method='PUT',
-                             api_version=api_version)
+                             api_version=(api_version or
+                                          self.request_api_version))
 
     def _do_delete(self, url, api_version=None):
-        return self._get_response(url, 'DELETE', api_version=api_version)
+        return self._get_response(url, 'DELETE',
+                                  api_version=(api_version or
+                                               self.request_api_version))
