@@ -214,14 +214,19 @@ class Controller(wsgi.Controller):
         sort_keys, sort_dirs = None, None
         if self.ext_mgr.is_loaded('os-server-sort-keys'):
             sort_keys, sort_dirs = common.get_sort_params(req.params)
+
+        expected_attrs = None
+        if is_detail:
+            # merge our expected attrs with what the view builder needs for
+            # showing details
+            expected_attrs = self._view_builder.get_show_expected_attrs(
+                                                                expected_attrs)
+
         try:
             instance_list = self.compute_api.get_all(elevated or context,
-                                                     search_opts=search_opts,
-                                                     limit=limit,
-                                                     marker=marker,
-                                                     want_objects=True,
-                                                     sort_keys=sort_keys,
-                                                     sort_dirs=sort_dirs)
+                    search_opts=search_opts, limit=limit, marker=marker,
+                    want_objects=True, expected_attrs=expected_attrs,
+                    sort_keys=sort_keys, sort_dirs=sort_dirs)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
@@ -237,11 +242,22 @@ class Controller(wsgi.Controller):
         req.cache_db_instances(instance_list)
         return response
 
-    def _get_server(self, context, req, instance_uuid):
-        """Utility function for looking up an instance by uuid."""
+    def _get_server(self, context, req, instance_uuid, is_detail=False):
+        """Utility function for looking up an instance by uuid.
+
+        :param context: request context for auth
+        :param req: HTTP request. The instance is cached in this request.
+        :param instance_uuid: UUID of the server instance to get
+        :param is_detail: True if you plan on showing the details of the
+            instance in the response, False otherwise.
+        """
+        expected_attrs = ['flavor']
+        if is_detail:
+            expected_attrs = self._view_builder.get_show_expected_attrs(
+                                                            expected_attrs)
         instance = common.get_instance(self.compute_api, context,
                                        instance_uuid,
-                                       expected_attrs=['flavor'])
+                                       expected_attrs=expected_attrs)
         req.cache_db_instance(instance)
         return instance
 
@@ -371,7 +387,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        instance = self._get_server(context, req, id)
+        instance = self._get_server(context, req, id, is_detail=True)
         return self._view_builder.show(req, instance)
 
     def _extract(self, server_dict, ext_name, key):
@@ -703,7 +719,7 @@ class Controller(wsgi.Controller):
             msg = _("Personality cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = self._get_server(ctxt, req, id)
+        instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
             policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
@@ -1032,7 +1048,7 @@ class Controller(wsgi.Controller):
                 exception.AutoDiskConfigDisabledByImage) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
-        instance = self._get_server(context, req, id)
+        instance = self._get_server(context, req, id, is_detail=True)
 
         view = self._view_builder.show(req, instance)
 

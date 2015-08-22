@@ -279,6 +279,9 @@ class ServersControllerTest(ControllerTest):
         """
         def return_instance_with_host(context, *args, **kwargs):
             project_id = str(uuid.uuid4())
+            self.assertIn('expected_attrs', kwargs)
+            self.assertEqual(['flavor', 'info_cache', 'metadata'],
+                             kwargs['expected_attrs'])
             return fakes.stub_instance_obj(context, id=1, uuid=FAKE_UUID,
                                           project_id=project_id,
                                           host='fake_host')
@@ -907,6 +910,7 @@ class ServersControllerTest(ControllerTest):
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
                         marker=mock.ANY, want_objects=mock.ANY,
+                        expected_attrs=None,
                         sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
@@ -933,6 +937,7 @@ class ServersControllerTest(ControllerTest):
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
                         marker=mock.ANY, want_objects=mock.ANY,
+                        expected_attrs=None,
                         sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
@@ -965,6 +970,7 @@ class ServersControllerTest(ControllerTest):
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
                         marker=mock.ANY, want_objects=mock.ANY,
+                        expected_attrs=None,
                         sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     def test_get_servers_allows_task_status(self):
@@ -1073,6 +1079,7 @@ class ServersControllerTest(ControllerTest):
         mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
             marker=mock.ANY, want_objects=mock.ANY,
+            expected_attrs=['flavor', 'info_cache', 'metadata'],
             sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
@@ -1096,6 +1103,7 @@ class ServersControllerTest(ControllerTest):
         mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
             marker=mock.ANY, want_objects=mock.ANY,
+            expected_attrs=['flavor', 'info_cache', 'metadata'],
             sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     def test_get_servers_allows_name(self):
