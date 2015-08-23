@@ -79,13 +79,19 @@ class APIVersionRequestTests(test.NoDBTestCase):
         v4 = api_version_request.APIVersionRequest("2.0")
         v_null = api_version_request.APIVersionRequest()
 
+        self.assertTrue(v_null < v2)
         self.assertTrue(v1 < v2)
+        self.assertTrue(v1 <= v2)
+        self.assertTrue(v1 <= v4)
+        self.assertTrue(v2 > v_null)
         self.assertTrue(v3 > v2)
+        self.assertTrue(v1 >= v4)
+        self.assertTrue(v3 >= v2)
         self.assertTrue(v1 != v2)
         self.assertTrue(v1 == v4)
         self.assertTrue(v1 != v_null)
         self.assertTrue(v_null == v_null)
-        self.assertRaises(TypeError, v1.__cmp__, "2.1")
+        self.assertRaises(TypeError, v1.__lt__, "2.1")
 
     def test_version_matches(self):
         v1 = api_version_request.APIVersionRequest("2.0")
