@@ -1091,8 +1091,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         guest = self._host.get_guest(instance)
 
@@ -1228,8 +1227,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest = self._host.get_guest(instance)
             xml = guest.get_xml_desc()
         except exception.InstanceNotFound:
-            image_meta = utils.get_image_from_system_metadata(
-                instance.system_metadata)
+            image_meta = objects.ImageMeta.from_instance(instance)
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance,
                                                 image_meta,
@@ -1281,6 +1279,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(connection_info, disk_dev)
 
     def attach_interface(self, instance, image_meta, vif):
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         guest = self._host.get_guest(instance)
 
         self.vif_driver.plug(instance, vif)
@@ -1301,8 +1300,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance_uuid=instance.uuid)
 
     def detach_interface(self, instance, vif):
+        image_meta = objects.ImageMeta.from_instance(instance)
         guest = self._host.get_guest(instance)
-        cfg = self.vif_driver.get_config(instance, vif, None, instance.flavor,
+        cfg = self.vif_driver.get_config(instance, vif, image_meta,
+                                         instance.flavor,
                                          CONF.libvirt.virt_type, self._host)
         try:
             self.vif_driver.unplug(instance, vif)
@@ -1338,13 +1339,15 @@ class LibvirtDriver(driver.ComputeDriver):
             metadata['properties']['os_type'] = instance.os_type
 
         # NOTE(vish): glance forces ami disk format to be ami
-        if image_meta.get('disk_format') == 'ami':
+        if image_meta.disk_format == 'ami':
             metadata['disk_format'] = 'ami'
         else:
             metadata['disk_format'] = img_fmt
 
-        metadata['container_format'] = image_meta.get(
-            'container_format', 'bare')
+        if image_meta.obj_attr_is_set("container_format"):
+            metadata['container_format'] = image_meta.container_format
+        else:
+            metadata['container_format'] = "bare"
 
         return metadata
 
@@ -1363,8 +1366,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         snapshot = self._image_api.get(context, image_id)
 
@@ -1519,9 +1521,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InstanceQuiesceNotSupported(
                 instance_id=instance.uuid)
 
-        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
-        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', '')
-        if not strutils.bool_from_string(hw_qga):
+        if not image_meta.properties.get('hw_qemu_guest_agent', False):
             raise exception.QemuGuestAgentNotEnabled()
 
     def _set_quiesced(self, context, instance, image_meta, quiesced):
@@ -1550,10 +1550,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         The qemu-guest-agent must be setup to execute fsfreeze.
         """
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._set_quiesced(context, instance, image_meta, True)
 
     def unquiesce(self, context, instance, image_meta):
         """Thaw the guest filesystems after snapshot."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._set_quiesced(context, instance, image_meta, False)
 
     def _live_snapshot(self, context, instance, guest, disk_path, out_path,
@@ -1582,9 +1584,8 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_cow_image(src_back_path, disk_delta,
                                        src_disk_size)
 
-        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
-        require_quiesce = strutils.bool_from_string(
-            img_meta_prop.get('os_require_quiesce', ''))
+        require_quiesce = image_meta.properties.get(
+            'os_require_quiesce', False)
         if require_quiesce:
             self.quiesce(context, instance, image_meta)
 
@@ -2156,8 +2157,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
 
         # Convert the system metadata to image metadata
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         instance_dir = libvirt_utils.get_instance_path(instance)
         fileutils.ensure_tree(instance_dir)
@@ -2344,8 +2344,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         disk_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance, image_meta,
@@ -2406,10 +2405,11 @@ class LibvirtDriver(driver.ComputeDriver):
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
+        rescue_image_id = None
         if image_meta is not None:
-            rescue_image_id = image_meta.get('id')
-        else:
-            rescue_image_id = None
+            image_meta = objects.ImageMeta.from_dict(image_meta)
+            if image_meta.obj_attr_is_set("id"):
+                rescue_image_id = image_meta.id
 
         rescue_images = {
             'image_id': (rescue_image_id or
@@ -2462,6 +2462,7 @@ class LibvirtDriver(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta,
@@ -3102,8 +3103,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         if self._has_sriov_port(network_info):
-            image_meta = utils.get_image_from_system_metadata(
-                instance.system_metadata)
+            image_meta = objects.ImageMeta.from_instance(instance)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
@@ -3133,8 +3133,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceDetachFailed(reason=reason,
                                                       dev=network_info)
 
-            image_meta = utils.get_image_from_system_metadata(
-                instance.system_metadata)
+            image_meta = objects.ImageMeta.from_instance(instance)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
@@ -3238,10 +3237,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if cpu is None:
             return None
 
-        # TODO(jaypipes): Remove when image_meta is always passed
-        # as an objects.ImageMeta
-        if not isinstance(image_meta, objects.ImageMeta):
-            image_meta = objects.ImageMeta.from_dict(image_meta)
         topology = hardware.get_best_cpu_topology(
                 flavor, image_meta, numa_topology=instance_numa_topology)
 
@@ -3375,9 +3370,8 @@ class LibvirtDriver(driver.ComputeDriver):
         for d in devices:
             self._set_cache_mode(d)
 
-        if (image_meta and
-                image_meta.get('properties', {}).get('hw_scsi_model')):
-            hw_scsi_model = image_meta['properties']['hw_scsi_model']
+        if image_meta.properties.get('hw_scsi_model'):
+            hw_scsi_model = image_meta.properties.hw_scsi_model
             scsi_controller = vconfig.LibvirtConfigGuestController()
             scsi_controller.type = 'scsi'
             scsi_controller.model = hw_scsi_model
@@ -3498,10 +3492,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         mach_type = None
 
-        if (image_meta is not None and image_meta.get('properties') and
-               image_meta['properties'].get('hw_machine_type')
-               is not None):
-            mach_type = image_meta['properties']['hw_machine_type']
+        if image_meta.properties.get('hw_machine_type') is not None:
+            mach_type = image_meta.properties.hw_machine_type
         else:
             # For ARM systems we will default to vexpress-a15 for armv7
             # and virt for aarch64
@@ -3795,10 +3787,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # we only support os_command_line with images with an explicit
         # kernel set and don't want to break nova if there's an
         # os_command_line property without a specified kernel_id param
-        if image_meta:
-            img_props = image_meta.get('properties', {})
-            if img_props.get('os_command_line'):
-                guest.os_cmdline = img_props.get('os_command_line')
+        if image_meta.properties.get("os_command_line"):
+            guest.os_cmdline = image_meta.properties.os_command_line
 
     def _set_clock(self, guest, os_type, image_meta, virt_type):
         # NOTE(mikal): Microsoft Windows expects the clock to be in
@@ -3885,10 +3875,6 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_arch = libvirt_utils.get_arch(image_meta)
 
         if CONF.serial_console.enabled:
-            # TODO(jaypipes): Remove when image_meta is always passed
-            # as an objects.ImageMeta
-            if not isinstance(image_meta, objects.ImageMeta):
-                image_meta = objects.ImageMeta.from_dict(image_meta)
             num_ports = hardware.get_number_of_serial_ports(
                 flavor, image_meta)
             for port in six.moves.range(num_ports):
@@ -3918,13 +3904,13 @@ class LibvirtDriver(driver.ComputeDriver):
             consolelog.source_path = self._get_console_log_path(instance)
             guest.add_device(consolelog)
 
-    def _add_video_driver(self, guest, image_meta, img_meta_prop, flavor):
+    def _add_video_driver(self, guest, image_meta, flavor):
         VALID_VIDEO_DEVICES = ("vga", "cirrus", "vmvga", "xen", "qxl")
         video = vconfig.LibvirtConfigGuestVideo()
         # NOTE(ldbragst): The following logic sets the video.type
         # depending on supported defaults given the architecture,
         # virtualization type, and features. The video.type attribute can
-        # be overridden by the user with image_meta['properties'], which
+        # be overridden by the user with image_meta.properties, which
         # is carried out in the next if statement below this one.
         guestarch = libvirt_utils.get_arch(image_meta)
         if guest.os_type == vm_mode.XEN:
@@ -3937,13 +3923,13 @@ class LibvirtDriver(driver.ComputeDriver):
             video.type = 'vga'
         elif CONF.spice.enabled:
             video.type = 'qxl'
-        if img_meta_prop.get('hw_video_model'):
-            video.type = img_meta_prop.get('hw_video_model')
+        if image_meta.properties.get('hw_video_model'):
+            video.type = image_meta.properties.hw_video_model
             if (video.type not in VALID_VIDEO_DEVICES):
                 raise exception.InvalidVideoMode(model=video.type)
 
         # Set video memory, only if the flavor's limit is set
-        video_ram = int(img_meta_prop.get('hw_video_ram', 0))
+        video_ram = image_meta.properties.get('hw_video_ram', 0)
         max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))
         if video_ram > max_vram:
             raise exception.RequestedVRamTooHigh(req_vram=video_ram,
@@ -3973,17 +3959,13 @@ class LibvirtDriver(driver.ComputeDriver):
         rng_device.backend = rng_path
         guest.add_device(rng_device)
 
-    def _set_qemu_guest_agent(self, guest, flavor, instance, img_meta_prop):
-        qga_enabled = False
+    def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
-        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', '')
-        if strutils.bool_from_string(hw_qga):
+        if image_meta.properties.get('hw_qemu_guest_agent', False):
             LOG.debug("Qemu guest agent is enabled through image "
                       "metadata", instance=instance)
-            qga_enabled = True
-        if qga_enabled:
             self._add_qga_device(guest, instance)
-        rng_is_virtio = img_meta_prop.get('hw_rng_model') == 'virtio'
+        rng_is_virtio = image_meta.properties.get('hw_rng_model') == 'virtio'
         rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', '')
         rng_allowed = strutils.bool_from_string(rng_allowed_str)
         if rng_is_virtio and rng_allowed:
@@ -4053,10 +4035,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
             guest.os_mach_type = self._get_machine_type(image_meta, caps)
-            guest.os_bootmenu = strutils.bool_from_string(
-                flavor.extra_specs.get(
-                    'hw:boot_menu', image_meta.get('properties', {}).get(
-                        'hw_boot_menu', 'no')))
+            if image_meta.properties.get('hw_boot_menu') is None:
+                guest.os_bootmenu = strutils.bool_from_string(
+                    flavor.extra_specs.get('hw:boot_menu', 'no'))
+            else:
+                guest.os_bootmenu = image_meta.properties.hw_boot_menu
+
         elif virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
@@ -4171,7 +4155,6 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor = instance.flavor
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
-        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
 
         virt_type = CONF.libvirt.virt_type
         guest = vconfig.LibvirtConfigGuest()
@@ -4286,11 +4269,11 @@ class LibvirtDriver(driver.ComputeDriver):
             add_video_driver = True
 
         if add_video_driver:
-            self._add_video_driver(guest, image_meta, img_meta_prop, flavor)
+            self._add_video_driver(guest, image_meta, flavor)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
-            self._set_qemu_guest_agent(guest, flavor, instance, img_meta_prop)
+            self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
 
         if virt_type in ('xen', 'qemu', 'kvm'):
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
@@ -4310,9 +4293,8 @@ class LibvirtDriver(driver.ComputeDriver):
         watchdog_action = (flavor.extra_specs.get('hw_watchdog_action') or
                            flavor.extra_specs.get('hw:watchdog_action')
                            or 'disabled')
-        if (image_meta is not None and
-                image_meta.get('properties', {}).get('hw_watchdog_action')):
-            watchdog_action = image_meta['properties']['hw_watchdog_action']
+        watchdog_action = image_meta.properties.get('hw_watchdog_action',
+                                                    watchdog_action)
 
         # NB(sross): currently only actually supported by KVM/QEmu
         if watchdog_action != 'disabled':
@@ -4557,8 +4539,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
@@ -6141,8 +6122,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     'is_shared_instance_path', True)
             is_block_migration = migrate_data.get('block_migration', True)
 
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         if configdrive.required_by(instance):
                 # NOTE(sileht): configdrive is stored into the block storage
@@ -6405,8 +6385,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_migration: if true, post operation of block_migration.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
         # In case of block migration, destination does not have
         # libvirt.xml
         disk_info = blockinfo.get_disk_info(
@@ -6813,6 +6792,8 @@ class LibvirtDriver(driver.ComputeDriver):
                          block_device_info=None, power_on=True):
         LOG.debug("Starting finish_migration", instance=instance)
 
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
@@ -6879,8 +6860,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_failed_migration(inst_base)
             utils.execute('mv', inst_base_resize, inst_base)
 
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
@@ -7137,7 +7117,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return False
 
     def default_root_device_name(self, instance, image_meta, root_bdm):
-
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         disk_bus = blockinfo.get_disk_bus_for_device_type(
             instance, CONF.libvirt.virt_type, image_meta, "disk")
         cdrom_bus = blockinfo.get_disk_bus_for_device_type(
@@ -7149,8 +7129,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def default_device_names_for_instance(self, instance, root_device_name,
                                           *block_device_lists):
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         block_device_mapping = list(itertools.chain(*block_device_lists))
         # NOTE(ndipanov): Null out the device names so that blockinfo code
@@ -7171,8 +7150,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                        image_meta)
 
     def get_device_name_for_instance(self, instance, bdms, block_device_obj):
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
+
         block_device_info = driver.get_block_device_info(instance, bdms)
         instance_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance,

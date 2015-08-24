@@ -110,8 +110,7 @@ class LibvirtGenericVIFDriver(object):
         # If the user has specified a 'vif_model' against the
         # image then honour that model
         if image_meta:
-            vif_model = image_meta.get('properties',
-                                       {}).get('hw_vif_model')
+            vif_model = image_meta.properties.get('hw_vif_model')
             if vif_model is not None:
                 model = vif_model
 

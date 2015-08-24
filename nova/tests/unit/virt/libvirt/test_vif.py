@@ -474,8 +474,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     id=2, disabled=False, rxtx_factor=1.0)
 
         d = vif.LibvirtGenericVIFDriver()
-        image_meta = {'properties': {'hw_vif_model': 'virtio',
-                                     'hw_vif_multiqueue_enabled': 'true'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'hw_vif_model': 'virtio',
+                            'hw_vif_multiqueue_enabled': 'true'}})
         xml = self._get_instance_xml(d, self.vif_bridge,
                                      image_meta, flavor)
 
@@ -552,23 +553,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                          network_model.VIF_MODEL_E1000,
                          network_model.VIF_MODEL_SPAPR_VLAN)
             for model in supported:
-                image_meta = {'properties': {'hw_vif_model': model}}
+                image_meta = objects.ImageMeta.from_dict(
+                    {'properties': {'hw_vif_model': model}})
                 xml = self._get_instance_xml(d, self.vif_bridge,
                                              image_meta)
                 self._assertModel(xml, model)
-
-    def test_model_kvm_bogus(self):
-        self.flags(use_virtio_for_bridges=True,
-                   virt_type='kvm',
-                   group='libvirt')
-
-        d = vif.LibvirtGenericVIFDriver()
-        image_meta = {'properties': {'hw_vif_model': 'acme'}}
-        self.assertRaises(exception.UnsupportedHardware,
-                          self._get_instance_xml,
-                          d,
-                          self.vif_bridge,
-                          image_meta)
 
     def _test_model_qemu(self, *vif_objs, **kw):
         libvirt_version = kw.get('libvirt_version')
@@ -1260,8 +1249,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def test_vhostuser_no_queues(self):
         d = vif.LibvirtGenericVIFDriver()
-        image_meta = {'properties': {'hw_vif_model': 'virtio',
-                                     'hw_vif_multiqueue_enabled': 'true'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'hw_vif_model': 'virtio',
+                            'hw_vif_multiqueue_enabled': 'true'}})
         xml = self._get_instance_xml(d, self.vif_vhostuser, image_meta)
         node = self._get_node(xml)
         self.assertEqual(node.get("type"),

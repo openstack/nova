@@ -54,6 +54,9 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'config_drive': None,
             'system_metadata': {},
         }
+        self.test_image_meta = {
+            'disk_format': 'raw',
+        }
 
         flavor = objects.Flavor(memory_mb=128,
                                 root_gb=0,
@@ -160,7 +163,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # The simplest possible disk mapping setup, all defaults
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -179,7 +182,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # A simple disk mapping setup, but with custom root device name
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         block_device_info = {
             'root_device_name': '/dev/sda'
             }
@@ -202,7 +205,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # A simple disk mapping setup, but in rescue mode
 
         instance_ref = objects.Instance()
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -223,7 +226,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
         self.test_instance['ephemeral_gb'] = 0
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("lxc", instance_ref,
                                              "lxc", "lxc",
@@ -240,7 +243,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # A simple disk mapping setup, but with a ISO for root device
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {'disk_format': 'iso'}
+        image_meta = objects.ImageMeta.from_dict({'disk_format': 'iso'})
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -260,7 +263,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor.swap = 5
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -285,7 +288,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.flags(force_config_drive=True)
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -322,7 +325,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.flags(config_drive_format='iso9660')
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -352,7 +355,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.flags(config_drive_format='vfat')
 
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -372,7 +375,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # A disk mapping with ephemeral devices
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor.swap = 5
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'ephemerals': [
@@ -406,7 +409,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # A disk mapping with a swap device at position vdb. This
         # should cause disk.local to be removed
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'swap': {'device_name': '/dev/vdb',
@@ -429,7 +432,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_blockdev_root(self):
         # A disk mapping with a blockdev replacing the default root
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'block_device_mapping': [
@@ -485,7 +488,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_blockdev_eph(self):
         # A disk mapping with a blockdev replacing the ephemeral device
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'block_device_mapping': [
@@ -512,7 +515,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_blockdev_many(self):
         # A disk mapping with a blockdev replacing all devices
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'block_device_mapping': [
@@ -550,7 +553,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_complex(self):
         # The strangest possible disk mapping setup
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'root_device_name': '/dev/vdf',
@@ -590,7 +593,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_get_disk_mapping_updates_original(self):
         instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         block_device_info = {
             'root_device_name': '/dev/vda',
@@ -643,7 +646,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 (arch.S390X, 'disk', 'virtio'),
                 (arch.S390X, 'cdrom', 'scsi')
                 )
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         for guestarch, dev, res in expected:
             with mock.patch.object(blockinfo.libvirt_utils,
                                    'get_arch',
@@ -658,13 +661,19 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 ('usb', None, 'disk', 'usb')
                 )
         for dbus, cbus, dev, res in expected:
-            image_meta = {'properties': {'hw_disk_bus': dbus,
-                                         'hw_cdrom_bus': cbus}}
+            props = {}
+            if dbus is not None:
+                props['hw_disk_bus'] = dbus
+            if cbus is not None:
+                props['hw_cdrom_bus'] = cbus
+            image_meta = objects.ImageMeta.from_dict(
+                {'properties': props})
             bus = blockinfo.get_disk_bus_for_device_type(
                 instance, 'kvm', image_meta, device_type=dev)
             self.assertEqual(res, bus)
 
-        image_meta = {'properties': {'hw_disk_bus': 'xen'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'hw_disk_bus': 'xen'}})
         self.assertRaises(exception.UnsupportedHardware,
                           blockinfo.get_disk_bus_for_device_type,
                           instance, 'kvm', image_meta)
@@ -684,7 +693,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_fail_get_disk_bus_for_disk_dev_unsupported_virt_type(self):
         instance = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         self.assertRaises(exception.UnsupportedVirtType,
                           blockinfo.get_disk_bus_for_device_type,
                           instance, 'kvm1', image_meta)
@@ -736,7 +745,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                     {'dev': 'vdo', 'type': 'disk',
                      'bus': 'scsi', 'boot_index': '2'}]
 
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         for bdm, expected in zip(bdms, expected):
             self.assertEqual(expected,
                              blockinfo.get_info_from_bdm(instance,
@@ -813,7 +822,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 return_value='virtio')
     def test_get_root_info_no_bdm(self, mock_get_bus, mock_find_dev):
         instance = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         blockinfo.get_root_info(instance, 'kvm', image_meta, None,
                                 'virtio', 'ide')
         mock_find_dev.assert_called_once_with({}, 'virtio')
@@ -825,7 +834,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_get_root_info_bdm(self, mock_get_info):
         instance = objects.Instance(**self.test_instance)
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         root_bdm = {'mount_device': '/dev/vda',
                     'disk_bus': 'scsi',
                     'device_type': 'disk'}
@@ -926,6 +935,10 @@ class DefaultDeviceNamesTestCase(test.NoDBTestCase):
                 config_drive=False,
                 root_device_name = '/dev/vda',
                 system_metadata={})
+        self.image_meta = objects.ImageMeta(
+            disk_format='raw',
+            properties=objects.ImageMetaProps())
+
         self.virt_type = 'kvm'
         self.flavor = objects.Flavor(swap=4)
         self.patchers = []
@@ -999,14 +1012,13 @@ class DefaultDeviceNamesTestCase(test.NoDBTestCase):
             patcher.stop()
 
     def _test_default_device_names(self, eph, swap, bdm):
-        image_meta = {}
         bdms = eph + swap + bdm
         bdi = driver.get_block_device_info(self.instance, bdms)
         blockinfo.default_device_names(self.virt_type,
                                        self.context,
                                        self.instance,
                                        bdi,
-                                       image_meta)
+                                       self.image_meta)
 
     def test_only_block_device_mapping(self):
         # Test no-op

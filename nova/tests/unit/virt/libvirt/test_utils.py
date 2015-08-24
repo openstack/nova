@@ -25,6 +25,7 @@ import six
 
 from nova.compute import arch
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
@@ -707,6 +708,7 @@ disk size: 4.4M
         self.assertEqual(expected_path, inst_path_at_dest)
 
     def test_get_arch(self):
-        image_meta = {'properties': {'architecture': "X86_64"}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'architecture': "X86_64"}})
         image_arch = libvirt_utils.get_arch(image_meta)
         self.assertEqual(arch.X86_64, image_arch)
