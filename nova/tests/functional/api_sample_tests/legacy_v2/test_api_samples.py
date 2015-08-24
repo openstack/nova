@@ -165,24 +165,6 @@ class ServersSampleBase(ApiSampleTestBaseV2):
             self.__class__._use_common_server_api_samples = orig_value
 
 
-class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
-    sample_dir = 'flavors'
-
-    def test_flavors_get(self):
-        response = self._do_get('flavors/1')
-        subs = self._get_regexes()
-        self._verify_response('flavor-get-resp', subs, response, 200)
-
-    def test_flavors_list(self):
-        response = self._do_get('flavors')
-        subs = self._get_regexes()
-        self._verify_response('flavors-list-resp', subs, response, 200)
-
-
-class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
-    all_extensions = True
-
-
 class LimitsSampleJsonTest(ApiSampleTestBaseV2):
     sample_dir = 'limits'
 
