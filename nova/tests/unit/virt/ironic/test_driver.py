@@ -255,7 +255,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
                     "local_gb", "local_gb_used",
                     "disk_available_least",
                     "supported_instances",
-                    "stats"]
+                    "stats",
+                    "numa_topology"]
         wantkeys.sort()
         gotkeys = result.keys()
         gotkeys.sort()
@@ -268,6 +269,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual(props['local_gb'], result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, jsonutils.loads(result['stats']))
+        self.assertIsNone(result['numa_topology'])
 
     def test__node_resource_canonicalizes_arch(self):
         node_uuid = uuidutils.generate_uuid()
