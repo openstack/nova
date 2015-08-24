@@ -10648,13 +10648,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, 'plug_vifs'),
             mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
+            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')
+        ) as (
+            mock_create_images_and_backing, mock_is_booted_from_volume,
+            mock_create_domain, mock_plug_vifs, mock_setup_basic_filtering,
+            mock_prepare_instance_filter, mock_apply_instance_filter
+        ):
             drvr._create_domain_and_network(self.context, 'xml',
                                             mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
+        mock_is_booted_from_volume.assert_called_once_with(mock_instance, {})
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
