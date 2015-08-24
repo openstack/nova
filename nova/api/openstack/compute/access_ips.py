@@ -22,13 +22,11 @@ authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 class AccessIPsController(wsgi.Controller):
     def _extend_server(self, req, server):
-            db_instance = req.get_db_instance(server['id'])
-            ip_v4 = db_instance.get('access_ip_v4')
-            ip_v6 = db_instance.get('access_ip_v6')
-            server['accessIPv4'] = (
-                str(ip_v4) if ip_v4 is not None else '')
-            server['accessIPv6'] = (
-                str(ip_v6) if ip_v6 is not None else '')
+        db_instance = req.get_db_instance(server['id'])
+        ip_v4 = db_instance.get('access_ip_v4')
+        ip_v6 = db_instance.get('access_ip_v6')
+        server['accessIPv4'] = str(ip_v4) if ip_v4 is not None else ''
+        server['accessIPv6'] = str(ip_v6) if ip_v6 is not None else ''
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
