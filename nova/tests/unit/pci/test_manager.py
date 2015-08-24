@@ -24,7 +24,6 @@ from nova import context
 from nova import db
 from nova import objects
 from nova.objects import fields
-from nova.pci import device
 from nova.pci import manager
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -291,7 +290,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.pci_devs), 3)
         dev = self.tracker.pci_devs[0]
         self.update_called = 0
-        device.remove(dev)
+        dev.remove()
         self.tracker.save(self.fake_context)
         self.assertEqual(len(self.tracker.pci_devs), 2)
         self.assertEqual(self.destroy_called, 1)

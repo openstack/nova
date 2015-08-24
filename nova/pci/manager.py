@@ -24,7 +24,6 @@ from nova import exception
 from nova.i18n import _LW
 from nova import objects
 from nova.objects import fields
-from nova.pci import device
 from nova.pci import stats
 from nova.pci import whitelist
 from nova.virt import hardware
@@ -127,7 +126,7 @@ class PciDevTracker(object):
         for existed in self.pci_devs:
             if existed.address in exist_addrs - new_addrs:
                 try:
-                    device.remove(existed)
+                    existed.remove()
                 except exception.PciDeviceInvalidStatus as e:
                     LOG.warning(_LW("Trying to remove device with %(status)s "
                                     "ownership %(instance_uuid)s because of "
@@ -189,7 +188,7 @@ class PciDevTracker(object):
             return None
 
         for dev in devs:
-            device.claim(dev, instance)
+            dev.claim(instance)
         if instance_numa_topology and any(
                                         dev.numa_node is None for dev in devs):
             LOG.warning(_LW("Assigning a pci device without numa affinity to"
@@ -199,7 +198,7 @@ class PciDevTracker(object):
 
     def _allocate_instance(self, instance, devs):
         for dev in devs:
-            device.allocate(dev, instance)
+            dev.allocate(instance)
 
     def allocate_instance(self, instance):
         devs = self.claims.pop(instance['uuid'], [])
@@ -218,7 +217,7 @@ class PciDevTracker(object):
         return None
 
     def _free_device(self, dev, instance=None):
-        device.free(dev, instance)
+        dev.free(instance)
         stale = self.stale.pop(dev.address, None)
         if stale:
             dev.update_device(stale)
