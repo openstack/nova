@@ -474,6 +474,26 @@ class MiscFunctionsTest(test.TestCase):
                      task_states.RESIZE_PREP])
         self.assertEqual(expected, actual)
 
+    def test_is_all_tenants_true(self):
+        for value in ('', '1', 'true', 'True'):
+            search_opts = {'all_tenants': value}
+            self.assertTrue(common.is_all_tenants(search_opts))
+            self.assertIn('all_tenants', search_opts)
+
+    def test_is_all_tenants_false(self):
+        for value in ('0', 'false', 'False'):
+            search_opts = {'all_tenants': value}
+            self.assertFalse(common.is_all_tenants(search_opts))
+            self.assertIn('all_tenants', search_opts)
+
+    def test_is_all_tenants_missing(self):
+        self.assertFalse(common.is_all_tenants({}))
+
+    def test_is_all_tenants_invalid(self):
+        search_opts = {'all_tenants': 'wonk'}
+        self.assertRaises(exception.InvalidInput, common.is_all_tenants,
+                          search_opts)
+
 
 class TestCollectionLinks(test.NoDBTestCase):
     """Tests the _get_collection_links method."""

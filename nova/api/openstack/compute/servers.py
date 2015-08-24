@@ -344,24 +344,17 @@ class ServersController(wsgi.Controller):
             # if context.project_id != search_opts.get('tenant_id'):
             #    search_opts['all_tenants'] = 1
 
-        # If all tenants is passed with 0 or false as the value
-        # then remove it from the search options. Nothing passed as
-        # the value for all_tenants is considered to enable the feature
-        all_tenants = search_opts.get('all_tenants')
-        if all_tenants:
-            try:
-                if not strutils.bool_from_string(all_tenants, True):
-                    del search_opts['all_tenants']
-            except ValueError as err:
-                raise exception.InvalidInput(six.text_type(err))
+        all_tenants = common.is_all_tenants(search_opts)
+        # use the boolean from here on out so remove the entry from search_opts
+        # if it's present
+        search_opts.pop('all_tenants', None)
 
         elevated = None
-        if 'all_tenants' in search_opts:
+        if all_tenants:
             if is_detail:
                 authorize(context, action="detail:get_all_tenants")
             else:
                 authorize(context, action="index:get_all_tenants")
-            del search_opts['all_tenants']
             elevated = context.elevated()
         else:
             if context.project_id:
