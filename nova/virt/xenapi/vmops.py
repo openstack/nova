@@ -416,7 +416,7 @@ class VMOps(object):
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
             vdis = self._get_vdis_for_instance(context, instance, name_label,
-                        image_meta.get('id'), disk_image_type,
+                        image_meta.id, disk_image_type,
                         block_device_info)
 
             def undo_create_disks():
@@ -446,13 +446,7 @@ class VMOps(object):
         self._ensure_enough_free_mem(instance)
 
         def attach_disks(undo_mgr, vm_ref, vdis, disk_image_type):
-            try:
-                ipxe_boot = strutils.bool_from_string(
-                        image_meta['properties']['ipxe_boot'])
-            except KeyError:
-                ipxe_boot = False
-
-            if ipxe_boot:
+            if image_meta.properties.get('hw_ipxe_boot', False):
                 if 'iso' in vdis:
                     vm_utils.handle_ipxe_iso(
                         self._session, instance, vdis['iso'], network_info)
@@ -661,7 +655,7 @@ class VMOps(object):
         # NOTE(tpownall): If rescue mode then we should try to pull the vm_mode
         # value from the image properties to ensure the vm is built properly.
         if rescue:
-            rescue_vm_mode = image_meta['properties'].get('vm_mode', None)
+            rescue_vm_mode = image_meta.properties.get('hw_vm_mode', None)
             if rescue_vm_mode is None:
                 LOG.debug("vm_mode not found in rescue image properties."
                           "Setting vm_mode to %s", mode, instance=instance)
@@ -673,8 +667,7 @@ class VMOps(object):
             instance.vm_mode = mode
             instance.save()
 
-        image_properties = image_meta.get("properties")
-        device_id = vm_utils.get_vm_device_id(self._session, image_properties)
+        device_id = vm_utils.get_vm_device_id(self._session, image_meta)
         use_pv_kernel = (mode == vm_mode.XEN)
         LOG.debug("Using PV kernel: %s", use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
@@ -706,15 +699,14 @@ class VMOps(object):
             # pulling the auto_disk_config value from the image properties so
             # that we can pull it from the rescue_image_ref.
             if rescue:
-                rescue_auto_disk_config = image_meta['properties'].get(
-                                                'auto_disk_config', None)
-                if rescue_auto_disk_config is None:
-                    LOG.debug("auto_disk_config value not found in"
+                if not image_meta.properties.obj_attr_is_set(
+                        "hw_auto_disk_config"):
+                    LOG.debug("'hw_auto_disk_config' value not found in"
                               "rescue image_properties. Setting value to %s",
                               auto_disk_config, instance=instance)
                 else:
                     auto_disk_config = strutils.bool_from_string(
-                            rescue_auto_disk_config)
+                        image_meta.properties.hw_auto_disk_config)
 
             if auto_disk_config:
                 LOG.debug("Auto configuring disk, attempting to "
