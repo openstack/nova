@@ -938,7 +938,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if destroy_disks:
             # NOTE(haomai): destroy volumes if needed
             if CONF.libvirt.images_type == 'lvm':
-                self._cleanup_lvm(instance)
+                self._cleanup_lvm(instance, block_device_info)
             if CONF.libvirt.images_type == 'rbd':
                 self._cleanup_rbd(instance)
 
@@ -966,9 +966,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._undefine_domain(instance)
 
-    def _detach_encrypted_volumes(self, instance):
+    def _detach_encrypted_volumes(self, instance, block_device_info):
         """Detaches encrypted volumes attached to instance."""
-        disks = jsonutils.loads(self.get_instance_disk_info(instance))
+        disks = jsonutils.loads(self.get_instance_disk_info(instance,
+                                                            block_device_info))
         encrypted_volumes = filter(dmcrypt.is_encrypted,
                                    [disk['path'] for disk in disks])
         for path in encrypted_volumes:
@@ -1006,10 +1007,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_rbd(self, instance):
         LibvirtDriver._get_rbd_driver().cleanup_volumes(instance)
 
-    def _cleanup_lvm(self, instance):
+    def _cleanup_lvm(self, instance, block_device_info):
         """Delete all LVM disks for given instance object."""
         if instance.get('ephemeral_key_uuid') is not None:
-            self._detach_encrypted_volumes(instance)
+            self._detach_encrypted_volumes(instance, block_device_info)
 
         disks = self._lvm_disks(instance)
         if disks:
