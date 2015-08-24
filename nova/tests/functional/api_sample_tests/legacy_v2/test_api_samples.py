@@ -167,19 +167,6 @@ class ServersSampleBase(ApiSampleTestBaseV2):
             self.__class__._use_common_server_api_samples = orig_value
 
 
-class ServersSampleMultiStatusJsonTest(ServersSampleBase):
-    extension_name = '.'.join(('nova.api.openstack.compute.legacy_v2.contrib',
-                               'server_list_multi_status',
-                               'Server_list_multi_status'))
-
-    def test_servers_list(self):
-        uuid = self._post_server()
-        response = self._do_get('servers?status=active&status=error')
-        subs = self._get_regexes()
-        subs['id'] = uuid
-        self._verify_response('servers-list-resp', subs, response, 200)
-
-
 class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
     sample_dir = 'flavors'
 
