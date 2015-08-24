@@ -65,7 +65,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors(404)
     @wsgi.action('os-resetState')
     @validation.schema(reset_server_state.reset_state)
     def _reset_state(self, req, id, body):
