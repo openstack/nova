@@ -64,6 +64,8 @@ s3_opts = [
                help='IP address for S3 API to listen'),
     cfg.IntOpt('s3_listen_port',
                default=3333,
+               min=1,
+               max=65535,
                help='Port for S3 API to listen'),
 ]
 

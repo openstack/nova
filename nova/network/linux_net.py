@@ -108,6 +108,8 @@ linux_net_opts = [
                help='The IP address for the metadata API server'),
     cfg.IntOpt('metadata_port',
                default=8775,
+               min=1,
+               max=65535,
                help='The port for the metadata API port'),
     cfg.StrOpt('iptables_top_regex',
                default='',

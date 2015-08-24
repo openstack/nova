@@ -31,6 +31,8 @@ opts = [
                help='Host on which to listen for incoming requests'),
     cfg.IntOpt('serialproxy_port',
                default=6083,
+               min=1,
+               max=65535,
                help='Port on which to listen for incoming requests'),
     ]
 

@@ -70,6 +70,8 @@ xenapi_vm_utils_opts = [
                     ' image_property `cache_in_nova=True`, and `none` turns'
                     ' off caching entirely'),
     cfg.IntOpt('image_compression_level',
+               min=1,
+               max=9,
                help='Compression level for images, e.g., 9 for gzip -9.'
                     ' Range is 1-9, 9 being most compressed but most CPU'
                     ' intensive on dom0.'),

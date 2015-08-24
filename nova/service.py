@@ -67,6 +67,8 @@ service_opts = [
                help='The IP address on which the EC2 API will listen.'),
     cfg.IntOpt('ec2_listen_port',
                default=8773,
+               min=1,
+               max=65535,
                help='The port on which the EC2 API will listen.'),
     cfg.IntOpt('ec2_workers',
                help='Number of workers for EC2 API service. The default will '
@@ -76,6 +78,8 @@ service_opts = [
                help='The IP address on which the OpenStack API will listen.'),
     cfg.IntOpt('osapi_compute_listen_port',
                default=8774,
+               min=1,
+               max=65535,
                help='The port on which the OpenStack API will listen.'),
     cfg.IntOpt('osapi_compute_workers',
                help='Number of workers for OpenStack API service. The default '
@@ -88,6 +92,8 @@ service_opts = [
                help='The IP address on which the metadata API will listen.'),
     cfg.IntOpt('metadata_listen_port',
                default=8775,
+               min=1,
+               max=65535,
                help='The port on which the metadata API will listen.'),
     cfg.IntOpt('metadata_workers',
                help='Number of workers for metadata service. The default will '

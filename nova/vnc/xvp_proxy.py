@@ -38,6 +38,8 @@ LOG = logging.getLogger(__name__)
 xvp_proxy_opts = [
     cfg.IntOpt('xvpvncproxy_port',
                default=6081,
+               min=1,
+               max=65535,
                help='Port that the XCP VNC proxy should bind to'),
     cfg.StrOpt('xvpvncproxy_host',
                default='0.0.0.0',
