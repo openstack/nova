@@ -91,15 +91,18 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
             parts.append('all_extensions')
         # Note(gmann): if _use_common_server_api_samples is set to True
         # then common server sample files present in 'servers' directory
-        # will be used.
+        # will be used. As of now it is being used for server POST request
+        # to avoid duplicate copy of server req and resp sample files.
+        # Example - ServersSampleBase's _post_server method.
         elif cls._use_common_server_api_samples:
             parts.append('servers')
-        elif cls.sample_dir:
-            parts.append(cls.sample_dir)
-        elif cls.extension_name:
-            parts.append(cls.extension_name)
-        if api_version:
-            parts.append('v' + api_version)
+        else:
+            if cls.sample_dir:
+                parts.append(cls.sample_dir)
+            elif cls.extension_name:
+                parts.append(cls.extension_name)
+            if api_version:
+                parts.append('v' + api_version)
         parts.append(name + "." + cls.ctype + suffix)
         return os.path.join(*parts)
 
