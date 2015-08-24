@@ -4428,12 +4428,12 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_domain_setup_lxc(self, instance, image_meta,
                                  block_device_info, disk_info):
         inst_path = libvirt_utils.get_instance_path(instance)
-        block_device_mapping = driver.block_device_info_get_mapping(
-                                                  block_device_info)
         disk_info = disk_info or {}
         disk_mapping = disk_info.get('mapping', {})
 
         if self._is_booted_from_volume(instance, disk_mapping):
+            block_device_mapping = driver.block_device_info_get_mapping(
+                                                            block_device_info)
             root_disk = block_device.get_root_bdm(block_device_mapping)
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type, image_meta, root_disk)
