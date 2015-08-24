@@ -254,15 +254,15 @@ class XenAPIBasedAgent(object):
     def update_if_needed(self, version):
         agent_build = self._get_expected_build()
         if version and agent_build and \
-                is_upgrade_required(version, agent_build['version']):
-            LOG.debug('Updating agent to %s', agent_build['version'],
+                is_upgrade_required(version, agent_build.version):
+            LOG.debug('Updating agent to %s', agent_build.version,
                       instance=self.instance)
             self._perform_update(agent_build)
         else:
             LOG.debug('Skipping agent update.', instance=self.instance)
 
     def _perform_update(self, agent_build):
-        args = {'url': agent_build['url'], 'md5sum': agent_build['md5hash']}
+        args = {'url': agent_build.url, 'md5sum': agent_build.md5hash}
         try:
             self._call_agent('agentupdate', args)
         except exception.AgentError as exc:
