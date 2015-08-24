@@ -356,6 +356,11 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(5, info.cpu_time_ns)
         self.assertEqual(6, info.id)
 
+    def test_get_power_state(self):
+        self.domain.info.return_value = (1, 2, 3, 4, 5)
+        power = self.guest.get_power_state(self.host)
+        self.assertEqual(1, power)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
