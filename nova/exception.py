@@ -1786,6 +1786,11 @@ class NumaTopologyNotFound(NotFound):
     msg_fmt = _("Instance %(instance_uuid)s does not specify a NUMA topology")
 
 
+class MigrationContextNotFound(NotFound):
+    msg_fmt = _("Instance %(instance_uuid)s does not specify a migration "
+                "context.")
+
+
 class SocketPortRangeExhaustedException(NovaException):
     msg_fmt = _("Not able to acquire a free port for %(host)s")
 
