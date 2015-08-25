@@ -100,11 +100,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
         self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
 
     def test_create_console(self):
-        # NOTE(rgerganov): set temporary to None to avoid duplicating server
-        # templates in the v2.6 folder
-        ConsolesV26SampleJsonTests.request_api_version = None
         uuid = self._post_server()
-        ConsolesV26SampleJsonTests.request_api_version = '2.6'
 
         body = {'protocol': 'vnc', 'type': 'novnc'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
@@ -127,11 +123,7 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
         self.flags(enabled=True, group='mks')
 
     def test_create_mks_console(self):
-        # NOTE(rgerganov): set temporary to None to avoid duplicating server
-        # templates in the v2.8 folder
-        ConsolesV28SampleJsonTests.request_api_version = None
         uuid = self._post_server()
-        ConsolesV28SampleJsonTests.request_api_version = '2.8'
 
         body = {'protocol': 'mks', 'type': 'webmks'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
