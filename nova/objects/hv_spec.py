@@ -19,10 +19,8 @@ from nova.objects import fields
 from nova import utils
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class HVSpec(base.NovaObject,
-             base.NovaObjectDictCompat):
+class HVSpec(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added 'vz' hypervisor
     VERSION = '1.1'
