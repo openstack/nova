@@ -165,33 +165,6 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('limit-get-resp', subs, response, 200)
 
 
-class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
-                      "used_limits.Used_limits")
-
-    def test_get_used_limits(self):
-        # Get api sample to used limits.
-        response = self._do_get('limits')
-        subs = self._get_regexes()
-        self._verify_response('usedlimits-get-resp', subs, response, 200)
-
-
-class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extends_name = ("nova.api.openstack.compute.legacy_v2.contrib.used_limits."
-                    "Used_limits")
-    extension_name = (
-        "nova.api.openstack.compute.legacy_v2.contrib.used_limits_for_admin."
-        "Used_limits_for_admin")
-
-    def test_get_used_limits_for_admin(self):
-        tenant_id = 'openstack'
-        response = self._do_get('limits?tenant_id=%s' % tenant_id)
-        subs = self._get_regexes()
-        return self._verify_response('usedlimitsforadmin-get-resp', subs,
-                                     response, 200)
-
-
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.legacy_v2.contrib"
                       ".extended_ips.Extended_ips")
@@ -244,10 +217,3 @@ class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
     sample_dir = None
     extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
                       "server_group_quotas.Server_group_quotas")
-
-
-class ServerGroupQuotas_UsedLimitsSamplesJsonTest(UsedLimitsSamplesJsonTest):
-    extension_name = ("nova.api.openstack.compute.legacy_v2.contrib."
-               "server_group_quotas.Server_group_quotas")
-    extends_name = ("nova.api.openstack.compute.legacy_v2.contrib.used_limits."
-                    "Used_limits")

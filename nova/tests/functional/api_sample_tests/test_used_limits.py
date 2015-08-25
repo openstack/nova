@@ -13,8 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 
 from nova.tests.functional.api_sample_tests import api_sample_base
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
@@ -22,11 +27,37 @@ class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-used-limits"
     extra_extensions_to_load = ["limits"]
 
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def setUp(self):
+        super(UsedLimitsSamplesJsonTest, self).setUp()
+        # NOTE(park): We have to separate the template files between V2
+        # and V2.1 as the response are different.
+        self.template = 'usedlimits-get-resp'
+        if(self._test == "v2"):
+            self.template = 'v2-usedlimits-get-resp'
+
+    def _get_flags(self):
+        f = super(UsedLimitsSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append("nova.api.openstack.compute."
+                      "legacy_v2.contrib.server_group_quotas."
+                      "Server_group_quotas")
+        f['osapi_compute_extension'].append("nova.api.openstack.compute."
+                      "legacy_v2.contrib.used_limits.Used_limits")
+        f['osapi_compute_extension'].append("nova.api.openstack.compute."
+                      "legacy_v2.contrib.used_limits_for_admin."
+                      "Used_limits_for_admin")
+        return f
+
     def test_get_used_limits(self):
         # Get api sample to used limits.
         response = self._do_get('limits')
         subs = self._get_regexes()
-        self._verify_response('usedlimits-get-resp', subs, response, 200)
+        self._verify_response(self.template, subs, response, 200)
 
     def test_get_used_limits_for_admin(self):
         # TODO(sdague): if we split the admin tests out the whole
@@ -34,4 +65,4 @@ class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         tenant_id = 'openstack'
         response = self._do_get('limits?tenant_id=%s' % tenant_id)
         subs = self._get_regexes()
-        self._verify_response('usedlimits-get-resp', subs, response, 200)
+        self._verify_response(self.template, subs, response, 200)
