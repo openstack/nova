@@ -4593,11 +4593,19 @@ class ComputeManager(manager.Manager):
                 LOG.debug("Updating volume usage cache with totals",
                           instance=instance)
                 rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
-                self.conductor_api.vol_usage_update(context, volume_id,
-                                                    rd_req, rd_bytes,
-                                                    wr_req, wr_bytes,
-                                                    instance,
-                                                    update_totals=True)
+                vol_usage = objects.VolumeUsage(context)
+                vol_usage.volume_id = volume_id
+                vol_usage.instance_uuid = instance.uuid
+                vol_usage.project_id = instance.project_id
+                vol_usage.user_id = instance.user_id
+                vol_usage.availability_zone = instance.availability_zone
+                vol_usage.curr_reads = rd_req
+                vol_usage.curr_read_bytes = rd_bytes
+                vol_usage.curr_writes = wr_req
+                vol_usage.curr_write_bytes = wr_bytes
+                vol_usage.save(update_totals=True)
+                self.notifier.info(context, 'volume.usage',
+                                   compute_utils.usage_volume_info(vol_usage))
 
         self._driver_detach_volume(context, instance, bdm)
         connector = self.driver.get_volume_connector(instance)
@@ -5747,12 +5755,19 @@ class ComputeManager(manager.Manager):
         for usage in vol_usages:
             # Allow switching of greenthreads between queries.
             greenthread.sleep(0)
-            self.conductor_api.vol_usage_update(context, usage['volume'],
-                                                usage['rd_req'],
-                                                usage['rd_bytes'],
-                                                usage['wr_req'],
-                                                usage['wr_bytes'],
-                                                usage['instance'])
+            vol_usage = objects.VolumeUsage(context)
+            vol_usage.volume_id = usage['volume']
+            vol_usage.instance_uuid = usage['instance'].uuid
+            vol_usage.project_id = usage['instance'].project_id
+            vol_usage.user_id = usage['instance'].user_id
+            vol_usage.availability_zone = usage['instance'].availability_zone
+            vol_usage.curr_reads = usage['rd_req']
+            vol_usage.curr_read_bytes = usage['rd_bytes']
+            vol_usage.curr_writes = usage['wr_req']
+            vol_usage.curr_write_bytes = usage['wr_bytes']
+            vol_usage.save()
+            self.notifier.info(context, 'volume.usage',
+                               compute_utils.usage_volume_info(vol_usage))
 
     @periodic_task.periodic_task(spacing=CONF.volume_usage_poll_interval)
     def _poll_volume_usage(self, context, start_time=None):

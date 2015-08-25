@@ -58,6 +58,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import fake_utils
+from nova.tests.unit.objects import test_volume_usage
 from nova import utils
 
 
@@ -159,8 +160,9 @@ class _BaseTestCase(object):
                             fake_inst['project_id'],
                             fake_inst['user_id'],
                             fake_inst['availability_zone'],
-                            False).AndReturn('fake-usage')
-        compute_utils.usage_volume_info('fake-usage').AndReturn('fake-info')
+                            False).AndReturn(test_volume_usage.fake_vol_usage)
+        compute_utils.usage_volume_info(
+            mox.IsA(objects.VolumeUsage)).AndReturn('fake-info')
 
         self.mox.ReplayAll()
 
