@@ -1716,42 +1716,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('vmdk')
 
-        adapter_type = constants.DEFAULT_ADAPTER_TYPE
-        disk_type = constants.DEFAULT_DISK_TYPE
-        vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64,
-                                     'fake-device')
-        with contextlib.nested(
-            mock.patch.object(vm_util, 'get_vm_ref',
-                              return_value=mock.sentinel.vm_ref),
-            mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_ref',
-                              return_value=mock.sentinel.volume_ref),
-            mock.patch.object(volumeops.VMwareVolumeOps,
-                              '_get_vmdk_backed_disk_device',
-                              return_value=mock.sentinel.disk_device),
-            mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info),
-            mock.patch.object(volumeops.VMwareVolumeOps,
-                              '_consolidate_vmdk_volume'),
-            mock.patch.object(volumeops.VMwareVolumeOps,
-                              'detach_disk_from_vm')
-        ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
-              get_vmdk_info, consolidate_vmdk_volume, detach_disk_from_vm):
+        with mock.patch.object(volumeops.VMwareVolumeOps,
+                               'detach_volume') as detach_volume:
             self.conn.detach_volume(connection_info, self.instance,
                                     '/dev/vdc', encryption=None)
-
-            get_vm_ref.assert_called_once_with(self.conn._session,
-                                               self.instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
-            get_vmdk_backed_disk_device.assert_called_once_with(
-                mock.sentinel.vm_ref, connection_info['data'])
-            self.assertTrue(get_vmdk_info.called)
-            consolidate_vmdk_volume.assert_called_once_with(self.instance,
-                mock.sentinel.vm_ref, mock.sentinel.disk_device,
-                mock.sentinel.volume_ref, adapter_type=adapter_type,
-                disk_type=disk_type)
-            detach_disk_from_vm.assert_called_once_with(mock.sentinel.vm_ref,
-                self.instance, mock.sentinel.disk_device)
+            detach_volume.assert_called_once_with(connection_info,
+                                                  self.instance)
 
     def test_volume_attach_iscsi(self):
         self._create_vm()
