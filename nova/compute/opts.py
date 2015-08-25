@@ -33,6 +33,7 @@ def list_opts():
              nova.compute.manager.timeout_opts,
              nova.compute.monitors.compute_monitors_opts,
              nova.compute.resource_tracker.resource_tracker_opts,
+             nova.compute.resource_tracker.allocation_ratio_opts,
              nova.compute.rpcapi.rpcapi_opts,
          )),
         ('ephemeral_storage_encryption',

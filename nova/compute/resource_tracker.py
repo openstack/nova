@@ -53,8 +53,25 @@ resource_tracker_opts = [
                 help='The names of the extra resources to track.'),
 ]
 
+allocation_ratio_opts = [
+    cfg.FloatOpt('cpu_allocation_ratio',
+        default=16.0,
+        help='Virtual CPU to physical CPU allocation ratio which affects '
+             'all CPU filters. This configuration specifies a global ratio '
+             'for CoreFilter. For AggregateCoreFilter, it will fall back to '
+             'this configuration value if no per-aggregate setting found.'),
+    cfg.FloatOpt('ram_allocation_ratio',
+        default=1.5,
+        help='Virtual ram to physical ram allocation ratio which affects '
+             'all ram filters. This configuration specifies a global ratio '
+             'for RamFilter. For AggregateRamFilter, it will fall back to '
+             'this configuration value if no per-aggregate setting found.'),
+]
+
+
 CONF = cfg.CONF
 CONF.register_opts(resource_tracker_opts)
+CONF.register_opts(allocation_ratio_opts)
 
 LOG = logging.getLogger(__name__)
 COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
