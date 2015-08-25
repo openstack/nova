@@ -1170,6 +1170,7 @@ object_data = {
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
     'VirtualInterface': '1.0-19921e38cba320f355d56ecbf8f29587',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
+    'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
 }
 
 
