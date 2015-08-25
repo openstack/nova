@@ -83,7 +83,8 @@ class ServerExternalEventsController(wsgi.Controller):
                 except exception.InstanceNotFound:
                     LOG.debug('Dropping event %(name)s:%(tag)s for unknown '
                               'instance %(instance_uuid)s',
-                              dict(event))
+                              {'name': event.name, 'tag': event.tag,
+                               'instance_uuid': event.instance_uuid})
                     _event['status'] = 'failed'
                     _event['code'] = 404
                     result = 207
@@ -97,7 +98,8 @@ class ServerExternalEventsController(wsgi.Controller):
                     accepted_instances.add(instance)
                     LOG.info(_LI('Creating event %(name)s:%(tag)s for '
                                  'instance %(instance_uuid)s'),
-                              dict(event))
+                              {'name': event.name, 'tag': event.tag,
+                               'instance_uuid': event.instance_uuid})
                     # NOTE: as the event is processed asynchronously verify
                     # whether 202 is a more suitable response code than 200
                     _event['status'] = 'completed'
