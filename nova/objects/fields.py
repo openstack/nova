@@ -174,8 +174,10 @@ class DiskBus(Enum):
     USB = "usb"
     VIRTIO = "virtio"
     XEN = "xen"
+    LXC = "lxc"
+    UML = "uml"
 
-    ALL = (FDC, IDE, SATA, SCSI, USB, VIRTIO, XEN)
+    ALL = (FDC, IDE, SATA, SCSI, USB, VIRTIO, XEN, LXC, UML)
 
     def __init__(self):
         super(DiskBus, self).__init__(

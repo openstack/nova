@@ -22,7 +22,8 @@ from nova.objects import fields
 @base.NovaObjectRegistry.register
 class RequestSpec(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: ImageMeta version 1.6
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -49,7 +50,7 @@ class RequestSpec(base.NovaObject):
     }
 
     obj_relationships = {
-        'image': [('1.0', '1.5')],
+        'image': [('1.0', '1.5'), ('1.1', '1.6')],
         'numa_topology': [('1.0', '1.2')],
         'flavor': [('1.0', '1.1')],
         'pci_requests': [('1.0', '1.1')],
