@@ -26,7 +26,7 @@ from nova.cells import utils as cells_utils
 from nova.compute import flavors
 from nova import db
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -47,7 +47,7 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
                                         'new_flavor', 'ec2_ids']
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
-                          'flavor', 'vcpu_model']
+                          'flavor', 'vcpu_model', 'migration_context']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -79,6 +79,9 @@ def _expected_cols(expected_attrs):
     return simple_cols + complex_cols
 
 
+_NO_DATA_SENTINEL = object()
+
+
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
 class Instance(base.NovaPersistentObject, base.NovaObject,
@@ -108,7 +111,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.20: Added ec2_ids
     # Version 1.21: TagList 1.1
     # Version 1.22: InstanceNUMATopology 1.2
-    VERSION = '1.22'
+    # Version 1.23: Added migration_context
+    VERSION = '1.23'
 
     fields = {
         'id': fields.IntegerField(),
@@ -206,6 +210,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'new_flavor': fields.ObjectField('Flavor', nullable=True),
         'vcpu_model': fields.ObjectField('VirtCPUModel', nullable=True),
         'ec2_ids': fields.ObjectField('EC2Ids'),
+        'migration_context': fields.ObjectField('MigrationContext',
+                                                nullable=True)
         }
 
     obj_extra_fields = ['name']
@@ -223,6 +229,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'new_flavor': [('1.18', '1.1')],
         'vcpu_model': [('1.19', '1.0')],
         'ec2_ids': [('1.20', '1.0')],
+        'migration_context': [('1.23', '1.0')],
     }
 
     def __init__(self, *args, **kwargs):
@@ -384,6 +391,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 instance.vcpu_model = None
         if 'ec2_ids' in expected_attrs:
             instance._load_ec2_ids()
+        if 'migration_context' in expected_attrs:
+            if have_extra:
+                instance._load_migration_context(
+                    db_inst['extra'].get('migration_context'))
+            else:
+                instance.migration_context = None
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
                 instance.info_cache = None
@@ -603,6 +616,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _save_ec2_ids(self, context):
         # NOTE(hanlind): Read-only so no need to save this.
         pass
+
+    def _save_migration_context(self, context):
+        if self.migration_context:
+            self.migration_context.instance_uuid = self.uuid
+            with self.migration_context.obj_alternate_context(context):
+                self.migration_context._save()
+        else:
+            objects.MigrationContext._destroy(context, self.uuid)
 
     @base.remotable
     def save(self, expected_vm_state=None,
@@ -848,6 +869,42 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_ec2_ids(self):
         self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
 
+    def _load_migration_context(self, db_context=_NO_DATA_SENTINEL):
+        if db_context is _NO_DATA_SENTINEL:
+            try:
+                self.migration_context = (
+                    objects.MigrationContext.get_by_instance_uuid(
+                        self._context, self.uuid))
+            except exception.MigrationContextNotFound:
+                self.migration_context = None
+        elif db_context is None:
+            self.migration_context = None
+        else:
+            self.migration_context = objects.MigrationContext.obj_from_db_obj(
+                db_context)
+
+    def apply_migration_context(self):
+        if self.migration_context:
+            self.numa_topology = self.migration_context.new_numa_topology
+        else:
+            LOG.warn(_LW("Trying to apply a migration context that does not "
+                         "seem to be set for this instance"),
+                         instance=self)
+
+    def revert_migration_context(self):
+        if self.migration_context:
+            self.numa_topology = self.migration_context.old_numa_topology
+        else:
+            LOG.warn(_LW("Trying to revert a migration context that does not "
+                         "seem to be set for this instance"),
+                         instance=self)
+
+    @base.remotable
+    def drop_migration_context(self):
+        if self.migration_context:
+            objects.MigrationContext._destroy(self._context, self.uuid)
+            self.migration_context = None
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -876,6 +933,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_vcpu_model()
         elif attrname == 'ec2_ids':
             self._load_ec2_ids()
+        elif attrname == 'migration_context':
+            self._load_migration_context()
         elif 'flavor' in attrname:
             self._load_flavor()
         else:
@@ -1024,7 +1083,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
     # Version 1.20: Instance <= version 1.22
     # Version 1.21: New method get_by_grantee_security_group_ids()
-    VERSION = '1.21'
+    # Version 1.22: Instance <= version 1.23
+    VERSION = '1.22'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1037,7 +1097,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                     ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
                     ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
                     ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
-                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22')],
+                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22'),
+                    ('1.22', '1.23')],
     }
 
     @base.remotable_classmethod

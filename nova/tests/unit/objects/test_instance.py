@@ -40,6 +40,7 @@ from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_instance_pci_requests
+from nova.tests.unit.objects import test_migration_context as test_mig_ctxt
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
 from nova.tests.unit.objects import test_vcpu_model
@@ -132,9 +133,11 @@ class _TestInstanceObject(object):
         exp_cols.remove('pci_requests')
         exp_cols.remove('vcpu_model')
         exp_cols.remove('ec2_ids')
+        exp_cols.remove('migration_context')
         exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
-                         'extra.flavor', 'extra.vcpu_model'])
+                         'extra.flavor', 'extra.vcpu_model',
+                         'extra.migration_context'])
 
         fake_topology = (test_instance_numa_topology.
                          fake_db_topology['numa_topology'])
@@ -145,12 +148,15 @@ class _TestInstanceObject(object):
              'old': None, 'new': None})
         fake_vcpu_model = jsonutils.dumps(
             test_vcpu_model.fake_vcpumodel.obj_to_primitive())
+        fake_mig_context = jsonutils.dumps(
+            test_mig_ctxt.fake_migration_context_obj.obj_to_primitive())
         fake_instance = dict(self.fake_instance,
                              extra={
                                  'numa_topology': fake_topology,
                                  'pci_requests': fake_requests,
                                  'flavor': fake_flavor,
                                  'vcpu_model': fake_vcpu_model,
+                                 'migration_context': fake_mig_context,
                                  })
         db.instance_get_by_uuid(
             self.context, 'uuid',
@@ -501,6 +507,28 @@ class _TestInstanceObject(object):
         inst.save()
         mock_update.assert_called_once_with(
             self.context, inst.uuid, {'vcpu_model': None})
+
+    @mock.patch('nova.db.instance_extra_update_by_uuid')
+    def test_save_migration_context_model(self, mock_update):
+        inst = fake_instance.fake_instance_obj(self.context)
+        inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
+            self.context)
+        inst.save()
+        self.assertTrue(mock_update.called)
+        self.assertEqual(mock_update.call_count, 1)
+        actual_args = mock_update.call_args
+        self.assertEqual(self.context, actual_args[0][0])
+        self.assertEqual(inst.uuid, actual_args[0][1])
+        self.assertEqual(list(actual_args[0][2].keys()), ['migration_context'])
+        self.assertIsInstance(
+            objects.MigrationContext.obj_from_db_obj(
+                actual_args[0][2]['migration_context']),
+            objects.MigrationContext)
+        mock_update.reset_mock()
+        inst.migration_context = None
+        inst.save()
+        mock_update.assert_called_once_with(
+            self.context, inst.uuid, {'migration_context': None})
 
     def test_save_flavor_skips_unchanged_flavors(self):
         inst = objects.Instance(context=self.context,
@@ -1159,6 +1187,61 @@ class _TestInstanceObject(object):
             mock_load.side_effect = fake_load
             inst.ec2_ids
             mock_load.assert_called_once_with()
+
+    def test_load_migration_context(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(
+                objects.MigrationContext, 'get_by_instance_uuid',
+                return_value=test_mig_ctxt.fake_migration_context_obj
+        ) as mock_get:
+            inst.migration_context
+            mock_get.assert_called_once_with(self.context, inst.uuid)
+
+    def test_load_migration_context_no_context(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(
+                objects.MigrationContext, 'get_by_instance_uuid',
+            side_effect=exception.MigrationContextNotFound(
+                instance_uuid=inst.uuid)
+        ) as mock_get:
+            mig_ctxt = inst.migration_context
+            mock_get.assert_called_once_with(self.context, inst.uuid)
+            self.assertIsNone(mig_ctxt)
+
+    def test_load_migration_context_no_data(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(
+                objects.MigrationContext, 'get_by_instance_uuid') as mock_get:
+            loaded_ctxt = inst._load_migration_context(db_context=None)
+            self.assertFalse(mock_get.called)
+            self.assertIsNone(loaded_ctxt)
+
+    def test_apply_revert_migration_context(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid', numa_topology=None)
+        inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
+            self.context)
+        inst.apply_migration_context()
+        self.assertIsInstance(inst.numa_topology, objects.InstanceNUMATopology)
+        inst.revert_migration_context()
+        self.assertIsNone(inst.numa_topology)
+
+    def test_drop_migration_context(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
+            self.context)
+        inst.migration_context.instance_uuid = inst.uuid
+        inst.migration_context.id = 7
+        with mock.patch(
+                'nova.db.instance_extra_update_by_uuid') as update_extra:
+            inst.drop_migration_context()
+            self.assertIsNone(inst.migration_context)
+            update_extra.assert_called_once_with(self.context, inst.uuid,
+                                                 {"migration_context": None})
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_load_generic(self, mock_get):
