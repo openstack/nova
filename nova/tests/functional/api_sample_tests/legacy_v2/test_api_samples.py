@@ -140,6 +140,11 @@ class VersionsSampleJsonTest(ApiSampleTestBaseV2):
         subs = self._get_regexes()
         self._verify_response('versions-get-resp', subs, response, 200)
 
+    def test_versions_get_v2(self):
+        response = self._do_get('/v2', strip_version=True)
+        subs = self._get_regexes()
+        self._verify_response('v2-version-get-resp', subs, response, 200)
+
 
 class ServersSampleBase(ApiSampleTestBaseV2):
     def _post_server(self, use_common_server_api_samples=True):

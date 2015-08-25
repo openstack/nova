@@ -344,6 +344,51 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
 
         self.assertEqual(output, expected)
 
+    def _test_view_builder_osapi_compute_link_prefix(self,
+                                                     href=None):
+        base_url = "http://example.org/v2.1/"
+        if href is None:
+            href = base_url
+
+        version_data = {
+            "id": "v2.1",
+            "status": "CURRENT",
+            "version": "2.8",
+            "min_version": "2.1",
+            "updated": "2013-07-23T11:33:21Z",
+            "links": [
+                {
+                    "rel": "describedby",
+                    "type": "text/html",
+                    "href": EXP_LINKS['v2.1']['html'],
+                }
+            ],
+            "media-types": [
+                {
+                    "base": "application/json",
+                    "type": ("application/vnd.openstack."
+                             "compute+json;version=2.1")
+                }
+            ],
+        }
+        expected_data = copy.deepcopy(version_data)
+        expected = {'version': expected_data}
+        expected['version']['links'].insert(0, {
+                        "rel": "self",
+                        "href": href,
+                    })
+        builder = views.versions.ViewBuilder(base_url)
+        output = builder.build_version(version_data)
+        self.assertEqual(expected, output)
+
+    def test_view_builder_with_osapi_compute_link_prefix(self):
+        self.flags(osapi_compute_link_prefix='http://zoo.com:42')
+        href = "http://zoo.com:42/v2.1/"
+        self._test_view_builder_osapi_compute_link_prefix(href)
+
+    def test_view_builder_without_osapi_compute_link_prefix(self):
+        self._test_view_builder_osapi_compute_link_prefix()
+
     def test_generate_href(self):
         base_url = "http://example.org/app/"
 
