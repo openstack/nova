@@ -143,7 +143,7 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
             raise exception.AgentError(method=method)
 
     if ret['returncode'] not in success_codes:
-        LOG.error(_LE('The agent call to %(method)s returned an '
+        LOG.error(_LE('The agent call to %(method)s returned '
                       'an error: %(ret)r. args=%(args)r'),
                   {'method': method, 'ret': ret, 'args': args},
                   instance=instance)
