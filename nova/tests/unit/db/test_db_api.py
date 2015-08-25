@@ -1619,15 +1619,6 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_security_group_rule_get_by_security_group_no_joins(self):
         self._test_security_group_rule_get_by_security_group(columns=[])
 
-    def test_security_group_rule_get_by_security_group_grantee(self):
-        security_group = self._create_security_group({})
-        security_group_rule = self._create_security_group_rule(
-            {'grantee_group': security_group})
-        rules = db.security_group_rule_get_by_security_group_grantee(self.ctxt,
-                                                          security_group['id'])
-        self.assertEqual(len(rules), 1)
-        self.assertEqual(rules[0]['id'], security_group_rule['id'])
-
     def test_security_group_rule_destroy(self):
         self._create_security_group({'name': 'fake1'})
         self._create_security_group({'name': 'fake2'})
