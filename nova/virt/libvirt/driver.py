@@ -4422,20 +4422,18 @@ class LibvirtDriver(driver.ComputeDriver):
             self._connect_volume(root_disk['connection_info'], disk_info)
             disk_path = root_disk['connection_info']['data']['device_path']
 
-            # Get the system metadata from the instance
-            use_cow = instance.system_metadata['image_disk_format'] == 'qcow2'
+            # NOTE(apmelton) - Even though the instance is being booted from a
+            # cinder volume, it is still presented as a local block device.
+            # LocalBlockImage is used here to indicate that the instance's
+            # disk is backed by a local block device.
+            image_model = imgmodel.LocalBlockImage(disk_path)
         else:
             image = self.image_backend.image(instance, 'disk')
-            disk_path = image.path
-            use_cow = CONF.use_cow_images
+            image_model = image.get_model(self._conn)
 
         container_dir = os.path.join(inst_path, 'rootfs')
         fileutils.ensure_tree(container_dir)
-        fmt = imgmodel.FORMAT_RAW
-        if use_cow:
-            fmt = imgmodel.FORMAT_QCOW2
-        image = imgmodel.LocalFileImage(disk_path, fmt)
-        rootfs_dev = disk.setup_container(image,
+        rootfs_dev = disk.setup_container(image_model,
                                           container_dir=container_dir)
 
         try:
