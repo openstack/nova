@@ -41,6 +41,14 @@ class TestCoreFilter(test.NoDBTestCase):
                 {'vcpus_total': 4, 'vcpus_used': 8})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
+    def test_core_filter_single_instance_overcommit_fails(self):
+        self.filt_cls = core_filter.CoreFilter()
+        filter_properties = {'instance_type': {'vcpus': 2}}
+        self.flags(cpu_allocation_ratio=2)
+        host = fakes.FakeHostState('host1', 'node1',
+                {'vcpus_total': 1, 'vcpus_used': 0})
+        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_core_filter_value_error(self, agg_mock):
         self.filt_cls = core_filter.AggregateCoreFilter()

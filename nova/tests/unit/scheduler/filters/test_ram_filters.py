@@ -45,6 +45,13 @@ class TestRamFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
 
+    def test_ram_filter_oversubscribe_singe_instance_fails(self):
+        self.flags(ram_allocation_ratio=2.0)
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        host = fakes.FakeHostState('host1', 'node1',
+                {'free_ram_mb': 512, 'total_usable_ram_mb': 512})
+        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+
 
 @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
 class TestAggregateRamFilter(test.NoDBTestCase):
