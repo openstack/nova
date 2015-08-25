@@ -791,6 +791,9 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_299(self, engine, data):
         self.assertColumnExists(engine, 'services', 'version')
 
+    def _check_300(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'migration_context')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

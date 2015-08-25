@@ -2721,7 +2721,8 @@ def instance_extra_get_by_instance_uuid(context, instance_uuid,
     query = model_query(context, models.InstanceExtra).\
         filter_by(instance_uuid=instance_uuid)
     if columns is None:
-        columns = ['numa_topology', 'pci_requests', 'flavor', 'vcpu_model']
+        columns = ['numa_topology', 'pci_requests', 'flavor', 'vcpu_model',
+                   'migration_context']
     for column in columns:
         query = query.options(undefer(column))
     instance_extra = query.first()
