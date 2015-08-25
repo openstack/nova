@@ -117,7 +117,9 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
 
 class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-remote-consoles"
-    _api_version = 'v3'
+    request_api_version = '2.8'
+    scenarios = [('v2_8', {})]
+    _api_version = 'v2'
 
     def setUp(self):
         super(ConsolesV28SampleJsonTests, self).setUp()
