@@ -24,32 +24,32 @@ class TestRamFilter(test.NoDBTestCase):
         self.filt_cls = ram_filter.RamFilter()
 
     def test_ram_filter_fails_on_memory(self):
-        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024})
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'ram_allocation_ratio': 1.0})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_ram_filter_passes(self):
-        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024})
+                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024,
+                 'ram_allocation_ratio': 1.0})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_ram_filter_oversubscribe(self):
-        self.flags(ram_allocation_ratio=2.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048})
+                {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048,
+                 'ram_allocation_ratio': 2.0})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
 
     def test_ram_filter_oversubscribe_singe_instance_fails(self):
-        self.flags(ram_allocation_ratio=2.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 512, 'total_usable_ram_mb': 512})
+                {'free_ram_mb': 512, 'total_usable_ram_mb': 512,
+                 'ram_allocation_ratio': 2.0})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
 
@@ -61,21 +61,21 @@ class TestAggregateRamFilter(test.NoDBTestCase):
         self.filt_cls = ram_filter.AggregateRamFilter()
 
     def test_aggregate_ram_filter_value_error(self, agg_mock):
-        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024})
+                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024,
+                 'ram_allocation_ratio': 1.0})
         agg_mock.return_value = set(['XXX'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertEqual(1024 * 1.0, host.limits['memory_mb'])
 
     def test_aggregate_ram_filter_default_value(self, agg_mock):
-        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024})
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'ram_allocation_ratio': 1.0})
         # False: fallback to default flag w/o aggregates
         agg_mock.return_value = set()
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
@@ -85,11 +85,11 @@ class TestAggregateRamFilter(test.NoDBTestCase):
         self.assertEqual(1024 * 2.0, host.limits['memory_mb'])
 
     def test_aggregate_ram_filter_conflict_values(self, agg_mock):
-        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024})
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'ram_allocation_ratio': 1.0})
         agg_mock.return_value = set(['1.5', '2.0'])
         # use the minimum ratio from aggregates
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))

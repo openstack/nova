@@ -135,6 +135,8 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             "updated_at": timeutils.utcnow(),
             "created_at": timeutils.utcnow(),
         }
+        host_state.cpu_allocation_ratio = 16.0
+        host_state.ram_allocation_ratio = 1.5
         return host_state
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',

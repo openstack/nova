@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.i18n import _LW
@@ -23,12 +22,6 @@ from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
-
-CONF = cfg.CONF
-
-# TODO(sbauza): Remove the import once all compute nodes are reporting the
-# allocation ratio to the HostState
-CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
 
 
 class BaseCoreFilter(filters.BaseHostFilter):
@@ -84,7 +77,7 @@ class CoreFilter(BaseCoreFilter):
     """CoreFilter filters based on CPU core utilization."""
 
     def _get_cpu_allocation_ratio(self, host_state, filter_properties):
-        return CONF.cpu_allocation_ratio
+        return host_state.cpu_allocation_ratio
 
 
 class AggregateCoreFilter(BaseCoreFilter):
@@ -99,9 +92,9 @@ class AggregateCoreFilter(BaseCoreFilter):
             'cpu_allocation_ratio')
         try:
             ratio = utils.validate_num_values(
-                aggregate_vals, CONF.cpu_allocation_ratio, cast_to=float)
+                aggregate_vals, host_state.cpu_allocation_ratio, cast_to=float)
         except ValueError as e:
             LOG.warning(_LW("Could not decode cpu_allocation_ratio: '%s'"), e)
-            ratio = CONF.cpu_allocation_ratio
+            ratio = host_state.cpu_allocation_ratio
 
         return ratio

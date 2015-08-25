@@ -10,23 +10,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova import objects
 from nova.scheduler import filters
 from nova.virt import hardware
-
-CONF = cfg.CONF
-CONF.import_opt('cpu_allocation_ratio', 'nova.scheduler.filters.core_filter')
-CONF.import_opt('ram_allocation_ratio', 'nova.scheduler.filters.ram_filter')
 
 
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
     def host_passes(self, host_state, filter_properties):
-        ram_ratio = CONF.ram_allocation_ratio
-        cpu_ratio = CONF.cpu_allocation_ratio
+        ram_ratio = host_state.ram_allocation_ratio
+        cpu_ratio = host_state.cpu_allocation_ratio
         request_spec = filter_properties.get('request_spec', {})
         instance = request_spec.get('instance_properties', {})
         requested_topology = hardware.instance_topology_from_instance(instance)

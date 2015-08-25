@@ -184,6 +184,10 @@ class HostState(object):
         # Instances on this host
         self.instances = {}
 
+        # Allocation ratios for this host
+        self.ram_allocation_ratio = None
+        self.cpu_allocation_ratio = None
+
         self.updated = None
         if compute:
             self.update_from_compute_node(compute)
@@ -250,6 +254,10 @@ class HostState(object):
 
         # update metrics
         self.metrics = objects.MonitorMetricList.from_json(compute.metrics)
+
+        # update allocation ratios given by the ComputeNode object
+        self.cpu_allocation_ratio = compute.cpu_allocation_ratio
+        self.ram_allocation_ratio = compute.ram_allocation_ratio
 
     @set_update_time_on_success
     def consume_from_instance(self, instance):

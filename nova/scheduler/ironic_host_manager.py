@@ -81,6 +81,11 @@ class IronicNodeState(host_manager.HostState):
                                         in compute.supported_hv_specs]
         else:
             self.supported_instances = []
+
+        # update allocation ratios given by the ComputeNode object
+        self.cpu_allocation_ratio = compute.cpu_allocation_ratio
+        self.ram_allocation_ratio = compute.ram_allocation_ratio
+
         self.updated = compute.updated_at
 
     @host_manager.set_update_time_on_success

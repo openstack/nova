@@ -40,7 +40,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
-                                    'pci_stats': None})
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 16.0,
+                                    'ram_allocation_ratio': 1.5})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
@@ -83,12 +85,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
-                                    'pci_stats': None})
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 16.0,
+                                    'ram_allocation_ratio': 1.5})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_fail_memory(self):
-        self.flags(ram_allocation_ratio=1)
-
         instance_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]),
                                             memory=1024),
@@ -102,12 +104,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
-                                    'pci_stats': None})
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 16.0,
+                                    'ram_allocation_ratio': 1})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_fail_cpu(self):
-        self.flags(cpu_allocation_ratio=1)
-
         instance_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
                    objects.InstanceNUMACell(id=1, cpuset=set([3, 4, 5]),
@@ -120,13 +122,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
-                                    'pci_stats': None})
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 1,
+                                    'ram_allocation_ratio': 1.5})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_pass_set_limit(self):
-        self.flags(cpu_allocation_ratio=21)
-        self.flags(ram_allocation_ratio=1.3)
-
         instance_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
                    objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
@@ -139,7 +140,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
-                                    'pci_stats': None})
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 21,
+                                    'ram_allocation_ratio': 1.3})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         limits = host.limits['numa_topology']
         self.assertEqual(limits.cpu_allocation_ratio, 21)
