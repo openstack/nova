@@ -64,8 +64,6 @@ class API(object):
                          'report_interval': report_interval,
                          'new_service_down_time': new_service_down_time})
             CONF.set_override('service_down_time', new_service_down_time)
-        LOG.debug('ServiceGroup driver defined as an instance of %s',
-                  str(CONF.servicegroup_driver))
         driver_name = CONF.servicegroup_driver
         try:
             driver_class = _driver_name_class_mapping[driver_name]
