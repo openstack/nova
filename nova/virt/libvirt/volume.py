@@ -1229,8 +1229,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _get_lun_string_for_s390(self, lun):
         target_lun = 0
-        if lun < 256:
-            target_lun = "0x00%02x000000000000" % lun
+        if lun <= 0xffff:
+            target_lun = "0x%04x000000000000" % lun
         elif lun <= 0xffffffff:
             target_lun = "0x%08x00000000" % lun
         return target_lun
