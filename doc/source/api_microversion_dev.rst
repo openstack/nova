@@ -159,6 +159,15 @@ we need a microversion".
   it's implied given keystone authentication can fail with a 403 and API
   validation can fail with a 400 for invalid json request body.
 
+When a microversion is not needed
+---------------------------------
+
+A microversion is not needed in the following situation:
+
+- the response
+
+  - Changing the error message without changing the response code
+    does not require a new microversion.
 
 In Code
 -------
