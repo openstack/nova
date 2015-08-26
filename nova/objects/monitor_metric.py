@@ -17,6 +17,16 @@ from nova.objects import fields
 from nova import utils
 
 
+# NOTE(jwcroppe): Used to determine which fields whose value we need to adjust
+# (read: divide by 100.0) before sending information to the RPC notifier since
+# these values were expected to be within the range [0, 1].
+FIELDS_REQUIRING_CONVERSION = [fields.MonitorMetricType.CPU_USER_PERCENT,
+                               fields.MonitorMetricType.CPU_KERNEL_PERCENT,
+                               fields.MonitorMetricType.CPU_IDLE_PERCENT,
+                               fields.MonitorMetricType.CPU_IOWAIT_PERCENT,
+                               fields.MonitorMetricType.CPU_PERCENT]
+
+
 @base.NovaObjectRegistry.register
 class MonitorMetric(base.NovaObject):
     # Version 1.0: Initial version
@@ -54,7 +64,10 @@ class MonitorMetric(base.NovaObject):
         }
 
         if self.obj_attr_is_set('value'):
-            dict_to_return['value'] = self.value
+            if self.name in FIELDS_REQUIRING_CONVERSION:
+                dict_to_return['value'] = self.value / 100.0
+            else:
+                dict_to_return['value'] = self.value
         elif self.obj_attr_is_set('numa_membw_values'):
             dict_to_return['numa_membw_values'] = self.numa_membw_values
 
