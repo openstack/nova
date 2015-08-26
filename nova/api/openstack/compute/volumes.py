@@ -131,7 +131,7 @@ class VolumeController(wsgi.Controller):
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 403, 404))
     @validation.schema(volumes_schema.create)
     def create(self, req, body):
         """Creates a new volume."""
@@ -171,6 +171,8 @@ class VolumeController(wsgi.Controller):
                 )
         except exception.InvalidInput as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
+        except exception.OverQuota as err:
+            raise exc.HTTPForbidden(explanation=err.format_message())
 
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into

@@ -269,10 +269,10 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertEqual(resp_dict['volume']['availabilityZone'],
                          vol['availability_zone'])
 
-    def test_volume_create_bad(self):
+    def _test_volume_create_bad(self, cinder_exc, api_exc):
         def fake_volume_create(self, context, size, name, description,
                                snapshot, **param):
-            raise exception.InvalidInput(reason="bad request data")
+            raise cinder_exc
 
         self.stubs.Set(cinder.API, "create", fake_volume_create)
 
@@ -283,7 +283,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
         body = {"volume": vol}
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(api_exc,
                           volumes.VolumeController().create, req, body=body)
 
     @mock.patch.object(cinder.API, 'get_snapshot')
@@ -296,6 +296,14 @@ class VolumeApiTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         self.assertRaises(webob.exc.HTTPNotFound,
                           volumes.VolumeController().create, req, body=body)
+
+    def test_volume_create_bad_input(self):
+        self._test_volume_create_bad(exception.InvalidInput(reason='fake'),
+                                     webob.exc.HTTPBadRequest)
+
+    def test_volume_create_bad_quota(self):
+        self._test_volume_create_bad(exception.OverQuota(overs='fake'),
+                                     webob.exc.HTTPForbidden)
 
     def test_volume_index(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
