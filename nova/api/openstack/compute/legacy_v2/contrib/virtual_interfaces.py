@@ -24,7 +24,7 @@ from nova import network
 authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
 
 
-def _translate_vif_summary_view(_context, vif):
+def _translate_vif_summary_view(vif):
     """Maps keys for VIF summary view."""
     d = {}
     d['id'] = vif.uuid
@@ -48,7 +48,7 @@ class ServerVirtualInterfaceController(object):
 
         vifs = self.network_api.get_vifs_by_instance(context, instance)
         limited_list = common.limited(vifs, req)
-        res = [entity_maker(context, vif) for vif in limited_list]
+        res = [entity_maker(vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
     def index(self, req, server_id):
