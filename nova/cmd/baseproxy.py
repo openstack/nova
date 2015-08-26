@@ -22,10 +22,8 @@ import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_reports import guru_meditation_report as gmr
 
 from nova.console import websocketproxy
-from nova import version
 
 
 CONF = cfg.CONF
@@ -52,8 +50,6 @@ def proxy(host, port):
         exit_with_error("Can not find html/js files at %s." % CONF.web)
 
     logging.setup(CONF, "nova")
-
-    gmr.TextGuruMeditation.setup_autorun(version)
 
     # Create and start the NovaWebSockets proxy
     websocketproxy.NovaWebSocketProxy(
