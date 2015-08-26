@@ -550,8 +550,11 @@ class XenAPIDriver(driver.ComputeDriver):
         # NOTE(johngarbutt) Destroying the VM is not appropriate here
         # and in the cases where it might make sense,
         # XenServer has already done it.
-        # TODO(johngarbutt) investigate if any cleanup is required here
-        pass
+        # NOTE(sulo): The only cleanup we do explicitly is to forget
+        # any volume that was attached to the destination during
+        # live migration. XAPI should take care of all other cleanup.
+        self._vmops.rollback_live_migration_at_destination(instance,
+                                                           block_device_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
