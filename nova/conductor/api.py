@@ -69,15 +69,6 @@ class LocalAPI(object):
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
-    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
-                         wr_bytes, instance, last_refreshed=None,
-                         update_totals=False):
-        return self._manager.vol_usage_update(context, vol_id,
-                                              rd_req, rd_bytes,
-                                              wr_req, wr_bytes,
-                                              instance, last_refreshed,
-                                              update_totals)
-
     def compute_node_create(self, context, values):
         return self._manager.compute_node_create(context, values)
 
