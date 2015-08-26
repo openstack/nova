@@ -164,8 +164,21 @@ class RemoteFSTestCase(test.NoDBTestCase):
     @mock.patch('nova.utils.execute')
     def test_remote_copy_file_rsync(self, mock_execute):
         remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
-                                         '/home/favourite', None, None)
-        mock_execute.assert_called_once_with('rsync', '--sparse', '--compress',
+                                         '/home/favourite', None, None,
+                                         compression=True)
+        mock_execute.assert_called_once_with('rsync', '--sparse',
+                                             '1.2.3.4:/home/star_wars',
+                                             '/home/favourite',
+                                             '--compress',
+                                             on_completion=None,
+                                             on_execute=None)
+
+    @mock.patch('nova.utils.execute')
+    def test_remote_copy_file_rsync_without_compression(self, mock_execute):
+        remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
+                                         '/home/favourite', None, None,
+                                         compression=False)
+        mock_execute.assert_called_once_with('rsync', '--sparse',
                                              '1.2.3.4:/home/star_wars',
                                              '/home/favourite',
                                              on_completion=None,
@@ -174,7 +187,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
     @mock.patch('nova.utils.execute')
     def test_remote_copy_file_ssh(self, mock_execute):
         remotefs.SshDriver().copy_file('1.2.3.4:/home/SpaceOdyssey',
-                                                '/home/favourite', None, None)
+                                       '/home/favourite', None, None, True)
         mock_execute.assert_called_once_with('scp',
                                              '1.2.3.4:/home/SpaceOdyssey',
                                              '/home/favourite',

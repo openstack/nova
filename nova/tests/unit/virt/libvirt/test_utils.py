@@ -67,14 +67,14 @@ blah BLAH: bb
         self.flags(remote_filesystem_transport='ssh', group='libvirt')
         libvirt_utils.copy_image('src', 'dest', host='host')
         mock_rem_fs_remove.assert_called_once_with('src', 'host:dest',
-            on_completion=None, on_execute=None)
+            on_completion=None, on_execute=None, compression=True)
 
     @mock.patch('nova.virt.libvirt.volume.remotefs.RsyncDriver.copy_file')
     def test_copy_image_remote_rsync(self, mock_rem_fs_remove):
         self.flags(remote_filesystem_transport='rsync', group='libvirt')
         libvirt_utils.copy_image('src', 'dest', host='host')
         mock_rem_fs_remove.assert_called_once_with('src', 'host:dest',
-            on_completion=None, on_execute=None)
+            on_completion=None, on_execute=None, compression=True)
 
     @mock.patch('os.path.exists', return_value=True)
     def test_disk_type(self, mock_exists):
