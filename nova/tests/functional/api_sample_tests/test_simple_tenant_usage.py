@@ -27,8 +27,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-simple-tenant-usage"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(SimpleTenantUsageSampleJsonTest, self)._get_flags()

@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-remote-consoles"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ConsolesSampleJsonTests, self)._get_flags()
@@ -86,14 +84,12 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
 
 
 class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
-    extra_extensions_to_load = ["os-access-ips"]
     request_api_version = '2.6'
     extension_name = "os-remote-consoles"
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.6 which will run the original tests
     # by appending '(v2_6)' in test_id.
     scenarios = [('v2_6', {})]
-    _api_version = 'v2'
 
     def setUp(self):
         super(ConsolesV26SampleJsonTests, self).setUp()

@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 class ServerExternalEventsSamplesJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
     extension_name = "os-server-external-events"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ServerExternalEventsSamplesJsonTest, self)._get_flags()

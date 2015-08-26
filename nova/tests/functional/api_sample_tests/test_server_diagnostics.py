@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-server-diagnostics"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ServerDiagnosticsSamplesJsonTest, self)._get_flags()

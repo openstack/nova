@@ -31,7 +31,6 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     sample_dir = "keypairs"
     expected_delete_status_code = 202
     expected_post_status_code = 200
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(KeyPairsSampleJsonTest, self)._get_flags()
@@ -117,7 +116,6 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     # so defining scenarios only for v2.2 which will run the original tests
     # by appending '(v2_2)' in test_id.
     scenarios = [('v2_2', {})]
-    _api_version = 'v2'
 
     def test_keypairs_post(self):
         # NOTE(claudiub): overrides the method with the same name in
@@ -177,7 +175,6 @@ class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
     expected_post_status_code = 201
     expected_delete_status_code = 204
     scenarios = [('v2_10', {})]
-    _api_version = 'v2'
 
     def test_keypair_create_for_user(self):
         subs = {

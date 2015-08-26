@@ -25,7 +25,6 @@ CONF.import_opt('osapi_compute_extension',
 class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-quota-sets"
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(QuotaSetsSampleJsonTests, self)._get_flags()

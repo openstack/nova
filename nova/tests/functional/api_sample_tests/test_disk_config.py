@@ -26,7 +26,6 @@ CONF.import_opt('osapi_compute_extension',
 class DiskConfigJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-disk-config'
     extra_extensions_to_load = ["images", "os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(DiskConfigJsonTest, self)._get_flags()

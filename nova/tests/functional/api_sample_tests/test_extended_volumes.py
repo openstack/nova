@@ -29,11 +29,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-extended-volumes"
-    extra_extensions_to_load = ["os-access-ips"]
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ExtendedVolumesSampleJsonTests, self)._get_flags()

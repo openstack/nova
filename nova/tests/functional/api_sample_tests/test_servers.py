@@ -24,6 +24,7 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
+    extra_extensions_to_load = ["os-access-ips"]
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -44,14 +45,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
-            # TODO(gmann) This is temporary hack to let other tests
-            # inherited from ServersSampleBase run successfully.
-            # Once all inherited tests are merged, below if condition
-            # code needs to be removed.
-            if ((self._api_version == 'v3') and
-                use_common_server_api_samples):
-                self.__class__._use_common_server_api_samples = False
-                self.__class__.sample_dir = 'servers_v21'
             response = self._do_post('servers', 'server-post-req', subs)
             subs = self._get_regexes()
             status = self._verify_response('server-post-resp', subs,
@@ -64,8 +57,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
 
 class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
     request_api_version = None
 
     def _get_flags(self):
@@ -128,8 +119,6 @@ class ServersSampleJson29Test(ServersSampleJsonTest):
 
 class ServerSortKeysJsonTests(ServersSampleBase):
     sample_dir = 'servers-sort'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ServerSortKeysJsonTests, self)._get_flags()
@@ -153,8 +142,6 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 
 class ServersActionsJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _test_server_action(self, uuid, action, req_tpl,
                             subs=None, resp_tpl=None, code=202):
@@ -232,8 +219,6 @@ class ServersActionsAllJsonTest(ServersActionsJsonTest):
 
 class ServerStartStopJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(ServerStartStopJsonTest, self)._get_flags()

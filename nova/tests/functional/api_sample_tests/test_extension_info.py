@@ -32,10 +32,6 @@ def fake_soft_extension_authorizer(extension_name, core=False):
 
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     all_extensions = True
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_list_extensions(self, soft_auth):
@@ -51,6 +47,10 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     sample_dir = "extension-info"
     extra_extensions_to_load = ["os-create-backup"]
+    # NOTE (gmann): run this tests for v21. and v2.1 compatible mode only
+    # as there is no 'extensions/*' API in v2.
+    scenarios = [('v2_1', {'_test': 'v2.1'}),
+                 ('v2_1_compatible', {'_test': 'v2.1_compatible'})]
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_get_extensions(self, soft_auth):

@@ -510,4 +510,4 @@ class ServersTest(ServersTestBase):
 
 
 class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
-    _api_version = 'v3'
+    _api_version = 'v2.1'

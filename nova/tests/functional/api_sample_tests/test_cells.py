@@ -30,10 +30,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-cells"
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(CellsSampleJsonTest, self)._get_flags()

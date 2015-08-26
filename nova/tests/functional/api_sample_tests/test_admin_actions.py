@@ -24,11 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-admin-actions"
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
-    extra_extensions_to_load = ["os-access-ips"]
 
     def _get_flags(self):
         f = super(AdminActionsSamplesJsonTest, self)._get_flags()

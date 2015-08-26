@@ -19,7 +19,6 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     sample_dir = 'versions'
     scenarios = [('', {'_test': ''})]
-    _api_version = 'v2'
 
     def test_versions_get(self):
         response = self._do_get('', strip_version=True)

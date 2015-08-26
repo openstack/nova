@@ -25,8 +25,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-preserve-ephemeral-rebuild'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(PreserveEphemeralOnRebuildJsonTest, self)._get_flags()

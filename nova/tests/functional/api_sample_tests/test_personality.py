@@ -18,8 +18,6 @@ from nova.tests.unit.image import fake
 
 class PersonalitySampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-personality'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def test_servers_post(self):
         self._post_server(use_common_server_api_samples=False)

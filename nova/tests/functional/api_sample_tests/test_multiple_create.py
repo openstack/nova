@@ -25,7 +25,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class MultipleCreateJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-multiple-create"
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(MultipleCreateJsonTest, self)._get_flags()
