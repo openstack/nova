@@ -767,7 +767,8 @@ class _TestObject(object):
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
             primitive = copy.deepcopy(orig_primitive)
             obj._obj_make_obj_compatible(primitive, '1.7', 'rel_object')
-            self.assertFalse(mock_compat.called)
+            mock_compat.assert_called_once_with(
+                primitive['rel_object']['nova_object.data'], '1.2')
 
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
             primitive = copy.deepcopy(orig_primitive)
@@ -806,13 +807,6 @@ class _TestObject(object):
         with mock.patch.object(obj, '_obj_make_obj_compatible') as mock_compat:
             obj.obj_make_compatible({'rel_object': 'foo'}, '1.10')
             self.assertFalse(mock_compat.called)
-
-    def test_obj_make_compatible_complains_about_missing_rules(self):
-        subobj = MyOwnedObject(baz=1)
-        obj = MyObj(foo=123, rel_object=subobj)
-        obj.obj_relationships = {}
-        self.assertRaises(exception.ObjectActionError,
-                          obj.obj_make_compatible, {}, '1.0')
 
     def test_obj_make_compatible_doesnt_skip_falsey_sub_objects(self):
         @base.NovaObjectRegistry.register_if(False)

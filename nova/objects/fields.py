@@ -55,6 +55,8 @@ SetOfIntegersField = fields.SetOfIntegersField
 ListOfSetsOfIntegersField = fields.ListOfSetsOfIntegersField
 ListOfDictOfNullableStringsField = fields.ListOfDictOfNullableStringsField
 DictProxyField = fields.DictProxyField
+ObjectField = fields.ObjectField
+ListOfObjectsField = fields.ListOfObjectsField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -67,6 +69,7 @@ FieldType = fields.FieldType
 Set = fields.Set
 Dict = fields.Dict
 List = fields.List
+Object = fields.Object
 
 
 class Architecture(Enum):
@@ -495,54 +498,6 @@ class IPV6Network(IPNetwork):
             raise ValueError(six.text_type(e))
 
 
-# FIXME(danms): Remove this after we convert to oslo.versionedobjects' registry
-class Object(FieldType):
-    def __init__(self, obj_name, **kwargs):
-        self._obj_name = obj_name
-        super(Object, self).__init__(**kwargs)
-
-    def coerce(self, obj, attr, value):
-        try:
-            obj_name = value.obj_name()
-        except AttributeError:
-            obj_name = ""
-
-        if obj_name != self._obj_name:
-            raise ValueError(_('An object of type %(type)s is required '
-                               'in field %(attr)s') %
-                             {'type': self._obj_name, 'attr': attr})
-        return value
-
-    @staticmethod
-    def to_primitive(obj, attr, value):
-        return value.obj_to_primitive()
-
-    @staticmethod
-    def from_primitive(obj, attr, value):
-        # FIXME(danms): Avoid circular import from base.py
-        from nova.objects import base as obj_base
-        # NOTE (ndipanov): If they already got hydrated by the serializer, just
-        # pass them back unchanged
-        if isinstance(value, obj_base.NovaObject):
-            return value
-        return obj_base.NovaObject.obj_from_primitive(value, obj._context)
-
-    def describe(self):
-        return "Object<%s>" % self._obj_name
-
-    def stringify(self, value):
-        if 'uuid' in value.fields:
-            ident = '(%s)' % (value.obj_attr_is_set('uuid') and value.uuid or
-                              'UNKNOWN')
-        elif 'id' in value.fields:
-            ident = '(%s)' % (value.obj_attr_is_set('id') and value.id or
-                              'UNKNOWN')
-        else:
-            ident = ''
-
-        return '%s%s' % (self._obj_name, ident)
-
-
 class NetworkModel(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
@@ -763,17 +718,3 @@ class NonNegativeFloatField(AutoTypedField):
 
 class NonNegativeIntegerField(AutoTypedField):
     AUTO_TYPE = NonNegativeInteger()
-
-
-# FIXME(danms): Remove this after we convert to oslo.versionedobjects' registry
-class ObjectField(AutoTypedField):
-    def __init__(self, objtype, **kwargs):
-        self.AUTO_TYPE = Object(objtype)
-        super(ObjectField, self).__init__(**kwargs)
-
-
-# FIXME(danms): Remove this after we convert to oslo.versionedobjects' registry
-class ListOfObjectsField(AutoTypedField):
-    def __init__(self, objtype, **kwargs):
-        self.AUTO_TYPE = List(Object(objtype))
-        super(ListOfObjectsField, self).__init__(**kwargs)
