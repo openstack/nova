@@ -75,6 +75,10 @@ class LocalAPI(object):
     def object_backport(self, context, objinst, target_version):
         return self._manager.object_backport(context, objinst, target_version)
 
+    def object_backport_versions(self, context, objinst, object_versions):
+        return self._manager.object_backport_versions(context, objinst,
+                                                      object_versions)
+
 
 class LocalComputeTaskAPI(object):
     def __init__(self):

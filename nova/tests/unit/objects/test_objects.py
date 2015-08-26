@@ -25,6 +25,7 @@ import fixtures
 import mock
 from oslo_log import log
 from oslo_utils import timeutils
+from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
 import six
@@ -934,7 +935,7 @@ class TestObjectSerializer(_BaseTestCase):
                                        my_version='1.6'):
         ser = base.NovaObjectSerializer()
         ser._conductor = mock.Mock()
-        ser._conductor.object_backport.return_value = 'backported'
+        ser._conductor.object_backport_versions.return_value = 'backported'
 
         class MyTestObj(MyObj):
             VERSION = my_version
@@ -946,12 +947,12 @@ class TestObjectSerializer(_BaseTestCase):
         primitive = obj.obj_to_primitive()
         result = ser.deserialize_entity(self.context, primitive)
         if backported_to is None:
-            self.assertFalse(ser._conductor.object_backport.called)
+            self.assertFalse(ser._conductor.object_backport_versions.called)
         else:
             self.assertEqual('backported', result)
-            ser._conductor.object_backport.assert_called_with(self.context,
-                                                              primitive,
-                                                              backported_to)
+            versions = ovo_base.obj_tree_get_versions('MyTestObj')
+            ser._conductor.object_backport_versions.assert_called_with(
+                self.context, primitive, versions)
 
     def test_deserialize_entity_newer_version_backports(self):
         self._test_deserialize_entity_newer('1.25', '1.6')
@@ -983,13 +984,26 @@ class TestObjectSerializer(_BaseTestCase):
         # .0 of the object.
         self.assertEqual('1.6', obj.VERSION)
 
-    def test_nested_backport(self):
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_object_tree_backport(self, mock_get_versions):
+        # Test the full client backport path all the way from the serializer
+        # to the conductor and back.
+        self.start_service('conductor',
+                           manager='nova.conductor.manager.ConductorManager')
+
+        # NOTE(danms): Actually register a complex set of objects,
+        # two versions of the same parent object which contain a
+        # child sub object.
+        @base.NovaObjectRegistry.register
+        class Child(base.NovaObject):
+            VERSION = '1.10'
+
         @base.NovaObjectRegistry.register
         class Parent(base.NovaObject):
             VERSION = '1.0'
 
             fields = {
-                'child': fields.ObjectField('MyObj'),
+                'child': fields.ObjectField('Child'),
             }
 
         @base.NovaObjectRegistry.register  # noqa
@@ -997,21 +1011,50 @@ class TestObjectSerializer(_BaseTestCase):
             VERSION = '1.1'
 
             fields = {
-                'child': fields.ObjectField('MyObj'),
+                'child': fields.ObjectField('Child'),
             }
 
-        child = MyObj(foo=1)
+        # NOTE(danms): Since we're on the same node as conductor,
+        # return a fake version manifest so that we confirm that it
+        # actually honors what the client asked for and not just what
+        # it sees in the local machine state.
+        mock_get_versions.return_value = {
+            'Parent': '1.0',
+            'Child': '1.5',
+        }
+        call_context = {}
+        real_ofp = base.NovaObject.obj_from_primitive
+
+        def fake_obj_from_primitive(*a, **k):
+            # NOTE(danms): We need the first call to this to report an
+            # incompatible object version, but subsequent calls must
+            # succeed. Since we're testing the backport path all the
+            # way through conductor and RPC, we can't fully break this
+            # method, we just need it to fail once to trigger the
+            # backport.
+            if 'run' in call_context:
+                return real_ofp(*a, **k)
+            else:
+                call_context['run'] = True
+                raise ovo_exc.IncompatibleObjectVersion('foo')
+
+        child = Child()
         parent = Parent(child=child)
         prim = parent.obj_to_primitive()
-        child_prim = prim['nova_object.data']['child']
-        child_prim['nova_object.version'] = '1.10'
         ser = base.NovaObjectSerializer()
-        with mock.patch.object(ser.conductor, 'object_backport') as backport:
-            ser.deserialize_entity(self.context, prim)
-            # NOTE(danms): This should be the version of the parent object,
-            # not the child. If wrong, this will be '1.6', which is the max
-            # child version in our registry.
-            backport.assert_called_once_with(self.context, prim, '1.1')
+
+        with mock.patch('nova.objects.base.NovaObject.'
+                        'obj_from_primitive') as mock_ofp:
+            mock_ofp.side_effect = fake_obj_from_primitive
+            result = ser.deserialize_entity(self.context, prim)
+
+            # Our newest version (and what we passed back) of Parent
+            # is 1.1, make sure that the manifest version is honored
+            self.assertEqual('1.0', result.VERSION)
+
+            # Our newest version (and what we passed back) of Child
+            # is 1.10, make sure that the manifest version is honored
+            self.assertEqual('1.5', result.child.VERSION)
 
     def test_object_serialization(self):
         ser = base.NovaObjectSerializer()

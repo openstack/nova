@@ -183,6 +183,7 @@ class ConductorAPI(object):
     * Remove security_groups_trigger_members_refresh()
     * Remove vol_usage_update()
 
+    * 2.2 - Add object_backport_versions()
     """
 
     VERSION_ALIASES = {
@@ -236,6 +237,11 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'object_backport', objinst=objinst,
                           target_version=target_version)
+
+    def object_backport_versions(self, context, objinst, object_versions):
+        cctxt = self.client.prepare(version='2.2')
+        return cctxt.call(context, 'object_backport_versions', objinst=objinst,
+                          object_versions=object_versions)
 
 
 class ComputeTaskAPI(object):
