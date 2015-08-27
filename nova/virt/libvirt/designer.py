@@ -158,7 +158,7 @@ def set_vif_bandwidth_config(conf, inst_type):
                 setattr(conf, scope[1], value)
 
 
-def set_vif_colo_config(conf, colo_nic_name, colo_failover=None):
-    conf.colo_nic_name = colo_nic_name
+def set_vif_colo_config(conf, colo_forward, colo_failover=None):
+    conf.colo_forward = colo_forward
     if colo_failover:
         conf.colo_failover = colo_failover

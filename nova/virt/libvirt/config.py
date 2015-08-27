@@ -1092,7 +1092,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vif_outbound_burst = None
         self.vif_outbound_average = None
         self.vlan = None
-        self.colo_nic_name = None
+        self.colo_forward = None
         self.colo_failover = None
 
     def format_dom(self):
@@ -1174,13 +1174,15 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 bandwidth.append(vif_outbound)
             dev.append(bandwidth)
 
-        if self.colo_nic_name is not None:
-            dev.append(etree.Element("colo_nic_name",
-                                     bridge=self.colo_nic_name))
+        if self.colo_forward is not None:
+            if self.net_type == "bridge":
+                dev.append(etree.Element("colo_forward",
+                                         bridge=self.colo_forward))
 
         if self.colo_failover is not None:
-            dev.append(etree.Element("colo_failover",
-                                     bridge=self.colo_failover))
+            if self.net_type == "bridge":
+                dev.append(etree.Element("colo_failover",
+                                         bridge=self.colo_failover))
 
         return dev
 

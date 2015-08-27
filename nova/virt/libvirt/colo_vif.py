@@ -61,8 +61,8 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
         return (("cqvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("cqvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
-    def get_colo_nic_name(self, vif):
-        return vif['network'].get('colo_nic_name', None)
+    def get_colo_forward(self, vif):
+        return vif['network'].get('colo_forward', None)
 
     def get_colo_failover(self, vif):
         return vif['network'].get('colo_failover', None)
@@ -75,7 +75,7 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
                                                                    inst_type,
                                                                    virt_type)
 
-        designer.set_vif_colo_config(conf, self.get_colo_nic_name(vif),
+        designer.set_vif_colo_config(conf, self.get_colo_forward(vif),
                                      self.get_colo_failover(vif))
 
         return conf
@@ -86,18 +86,18 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
 
     def get_config_ovs_hybrid(self, instance, vif, image_meta,
                               inst_type, virt_type):
-        newvif = copy.deepcopy(vif)
-        newvif['network']['bridge'] = self.get_br_name(vif['id'])
+        _vif = copy.deepcopy(vif)
+        _vif['network']['bridge'] = self.get_br_name(vif['id'])
 
         if utils.ft_enabled(instance):
-            colo_nic_name, _ = self.get_colo_veth_pair_names(vif['id'])
-            newvif['network']['colo_nic_name'] = colo_nic_name
+            colo_forward, _ = self.get_colo_veth_pair_names(vif['id'])
+            _vif['network']['colo_forward'] = colo_forward
 
             if utils.ft_secondary(instance):
-                newvif['network']['colo_failover'] = vif['network']['bridge']
-                newvif['network']['bridge'] = self.get_colo_br_name(vif['id'])
+                _vif['network']['colo_failover'] = _vif['network']['bridge']
+                _vif['network']['bridge'] = self.get_colo_br_name(vif['id'])
 
-        return self.get_config_bridge(instance, newvif, image_meta,
+        return self.get_config_bridge(instance, _vif, image_meta,
                                       inst_type, virt_type)
 
     def get_config_ivs_hybrid(self, instance, vif, image_meta, inst_type,
