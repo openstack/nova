@@ -227,10 +227,8 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_b = FilterB()
         all_filters = [filter_a, filter_b]
         hosts = ["Host0", "Host1", "Host2"]
-        fake_res_id = "reservation"
         fake_uuid = "uuid"
         filt_props = {"request_spec": {"instance_properties": {
-                      "reservation_id": fake_res_id,
                       "uuid": fake_uuid}}}
         with mock.patch.object(LOG, "info") as mock_log:
             result = self.filter_handler.get_filtered_objects(
@@ -240,8 +238,7 @@ class FiltersTestCase(test.NoDBTestCase):
             exp_output = ("['FilterA: (start: 3, end: 2)', "
                           "'FilterB: (start: 2, end: 0)']")
             cargs = mock_log.call_args[0][0]
-            self.assertIn("with reservation ID '%s'" % fake_res_id, cargs)
-            self.assertIn("and instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
             self.assertIn(exp_output, cargs)
 
     def test_get_filtered_objects_debug_log_none_returned(self):
@@ -261,10 +258,8 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_b = FilterB()
         all_filters = [filter_a, filter_b]
         hosts = ["Host0", "Host1", "Host2"]
-        fake_res_id = "reservation"
         fake_uuid = "uuid"
         filt_props = {"request_spec": {"instance_properties": {
-                      "reservation_id": fake_res_id,
                       "uuid": fake_uuid}}}
         with mock.patch.object(LOG, "debug") as mock_log:
             result = self.filter_handler.get_filtered_objects(
@@ -274,6 +269,5 @@ class FiltersTestCase(test.NoDBTestCase):
             exp_output = ("[('FilterA', [('Host1', ''), ('Host2', '')]), " +
                           "('FilterB', None)]")
             cargs = mock_log.call_args[0][0]
-            self.assertIn("with reservation ID '%s'" % fake_res_id, cargs)
-            self.assertIn("and instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
             self.assertIn(exp_output, cargs)
