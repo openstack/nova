@@ -29,6 +29,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import utils
 
 
@@ -576,3 +577,48 @@ class LinkPrefixTest(test.NoDBTestCase):
                 "http://new.prefix.com:20455/new_extra_prefix")
         self.assertEqual("http://new.prefix.com:20455/new_extra_prefix/v1",
                          result)
+
+
+class ViewBuilderLinkTest(test.NoDBTestCase):
+    project_id = "fake"
+    api_version = "2.1"
+
+    def setUp(self):
+        super(ViewBuilderLinkTest, self).setUp()
+        self.request = self.req("/%s" % self.project_id)
+        self.vb = common.ViewBuilder()
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(url,
+                use_admin_context=use_admin_context, version=self.api_version)
+
+    def test_get_project_id(self):
+        proj_id = self.vb._get_project_id(self.request)
+        self.assertEqual(self.project_id, proj_id)
+
+    def test_get_next_link(self):
+        identifier = "identifier"
+        collection = "collection"
+        next_link = self.vb._get_next_link(self.request, identifier,
+                                           collection)
+        expected = "/".join((self.request.url,
+                             "%s?marker=%s" % (collection, identifier)))
+        self.assertEqual(expected, next_link)
+
+    def test_get_href_link(self):
+        identifier = "identifier"
+        collection = "collection"
+        href_link = self.vb._get_href_link(self.request, identifier,
+                                           collection)
+        expected = "/".join((self.request.url, collection, identifier))
+        self.assertEqual(expected, href_link)
+
+    def test_get_bookmark_link(self):
+        identifier = "identifier"
+        collection = "collection"
+        bookmark_link = self.vb._get_bookmark_link(self.request, identifier,
+                                                   collection)
+        bmk_url = common.remove_trailing_version_from_href(
+                self.request.application_url)
+        expected = "/".join((bmk_url, self.project_id, collection, identifier))
+        self.assertEqual(expected, bookmark_link)
