@@ -27,10 +27,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class FixedIpTest(test_servers.ServersSampleBase):
     extension_name = "os-fixed-ips"
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     request_api_version = None
 
@@ -126,7 +122,6 @@ class FixedIpV24Test(FixedIpTest):
     # so defining scenarios only for v2.4 which will run the original tests
     # by appending '(v2_4)' in test_id.
     scenarios = [('v2_4', {})]
-    _api_version = 'v2'
 
     def test_get_fixed_ip(self):
         self._test_get_fixed_ip(reserved=False)

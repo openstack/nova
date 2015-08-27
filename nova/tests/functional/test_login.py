@@ -33,4 +33,4 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
 
 
 class LoginTestV3(client.TestOpenStackClientV3Mixin, LoginTest):
-    _api_version = 'v3'
+    _api_version = 'v2.1'

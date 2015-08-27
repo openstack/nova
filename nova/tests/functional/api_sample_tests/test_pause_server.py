@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class PauseServerSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-pause-server"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(PauseServerSamplesJsonTest, self)._get_flags()

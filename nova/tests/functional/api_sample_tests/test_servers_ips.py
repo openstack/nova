@@ -25,11 +25,6 @@ CONF.import_opt('osapi_compute_extension',
 class ServersIpsJsonTest(test_servers.ServersSampleBase):
     extends_name = 'core_only'
     sample_dir = 'server-ips'
-    extra_extensions_to_load = ["os-access-ips"]
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def test_get(self):
         # Test getting a server's IP information.

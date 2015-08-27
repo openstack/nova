@@ -36,10 +36,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-volumes"
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     create_subs = {
             'snapshot_name': 'snap-001',
@@ -105,10 +101,6 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
 
 class VolumesSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-volumes"
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(VolumesSampleJsonTest, self)._get_flags()
@@ -253,12 +245,7 @@ class VolumeAttachmentsSampleBase(test_servers.ServersSampleBase):
 
 
 class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
-    extra_extensions_to_load = ["os-access-ips"]
     extension_name = "os-volumes"
-    # TODO(park): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(VolumeAttachmentsSampleJsonTest, self)._get_flags()

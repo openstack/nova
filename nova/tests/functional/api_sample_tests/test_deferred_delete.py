@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-deferred-delete"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(DeferredDeleteSampleJsonTests, self)._get_flags()

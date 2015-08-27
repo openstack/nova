@@ -27,10 +27,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-floating-ips"
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(FloatingIpsTest, self)._get_flags()

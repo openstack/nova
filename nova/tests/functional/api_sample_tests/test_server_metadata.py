@@ -25,8 +25,6 @@ CONF.import_opt('osapi_compute_extension',
 class ServersMetadataJsonTest(test_servers.ServersSampleBase):
     extends_name = 'core_only'
     sample_dir = 'server-metadata'
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _create_and_set(self, subs):
         uuid = self._post_server()

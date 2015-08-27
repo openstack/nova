@@ -30,10 +30,6 @@ CONF.import_opt('osapi_compute_extension',
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-hypervisors"
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(HypervisorsSampleJsonTests, self)._get_flags()
@@ -121,10 +117,6 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
 class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-hypervisors"
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(HypervisorsCellsSampleJsonTests, self)._get_flags()

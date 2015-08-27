@@ -24,8 +24,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-virtual-interfaces"
-    extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(VirtualInterfacesJsonTest, self)._get_flags()

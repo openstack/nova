@@ -26,10 +26,6 @@ CONF.import_opt('osapi_compute_extension',
 class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = 'images'
     extra_extensions_to_load = ["image-metadata"]
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
 
     def test_images_list(self):
         # Get api sample of images get list request.

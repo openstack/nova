@@ -26,7 +26,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class UserDataJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-user-data"
-    _api_version = 'v2'
 
     def _get_flags(self):
         f = super(UserDataJsonTest, self)._get_flags()

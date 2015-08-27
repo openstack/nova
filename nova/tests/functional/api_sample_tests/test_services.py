@@ -30,11 +30,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-services"
     request_api_version = None
 
-    # TODO(gmann): Overriding '_api_version' till all functional tests
-    # are merged between v2 and v2.1. After that base class variable
-    # itself can be changed to 'v2'
-    _api_version = 'v2'
-
     def _get_flags(self):
         f = super(ServicesJsonTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
@@ -114,7 +109,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
 class ServicesV211JsonTest(ServicesJsonTest):
     request_api_version = '2.11'
-    _api_version = 'v2'
     # NOTE(gryf): There is no need to run those tests on v2 API. Only
     # scenarios for v2_9 will be run.
     scenarios = [('v2_11', {})]
