@@ -6238,7 +6238,9 @@ class ComputeTestCase(BaseTestCase):
         val = self.compute._running_deleted_instances(admin_context)
         self.assertEqual(val, [instance])
 
-    def _heal_instance_info_cache(self, _get_instance_nw_info_raise=False):
+    def _heal_instance_info_cache(self,
+                                  _get_instance_nw_info_raise=False,
+                                  _get_instance_nw_info_raise_cache=False):
         # Update on every call for the test
         self.flags(heal_instance_info_cache_interval=-1)
         ctxt = context.get_admin_context()
@@ -6281,6 +6283,9 @@ class ComputeTestCase(BaseTestCase):
             call_info['get_nw_info'] += 1
             if _get_instance_nw_info_raise:
                 raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            if _get_instance_nw_info_raise_cache:
+                raise exception.InstanceInfoCacheNotFound(
+                                                instance_uuid=instance['uuid'])
 
         self.stubs.Set(db, 'instance_get_all_by_host',
                 fake_instance_get_all_by_host)
@@ -6337,8 +6342,11 @@ class ComputeTestCase(BaseTestCase):
     def test_heal_instance_info_cache(self):
         self._heal_instance_info_cache()
 
-    def test_heal_instance_info_cache_with_exception(self):
+    def test_heal_instance_info_cache_with_instance_exception(self):
         self._heal_instance_info_cache(_get_instance_nw_info_raise=True)
+
+    def test_heal_instance_info_cache_with_info_cache_exception(self):
+        self._heal_instance_info_cache(_get_instance_nw_info_raise_cache=True)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     @mock.patch('nova.compute.api.API.unrescue')
