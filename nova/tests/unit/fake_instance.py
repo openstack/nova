@@ -99,7 +99,9 @@ def fake_db_instance(**updates):
     return db_instance
 
 
-def fake_instance_obj(context, **updates):
+def fake_instance_obj(context, obj_instance_class=None, **updates):
+    if obj_instance_class is None:
+        obj_instance_class = objects.Instance
     expected_attrs = updates.pop('expected_attrs', None)
     flavor = updates.pop('flavor', None)
     if not flavor:
@@ -114,8 +116,8 @@ def fake_instance_obj(context, **updates):
                                 extra_specs={},
                                 projects=[])
         flavor.obj_reset_changes()
-    inst = objects.Instance._from_db_object(context,
-               objects.Instance(), fake_db_instance(**updates),
+    inst = obj_instance_class._from_db_object(context,
+               obj_instance_class(), fake_db_instance(**updates),
                expected_attrs=expected_attrs)
     if flavor:
         inst.flavor = flavor

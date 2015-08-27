@@ -14,6 +14,7 @@
 
 import datetime
 
+import fixtures
 import mock
 from mox3 import mox
 import netaddr
@@ -425,17 +426,6 @@ class _TestInstanceObject(object):
             inst.pci_requests = None
             inst.save()
             self.assertTrue(save_mock.called)
-
-    @mock.patch('nova.db.instance_update_and_get_original')
-    @mock.patch.object(instance._BaseInstance, '_from_db_object')
-    def test_save_skip_scheduled_at(self, mock_fdo, mock_update):
-        mock_update.return_value = None, None
-        inst = objects.Instance(context=self.context, id=123)
-        inst.uuid = 'foo'
-        inst.scheduled_at = None
-        inst.save()
-        self.assertNotIn('scheduled_at',
-                         mock_update.call_args_list[0][0][2])
 
     @mock.patch('nova.db.instance_update_and_get_original')
     @mock.patch.object(instance._BaseInstance, '_from_db_object')
@@ -1049,40 +1039,6 @@ class _TestInstanceObject(object):
                              expected_attrs=['info_cache'])
         self.assertIs(info_cache, inst.info_cache)
 
-    def test_compat_strings(self):
-        unicode_attributes = ['user_id', 'project_id', 'image_ref',
-                              'kernel_id', 'ramdisk_id', 'hostname',
-                              'key_name', 'key_data', 'host', 'node',
-                              'user_data', 'availability_zone',
-                              'display_name', 'display_description',
-                              'launched_on', 'locked_by', 'os_type',
-                              'architecture', 'vm_mode', 'root_device_name',
-                              'default_ephemeral_device',
-                              'default_swap_device', 'config_drive',
-                              'cell_name']
-        inst = objects.Instance()
-        expected = {}
-        for key in unicode_attributes:
-            inst[key] = u'\u2603'
-            expected[key] = b'?'
-        primitive = inst.obj_to_primitive(target_version='1.6')
-        self.assertJsonEqual(expected, primitive['nova_object.data'])
-        self.assertEqual('1.6', primitive['nova_object.version'])
-
-    def test_compat_pci_devices(self):
-        inst = objects.Instance()
-        inst.pci_devices = pci_device.PciDeviceList()
-        primitive = inst.obj_to_primitive(target_version='1.5')
-        self.assertNotIn('pci_devices', primitive)
-
-    def test_compat_info_cache(self):
-        inst = objects.Instance()
-        inst.info_cache = instance_info_cache.InstanceInfoCache()
-        primitive = inst.obj_to_primitive(target_version='1.9')
-        self.assertEqual(
-            '1.4',
-            primitive['nova_object.data']['info_cache']['nova_object.version'])
-
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_with_pci_requests(self, mock_get):
         mock_get.return_value = objects.InstancePCIRequests()
@@ -1286,16 +1242,6 @@ class _TestInstanceObject(object):
             self.context, uuid, expected_attrs=['pci_requests'])
         self.assertTrue(inst.obj_attr_is_set('pci_requests'))
 
-    def test_backport_flavor(self):
-        flavor = flavors.get_default_flavor()
-        inst = objects.Instance(context=self.context, flavor=flavor,
-                                system_metadata={'foo': 'bar'},
-                                new_flavor=None,
-                                old_flavor=None)
-        primitive = inst.obj_to_primitive(target_version='1.17')
-        self.assertIn('instance_type_id',
-                      primitive['nova_object.data']['system_metadata'])
-
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
@@ -1325,7 +1271,95 @@ class TestInstanceObject(test_objects._LocalTest,
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
                                _TestInstanceObject):
-    pass
+    def setUp(self):
+        super(TestRemoteInstanceObject, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch('nova.objects.Instance',
+                                             instance.InstanceV2))
+
+
+class TestInstanceV1RemoteObject(test_objects._RemoteTest,
+                                 _TestInstanceObject):
+    def setUp(self):
+        super(TestInstanceV1RemoteObject, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch('nova.objects.Instance',
+                                             instance.InstanceV1))
+
+    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch.object(instance._BaseInstance, '_from_db_object')
+    def test_save_skip_scheduled_at(self, mock_fdo, mock_update):
+        mock_update.return_value = None, None
+        inst = objects.Instance(context=self.context, id=123)
+        inst.uuid = 'foo'
+        inst.scheduled_at = None
+        inst.save()
+        self.assertNotIn('scheduled_at',
+                         mock_update.call_args_list[0][0][2])
+
+    def test_backport_flavor(self):
+        flavor = flavors.get_default_flavor()
+        inst = objects.Instance(context=self.context, flavor=flavor,
+                                system_metadata={'foo': 'bar'},
+                                new_flavor=None,
+                                old_flavor=None)
+        primitive = inst.obj_to_primitive(target_version='1.17')
+        self.assertIn('instance_type_id',
+                      primitive['nova_object.data']['system_metadata'])
+
+    def test_compat_strings(self):
+        unicode_attributes = ['user_id', 'project_id', 'image_ref',
+                              'kernel_id', 'ramdisk_id', 'hostname',
+                              'key_name', 'key_data', 'host', 'node',
+                              'user_data', 'availability_zone',
+                              'display_name', 'display_description',
+                              'launched_on', 'locked_by', 'os_type',
+                              'architecture', 'vm_mode', 'root_device_name',
+                              'default_ephemeral_device',
+                              'default_swap_device', 'config_drive',
+                              'cell_name']
+        inst = objects.Instance()
+        expected = {}
+        for key in unicode_attributes:
+            inst[key] = u'\u2603'
+            expected[key] = b'?'
+        primitive = inst.obj_to_primitive(target_version='1.6')
+        self.assertJsonEqual(expected, primitive['nova_object.data'])
+        self.assertEqual('1.6', primitive['nova_object.version'])
+
+    def test_compat_pci_devices(self):
+        inst = objects.Instance()
+        inst.pci_devices = pci_device.PciDeviceList()
+        primitive = inst.obj_to_primitive(target_version='1.5')
+        self.assertNotIn('pci_devices', primitive)
+
+    def test_compat_info_cache(self):
+        inst = objects.Instance()
+        inst.info_cache = instance_info_cache.InstanceInfoCache()
+        primitive = inst.obj_to_primitive(target_version='1.9')
+        self.assertEqual(
+            '1.4',
+            primitive['nova_object.data']['info_cache']['nova_object.version'])
+
+    def test_backport_v2_to_v1(self):
+        inst2 = fake_instance.fake_instance_obj(
+            self.context, obj_instance_class=instance.InstanceV2)
+        inst1 = instance.InstanceV1.obj_from_primitive(
+            inst2.obj_to_primitive(target_version=instance.InstanceV1.VERSION))
+        self.assertEqual(instance.InstanceV1.VERSION, inst1.VERSION)
+        self.assertIsInstance(inst1, instance.InstanceV1)
+        self.assertEqual(inst2.uuid, inst1.uuid)
+
+    def test_backport_list_v2_to_v1(self):
+        inst2 = fake_instance.fake_instance_obj(
+            self.context, obj_instance_class=instance.InstanceV2)
+        list2 = instance.InstanceListV2(objects=[inst2])
+        list1 = instance.InstanceListV1.obj_from_primitive(
+            list2.obj_to_primitive(
+                target_version=instance.InstanceListV1.VERSION))
+        self.assertEqual(instance.InstanceListV1.VERSION, list1.VERSION)
+        self.assertEqual(instance.InstanceV1.VERSION, list1[0].VERSION)
+        self.assertIsInstance(list1, instance.InstanceListV1)
+        self.assertIsInstance(list1[0], instance.InstanceV1)
+        self.assertEqual(list2[0].uuid, list1[0].uuid)
 
 
 class _TestInstanceListObject(object):

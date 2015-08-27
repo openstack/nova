@@ -1186,7 +1186,8 @@ object_data = {
     'HVSpec': '1.1-6b4f7c0f688cbd03e24142a44eb9010d',
     'ImageMeta': '1.6-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.6-07a6d9f3576c4927220331584661ce45',
-    'Instance': '1.23-4e68422207667f4abff5fa730a5edc98',
+    'Instance': '2.0-ff56804dce87d81d9a04834d4bd1e3d2',
+    'Instance1': '1.23-4e68422207667f4abff5fa730a5edc98',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
@@ -1197,7 +1198,8 @@ object_data = {
     'InstanceGroup': '1.10-1a0c8c7447dc7ecb9da53849430c4a5f',
     'InstanceGroupList': '1.7-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
-    'InstanceList': '1.22-6c8ba6147cca3082b1e4643f795068bf',
+    'InstanceList': '2.0-6c8ba6147cca3082b1e4643f795068bf',
+    'InstanceList1': '1.22-6c8ba6147cca3082b1e4643f795068bf',
     'InstanceMapping': '1.0-47ef26034dfcbea78427565d9177fe50',
     'InstanceMappingList': '1.0-9e982e3de1613b9ada85e35f69b23d47',
     'InstanceNUMACell': '1.2-535ef30e0de2d6a0d26a71bd58ecafc4',
@@ -1380,7 +1382,7 @@ class TestObjectVersions(test.NoDBTestCase):
         # a 2.0 version while calculating the old-style relationship
         # mapping. Once we drop all the 1.x versions, we can drop this
         # relationship test altogether.
-        new_objects = []
+        new_objects = ['Instance', 'InstanceList']
 
         versions = base.NovaObjectRegistry.obj_classes()[name]
         if len(versions) > 1 and name in new_objects:

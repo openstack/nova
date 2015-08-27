@@ -1043,8 +1043,29 @@ class InstanceV1(_BaseInstance):
                             getattr(self, attrname), ftype)
 
 
+@base.NovaObjectRegistry.register
+class InstanceV2(_BaseInstance):
+    # Version 2.0: Initial version
+    VERSION = '2.0'
+
+    def obj_make_compatible(self, primitive, target_version):
+        if target_version.startswith('1.'):
+            # NOTE(danms): Special case to backport to 1.x. Serialize
+            # ourselves, change the version, deserialize that, and get
+            # that to continue the backport of this primitive to
+            # whatever 1.x version was actually requested.  We can get
+            # away with this because InstanceV2 is structurally a
+            # subset of V1.
+            # FIXME(danms): Remove this when we drop v1.x compatibility
+            my_prim = self.obj_to_primitive()
+            my_prim['nova_object.version'] = InstanceV1.VERSION
+            instv1 = InstanceV1.obj_from_primitive(my_prim)
+            return instv1.obj_make_compatible(primitive, target_version)
+        super(InstanceV2, self).obj_make_compatible(primitive, target_version)
+
+
 # NOTE(danms): For the unit tests...
-Instance = InstanceV1
+Instance = InstanceV2
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
@@ -1270,5 +1291,21 @@ class InstanceListV1(_BaseInstanceList):
     }
 
 
+@base.NovaObjectRegistry.register
+class InstanceListV2(_BaseInstanceList):
+    # Version 2.0: Initial version
+    VERSION = '2.0'
+
+    NOVA_OBJ_INSTANCE_CLS = InstanceV2
+
+    def obj_make_compatible(self, primitive, target_version):
+        if target_version.startswith('1.'):
+            my_prim = self.obj_to_primitive()
+            my_prim['nova_object.version'] = InstanceListV1.VERSION
+            instv1 = InstanceListV1.obj_from_primitive(my_prim)
+            return instv1.obj_make_compatible(primitive, target_version)
+        super(InstanceListV2, self).obj_make_compatible(primitive,
+                                                        target_version)
+
 # NOTE(danms): For the unit tests...
-InstanceList = InstanceListV1
+InstanceList = InstanceListV2
