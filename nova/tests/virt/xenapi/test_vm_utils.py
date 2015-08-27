@@ -277,8 +277,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
                 self.session, 'call_plugin_serialized_with_retry')
         func = self.session.call_plugin_serialized_with_retry(
                 'glance', 'download_vhd', 0, mox.IgnoreArg(),
-                extra_headers={'X-Service-Catalog': '[]',
-                               'X-Auth-Token': 'auth_token',
+                extra_headers={'X-Auth-Token': 'auth_token',
                                'X-Roles': '',
                                'X-Tenant-Id': None,
                                'X-User-Id': None,

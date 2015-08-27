@@ -218,7 +218,6 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-User-Id': 'fake',
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
-                'X-Service-Catalog': '[]',
                 'X-Identity-Status': 'Confirmed'
             },
             'token': 'token'
@@ -238,7 +237,6 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-User-Id': 'fake',
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
-                'X-Service-Catalog': '[]',
                 'X-Identity-Status': 'Confirmed'
             },
             'token': 'token'

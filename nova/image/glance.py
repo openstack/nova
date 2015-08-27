@@ -126,7 +126,6 @@ def generate_identity_headers(context, status='Confirmed'):
         'X-Tenant-Id': getattr(context, 'tenant', None),
         'X-Roles': ','.join(context.roles),
         'X-Identity-Status': status,
-        'X-Service-Catalog': jsonutils.dumps(context.service_catalog),
     }
 
 
