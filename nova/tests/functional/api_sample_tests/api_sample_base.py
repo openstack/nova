@@ -57,13 +57,19 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
                               'osapi_v3')
         expected_middleware = []
         if (not hasattr(self, '_test') or (self._test == 'v2.1')):
-            # NOTE(gmann)For v2.1 API testing, override /v2 endpoint with v2.1
-            self.useFixture(api_paste_fixture.ApiPasteFixture())
+            # NOTE(gmann): we should run v21 tests on /v2.1 but then we need
+            # two sets of sample files as api version (v2 or v2.1) is being
+            # added in response's link/namespace etc
+            # override /v2 in compatibility mode with v2.1
+            self.useFixture(api_paste_fixture.ApiPasteV21Fixture())
             expected_middleware = [compute.APIRouterV21]
         elif self._test == 'v2.1_compatible':
-            self.useFixture(api_paste_fixture.ApiPasteV2CompatibleFixture())
             expected_middleware = [openstack.LegacyV2CompatibleWrapper,
                                    compute.APIRouterV21]
+        elif (self._test == 'v2' and self._api_version == 'v2'):
+            # override /v2 in compatibility mode with v2 legacy
+            self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())
+
         super(ApiSampleTestBaseV3, self).setUp()
         self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)

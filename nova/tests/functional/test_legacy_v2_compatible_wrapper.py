@@ -17,7 +17,6 @@ from nova.api import openstack
 from nova.api.openstack import compute
 from nova.api.openstack import wsgi
 from nova.tests.functional.api import client
-from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import test_servers
 from nova.tests.unit import fake_network
 
@@ -26,7 +25,6 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
     _api_version = 'v2'
 
     def setUp(self):
-        self.useFixture(api_paste_fixture.ApiPasteV2CompatibleFixture())
         super(LegacyV2CompatibleTestBase, self).setUp()
         self._check_api_endpoint('/v2', [compute.APIRouterV21,
                                          openstack.LegacyV2CompatibleWrapper])

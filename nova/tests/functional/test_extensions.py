@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 # Import extensions to pull in osapi_compute_extension CONF option used below.
+from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import integrated_helpers
 
 CONF = cfg.CONF
@@ -25,6 +26,10 @@ LOG = logging.getLogger(__name__)
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
     _api_version = 'v2'
+
+    def setUp(self):
+        self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())
+        super(ExtensionsTest, self).setUp()
 
     def _get_flags(self):
         f = super(ExtensionsTest, self)._get_flags()
