@@ -34,6 +34,7 @@ from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova import rpc
 from nova.scheduler import client as scheduler_client
@@ -162,11 +163,23 @@ class ResourceTracker(object):
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type,
                      image_meta=None, limits=None):
-        """Indicate that resources are needed for a resize operation to this
-        compute host.
+        """Create a claim for a resize or cold-migration move."""
+        return self._move_claim(context, instance, instance_type,
+                                image_meta=image_meta, limits=limits)
+
+    def _move_claim(self, context, instance, new_instance_type, move_type=None,
+                    image_meta=None, limits=None):
+        """Indicate that resources are needed for a move to this host.
+
+        Move can be either a migrate/resize, live-migrate or an
+        evacuate/rebuild operation.
+
         :param context: security context
         :param instance: instance object to reserve resources for
-        :param instance_type: new instance_type being resized to
+        :param new_instance_type: new instance_type being resized to
+        :param image_meta: instance image metadata
+        :param move_type: move type - can be one of 'migration', 'resize',
+                         'live-migration', 'evacuate'
         :param limits: Dict of oversubscription limits for memory, disk,
         and CPUs
         :returns: A Claim ticket representing the reserved resources.  This
@@ -179,21 +192,21 @@ class ResourceTracker(object):
             # compute_driver doesn't support resource tracking, just
             # generate the migration record and continue the resize:
             migration = self._create_migration(context, instance,
-                                               instance_type)
+                                               new_instance_type, move_type)
             return claims.NopClaim(migration=migration)
 
         # get memory overhead required to build this instance:
-        overhead = self.driver.estimate_instance_overhead(instance_type)
+        overhead = self.driver.estimate_instance_overhead(new_instance_type)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance_type.memory_mb,
+                  "MB", {'flavor': new_instance_type.memory_mb,
                           'overhead': overhead['memory_mb']})
 
-        claim = claims.MoveClaim(context, instance, instance_type,
+        claim = claims.MoveClaim(context, instance, new_instance_type,
                                  image_meta, self, self.compute_node,
                                  overhead=overhead, limits=limits)
 
         migration = self._create_migration(context, instance,
-                                           instance_type)
+                                           new_instance_type, move_type)
         claim.migration = migration
 
         # Mark the resources in-use for the resize landing on this
@@ -205,7 +218,8 @@ class ResourceTracker(object):
 
         return claim
 
-    def _create_migration(self, context, instance, instance_type):
+    def _create_migration(self, context, instance, new_instance_type,
+                          move_type=None):
         """Create a migration record for the upcoming resize.  This should
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
@@ -215,14 +229,16 @@ class ResourceTracker(object):
         migration.dest_node = self.nodename
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.old_instance_type_id = instance.flavor.id
-        migration.new_instance_type_id = instance_type.id
+        migration.new_instance_type_id = new_instance_type.id
         migration.status = 'pre-migrating'
         migration.instance_uuid = instance.uuid
         migration.source_compute = instance.host
         migration.source_node = instance.node
-        migration.migration_type = (
-            migration.old_instance_type_id != migration.new_instance_type_id
-            and 'resize' or 'migration')
+        if move_type:
+            migration.migration_type = move_type
+        else:
+            migration.migration_type = migration_obj.determine_migration_type(
+                migration)
         migration.create()
         return migration
 

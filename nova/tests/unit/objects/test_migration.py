@@ -79,11 +79,13 @@ class _TestMigrationObject(object):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_create')
-        db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
-            fake_migration)
+        db.migration_create(ctxt, {'source_compute': 'foo',
+                                   'migration_type': 'resize'}
+                            ).AndReturn(fake_migration)
         self.mox.ReplayAll()
         mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
+        mig.migration_type = 'resize'
         mig.create()
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
 
@@ -91,12 +93,24 @@ class _TestMigrationObject(object):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_create')
-        db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
-            fake_migration)
+        db.migration_create(ctxt, {'source_compute': 'foo',
+                                   'migration_type': 'resize'}
+                            ).AndReturn(fake_migration)
         self.mox.ReplayAll()
         mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
+        mig.migration_type = 'resize'
         mig.create()
+        self.assertRaises(exception.ObjectActionError, mig.create)
+
+    def test_create_fails_migration_type(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'migration_create')
+        self.mox.ReplayAll()
+        mig = migration.Migration(context=ctxt,
+                                  old_instance_type_id=42,
+                                  new_instance_type_id=84)
+        mig.source_compute = 'foo'
         self.assertRaises(exception.ObjectActionError, mig.create)
 
     def test_save(self):
