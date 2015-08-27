@@ -83,37 +83,8 @@ _NO_DATA_SENTINEL = object()
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
-@base.NovaObjectRegistry.register
-class Instance(base.NovaPersistentObject, base.NovaObject,
-               base.NovaObjectDictCompat):
-    # Version 1.0: Initial version
-    # Version 1.1: Added info_cache
-    # Version 1.2: Added security_groups
-    # Version 1.3: Added expected_vm_state and admin_state_reset to
-    #              save()
-    # Version 1.4: Added locked_by and deprecated locked
-    # Version 1.5: Added cleaned
-    # Version 1.6: Added pci_devices
-    # Version 1.7: String attributes updated to support unicode
-    # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
-    # Version 1.9: Make uuid a non-None real string
-    # Version 1.10: Added use_slave to refresh and get_by_uuid
-    # Version 1.11: Update instance from database during destroy
-    # Version 1.12: Added ephemeral_key_uuid
-    # Version 1.13: Added delete_metadata_key()
-    # Version 1.14: Added numa_topology
-    # Version 1.15: PciDeviceList 1.1
-    # Version 1.16: Added pci_requests
-    # Version 1.17: Added tags
-    # Version 1.18: Added flavor, old_flavor, new_flavor, will use
-    #               PciDeviceList version 1.2
-    # Version 1.19: Added vcpu_model
-    # Version 1.20: Added ec2_ids
-    # Version 1.21: TagList 1.1
-    # Version 1.22: InstanceNUMATopology 1.2
-    # Version 1.23: Added migration_context
-    VERSION = '1.23'
-
+class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
+                    base.NovaObjectDictCompat):
     fields = {
         'id': fields.IntegerField(),
 
@@ -148,9 +119,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         'reservation_id': fields.StringField(nullable=True),
 
-        # NOTE(sbiswas7): this field is depcrecated,
-        # will be removed in instance v2.0
-        'scheduled_at': fields.DateTimeField(nullable=True),
         'launched_at': fields.DateTimeField(nullable=True),
         'terminated_at': fields.DateTimeField(nullable=True),
 
@@ -216,24 +184,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     obj_extra_fields = ['name']
 
-    obj_relationships = {
-        'fault': [('1.0', '1.0'), ('1.13', '1.2')],
-        'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
-        'security_groups': [('1.2', '1.0')],
-        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
-        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1'), ('1.22', '1.2')],
-        'pci_requests': [('1.16', '1.1')],
-        'tags': [('1.17', '1.0'), ('1.21', '1.1')],
-        'flavor': [('1.18', '1.1')],
-        'old_flavor': [('1.18', '1.1')],
-        'new_flavor': [('1.18', '1.1')],
-        'vcpu_model': [('1.19', '1.0')],
-        'ec2_ids': [('1.20', '1.0')],
-        'migration_context': [('1.23', '1.0')],
-    }
-
     def __init__(self, *args, **kwargs):
-        super(Instance, self).__init__(*args, **kwargs)
+        super(_BaseInstance, self).__init__(*args, **kwargs)
         self._reset_metadata_tracking()
 
     def _reset_metadata_tracking(self, fields=None):
@@ -245,11 +197,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                    'metadata' in self else {})
 
     def obj_reset_changes(self, fields=None, recursive=False):
-        super(Instance, self).obj_reset_changes(fields, recursive=recursive)
+        super(_BaseInstance, self).obj_reset_changes(fields,
+                                                     recursive=recursive)
         self._reset_metadata_tracking(fields=fields)
 
     def obj_what_changed(self):
-        changes = super(Instance, self).obj_what_changed()
+        changes = super(_BaseInstance, self).obj_what_changed()
         if 'metadata' in self and self.metadata != self._orig_metadata:
             changes.add('metadata')
         if 'system_metadata' in self and (self.system_metadata !=
@@ -259,39 +212,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     @classmethod
     def _obj_from_primitive(cls, context, objver, primitive):
-        self = super(Instance, cls)._obj_from_primitive(context, objver,
-                                                        primitive)
+        self = super(_BaseInstance, cls)._obj_from_primitive(context, objver,
+                                                             primitive)
         self._reset_metadata_tracking()
         return self
-
-    def obj_make_compatible(self, primitive, target_version):
-        super(Instance, self).obj_make_compatible(primitive, target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
-        unicode_attributes = ['user_id', 'project_id', 'image_ref',
-                              'kernel_id', 'ramdisk_id', 'hostname',
-                              'key_name', 'key_data', 'host', 'node',
-                              'user_data', 'availability_zone',
-                              'display_name', 'display_description',
-                              'launched_on', 'locked_by', 'os_type',
-                              'architecture', 'vm_mode', 'root_device_name',
-                              'default_ephemeral_device',
-                              'default_swap_device', 'config_drive',
-                              'cell_name']
-        if target_version < (1, 7):
-            # NOTE(danms): Before 1.7, we couldn't handle unicode in
-            # string fields, so squash it here
-            for field in [x for x in unicode_attributes if x in primitive
-                          and primitive[x] is not None]:
-                primitive[field] = primitive[field].encode('ascii', 'replace')
-        if target_version < (1, 18):
-            if 'system_metadata' in primitive:
-                for ftype in ('', 'old_', 'new_'):
-                    attrname = '%sflavor' % ftype
-                    primitive.pop(attrname, None)
-                    if self[attrname] is not None:
-                        flavors.save_flavor_info(
-                            primitive['system_metadata'],
-                            getattr(self, attrname), ftype)
 
     @property
     def name(self):
@@ -1031,6 +955,96 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             yield
         finally:
             self._normalize_cell_name()
+
+    @classmethod
+    def obj_name(cls):
+        return 'Instance'
+
+
+@base.NovaObjectRegistry.register
+class InstanceV1(_BaseInstance):
+    # Version 1.0: Initial version
+    # Version 1.1: Added info_cache
+    # Version 1.2: Added security_groups
+    # Version 1.3: Added expected_vm_state and admin_state_reset to
+    #              save()
+    # Version 1.4: Added locked_by and deprecated locked
+    # Version 1.5: Added cleaned
+    # Version 1.6: Added pci_devices
+    # Version 1.7: String attributes updated to support unicode
+    # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
+    # Version 1.9: Make uuid a non-None real string
+    # Version 1.10: Added use_slave to refresh and get_by_uuid
+    # Version 1.11: Update instance from database during destroy
+    # Version 1.12: Added ephemeral_key_uuid
+    # Version 1.13: Added delete_metadata_key()
+    # Version 1.14: Added numa_topology
+    # Version 1.15: PciDeviceList 1.1
+    # Version 1.16: Added pci_requests
+    # Version 1.17: Added tags
+    # Version 1.18: Added flavor, old_flavor, new_flavor, will use
+    #               PciDeviceList version 1.2
+    # Version 1.19: Added vcpu_model
+    # Version 1.20: Added ec2_ids
+    # Version 1.21: TagList 1.1
+    # Version 1.22: InstanceNUMATopology 1.2
+    # Version 1.23: Added migration_context
+    VERSION = '1.23'
+
+    fields = {
+        # NOTE(sbiswas7): this field is depcrecated,
+        # will be removed in instance v2.0
+        'scheduled_at': fields.DateTimeField(nullable=True),
+    }
+
+    obj_relationships = {
+        'fault': [('1.0', '1.0'), ('1.13', '1.2')],
+        'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
+        'security_groups': [('1.2', '1.0')],
+        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
+        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1'), ('1.22', '1.2')],
+        'pci_requests': [('1.16', '1.1')],
+        'tags': [('1.17', '1.0'), ('1.21', '1.1')],
+        'flavor': [('1.18', '1.1')],
+        'old_flavor': [('1.18', '1.1')],
+        'new_flavor': [('1.18', '1.1')],
+        'vcpu_model': [('1.19', '1.0')],
+        'ec2_ids': [('1.20', '1.0')],
+        'migration_context': [('1.23', '1.0')],
+    }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(InstanceV1, self).obj_make_compatible(primitive, target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        unicode_attributes = ['user_id', 'project_id', 'image_ref',
+                              'kernel_id', 'ramdisk_id', 'hostname',
+                              'key_name', 'key_data', 'host', 'node',
+                              'user_data', 'availability_zone',
+                              'display_name', 'display_description',
+                              'launched_on', 'locked_by', 'os_type',
+                              'architecture', 'vm_mode', 'root_device_name',
+                              'default_ephemeral_device',
+                              'default_swap_device', 'config_drive',
+                              'cell_name']
+        if target_version < (1, 7):
+            # NOTE(danms): Before 1.7, we couldn't handle unicode in
+            # string fields, so squash it here
+            for field in [x for x in unicode_attributes if x in primitive
+                          and primitive[x] is not None]:
+                primitive[field] = primitive[field].encode('ascii', 'replace')
+        if target_version < (1, 18):
+            if 'system_metadata' in primitive:
+                for ftype in ('', 'old_', 'new_'):
+                    attrname = '%sflavor' % ftype
+                    primitive.pop(attrname, None)
+                    if self[attrname] is not None:
+                        flavors.save_flavor_info(
+                            primitive['system_metadata'],
+                            getattr(self, attrname), ftype)
+
+
+# NOTE(danms): For the unit tests...
+Instance = InstanceV1
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
