@@ -579,6 +579,38 @@ class LinkPrefixTest(test.NoDBTestCase):
                          result)
 
 
+class UrlJoinTest(test.NoDBTestCase):
+    def test_url_join(self):
+        pieces = ["one", "two", "three"]
+        joined = common.url_join(*pieces)
+        self.assertEqual("one/two/three", joined)
+
+    def test_url_join_extra_slashes(self):
+        pieces = ["one/", "/two//", "/three/"]
+        joined = common.url_join(*pieces)
+        self.assertEqual("one/two/three", joined)
+
+    def test_url_join_trailing_slash(self):
+        pieces = ["one", "two", "three", ""]
+        joined = common.url_join(*pieces)
+        self.assertEqual("one/two/three/", joined)
+
+    def test_url_join_empty_list(self):
+        pieces = []
+        joined = common.url_join(*pieces)
+        self.assertEqual("", joined)
+
+    def test_url_join_single_empty_string(self):
+        pieces = [""]
+        joined = common.url_join(*pieces)
+        self.assertEqual("", joined)
+
+    def test_url_join_single_slash(self):
+        pieces = ["/"]
+        joined = common.url_join(*pieces)
+        self.assertEqual("", joined)
+
+
 class ViewBuilderLinkTest(test.NoDBTestCase):
     project_id = "fake"
     api_version = "2.1"
