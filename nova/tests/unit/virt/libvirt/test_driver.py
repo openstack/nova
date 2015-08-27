@@ -6550,6 +6550,90 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)
 
+    @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
+    def test_live_migration_copy_disk_paths(self, mock_xml):
+        xml = """
+        <domain>
+          <name>dummy</name>
+          <uuid>d4e13113-918e-42fe-9fc9-861693ffd432</uuid>
+          <devices>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.root"/>
+            </disk>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.shared"/>
+               <shareable/>
+            </disk>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.config"/>
+               <readonly/>
+            </disk>
+            <disk type="block">
+               <source dev="/dev/mapper/somevol"/>
+            </disk>
+            <disk type="network">
+               <source protocol="https" name="url_path">
+                 <host name="hostname" port="443"/>
+               </source>
+            </disk>
+          </devices>
+        </domain>"""
+        mock_xml.return_value = xml
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dom = fakelibvirt.Domain(drvr._get_connection(), xml, False)
+        guest = libvirt_guest.Guest(dom)
+
+        paths = drvr._live_migration_copy_disk_paths(guest)
+        self.assertEqual(["/var/lib/nova/instance/123/disk.root",
+                          "/dev/mapper/somevol"], paths)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_live_migration_copy_disk_paths")
+    def test_live_migration_data_gb_plain(self, mock_paths):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
+        guest = libvirt_guest.Guest(dom)
+        instance = objects.Instance(**self.test_instance)
+
+        data_gb = drvr._live_migration_data_gb(instance, guest, False)
+        self.assertEqual(2, data_gb)
+        self.assertEqual(0, mock_paths.call_count)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_live_migration_copy_disk_paths")
+    def test_live_migration_data_gb_block(self, mock_paths):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
+        guest = libvirt_guest.Guest(dom)
+        instance = objects.Instance(**self.test_instance)
+
+        def fake_stat(path):
+            class StatResult(object):
+                def __init__(self, size):
+                    self._size = size
+
+                @property
+                def st_size(self):
+                    return self._size
+
+            if path == "/var/lib/nova/instance/123/disk.root":
+                return StatResult(10 * units.Gi)
+            elif path == "/dev/mapper/somevol":
+                return StatResult(1.5 * units.Gi)
+            else:
+                raise Exception("Should not be reached")
+
+        mock_paths.return_value = ["/var/lib/nova/instance/123/disk.root",
+                                   "/dev/mapper/somevol"]
+        with mock.patch.object(os, "stat") as mock_stat:
+            mock_stat.side_effect = fake_stat
+            data_gb = drvr._live_migration_data_gb(instance, guest, True)
+            # Expecting 2 GB for RAM, plus 10 GB for disk.root
+            # and 1.5 GB rounded to 2 GB for somevol, so 14 GB
+            self.assertEqual(14, data_gb)
+            self.assertEqual(1, mock_paths.call_count)
+
     EXPECT_SUCCESS = 1
     EXPECT_FAILURE = 2
     EXPECT_ABORT = 3
@@ -6574,6 +6658,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
+        guest = libvirt_guest.Guest(dom)
         finish_event = eventlet.event.Event()
 
         def fake_job_info(hostself):
@@ -6609,7 +6694,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         fake_post_method = mock.MagicMock()
         fake_recover_method = mock.MagicMock()
         drvr._live_migration_monitor(self.context, instance,
-                                     dest,
+                                     guest, dest,
                                      fake_post_method,
                                      fake_recover_method,
                                      False,
@@ -6874,16 +6959,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(utils, "spawn")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
-    @mock.patch.object(host.Host, "get_domain")
+    @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
-    def test_live_migration_main(self, mock_running, mock_dom,
+    def test_live_migration_main(self, mock_running, mock_guest,
                                  mock_monitor, mock_thread):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
+        dom = fakelibvirt.Domain(drvr._get_connection(),
+                                 "<domain><name>demo</name></domain>", True)
+        guest = libvirt_guest.Guest(dom)
         migrate_data = {}
 
-        mock_dom.return_value = dom
+        mock_guest.return_value = guest
 
         def fake_post():
             pass
@@ -6904,7 +6991,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.context, instance, "fakehost", False,
             migrate_data, dom)
         mock_monitor.assert_called_once_with(
-            self.context, instance, "fakehost",
+            self.context, instance, guest, "fakehost",
             fake_post, fake_recover, False,
             migrate_data, dom, AnyEventletEvent())
 

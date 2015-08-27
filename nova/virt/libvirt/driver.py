@@ -188,16 +188,17 @@ libvirt_opts = [
                default=75,
                help='Time to wait, in seconds, between each step increase '
                     'of the migration downtime. Minimum delay is %d seconds. '
-                    'Value is per GiB of guest RAM, with lower bound of a '
-                    'minimum of 2 GiB' % LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
+                    'Value is per GiB of guest RAM + disk to be transferred, '
+                    'with lower bound of a minimum of 2 GiB per device' %
+                    LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
     cfg.IntOpt('live_migration_completion_timeout',
                default=800,
                help='Time to wait, in seconds, for migration to successfully '
                     'complete transferring data before aborting the '
-                    'operation. Value is per GiB of guest RAM, with lower '
-                    'bound of a minimum of 2 GiB. Should usually be larger '
-                    'than downtime delay * downtime steps. Set to 0 to '
-                    'disable timeouts.'),
+                    'operation. Value is per GiB of guest RAM + disk to be '
+                    'transferred, with lower bound of a minimum of 2 GiB. '
+                    'Should usually be larger than downtime delay * downtime '
+                    'steps. Set to 0 to disable timeouts.'),
     cfg.IntOpt('live_migration_progress_timeout',
                default=150,
                help='Time to wait, in seconds, for migration to make forward '
@@ -5761,10 +5762,44 @@ class LibvirtDriver(driver.ComputeDriver):
         for i in range(steps + 1):
             yield (int(delay * i), int(offset + base ** i))
 
-    def _live_migration_data_gb(self, instance):
+    def _live_migration_copy_disk_paths(self, guest):
+        '''Get list of disks to copy during migration
+
+        :param guest: the Guest instance being migrated
+
+        Get the list of disks to copy during migration.
+
+        :returns: a list of local disk paths to copy
+        '''
+
+        disks = []
+        for dev in guest.get_all_disks():
+            # TODO(berrange) This is following the current
+            # (stupid) default logic in libvirt for selecting
+            # which disks are copied. In the future, when we
+            # can use a libvirt which accepts a list of disks
+            # to copy, we will need to adjust this to use a
+            # different rule.
+            #
+            # Our future goal is that a disk needs to be copied
+            # if it is a non-cinder volume which is not backed
+            # by shared storage. eg it may be an LVM block dev,
+            # or a raw/qcow2 file on a local filesystem. We
+            # never want to copy disks on NFS, or RBD or any
+            # cinder volume
+            if dev.readonly or dev.shareable:
+                continue
+            if dev.source_type not in ["file", "block"]:
+                continue
+            disks.append(dev.source_path)
+        return disks
+
+    def _live_migration_data_gb(self, instance, guest, block_migration):
         '''Calculate total amount of data to be transferred
 
         :param instance: the nova.objects.Instance being migrated
+        :param guest: the Guest being migrated
+        :param block_migration: true if block migration is requested
 
         Calculates the total amount of data that needs to be
         transferred during the live migration. The actual
@@ -5780,14 +5815,32 @@ class LibvirtDriver(driver.ComputeDriver):
         if ram_gb < 2:
             ram_gb = 2
 
-        # TODO(berrange) calculate size of any disks when doing
-        # a block migration
-        return ram_gb
+        if not block_migration:
+            return ram_gb
 
-    def _live_migration_monitor(self, context, instance, dest, post_method,
+        paths = self._live_migration_copy_disk_paths(guest)
+        disk_gb = 0
+        for path in paths:
+            try:
+                size = os.stat(path).st_size
+                size_gb = (size / units.Gi)
+                if size_gb < 2:
+                    size_gb = 2
+                disk_gb += size_gb
+            except OSError as e:
+                LOG.warn(_LW("Unable to stat %(disk)s: %(ex)s"),
+                         {'disk': path, 'ex': e})
+                # Ignore error since we don't want to break
+                # the migration monitoring thread operation
+
+        return ram_gb + disk_gb
+
+    def _live_migration_monitor(self, context, instance, guest,
+                                dest, post_method,
                                 recover_method, block_migration,
                                 migrate_data, dom, finish_event):
-        data_gb = self._live_migration_data_gb(instance)
+        data_gb = self._live_migration_data_gb(instance, guest,
+                                               block_migration)
         downtime_steps = list(self._migration_downtime_steps(data_gb))
         completion_timeout = int(
             CONF.libvirt.live_migration_completion_timeout * data_gb)
@@ -6024,7 +6077,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             LOG.debug("Starting monitoring of live migration",
                       instance=instance)
-            self._live_migration_monitor(context, instance, dest,
+            self._live_migration_monitor(context, instance, guest, dest,
                                          post_method, recover_method,
                                          block_migration, migrate_data,
                                          dom, finish_event)
