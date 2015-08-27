@@ -1280,9 +1280,7 @@ class TestObjectVersions(test.NoDBTestCase):
                 [x.encode('utf-8') for x in
                  field._type._valid_values])
 
-    def _get_fingerprint(self, obj_name):
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        obj_class = obj_classes[obj_name][0]
+    def _get_fingerprint(self, obj_class):
         fields = list(obj_class.fields.items())
         # NOTE(danms): We store valid_values in the enum as strings,
         # but oslo is working to make these coerced to unicode (which
@@ -1335,7 +1333,15 @@ class TestObjectVersions(test.NoDBTestCase):
         fingerprints = {}
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in sorted(obj_classes, key=lambda x: x[0]):
-            fingerprints[obj_name] = self._get_fingerprint(obj_name)
+            index = 0
+            for version_cls in obj_classes[obj_name]:
+                if len(obj_classes[obj_name]) > 1 and index != 0:
+                    name = '%s%s' % (obj_name,
+                                     version_cls.VERSION.split('.')[0])
+                else:
+                    name = obj_name
+                fingerprints[name] = self._get_fingerprint(version_cls)
+                index += 1
 
         if os.getenv('GENERATE_HASHES'):
             file('object_hashes.txt', 'w').write(
@@ -1364,16 +1370,31 @@ class TestObjectVersions(test.NoDBTestCase):
             return field._type._element_type._type._obj_name
         return None
 
+    def _get_obj_cls(self, name):
+        # NOTE(danms): We're moving to using manifest-based backports,
+        # which don't depend on relationships. Given that we only had
+        # one major version of each object before that change, we can
+        # make sure to pull the older version of objects that have
+        # a 2.0 version while calculating the old-style relationship
+        # mapping. Once we drop all the 1.x versions, we can drop this
+        # relationship test altogether.
+        new_objects = []
+
+        versions = base.NovaObjectRegistry.obj_classes()[name]
+        if len(versions) > 1 and name in new_objects:
+            return versions[1]
+        else:
+            return versions[0]
+
     def _build_tree(self, tree, obj_class, get_current_versions=True):
         obj_name = obj_class.obj_name()
         if obj_name in tree:
             return
 
-        obj_classes = base.NovaObjectRegistry.obj_classes()
         for name, field in obj_class.fields.items():
             sub_obj_name = self._get_object_field_name(field)
             if sub_obj_name:
-                sub_obj_class = obj_classes[sub_obj_name][0]
+                sub_obj_class = self._get_obj_cls(sub_obj_name)
                 tree.setdefault(obj_name, {})
                 if get_current_versions:
                     sub_obj_ver = sub_obj_class.VERSION
@@ -1390,8 +1411,9 @@ class TestObjectVersions(test.NoDBTestCase):
         obj_relationships_tree = {}
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in obj_classes.keys():
-            self._build_tree(current_versions_tree, obj_classes[obj_name][0])
-            self._build_tree(obj_relationships_tree, obj_classes[obj_name][0],
+            obj_cls = self._get_obj_cls(obj_name)
+            self._build_tree(current_versions_tree, obj_cls)
+            self._build_tree(obj_relationships_tree, obj_cls,
                              get_current_versions=False)
 
         stored = set([(x, str(y))
@@ -1524,13 +1546,20 @@ class TestObjectVersions(test.NoDBTestCase):
         self.assertEqual(expected_current, current_versions_tree)
         self.assertEqual(expected_obj_relationships, obj_relationships_tree)
 
+    def _get_obj_same_major(self, this_cls, obj_name):
+        this_major = this_cls.VERSION.split('.')[0]
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for cls_version in obj_classes[obj_name]:
+            major = cls_version.VERSION.split('.')[0]
+            if major == this_major:
+                return cls_version
+
     def _get_obj_to_test(self, obj_class):
         obj = obj_class()
-        obj_classes = base.NovaObjectRegistry.obj_classes()
         for fname, ftype in obj.fields.items():
             if isinstance(ftype, fields.ObjectField):
                 fobjname = ftype.AUTO_TYPE._obj_name
-                fobjcls = obj_classes[fobjname][0]
+                fobjcls = self._get_obj_same_major(obj_class, fobjname)
                 setattr(obj, fname, self._get_obj_to_test(fobjcls))
             elif isinstance(ftype, fields.ListOfObjectsField):
                 # FIXME(danms): This will result in no tests for this
@@ -1574,20 +1603,25 @@ class TestObjectVersions(test.NoDBTestCase):
         # expecting the wrong version format.
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in obj_classes:
-            obj_class = obj_classes[obj_name][0]
-            if 'tests.unit' in obj_class.__module__:
-                # NOTE(danms): Skip test objects. When we move to
-                # oslo.versionedobjects, we won't have to do this
-                continue
-            version = utils.convert_version_to_tuple(obj_class.VERSION)
-            for n in range(version[1]):
-                test_version = '%d.%d' % (version[0], n)
-                LOG.info('testing obj: %s version: %s' %
-                         (obj_name, test_version))
-                test_object = self._get_obj_to_test(obj_class)
-                obj_p = test_object.obj_to_primitive(
-                    target_version=test_version)
-                self._validate_object_fields(obj_class, obj_p)
+            for obj_class in obj_classes[obj_name]:
+                if obj_class.VERSION.startswith('2'):
+                    # NOTE(danms): Objects with major versions >=2 will
+                    # use version_manifest for backports, which is a
+                    # different test than this one, so skip.
+                    continue
+                if 'tests.unit' in obj_class.__module__:
+                    # NOTE(danms): Skip test objects. When we move to
+                    # oslo.versionedobjects, we won't have to do this
+                    continue
+                version = utils.convert_version_to_tuple(obj_class.VERSION)
+                for n in range(version[1]):
+                    test_version = '%d.%d' % (version[0], n)
+                    LOG.info('testing obj: %s version: %s' %
+                             (obj_name, test_version))
+                    test_object = self._get_obj_to_test(obj_class)
+                    obj_p = test_object.obj_to_primitive(
+                        target_version=test_version)
+                    self._validate_object_fields(obj_class, obj_p)
 
     def test_obj_relationships_in_order(self):
         # Iterate all object classes and verify that we can run
