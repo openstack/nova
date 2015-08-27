@@ -50,6 +50,11 @@ class ViewBuilder(common.ViewBuilder):
         "ERROR", "DELETED"
     )
 
+    # These are the lazy-loadable instance attributes required for showing
+    # details about an instance. Add to this list as new things need to be
+    # shown.
+    _show_expected_attrs = ['flavor', 'info_cache', 'metadata']
+
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilder, self).__init__()
@@ -79,6 +84,26 @@ class ViewBuilder(common.ViewBuilder):
                                          self._collection_name),
             },
         }
+
+    def get_show_expected_attrs(self, expected_attrs=None):
+        """Returns a list of lazy-loadable expected attributes used by show
+
+        This should be used when getting the instances from the database so
+        that the necessary attributes are pre-loaded before needing to build
+        the show response where lazy-loading can fail if an instance was
+        deleted.
+
+        :param list expected_attrs: The list of expected attributes that will
+            be requested in addition to what this view builder requires. This
+            method will merge the two lists and return what should be
+            ultimately used when getting an instance from the database.
+        :returns: merged and sorted list of expected attributes
+        """
+        if expected_attrs is None:
+            expected_attrs = []
+        # NOTE(mriedem): We sort the list so we can have predictable test
+        # results.
+        return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
     def show(self, request, instance):
         """Detailed view of a single instance."""

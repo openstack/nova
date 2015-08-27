@@ -364,10 +364,18 @@ class ServersController(wsgi.Controller):
 
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
+
+        expected_attrs = ['pci_devices']
+        if is_detail:
+            # merge our expected attrs with what the view builder needs for
+            # showing details
+            expected_attrs = self._view_builder.get_show_expected_attrs(
+                                                                expected_attrs)
+
         try:
             instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
-                    want_objects=True, expected_attrs=['pci_devices'],
+                    want_objects=True, expected_attrs=expected_attrs,
                     sort_keys=sort_keys, sort_dirs=sort_dirs)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
@@ -385,12 +393,22 @@ class ServersController(wsgi.Controller):
         req.cache_db_instances(instance_list)
         return response
 
-    def _get_server(self, context, req, instance_uuid):
-        """Utility function for looking up an instance by uuid."""
+    def _get_server(self, context, req, instance_uuid, is_detail=False):
+        """Utility function for looking up an instance by uuid.
+
+        :param context: request context for auth
+        :param req: HTTP request. The instance is cached in this request.
+        :param instance_uuid: UUID of the server instance to get
+        :param is_detail: True if you plan on showing the details of the
+            instance in the response, False otherwise.
+        """
+        expected_attrs = ['flavor', 'pci_devices']
+        if is_detail:
+            expected_attrs = self._view_builder.get_show_expected_attrs(
+                                                            expected_attrs)
         instance = common.get_instance(self.compute_api, context,
                                        instance_uuid,
-                                       expected_attrs=['pci_devices',
-                                                       'flavor'])
+                                       expected_attrs=expected_attrs)
         req.cache_db_instance(instance)
         return instance
 
@@ -479,11 +497,8 @@ class ServersController(wsgi.Controller):
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        instance = common.get_instance(self.compute_api, context, id,
-                                       expected_attrs=['pci_devices',
-                                                       'flavor'])
         authorize(context, action="show")
-        req.cache_db_instance(instance)
+        instance = self._get_server(context, req, id, is_detail=True)
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
@@ -750,12 +765,10 @@ class ServersController(wsgi.Controller):
             self.update_extension_manager.map(self._update_extension_point,
                                               body['server'], update_dict)
 
-        instance = common.get_instance(self.compute_api, ctxt, id,
-                                       expected_attrs=['pci_devices'])
+        instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
             # NOTE(mikal): this try block needs to stay because save() still
             # might throw an exception.
-            req.cache_db_instance(instance)
             instance.update(update_dict)
             instance.save()
             return self._view_builder.show(req, instance,
@@ -991,7 +1004,7 @@ class ServersController(wsgi.Controller):
                 exception.AutoDiskConfigDisabledByImage) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
-        instance = self._get_server(context, req, id)
+        instance = self._get_server(context, req, id, is_detail=True)
 
         view = self._view_builder.show(req, instance, extend_address=False)
 

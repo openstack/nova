@@ -314,20 +314,19 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
 
     def test_get_server_joins_pci_devices(self):
-        self.expected_attrs = None
 
         def fake_get(_self, *args, **kwargs):
-            self.expected_attrs = kwargs['expected_attrs']
+            expected_attrs = kwargs['expected_attrs']
+            self.assertEqual(['flavor', 'info_cache', 'metadata',
+                              'pci_devices'], expected_attrs)
             ctxt = context.RequestContext('fake', 'fake')
             return fake_instance.fake_instance_obj(
-                ctxt, expected_attrs=['metadata', 'info_cache'])
+                ctxt, expected_attrs=expected_attrs)
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
 
         req = self.req('/servers/%s' % FAKE_UUID)
         self.controller.show(req, FAKE_UUID)
-
-        self.assertIn('pci_devices', self.expected_attrs)
 
     def test_unique_host_id(self):
         """Create two servers with the same host and different
@@ -1025,8 +1024,8 @@ class ServersControllerTest(ControllerTest):
         # while calling get_all() method.
         expected_search_opts = {'deleted': True, 'project_id': 'fake'}
         mock_get_all.assert_called_once_with(
-            mock.ANY, search_opts=expected_search_opts,
-            limit=mock.ANY, expected_attrs=mock.ANY,
+            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
+            expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
             marker=mock.ANY, want_objects=mock.ANY,
             sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
@@ -1049,8 +1048,8 @@ class ServersControllerTest(ControllerTest):
         # False while calling get_all() method.
         expected_search_opts = {'deleted': False, 'project_id': 'fake'}
         mock_get_all.assert_called_once_with(
-            mock.ANY, search_opts=expected_search_opts,
-            limit=mock.ANY, expected_attrs=mock.ANY,
+            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
+            expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
             marker=mock.ANY, want_objects=mock.ANY,
             sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
@@ -1063,6 +1062,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
+            self.assertEqual(['pci_devices'], expected_attrs)
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1307,19 +1307,17 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_get_servers_joins_pci_devices(self):
-        self.expected_attrs = None
 
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None, want_objects=False,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.expected_attrs = expected_attrs
+            self.assertEqual(['pci_devices'], expected_attrs)
             return []
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = self.req('/servers', use_admin_context=True)
         self.assertIn('servers', self.controller.index(req))
-        self.assertIn('pci_devices', self.expected_attrs)
 
 
 class ServersControllerTestV29(ServersControllerTest):
