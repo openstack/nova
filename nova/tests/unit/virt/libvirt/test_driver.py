@@ -14229,7 +14229,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
 
+    def test_get_guest_config_parallels_ct_rescue(self):
+        self._test_get_guest_config_parallels_ct(rescue=True)
+
     def test_get_guest_config_parallels_ct(self):
+        self._test_get_guest_config_parallels_ct(rescue=False)
+
+    def _test_get_guest_config_parallels_ct(self, rescue=False):
         self.flags(virt_type='parallels', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         ct_instance = self.test_instance.copy()
@@ -14237,9 +14243,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**ct_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
+        if rescue:
+            rescue_data = ct_instance
+        else:
+            rescue_data = None
+
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self, 1),
-                                    image_meta, {'mapping': {'disk': {}}})
+                                    image_meta, {'mapping': {'disk': {}}},
+                                    rescue_data)
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
@@ -14247,18 +14259,31 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(vm_mode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(4, len(cfg.devices))
+        if rescue:
+            self.assertEqual(5, len(cfg.devices))
+        else:
+            self.assertEqual(4, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestFilesys)
-        fs = cfg.devices[0]
+
+        device_index = 0
+        fs = cfg.devices[device_index]
         self.assertEqual(fs.source_type, "file")
         self.assertEqual(fs.driver_type, "ploop")
         self.assertEqual(fs.target_dir, "/")
-        self.assertIsInstance(cfg.devices[1],
+
+        if rescue:
+            device_index = 1
+            fs = cfg.devices[device_index]
+            self.assertEqual(fs.source_type, "file")
+            self.assertEqual(fs.driver_type, "ploop")
+            self.assertEqual(fs.target_dir, "/mnt/rescue")
+
+        self.assertIsInstance(cfg.devices[device_index + 1],
                               vconfig.LibvirtConfigGuestInterface)
-        self.assertIsInstance(cfg.devices[2],
+        self.assertIsInstance(cfg.devices[device_index + 2],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[3],
+        self.assertIsInstance(cfg.devices[device_index + 3],
                               vconfig.LibvirtConfigGuestVideo)
 
     def _test_get_guest_config_parallels_volume(self, vmmode, devices):
@@ -15900,6 +15925,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         unrescue_xml_path = os.path.join('/path', 'unrescue.xml')
         xml_path = os.path.join('/path', 'libvirt.xml')
         rescue_file = os.path.join('/path', 'rescue.file')
+        rescue_dir = os.path.join('/path', 'rescue.dir')
+
+        def isdir_sideeffect(*args, **kwargs):
+            if args[0] == '/path/rescue.file':
+                return False
+            if args[0] == '/path/rescue.dir':
+                return True
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with test.nested(
@@ -15907,12 +15939,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 mock.patch.object(drvr, '_destroy'),
                 mock.patch.object(drvr, '_create_domain'),
                 mock.patch.object(libvirt_utils, 'file_delete'),
+                mock.patch.object(shutil, 'rmtree'),
+                mock.patch.object(os.path, "isdir",
+                                  side_effect=isdir_sideeffect),
                 mock.patch.object(drvr, '_lvm_disks',
                                   return_value=['lvm.rescue']),
                 mock.patch.object(lvm, 'remove_volumes'),
-                mock.patch.object(glob, 'iglob', return_value=[rescue_file])
+                mock.patch.object(glob, 'iglob',
+                                  return_value=[rescue_file, rescue_dir])
                 ) as (mock_write, mock_destroy, mock_create, mock_del,
-                      mock_lvm_disks, mock_remove_volumes, mock_glob):
+                      mock_rmtree, mock_isdir, mock_lvm_disks,
+                      mock_remove_volumes, mock_glob):
             drvr.unrescue(instance, None)
             mock_write.assert_called_once_with(xml_path, "fake_unrescue_xml")
             mock_destroy.assert_called_once_with(instance)
@@ -15921,6 +15958,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertEqual(2, mock_del.call_count)
             self.assertEqual(unrescue_xml_path,
                              mock_del.call_args_list[0][0][0])
+            self.assertEqual(1, mock_rmtree.call_count)
+            self.assertEqual(rescue_dir, mock_rmtree.call_args_list[0][0][0])
             self.assertEqual(rescue_file, mock_del.call_args_list[1][0][0])
             mock_remove_volumes.assert_called_once_with(['lvm.rescue'])
 
