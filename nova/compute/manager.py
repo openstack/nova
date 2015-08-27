@@ -5005,6 +5005,7 @@ class ComputeManager(manager.Manager):
             # Executing live migration
             # live_migration might raises exceptions, but
             # nothing must be recovered in this version.
+            LOG.exception(_LE('Live migration failed.'), instance=instance)
             with excutils.save_and_reraise_exception():
                 if migration:
                     migration.status = 'failed'
