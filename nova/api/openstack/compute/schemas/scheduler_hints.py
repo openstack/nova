@@ -52,7 +52,11 @@ _hints = {
             'pattern': '^\/[0-9a-f.:]+$'
         },
     },
-    'additionalProperties': False
+    # NOTE: As this Mail:
+    # http://lists.openstack.org/pipermail/openstack-dev/2015-June/067996.html
+    # pointed out the limit the scheduler-hints in the API is problematic. So
+    # relax it.
+    'additionalProperties': True
 }
 
 

@@ -75,13 +75,29 @@ def _validate_uri(instance):
                                 require_authority=True)
 
 
-def _soft_validate_additional_properties(validator, aP, instance, schema):
+def _soft_validate_additional_properties(validator,
+                                         additional_properties_value,
+                                         instance,
+                                         schema):
     """This validator function is used for legacy v2 compatible mode in v2.1.
     This will skip all the addtional properties checking but keep check the
     'patternProperties'. 'patternProperties' is used for metadata API.
 
+    If there are not any properties on the instance that are not specified in
+    the schema, this will return without any effect. If there are any such
+    extra properties, they will be handled as follows:
+
+    - if the schema has an additionalProperties value of True, the extra
+      properties on the instance will not be touched.
+    - if the schema has an additionalProperties value of False and there
+      aren't patternProperties specified, the extra properties will be stripped
+      from the instance.
+    - if the schema has an additionalProperties value of False and there
+      are patternProperties specified, the extra properties will not be
+      touched and raise validation error if pattern doesn't match.
     """
-    if not validator.is_type(instance, "object"):
+    if (not validator.is_type(instance, "object") or
+            additional_properties_value):
         return
 
     properties = schema.get("properties", {})
