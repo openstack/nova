@@ -1518,35 +1518,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'uuid': instance['uuid'], },
         }
 
-    @mock.patch('nova.objects.Migration')
-    def _test_migrate_server_deals_with_expected_exceptions(self, ex, migobj):
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
+    def _test_migrate_server_deals_with_expected_exceptions(self, ex,
+        mock_execute, mock_set):
         instance = fake_instance.fake_db_instance(uuid='uuid',
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
-        self.mox.StubOutWithMock(live_migrate.LiveMigrationTask, 'execute')
-        self.mox.StubOutWithMock(scheduler_utils,
-                'set_vm_state_and_notify')
-
-        migration = migobj()
-
-        task = self.conductor._build_live_migrate_task(self.context, inst_obj,
-                                                       'destination',
-                                                       'block_migration',
-                                                       'disk_over_commit',
-                                                       migration)
-        task.execute().AndRaise(ex)
-
-        scheduler_utils.set_vm_state_and_notify(self.context,
-                inst_obj.uuid,
-                'compute_task', 'migrate_server',
-                {'vm_state': vm_states.ACTIVE,
-                 'task_state': None,
-                 'expected_task_state': task_states.MIGRATING},
-                ex, self._build_request_spec(inst_obj),
-                self.conductor_manager.db)
-        self.mox.ReplayAll()
-
+        mock_execute.side_effect = ex
         self.conductor = utils.ExceptionHelper(self.conductor)
 
         self.assertRaises(type(ex),
@@ -1554,7 +1534,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
 
-        self.assertEqual('error', migration.status)
+        mock_set.assert_called_once_with(self.context,
+                inst_obj.uuid,
+                'compute_task', 'migrate_server',
+                {'vm_state': vm_states.ACTIVE,
+                 'task_state': None,
+                 'expected_task_state': task_states.MIGRATING},
+                ex, self._build_request_spec(inst_obj),
+                self.conductor_manager.db)
 
     def test_migrate_server_deals_with_invalidcpuinfo_exception(self):
         instance = fake_instance.fake_db_instance(uuid='uuid',
@@ -1589,22 +1576,22 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
 
-    def test_migrate_server_deals_with_InstanceInvalidState(self):
-        ex = exc.InstanceInvalidState(instance_uuid="fake", attr='',
-                                      state='', method='')
-        self._test_migrate_server_deals_with_expected_exceptions(ex)
-
-    def test_migrate_server_deals_with_DestinationHypervisorTooOld(self):
-        ex = exc.DestinationHypervisorTooOld()
-        self._test_migrate_server_deals_with_expected_exceptions(ex)
-
-    def test_migrate_server_deals_with_HypervisorUnavailable(self):
-        ex = exc.HypervisorUnavailable(host='dummy')
-        self._test_migrate_server_deals_with_expected_exceptions(ex)
-
-    def test_migrate_server_deals_with_LiveMigrationWithOldNovaNotSafe(self):
-        ex = exc.LiveMigrationWithOldNovaNotSafe(server='dummy')
-        self._test_migrate_server_deals_with_expected_exceptions(ex)
+    def test_migrate_server_deals_with_expected_exception(self):
+        exs = [exc.InstanceInvalidState(instance_uuid="fake", attr='',
+                                        state='', method=''),
+               exc.DestinationHypervisorTooOld(),
+               exc.HypervisorUnavailable(host='dummy'),
+               exc.LiveMigrationWithOldNovaNotSafe(server='dummy'),
+               exc.MigrationPreCheckError(reason='dummy'),
+               exc.InvalidSharedStorage(path='dummy', reason='dummy'),
+               exc.NoValidHost(reason='dummy'),
+               exc.ComputeServiceUnavailable(host='dummy'),
+               exc.InvalidHypervisorType(),
+               exc.InvalidCPUInfo(reason='dummy'),
+               exc.UnableToMigrateToSelf(instance_id='dummy', host='dummy'),
+               exc.InvalidLocalStorage(path='dummy', reason='dummy')]
+        for ex in exs:
+            self._test_migrate_server_deals_with_expected_exceptions(ex)
 
     @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
     @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
