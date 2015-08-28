@@ -1,9 +1,0 @@
-# nova-rootwrap command filters for compute nodes
-# This file should be owned by (and only-writeable by) the root user
-
-[Filters]
-# nova/virt/baremetal/ipmi.py: 'ipmitool', ..
-ipmitool: CommandFilter, ipmitool, root
-
-# nova/virt/baremetal/ipmi.py: 'kill', '-TERM', str(console_pid)
-kill_shellinaboxd: KillFilter, root, /usr/local/bin/shellinaboxd, -15, -TERM
