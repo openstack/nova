@@ -900,6 +900,11 @@ class FloatingIpAssociateFailed(NovaException):
     msg_fmt = _("Floating IP %(address)s association has failed.")
 
 
+class FloatingIpBadRequest(Invalid):
+    ec2_code = "UnsupportedOperation"
+    msg_fmt = _("The floating IP request failed with a BadRequest")
+
+
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
     ec2_code = "UnsupportedOperation"
     msg_fmt = _("Cannot disassociate auto assigned floating ip")

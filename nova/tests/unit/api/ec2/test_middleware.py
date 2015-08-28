@@ -150,6 +150,13 @@ class ExecutorTestCase(test.NoDBTestCase):
         self.assertIn('vol-00000005', self._extract_message(result))
         self.assertEqual('InvalidVolume.NotFound', self._extract_code(result))
 
+    def test_floating_ip_bad_create_request(self):
+        def bad_request(context):
+            raise exception.FloatingIpBadRequest()
+        result = self._execute(bad_request)
+        self.assertIn('BadRequest', self._extract_message(result))
+        self.assertEqual('UnsupportedOperation', self._extract_code(result))
+
 
 class FakeResponse(object):
     reason = "Test Reason"

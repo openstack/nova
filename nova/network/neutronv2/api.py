@@ -1420,6 +1420,8 @@ class API(base_api.NetworkAPI):
             raise exception.NoMoreFloatingIps(six.text_type(e))
         except neutron_client_exc.OverQuotaClient as e:
             raise exception.FloatingIpLimitExceeded(six.text_type(e))
+        except neutron_client_exc.BadRequest as e:
+            raise exception.FloatingIpBadRequest(six.text_type(e))
 
         return fip['floatingip']['floating_ip_address']
 

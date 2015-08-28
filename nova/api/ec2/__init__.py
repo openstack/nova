@@ -616,6 +616,7 @@ class Executor(wsgi.Application):
         except (exception.CannotDisassociateAutoAssignedFloatingIP,
                 exception.FloatingIpAssociated,
                 exception.FloatingIpNotFound,
+                exception.FloatingIpBadRequest,
                 exception.ImageNotActive,
                 exception.InvalidInstanceIDMalformed,
                 exception.InvalidVolumeIDMalformed,

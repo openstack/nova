@@ -128,6 +128,8 @@ class FloatingIPController(object):
             raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.FloatingIpPoolNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.FloatingIpBadRequest as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         return _translate_floating_ip_view(ip)
 
