@@ -6394,6 +6394,18 @@ class LibvirtDriver(driver.ComputeDriver):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
+    def exec_monitor_command(self, instance, cmd, hmp=True):
+        libvirt_qemu = importutils.import_module('libvirt_qemu')
+        dom = self._lookup_by_name(instance['name'])
+        flags = libvirt_qemu.VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT
+        if hmp:
+            flags = libvirt_qemu.VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP
+
+        try:
+            return libvirt_qemu.qemuMonitorCommand(dom, cmd, flags)
+        except libvirt.libvirtError as e:
+            LOG.error("QEMU monitor command failed: %s", cmd)
+
     def colo_synchronize(self, primary_instance, secondary_instance):
         """Execute the initial synchronization of the primary and secondary VM.
         """
