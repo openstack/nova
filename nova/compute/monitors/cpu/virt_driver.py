@@ -77,17 +77,20 @@ class Monitor(base.CPUMonitorBase):
                           + stats["idle"] + stats["iowait"])
         cputime = float(stats["total"] - self._cpu_stats.get("total", 0))
 
+        # NOTE(jwcroppe): Convert all the `perc` values to their integer forms
+        # since pre-conversion their values are within the range [0, 1] and the
+        # objects.MonitorMetric.value field requires an integer.
         perc = (stats["user"] - self._cpu_stats.get("user", 0)) / cputime
-        self._data["cpu.user.percent"] = perc
+        self._data["cpu.user.percent"] = int(perc * 100)
 
         perc = (stats["kernel"] - self._cpu_stats.get("kernel", 0)) / cputime
-        self._data["cpu.kernel.percent"] = perc
+        self._data["cpu.kernel.percent"] = int(perc * 100)
 
         perc = (stats["idle"] - self._cpu_stats.get("idle", 0)) / cputime
-        self._data["cpu.idle.percent"] = perc
+        self._data["cpu.idle.percent"] = int(perc * 100)
 
         perc = (stats["iowait"] - self._cpu_stats.get("iowait", 0)) / cputime
-        self._data["cpu.iowait.percent"] = perc
+        self._data["cpu.iowait.percent"] = int(perc * 100)
 
         # Compute the current system-wide CPU utilization as a percentage.
         used = stats["user"] + stats["kernel"] + stats["iowait"]
@@ -95,6 +98,6 @@ class Monitor(base.CPUMonitorBase):
                      + self._cpu_stats.get("kernel", 0)
                      + self._cpu_stats.get("iowait", 0))
         perc = (used - prev_used) / cputime
-        self._data["cpu.percent"] = perc
+        self._data["cpu.percent"] = int(perc * 100)
 
         self._cpu_stats = stats.copy()

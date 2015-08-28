@@ -65,13 +65,8 @@ class VirtDriverCPUMonitorTestCase(test.NoDBTestCase):
         self.assertEqual(metrics["cpu.kernel.time"], 5664160000000)
         self.assertEqual(metrics["cpu.idle.time"], 1592705190000000)
         self.assertEqual(metrics["cpu.iowait.time"], 6121490000000)
-        self.assertTrue(metrics["cpu.user.percent"] <= 1
-                        and metrics["cpu.user.percent"] >= 0)
-        self.assertTrue(metrics["cpu.kernel.percent"] <= 1
-                        and metrics["cpu.kernel.percent"] >= 0)
-        self.assertTrue(metrics["cpu.idle.percent"] <= 1
-                        and metrics["cpu.idle.percent"] >= 0)
-        self.assertTrue(metrics["cpu.iowait.percent"] <= 1
-                        and metrics["cpu.iowait.percent"] >= 0)
-        self.assertTrue(metrics["cpu.percent"] <= 1
-                        and metrics["cpu.percent"] >= 0)
+        self.assertEqual(metrics["cpu.user.percent"], 1)
+        self.assertEqual(metrics["cpu.kernel.percent"], 0)
+        self.assertEqual(metrics["cpu.idle.percent"], 97)
+        self.assertEqual(metrics["cpu.iowait.percent"], 0)
+        self.assertEqual(metrics["cpu.percent"], 2)

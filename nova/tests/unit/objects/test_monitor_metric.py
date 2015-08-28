@@ -25,6 +25,13 @@ _monitor_metric_spec = {
     'source': 'nova.virt.libvirt.driver'
 }
 
+_monitor_metric_perc_spec = {
+    'name': fields.MonitorMetricType.CPU_PERCENT,
+    'value': 0.17,
+    'timestamp': timeutils.strtime(_ts_now),
+    'source': 'nova.virt.libvirt.driver'
+}
+
 _monitor_numa_metric_spec = {
     'name': fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
     'numa_membw_values': {"0": 10, "1": 43},
@@ -42,6 +49,14 @@ class _TestMonitorMetricObject(object):
                                     timestamp=_ts_now,
                                     source='nova.virt.libvirt.driver')
         self.assertEqual(_monitor_metric_spec, obj.to_dict())
+
+    def test_monitor_metric_perc_to_dict(self):
+        """Test to ensure division by 100.0 occurs on percentage value."""
+        obj = objects.MonitorMetric(name='cpu.percent',
+                                    value=17,
+                                    timestamp=_ts_now,
+                                    source='nova.virt.libvirt.driver')
+        self.assertEqual(_monitor_metric_perc_spec, obj.to_dict())
 
     def test_monitor_metric_list_to_list(self):
         obj = objects.MonitorMetric(name='cpu.frequency',
