@@ -1222,6 +1222,17 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
         self._assert(0, 'local_gb_used')
         self._assert(0, 'vcpus_used')
 
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    def test_move_type_not_tracked(self, mock_get):
+        self.claim_method(self.context, self.instance,
+                self.instance_type, limits=self.limits, move_type="evacuation")
+
+        self._assert(0, 'memory_mb_used')
+        self._assert(0, 'local_gb_used')
+        self._assert(0, 'vcpus_used')
+        self.assertEqual(0, len(self.tracker.tracked_migrations))
+
     def test_resize_filter(self):
         instance = self._fake_instance_obj(vm_state=vm_states.ACTIVE,
                 task_state=task_states.SUSPENDING)
@@ -1246,6 +1257,9 @@ class ResizeClaimTestCase(_MoveClaimTestCase):
         super(ResizeClaimTestCase, self).setUp()
 
         self.claim_method = self.tracker.resize_claim
+
+    def test_move_type_not_tracked(self):
+        self.skipTest("Resize_claim does already sets the move_type.")
 
 
 class OrphanTestCase(BaseTrackerTestCase):
