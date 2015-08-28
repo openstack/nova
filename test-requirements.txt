@@ -4,7 +4,6 @@
 
 hacking<0.11,>=0.10.0
 coverage>=3.6
-discover
 fixtures>=1.3.1
 mock>=1.2
 mox3>=0.7.0
