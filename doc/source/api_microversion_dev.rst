@@ -22,6 +22,13 @@ There is a special value ``latest`` which can be specified, which will
 allow a client to always receive the most recent version of API
 responses from the server.
 
+.. warning:: The ``latest`` value is mostly meant for integration testing and
+  would be dangerous to rely on in client code since Nova microversions are not
+  following semver and therefore backward compability is not guaranteed.
+  Clients, like python-novaclient, should always require a specific
+  microversion but limit what is acceptable to the version range that it
+  understands at the time.
+
 For full details please read the `Kilo spec for microversions
 <http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/kilo/implemented/api-microversions.rst>`_
 
