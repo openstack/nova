@@ -44,12 +44,13 @@ class _TestBlockDeviceMappingObject(object):
             fake_bdm['instance'] = instance
         return fake_bdm
 
-    def _test_save(self, cell_type=None):
+    def _test_save(self, cell_type=None, update_device_name=False):
         if cell_type:
             self.flags(enable=True, cell_type=cell_type, group='cells')
         else:
             self.flags(enable=False, group='cells')
 
+        create = False
         fake_bdm = self.fake_bdm()
         with test.nested(
             mock.patch.object(
@@ -60,11 +61,21 @@ class _TestBlockDeviceMappingObject(object):
             bdm_object = objects.BlockDeviceMapping(context=self.context)
             bdm_object.id = 123
             bdm_object.volume_id = 'fake_volume_id'
+            if update_device_name:
+                bdm_object.device_name = '/dev/vda'
+                create = None
             bdm_object.save()
 
-            bdm_update_mock.assert_called_once_with(
-                    self.context, 123, {'volume_id': 'fake_volume_id'},
-                    legacy=False)
+            if update_device_name:
+                bdm_update_mock.assert_called_once_with(
+                        self.context, 123,
+                        {'volume_id': 'fake_volume_id',
+                         'device_name': '/dev/vda'},
+                        legacy=False)
+            else:
+                bdm_update_mock.assert_called_once_with(
+                        self.context, 123, {'volume_id': 'fake_volume_id'},
+                        legacy=False)
             if cell_type != 'compute':
                 self.assertFalse(cells_update_mock.called)
             else:
@@ -72,7 +83,8 @@ class _TestBlockDeviceMappingObject(object):
                 self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
                 self.assertIsInstance(cells_update_mock.call_args[0][1],
                                       block_device_obj.BlockDeviceMapping)
-                self.assertEqual(cells_update_mock.call_args[1], {})
+                self.assertEqual(cells_update_mock.call_args[1], {'create':
+                    create})
 
     def test_save_nocells(self):
         self._test_save()
@@ -82,6 +94,9 @@ class _TestBlockDeviceMappingObject(object):
 
     def test_save_computecell(self):
         self._test_save(cell_type='compute')
+
+    def test_save_computecell_device_name_changed(self):
+        self._test_save(cell_type='compute', update_device_name=True)
 
     def test_save_instance_changed(self):
         bdm_object = objects.BlockDeviceMapping(context=self.context)
