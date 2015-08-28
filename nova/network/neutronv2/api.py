@@ -47,29 +47,44 @@ neutron_opts = [
     cfg.StrOpt('url',
                default='http://127.0.0.1:9696',
                help='URL for connecting to neutron'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_user_id',
+               deprecated_for_removal=True,
                help='User id for connecting to neutron in admin context. '
                     'DEPRECATED: specify an auth_plugin and appropriate '
                     'credentials instead.'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_username',
+               deprecated_for_removal=True,
                help='Username for connecting to neutron in admin context '
                     'DEPRECATED: specify an auth_plugin and appropriate '
                     'credentials instead.'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_password',
+               deprecated_for_removal=True,
                help='Password for connecting to neutron in admin context '
                     'DEPRECATED: specify an auth_plugin and appropriate '
                     'credentials instead.',
                secret=True),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_tenant_id',
+               deprecated_for_removal=True,
                help='Tenant id for connecting to neutron in admin context '
                     'DEPRECATED: specify an auth_plugin and appropriate '
                     'credentials instead.'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_tenant_name',
+               deprecated_for_removal=True,
                help='Tenant name for connecting to neutron in admin context. '
                     'This option will be ignored if neutron_admin_tenant_id '
                     'is set. Note that with Keystone V3 tenant names are '
@@ -78,15 +93,21 @@ neutron_opts = [
                     'credentials instead.'),
     cfg.StrOpt('region_name',
                help='Region name for connecting to neutron in admin context'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('admin_auth_url',
                default='http://localhost:5000/v2.0',
+               deprecated_for_removal=True,
                help='Authorization URL for connecting to neutron in admin '
                     'context. DEPRECATED: specify an auth_plugin and '
                     'appropriate credentials instead.'),
-    # deprecated in Kilo, may be removed in Liberty.
+    # deprecated in Kilo, may be removed in Mitaka
+    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
+    # deprecated_for_removal for this flag so no warnings were emitted.
     cfg.StrOpt('auth_strategy',
                default='keystone',
+               deprecated_for_removal=True,
                help='Authorization strategy for connecting to neutron in '
                     'admin context. DEPRECATED: specify an auth_plugin and '
                     'appropriate credentials instead. If an auth_plugin is '
