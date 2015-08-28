@@ -84,6 +84,7 @@ from nova.tests.unit import fake_server_actions
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
+from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit import utils as test_utils
 from nova import utils
@@ -5148,7 +5149,7 @@ class ComputeTestCase(BaseTestCase):
     def test_resize_instance_forced_shutdown(self):
         self._test_resize_instance(clean_shutdown=False)
 
-    def _test_confirm_resize(self, power_on):
+    def _test_confirm_resize(self, power_on, numa_topology=None):
         # Common test case method for confirm_resize
         def fake(*args, **kwargs):
             pass
@@ -5188,6 +5189,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance.vm_state = old_vm_state
         instance.power_state = p_state
+        instance.numa_topology = numa_topology
         instance.save()
 
         new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
@@ -5200,6 +5202,11 @@ class ComputeTestCase(BaseTestCase):
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
+        migration_context = objects.MigrationContext.get_by_instance_uuid(
+            self.context.elevated(), instance.uuid)
+        self.assertIsInstance(migration_context.old_numa_topology,
+                              numa_topology.__class__)
+        self.assertIsNone(migration_context.new_numa_topology)
 
         # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
         sys_meta = instance.system_metadata
@@ -5220,6 +5227,9 @@ class ComputeTestCase(BaseTestCase):
         instance_type_ref = db.flavor_get(self.context,
                 instance.instance_type_id)
         self.assertEqual(instance_type_ref['flavorid'], '3')
+        # Prove that the NUMA topology has also been updated to that of the new
+        # flavor - meaning None
+        self.assertIsNone(instance.numa_topology)
 
         # Finally, confirm the resize and verify the new flavor is applied
         instance.task_state = None
@@ -5236,6 +5246,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('fake-mini', migration.source_compute)
         self.assertEqual(old_vm_state, instance.vm_state)
         self.assertIsNone(instance.task_state)
+        self.assertIsNone(instance.migration_context)
         self.assertEqual(p_state, instance.power_state)
         self.compute.terminate_instance(self.context, instance, [], [])
 
@@ -5245,8 +5256,15 @@ class ComputeTestCase(BaseTestCase):
     def test_confirm_resize_from_stopped(self):
         self._test_confirm_resize(power_on=False)
 
+    def test_confirm_resize_with_migration_context(self):
+        numa_topology = (
+            test_instance_numa_topology.get_fake_obj_numa_topology(
+                self.context))
+        self._test_confirm_resize(power_on=True, numa_topology=numa_topology)
+
     def _test_finish_revert_resize(self, power_on,
-                                   remove_old_vm_state=False):
+                                   remove_old_vm_state=False,
+                                   numa_topology=None):
         """Convenience method that does most of the work for the
         test_finish_revert_resize tests.
         :param power_on -- True if testing resize from ACTIVE state, False if
@@ -5291,6 +5309,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance.host = 'foo'
         instance.vm_state = old_vm_state
+        instance.numa_topology = numa_topology
         instance.save()
 
         new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
@@ -5304,6 +5323,10 @@ class ComputeTestCase(BaseTestCase):
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
+        migration_context = objects.MigrationContext.get_by_instance_uuid(
+            self.context.elevated(), instance.uuid)
+        self.assertIsInstance(migration_context.old_numa_topology,
+                              numa_topology.__class__)
 
         # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
         sys_meta = instance.system_metadata
@@ -5323,6 +5346,9 @@ class ComputeTestCase(BaseTestCase):
         # Prove that the instance size is now the new size
         instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.assertEqual(instance_type_ref['flavorid'], '3')
+        # Prove that the NUMA topology has also been updated to that of the new
+        # flavor - meaning None
+        self.assertIsNone(instance.numa_topology)
 
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save()
@@ -5352,6 +5378,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '1')
         self.assertEqual(instance.host, migration.source_compute)
         self.assertEqual(migration.dest_compute, migration.source_compute)
+        self.assertIsInstance(instance.numa_topology, numa_topology.__class__)
 
         if remove_old_vm_state:
             self.assertEqual(vm_states.ACTIVE, instance.vm_state)
@@ -5370,6 +5397,13 @@ class ComputeTestCase(BaseTestCase):
         # finish_revert_resize
         self._test_finish_revert_resize(power_on=False,
                                         remove_old_vm_state=True)
+
+    def test_finish_revert_resize_migration_context(self):
+        numa_topology = (
+            test_instance_numa_topology.get_fake_obj_numa_topology(
+                self.context))
+        self._test_finish_revert_resize(power_on=True,
+                                        numa_topology=numa_topology)
 
     def _test_cleanup_stored_instance_types(self, old, new, revert=False):
         instance = self._create_fake_instance_obj()
