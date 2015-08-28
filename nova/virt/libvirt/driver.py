@@ -356,34 +356,6 @@ def patch_tpool_proxy():
 
 patch_tpool_proxy()
 
-VIR_DOMAIN_NOSTATE = 0
-VIR_DOMAIN_RUNNING = 1
-VIR_DOMAIN_BLOCKED = 2
-VIR_DOMAIN_PAUSED = 3
-VIR_DOMAIN_SHUTDOWN = 4
-VIR_DOMAIN_SHUTOFF = 5
-VIR_DOMAIN_CRASHED = 6
-VIR_DOMAIN_PMSUSPENDED = 7
-
-LIBVIRT_POWER_STATE = {
-    VIR_DOMAIN_NOSTATE: power_state.NOSTATE,
-    VIR_DOMAIN_RUNNING: power_state.RUNNING,
-    # NOTE(maoy): The DOMAIN_BLOCKED state is only valid in Xen.
-    # It means that the VM is running and the vCPU is idle. So,
-    # we map it to RUNNING
-    VIR_DOMAIN_BLOCKED: power_state.RUNNING,
-    VIR_DOMAIN_PAUSED: power_state.PAUSED,
-    # NOTE(maoy): The libvirt API doc says that DOMAIN_SHUTDOWN
-    # means the domain is being shut down. So technically the domain
-    # is still running. SHUTOFF is the real powered off state.
-    # But we will map both to SHUTDOWN anyway.
-    # http://libvirt.org/html/libvirt-libvirt.html
-    VIR_DOMAIN_SHUTDOWN: power_state.SHUTDOWN,
-    VIR_DOMAIN_SHUTOFF: power_state.SHUTDOWN,
-    VIR_DOMAIN_CRASHED: power_state.CRASHED,
-    VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
-}
-
 # This is effectively the min version for i686/x86_64 + KVM/QEMU
 # TODO(berrange) find out what min version ppc64 needs as it
 # almost certainly wants something newer than this....
@@ -4382,31 +4354,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         guest = self._host.get_guest(instance)
-
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove virt_dom at the end.
-        virt_dom = guest._domain
-        try:
-            dom_info = self._host.get_domain_info(virt_dom)
-        except libvirt.libvirtError as ex:
-            error_code = ex.get_error_code()
-            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.InstanceNotFound(instance_id=instance.uuid)
-
-            msg = (_('Error from libvirt while getting domain info for '
-                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s') %
-                   {'instance_name': instance.name,
-                    'error_code': error_code,
-                    'ex': ex})
-            raise exception.NovaException(msg)
-
-        return hardware.InstanceInfo(state=LIBVIRT_POWER_STATE[dom_info[0]],
-                                     max_mem_kb=dom_info[1],
-                                     mem_kb=dom_info[2],
-                                     num_cpu=dom_info[3],
-                                     cpu_time_ns=dom_info[4],
-                                     id=virt_dom.ID())
+        # Kind of ugly but we need to pass host to get_info as for a
+        # workaround, see libvirt/compat.py
+        return guest.get_info(self._host)
 
     def _create_domain_setup_lxc(self, instance, image_meta,
                                  block_device_info, disk_info):
@@ -7028,8 +6978,11 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = guest.get_xml_desc()
         xml_doc = etree.fromstring(xml)
 
+        # TODO(sahid): Needs to use get_info but more changes have to
+        # be done since a mapping STATE_MAP LIBVIRT_POWER_STATE is
+        # needed.
         (state, max_mem, mem, num_cpu, cpu_time) = \
-            self._host.get_domain_info(domain)
+            guest._get_domain_info(self._host)
         config_drive = configdrive.required_by(instance)
         launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
@@ -7226,5 +7179,9 @@ class LibvirtDriver(driver.ComputeDriver):
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
     def _get_power_state(self, virt_dom):
-        dom_info = self._host.get_domain_info(virt_dom)
-        return LIBVIRT_POWER_STATE[dom_info[0]]
+        # TODO(sahid): We should pass a guest object.
+        guest = libvirt_guest.Guest(virt_dom)
+        # TODO(sahid): Need to use guest.get_info. currently to many
+        # tests to have to be updated, will do the change soon.
+        info = guest._get_domain_info(self._host)
+        return libvirt_guest.LIBVIRT_POWER_STATE[info[0]]
