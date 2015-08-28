@@ -238,6 +238,8 @@ class ResourceTracker(object):
                                  image_meta, self, self.compute_node,
                                  overhead=overhead, limits=limits)
         claim.migration = migration
+        instance.migration_context = claim.create_migration_context()
+        instance.save()
 
         # Mark the resources in-use for the resize landing on this
         # compute host:
@@ -338,6 +340,8 @@ class ResourceTracker(object):
 
                 ctxt = context.elevated()
                 self._update(ctxt)
+
+            instance.drop_migration_context()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_usage(self, context, instance):
