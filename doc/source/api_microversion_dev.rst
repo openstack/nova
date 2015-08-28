@@ -187,6 +187,11 @@ A microversion is not needed in the following situation:
   - Changing the error message without changing the response code
     does not require a new microversion.
 
+  - Removing an inapplicable HTTP header, for example, suppose the Retry-After
+    HTTP header is being returned with a 4xx code. This header should only be
+    returned with a 503 or 3xx response, so it may be removed without bumping
+    the microversion.
+
 In Code
 -------
 
