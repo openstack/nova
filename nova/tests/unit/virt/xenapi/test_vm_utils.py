@@ -26,6 +26,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 
 from nova.compute import flavors
@@ -1991,16 +1992,34 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, '_import_migrated_vhds')
     def test_import_migrate_ephemeral_disks(self, mock_migrate):
         mock_migrate.return_value = "foo"
-        instance = {"uuid": "uuid", "name": "name", "ephemeral_gb": 4000}
+        instance = objects.Instance(id=1, uuid=uuidutils.generate_uuid())
+        instance.old_flavor = objects.Flavor(ephemeral_gb=4000)
 
         result = vm_utils._import_migrate_ephemeral_disks("s", instance)
 
         self.assertEqual({'4': 'foo', '5': 'foo'}, result)
-        expected_calls = [mock.call("s", instance, "uuid_ephemeral_1",
-                                    "ephemeral", "name ephemeral (1)"),
-                          mock.call("s", instance, "uuid_ephemeral_2",
-                                    "ephemeral", "name ephemeral (2)")]
+        inst_uuid = instance.uuid
+        inst_name = instance.name
+        expected_calls = [mock.call("s", instance,
+                                    "%s_ephemeral_1" % inst_uuid,
+                                    "ephemeral",
+                                    "%s ephemeral (1)" % inst_name),
+                          mock.call("s", instance,
+                                    "%s_ephemeral_2" % inst_uuid,
+                                    "ephemeral",
+                                    "%s ephemeral (2)" % inst_name)]
         self.assertEqual(expected_calls, mock_migrate.call_args_list)
+
+    @mock.patch.object(vm_utils, 'get_ephemeral_disk_sizes')
+    def test_import_migrate_ephemeral_disks_use_old_flavor(self,
+            mock_get_sizes):
+        mock_get_sizes.return_value = []
+        instance = objects.Instance(id=1, uuid=uuidutils.generate_uuid(),
+                ephemeral_gb=2000)
+        instance.old_flavor = objects.Flavor(ephemeral_gb=4000)
+
+        vm_utils._import_migrate_ephemeral_disks("s", instance)
+        mock_get_sizes.assert_called_once_with(4000)
 
     @mock.patch.object(vm_utils, '_set_vdi_info')
     @mock.patch.object(vm_utils, 'scan_default_sr')

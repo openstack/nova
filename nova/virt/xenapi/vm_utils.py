@@ -2510,7 +2510,7 @@ def _import_migrated_root_disk(session, instance):
 def _import_migrate_ephemeral_disks(session, instance):
     ephemeral_vdis = {}
     instance_uuid = instance['uuid']
-    ephemeral_gb = instance["ephemeral_gb"]
+    ephemeral_gb = instance.old_flavor.ephemeral_gb
     disk_sizes = get_ephemeral_disk_sizes(ephemeral_gb)
     for chain_number, _size in enumerate(disk_sizes, start=1):
         chain_label = instance_uuid + "_ephemeral_%d" % chain_number
