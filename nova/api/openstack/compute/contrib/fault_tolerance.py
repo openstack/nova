@@ -34,7 +34,16 @@ class FaultServerToleranceController(servers.Controller):
 
     @wsgi.action('failover')
     def _failover(self, req, id, body):
-        """Failover to secondary instance."""
+        """Recover from a failure.
+
+        The failover API call allows for third-party fault detection mechanisms
+        to initiate recovery of failed instances in fault tolerance mode.
+
+        If a primary instance has failed, a secondary instance is promoted to
+        primary and all traffic is redirected without the client feeling it. If
+        a secondary instance has failed it's removed. Finally, the
+        primary/secondary relation is cleaned up.
+        """
         context = req.environ["nova.context"]
 
         try:
@@ -52,7 +61,7 @@ class FaultServerToleranceController(servers.Controller):
     def delete(self, req, resp_obj, id):
         """
         Extending the delete action to delete all secondary instances in
-        relation to primary instances getting deleted.
+        relation to a primary instance getting deleted.
         """
         context = req.environ['nova.context']
 

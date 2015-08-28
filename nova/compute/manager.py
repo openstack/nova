@@ -6281,3 +6281,8 @@ class ComputeManager(manager.Manager):
     def colo_cleanup(self, context, instance):
         network_info = compute_utils.get_nw_info_for_instance(instance)
         self.driver.colo_cleanup(instance, network_info)
+
+    def colo_failover(self, context, instance):
+        ret = self.driver.exec_monitor_command(instance, "colo_lost_heartbeat")
+        # TODO(ORBIT): Handle qemu response
+        LOG.error("colo_lost_heartbeat response: %s", ret)

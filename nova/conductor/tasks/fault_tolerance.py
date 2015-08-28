@@ -61,10 +61,16 @@ class FaultToleranceTasks(object):
             relation = objects.FaultToleranceRelation.\
                 get_by_secondary_instance_uuid(context, instance.uuid)
 
+            s_instance = instance
             p_instance = self.compute_api.get(context,
                                               relation.primary_instance_uuid,
                                               want_objects=True)
-            s_instance = instance
+
+            self.compute_api.colo_failover(context, p_instance)
+
+            self.compute_api.delete(context, s_instance)
+
+            self.compute_api.colo_cleanup(context, p_instance)
         else:
             relations = objects.FaultToleranceRelationList.\
                     get_by_primary_instance_uuid(context, instance.uuid)
@@ -77,20 +83,15 @@ class FaultToleranceTasks(object):
                                               relation.secondary_instance_uuid,
                                               want_objects=True)
 
-        self._failover_floating_ip(context, p_instance, s_instance)
-        self._failover_name(context, p_instance, s_instance)
+            self.compute_api.colo_failover(context, s_instance)
 
-        self.compute_api.colo_cleanup(context, s_instance)
+            self._failover_floating_ip(context, p_instance, s_instance)
+            self._failover_name(context, p_instance, s_instance)
 
-        del s_instance.system_metadata['instance_type_extra_ft:secondary']
-        s_instance.save()
+            del s_instance.system_metadata['instance_type_extra_ft:secondary']
+            s_instance.save()
 
         relation.destroy()
-
-        # TODO(ORBIT): Currently just unpausing secondary.
-        self.compute_api.unpause(context, s_instance)
-
-        self.compute_api.delete(context, p_instance)
 
     # TODO(ORBIT): This might come in handy if the secondary VM need different
     #              resources (more RAM?) than the primary VM.

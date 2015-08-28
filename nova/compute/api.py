@@ -3281,6 +3281,9 @@ class API(base.Base):
             self.compute_rpcapi.external_instance_event(
                 context, instances_by_host[host], events_by_host[host])
 
+    def colo_failover(self, context, instance):
+        self.compute_rpcapi.colo_failover(context, instance)
+
     def colo_cleanup(self, context, instance):
         self.compute_rpcapi.colo_cleanup(context, instance)
 
