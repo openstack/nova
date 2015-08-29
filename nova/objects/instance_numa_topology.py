@@ -131,10 +131,10 @@ class InstanceNUMATopology(base.NovaObject,
     }
 
     @classmethod
-    def obj_from_primitive(cls, primitive):
+    def obj_from_primitive(cls, primitive, context=None):
         if 'nova_object.name' in primitive:
             obj_topology = super(InstanceNUMATopology, cls).obj_from_primitive(
-                primitive)
+                primitive, context=None)
         else:
             # NOTE(sahid): This compatibility code needs to stay until we can
             # guarantee that there are no cases of the old format stored in

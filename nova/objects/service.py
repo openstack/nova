@@ -120,6 +120,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         self.version = SERVICE_VERSION
 
     def obj_make_compatible(self, primitive, target_version):
+        super(Service, self).obj_make_compatible(primitive, target_version)
         _target_version = utils.convert_version_to_tuple(target_version)
         if _target_version < (1, 16) and 'version' in primitive:
             del primitive['version']
@@ -134,7 +135,6 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             # when called
             self._do_compute_node(self._context, primitive,
                                   target_compute_version)
-        super(Service, self).obj_make_compatible(primitive, target_version)
 
     def _do_compute_node(self, context, primitive, target_version):
         try:

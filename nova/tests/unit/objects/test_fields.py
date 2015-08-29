@@ -21,7 +21,6 @@ from oslo_versionedobjects import exception as ovo_exc
 import six
 
 from nova.network import model as network_model
-from nova.objects import base as obj_base
 from nova.objects import fields
 from nova import test
 
@@ -832,43 +831,6 @@ class TestDictOfListOfStrings(TestField):
     def test_stringify(self):
         self.assertEqual("{foo=['1','2']}",
                          self.field.stringify({'foo': ['1', '2']}))
-
-
-class TestObject(TestField):
-    def setUp(self):
-        super(TestObject, self).setUp()
-
-        class TestableObject(obj_base.NovaObject):
-            fields = {
-                'uuid': fields.StringField(),
-                }
-
-            def __eq__(self, value):
-                # NOTE(danms): Be rather lax about this equality thing to
-                # satisfy the assertEqual() in test_from_primitive(). We
-                # just want to make sure the right type of object is re-created
-                return value.__class__.__name__ == TestableObject.__name__
-
-        class OtherTestableObject(obj_base.NovaObject):
-            pass
-
-        obj_base.NovaObjectRegistry.register(TestableObject)
-        obj_base.NovaObjectRegistry.register(OtherTestableObject)
-
-        test_inst = TestableObject()
-        self._test_cls = TestableObject
-        self.field = fields.Field(fields.Object('TestableObject'))
-        self.coerce_good_values = [(test_inst, test_inst)]
-        self.coerce_bad_values = [OtherTestableObject(), 1, 'foo']
-        self.to_primitive_values = [(test_inst, test_inst.obj_to_primitive())]
-        self.from_primitive_values = [(test_inst.obj_to_primitive(),
-                                       test_inst),
-                                       (test_inst, test_inst)]
-
-    def test_stringify(self):
-        obj = self._test_cls(uuid='fake-uuid')
-        self.assertEqual('TestableObject(fake-uuid)',
-                         self.field.stringify(obj))
 
 
 class TestNetworkModel(TestField):
