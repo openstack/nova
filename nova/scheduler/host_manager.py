@@ -29,7 +29,6 @@ except ImportError:
 import iso8601
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
 
@@ -177,7 +176,7 @@ class HostState(object):
         self.limits = {}
 
         # Generic metrics from compute nodes
-        self.metrics = {}
+        self.metrics = None
 
         # List of aggregates the host belongs to
         self.aggregates = []
@@ -191,27 +190,6 @@ class HostState(object):
 
     def update_service(self, service):
         self.service = ReadOnlyDict(service)
-
-    def _update_metrics_from_compute_node(self, compute):
-        """Update metrics from a ComputeNode object."""
-        # NOTE(llu): The 'or []' is to avoid json decode failure of None
-        #            returned from compute.get, because DB schema allows
-        #            NULL in the metrics column
-        metrics = compute.metrics or []
-        if metrics:
-            metrics = jsonutils.loads(metrics)
-        for metric in metrics:
-            # 'name', 'value', 'timestamp' and 'source' are all required
-            # to be valid keys, just let KeyError happen if any one of
-            # them is missing. But we also require 'name' to be True.
-            name = metric['name']
-            item = MetricItem(value=metric['value'],
-                              timestamp=metric['timestamp'],
-                              source=metric['source'])
-            if name:
-                self.metrics[name] = item
-            else:
-                LOG.warning(_LW("Metric name unknown of %r"), item)
 
     def update_from_compute_node(self, compute):
         """Update information about a host from a ComputeNode object."""
@@ -271,7 +249,7 @@ class HostState(object):
         self.num_io_ops = int(self.stats.get('io_workload', 0))
 
         # update metrics
-        self._update_metrics_from_compute_node(compute)
+        self.metrics = objects.MonitorMetricList.from_json(compute.metrics)
 
     @set_update_time_on_success
     def consume_from_instance(self, instance):

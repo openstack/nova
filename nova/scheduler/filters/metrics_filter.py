@@ -41,13 +41,15 @@ class MetricsFilter(filters.BaseHostFilter):
                                    sep='=',
                                    converter=float,
                                    name="metrics.weight_setting")
-        self.keys = [x[0] for x in opts]
+        self.keys = set([x[0] for x in opts])
 
     def host_passes(self, host_state, filter_properties):
-        unavail = [i for i in self.keys if i not in host_state.metrics]
-        if unavail:
+        metrics_on_host = set(m.name for m in host_state.metrics)
+        if not self.keys.issubset(metrics_on_host):
+            unavail = metrics_on_host - self.keys
             LOG.debug("%(host_state)s does not have the following "
                         "metrics: %(metrics)s",
                       {'host_state': host_state,
                        'metrics': ', '.join(unavail)})
-        return len(unavail) == 0
+            return False
+        return True
