@@ -36,7 +36,7 @@ def fake_instance_get_by_uuid(context, instance_id,
 
 class ShelvePolicyTestV21(test.NoDBTestCase):
     plugin = shelve_v21
-    prefix = 'v3:os-shelve:'
+    prefix = 'os_compute_api:os-shelve'
     offload = 'shelve_offload'
 
     def setUp(self):

@@ -284,7 +284,7 @@ class HTTPRequestV21(os_wsgi.Request):
 
     @staticmethod
     def blank(*args, **kwargs):
-        kwargs['base_url'] = 'http://localhost/v3'
+        kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         out = os_wsgi.Request.blank(*args, **kwargs)
