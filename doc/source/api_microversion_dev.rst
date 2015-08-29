@@ -307,6 +307,10 @@ necessary to add changes to other places which describe your change:
 * Update the expected versions in affected tests, for example in
   ``nova/tests/unit/api/openstack/compute/test_versions.py``.
 
+* Update the get versions api sample files:
+  ``doc/api_samples/versions/versions-get-resp.json`` and
+  ``nova/tests/functional/api_samples/versions/versions-get-resp.json.tpl``.
+
 Allocating a microversion
 -------------------------
 
