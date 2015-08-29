@@ -168,7 +168,7 @@ class ResourceTracker(object):
                                 image_meta=image_meta, limits=limits)
 
     def _move_claim(self, context, instance, new_instance_type, move_type=None,
-                    image_meta=None, limits=None):
+                    image_meta=None, limits=None, migration=None):
         """Indicate that resources are needed for a move to this host.
 
         Move can be either a migrate/resize, live-migrate or an
@@ -182,17 +182,22 @@ class ResourceTracker(object):
                          'live-migration', 'evacuate'
         :param limits: Dict of oversubscription limits for memory, disk,
         and CPUs
+        :param migration: A migration object if one was already created
+                          elsewhere for this operation
         :returns: A Claim ticket representing the reserved resources.  This
         should be turned into finalize  a resource claim or free
         resources after the compute operation is finished.
         """
         image_meta = image_meta or {}
+        if migration:
+            self._claim_existing_migration(migration)
+        else:
+            migration = self._create_migration(context, instance,
+                                               new_instance_type, move_type)
 
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # generate the migration record and continue the resize:
-            migration = self._create_migration(context, instance,
-                                               new_instance_type, move_type)
             return claims.NopClaim(migration=migration)
 
         # get memory overhead required to build this instance:
@@ -204,9 +209,6 @@ class ResourceTracker(object):
         claim = claims.MoveClaim(context, instance, new_instance_type,
                                  image_meta, self, self.compute_node,
                                  overhead=overhead, limits=limits)
-
-        migration = self._create_migration(context, instance,
-                                           new_instance_type, move_type)
         claim.migration = migration
 
         # Mark the resources in-use for the resize landing on this
@@ -241,6 +243,20 @@ class ResourceTracker(object):
                 migration)
         migration.create()
         return migration
+
+    def _claim_existing_migration(self, migration):
+        """Make an existing migration record count for resource tracking.
+
+        If a migration record was created already before the request made
+        it to this compute host, only set up the migration so it's included in
+        resource tracking. This should be done while the
+        COMPUTE_RESOURCES_SEMAPHORE is held.
+        """
+        migration.dest_compute = self.host
+        migration.dest_node = self.nodename
+        migration.dest_host = self.driver.get_host_ip_addr()
+        migration.status = 'pre-migrating'
+        migration.save()
 
     def _set_instance_host_and_node(self, context, instance):
         """Tag the instance as belonging to this host.  This should be done

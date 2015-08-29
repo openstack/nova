@@ -1251,6 +1251,20 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
                 result = self.tracker._instance_in_resize_state(instance)
                 self.assertTrue(result)
 
+    @mock.patch.object(objects.Migration, 'save')
+    def test_existing_migration(self, save_mock):
+        migration = objects.Migration(self.context,
+                                      instance_uuid=self.instance.uuid,
+                                      status='accepted',
+                                      migration_type='evacuation')
+        self.claim_method(self.context, self.instance, self.instance_type,
+                          migration=migration)
+        self.assertEqual(self.tracker.host, migration.dest_compute)
+        self.assertEqual(self.tracker.nodename, migration.dest_node)
+        self.assertEqual("pre-migrating", migration.status)
+        self.assertEqual(0, len(self.tracker.tracked_migrations))
+        save_mock.assert_called_once_with()
+
 
 class ResizeClaimTestCase(_MoveClaimTestCase):
     def setUp(self):
@@ -1260,6 +1274,10 @@ class ResizeClaimTestCase(_MoveClaimTestCase):
 
     def test_move_type_not_tracked(self):
         self.skipTest("Resize_claim does already sets the move_type.")
+
+    def test_existing_migration(self):
+        self.skipTest("Resize_claim does not support having existing "
+                      "migration record.")
 
 
 class OrphanTestCase(BaseTrackerTestCase):
