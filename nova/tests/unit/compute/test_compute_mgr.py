@@ -2663,6 +2663,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertIsInstance(mock_r.call_args_list[0][0][0],
                                   objects.Instance)
 
+    def test_set_instance_obj_error_state_with_clean_task_state(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+            vm_state=vm_states.BUILDING, task_state=task_states.SPAWNING)
+        with mock.patch.object(instance, 'save'):
+            self.compute._set_instance_obj_error_state(self.context, instance,
+                                                       clean_task_state=True)
+            self.assertEqual(vm_states.ERROR, instance.vm_state)
+            self.assertIsNone(instance.task_state)
+
+    def test_set_instance_obj_error_state_by_default(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+            vm_state=vm_states.BUILDING, task_state=task_states.SPAWNING)
+        with mock.patch.object(instance, 'save'):
+            self.compute._set_instance_obj_error_state(self.context, instance)
+            self.assertEqual(vm_states.ERROR, instance.vm_state)
+            self.assertEqual(task_states.SPAWNING, instance.task_state)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -2835,7 +2852,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         compute_utils.add_instance_fault_from_exc(self.context,
                 self.instance, mox.IgnoreArg(), mox.IgnoreArg())
         self.compute._nil_out_instance_obj_host_and_node(self.instance)
-        self.compute._set_instance_obj_error_state(self.context, self.instance)
+        self.compute._set_instance_obj_error_state(self.context, self.instance,
+                                                   clean_task_state=True)
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -2996,8 +3014,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                 mox.IgnoreArg(), mox.IgnoreArg())
         self.compute._nil_out_instance_obj_host_and_node(self.instance)
-        self.compute._set_instance_obj_error_state(self.context,
-                                               self.instance)
+        self.compute._set_instance_obj_error_state(self.context, self.instance,
+                                                   clean_task_state=True)
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -3135,7 +3153,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.instance, mox.IgnoreArg(), mox.IgnoreArg())
             self.compute._set_instance_obj_error_state(self.context,
-                    self.instance)
+                    self.instance, clean_task_state=True)
         self._instance_action_events()
         self.mox.ReplayAll()
 
