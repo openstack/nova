@@ -40,9 +40,7 @@ def _get_ds_capacity_and_freespace(session, cluster=None,
 
 
 class VCState(object):
-    """Manages information about the VC host this compute
-    node is running on.
-    """
+    """Manages information about the vCenter cluster"""
     def __init__(self, session, host_name, cluster, datastore_regex):
         super(VCState, self).__init__()
         self._session = session
@@ -53,7 +51,7 @@ class VCState(object):
         self.update_status()
 
     def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
+        """Return the current state of the cluster. If 'refresh' is
         True, run the update first.
         """
         if refresh or not self._stats:
