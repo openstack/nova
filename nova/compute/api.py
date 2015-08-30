@@ -1339,8 +1339,7 @@ class API(base.Base):
             raise exception.InvalidBDMEphemeralSize()
 
         # There should be only one swap
-        swap_list = [bdm for bdm in all_mappings
-                if block_device.new_format_is_swap(bdm)]
+        swap_list = block_device.get_bdm_swap_list(all_mappings)
         if len(swap_list) > 1:
             msg = _("More than one swap drive requested.")
             raise exception.InvalidBDMFormat(details=msg)
