@@ -21,7 +21,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LI, _LW
 from nova.openstack.common import memorycache
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
@@ -83,10 +83,13 @@ class MemcachedDriver(base.Driver):
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):
                 service.model_disconnected = False
-                LOG.error(_LE('Recovered model server connection!'))
+                LOG.info(
+                    _LI('Recovered connection to memcache server '
+                        'for reporting service status.'))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.exception(_LE('model server went away'))
+                LOG.warn(_LW('Lost connection to memcache server '
+                             'for reporting service status.'))
