@@ -3504,7 +3504,7 @@ class ComputeManager(manager.Manager):
 
             # if the original vm state was STOPPED, set it back to STOPPED
             LOG.info(_LI("Updating instance to original state: '%s'"),
-                     old_vm_state)
+                     old_vm_state, instance=instance)
             if power_on:
                 instance.vm_state = vm_states.ACTIVE
                 instance.task_state = None
