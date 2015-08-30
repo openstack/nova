@@ -940,16 +940,6 @@ class ServerActionsControllerTestV21(test.TestCase):
                     volume_size=1,
                     device_name='vda',
                     delete_on_termination=False)]
-        props = dict(kernel_id=_fake_id('b'),
-                     ramdisk_id=_fake_id('c'),
-                     root_device_name='/dev/vda',
-                     block_device_mapping=bdm)
-        original_image = dict(properties=props,
-                              container_format='ami',
-                              status='active',
-                              is_public=True)
-
-        image_service.create(None, original_image)
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id,
                                                           use_slave=False):
@@ -967,9 +957,15 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
 
-        instance = fakes.fake_instance_get(image_ref=original_image['id'],
+        system_metadata = dict(image_kernel_id=_fake_id('b'),
+                               image_ramdisk_id=_fake_id('c'),
+                               image_root_device_name='/dev/vda',
+                               image_block_device_mapping=str(bdm),
+                               image_container_format='ami')
+        instance = fakes.fake_instance_get(image_ref=str(uuid.uuid4()),
                                            vm_state=vm_states.ACTIVE,
-                                           root_device_name='/dev/vda')
+                                           root_device_name='/dev/vda',
+                                           system_metadata=system_metadata)
         self.stubs.Set(db, 'instance_get_by_uuid', instance)
 
         self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
@@ -1053,9 +1049,12 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
 
-        instance = fakes.fake_instance_get(image_ref='',
-                                           vm_state=vm_states.ACTIVE,
-                                           root_device_name='/dev/vda')
+        instance = fakes.fake_instance_get(
+            image_ref='',
+            vm_state=vm_states.ACTIVE,
+            root_device_name='/dev/vda',
+            system_metadata={'image_test_key1': 'test_value1',
+                             'image_test_key2': 'test_value2'})
         self.stubs.Set(db, 'instance_get_by_uuid', instance)
 
         self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
@@ -1065,17 +1064,13 @@ class ServerActionsControllerTestV21(test.TestCase):
                 exception.InstanceQuiesceNotSupported(instance_id='fake',
                                                       reason='test'))
 
-        fake_metadata = {'test_key1': 'test_value1',
-                         'test_key2': 'test_value2'}
         volume = dict(id=_fake_id('a'),
                       size=1,
                       host='fake',
-                      display_description='fake',
-                      volume_image_metadata=fake_metadata)
+                      display_description='fake')
         snapshot = dict(id=_fake_id('d'))
         self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
         volume_api = self.controller.compute_api.volume_api
-        volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
         volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
         volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)

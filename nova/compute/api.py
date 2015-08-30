@@ -2282,20 +2282,20 @@ class API(base.Base):
 
         :returns: the new image metadata
         """
-        # TODO(ft): Get metadata from the instance to avoid waste DB request
-        img = instance.image_ref
-        if not img:
-            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance.uuid)
-            properties = bdms.root_metadata(
-                    context, self.image_api,
-                    self.volume_api)
-            image_meta = {'properties': properties}
-        else:
-            image_meta = self.image_api.get(context, img)
-        image_meta['name'] = name
-        image_meta['is_public'] = False
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
+        # the new image is simply a bucket of properties (particularly the
+        # block device mapping, kernel and ramdisk IDs) with no image data,
+        # hence the zero size
+        image_meta.update({'size': 0,
+                           'name': name,
+                           'is_public': False})
+        for attr in ('container_format', 'disk_format'):
+            image_meta.pop(attr, None)
         properties = image_meta['properties']
+        # clean properties before filling
+        for key in ('block_device_mapping', 'bdm_v2', 'root_device_name'):
+            properties.pop(key, None)
         if instance.root_device_name:
             properties['root_device_name'] = instance.root_device_name
         properties.update(extra_properties or {})
@@ -2344,24 +2344,9 @@ class API(base.Base):
         if quiesced:
             self.compute_rpcapi.unquiesce_instance(context, instance, mapping)
 
-        # NOTE (ndipanov): Remove swap/ephemerals from mappings as they will be
-        # in the block_device_mapping for the new image.
-        image_mappings = properties.get('mappings')
-        if image_mappings:
-            properties['mappings'] = [m for m in image_mappings
-                                      if not block_device.is_swap_or_ephemeral(
-                                          m['virtual'])]
         if mapping:
             properties['block_device_mapping'] = mapping
             properties['bdm_v2'] = True
-
-        for attr in ('status', 'location', 'id', 'owner'):
-            image_meta.pop(attr, None)
-
-        # the new image is simply a bucket of properties (particularly the
-        # block device mapping, kernel and ramdisk IDs) with no image data,
-        # hence the zero size
-        image_meta['size'] = 0
 
         return self.image_api.create(context, image_meta)
 
