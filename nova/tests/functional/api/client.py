@@ -331,6 +331,12 @@ class TestOpenStackClient(object):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id))
 
+    def post_server_metadata(self, server_id, metadata):
+        post_body = {'metadata': {}}
+        post_body['metadata'].update(metadata)
+        return self.api_post('/servers/%s/metadata' % server_id,
+                             post_body).body['metadata']
+
 
 class TestOpenStackClientV3(TestOpenStackClient):
     """Simple OpenStack v3 API Client.

@@ -13,11 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from jsonschema import exceptions as jsonschema_exc
 import webob
 import webob.dec
 
 import nova.api.openstack
 from nova.api.openstack import wsgi
+from nova.api.validation import validators
 from nova import test
 
 
@@ -106,3 +108,68 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
 
         wrapper = nova.api.openstack.LegacyV2CompatibleWrapper(fake_app)
         req.get_response(wrapper)
+
+
+class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestSoftAddtionalPropertiesValidation, self).setUp()
+        self.schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {'type': 'string'},
+                'bar': {'type': 'string'}
+             },
+            'additionalProperties': False}
+        self.schema_with_pattern = {
+            'type': 'object',
+            'patternProperties': {
+                '^[a-zA-Z0-9-_:. ]{1,255}$': {'type': 'string'}
+            },
+            'additionalProperties': False}
+
+    def test_strip_extra_properties_out_without_extra_props(self):
+        validator = validators._SchemaValidator(self.schema).validator
+        instance = {'foo': '1'}
+        gen = validators._soft_validate_additional_properties(
+            validator, False, instance, self.schema)
+        self.assertRaises(StopIteration, gen.next)
+        self.assertEqual({'foo': '1'}, instance)
+
+    def test_strip_extra_properties_out_with_extra_props(self):
+        validator = validators._SchemaValidator(self.schema).validator
+        instance = {'foo': '1', 'extra_foo': 'extra'}
+        gen = validators._soft_validate_additional_properties(
+            validator, False, instance, self.schema)
+        self.assertRaises(StopIteration, gen.next)
+        self.assertEqual({'foo': '1'}, instance)
+
+    def test_pattern_properties(self):
+        validator = validators._SchemaValidator(
+            self.schema_with_pattern).validator
+        instance = {'foo': '1'}
+        gen = validators._soft_validate_additional_properties(
+            validator, False, instance, self.schema_with_pattern)
+        self.assertRaises(StopIteration, gen.next)
+
+    def test_pattern_properties_with_invalid_property(self):
+        validator = validators._SchemaValidator(
+            self.schema_with_pattern).validator
+        instance = {'foo': '1', 'b' * 300: 'extra'}
+        gen = validators._soft_validate_additional_properties(
+            validator, False, instance, self.schema_with_pattern)
+        exc = gen.next()
+        self.assertIsInstance(exc,
+                              jsonschema_exc.ValidationError)
+        self.assertIn('was', exc.message)
+
+    def test_pattern_properties_with_multiple_invalid_properties(self):
+        validator = validators._SchemaValidator(
+            self.schema_with_pattern).validator
+        instance = {'foo': '1', 'b' * 300: 'extra', 'c' * 300: 'extra'}
+        gen = validators._soft_validate_additional_properties(
+            validator, False, instance, self.schema_with_pattern)
+        exc = gen.next()
+        self.assertIsInstance(exc,
+                              jsonschema_exc.ValidationError)
+        self.assertIn('were', exc.message)
