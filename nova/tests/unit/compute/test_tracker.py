@@ -1271,3 +1271,25 @@ class TestMoveClaim(BaseTestCase):
         self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
         self.audit(self.rt, [], [migr_obj, migr_obj], self.instance)
         self.assertEqual(1, len(self.rt.tracked_migrations))
+
+
+class TestInstanceInResizeState(test.NoDBTestCase):
+    def test_active_suspending(self):
+        instance = objects.Instance(vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.SUSPENDING)
+        self.assertFalse(resource_tracker._instance_in_resize_state(instance))
+
+    def test_resized_suspending(self):
+        instance = objects.Instance(vm_state=vm_states.RESIZED,
+                                    task_state=task_states.SUSPENDING)
+        self.assertTrue(resource_tracker._instance_in_resize_state(instance))
+
+    def test_resized_resize_migrating(self):
+        instance = objects.Instance(vm_state=vm_states.RESIZED,
+                                    task_state=task_states.RESIZE_MIGRATING)
+        self.assertTrue(resource_tracker._instance_in_resize_state(instance))
+
+    def test_resized_resize_finish(self):
+        instance = objects.Instance(vm_state=vm_states.RESIZED,
+                                    task_state=task_states.RESIZE_FINISH)
+        self.assertTrue(resource_tracker._instance_in_resize_state(instance))
