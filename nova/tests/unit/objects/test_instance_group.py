@@ -101,6 +101,23 @@ class _TestInstanceGroupObject(object):
                                                 'server_group_id': _DB_UUID})
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
+    @mock.patch('nova.db.instance_group_update')
+    @mock.patch('nova.db.instance_group_get')
+    def test_save_without_hosts(self, mock_db_get, mock_db_update,
+                                mock_notify):
+        mock_db_get.side_effect = [_INST_GROUP_DB, _INST_GROUP_DB]
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        obj.hosts = ['fake-host1']
+        self.assertRaises(exception.InstanceGroupSaveException,
+                          obj.save)
+        # make sure that we can save by removing hosts from what is updated
+        obj.obj_reset_changes(['hosts'])
+        obj.save()
+        # since hosts was the only update, there is no actual call
+        self.assertFalse(mock_db_update.called)
+        self.assertFalse(mock_notify.called)
+
+    @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.db.instance_group_create', return_value=_INST_GROUP_DB)
     def test_create(self, mock_db_create, mock_notify):
         obj = objects.InstanceGroup(context=mock.sentinel.ctx)
@@ -221,6 +238,21 @@ class _TestInstanceGroupObject(object):
         self.assertNotIn('metadetails', obj_primitive)
         obj.obj_make_compatible(obj_primitive, '1.6')
         self.assertEqual({}, obj_primitive['metadetails'])
+
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    def test_load_hosts(self, mock_get_by_filt):
+        mock_get_by_filt.return_value = [objects.Instance(host='host1'),
+                                         objects.Instance(host='host2')]
+
+        obj = objects.InstanceGroup(mock.sentinel.ctx, members=['uuid1'])
+        self.assertEqual(2, len(obj.hosts))
+        self.assertIn('host1', obj.hosts)
+        self.assertIn('host2', obj.hosts)
+        self.assertNotIn('hosts', obj.obj_what_changed())
+
+    def test_load_anything_else_but_hosts(self):
+        obj = objects.InstanceGroup(mock.sentinel.ctx)
+        self.assertRaises(exception.ObjectActionError, getattr, obj, 'members')
 
 
 class TestInstanceGroupObject(test_objects._LocalTest,

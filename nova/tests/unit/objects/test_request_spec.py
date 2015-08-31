@@ -172,7 +172,7 @@ class _TestRequestSpecObject(object):
         spec._populate_group_info(filt_props)
         self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
         self.assertEqual(['affinity'], spec.instance_group.policies)
-        self.assertEqual(['fake1'], spec.instance_group.members)
+        self.assertEqual(['fake1'], spec.instance_group.hosts)
 
     def test_populate_group_info_missing_values(self):
         filt_props = {}
@@ -316,7 +316,7 @@ class _TestRequestSpecObject(object):
                                            vcpu=1.0,
                                            disk_gb=10.0,
                                            memory_mb=8192.0),
-            instance_group=objects.InstanceGroup(members=['fake1'],
+            instance_group=objects.InstanceGroup(hosts=['fake1'],
                                                  policies=['affinity']),
             scheduler_hints={'foo': ['bar']})
         expected = {'ignore_hosts': ['ignoredhost'],

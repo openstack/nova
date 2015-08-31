@@ -23,6 +23,9 @@ from nova.objects import fields
 from nova import utils
 
 
+LAZY_LOAD_FIELDS = ['hosts']
+
+
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
@@ -37,7 +40,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
     # Version 1.7: Deprecate metadetails
     # Version 1.8: Add count_members_by_user()
     # Version 1.9: Add get_by_instance_uuid()
-    VERSION = '1.9'
+    # Version 1.10: Add hosts field
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(),
@@ -50,6 +54,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
 
         'policies': fields.ListOfStringsField(nullable=True),
         'members': fields.ListOfStringsField(nullable=True),
+        'hosts': fields.ListOfStringsField(nullable=True),
         }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -67,6 +72,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         """
         # Most of the field names match right now, so be quick
         for field in instance_group.fields:
+            if field in LAZY_LOAD_FIELDS:
+                continue
             if field == 'deleted':
                 instance_group.deleted = db_inst['deleted'] == db_inst['id']
             else:
@@ -75,6 +82,15 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         instance_group._context = context
         instance_group.obj_reset_changes()
         return instance_group
+
+    def obj_load_attr(self, attrname):
+        # NOTE(sbauza): Only hosts could be lazy-loaded right now
+        if attrname != 'hosts':
+            raise exception.ObjectActionError(
+                action='obj_load_attr', reason='unable to load %s' % attrname)
+
+        self.hosts = self.get_hosts()
+        self.obj_reset_changes(['hosts'])
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid):
@@ -112,6 +128,19 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         """Save updates to this instance group."""
 
         updates = self.obj_get_changes()
+
+        # NOTE(sbauza): We do NOT save the set of compute nodes that an
+        # instance group is connected to in this method. Instance groups are
+        # implicitly connected to compute nodes when the
+        # InstanceGroup.add_members() method is called, which adds the mapping
+        # table entries.
+        # So, since the only way to have hosts in the updates is to set that
+        # field explicitely, we prefer to raise an Exception so the developer
+        # knows he has to call obj_reset_changes(['hosts']) right after setting
+        # the field.
+        if 'hosts' in updates:
+            raise exception.InstanceGroupSaveException(field='hosts')
+
         if not updates:
             return
 
@@ -208,7 +237,8 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.4: InstanceGroup <= version 1.7
     # Version 1.5: InstanceGroup <= version 1.8
     # Version 1.6: InstanceGroup <= version 1.9
-    VERSION = '1.6'
+    # Version 1.7: InstanceGroup <= version 1.10
+    VERSION = '1.7'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -217,7 +247,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     obj_relationships = {
         'objects': [('1.0', '1.3'), ('1.1', '1.4'), ('1.2', '1.5'),
                     ('1.3', '1.6'), ('1.4', '1.7'), ('1.5', '1.8'),
-                    ('1.6', '1.9')],
+                    ('1.6', '1.9'), ('1.7', '1.10')],
         }
 
     @base.remotable_classmethod
