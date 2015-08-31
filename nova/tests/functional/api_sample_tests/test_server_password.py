@@ -54,4 +54,4 @@ class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
     def test_reset_password(self):
         uuid = self._post_server()
         response = self._do_delete('servers/%s/os-server-password' % uuid)
-        self.assertEqual(response.status_code, 204)
+        self.assertEqual(204, response.status_code)

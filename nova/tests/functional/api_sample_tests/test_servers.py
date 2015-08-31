@@ -155,8 +155,8 @@ class ServersActionsJsonTest(ServersSampleBase):
             subs.update(self._get_regexes())
             self._verify_response(resp_tpl, subs, response, code)
         else:
-            self.assertEqual(response.status_code, code)
-            self.assertEqual(response.content, "")
+            self.assertEqual(code, response.status_code)
+            self.assertEqual("", response.content)
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()
@@ -232,8 +232,8 @@ class ServerStartStopJsonTest(ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  req_tpl,
                                  {'action': action})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_server_start(self):
         uuid = self._post_server()
