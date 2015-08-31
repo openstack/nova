@@ -88,5 +88,5 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_put('os-cloudpipe/configure-project',
                                 'cloud-pipe-update-req',
                                 subs)
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
