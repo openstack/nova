@@ -36,7 +36,12 @@ compute_monitors_opts = [
                 help='A list of monitors that can be used for getting '
                      'compute metrics. You can use the alias/name from '
                      'the setuptools entry points for nova.compute.monitors.* '
-                     'namespaces.'),
+                     'namespaces. If no namespace is supplied, the "cpu." '
+                     'namespace is assumed for backwards-compatibility. '
+                     'An example value that would enable both the CPU and '
+                     'NUMA memory bandwidth monitors that used the virt '
+                     'driver variant: '
+                     '["cpu.virt_driver", "numa_mem_bw.virt_driver"]'),
     ]
 
 CONF = cfg.CONF
@@ -46,39 +51,68 @@ LOG = logging.getLogger(__name__)
 
 class MonitorHandler(object):
 
+    NAMESPACES = [
+        'nova.compute.monitors.cpu',
+    ]
+
     def __init__(self, resource_tracker):
-        self.cpu_monitor_loaded = False
+        # Dictionary keyed by the monitor type namespace. Value is the
+        # first loaded monitor of that namespace or False.
+        self.type_monitor_loaded = {ns: False for ns in self.NAMESPACES}
 
-        ns = 'nova.compute.monitors.cpu'
-        cpu_plugin_mgr = enabled.EnabledExtensionManager(
-                namespace=ns,
-                invoke_on_load=True,
-                check_func=self.check_enabled_cpu_monitor,
-                invoke_args=(resource_tracker,)
-        )
-        self.monitors = [obj.obj for obj in cpu_plugin_mgr]
+        self.monitors = []
+        for ns in self.NAMESPACES:
+            plugin_mgr = enabled.EnabledExtensionManager(
+                    namespace=ns,
+                    invoke_on_load=True,
+                    check_func=self.check_enabled_monitor,
+                    invoke_args=(resource_tracker,)
+            )
+            self.monitors += [ext.obj for ext in plugin_mgr]
 
-    def check_enabled_cpu_monitor(self, ext):
-        if self.cpu_monitor_loaded is not False:
-            msg = _LW("Excluding CPU monitor %(monitor_name)s. Already "
-                      "loaded %(loaded_cpu_monitor)s.")
+    def check_enabled_monitor(self, ext):
+        """Ensures that only one monitor is specified of any type."""
+        # The extension does not have a namespace attribute, unfortunately,
+        # but we can get the namespace by examining the first part of the
+        # entry_point_target attribute, which looks like this:
+        # 'nova.compute.monitors.cpu.virt_driver:Monitor'
+        ept = ext.entry_point_target
+        ept_parts = ept.split(':')
+        namespace_parts = ept_parts[0].split('.')
+        namespace = '.'.join(namespace_parts[0:-1])
+        if self.type_monitor_loaded[namespace] is not False:
+            msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
+                      "Already loaded %(loaded_monitor)s.")
             msg = msg % {
+                'namespace': namespace,
                 'monitor_name': ext.name,
-                'loaded_cpu_monitor': self.cpu_monitor_loaded
+                'loaded_monitor': self.type_monitor_loaded[namespace]
             }
             LOG.warn(msg)
             return False
-        # TODO(jaypipes): Right now, we only have CPU monitors, so we don't
-        # need to check if the plugin is a CPU monitor or not. Once non-CPU
-        # monitors are added, change this to check either the base class or
-        # the set of metric names returned to ensure only a single CPU
-        # monitor is loaded at any one time.
-        if ext.name in CONF.compute_monitors:
-            self.cpu_monitor_loaded = ext.name
+
+        # NOTE(jaypipes): We used to only have CPU monitors, so
+        # CONF.compute_monitors could contain "virt_driver" without any monitor
+        # type namespace. So, to maintain backwards-compatibility with that
+        # older way of specifying monitors, we first loop through any values in
+        # CONF.compute_monitors and put any non-namespace'd values into the
+        # 'cpu' namespace.
+        cfg_monitors = ['cpu.' + cfg if '.' not in cfg else cfg
+                        for cfg in CONF.compute_monitors]
+        # NOTE(jaypipes): Append 'nova.compute.monitors.' to any monitor value
+        # that doesn't have it to allow CONF.compute_monitors to use shortened
+        # namespaces (like 'cpu.' instead of 'nova.compute.monitors.cpu.')
+        cfg_monitors = ['nova.compute.monitors.' + cfg
+                        if 'nova.compute.monitors.' not in cfg else cfg
+                        for cfg in cfg_monitors]
+        if namespace + '.' + ext.name in cfg_monitors:
+            self.type_monitor_loaded[namespace] = ext.name
             return True
-        msg = _LW("Excluding CPU monitor %(monitor_name)s. Not in the "
-                  "list of enabled monitors (CONF.compute_monitors).")
+        msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
+                  "Not in the list of enabled monitors "
+                  "(CONF.compute_monitors).")
         msg = msg % {
+            'namespace': namespace,
             'monitor_name': ext.name,
         }
         LOG.warn(msg)

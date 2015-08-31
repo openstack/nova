@@ -25,15 +25,29 @@ class MonitorsTestCase(test.NoDBTestCase):
     """Test case for monitors."""
 
     @mock.patch('stevedore.enabled.EnabledExtensionManager')
-    def test_check_enabled_cpu_monitor(self, _mock_ext_manager):
+    def test_check_enabled_monitor(self, _mock_ext_manager):
         class FakeExt(object):
-            def __init__(self, name):
+            def __init__(self, ept, name):
+                self.entry_point_target = ept
                 self.name = name
 
         # We check to ensure only one CPU monitor is loaded...
-        self.flags(compute_monitors=['cpu_mon1', 'cpu_mon2'])
+        self.flags(compute_monitors=['mon1', 'mon2'])
         handler = monitors.MonitorHandler(None)
-        ext_cpu_mon1 = FakeExt('cpu_mon1')
-        ext_cpu_mon2 = FakeExt('cpu_mon2')
-        self.assertTrue(handler.check_enabled_cpu_monitor(ext_cpu_mon1))
-        self.assertFalse(handler.check_enabled_cpu_monitor(ext_cpu_mon2))
+        ext_cpu_mon1 = FakeExt('nova.compute.monitors.cpu.virt_driver:Monitor',
+                               'mon1')
+        ext_cpu_mon2 = FakeExt('nova.compute.monitors.cpu.virt_driver:Monitor',
+                               'mon2')
+        self.assertTrue(handler.check_enabled_monitor(ext_cpu_mon1))
+        self.assertFalse(handler.check_enabled_monitor(ext_cpu_mon2))
+
+        # We check to ensure that the auto-prefixing of the CPU
+        # namespace is handled properly...
+        self.flags(compute_monitors=['cpu.mon1', 'mon2'])
+        handler = monitors.MonitorHandler(None)
+        ext_cpu_mon1 = FakeExt('nova.compute.monitors.cpu.virt_driver:Monitor',
+                               'mon1')
+        ext_cpu_mon2 = FakeExt('nova.compute.monitors.cpu.virt_driver:Monitor',
+                               'mon2')
+        self.assertTrue(handler.check_enabled_monitor(ext_cpu_mon1))
+        self.assertFalse(handler.check_enabled_monitor(ext_cpu_mon2))
