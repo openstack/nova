@@ -190,8 +190,16 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, updated)
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'compute':
+            create = False
+            # NOTE(alaski): If the device name has just been set this bdm
+            # likely does not exist in the parent cell and we should create it.
+            # If this is a modification of the device name we should update
+            # rather than create which is why None is used here instead of True
+            if 'device_name' in updates:
+                create = None
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(self._context, self)
+            cells_api.bdm_update_or_create_at_top(self._context, self,
+                    create=create)
 
     @base.remotable_classmethod
     def get_by_volume_id(cls, context, volume_id,
