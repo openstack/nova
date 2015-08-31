@@ -783,7 +783,8 @@ class HostStateTestCase(test.NoDBTestCase):
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
-            pci_device_pools=None, metrics=None)
+            pci_device_pools=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -823,7 +824,8 @@ class HostStateTestCase(test.NoDBTestCase):
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
-            pci_device_pools=None, metrics=None)
+            pci_device_pools=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -854,7 +856,8 @@ class HostStateTestCase(test.NoDBTestCase):
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
-            pci_device_pools=None, metrics=None)
+            pci_device_pools=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -1017,7 +1020,8 @@ class HostStateTestCase(test.NoDBTestCase):
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int,
             numa_topology=fakes.NUMA_TOPOLOGY._to_json(),
-            stats=None, pci_device_pools=None)
+            stats=None, pci_device_pools=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5)
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
 

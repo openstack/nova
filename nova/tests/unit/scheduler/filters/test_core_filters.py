@@ -22,9 +22,9 @@ class TestCoreFilter(test.NoDBTestCase):
     def test_core_filter_passes(self):
         self.filt_cls = core_filter.CoreFilter()
         filter_properties = {'instance_type': {'vcpus': 1}}
-        self.flags(cpu_allocation_ratio=2)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 7})
+                {'vcpus_total': 4, 'vcpus_used': 7,
+                 'cpu_allocation_ratio': 2})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_core_filter_fails_safe(self):
@@ -36,17 +36,17 @@ class TestCoreFilter(test.NoDBTestCase):
     def test_core_filter_fails(self):
         self.filt_cls = core_filter.CoreFilter()
         filter_properties = {'instance_type': {'vcpus': 1}}
-        self.flags(cpu_allocation_ratio=2)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 8})
+                {'vcpus_total': 4, 'vcpus_used': 8,
+                 'cpu_allocation_ratio': 2})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_core_filter_single_instance_overcommit_fails(self):
         self.filt_cls = core_filter.CoreFilter()
         filter_properties = {'instance_type': {'vcpus': 2}}
-        self.flags(cpu_allocation_ratio=2)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 1, 'vcpus_used': 0})
+                {'vcpus_total': 1, 'vcpus_used': 0,
+                 'cpu_allocation_ratio': 2})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
@@ -54,9 +54,9 @@ class TestCoreFilter(test.NoDBTestCase):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'vcpus': 1}}
-        self.flags(cpu_allocation_ratio=2)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 7})
+                {'vcpus_total': 4, 'vcpus_used': 7,
+                 'cpu_allocation_ratio': 2})
         agg_mock.return_value = set(['XXX'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         agg_mock.assert_called_once_with(host, 'cpu_allocation_ratio')
@@ -67,9 +67,9 @@ class TestCoreFilter(test.NoDBTestCase):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'vcpus': 1}}
-        self.flags(cpu_allocation_ratio=2)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 8})
+                {'vcpus_total': 4, 'vcpus_used': 8,
+                 'cpu_allocation_ratio': 2})
         agg_mock.return_value = set([])
         # False: fallback to default flag w/o aggregates
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
@@ -84,9 +84,9 @@ class TestCoreFilter(test.NoDBTestCase):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'vcpus': 1}}
-        self.flags(cpu_allocation_ratio=1)
         host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 8})
+                {'vcpus_total': 4, 'vcpus_used': 8,
+                 'cpu_allocation_ratio': 1})
         agg_mock.return_value = set(['2', '3'])
         # use the minimum ratio from aggregates
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))

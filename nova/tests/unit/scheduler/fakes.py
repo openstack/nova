@@ -39,7 +39,8 @@ COMPUTE_NODES = [
             host='host1', hypervisor_hostname='node1', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
-            pci_device_pools=None, cpu_info=None, stats=None, metrics=None),
+            pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
         objects.ComputeNode(
             id=2, local_gb=2048, memory_mb=2048, vcpus=2,
             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
@@ -47,7 +48,8 @@ COMPUTE_NODES = [
             host='host2', hypervisor_hostname='node2', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
-            pci_device_pools=None, cpu_info=None, stats=None, metrics=None),
+            pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
         objects.ComputeNode(
             id=3, local_gb=4096, memory_mb=4096, vcpus=4,
             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
@@ -55,7 +57,8 @@ COMPUTE_NODES = [
             host='host3', hypervisor_hostname='node3', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY._to_json(),
             hypervisor_type='foo', supported_hv_specs=[],
-            pci_device_pools=None, cpu_info=None, stats=None, metrics=None),
+            pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
         objects.ComputeNode(
             id=4, local_gb=8192, memory_mb=8192, vcpus=8,
             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
@@ -63,7 +66,8 @@ COMPUTE_NODES = [
             host='host4', hypervisor_hostname='node4', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
-            pci_device_pools=None, cpu_info=None, stats=None, metrics=None),
+            pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
         # Broken entry
         objects.ComputeNode(
             id=5, local_gb=1024, memory_mb=1024, vcpus=1,
