@@ -56,17 +56,23 @@ resource_tracker_opts = [
 
 allocation_ratio_opts = [
     cfg.FloatOpt('cpu_allocation_ratio',
-        default=16.0,
+        default=0.0,
         help='Virtual CPU to physical CPU allocation ratio which affects '
              'all CPU filters. This configuration specifies a global ratio '
              'for CoreFilter. For AggregateCoreFilter, it will fall back to '
-             'this configuration value if no per-aggregate setting found.'),
+             'this configuration value if no per-aggregate setting found. '
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 16.0'),
     cfg.FloatOpt('ram_allocation_ratio',
-        default=1.5,
+        default=0.0,
         help='Virtual ram to physical ram allocation ratio which affects '
              'all ram filters. This configuration specifies a global ratio '
              'for RamFilter. For AggregateRamFilter, it will fall back to '
-             'this configuration value if no per-aggregate setting found.'),
+             'this configuration value if no per-aggregate setting found. '
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 1.5'),
 ]
 
 
@@ -120,6 +126,8 @@ class ResourceTracker(object):
             ext_resources.ResourceHandler(CONF.compute_resources)
         self.old_resources = objects.ComputeNode()
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.ram_allocation_ratio = CONF.ram_allocation_ratio
+        self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -397,6 +405,10 @@ class ResourceTracker(object):
         # purge old stats and init with anything passed in by the driver
         self.stats.clear()
         self.stats.digest_stats(resources.get('stats'))
+
+        # update the allocation ratios for the related ComputeNode object
+        self.compute_node.ram_allocation_ratio = self.ram_allocation_ratio
+        self.compute_node.cpu_allocation_ratio = self.cpu_allocation_ratio
 
         # now copy rest to compute_node
         self.compute_node.update_from_virt_driver(resources)

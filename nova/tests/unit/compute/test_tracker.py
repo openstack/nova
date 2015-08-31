@@ -73,6 +73,8 @@ _COMPUTE_NODE_FIXTURES = [
         extra_resources=None,
         stats={},
         numa_topology=None,
+        cpu_allocation_ratio=16.0,
+        ram_allocation_ratio=1.5,
         ),
 ]
 
@@ -817,6 +819,8 @@ class TestInitComputeNode(BaseTestCase):
         self._setup_rt()
 
         get_mock.side_effect = exc.NotFound
+        cpu_alloc_ratio = 1.0
+        ram_alloc_ratio = 1.0
 
         resources = {
             'host_ip': '1.1.1.1',
@@ -856,7 +860,14 @@ class TestInitComputeNode(BaseTestCase):
             hypervisor_hostname=resources['hypervisor_hostname'],
             # NOTE(sbauza): ResourceTracker adds host field
             host='fake-host',
+            # NOTE(sbauza): ResourceTracker adds CONF allocation ratios
+            ram_allocation_ratio=ram_alloc_ratio,
+            cpu_allocation_ratio=cpu_alloc_ratio,
         )
+
+        # Forcing the flags to the values we know
+        self.rt.ram_allocation_ratio = ram_alloc_ratio
+        self.rt.cpu_allocation_ratio = cpu_alloc_ratio
 
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
@@ -866,6 +877,18 @@ class TestInitComputeNode(BaseTestCase):
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute,
                                                  self.rt.compute_node))
+
+    def test_copy_resources_adds_allocation_ratios(self):
+        self.flags(cpu_allocation_ratio=4.0, ram_allocation_ratio=3.0)
+        self._setup_rt()
+
+        resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        self.rt.compute_node = compute_node
+
+        self.rt._copy_resources(resources)
+        self.assertEqual(4.0, self.rt.compute_node.cpu_allocation_ratio)
+        self.assertEqual(3.0, self.rt.compute_node.ram_allocation_ratio)
 
 
 class TestUpdateComputeNode(BaseTestCase):
@@ -895,7 +918,9 @@ class TestUpdateComputeNode(BaseTestCase):
             memory_mb=512,
             current_workload=0,
             vcpus=4,
-            running_vms=0
+            running_vms=0,
+            cpu_allocation_ratio=16.0,
+            ram_allocation_ratio=1.5,
         )
         self.rt.compute_node = compute
         self.rt._update(mock.sentinel.ctx)
@@ -940,7 +965,9 @@ class TestUpdateComputeNode(BaseTestCase):
             memory_mb=512,
             current_workload=0,
             vcpus=4,
-            running_vms=0
+            running_vms=0,
+            cpu_allocation_ratio=16.0,
+            ram_allocation_ratio=1.5,
         )
         expected_resources = copy.deepcopy(compute)
         expected_resources.stats = {}
