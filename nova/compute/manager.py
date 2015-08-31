@@ -5453,6 +5453,10 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Instance no longer exists. Unable to refresh',
                           instance=instance)
                 return
+            except exception.InstanceInfoCacheNotFound:
+                # InstanceInfoCache is gone.
+                LOG.debug('InstanceInfoCache no longer exists. '
+                          'Unable to refresh', instance=instance)
             except Exception:
                 LOG.error(_LE('An error occurred while refreshing the network '
                               'cache.'), instance=instance, exc_info=True)
