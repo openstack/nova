@@ -899,8 +899,8 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertIsNotNone(host.updated)
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
-                        project_id='12345', vm_state=vm_states.PAUSED,
-                        task_state=None, os_type='Linux',
+                        project_id='12345', vm_state=vm_states.ACTIVE,
+                        task_state=task_states.RESIZE_PREP, os_type='Linux',
                         uuid='fake-uuid',
                         numa_topology=fake_numa_topology)
         numa_usage_mock.return_value = 'fake-consumed-twice'
@@ -909,7 +909,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual('fake-fitted-twice', instance['numa_topology'])
 
         self.assertEqual(2, host.num_instances)
-        self.assertEqual(1, host.num_io_ops)
+        self.assertEqual(2, host.num_io_ops)
         self.assertEqual(2, numa_usage_mock.call_count)
         self.assertEqual(((host, instance),), numa_usage_mock.call_args)
         self.assertEqual('fake-consumed-twice', host.numa_topology)
