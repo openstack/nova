@@ -66,7 +66,7 @@ class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
             subs.update(self._get_regexes())
             self._verify_response(resp_tpl, subs, response, 202)
         else:
-            self.assertEqual(response.status_code, 202)
+            self.assertEqual(202, response.status_code)
 
     def test_server_rebuild_preserve_ephemeral_true(self):
         self._test_server_rebuild_preserve_ephemeral(True)

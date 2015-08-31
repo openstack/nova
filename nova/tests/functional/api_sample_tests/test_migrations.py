@@ -86,5 +86,5 @@ class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('os-migrations')
         subs = self._get_regexes()
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(200, response.status_code)
         self._verify_response('migrations-get', subs, response, 200)

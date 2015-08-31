@@ -62,8 +62,8 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_post('os-networks/%s/action' % uuid,
                                  'networks-disassociate-req', {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
@@ -80,10 +80,10 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
     def test_network_add(self):
         response = self._do_post("os-networks/add",
                                  'network-add-req', {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_network_delete(self):
         response = self._do_delete('os-networks/always_delete')
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
