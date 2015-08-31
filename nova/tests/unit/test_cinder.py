@@ -71,7 +71,7 @@ class BaseCinderTestCase(object):
     def test_cinder_api_cacert_file(self):
         cacert = "/etc/ssl/certs/ca-certificates.crt"
         self.flags(cafile=cacert, group='cinder')
-        self.assertEqual(self.create_client().client.session.verify, cacert)
+        self.assertEqual(cacert, self.create_client().client.session.verify)
 
 
 class CinderTestCase(BaseCinderTestCase, test.NoDBTestCase):
@@ -129,7 +129,7 @@ class CinderTestCase(BaseCinderTestCase, test.NoDBTestCase):
         self.assertThat(m.last_request.path,
                         matchers.EndsWith('/volumes/5678'))
         self.assertIn('volume_image_metadata', volume)
-        self.assertEqual(volume['volume_image_metadata'], _image_metadata)
+        self.assertEqual(_image_metadata, volume['volume_image_metadata'])
 
 
 class CinderV2TestCase(BaseCinderTestCase, test.NoDBTestCase):

@@ -40,28 +40,28 @@ class ContextTestCase(test.NoDBTestCase):
         ctxt = context.RequestContext('111',
                                       '222',
                                       roles=['admin', 'weasel'])
-        self.assertEqual(ctxt.is_admin, True)
+        self.assertEqual(True, ctxt.is_admin)
 
     def test_request_context_sets_is_admin_by_role(self):
         ctxt = context.RequestContext('111',
                                       '222',
                                       roles=['administrator'])
-        self.assertEqual(ctxt.is_admin, True)
+        self.assertEqual(True, ctxt.is_admin)
 
     def test_request_context_sets_is_admin_upcase(self):
         ctxt = context.RequestContext('111',
                                       '222',
                                       roles=['Admin', 'weasel'])
-        self.assertEqual(ctxt.is_admin, True)
+        self.assertEqual(True, ctxt.is_admin)
 
     def test_request_context_read_deleted(self):
         ctxt = context.RequestContext('111',
                                       '222',
                                       read_deleted='yes')
-        self.assertEqual(ctxt.read_deleted, 'yes')
+        self.assertEqual('yes', ctxt.read_deleted)
 
         ctxt.read_deleted = 'no'
-        self.assertEqual(ctxt.read_deleted, 'no')
+        self.assertEqual('no', ctxt.read_deleted)
 
     def test_request_context_read_deleted_invalid(self):
         self.assertRaises(ValueError,
@@ -93,15 +93,15 @@ class ContextTestCase(test.NoDBTestCase):
 
     def test_service_catalog_default(self):
         ctxt = context.RequestContext('111', '222')
-        self.assertEqual(ctxt.service_catalog, [])
+        self.assertEqual([], ctxt.service_catalog)
 
         ctxt = context.RequestContext('111', '222',
                 service_catalog=[])
-        self.assertEqual(ctxt.service_catalog, [])
+        self.assertEqual([], ctxt.service_catalog)
 
         ctxt = context.RequestContext('111', '222',
                 service_catalog=None)
-        self.assertEqual(ctxt.service_catalog, [])
+        self.assertEqual([], ctxt.service_catalog)
 
     def test_service_catalog_cinder_only(self):
         service_catalog = [
@@ -118,7 +118,7 @@ class ContextTestCase(test.NoDBTestCase):
         volume_catalog = [{u'type': u'volume', u'name': u'cinder'}]
         ctxt = context.RequestContext('111', '222',
                 service_catalog=service_catalog)
-        self.assertEqual(ctxt.service_catalog, volume_catalog)
+        self.assertEqual(volume_catalog, ctxt.service_catalog)
 
     def test_to_dict_from_dict_no_log(self):
         warns = []
@@ -136,7 +136,7 @@ class ContextTestCase(test.NoDBTestCase):
 
         context.RequestContext.from_dict(ctxt.to_dict())
 
-        self.assertEqual(len(warns), 0, warns)
+        self.assertEqual(0, len(warns), warns)
 
     def test_store_when_no_overwrite(self):
         # If no context exists we store one even if overwrite is false
@@ -217,9 +217,9 @@ class ContextTestCase(test.NoDBTestCase):
                   'request_id': 'req-956637ad-354a-4bc5-b969-66fd1cc00f50',
                   'user_domain': None}
         ctx = context.RequestContext.from_dict(values)
-        self.assertEqual(ctx.user, '111')
-        self.assertEqual(ctx.tenant, '222')
-        self.assertEqual(ctx.user_id, '111')
-        self.assertEqual(ctx.project_id, '222')
+        self.assertEqual('111', ctx.user)
+        self.assertEqual('222', ctx.tenant)
+        self.assertEqual('111', ctx.user_id)
+        self.assertEqual('222', ctx.project_id)
         values2 = ctx.to_dict()
         self.assertEqual(values, values2)

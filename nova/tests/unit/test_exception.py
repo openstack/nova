@@ -56,9 +56,9 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
-        self.assertEqual(notifier.provided_event, "bad_function_exception")
+        self.assertEqual("bad_function_exception", notifier.provided_event)
         self.assertEqual(notifier.provided_context, ctxt)
-        self.assertEqual(notifier.provided_payload['args']['extra'], 3)
+        self.assertEqual(3, notifier.provided_payload['args']['extra'])
         for key in ['exception', 'args']:
             self.assertIn(key, notifier.provided_payload.keys())
 
@@ -69,34 +69,34 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message"
 
         exc = FakeNovaException()
-        self.assertEqual(six.text_type(exc), 'default message')
+        self.assertEqual('default message', six.text_type(exc))
 
     def test_error_msg(self):
-        self.assertEqual(six.text_type(exception.NovaException('test')),
-                         'test')
+        self.assertEqual('test',
+                         six.text_type(exception.NovaException('test')))
 
     def test_default_error_msg_with_kwargs(self):
         class FakeNovaException(exception.NovaException):
             msg_fmt = "default message: %(code)s"
 
         exc = FakeNovaException(code=500)
-        self.assertEqual(six.text_type(exc), 'default message: 500')
-        self.assertEqual(exc.message, 'default message: 500')
+        self.assertEqual('default message: 500', six.text_type(exc))
+        self.assertEqual('default message: 500', exc.message)
 
     def test_error_msg_exception_with_kwargs(self):
         class FakeNovaException(exception.NovaException):
             msg_fmt = "default message: %(misspelled_code)s"
 
         exc = FakeNovaException(code=500, misspelled_code='blah')
-        self.assertEqual(six.text_type(exc), 'default message: blah')
-        self.assertEqual(exc.message, 'default message: blah')
+        self.assertEqual('default message: blah', six.text_type(exc))
+        self.assertEqual('default message: blah', exc.message)
 
     def test_default_error_code(self):
         class FakeNovaException(exception.NovaException):
             code = 404
 
         exc = FakeNovaException()
-        self.assertEqual(exc.kwargs['code'], 404)
+        self.assertEqual(404, exc.kwargs['code'])
 
     def test_error_code_from_kwarg(self):
         class FakeNovaException(exception.NovaException):
@@ -107,10 +107,10 @@ class NovaExceptionTestCase(test.NoDBTestCase):
 
     def test_cleanse_dict(self):
         kwargs = {'foo': 1, 'blah_pass': 2, 'zoo_password': 3, '_pass': 4}
-        self.assertEqual(exception._cleanse_dict(kwargs), {'foo': 1})
+        self.assertEqual({'foo': 1}, exception._cleanse_dict(kwargs))
 
         kwargs = {}
-        self.assertEqual(exception._cleanse_dict(kwargs), {})
+        self.assertEqual({}, exception._cleanse_dict(kwargs))
 
     def test_format_message_local(self):
         class FakeNovaException(exception.NovaException):
@@ -131,8 +131,8 @@ class NovaExceptionTestCase(test.NoDBTestCase):
                     return u"print the whole trace"
 
         exc = FakeNovaException_Remote()
-        self.assertEqual(six.text_type(exc), u"print the whole trace")
-        self.assertEqual(exc.format_message(), "some message")
+        self.assertEqual(u"print the whole trace", six.text_type(exc))
+        self.assertEqual("some message", exc.format_message())
 
     def test_format_message_remote_error(self):
         class FakeNovaException_Remote(exception.NovaException):
@@ -143,7 +143,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
 
         self.flags(fatal_exception_format_errors=False)
         exc = FakeNovaException_Remote(lame_arg='lame')
-        self.assertEqual(exc.format_message(), "some message %(somearg)s")
+        self.assertEqual("some message %(somearg)s", exc.format_message())
 
 
 class ExceptionTestCase(test.NoDBTestCase):

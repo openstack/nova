@@ -77,12 +77,10 @@ class BlockDeviceTestCase(test.NoDBTestCase):
                        'root_device_name': root_device1}
 
         self.assertIsNone(block_device.properties_root_device_name({}))
-        self.assertEqual(
-            block_device.properties_root_device_name(properties0),
-            root_device0)
-        self.assertEqual(
-            block_device.properties_root_device_name(properties1),
-            root_device1)
+        self.assertEqual(root_device0,
+                         block_device.properties_root_device_name(properties0))
+        self.assertEqual(root_device1,
+                         block_device.properties_root_device_name(properties1))
 
     def test_ephemeral(self):
         self.assertFalse(block_device.is_ephemeral('ephemeral'))
@@ -93,9 +91,9 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         self.assertFalse(block_device.is_ephemeral('swap'))
         self.assertFalse(block_device.is_ephemeral('/dev/sda1'))
 
-        self.assertEqual(block_device.ephemeral_num('ephemeral0'), 0)
-        self.assertEqual(block_device.ephemeral_num('ephemeral1'), 1)
-        self.assertEqual(block_device.ephemeral_num('ephemeral11'), 11)
+        self.assertEqual(0, block_device.ephemeral_num('ephemeral0'))
+        self.assertEqual(1, block_device.ephemeral_num('ephemeral1'))
+        self.assertEqual(11, block_device.ephemeral_num('ephemeral11'))
 
         self.assertFalse(block_device.is_swap_or_ephemeral('ephemeral'))
         self.assertTrue(block_device.is_swap_or_ephemeral('ephemeral0'))
@@ -122,28 +120,28 @@ class BlockDeviceTestCase(test.NoDBTestCase):
             {'virtual': 'ephemeral2', 'device': '/dev/sde'}]
 
         prepended = block_device.mappings_prepend_dev(mapping)
-        self.assertEqual(prepended.sort(), expected.sort())
+        self.assertEqual(expected.sort(), prepended.sort())
 
     def test_strip_dev(self):
-        self.assertEqual(block_device.strip_dev('/dev/sda'), 'sda')
-        self.assertEqual(block_device.strip_dev('sda'), 'sda')
+        self.assertEqual('sda', block_device.strip_dev('/dev/sda'))
+        self.assertEqual('sda', block_device.strip_dev('sda'))
 
     def test_strip_prefix(self):
-        self.assertEqual(block_device.strip_prefix('/dev/sda'), 'a')
-        self.assertEqual(block_device.strip_prefix('a'), 'a')
-        self.assertEqual(block_device.strip_prefix('xvda'), 'a')
-        self.assertEqual(block_device.strip_prefix('vda'), 'a')
-        self.assertEqual(block_device.strip_prefix('hda'), 'a')
+        self.assertEqual('a', block_device.strip_prefix('/dev/sda'))
+        self.assertEqual('a', block_device.strip_prefix('a'))
+        self.assertEqual('a', block_device.strip_prefix('xvda'))
+        self.assertEqual('a', block_device.strip_prefix('vda'))
+        self.assertEqual('a', block_device.strip_prefix('hda'))
 
     def test_get_device_letter(self):
-        self.assertEqual(block_device.get_device_letter(''), '')
-        self.assertEqual(block_device.get_device_letter('/dev/sda1'), 'a')
-        self.assertEqual(block_device.get_device_letter('/dev/xvdb'), 'b')
-        self.assertEqual(block_device.get_device_letter('/dev/d'), 'd')
-        self.assertEqual(block_device.get_device_letter('a'), 'a')
-        self.assertEqual(block_device.get_device_letter('sdb2'), 'b')
-        self.assertEqual(block_device.get_device_letter('vdc'), 'c')
-        self.assertEqual(block_device.get_device_letter('hdc'), 'c')
+        self.assertEqual('', block_device.get_device_letter(''))
+        self.assertEqual('a', block_device.get_device_letter('/dev/sda1'))
+        self.assertEqual('b', block_device.get_device_letter('/dev/xvdb'))
+        self.assertEqual('d', block_device.get_device_letter('/dev/d'))
+        self.assertEqual('a', block_device.get_device_letter('a'))
+        self.assertEqual('b', block_device.get_device_letter('sdb2'))
+        self.assertEqual('c', block_device.get_device_letter('vdc'))
+        self.assertEqual('c', block_device.get_device_letter('hdc'))
 
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
@@ -169,7 +167,7 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         def _assert_volume_in_mapping(device_name, true_or_false):
             in_mapping = block_device.volume_in_mapping(
                     device_name, block_device_info)
-            self.assertEqual(in_mapping, true_or_false)
+            self.assertEqual(true_or_false, in_mapping)
 
         _assert_volume_in_mapping('sda', False)
         _assert_volume_in_mapping('sdb', True)
@@ -468,7 +466,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         cool_volume_size_bdm['volume_size'] = '42'
         cool_volume_size_bdm = block_device.BlockDeviceDict(
             cool_volume_size_bdm)
-        self.assertEqual(cool_volume_size_bdm['volume_size'], 42)
+        self.assertEqual(42, cool_volume_size_bdm['volume_size'])
 
         lame_volume_size_bdm = dict(self.new_mapping[2])
         lame_volume_size_bdm['volume_size'] = 'some_non_int_string'
@@ -479,7 +477,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         truthy_bdm = dict(self.new_mapping[2])
         truthy_bdm['delete_on_termination'] = '1'
         truthy_bdm = block_device.BlockDeviceDict(truthy_bdm)
-        self.assertEqual(truthy_bdm['delete_on_termination'], True)
+        self.assertEqual(True, truthy_bdm['delete_on_termination'])
 
         verbose_bdm = dict(self.new_mapping[2])
         verbose_bdm['boot_index'] = 'first'
@@ -501,7 +499,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             return [bdm for bdm in bdms if bdm['boot_index'] >= 0]
 
         new_no_img = block_device.from_legacy_mapping(self.legacy_mapping)
-        self.assertEqual(len(_get_image_bdms(new_no_img)), 0)
+        self.assertEqual(0, len(_get_image_bdms(new_no_img)))
 
         for new, expected in zip(new_no_img, self.new_mapping):
             self.assertThat(new, matchers.IsSubDictOf(expected))
@@ -510,24 +508,24 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             self.legacy_mapping, 'fake_image_ref')
         image_bdms = _get_image_bdms(new_with_img)
         boot_bdms = _get_bootable_bdms(new_with_img)
-        self.assertEqual(len(image_bdms), 1)
-        self.assertEqual(len(boot_bdms), 1)
-        self.assertEqual(image_bdms[0]['boot_index'], 0)
-        self.assertEqual(boot_bdms[0]['source_type'], 'image')
+        self.assertEqual(1, len(image_bdms))
+        self.assertEqual(1, len(boot_bdms))
+        self.assertEqual(0, image_bdms[0]['boot_index'])
+        self.assertEqual('image', boot_bdms[0]['source_type'])
 
         new_with_img_and_root = block_device.from_legacy_mapping(
             self.legacy_mapping, 'fake_image_ref', 'sda1')
         image_bdms = _get_image_bdms(new_with_img_and_root)
         boot_bdms = _get_bootable_bdms(new_with_img_and_root)
-        self.assertEqual(len(image_bdms), 0)
-        self.assertEqual(len(boot_bdms), 1)
-        self.assertEqual(boot_bdms[0]['boot_index'], 0)
-        self.assertEqual(boot_bdms[0]['source_type'], 'volume')
+        self.assertEqual(0, len(image_bdms))
+        self.assertEqual(1, len(boot_bdms))
+        self.assertEqual(0, boot_bdms[0]['boot_index'])
+        self.assertEqual('volume', boot_bdms[0]['source_type'])
 
         new_no_root = block_device.from_legacy_mapping(
             self.legacy_mapping, 'fake_image_ref', 'sda1', no_root=True)
-        self.assertEqual(len(_get_image_bdms(new_no_root)), 0)
-        self.assertEqual(len(_get_bootable_bdms(new_no_root)), 0)
+        self.assertEqual(0, len(_get_image_bdms(new_no_root)))
+        self.assertEqual(0, len(_get_bootable_bdms(new_no_root)))
 
     def test_from_api(self):
         for api, new in zip(self.api_mapping, self.new_mapping):
@@ -573,9 +571,8 @@ class TestBlockDeviceDict(test.NoDBTestCase):
              'destination_type': 'local',
              'volume_id': 'fake-volume-id-1',
              'boot_index': 0})
-        self.assertEqual(
-            block_device.BlockDeviceDict.from_api(api_dict, True),
-            retexp)
+        self.assertEqual(retexp,
+                         block_device.BlockDeviceDict.from_api(api_dict, True))
 
     def test_from_api_invalid_source_to_local_mapping_with_string_bi(self):
         api_dict = {'id': 1,
@@ -655,15 +652,15 @@ class TestBlockDeviceDict(test.NoDBTestCase):
 
     def _test_snapshot_from_bdm(self, template):
         snapshot = block_device.snapshot_from_bdm('new-snapshot-id', template)
-        self.assertEqual(snapshot['snapshot_id'], 'new-snapshot-id')
-        self.assertEqual(snapshot['source_type'], 'snapshot')
-        self.assertEqual(snapshot['destination_type'], 'volume')
+        self.assertEqual('new-snapshot-id', snapshot['snapshot_id'])
+        self.assertEqual('snapshot', snapshot['source_type'])
+        self.assertEqual('volume', snapshot['destination_type'])
         self.assertEqual(template.volume_size, snapshot['volume_size'])
         self.assertEqual(template.delete_on_termination,
                          snapshot['delete_on_termination'])
         self.assertEqual(template.device_name, snapshot['device_name'])
         for key in ['disk_bus', 'device_type', 'boot_index']:
-            self.assertEqual(snapshot[key], template[key])
+            self.assertEqual(template[key], snapshot[key])
 
     def test_snapshot_from_bdm(self):
         for bdm in self.new_mapping:
