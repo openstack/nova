@@ -172,6 +172,10 @@ class ComputeNode(BASE, NovaBase):
     # objects.NUMATopoloogy._to_json()
     numa_topology = Column(Text)
 
+    # allocation ratios provided by the RT
+    ram_allocation_ratio = Column(Float, nullable=True)
+    cpu_allocation_ratio = Column(Float, nullable=True)
+
 
 class Certificate(BASE, NovaBase):
     """Represents a x509 certificate."""

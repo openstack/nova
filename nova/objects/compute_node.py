@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
@@ -22,6 +23,10 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova import utils
+
+CONF = cfg.CONF
+CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
+CONF.import_opt('ram_allocation_ratio', 'nova.compute.resource_tracker')
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -42,7 +47,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.11: PciDevicePoolList version 1.1
     # Version 1.12: HVSpec version 1.1
     # Version 1.13: Changed service_id field to be nullable
-    VERSION = '1.13'
+    # Version 1.14: Added cpu_allocation_ratio and ram_allocation_ratio
+    VERSION = '1.14'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -74,6 +80,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         # pci_stats field in the database
         'pci_device_pools': fields.ObjectField('PciDevicePoolList',
                                                nullable=True),
+        'cpu_allocation_ratio': fields.FloatField(),
+        'ram_allocation_ratio': fields.FloatField(),
         }
 
     obj_relationships = {
@@ -84,6 +92,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 14):
+            if 'ram_allocation_ratio' in primitive:
+                del primitive['ram_allocation_ratio']
+            if 'cpu_allocation_ratio' in primitive:
+                del primitive['cpu_allocation_ratio']
         if target_version < (1, 13) and primitive.get('service_id') is None:
             # service_id is non-nullable in versions before 1.13
             try:
@@ -146,7 +159,34 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             ])
         fields = set(compute.fields) - special_cases
         for key in fields:
-            compute[key] = db_compute[key]
+            value = db_compute[key]
+            # NOTE(sbauza): Since all compute nodes don't possibly run the
+            # latest RT code updating allocation ratios, we need to provide
+            # a backwards compatible way of hydrating them.
+            # As we want to care about our operators and since we don't want to
+            # ask them to change their configuration files before upgrading, we
+            # prefer to hardcode the default values for the ratios here until
+            # the next release (Mitaka) where the opt default values will be
+            # restored for both cpu (16.0) and ram (1.5) allocation ratios.
+            # TODO(sbauza): Remove that in the next major version bump where
+            # we break compatibilility with old Kilo computes
+            if key == 'cpu_allocation_ratio' or key == 'ram_allocation_ratio':
+                if value == 0.0:
+                    # Operator has not yet provided a new value for that ratio
+                    # on the compute node
+                    value = None
+                if value is None:
+                    # ResourceTracker is not updating the value (old node)
+                    # or the compute node is updated but the default value has
+                    # not been changed
+                    value = getattr(CONF, key)
+                    if value == 0.0 and key == 'cpu_allocation_ratio':
+                        # It's not specified either on the controller
+                        value = 16.0
+                    if value == 0.0 and key == 'ram_allocation_ratio':
+                        # It's not specified either on the controller
+                        value = 1.5
+            compute[key] = value
 
         stats = db_compute['stats']
         if stats:
@@ -328,7 +368,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.11 ComputeNode version 1.11
     # Version 1.12 ComputeNode version 1.12
     # Version 1.13 ComputeNode version 1.13
-    VERSION = '1.13'
+    # Version 1.14 ComputeNode version 1.14
+    VERSION = '1.14'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -338,7 +379,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
                     ('1.3', '1.4'), ('1.4', '1.5'), ('1.5', '1.5'),
                     ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
                     ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
-                    ('1.12', '1.12'), ('1.13', '1.13')],
+                    ('1.12', '1.12'), ('1.13', '1.13'), ('1.14', '1.14')],
         }
 
     @base.remotable_classmethod

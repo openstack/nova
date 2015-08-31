@@ -794,6 +794,12 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_300(self, engine, data):
         self.assertColumnExists(engine, 'instance_extra', 'migration_context')
 
+    def _check_301(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes',
+                                'cpu_allocation_ratio')
+        self.assertColumnExists(engine, 'compute_nodes',
+                                'ram_allocation_ratio')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

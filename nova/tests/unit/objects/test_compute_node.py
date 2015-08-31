@@ -83,6 +83,8 @@ fake_compute_node = {
     'numa_topology': fake_numa_topology_db_format,
     'supported_instances': fake_supported_hv_specs_db_format,
     'pci_stats': fake_pci,
+    'cpu_allocation_ratio': 16.0,
+    'ram_allocation_ratio': 1.5,
     }
 # FIXME(sbauza) : For compatibility checking, to be removed once we are sure
 # that all computes are running latest DB version with host field in it.
@@ -510,6 +512,46 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode()
         self.assertRaises(ValueError,
                           compute.update_from_virt_driver, resources)
+
+    def test_compat_allocation_ratios(self):
+        compute = compute_node.ComputeNode()
+        primitive = compute.obj_to_primitive(target_version='1.13')
+        self.assertNotIn('cpu_allocation_ratio', primitive)
+        self.assertNotIn('ram_allocation_ratio', primitive)
+
+    def test_compat_allocation_ratios_old_compute(self):
+        self.flags(cpu_allocation_ratio=2.0, ram_allocation_ratio=3.0)
+        compute_dict = fake_compute_node.copy()
+        # old computes don't provide allocation ratios to the table
+        compute_dict['cpu_allocation_ratio'] = None
+        compute_dict['ram_allocation_ratio'] = None
+        cls = objects.ComputeNode
+        compute = cls._from_db_object(self.context, cls(), compute_dict)
+
+        self.assertEqual(2.0, compute.cpu_allocation_ratio)
+        self.assertEqual(3.0, compute.ram_allocation_ratio)
+
+    def test_compat_allocation_ratios_default_values(self):
+        compute_dict = fake_compute_node.copy()
+        # new computes provide allocation ratios defaulted to 0.0
+        compute_dict['cpu_allocation_ratio'] = 0.0
+        compute_dict['ram_allocation_ratio'] = 0.0
+        cls = objects.ComputeNode
+        compute = cls._from_db_object(self.context, cls(), compute_dict)
+
+        self.assertEqual(16.0, compute.cpu_allocation_ratio)
+        self.assertEqual(1.5, compute.ram_allocation_ratio)
+
+    def test_compat_allocation_ratios_old_compute_default_values(self):
+        compute_dict = fake_compute_node.copy()
+        # old computes don't provide allocation ratios to the table
+        compute_dict['cpu_allocation_ratio'] = None
+        compute_dict['ram_allocation_ratio'] = None
+        cls = objects.ComputeNode
+        compute = cls._from_db_object(self.context, cls(), compute_dict)
+
+        self.assertEqual(16.0, compute.cpu_allocation_ratio)
+        self.assertEqual(1.5, compute.ram_allocation_ratio)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,
