@@ -713,7 +713,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # domain is not running
 
                     # TODO(sahid): At this point we should be a Guest object
-                    state = self._get_power_state(guest._domain)
+                    state = guest.get_power_state(self._host)
                     if state == power_state.SHUTDOWN:
                         is_okay = True
                 elif errcode == libvirt.VIR_ERR_INTERNAL_ERROR:
@@ -1102,7 +1102,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._set_cache_mode(conf)
 
         try:
-            state = self._get_power_state(guest._domain)
+            state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
 
             if encryption:
@@ -1220,7 +1220,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if not conf:
                 raise exception.DiskNotFound(location=disk_dev)
 
-            state = self._get_power_state(guest._domain)
+            state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
             guest.detach_device(conf, persistent=True, live=live)
 
@@ -1262,7 +1262,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          CONF.libvirt.virt_type,
                                          self._host)
         try:
-            state = self._get_power_state(guest._domain)
+            state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
             guest.attach_device(cfg, persistent=True, live=live)
         except libvirt.libvirtError:
@@ -1280,7 +1280,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          CONF.libvirt.virt_type, self._host)
         try:
             self.vif_driver.unplug(instance, vif)
-            state = self._get_power_state(guest._domain)
+            state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
             guest.detach_device(cfg, persistent=True, live=live)
         except libvirt.libvirtError as ex:
@@ -1359,7 +1359,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         snapshot_name = uuid.uuid4().hex
 
-        state = self._get_power_state(virt_dom)
+        state = guest.get_power_state(self._host)
 
         # NOTE(rmk): Live snapshots require QEMU 1.3 and Libvirt 1.0.0.
         #            These restrictions can be relaxed as other configurations
@@ -2076,7 +2076,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # virDomain object to use nova.virt.libvirt.Guest.
         # We should be able to remove dom at the end.
         dom = guest._domain
-        state = self._get_power_state(dom)
+        state = guest.get_power_state(self._host)
         old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
@@ -2094,7 +2094,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # virDomain object to use nova.virt.libvirt.Guest.
             # We should be able to remove dom at the end.
             dom = guest._domain
-            state = self._get_power_state(dom)
+            state = guest.get_power_state(self._host)
             new_domid = dom.ID()
 
             # NOTE(ivoks): By checking domain IDs, we make sure we are
@@ -2222,7 +2222,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # wait for it to shutdown
             return True
 
-        state = self._get_power_state(dom)
+        state = guest.get_power_state(self._host)
         if state in SHUTDOWN_STATES:
             LOG.info(_LI("Instance already shutdown."),
                      instance=instance)
@@ -2242,7 +2242,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # We should be able to remove dom at the end.
             dom = guest._domain
 
-            state = self._get_power_state(dom)
+            state = guest.get_power_state(self._host)
 
             if state in SHUTDOWN_STATES:
                 LOG.info(_LI("Instance shutdown successfully after %d "
@@ -2340,13 +2340,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # anything if it is.
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove domain at the end.
-            domain = guest._domain
-
-            state = self._get_power_state(domain)
+            state = guest.get_power_state(self._host)
 
             ignored_states = (power_state.RUNNING,
                               power_state.SUSPENDED,
@@ -7177,11 +7171,3 @@ class LibvirtDriver(driver.ComputeDriver):
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
-
-    def _get_power_state(self, virt_dom):
-        # TODO(sahid): We should pass a guest object.
-        guest = libvirt_guest.Guest(virt_dom)
-        # TODO(sahid): Need to use guest.get_info. currently to many
-        # tests to have to be updated, will do the change soon.
-        info = guest._get_domain_info(self._host)
-        return libvirt_guest.LIBVIRT_POWER_STATE[info[0]]

@@ -362,6 +362,9 @@ class Guest(object):
             cpu_time_ns=dom_info[4],
             id=self.id)
 
+    def get_power_state(self, host):
+        return self.get_info(host).state
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

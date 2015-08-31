@@ -8695,9 +8695,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_domain.info().AndReturn(
             (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple)
         mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.ID().AndReturn('some_fake_id')
         mock_domain.shutdown()
         mock_domain.info().AndReturn(
             (libvirt_guest.VIR_DOMAIN_CRASHED,) + info_tuple)
+        mock_domain.ID().AndReturn('some_other_fake_id')
         mock_domain.ID().AndReturn('some_other_fake_id')
 
         self.mox.ReplayAll()
@@ -13244,7 +13246,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mox.IsA(objects.Flavor),
             CONF.libvirt.virt_type,
             self.drvr._host).AndReturn(expected)
-        domain.info().AndReturn([power_state])
+        domain.info().AndReturn([power_state, 1, 2, 3, 4])
         if method == 'attach_interface':
             domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
         elif method == 'detach_interface':
