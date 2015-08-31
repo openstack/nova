@@ -98,7 +98,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             extension_info=ext_info)
         CONF.set_override('extensions_blacklist',
                           'os-config-drive',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_config_drive_controller = servers_v21.ServersController(
             extension_info=ext_info)
 

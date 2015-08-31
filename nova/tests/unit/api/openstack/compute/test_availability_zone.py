@@ -241,7 +241,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             extension_info=ext_info)
         CONF.set_override('extensions_blacklist',
                           'os-availability-zone',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_availability_zone_controller = servers_v21.ServersController(
             extension_info=ext_info)
 

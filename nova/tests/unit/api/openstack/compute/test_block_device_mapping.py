@@ -45,10 +45,10 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.controller = servers_v21.ServersController(
                                         extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_bdm_v2_controller = servers_v21.ServersController(
                 extension_info=ext_info)
-        CONF.set_override('extensions_blacklist', '', 'osapi_v3')
+        CONF.set_override('extensions_blacklist', '', 'osapi_v21')
 
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()

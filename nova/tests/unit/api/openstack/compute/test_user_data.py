@@ -62,7 +62,7 @@ class ServersControllerCreateTest(test.TestCase):
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-user-data',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_user_data_controller = servers.ServersController(
             extension_info=ext_info)
 

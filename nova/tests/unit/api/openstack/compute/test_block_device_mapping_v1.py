@@ -40,16 +40,16 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def _setup_controller(self):
         ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
-                          'osapi_v3')
+                          'osapi_v21')
         self.controller = servers_v21.ServersController(
                                         extension_info=ext_info)
         CONF.set_override('extensions_blacklist',
                           ['os-block-device-mapping-v1',
                            'os-block-device-mapping'],
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_volumes_controller = servers_v21.ServersController(
                 extension_info=ext_info)
-        CONF.set_override('extensions_blacklist', '', 'osapi_v3')
+        CONF.set_override('extensions_blacklist', '', 'osapi_v21')
 
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()
@@ -299,7 +299,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         CONF.set_override('extensions_blacklist',
                           ['os-block-device-mapping',
                            'os-block-device-mapping-v1'],
-                          'osapi_v3')
+                          'osapi_v21')
         controller = servers_v21.ServersController(extension_info=ext_info)
         bdm = [{'device_name': 'foo1',
                 'volume_id': fakes.FAKE_UUID,
@@ -328,7 +328,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
     def test_create_instance_both_bdm_formats(self):
         ext_info = extension_info.LoadedExtensionInfo()
-        CONF.set_override('extensions_blacklist', '', 'osapi_v3')
+        CONF.set_override('extensions_blacklist', '', 'osapi_v21')
         both_controllers = servers_v21.ServersController(
                 extension_info=ext_info)
         bdm = [{'device_name': 'foo'}]

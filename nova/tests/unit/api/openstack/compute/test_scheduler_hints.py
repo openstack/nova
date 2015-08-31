@@ -181,7 +181,7 @@ class ServersControllerCreateTestV21(test.TestCase):
     def _set_up_controller(self):
         ext_info = extension_info.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', 'os-scheduler-hints',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_scheduler_hints_controller = servers_v21.ServersController(
             extension_info=ext_info)
 

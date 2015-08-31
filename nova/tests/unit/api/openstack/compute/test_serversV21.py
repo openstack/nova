@@ -3536,7 +3536,7 @@ class TestServersExtensionPoint(test.NoDBTestCase):
     def setUp(self):
         super(TestServersExtensionPoint, self).setUp()
         CONF.set_override('extensions_whitelist', ['os-disk-config'],
-                          'osapi_v3')
+                          'osapi_v21')
         self.stubs.Set(disk_config, 'DiskConfig', FakeExt)
 
     def _test_load_extension_point(self, name):
@@ -3566,7 +3566,7 @@ class TestServersExtensionPoint(test.NoDBTestCase):
 class TestServersExtensionSchema(test.NoDBTestCase):
     def setUp(self):
         super(TestServersExtensionSchema, self).setUp()
-        CONF.set_override('extensions_whitelist', ['disk_config'], 'osapi_v3')
+        CONF.set_override('extensions_whitelist', ['disk_config'], 'osapi_v21')
 
     def _test_load_extension_schema(self, name):
         setattr(FakeExt, 'get_server_%s_schema' % name,

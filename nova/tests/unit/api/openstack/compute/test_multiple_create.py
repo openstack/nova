@@ -65,7 +65,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         self.controller = servers_v21.ServersController(
             extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-multiple-create',
-                          'osapi_v3')
+                          'osapi_v21')
         self.no_mult_create_controller = servers_v21.ServersController(
             extension_info=ext_info)
 

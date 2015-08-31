@@ -73,7 +73,7 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_extensions_blacklist(self):
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v3')
+        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v21')
         app = compute.APIRouterV21()
         self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
 
@@ -102,7 +102,7 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
         CONF.set_override('extensions_whitelist', ['servers', 'os-hosts'],
-                          'osapi_v3')
+                          'osapi_v21')
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
 
@@ -115,7 +115,7 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
 
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-        CONF.set_override('extensions_whitelist', ['servers'], 'osapi_v3')
+        CONF.set_override('extensions_whitelist', ['servers'], 'osapi_v21')
         app = compute.APIRouterV21()
         self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
 
@@ -129,8 +129,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
         CONF.set_override('extensions_whitelist', ['servers', 'os-hosts'],
-                          'osapi_v3')
-        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v3')
+                          'osapi_v21')
+        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v21')
         app = compute.APIRouterV21()
         self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
         self.assertIn('servers', app._loaded_extension_info.extensions)

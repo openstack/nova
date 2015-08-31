@@ -63,7 +63,7 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('sqlite_synchronous', False,
                 group='api_database')
         self.conf.set_default('fatal_exception_format_errors', True)
-        self.conf.set_default('enabled', True, 'osapi_v3')
+        self.conf.set_default('enabled', True, 'osapi_v21')
         self.conf.set_default('force_dhcp_release', False)
         self.conf.set_default('periodic_enable', False)
         self.addCleanup(utils.cleanup_dns_managers)
