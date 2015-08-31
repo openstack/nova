@@ -1138,7 +1138,7 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         # Get the image details of the instance
-        image_info = images.VMwareImage.from_image(instance.image_ref,
+        image_info = images.VMwareImage.from_image(image_meta.id,
                                                    image_meta)
         vi = VirtualMachineInstanceConfigInfo(instance,
                                               image_info,
@@ -1146,6 +1146,9 @@ class VMwareVMOps(object):
                                               dc_info,
                                               self._imagecache)
         vm_util.power_off_instance(self._session, instance, vm_ref)
+
+        # Fetch the image if it does not exist in the cache
+        self._fetch_image_if_missing(context, vi)
 
         # Get the rescue disk path
         rescue_disk_path = datastore.build_path(instance.uuid,

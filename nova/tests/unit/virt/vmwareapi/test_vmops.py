@@ -99,7 +99,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
                                         cluster=cluster.obj)
         self._cluster = cluster
-        self._image_meta = objects.ImageMeta.from_dict({})
+        self._image_meta = objects.ImageMeta.from_dict({'id': self._image_id})
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
                                         gateway=
@@ -405,6 +405,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
 
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(ds_util, 'disk_copy')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
@@ -416,7 +417,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
                     mock_get_boot_spec, mock_find_rescue,
                     mock_get_vm_ref, mock_disk_copy,
-                    mock_power_off):
+                    mock_power_off, mock_fetch_image_if_missing):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
 
@@ -444,7 +445,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             _get_dc_ref_and_name.return_value = dc_info
             self._vmops.rescue(
                 self._context, self._instance, None, self._image_meta)
-
+            mock_fetch_image_if_missing(self._context, mock.ANY)
             mock_power_off.assert_called_once_with(self._session,
                                                    self._instance,
                                                    'fake-ref')
