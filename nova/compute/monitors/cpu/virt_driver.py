@@ -40,20 +40,16 @@ class Monitor(base.CPUMonitorBase):
         self._data = {}
         self._cpu_stats = {}
 
-    def get_metric(self, name):
+    def get_metrics(self):
+        metrics = []
         self._update_data()
-        return self._data[name], self._data["timestamp"]
+        for name in self.get_metric_names():
+            metrics.append((name, self._data[name], self._data["timestamp"]))
+        return metrics
 
     def _update_data(self):
-        # Don't allow to call this function so frequently (<= 1 sec)
-        now = timeutils.utcnow()
-        if self._data.get("timestamp") is not None:
-            delta = now - self._data.get("timestamp")
-            if delta.seconds <= 1:
-                return
-
         self._data = {}
-        self._data["timestamp"] = now
+        self._data["timestamp"] = timeutils.utcnow()
 
         # Extract node's CPU statistics.
         try:

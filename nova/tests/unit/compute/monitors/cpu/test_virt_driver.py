@@ -15,6 +15,8 @@
 
 """Tests for Compute Driver CPU resource monitor."""
 
+import mock
+
 from nova.compute.monitors.cpu import virt_driver
 from nova import objects
 from nova import test
@@ -70,3 +72,15 @@ class VirtDriverCPUMonitorTestCase(test.NoDBTestCase):
         self.assertEqual(metrics["cpu.idle.percent"], 97)
         self.assertEqual(metrics["cpu.iowait.percent"], 0)
         self.assertEqual(metrics["cpu.percent"], 2)
+
+    def test_ensure_single_sampling(self):
+        # We want to ensure that the virt driver's get_host_cpu_stats()
+        # is only ever called once, otherwise values for monitor metrics
+        # might be illogical -- e.g. pct cpu times for user/system/idle
+        # may add up to more than 100.
+        metrics = objects.MonitorMetricList()
+        monitor = virt_driver.Monitor(FakeResourceTracker())
+
+        with mock.patch.object(FakeDriver, 'get_host_cpu_stats') as mocked:
+            monitor.add_metrics_to_list(metrics)
+            mocked.assert_called_once_with()
