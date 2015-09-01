@@ -141,7 +141,7 @@ PROGRESS_INTERVAL_SECONDS = 300
 
 # Fudge factor to allow for the VHD chain to be slightly larger than
 # the partitioned space. Otherwise, legitimate images near their
-# maximum allowed size can fail on build with FlavorDiskTooSmall.
+# maximum allowed size can fail on build with FlavorDiskSmallerThanImage.
 VHD_SIZE_CHECK_FUDGE_FACTOR_GB = 10
 
 
@@ -1497,7 +1497,9 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
                   {'size': size, 'allowed_size': allowed_size},
                   instance=instance)
 
-        raise exception.FlavorDiskTooSmall()
+        raise exception.FlavorDiskSmallerThanImage(
+            flavor_size=(flavor.root_gb * units.Gi),
+            image_size=(size * units.Gi))
 
 
 def _fetch_disk_image(context, session, instance, name_label, image_id,

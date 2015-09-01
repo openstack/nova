@@ -286,7 +286,8 @@ class Image(object):
             LOG.error(msg % {'base': base,
                               'base_size': base_size,
                               'size': size})
-            raise exception.FlavorDiskTooSmall()
+            raise exception.FlavorDiskSmallerThanImage(
+                flavor_size=base_size, image_size=size)
 
     def get_disk_size(self, name):
         return disk.get_disk_size(name)
