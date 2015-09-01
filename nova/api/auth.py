@@ -33,7 +33,7 @@ auth_opts = [
                 default=False,
                 help='Whether to use per-user rate limiting for the api. '
                      'This option is only used by v2 api. Rate limiting '
-                     'is removed from v3 api.'),
+                     'is removed from v2.1 api.'),
     cfg.StrOpt('auth_strategy',
                default='keystone',
                help='''
