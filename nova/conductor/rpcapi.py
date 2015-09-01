@@ -18,6 +18,7 @@
 from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova.objects import base as objects_base
 from nova import rpc
@@ -185,6 +186,7 @@ class ConductorAPI(object):
     * Remove instance_update()
 
     * 2.2 - Add object_backport_versions()
+    * 2.3 - Add object_class_action_versions()
     """
 
     VERSION_ALIASES = {
@@ -215,10 +217,28 @@ class ConductorAPI(object):
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
+        if self.client.can_send_version('2.3'):
+            # NOTE(danms): If we're new enough, collect the object
+            # version manifest and redirect the call to the newer
+            # class action handler
+            versions = ovo_base.obj_tree_get_versions(objname)
+            return self.object_class_action_versions(context,
+                                                     objname,
+                                                     objmethod,
+                                                     versions,
+                                                     args, kwargs)
         cctxt = self.client.prepare()
         return cctxt.call(context, 'object_class_action',
                           objname=objname, objmethod=objmethod,
                           objver=objver, args=args, kwargs=kwargs)
+
+    def object_class_action_versions(self, context, objname, objmethod,
+                                     object_versions, args, kwargs):
+        cctxt = self.client.prepare(version='2.3')
+        return cctxt.call(context, 'object_class_action_versions',
+                          objname=objname, objmethod=objmethod,
+                          object_versions=object_versions,
+                          args=args, kwargs=kwargs)
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
         cctxt = self.client.prepare()

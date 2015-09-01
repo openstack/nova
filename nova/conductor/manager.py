@@ -83,7 +83,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    target = messaging.Target(version='2.2')
+    target = messaging.Target(version='2.3')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -457,6 +457,20 @@ class ConductorManager(manager.Manager):
         # but in this case, we need to honor the version the client is
         # asking for, so we do it before returning here.
         return (result.obj_to_primitive(target_version=objver)
+                if isinstance(result, nova_object.NovaObject) else result)
+
+    def object_class_action_versions(self, context, objname, objmethod,
+                                     object_versions, args, kwargs):
+        objclass = nova_object.NovaObject.obj_class_from_name(
+            objname, object_versions[objname])
+        args = tuple([context] + list(args))
+        result = self._object_dispatch(objclass, objmethod, args, kwargs)
+        # NOTE(danms): The RPC layer will convert to primitives for us,
+        # but in this case, we need to honor the version the client is
+        # asking for, so we do it before returning here.
+        return (result.obj_to_primitive(
+            target_version=object_versions[objname],
+            version_manifest=object_versions)
                 if isinstance(result, nova_object.NovaObject) else result)
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
