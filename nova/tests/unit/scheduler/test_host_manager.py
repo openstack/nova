@@ -947,6 +947,8 @@ class HostStateTestCase(test.NoDBTestCase):
                                                              ephemeral_gb=0,
                                                              memory_mb=1024,
                                                              vcpus=1))
+        # NOTE(sbauza): FilterSchedule._schedule() rehydrates pci_requests
+        req_spec['instance_properties']['pci_requests'] = fake_requests_obj
         host = host_manager.HostState("fakehost", "fakenode")
         self.assertIsNone(host.updated)
         host.pci_stats = pci_stats.PciDeviceStats(

@@ -966,15 +966,13 @@ class API(base.Base):
         return base_options, max_network_count
 
     def _build_filter_properties(self, context, scheduler_hints, forced_host,
-            forced_node, instance_type, pci_request_info):
+            forced_node, instance_type):
         filter_properties = dict(scheduler_hints=scheduler_hints)
         filter_properties['instance_type'] = instance_type
         if forced_host:
             filter_properties['force_hosts'] = [forced_host]
         if forced_node:
             filter_properties['force_nodes'] = [forced_node]
-        if pci_request_info and pci_request_info.requests:
-            filter_properties['pci_requests'] = pci_request_info
         return filter_properties
 
     def _provision_instances(self, context, instance_type, min_count,
@@ -1185,8 +1183,7 @@ class API(base.Base):
 
         filter_properties = self._build_filter_properties(context,
                 scheduler_hints, forced_host,
-                forced_node, instance_type,
-                base_options.get('pci_requests'))
+                forced_node, instance_type)
 
         for instance in instances:
             self._record_action_start(context, instance,

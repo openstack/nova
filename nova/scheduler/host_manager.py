@@ -271,12 +271,7 @@ class HostState(object):
         self.num_instances += 1
 
         pci_requests = instance.get('pci_requests')
-        # NOTE(danms): Instance here is still a dict, which is converted from
-        # an object. The pci_requests are a dict as well. Convert this when
-        # we get an object all the way to this path.
-        if pci_requests and pci_requests['requests'] and self.pci_stats:
-            pci_requests = objects.InstancePCIRequests \
-                .from_request_spec_instance_props(pci_requests)
+        if pci_requests and self.pci_stats:
             pci_requests = pci_requests.requests
         else:
             pci_requests = None
