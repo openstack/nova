@@ -2257,15 +2257,16 @@ class _ComputeAPIUnitTestMixIn(object):
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
                 launched_at=timeutils.utcnow(),
                 system_metadata=orig_system_metadata,
+                image_ref='foo',
                 expected_attrs=['system_metadata'])
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
-        image_href = ''
+        image_href = 'foo'
         image = {"min_ram": 10, "min_disk": 1,
                  "properties": {'architecture': arch.X86_64}}
         admin_pass = ''
         files_to_inject = []
-        bdms = []
+        bdms = objects.BlockDeviceMappingList()
 
         _get_image.return_value = (None, image)
         bdm_get_by_instance_uuid.return_value = bdms
@@ -2284,7 +2285,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
-                None, image, flavor, {}, [])
+                None, image, flavor, {}, [], None)
         self.assertNotEqual(orig_system_metadata, instance.system_metadata)
 
     @mock.patch.object(objects.Instance, 'save')
@@ -2309,7 +2310,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                     'vm_mode': 'xen'}}
         admin_pass = ''
         files_to_inject = []
-        bdms = []
+        bdms = objects.BlockDeviceMappingList()
 
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
@@ -2342,7 +2343,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         _check_auto_disk_config.assert_called_once_with(image=new_image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
-                None, new_image, flavor, {}, [])
+                None, new_image, flavor, {}, [], None)
         self.assertEqual(vm_mode.XEN, instance.vm_mode)
 
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,

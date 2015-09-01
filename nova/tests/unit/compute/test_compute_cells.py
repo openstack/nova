@@ -236,11 +236,13 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, '_check_and_transform_bdm')
     @mock.patch.object(compute_api.API, '_get_image')
     @mock.patch.object(compute_api.API, '_validate_and_build_base_options')
-    def test_build_instances(self, _validate, _get_image, _check_bdm,
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    def test_build_instances(self, _checks_for_create_and_rebuild,
+                             _validate, _get_image, _check_bdm,
                              _provision, _record_action_start):
         _get_image.return_value = (None, 'fake-image')
         _validate.return_value = ({}, 1)
-        _check_bdm.return_value = 'bdms'
+        _check_bdm.return_value = objects.BlockDeviceMappingList()
         _provision.return_value = 'instances'
 
         self.compute_api.create(self.context, 'fake-flavor', 'fake-image')
@@ -309,7 +311,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
                  "properties": {'architecture': 'x86_64'}}
         admin_pass = ''
         files_to_inject = []
-        bdms = []
+        bdms = objects.BlockDeviceMappingList()
 
         _get_image.return_value = (None, image)
         bdm_get_by_instance_uuid.return_value = bdms
