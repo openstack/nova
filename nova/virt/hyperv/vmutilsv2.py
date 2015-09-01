@@ -59,6 +59,8 @@ class VMUtilsV2(vmutils.VMUtils):
     _ETHERNET_PORT_ALLOCATION_SETTING_DATA_CLASS = \
     'Msvm_EthernetPortAllocationSettingData'
 
+    _VIRT_DISK_CONNECTION_ATTR = "HostResource"
+
     _AUTOMATIC_STARTUP_ACTION_NONE = 2
 
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
