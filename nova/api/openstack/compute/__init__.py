@@ -19,6 +19,7 @@ WSGI middleware for OpenStack Compute API.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 import nova.api.openstack
 from nova.api.openstack.compute import extension_info
@@ -35,6 +36,7 @@ from nova.api.openstack.compute.legacy_v2 import server_metadata \
 from nova.api.openstack.compute.legacy_v2 import servers as v2_servers
 from nova.api.openstack.compute.legacy_v2 import versions \
         as legacy_v2_versions
+from nova.i18n import _LW
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
         default=True,
@@ -43,12 +45,25 @@ allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
 CONF = cfg.CONF
 CONF.register_opt(allow_instance_snapshots_opt)
 
+LOG = logging.getLogger(__name__)
+
 
 class APIRouter(nova.api.openstack.APIRouter):
     """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
     ExtensionManager = v2_extensions.ExtensionManager
+
+    def __init__(self, ext_mgr=None, init_only=None):
+        LOG.warning(_LW(
+            "Deprecated: Starting with the Liberty release, the v2 API was "
+            "already deprecated and the v2.1 API is set as the default. Nova "
+            "also supports v2.1 API legacy v2 compatible mode for switching "
+            "to v2.1 API smoothly. For more information on how to configure "
+            "v2.1 API and legacy v2 compatible mode, please refer Nova "
+            "api-paste.ini sample file."))
+        super(APIRouter, self).__init__(ext_mgr=ext_mgr,
+                                        init_only=init_only)
 
     def _setup_routes(self, mapper, ext_mgr, init_only):
         if init_only is None or 'versions' in init_only:
@@ -155,6 +170,10 @@ class APIRouterV3(nova.api.openstack.APIRouterV21):
     and method.
     """
     def __init__(self, init_only=None):
+        LOG.warning(_LW(
+            "Deprecated: The v3 API was deprecated. The v2.1 API replaces it "
+            "as the Nova API, please refer Nova api-paste.ini sample file for "
+            "how to configure v2.1 API."))
         self._loaded_extension_info = extension_info.LoadedExtensionInfo()
         super(APIRouterV3, self).__init__(init_only, v3mode=True)
 
