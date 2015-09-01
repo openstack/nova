@@ -1560,7 +1560,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             cells=[
                 objects.InstanceNUMACell(
                     id=0, cpuset=set([0, 1]), memory=256, pagesize=2048,
-                    cpu_pinning={0: 1, 0: 1}),
+                    cpu_pinning={0: 0, 1: 1}),
                 objects.InstanceNUMACell(
                     id=1, cpuset=set([2]), memory=256, pagesize=2048,
                     cpu_pinning={2: 3}),
