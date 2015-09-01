@@ -408,9 +408,7 @@ class _BaseTaskTestCase(object):
         instance_properties['system_metadata'] = flavors.save_flavor_info(
             {}, instance_type)
 
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
-                                 'select_destinations')
+        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(db,
                                  'block_device_mapping_get_all_by_instance')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
@@ -420,10 +418,9 @@ class _BaseTaskTestCase(object):
                 'instance_properties': instance_properties,
                 'instance_type': instance_type_p,
                 'num_instances': 2}
-        scheduler_utils.setup_instance_group(self.context, spec, {})
-        self.conductor_manager.scheduler_client.select_destinations(
-                self.context, spec,
-                {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
+        filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
+        self.conductor_manager._schedule_instances(self.context,
+                spec, filter_properties).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         db.block_device_mapping_get_all_by_instance(self.context,
@@ -492,18 +489,14 @@ class _BaseTaskTestCase(object):
                 'instance_properties': instances[0]}
         exception = exc.NoValidHost(reason='fake-reason')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
+        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(scheduler_utils, 'set_vm_state_and_notify')
-        self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
-                'select_destinations')
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
-        scheduler_utils.setup_instance_group(self.context, spec, {})
-        self.conductor_manager.scheduler_client.select_destinations(
-                self.context, spec,
-                {'retry': {'num_attempts': 1,
-                           'hosts': []}}).AndRaise(exception)
+        filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
+        self.conductor_manager._schedule_instances(self.context,
+                spec, filter_properties).AndRaise(exception)
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
         for instance in instances:
             scheduler_utils.set_vm_state_and_notify(
@@ -644,14 +637,17 @@ class _BaseTaskTestCase(object):
         system_metadata = instance.system_metadata
 
         self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
         self.conductor_manager.image_api.get(self.context,
                 'fake_image_id', show_deleted=False).AndReturn('fake_image')
+        scheduler_utils.build_request_spec(self.context, 'fake_image',
+                mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
-                'fake_image', filter_properties, instance).AndReturn(
+                'req_spec', filter_properties).AndReturn(
                         [{'host': 'fake_host',
                           'nodename': 'fake_node',
                           'limits': {}}])
@@ -726,12 +722,15 @@ class _BaseTaskTestCase(object):
                                        'hosts': []}}
         system_metadata = instance.system_metadata
 
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
+        scheduler_utils.build_request_spec(self.context, None,
+                mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
-                None, filter_properties, instance).AndReturn(
+                'req_spec', filter_properties).AndReturn(
                         [{'host': 'fake_host',
                           'nodename': 'fake_node',
                           'limits': {}}])
@@ -1315,18 +1314,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
-                'select_destinations')
+        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance')
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
-        scheduler_utils.setup_instance_group(self.context, spec, {})
-        self.conductor_manager.scheduler_client.select_destinations(
-                self.context, spec,
-                {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
+        filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
+        self.conductor_manager._schedule_instances(self.context,
+                spec, filter_properties).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         instances[0].refresh().AndRaise(
