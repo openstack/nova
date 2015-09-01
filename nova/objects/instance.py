@@ -1060,10 +1060,12 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
             if fault.instance_uuid not in inst_faults:
                 inst_faults[fault.instance_uuid] = fault
 
+    inst_cls = inst_list.NOVA_OBJ_INSTANCE_CLS
+
     inst_list.objects = []
     for db_inst in db_inst_list:
-        inst_obj = objects.Instance._from_db_object(
-                context, objects.Instance(context), db_inst,
+        inst_obj = inst_cls._from_db_object(
+                context, inst_cls(context), db_inst,
                 expected_attrs=expected_attrs)
         if get_fault:
             inst_obj.fault = inst_faults.get(inst_obj.uuid, None)
@@ -1072,47 +1074,9 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
-@base.NovaObjectRegistry.register
-class InstanceList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial version
-    # Version 1.1: Added use_slave to get_by_host
-    #              Instance <= version 1.9
-    # Version 1.2: Instance <= version 1.11
-    # Version 1.3: Added use_slave to get_by_filters
-    # Version 1.4: Instance <= version 1.12
-    # Version 1.5: Added method get_active_by_window_joined.
-    # Version 1.6: Instance <= version 1.13
-    # Version 1.7: Added use_slave to get_active_by_window_joined
-    # Version 1.8: Instance <= version 1.14
-    # Version 1.9: Instance <= version 1.15
-    # Version 1.10: Instance <= version 1.16
-    # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
-    # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
-    # Version 1.13: Instance <= version 1.17
-    # Version 1.14: Instance <= version 1.18
-    # Version 1.15: Instance <= version 1.19
-    # Version 1.16: Added get_all() method
-    # Version 1.17: Instance <= version 1.20
-    # Version 1.18: Instance <= version 1.21
-    # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
-    # Version 1.20: Instance <= version 1.22
-    # Version 1.21: New method get_by_grantee_security_group_ids()
-    # Version 1.22: Instance <= version 1.23
-    VERSION = '1.22'
-
+class _BaseInstanceList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
-    }
-    # NOTE(danms): Instance was at 1.9 before we added this
-    obj_relationships = {
-        'objects': [('1.1', '1.9'), ('1.2', '1.11'), ('1.3', '1.11'),
-                    ('1.4', '1.12'), ('1.5', '1.12'), ('1.6', '1.13'),
-                    ('1.7', '1.13'), ('1.8', '1.14'), ('1.9', '1.15',),
-                    ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
-                    ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
-                    ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
-                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22'),
-                    ('1.22', '1.23')],
     }
 
     @base.remotable_classmethod
@@ -1257,3 +1221,54 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             instance.obj_reset_changes(['fault'])
 
         return faults_by_uuid.keys()
+
+    @classmethod
+    def obj_name(cls):
+        return 'InstanceList'
+
+
+@base.NovaObjectRegistry.register
+class InstanceListV1(_BaseInstanceList):
+    # Version 1.0: Initial version
+    # Version 1.1: Added use_slave to get_by_host
+    #              Instance <= version 1.9
+    # Version 1.2: Instance <= version 1.11
+    # Version 1.3: Added use_slave to get_by_filters
+    # Version 1.4: Instance <= version 1.12
+    # Version 1.5: Added method get_active_by_window_joined.
+    # Version 1.6: Instance <= version 1.13
+    # Version 1.7: Added use_slave to get_active_by_window_joined
+    # Version 1.8: Instance <= version 1.14
+    # Version 1.9: Instance <= version 1.15
+    # Version 1.10: Instance <= version 1.16
+    # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
+    # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
+    # Version 1.13: Instance <= version 1.17
+    # Version 1.14: Instance <= version 1.18
+    # Version 1.15: Instance <= version 1.19
+    # Version 1.16: Added get_all() method
+    # Version 1.17: Instance <= version 1.20
+    # Version 1.18: Instance <= version 1.21
+    # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
+    # Version 1.20: Instance <= version 1.22
+    # Version 1.21: New method get_by_grantee_security_group_ids()
+    # Version 1.22: Instance <= version 1.23
+    VERSION = '1.22'
+
+    NOVA_OBJ_INSTANCE_CLS = InstanceV1
+
+    # NOTE(danms): Instance was at 1.9 before we added this
+    obj_relationships = {
+        'objects': [('1.1', '1.9'), ('1.2', '1.11'), ('1.3', '1.11'),
+                    ('1.4', '1.12'), ('1.5', '1.12'), ('1.6', '1.13'),
+                    ('1.7', '1.13'), ('1.8', '1.14'), ('1.9', '1.15',),
+                    ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
+                    ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
+                    ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
+                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22'),
+                    ('1.22', '1.23')],
+    }
+
+
+# NOTE(danms): For the unit tests...
+InstanceList = InstanceListV1
