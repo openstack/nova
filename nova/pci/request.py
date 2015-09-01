@@ -56,7 +56,7 @@ pci_alias_opts = [
                         'extra_spec for a flavor, without needing to repeat '
                         'all the PCI property requirements. For example: '
                         'pci_alias = '
-                          '{ "name": "QuicAssist", '
+                          '{ "name": "QuickAssist", '
                           '  "product_id": "0443", '
                           '  "vendor_id": "8086", '
                           '  "device_type": "ACCEL" '

@@ -46,7 +46,7 @@ class PciDeviceStats(object):
 
     The pci stats information is maintained exclusively by compute node
     resource tracker and updated to database. The scheduler fetches the
-    information and selects the compute node accordingly. If a comptue
+    information and selects the compute node accordingly. If a compute
     node is selected, the resource tracker allocates the devices to the
     instance and updates the pci stats information.
 
