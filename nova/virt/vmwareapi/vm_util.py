@@ -38,7 +38,6 @@ from nova.network import model as network_model
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 vmware_utils_opts = [
