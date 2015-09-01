@@ -284,8 +284,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._orig_metadata = (dict(self.metadata) if
                                    'metadata' in self else {})
 
-    def obj_reset_changes(self, fields=None):
-        super(Instance, self).obj_reset_changes(fields)
+    def obj_reset_changes(self, fields=None, recursive=False):
+        super(Instance, self).obj_reset_changes(fields, recursive=recursive)
         self._reset_metadata_tracking(fields=fields)
 
     def obj_what_changed(self):

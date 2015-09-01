@@ -1480,3 +1480,12 @@ class TestObjectVersions(test.NoDBTestCase):
                                         field))
                     last_my_version = _my_version
                     last_child_version = _ch_version
+
+
+class TestObjMethodOverrides(test.NoDBTestCase):
+    def test_obj_reset_changes(self):
+        args = inspect.getargspec(base.NovaObject.obj_reset_changes)
+        for obj_classes in base.NovaObject._obj_classes.values():
+            for obj_class in obj_classes:
+                self.assertEqual(args,
+                        inspect.getargspec(obj_class.obj_reset_changes))
