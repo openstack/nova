@@ -1500,6 +1500,21 @@ Setting up iSCSI targets: unused
         pci_num = libvirt_driver._get_pci_num(hba)
         self.assertEqual("0000:06:00.6", pci_num)
 
+    def test_get_lun_string_for_s390(self):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        lun = 1
+        lunstring = libvirt_driver._get_lun_string_for_s390(lun)
+        self.assertEqual(lunstring, "0x0001000000000000")
+        lun = 0xff
+        lunstring = libvirt_driver._get_lun_string_for_s390(lun)
+        self.assertEqual(lunstring, "0x00ff000000000000")
+        lun = 0x101
+        lunstring = libvirt_driver._get_lun_string_for_s390(lun)
+        self.assertEqual(lunstring, "0x0101000000000000")
+        lun = 0x4020400a
+        lunstring = libvirt_driver._get_lun_string_for_s390(lun)
+        self.assertEqual(lunstring, "0x4020400a00000000")
+
     def test_libvirt_fibrechan_get_device_file_path_s390(self):
         libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
         pci_num = "2310"
