@@ -1105,11 +1105,11 @@ class ServersController(wsgi.Controller):
         LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'start', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
     @extensions.expected_errors((404, 409))
@@ -1122,11 +1122,11 @@ class ServersController(wsgi.Controller):
         LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'stop', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
