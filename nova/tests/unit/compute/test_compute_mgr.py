@@ -1425,6 +1425,78 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(c.cleaned)
         self.assertEqual('1', c.system_metadata['clean_attempts'])
 
+    @mock.patch.object(objects.Migration, 'obj_as_admin')
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(objects.MigrationList, 'get_by_filters')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    def _test_cleanup_incomplete_migrations(self, inst_host,
+                                            mock_inst_get_by_filters,
+                                            mock_migration_get_by_filters,
+                                            mock_save, mock_obj_as_admin):
+        def fake_inst(context, uuid, host):
+            inst = objects.Instance(context)
+            inst.uuid = uuid
+            inst.host = host
+            return inst
+
+        def fake_migration(uuid, status, inst_uuid, src_host, dest_host):
+            migration = objects.Migration()
+            migration.uuid = uuid
+            migration.status = status
+            migration.instance_uuid = inst_uuid
+            migration.source_compute = src_host
+            migration.dest_compute = dest_host
+            return migration
+
+        fake_instances = [fake_inst(self.context, '111', inst_host),
+                          fake_inst(self.context, '222', inst_host)]
+
+        fake_migrations = [fake_migration('123', 'error', '111',
+                                          'fake-host', 'fake-mini'),
+                           fake_migration('456', 'error', '222',
+                                          'fake-host', 'fake-mini')]
+
+        mock_migration_get_by_filters.return_value = fake_migrations
+        mock_inst_get_by_filters.return_value = fake_instances
+
+        with mock.patch.object(self.compute.driver, 'delete_instance_files'):
+            self.compute._cleanup_incomplete_migrations(self.context)
+
+        # Ensure that migration status is set to 'failed' after instance
+        # files deletion for those instances whose instance.host is not
+        # same as compute host where periodic task is running.
+        for inst in fake_instances:
+            if inst.host != CONF.host:
+                for mig in fake_migrations:
+                    if inst.uuid == mig.instance_uuid:
+                        self.assertEqual('failed', mig.status)
+
+    def test_cleanup_incomplete_migrations_dest_node(self):
+        """Test to ensure instance files are deleted from destination node.
+
+        If instance gets deleted during resizing/revert-resizing operation,
+        in that case instance files gets deleted from instance.host (source
+        host here), but there is possibility that instance files could be
+        present on destination node.
+        This test ensures that `_cleanup_incomplete_migration` periodic
+        task deletes orphaned instance files from destination compute node.
+        """
+        self.flags(host='fake-mini')
+        self._test_cleanup_incomplete_migrations('fake-host')
+
+    def test_cleanup_incomplete_migrations_source_node(self):
+        """Test to ensure instance files are deleted from source node.
+
+        If instance gets deleted during resizing/revert-resizing operation,
+        in that case instance files gets deleted from instance.host (dest
+        host here), but there is possibility that instance files could be
+        present on source node.
+        This test ensures that `_cleanup_incomplete_migration` periodic
+        task deletes orphaned instance files from source compute node.
+        """
+        self.flags(host='fake-host')
+        self._test_cleanup_incomplete_migrations('fake-mini')
+
     def test_attach_interface_failure(self):
         # Test that the fault methods are invoked when an attach fails
         db_instance = fake_instance.fake_db_instance()
