@@ -69,7 +69,7 @@ create_volume_attachment = {
             'properties': {
                 'volumeId': parameter_types.volume_id,
                 'device': {
-                    'type': 'string',
+                    'type': ['string', 'null'],
                     # NOTE: The validation pattern from match_device() in
                     #       nova/block_device.py.
                     'pattern': '(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$'
