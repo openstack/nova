@@ -63,7 +63,7 @@ notify_decorator = 'nova.notifications.notify_decorator'
 monkey_patch_opts = [
     cfg.BoolOpt('monkey_patch',
                 default=False,
-                help='Whether to log monkey patching'),
+                help='Whether to apply monkey patching'),
     cfg.ListOpt('monkey_patch_modules',
                 default=[
                   'nova.api.ec2.cloud:%s' % (notify_decorator),
