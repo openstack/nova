@@ -48,7 +48,7 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
         super(SecgroupsFullstack, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         if self._test == 'v2.1':
-            self.useFixture(api_paste_fixture.ApiPasteFixture())
+            self.useFixture(api_paste_fixture.ApiPasteV21Fixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture())
 
         self.api = api_fixture.api

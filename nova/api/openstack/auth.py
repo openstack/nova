@@ -74,6 +74,7 @@ class NoAuthMiddleware(NoAuthMiddlewareBase):
         return self.base_call(req, True, always_admin=False)
 
 
+# TODO(johnthetubaguy) this should be removed in the M release
 class NoAuthMiddlewareV3(NoAuthMiddlewareBase):
     """Return a fake token if one isn't specified."""
 
