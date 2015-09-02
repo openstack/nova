@@ -26,8 +26,8 @@ out being called v3 rather than v2.1. Where you see references to v3
 you can treat it as a reference to v2.1 with or without microversions
 support.
 
-The original V2 API plugins live in ``nova/api/openstack/compute/contrib``
-and the V2.1 plugins live in ``nova/api/openstack/compute/plugins/v3``.
+The original V2 API plugins live in ``nova/api/openstack/compute/legacy_v2``
+and the V2.1 plugins live in ``nova/api/openstack/compute``.
 
 Note that any change to the Nova API to be merged will first require a
 spec be approved first. See `here <https://github.com/openstack/nova-specs>`_
@@ -66,7 +66,7 @@ A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <http:
         # If a method is not definied a request to it will be a 404 response
 
         # It is also possible to define support for further responses
-        # See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/plugins/v3/servers.py>`_.
+        # See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/servers.py>`_.
 
 
     class Basic(extensions.V3APIExtensionBase):
@@ -85,7 +85,7 @@ A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <http:
         def get_controller_extensions(self):
             return []
 
-All of these plugin files should live in the ``nova/api/openstack/compute/plugins/v3`` directory.
+All of these plugin files should live in the ``nova/api/openstack/compute`` directory.
 
 
 Policy
@@ -101,7 +101,7 @@ Modularity
 ~~~~~~~~~~
 
 The Nova REST API is separated into different plugins in the directory
-'nova/api/openstack/compute/plugins/v3/'
+'nova/api/openstack/compute/'
 
 Because microversions are supported in the Nova REST API, the API can be
 extended without any new plugin. But for code readability, the Nova REST API
