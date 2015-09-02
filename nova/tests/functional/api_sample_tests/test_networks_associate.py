@@ -55,26 +55,26 @@ class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-req',
                                  {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_disassociate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-host-req',
                                  {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_disassociate_project(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-project-req',
                                  {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_associate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-associate-host-req',
                                  {"host": "testHost"})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)

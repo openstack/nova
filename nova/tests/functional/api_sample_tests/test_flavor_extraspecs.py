@@ -73,5 +73,5 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     def test_flavor_extra_specs_delete(self):
         self._flavor_extra_specs_create()
         response = self._do_delete('flavors/1/os-extra_specs/key1')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, '')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('', response.content)

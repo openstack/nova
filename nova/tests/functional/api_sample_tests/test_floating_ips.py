@@ -113,5 +113,5 @@ class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV3):
     def test_floating_ips_delete(self):
         self.test_floating_ips_create()
         response = self._do_delete('os-floating-ips/%d' % 1)
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
