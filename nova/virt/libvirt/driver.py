@@ -688,6 +688,10 @@ class LibvirtDriver(driver.ComputeDriver):
         inst_path = libvirt_utils.get_instance_path(instance)
         container_dir = os.path.join(inst_path, 'rootfs')
         rootfs_dev = instance.system_metadata.get('rootfs_device_name')
+        LOG.debug('Attempting to teardown container at path %(dir)s with '
+                  'root device: %(rootfs_dev)s',
+                  {'dir': container_dir, 'rootfs_dev': rootfs_dev},
+                  instance=instance)
         disk.teardown_container(container_dir, rootfs_dev)
 
     def _destroy(self, instance, attempt=1):
@@ -4405,6 +4409,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(uni): Now the container is running with its own private
             # mount namespace and so there is no need to keep the container
             # rootfs mounted in the host namespace
+            LOG.debug('Attempting to unmount container filesystem: %s',
+                      container_dir, instance=instance)
             disk.clean_lxc_namespace(container_dir=container_dir)
         else:
             disk.teardown_container(container_dir=container_dir)
