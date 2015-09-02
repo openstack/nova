@@ -6413,8 +6413,10 @@ def instance_tag_set(context, instance_uuid, tags):
                 models.Tag.tag.in_(to_delete)).delete(
                 synchronize_session=False)
 
-        data = [{'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
-        session.execute(models.Tag.__table__.insert(), data)
+        if to_add:
+            data = [
+                {'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
+            session.execute(models.Tag.__table__.insert(), data)
 
         return session.query(models.Tag).filter_by(
             resource_id=instance_uuid).all()
