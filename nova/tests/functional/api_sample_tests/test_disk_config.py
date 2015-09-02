@@ -76,10 +76,10 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-resize-post-req', {})
-        self.assertEqual(response.status_code, 202)
+        self.assertEqual(202, response.status_code)
         # NOTE(tmello): Resize does not return response body
         # Bug #1085213.
-        self.assertEqual(response.content, "")
+        self.assertEqual("", response.content)
 
     def test_rebuild_server(self):
         uuid = self._post_server(use_common_server_api_samples=False)

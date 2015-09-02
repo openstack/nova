@@ -98,8 +98,8 @@ class FixedIpTest(test_servers.ServersSampleBase):
         response = self._do_post('os-fixed-ips/192.168.1.1/action',
                                  'fixedip-post-req', {},
                                  api_version=self.request_api_version)
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def _test_get_fixed_ip(self, **kwargs):
         # Return data about the given fixed ip.
