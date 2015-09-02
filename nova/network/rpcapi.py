@@ -105,6 +105,7 @@ class NetworkAPI(object):
         * NOTE: remove unused method associate()
 
         * 1.14 - Add mac parameter to release_fixed_ip().
+        * 1.15 - Convert set_network_host() to use Network objects.
     '''
 
     VERSION_ALIASES = {
@@ -244,9 +245,12 @@ class NetworkAPI(object):
                                 teardown=teardown)
 
     def set_network_host(self, ctxt, network_ref):
-        network_ref_p = jsonutils.to_primitive(network_ref)
-        return self.client.call(ctxt, 'set_network_host',
-                                network_ref=network_ref_p)
+        version = '1.15'
+        if not self.client.can_send_version(version):
+            version = '1.0'
+            network_ref = objects_base.obj_to_primitive(network_ref)
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'set_network_host', network_ref=network_ref)
 
     def rpc_setup_network_on_host(self, ctxt, network_id, teardown, host):
         # NOTE(tr3buchet): the call is just to wait for completion
