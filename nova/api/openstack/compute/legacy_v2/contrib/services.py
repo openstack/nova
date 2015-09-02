@@ -104,6 +104,11 @@ class ServiceController(object):
         nova_context.require_admin_context(context)
 
         try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+
+        try:
             self.host_api.service_delete(context, id)
         except exception.ServiceNotFound:
             explanation = _("Service %s not found.") % id

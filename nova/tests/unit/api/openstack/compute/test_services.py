@@ -547,6 +547,12 @@ class ServicesTestV21(test.TestCase):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, self.req, 1234)
+
+    def test_services_delete_bad_request(self):
+        self.ext_mgr.extensions['os-extended-services-delete'] = True
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.delete, self.req, 'abc')
 
     # This test is just to verify that the servicegroup API gets used when
