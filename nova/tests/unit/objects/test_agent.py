@@ -38,7 +38,7 @@ class _TestAgent(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     @mock.patch('nova.db.agent_build_get_by_triple')
     def test_get_by_triple(self, mock_get):
