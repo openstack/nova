@@ -65,8 +65,8 @@ class CellsAPITestCase(test.NoDBTestCase):
         return call_info
 
     def _check_result(self, call_info, method, args, version=None):
-        self.assertEqual(self.cells_rpcapi.client.target.topic,
-                         self.fake_topic)
+        self.assertEqual(self.fake_topic,
+                         self.cells_rpcapi.client.target.topic)
         self.assertEqual(self.fake_context, call_info['context'])
         self.assertEqual(method, call_info['method'])
         self.assertEqual(args, call_info['args'])
@@ -240,7 +240,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                 self.fake_context)
         self._check_result(call_info, 'get_cell_info_for_neighbors', {},
                            version='1.1')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_sync_instances(self):
         call_info = self._stub_rpc_method('cast', None)
@@ -263,7 +263,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'filters': fake_filters}
         self._check_result(call_info, 'service_get_all', expected_args,
                            version='1.2')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_service_get_by_compute_host(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -273,7 +273,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'service_get_by_compute_host',
                            expected_args,
                            version='1.2')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_get_host_uptime(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -283,7 +283,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'get_host_uptime',
                            expected_args,
                            version='1.17')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_service_update(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -297,7 +297,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'service_update',
                            expected_args,
                            version='1.7')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_service_delete(self):
         call_info = self._stub_rpc_method('call', None)
@@ -321,7 +321,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'proxy_rpc_to_manager',
                            expected_args,
                            version='1.2')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_task_log_get_all(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -339,7 +339,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'state': 'fake_state'}
         self._check_result(call_info, 'task_log_get_all', expected_args,
                            version='1.3')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_compute_node_get_all(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -349,7 +349,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'hypervisor_match': 'fake-match'}
         self._check_result(call_info, 'compute_node_get_all', expected_args,
                            version='1.4')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_compute_node_stats(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -357,7 +357,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {}
         self._check_result(call_info, 'compute_node_stats',
                            expected_args, version='1.4')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_compute_node_get(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -366,7 +366,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'compute_id': 'fake_compute_id'}
         self._check_result(call_info, 'compute_node_get',
                            expected_args, version='1.4')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_actions_get(self):
         fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
@@ -377,7 +377,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'instance_uuid': fake_instance['uuid']}
         self._check_result(call_info, 'actions_get', expected_args,
                            version='1.5')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_actions_get_no_cell(self):
         fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
@@ -396,7 +396,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'request_id': 'req-fake'}
         self._check_result(call_info, 'action_get_by_request_id',
                            expected_args, version='1.5')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_action_get_by_request_id_no_cell(self):
         fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
@@ -414,7 +414,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'action_id': 'fake-action'}
         self._check_result(call_info, 'action_events_get', expected_args,
                            version='1.5')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_action_events_get_no_cell(self):
         fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
@@ -443,7 +443,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'console_type': 'fake-type'}
         self._check_result(call_info, 'validate_console_port',
                 expected_args, version='1.6')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_bdm_update_or_create_at_top(self):
         fake_bdm = {'id': 2, 'other': 'meow'}
@@ -532,7 +532,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'clean_shutdown': True}
         self._check_result(call_info, 'stop_instance',
                 expected_args, version='1.31')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_cell_create(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -542,7 +542,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'values': 'values'}
         self._check_result(call_info, 'cell_create',
                            expected_args, version='1.13')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_cell_update(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -554,7 +554,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'values': 'values'}
         self._check_result(call_info, 'cell_update',
                            expected_args, version='1.13')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_cell_delete(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -565,7 +565,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'cell_name': 'cell_name'}
         self._check_result(call_info, 'cell_delete',
                            expected_args, version='1.13')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_cell_get(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
@@ -576,7 +576,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         expected_args = {'cell_name': 'cell_name'}
         self._check_result(call_info, 'cell_get',
                            expected_args, version='1.13')
-        self.assertEqual(result, 'fake_response')
+        self.assertEqual('fake_response', result)
 
     def test_reboot_instance(self):
         call_info = self._stub_rpc_method('cast', None)

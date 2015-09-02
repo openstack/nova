@@ -99,7 +99,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 512}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[3], cells[2], cells[1], cells[0]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -108,7 +108,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 1024}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[0], cells[1], cells[2], cells[3]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -117,7 +117,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 2048}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[1], cells[0], cells[3], cells[2]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -130,7 +130,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 512}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[0], cells[1], cells[2], cells[3]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -139,7 +139,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 1024}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[3], cells[2], cells[1], cells[0]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -148,7 +148,7 @@ class RAMByInstanceTypeWeigherTestClass(_WeigherTestClass):
         instance_type = {'memory_mb': 2048}
         weight_properties = {'request_spec': {'instance_type': instance_type}}
         weighed_cells = self._get_weighed_cells(cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         expected_cells = [cells[2], cells[3], cells[0], cells[1]]
         self.assertEqual(expected_cells, resulting_cells)
@@ -164,7 +164,7 @@ class WeightOffsetWeigherTestClass(_WeigherTestClass):
         """
         cells = _get_fake_cells()
         weighed_cells = self._get_weighed_cells(cells, {})
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
         expected_cells = [cells[2], cells[3], cells[0], cells[1]]
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         self.assertEqual(expected_cells, resulting_cells)
@@ -192,7 +192,7 @@ class MuteWeigherTestClass(_WeigherTestClass):
     def test_non_mute(self):
         weight_properties = {}
         weighed_cells = self._get_weighed_cells(self.cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
 
         for weighed_cell in weighed_cells:
             self.assertEqual(0, weighed_cell.weight)
@@ -206,7 +206,7 @@ class MuteWeigherTestClass(_WeigherTestClass):
 
         weight_properties = {}
         weighed_cells = self._get_weighed_cells(self.cells, weight_properties)
-        self.assertEqual(len(weighed_cells), 4)
+        self.assertEqual(4, len(weighed_cells))
 
         for i in range(2):
             weighed_cell = weighed_cells.pop(0)

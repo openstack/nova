@@ -63,7 +63,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         path = 'a!b!c!d'
         expected = 'd!c!b!a'
         rev_path = messaging._reverse_path(path)
-        self.assertEqual(rev_path, expected)
+        self.assertEqual(expected, rev_path)
 
     def test_response_cell_name_from_path(self):
         # test array with tuples of inputs/expected outputs
@@ -381,7 +381,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         self.assertEqual(method_kwargs, call_info['kwargs'])
         self.assertEqual(target_cell, call_info['routing_path'])
         self.assertFalse(response.failure)
-        self.assertEqual(response.value_or_raise(), 'our_fake_response')
+        self.assertEqual('our_fake_response', response.value_or_raise())
 
     def test_grandchild_targeted_message_with_error(self):
         target_cell = 'api-cell!child-cell2!grandchild-cell1'
@@ -488,7 +488,7 @@ class CellsMessageClassesTestCase(test.TestCase):
                                                     run_locally=True)
         bcast_message.process()
         # fakes creates 8 cells (including ourself).
-        self.assertEqual(len(cells), 8)
+        self.assertEqual(8, len(cells))
 
     def test_broadcast_routing_up(self):
         method = 'our_fake_method'
@@ -533,7 +533,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         bcast_message.process()
         # fakes creates 8 cells (including ourself).  So we should see
         # only 7 here.
-        self.assertEqual(len(cells), 7)
+        self.assertEqual(7, len(cells))
 
     def test_broadcast_routing_with_response(self):
         method = 'our_fake_method'
@@ -552,7 +552,7 @@ class CellsMessageClassesTestCase(test.TestCase):
                                                     run_locally=True,
                                                     need_response=True)
         responses = bcast_message.process()
-        self.assertEqual(len(responses), 8)
+        self.assertEqual(8, len(responses))
         for response in responses:
             self.assertFalse(response.failure)
             self.assertEqual('response-%s' % response.cell_name,
@@ -578,7 +578,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         responses = bcast_message.process()
         # Should only get responses from our immediate children (and
         # ourselves)
-        self.assertEqual(len(responses), 5)
+        self.assertEqual(5, len(responses))
         for response in responses:
             self.assertFalse(response.failure)
             self.assertEqual('response-%s' % response.cell_name,
@@ -601,7 +601,7 @@ class CellsMessageClassesTestCase(test.TestCase):
                                                     run_locally=True,
                                                     need_response=True)
         responses = bcast_message.process()
-        self.assertEqual(len(responses), 8)
+        self.assertEqual(8, len(responses))
         for response in responses:
             self.assertTrue(response.failure)
             self.assertRaises(test.TestingException, response.value_or_raise)
@@ -630,11 +630,11 @@ class CellsMessageClassesTestCase(test.TestCase):
                                                     run_locally=True,
                                                     need_response=True)
         responses = bcast_message.process()
-        self.assertEqual(len(responses), 8)
+        self.assertEqual(8, len(responses))
         failure_responses = [resp for resp in responses if resp.failure]
         success_responses = [resp for resp in responses if not resp.failure]
-        self.assertEqual(len(failure_responses), 2)
-        self.assertEqual(len(success_responses), 6)
+        self.assertEqual(2, len(failure_responses))
+        self.assertEqual(6, len(success_responses))
 
         for response in success_responses:
             self.assertFalse(response.failure)
