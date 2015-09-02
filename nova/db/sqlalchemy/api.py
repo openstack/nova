@@ -3502,11 +3502,11 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
     """
     overs = []
     for res, delta in deltas.items():
-        # We can't go over-quota if we're not reserving anything or if
-        # we have unlimited quotas.
-        if user_quotas[res] >= 0 and delta >= 0:
+        # We can't go over-quota if we're not reserving anything.
+        if delta >= 0:
+            # We can't go over-quota if we have unlimited quotas.
             # over if the project usage + delta is more than project quota
-            if project_quotas[res] < delta + project_usages[res]['total']:
+            if 0 <= project_quotas[res] < delta + project_usages[res]['total']:
                 LOG.debug('Request is over project quota for resource '
                           '"%(res)s". Project limit: %(limit)s, delta: '
                           '%(delta)s, current total project usage: %(total)s',
@@ -3514,8 +3514,9 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
                            'delta': delta,
                            'total': project_usages[res]['total']})
                 overs.append(res)
+            # We can't go over-quota if we have unlimited quotas.
             # over if the user usage + delta is more than user quota
-            elif user_quotas[res] < delta + user_usages[res]['total']:
+            elif 0 <= user_quotas[res] < delta + user_usages[res]['total']:
                 LOG.debug('Request is over user quota for resource '
                           '"%(res)s". User limit: %(limit)s, delta: '
                           '%(delta)s, current total user usage: %(total)s',

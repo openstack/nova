@@ -6902,12 +6902,22 @@ class QuotaReserveNoDbTestCase(test.NoDBTestCase):
                                                     {}, {})
         self.assertFalse(overs)
 
-    def test_calculate_overquota_unlimited_quota(self):
+    def test_calculate_overquota_unlimited_user_quota(self):
         deltas = {'foo': 1}
-        project_quotas = {}
+        project_quotas = {'foo': -1}
         user_quotas = {'foo': -1}
-        project_usages = {}
-        user_usages = {'foo': 10}
+        project_usages = {'foo': {'total': 10}}
+        user_usages = {'foo': {'total': 10}}
+        overs = sqlalchemy_api._calculate_overquota(
+            project_quotas, user_quotas, deltas, project_usages, user_usages)
+        self.assertFalse(overs)
+
+    def test_calculate_overquota_unlimited_project_quota(self):
+        deltas = {'foo': 1}
+        project_quotas = {'foo': -1}
+        user_quotas = {'foo': 1}
+        project_usages = {'foo': {'total': 0}}
+        user_usages = {'foo': {'total': 0}}
         overs = sqlalchemy_api._calculate_overquota(
             project_quotas, user_quotas, deltas, project_usages, user_usages)
         self.assertFalse(overs)
