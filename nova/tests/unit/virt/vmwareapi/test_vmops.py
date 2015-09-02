@@ -858,15 +858,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                     mock_attach_cdrom_to_vm):
         injected_files = mock.Mock()
         admin_password = mock.Mock()
+        network_info = mock.Mock()
         vm_ref = mock.Mock()
         mock_create_config_drive.return_value = "fake_iso_path"
         self._vmops._configure_config_drive(
                 self._instance, vm_ref, self._dc_info, self._ds,
-                injected_files, admin_password)
+                injected_files, admin_password, network_info)
 
         upload_iso_path = self._ds.build_path("fake_iso_path")
         mock_create_config_drive.assert_called_once_with(self._instance,
-                injected_files, admin_password, self._ds.name,
+                injected_files, admin_password, network_info, self._ds.name,
                 self._dc_info.name, self._instance.uuid, "Fake-CookieJar")
         mock_attach_cdrom_to_vm.assert_called_once_with(
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
@@ -1456,7 +1457,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             if config_drive:
                 mock_configure_config_drive.assert_called_once_with(
                         self._instance, 'fake_vm_ref', self._dc_info,
-                        self._ds, 'fake_files', 'password')
+                        self._ds, 'fake_files', 'password', network_info)
             mock_update_vnic_index.assert_called_once_with(
                         self._context, self._instance, network_info)
 

@@ -581,7 +581,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.iso_index = 0
 
         def fake_create_config_drive(instance, injected_files, password,
-                                     data_store_name, folder, uuid, cookies):
+                                     network_info, data_store_name,
+                                     folder, uuid, cookies):
             return 'fake-config-drive'
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
@@ -634,7 +635,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.cd_attach_called = False
 
         def fake_create_config_drive(instance, injected_files, password,
-                                     data_store_name, folder, uuid, cookies):
+                                     network_info, data_store_name,
+                                     folder, uuid, cookies):
+
             return 'fake-config-drive'
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
@@ -1529,8 +1532,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         if config_drive:
             def fake_create_config_drive(instance, injected_files, password,
-                                         data_store_name, folder,
-                                         instance_uuid, cookies):
+                                         network_info, data_store_name,
+                                         folder, instance_uuid, cookies):
                 self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
                 return str(ds_obj.DatastorePath(data_store_name,
                                                  instance_uuid, 'fake.iso'))
