@@ -82,5 +82,5 @@ class ServersMetadataJsonTest(test_servers.ServersSampleBase):
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         response = self._do_delete('servers/%s/metadata/foo' % uuid)
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response.content, '')
+        self.assertEqual(204, response.status_code)
+        self.assertEqual('', response.content)

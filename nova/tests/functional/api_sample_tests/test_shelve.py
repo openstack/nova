@@ -41,8 +41,8 @@ class ShelveJsonTest(test_servers.ServersSampleBase):
     def _test_server_action(self, uuid, template, action):
         response = self._do_post('servers/%s/action' % uuid,
                                  template, {'action': action})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.content)
 
     def test_shelve(self):
         uuid = self._post_server()
