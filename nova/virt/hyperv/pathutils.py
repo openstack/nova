@@ -95,6 +95,7 @@ class PathUtils(object):
         # shutil.copy(...) but still 20% slower than a shell copy.
         # It can be replaced with Win32 API calls to avoid the process
         # spawning overhead.
+        LOG.debug('Copying file from %s to %s', src, dest)
         output, ret = utils.execute('cmd.exe', '/C', 'copy', '/Y', src, dest)
         if ret:
             raise IOError(_('The file copy from %(src)s to %(dest)s failed')

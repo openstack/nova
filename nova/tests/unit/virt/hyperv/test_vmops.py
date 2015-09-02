@@ -1019,12 +1019,17 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_copy = self._vmops._pathutils.copyfile
         mock_get_dvd_disk_paths = self._vmops._vmutils.get_vm_dvd_disk_paths
         mock_get_dvd_disk_paths.return_value = fake_paths
+        self._vmops._pathutils.get_instance_dir.return_value = (
+            mock.sentinel.FAKE_DEST_PATH)
 
         self._vmops.copy_vm_dvd_disks(mock.sentinel.FAKE_VM_NAME,
-                                      mock.sentinel.FAKE_DEST)
+                                      mock.sentinel.FAKE_DEST_HOST)
 
         mock_get_dvd_disk_paths.assert_called_with(mock.sentinel.FAKE_VM_NAME)
+        self._vmops._pathutils.get_instance_dir.assert_called_once_with(
+            mock.sentinel.FAKE_VM_NAME,
+            remote_server=mock.sentinel.FAKE_DEST_HOST)
         mock_copy.has_calls(mock.call(mock.sentinel.FAKE_DVD_PATH1,
-                                      mock.sentinel.FAKE_DEST),
+                                      mock.sentinel.FAKE_DEST_PATH),
                             mock.call(mock.sentinel.FAKE_DVD_PATH2,
-                                      mock.sentinel.FAKE_DEST))
+                                      mock.sentinel.FAKE_DEST_PATH))
