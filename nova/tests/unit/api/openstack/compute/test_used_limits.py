@@ -93,8 +93,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         for limit in expected_abs_limits:
             value = abs_limits[limit]
             r = limits[quota_map[limit]]['reserved'] if reserved else 0
-            self.assertEqual(value,
-                             limits[quota_map[limit]]['in_use'] + r)
+            self.assertEqual(limits[quota_map[limit]]['in_use'] + r, value)
 
     def test_used_limits_basic(self):
         self._do_test_used_limits(False)
@@ -232,7 +231,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertIn('totalRAMUsed', abs_limits)
-        self.assertEqual(abs_limits['totalRAMUsed'], 256)
+        self.assertEqual(256, abs_limits['totalRAMUsed'])
 
     def test_no_ram_quota(self):
         fake_req = FakeRequest(self.fake_context)
