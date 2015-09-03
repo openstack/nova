@@ -1044,6 +1044,18 @@ class ComputeManager(manager.Manager):
                       {'task_state': instance.task_state,
                        'power_state': current_power_state},
                       instance=instance)
+
+            # NOTE(mikal): if the instance was doing a soft reboot that got as
+            # far as shutting down the instance but not as far as starting it
+            # again, then we've just become a hard reboot. That means the
+            # task state for the instance needs to change so that we're in one
+            # of the expected task states for a hard reboot.
+            soft_types = [task_states.REBOOT_STARTED,
+                          task_states.REBOOT_PENDING,
+                          task_states.REBOOTING]
+            if instance.task_state in soft_types and reboot_type == 'HARD':
+                instance.task_state = task_states.REBOOT_PENDING_HARD
+
             self.reboot_instance(context, instance, block_device_info=None,
                                  reboot_type=reboot_type)
             return
