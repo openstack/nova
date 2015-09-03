@@ -306,10 +306,10 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
                     '.'.join(objver.split('.')[:2])
                 return self._process_object(context, objprim)
             objname = objprim['nova_object.name']
-            supported = NovaObjectRegistry.obj_classes().get(objname, [])
-            if supported:
-                objinst = self.conductor.object_backport(context, objprim,
-                                                         supported[0].VERSION)
+            version_manifest = ovoo_base.obj_tree_get_versions(objname)
+            if objname in version_manifest:
+                objinst = self.conductor.object_backport_versions(
+                    context, objprim, version_manifest)
             else:
                 raise
         return objinst
