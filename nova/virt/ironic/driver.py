@@ -257,6 +257,23 @@ class IronicDriver(virt_driver.ComputeDriver):
         properties['capabilities'] = node.properties.get('capabilities')
         return properties
 
+    def _parse_node_instance_info(self, node):
+        """Helper method to parse the node's instance info."""
+        instance_info = {}
+
+        for prop in ('vcpus', 'memory_mb', 'local_gb'):
+            try:
+                instance_info[prop] = int(node.instance_info.get(prop, 0))
+            except (TypeError, ValueError):
+                LOG.warning(_LW('Node %(uuid)s has a malformed "%(prop)s". '
+                                'It should be an integer but its value '
+                                'is "%(value)s".'),
+                            {'uuid': node.uuid, 'prop': prop,
+                             'value': node.instance_info.get(prop)})
+                instance_info[prop] = 0
+
+        return instance_info
+
     def _node_resource(self, node):
         """Helper method to create resource dict from node stats."""
         properties = self._parse_node_properties(node)
@@ -304,9 +321,14 @@ class IronicDriver(virt_driver.ComputeDriver):
             # Node is in the process of deploying, is deployed, or is in
             # the process of cleaning up from a deploy. Report all of its
             # resources as in use.
-            vcpus_used = vcpus
-            memory_mb_used = memory_mb
-            local_gb_used = local_gb
+            instance_info = self._parse_node_instance_info(node)
+
+            # Use instance_info instead of properties here is because the
+            # properties of a deployed node can be changed which will count
+            # as available resources.
+            vcpus_used = vcpus = instance_info['vcpus']
+            memory_mb_used = memory_mb = instance_info['memory_mb']
+            local_gb_used = local_gb = instance_info['local_gb']
         elif self._node_resources_unavailable(node):
             # The node's current state is such that it should not present any
             # of its resources to Nova
