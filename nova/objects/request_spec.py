@@ -24,7 +24,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: ImageMeta version 1.6
     # Version 1.2: SchedulerRetries version 1.1
-    VERSION = '1.2'
+    # Version 1.3: InstanceGroup version 1.10
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -57,7 +58,7 @@ class RequestSpec(base.NovaObject):
         'pci_requests': [('1.0', '1.1')],
         'retry': [('1.0', '1.0'), ('1.2', '1.1')],
         'limits': [('1.0', '1.0')],
-        'instance_group': [('1.0', '1.9')],
+        'instance_group': [('1.0', '1.9'), ('1.3', '1.10')],
     }
 
     @property
@@ -140,9 +141,11 @@ class RequestSpec(base.NovaObject):
             # Old-style group information having ugly dict keys containing sets
             # NOTE(sbauza): Can be dropped once select_destinations is removed
             policies = list(filter_properties.get('group_policies'))
-            members = list(filter_properties.get('group_hosts'))
+            hosts = list(filter_properties.get('group_hosts'))
             self.instance_group = objects.InstanceGroup(policies=policies,
-                                                        members=members)
+                                                        hosts=hosts)
+            # hosts has to be not part of the updates for saving the object
+            self.instance_group.obj_reset_changes(['hosts'])
         else:
             # Set the value anyway to avoid any call to obj_attr_is_set for it
             self.instance_group = None
@@ -242,7 +245,7 @@ class RequestSpec(base.NovaObject):
         # modified by using directly the RequestSpec object, we need to keep
         # the existing dictionary as a primitive.
         return {'group_updated': True,
-                'group_hosts': set(self.instance_group.members),
+                'group_hosts': set(self.instance_group.hosts),
                 'group_policies': set(self.instance_group.policies)}
 
     def to_legacy_request_spec_dict(self):
