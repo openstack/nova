@@ -29,6 +29,9 @@ CONF = cfg.CONF
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
+# NOTE(mikal): suds is used by the vmware driver, removing this will
+# cause many extraneous log lines for their tempest runs. Refer to
+# https://review.openstack.org/#/c/219225/ for details.
 _DEFAULT_LOG_LEVELS = ['amqp=WARN', 'amqplib=WARN', 'boto=WARN',
                        'qpid=WARN', 'sqlalchemy=WARN', 'suds=INFO',
                        'oslo_messaging=INFO', 'iso8601=WARN',
