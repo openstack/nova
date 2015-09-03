@@ -61,11 +61,6 @@ class LocalAPI(object):
         # nothing to wait for in the local case.
         pass
 
-    def instance_update(self, context, instance_uuid, **updates):
-        """Perform an instance update in the database."""
-        return self._manager.instance_update(context, instance_uuid,
-                                             updates, 'compute')
-
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
@@ -183,11 +178,6 @@ class API(LocalAPI):
                                 'before nova-conductor?  '
                                 'Reattempting establishment of '
                                 'nova-conductor connection...'))
-
-    def instance_update(self, context, instance_uuid, **updates):
-        """Perform an instance update in the database."""
-        return self._manager.instance_update(context, instance_uuid,
-                                             updates, 'conductor')
 
 
 class ComputeTaskAPI(object):

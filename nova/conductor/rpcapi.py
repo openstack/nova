@@ -182,6 +182,7 @@ class ConductorAPI(object):
     * Remove task_log_end_task()
     * Remove security_groups_trigger_members_refresh()
     * Remove vol_usage_update()
+    * Remove instance_update()
 
     """
 
@@ -202,15 +203,6 @@ class ConductorAPI(object):
         self.client = rpc.get_client(target,
                                      version_cap=version_cap,
                                      serializer=serializer)
-
-    def instance_update(self, context, instance_uuid, updates,
-                        service=None):
-        updates_p = jsonutils.to_primitive(updates)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'instance_update',
-                          instance_uuid=instance_uuid,
-                          updates=updates_p,
-                          service=service)
 
     def provider_fw_rule_get_all(self, context):
         cctxt = self.client.prepare()

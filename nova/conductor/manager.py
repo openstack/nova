@@ -111,6 +111,7 @@ class ConductorManager(manager.Manager):
             self._compute_api = compute_api.API()
         return self._compute_api
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(KeyError, ValueError,
                                    exception.InvalidUUID,
                                    exception.InstanceNotFound,
