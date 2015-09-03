@@ -346,10 +346,9 @@ class VMOps(object):
                                            ctrl_disk_addr, drive_type)
 
     def get_image_vm_generation(self, root_vhd_path, image_meta):
-        image_props = image_meta['properties']
         default_vm_gen = self._hostutils.get_default_vm_generation()
-        image_prop_vm = image_props.get(constants.IMAGE_PROP_VM_GEN,
-                                        default_vm_gen)
+        image_prop_vm = image_meta.properties.get(
+            'hw_machine_type', default_vm_gen)
         if image_prop_vm not in self._hostutils.get_supported_vm_types():
             LOG.error(_LE('Requested VM Generation %s is not supported on '
                          ' this OS.'), image_prop_vm)

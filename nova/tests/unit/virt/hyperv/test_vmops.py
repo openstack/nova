@@ -22,6 +22,7 @@ from oslo_utils import units
 import unittest2
 
 from nova import exception
+from nova import objects
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
@@ -470,18 +471,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_DRIVE_ADDR, mock.sentinel.FAKE_CTRL_DISK_ADDR,
             constants.DISK)
 
-    def _check_get_image_vm_gen_except(self, image_prop):
-        image_meta = {"properties": {constants.IMAGE_PROP_VM_GEN: image_prop}}
-        self._vmops._hostutils.get_supported_vm_types.return_value = [
-            constants.IMAGE_PROP_VM_GEN_1, constants.IMAGE_PROP_VM_GEN_2]
-
-        self.assertRaises(vmutils.HyperVException,
-                          self._vmops.get_image_vm_generation,
-                          mock.sentinel.FAKE_PATH,
-                          image_meta)
-
     def test_get_image_vm_generation_default(self):
-        image_meta = {"properties": {}}
+        image_meta = objects.ImageMeta.from_dict({"properties": {}})
         self._vmops._hostutils.get_default_vm_generation.return_value = (
             constants.IMAGE_PROP_VM_GEN_1)
         self._vmops._hostutils.get_supported_vm_types.return_value = [
@@ -493,8 +484,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(constants.VM_GEN_1, response)
 
     def test_get_image_vm_generation_gen2(self):
-        image_meta = {"properties": {
-            constants.IMAGE_PROP_VM_GEN: constants.IMAGE_PROP_VM_GEN_2}}
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties":
+             {"hw_machine_type": constants.IMAGE_PROP_VM_GEN_2}})
         self._vmops._hostutils.get_supported_vm_types.return_value = [
             constants.IMAGE_PROP_VM_GEN_1, constants.IMAGE_PROP_VM_GEN_2]
         self._vmops._vhdutils.get_vhd_format.return_value = (
@@ -505,13 +497,19 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
         self.assertEqual(constants.VM_GEN_2, response)
 
-    def test_get_image_vm_generation_bad_prop(self):
-        self._check_get_image_vm_gen_except(mock.sentinel.FAKE_IMAGE_PROP)
-
     def test_get_image_vm_generation_not_vhdx(self):
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties":
+             {'hw_machine_type': constants.IMAGE_PROP_VM_GEN_2}})
+        self._vmops._hostutils.get_supported_vm_types.return_value = [
+            constants.IMAGE_PROP_VM_GEN_1, constants.IMAGE_PROP_VM_GEN_2]
         self._vmops._vhdutils.get_vhd_format.return_value = (
             constants.DISK_FORMAT_VHD)
-        self._check_get_image_vm_gen_except(constants.IMAGE_PROP_VM_GEN_2)
+
+        self.assertRaises(vmutils.HyperVException,
+                          self._vmops.get_image_vm_generation,
+                          mock.sentinel.FAKE_PATH,
+                          image_meta)
 
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     @mock.patch('nova.virt.configdrive.ConfigDriveBuilder')

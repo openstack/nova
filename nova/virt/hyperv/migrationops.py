@@ -24,6 +24,7 @@ from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _, _LE
+from nova import objects
 from nova.virt import configdrive
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory
@@ -173,7 +174,7 @@ class MigrationOps(object):
 
         eph_vhd_path = self._pathutils.lookup_ephemeral_vhd_path(instance_name)
 
-        image_meta = self._imagecache.get_image_details(context, instance)
+        image_meta = objects.ImageMeta.from_instance(instance)
         vm_gen = self._vmops.get_image_vm_generation(root_vhd_path, image_meta)
         self._vmops.create_instance(instance, network_info, block_device_info,
                                     root_vhd_path, eph_vhd_path, vm_gen)

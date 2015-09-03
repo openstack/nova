@@ -134,7 +134,3 @@ class ImageCache(object):
                 return resized_vhd_path
 
         return vhd_path
-
-    def get_image_details(self, context, instance):
-        image_id = instance.image_ref
-        return images.get_info(context, image_id)

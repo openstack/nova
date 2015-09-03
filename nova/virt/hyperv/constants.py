@@ -94,7 +94,6 @@ HOST_POWER_ACTION_SHUTDOWN = "shutdown"
 HOST_POWER_ACTION_REBOOT = "reboot"
 HOST_POWER_ACTION_STARTUP = "startup"
 
-IMAGE_PROP_VM_GEN = "hw_machine_type"
 IMAGE_PROP_VM_GEN_1 = "hyperv-gen1"
 IMAGE_PROP_VM_GEN_2 = "hyperv-gen2"
 
