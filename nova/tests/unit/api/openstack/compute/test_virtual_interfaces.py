@@ -15,6 +15,7 @@
 
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.legacy_v2.contrib import virtual_interfaces \
         as vi20
 from nova.api.openstack.compute import virtual_interfaces as vi21
@@ -40,11 +41,13 @@ def _generate_fake_vifs(context):
     vif = vif_obj.VirtualInterface(context=context)
     vif.address = '00-00-00-00-00-00'
     vif.network_id = 123
+    vif.net_uuid = '22222222-2222-2222-2222-22222222222222222'
     vif.uuid = '00000000-0000-0000-0000-00000000000000000'
     fake_vifs = [vif]
     vif = vif_obj.VirtualInterface(context=context)
     vif.address = '11-11-11-11-11-11'
     vif.network_id = 456
+    vif.net_uuid = '33333333-3333-3333-3333-33333333333333333'
     vif.uuid = '11111111-1111-1111-1111-11111111111111111'
     fake_vifs.append(vif)
     return fake_vifs
@@ -60,6 +63,13 @@ class FakeRequest(object):
 
 
 class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
+    wsgi_api_version = None
+    expected_response = {
+        'virtual_interfaces': [
+            {'id': '00000000-0000-0000-0000-00000000000000000',
+                'mac_address': '00-00-00-00-00-00'},
+            {'id': '11111111-1111-1111-1111-11111111111111111',
+                'mac_address': '11-11-11-11-11-11'}]}
 
     def setUp(self):
         super(ServerVirtualInterfaceTestV21, self).setUp()
@@ -73,20 +83,16 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         self.controller = vi21.ServerVirtualInterfaceController()
 
     def test_get_virtual_interfaces_list(self):
-        req = fakes.HTTPRequest.blank('')
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
         res_dict = self.controller.index(req, 'fake_uuid')
-        response = {'virtual_interfaces': [
-                        {'id': '00000000-0000-0000-0000-00000000000000000',
-                         'mac_address': '00-00-00-00-00-00'},
-                        {'id': '11111111-1111-1111-1111-11111111111111111',
-                         'mac_address': '11-11-11-11-11-11'}]}
-        self.assertEqual(res_dict, response)
+        self.assertEqual(res_dict, self.expected_response)
 
     def test_vif_instance_not_found(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         fake_context = context.RequestContext('fake', 'fake')
         fake_req = FakeRequest(fake_context)
-
+        fake_req.api_version_request = api_version_request.APIVersionRequest(
+                                        self.wsgi_api_version)
         compute_api.API.get(fake_context, 'fake_uuid',
                             expected_attrs=None,
                             want_objects=True).AndRaise(
@@ -103,6 +109,19 @@ class ServerVirtualInterfaceTestV20(ServerVirtualInterfaceTestV21):
 
     def _set_controller(self):
         self.controller = vi20.ServerVirtualInterfaceController()
+
+
+class ServerVirtualInterfaceTestV212(ServerVirtualInterfaceTestV21):
+    wsgi_api_version = '2.12'
+
+    expected_response = {
+        'virtual_interfaces': [
+            {'id': '00000000-0000-0000-0000-00000000000000000',
+                'mac_address': '00-00-00-00-00-00',
+                'net_id': '22222222-2222-2222-2222-22222222222222222'},
+            {'id': '11111111-1111-1111-1111-11111111111111111',
+                'mac_address': '11-11-11-11-11-11',
+                'net_id': '33333333-3333-3333-3333-33333333333333333'}]}
 
 
 class ServerVirtualInterfaceEnforcementV21(test.NoDBTestCase):

@@ -123,3 +123,10 @@ user documentation.
 
   Exposed attribute ``forced_down`` for ``os-services``.
   Added ability to change the ``forced_down`` attribute by calling an update.
+
+2.12
+----
+
+  Exposes VIF ``net-id`` attribute in ``os-virtual-interfaces``.
+  User will be able to get Virtual Interfaces ``net-id`` in Virtual Interfaces
+  list and can determine in which network a Virtual Interface is plugged into.

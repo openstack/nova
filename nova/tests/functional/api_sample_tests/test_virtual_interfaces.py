@@ -44,6 +44,14 @@ class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         template = 'vifs-list-resp'
-        if self._test == 'v2':
+        if (hasattr(self, '_test') and self._test == 'v2'):
             template = 'vifs-list-resp-v2'
         self._verify_response(template, subs, response, 200)
+
+
+class VirtualInterfacesJsonV212Test(VirtualInterfacesJsonTest):
+    request_api_version = '2.12'
+    # NOTE(gmann): microversion tests do not need to run for v2 API
+    # so defining scenarios only for v2.12 which will run the original tests
+    # by appending '(v2_12)' in test_id.
+    scenarios = [('v2_12', {})]
