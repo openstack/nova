@@ -18,14 +18,11 @@ Claim objects for use with resource tracking.
 """
 
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 
-from nova import context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
-from nova.objects import base as obj_base
 from nova.virt import hardware
 
 
@@ -77,13 +74,7 @@ class Claim(NopClaim):
                  limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
-        if isinstance(instance, obj_base.NovaObject):
-            self.instance = instance.obj_clone()
-        else:
-            # This does not use copy.deepcopy() because it could be
-            # a sqlalchemy model, and it's best to make sure we have
-            # the primitive form.
-            self.instance = jsonutils.to_primitive(instance)
+        self.instance = instance.obj_clone()
         self._numa_topology_loaded = False
         self.tracker = tracker
 
@@ -99,28 +90,18 @@ class Claim(NopClaim):
 
     @property
     def disk_gb(self):
-        return self.instance['root_gb'] + self.instance['ephemeral_gb']
+        return self.instance.root_gb + self.instance.ephemeral_gb
 
     @property
     def memory_mb(self):
-        return self.instance['memory_mb'] + self.overhead['memory_mb']
+        return self.instance.memory_mb + self.overhead['memory_mb']
 
     @property
     def numa_topology(self):
         if self._numa_topology_loaded:
             return self._numa_topology
         else:
-            if isinstance(self.instance, obj_base.NovaObject):
-                self._numa_topology = self.instance.numa_topology
-            else:
-                try:
-                    self._numa_topology = (
-                        objects.InstanceNUMATopology.get_by_instance_uuid(
-                            context.get_admin_context(), self.instance['uuid'])
-                        )
-                except exception.NumaTopologyNotFound:
-                    self._numa_topology = None
-            self._numa_topology_loaded = True
+            self._numa_topology = self.instance.numa_topology
             return self._numa_topology
 
     def abort(self):
@@ -186,7 +167,7 @@ class Claim(NopClaim):
 
     def _test_pci(self):
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            self.context, self.instance['uuid'])
+            self.context, self.instance.uuid)
 
         if pci_requests.requests:
             devs = self.tracker.pci_tracker.claim_instance(self.context,
@@ -205,7 +186,7 @@ class Claim(NopClaim):
             host_topology = objects.NUMATopology.obj_from_db_obj(
                     host_topology)
             pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-                                        self.context, self.instance['uuid'])
+                                        self.context, self.instance.uuid)
 
             pci_stats = None
             if pci_requests.requests:
@@ -292,7 +273,7 @@ class MoveClaim(Claim):
     def _test_pci(self):
         pci_requests = objects.InstancePCIRequests.\
                        get_by_instance_uuid_and_newness(
-                           self.context, self.instance['uuid'], True)
+                           self.context, self.instance.uuid, True)
         if pci_requests.requests:
             claim = self.tracker.pci_tracker.stats.support_requests(
                 pci_requests.requests)
