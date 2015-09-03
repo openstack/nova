@@ -6580,21 +6580,22 @@ class ComputeTestCase(BaseTestCase):
                           self.compute._get_resource_tracker,
                           'invalidnodename')
 
-    def test_instance_update_host_check(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_instance_update_host_check(self, mock_save):
         # make sure rt usage doesn't happen if the host or node is different
         def fail_get(nodename):
             raise test.TestingException("wrong host/node")
         self.stubs.Set(self.compute, '_get_resource_tracker', fail_get)
 
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
-        self.compute._instance_update(self.context, instance.uuid, vcpus=4)
+        self.compute._instance_update(self.context, instance, vcpus=4)
 
         instance = self._create_fake_instance_obj({'node': 'someothernode'})
-        self.compute._instance_update(self.context, instance.uuid, vcpus=4)
+        self.compute._instance_update(self.context, instance, vcpus=4)
 
         params = {'host': 'someotherhost', 'node': 'someothernode'}
         instance = self._create_fake_instance_obj(params)
-        self.compute._instance_update(self.context, instance.uuid, vcpus=4)
+        self.compute._instance_update(self.context, instance, vcpus=4)
 
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')

@@ -335,11 +335,9 @@ def reverts_task_state(function):
                 # NOTE(mriedem): 'instance' must be in keyed_args because we
                 # have utils.expects_func_args('instance') decorating this
                 # method.
-                instance_uuid = keyed_args['instance']['uuid']
+                instance = keyed_args['instance']
                 try:
-                    self._instance_update(context,
-                                          instance_uuid,
-                                          task_state=None)
+                    self._instance_update(context, instance, task_state=None)
                 except exception.InstanceNotFound:
                     # We might delete an instance that failed to build shortly
                     # after it errored out this is an expected case and we
@@ -348,7 +346,7 @@ def reverts_task_state(function):
                 except Exception as e:
                     msg = _LW("Failed to revert task state for instance. "
                               "Error: %s")
-                    LOG.warning(msg, e, instance_uuid=instance_uuid)
+                    LOG.warning(msg, e, instance=instance)
 
     return decorated_function
 
@@ -733,19 +731,18 @@ class ComputeManager(manager.Manager):
     def _update_resource_tracker(self, context, instance):
         """Let the resource tracker know that an instance has changed state."""
 
-        if (instance['host'] == self.host and
-                self.driver.node_is_available(instance['node'])):
-            rt = self._get_resource_tracker(instance.get('node'))
+        if (instance.host == self.host and
+                self.driver.node_is_available(instance.node)):
+            rt = self._get_resource_tracker(instance.node)
             rt.update_usage(context, instance)
 
-    def _instance_update(self, context, instance_uuid, **kwargs):
+    def _instance_update(self, context, instance, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
-        instance_ref = self.conductor_api.instance_update(context,
-                                                          instance_uuid,
-                                                          **kwargs)
-        self._update_resource_tracker(context, instance_ref)
-        return instance_ref
+        for k, v in kwargs.items():
+            setattr(instance, k, v)
+        instance.save()
+        self._update_resource_tracker(context, instance)
 
     def _nil_out_instance_obj_host_and_node(self, instance):
         # NOTE(jwcroppe): We don't do instance.save() here for performance
@@ -1490,7 +1487,7 @@ class ComputeManager(manager.Manager):
                    'num': retry['num_attempts']}, instance_uuid=instance_uuid)
 
         # reset the task state:
-        self._instance_update(context, instance_uuid, task_state=task_state)
+        self._instance_update(context, instance, task_state=task_state)
 
         if exc_info:
             # stringify to avoid circular ref problem in json serialization:
@@ -6260,7 +6257,7 @@ class ComputeManager(manager.Manager):
                              "%(error)s"),
                          {'state': instance_state, 'error': error},
                          instance_uuid=instance_uuid)
-                self._instance_update(context, instance_uuid,
+                self._instance_update(context, instance,
                                       vm_state=instance_state,
                                       task_state=None)
         except exception.InstanceFaultRollback as error:
@@ -6268,7 +6265,7 @@ class ComputeManager(manager.Manager):
                 quotas.rollback()
             LOG.info(_LI("Setting instance back to ACTIVE after: %s"),
                      error, instance_uuid=instance_uuid)
-            self._instance_update(context, instance_uuid,
+            self._instance_update(context, instance,
                                   vm_state=vm_states.ACTIVE,
                                   task_state=None)
             raise error.inner_exception
