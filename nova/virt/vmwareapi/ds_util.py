@@ -484,3 +484,22 @@ def get_dc_info(session, ds_ref):
 def dc_cache_reset():
     global _DS_DC_MAPPING
     _DS_DC_MAPPING = {}
+
+
+def get_connected_hosts(session, datastore):
+    """Get all the hosts to which the datastore is connected.
+
+    :param datastore: Reference to the datastore entity
+    :return: List of managed object references of all connected
+             hosts
+    """
+    host_mounts = session._call_method(vutil, 'get_object_property',
+                                       datastore, 'host')
+    if not hasattr(host_mounts, 'DatastoreHostMount'):
+        return []
+
+    connected_hosts = []
+    for host_mount in host_mounts.DatastoreHostMount:
+        connected_hosts.append(host_mount.key.value)
+
+    return connected_hosts
