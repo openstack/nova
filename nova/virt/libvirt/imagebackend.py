@@ -408,6 +408,16 @@ class Image(object):
         # we should talk about if we want this functionality for everything.
         pass
 
+    def import_file_cleanup(self, local_file):
+        """Once an import has run, we many no longer need the local file.
+
+        :param local_file: path to the file that was imported.
+        """
+
+        # NOTE(mikal): this is a noop for most backends, as they don't "import"
+        # the file into some sort of storage system.
+        pass
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -833,6 +843,10 @@ class Rbd(Image):
         if self.check_image_exists():
             self.driver.remove_image(name)
         self.driver.import_image(local_file, name)
+
+    def import_file_cleanup(self, local_file):
+        if os.path.exists(local_file):
+            os.unlink(local_file)
 
 
 class Ploop(Image):
