@@ -114,8 +114,15 @@ compute_opts = [
                default=3,
                help='Maximum number of devices that will result '
                     'in a local image being created on the hypervisor node. '
-                    'Setting this to 0 means nova will allow only '
-                    'boot from volume. A negative number means unlimited.'),
+                    'A negative number means unlimited. Setting '
+                    'max_local_block_devices to 0 means that any request that '
+                    'attempts to create a local disk will fail. This option '
+                    'is meant to limit the number of local discs (so root '
+                    'local disc that is the result of --image being used, and '
+                    'any other ephemeral and swap disks). 0 does not mean '
+                    'that images will be automatically converted to volumes '
+                    'and boot instances from volumes - it just means that all '
+                    'requests that attempt to create a local disk will fail.'),
 ]
 
 ephemeral_storage_encryption_group = cfg.OptGroup(
