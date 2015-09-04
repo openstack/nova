@@ -83,8 +83,8 @@ class _TestBlockDeviceMappingObject(object):
                 self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
                 self.assertIsInstance(cells_update_mock.call_args[0][1],
                                       block_device_obj.BlockDeviceMapping)
-                self.assertEqual(cells_update_mock.call_args[1], {'create':
-                    create})
+                self.assertEqual({'create': create},
+                                 cells_update_mock.call_args[1])
 
     def test_save_nocells(self):
         self._test_save()
@@ -191,12 +191,12 @@ class _TestBlockDeviceMappingObject(object):
                 if cell_type == 'compute' and 'device_name' in values:
                     self.assertEqual(1, cells_update_mock.call_count)
                     self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
-                    self.assertEqual(cells_update_mock.call_args[0][0],
-                                     self.context)
+                    self.assertEqual(self.context,
+                                     cells_update_mock.call_args[0][0])
                     self.assertIsInstance(cells_update_mock.call_args[0][1],
                                           block_device_obj.BlockDeviceMapping)
-                    self.assertEqual(cells_update_mock.call_args[1],
-                                     {'create': update_or_create or None})
+                    self.assertEqual({'create': update_or_create or None},
+                                     cells_update_mock.call_args[1])
                 else:
                     self.assertFalse(cells_update_mock.called)
 

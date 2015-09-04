@@ -320,7 +320,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         result = sg_api.get_instances_security_groups_bindings(
                                   self.context, servers)
-        self.assertEqual(result, sg_bindings)
+        self.assertEqual(sg_bindings, result)
 
     def _test_instances_security_group_bindings_scale(self, num_servers):
         max_query = 150
@@ -356,7 +356,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         result = sg_api.get_instances_security_groups_bindings(
                                   self.context, servers)
-        self.assertEqual(result, sg_bindings)
+        self.assertEqual(sg_bindings, result)
 
     def test_instances_security_group_bindings_less_than_max(self):
         self._test_instances_security_group_bindings_scale(100)
@@ -388,7 +388,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         result = sg_api.get_instances_security_groups_bindings(
                                   self.context, servers)
-        self.assertEqual(result, sg_bindings)
+        self.assertEqual(sg_bindings, result)
 
     def test_instance_empty_security_groups(self):
 

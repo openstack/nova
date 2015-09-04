@@ -403,8 +403,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def _test_add_snat_rule(self, expected, is_external):
 
         def verify_add_rule(chain, rule):
-            self.assertEqual(chain, 'snat')
-            self.assertEqual(rule, expected)
+            self.assertEqual('snat', chain)
+            self.assertEqual(expected, rule)
             self.called = True
 
         self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
@@ -505,7 +505,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0],
                                                   fixedips)
 
-        self.assertEqual(actual_hosts, expected)
+        self.assertEqual(expected, actual_hosts)
 
     def test_get_dhcp_hosts_for_nw01(self):
         self.flags(use_single_default_gateway=True)
@@ -519,7 +519,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         fixedips = self._get_fixedips(networks[1], host='fake_instance01')
         actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1],
                                                   fixedips)
-        self.assertEqual(actual_hosts, expected)
+        self.assertEqual(expected, actual_hosts)
 
     def test_get_dns_hosts_for_nw00(self):
         expected = (
@@ -528,7 +528,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "192.168.0.102\tfake_instance00.novalocal"
         )
         actual_hosts = self.driver.get_dns_hosts(self.context, networks[0])
-        self.assertEqual(actual_hosts, expected)
+        self.assertEqual(expected, actual_hosts)
 
     def test_get_dns_hosts_for_nw01(self):
         expected = (
@@ -537,7 +537,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "192.168.1.102\tfake_instance01.novalocal"
         )
         actual_hosts = self.driver.get_dns_hosts(self.context, networks[1])
-        self.assertEqual(actual_hosts, expected)
+        self.assertEqual(expected, actual_hosts)
 
     def test_get_dhcp_opts_for_nw00(self):
         self.flags(use_single_default_gateway=True)
@@ -546,7 +546,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0],
                                                 fixedips)
 
-        self.assertEqual(actual_opts, expected_opts)
+        self.assertEqual(expected_opts, actual_opts)
 
     def test_get_dhcp_opts_for_nw00_no_single_default_gateway(self):
         self.flags(use_single_default_gateway=False)
@@ -555,7 +555,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0],
                                                 fixedips)
 
-        self.assertEqual(actual_opts, expected_opts)
+        self.assertEqual(expected_opts, actual_opts)
 
     def test_get_dhcp_opts_for_nw01(self):
         self.flags(use_single_default_gateway=True)
@@ -564,7 +564,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[1],
                                                 fixedips)
 
-        self.assertEqual(actual_opts, expected_opts)
+        self.assertEqual(expected_opts, actual_opts)
 
     def test_get_dhcp_leases_for_nw00(self):
         timestamp = timeutils.utcnow()
@@ -605,7 +605,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         fixedip = objects.FixedIPList.get_by_network(self.context,
                                                      {'id': 0})[0]
         actual = self.driver._host_dhcp_opts(fixedip.virtual_interface_id)
-        self.assertEqual(actual, expected)
+        self.assertEqual(expected, actual)
 
     def test_host_dhcp_without_default_gateway_network(self):
         expected = ','.join(['DE:AD:BE:EF:00:00',
@@ -614,7 +614,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         fixedip = objects.FixedIPList.get_by_network(self.context,
                                                      {'id': 0})[0]
         actual = self.driver._host_dhcp(fixedip)
-        self.assertEqual(actual, expected)
+        self.assertEqual(expected, actual)
 
     def test_host_dhcp_truncated_hostname(self):
         expected = ','.join(['DE:AD:BE:EF:00:07',
@@ -631,7 +631,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         fixedip = objects.FixedIPList.get_by_network(self.context,
                                                      {'id': 0})[0]
         actual = self.driver._host_dns(fixedip)
-        self.assertEqual(actual, expected)
+        self.assertEqual(expected, actual)
 
     def test_linux_bridge_driver_plug(self):
         """Makes sure plug doesn't drop FORWARD by default.
@@ -644,7 +644,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
         def verify_add_rule(chain, rule):
-            self.assertEqual(chain, 'FORWARD')
+            self.assertEqual('FORWARD', chain)
             self.assertIn('ACCEPT', rule)
         self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
                        'add_rule', verify_add_rule)
@@ -693,10 +693,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         }
         self.flags(vlan_interface="")
         driver.plug(network, "fakemac")
-        self.assertEqual(info['passed_interface'], "base_interface")
+        self.assertEqual("base_interface", info['passed_interface'])
         self.flags(vlan_interface="override_interface")
         driver.plug(network, "fakemac")
-        self.assertEqual(info['passed_interface'], "override_interface")
+        self.assertEqual("override_interface", info['passed_interface'])
         driver.plug(network, "fakemac")
 
     def test_flat_override(self):
@@ -722,10 +722,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "share_address": False,
         }
         driver.plug(network, "fakemac")
-        self.assertEqual(info['passed_interface'], "base_interface")
+        self.assertEqual("base_interface", info['passed_interface'])
         self.flags(flat_interface="override_interface")
         driver.plug(network, "fakemac")
-        self.assertEqual(info['passed_interface'], "override_interface")
+        self.assertEqual("override_interface", info['passed_interface'])
 
     def _test_dnsmasq_execute(self, extra_expected=None):
         network_ref = {'id': 'fake',
@@ -866,7 +866,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             ('ip6tables-save', '-c'),
             ('ip6tables-restore', '-c'),
         ]
-        self.assertEqual(executes, expected)
+        self.assertEqual(expected, executes)
 
         executes = []
 
@@ -890,7 +890,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
              iface, '--ip-protocol', 'udp', '--ip-destination-port', '67:68',
              '-j', 'DROP'),
         ]
-        self.assertEqual(executes, expected)
+        self.assertEqual(expected, executes)
 
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)
@@ -910,7 +910,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                    'broadcast': '192.168.1.255',
                    'cidr_v6': '2001:db8::/64'}
         self.driver.initialize_gateway_device('eth0', network)
-        self.assertEqual(executes, expected)
+        self.assertEqual(expected, executes)
 
     def test_initialize_gateway_moves_wrong_ip(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -1059,7 +1059,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def _test_add_metadata_accept_rule(self, expected):
         def verify_add_rule(chain, rule):
-            self.assertEqual(chain, 'INPUT')
+            self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
 
         self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
@@ -1068,7 +1068,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def _test_add_metadata_accept_ipv6_rule(self, expected):
         def verify_add_rule(chain, rule):
-            self.assertEqual(chain, 'INPUT')
+            self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
 
         self.stubs.Set(linux_net.iptables_manager.ipv6['filter'],
@@ -1105,7 +1105,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def _test_add_metadata_forward_rule(self, expected):
         def verify_add_rule(chain, rule):
-            self.assertEqual(chain, 'PREROUTING')
+            self.assertEqual('PREROUTING', chain)
             self.assertEqual(expected, rule)
 
         self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
