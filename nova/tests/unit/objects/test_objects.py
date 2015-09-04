@@ -1187,6 +1187,9 @@ object_data = {
     'ImageMeta': '1.6-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.6-07a6d9f3576c4927220331584661ce45',
     'Instance': '2.0-ff56804dce87d81d9a04834d4bd1e3d2',
+    # NOTE(danms): Reviewers: do not approve changes to the Instance1
+    # object schema. It is frozen for Liberty and will be removed in
+    # Mitaka.
     'Instance1': '1.23-4e68422207667f4abff5fa730a5edc98',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
@@ -1199,6 +1202,9 @@ object_data = {
     'InstanceGroupList': '1.7-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
     'InstanceList': '2.0-6c8ba6147cca3082b1e4643f795068bf',
+    # NOTE(danms): Reviewers: do not approve changes to the InstanceList1
+    # object schema. It is frozen for Liberty and will be removed in
+    # Mitaka.
     'InstanceList1': '1.22-6c8ba6147cca3082b1e4643f795068bf',
     'InstanceMapping': '1.0-47ef26034dfcbea78427565d9177fe50',
     'InstanceMappingList': '1.0-9e982e3de1613b9ada85e35f69b23d47',
