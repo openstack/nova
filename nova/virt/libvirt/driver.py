@@ -5420,7 +5420,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              post_method, recover_method, block_migration,
                              migrate_data)
 
-    def _update_xml(self, xml_str, volume, listen_addrs):
+    def _update_xml(self, xml_str, volume, listen_addrs, serial_listen_addr):
         xml_doc = etree.fromstring(xml_str)
 
         if volume:
@@ -5429,6 +5429,10 @@ class LibvirtDriver(driver.ComputeDriver):
             xml_doc = self._update_graphics_xml(xml_doc, listen_addrs)
         else:
             self._check_graphics_addresses_can_live_migrate(listen_addrs)
+        if serial_listen_addr:
+            xml_doc = self._update_serial_xml(xml_doc, serial_listen_addr)
+        else:
+            self._verify_serial_console_is_disabled()
 
         return etree.tostring(xml_doc)
 
@@ -5489,6 +5493,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return xml_doc
 
+    def _update_serial_xml(self, xml_doc, listen_addr):
+        for dev in xml_doc.findall("./devices/serial[@type='tcp']/source"):
+            if dev.get('host') is not None:
+                dev.set('host', listen_addr)
+
+        for dev in xml_doc.findall("./devices/console[@type='tcp']/source"):
+            if dev.get('host') is not None:
+                dev.set('host', listen_addr)
+
+        return xml_doc
+
     def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
         LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
 
@@ -5529,6 +5544,18 @@ class LibvirtDriver(driver.ComputeDriver):
                              ' continue to listen on the current'
                              ' addresses.'))
 
+    def _verify_serial_console_is_disabled(self):
+        if CONF.serial_console.enabled:
+
+            msg = _('Your libvirt version does not support the'
+                    ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
+                    ' destination node does not support'
+                    ' retrieving listen addresses.  In order'
+                    ' for live migration to work properly you'
+                    ' must either disable serial console or'
+                    ' upgrade your libvirt version.')
+            raise exception.MigrationError(reason=msg)
+
     def _live_migration_operation(self, context, instance, dest,
                                   block_migration, migrate_data, dom):
         """Invoke the live migration operation
@@ -5560,13 +5587,18 @@ class LibvirtDriver(driver.ComputeDriver):
                                         'pre_live_migration_result', {})
             listen_addrs = pre_live_migrate_data.get('graphics_listen_addrs')
             volume = pre_live_migrate_data.get('volume')
+            serial_listen_addr = pre_live_migrate_data.get(
+                                     'serial_listen_addr')
 
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
 
             if (migratable_flag is None or
                     (listen_addrs is None and not volume)):
+                # TODO(alexs-h): These checks could be moved to the
+                # check_can_live_migrate_destination/source phase
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
+                self._verify_serial_console_is_disabled()
                 dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
                                  logical_sum,
                                  None,
@@ -5575,7 +5607,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 old_xml_str = guest.get_xml_desc(dump_migratable=True)
                 new_xml_str = self._update_xml(old_xml_str,
                                                volume,
-                                               listen_addrs)
+                                               listen_addrs,
+                                               serial_listen_addr)
                 try:
                     dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
                                       None,
@@ -5603,6 +5636,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                  instance=instance)
                         self._check_graphics_addresses_can_live_migrate(
                             listen_addrs)
+                        self._verify_serial_console_is_disabled()
                         dom.migrateToURI(
                             CONF.libvirt.live_migration_uri % dest,
                             logical_sum,
@@ -6217,9 +6251,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     greenthread.sleep(1)
 
         # Store vncserver_listen and latest disk device info
-        res_data = {'graphics_listen_addrs': {}, 'volume': {}}
+        res_data = {'graphics_listen_addrs': {}, 'volume': {},
+                    'serial_listen_addr': {}}
         res_data['graphics_listen_addrs']['vnc'] = CONF.vnc.vncserver_listen
         res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
+        res_data['serial_listen_addr'] = \
+                CONF.serial_console.proxyclient_address
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             if connection_info.get('serial'):
