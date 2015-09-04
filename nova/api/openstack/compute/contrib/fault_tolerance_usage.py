@@ -21,7 +21,10 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import objects
+from nova.openstack.common import log as logging
 from nova import utils
+
+LOG = logging.getLogger(__name__)
 
 # TODO(ORBIT)
 # authorize = extensions.extension_authorizer('compute', 'fault_tolerance')
@@ -35,7 +38,10 @@ class FaultToleranceUsageController(wsgi.Controller):
         super(FaultToleranceUsageController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_secondary_instance_uuids(self, context, usage):
+    def _extend(self, req, usage):
+        """Move secondary instances usage data to the primary instance."""
+        context = req.environ['nova.context']
+
         instance_uuids = []
         for server_usage in usage['server_usages']:
             instance_uuids.append(server_usage['instance_id'])
@@ -43,33 +49,36 @@ class FaultToleranceUsageController(wsgi.Controller):
         opts = {'uuid': instance_uuids}
         instances = self.compute_api.get_all(context, search_opts=opts)
 
+        primary_instance_uuids = []
         secondary_instance_uuids = []
         for instance in instances:
             if utils.ft_secondary(instance):
                 secondary_instance_uuids.append(instance['uuid'])
-
-        return secondary_instance_uuids
-
-    def _extend(self, req, usage):
-        """Move secondary instances usage data to the primary instance."""
-        context = req.environ['nova.context']
-
-        secondary_instance_uuids = self._get_secondary_instance_uuids(context,
-                                                                      usage)
+            elif utils.ft_enabled(instance):
+                primary_instance_uuids.append(instance['uuid'])
 
         relations = defaultdict(list)
+
         for key, server_usage in enumerate(usage['server_usages']):
             uuid = server_usage['instance_id']
             if uuid in secondary_instance_uuids:
-                # TODO(ORBIT) Handle exception
-                relation = (objects.FaultToleranceRelation.
-                            get_by_secondary_instance_uuid(context, uuid))
-                relations[relation.primary_instance_uuid].append(server_usage)
+                try:
+                    r = (objects.FaultToleranceRelation.
+                         get_by_secondary_instance_uuid(context, uuid))
+                    relations[r.primary_instance_uuid].append(server_usage)
+                except exception.FaultToleranceRelationBySecondaryNotFound as e:
+                    LOG.warning("Found secondary instance without primary."
+                                "Standalone secondary instances are currently "
+                                "not supported and will therefore not show up "
+                                "in the usage data. It's recommended that the "
+                                "secondary instance is deleted."
+                                "Error message: %s", e)
+
                 del usage['server_usages'][key]
 
         for server_usage in usage['server_usages']:
             uuid = server_usage['instance_id']
-            if uuid in relations:
+            if uuid in primary_instance_uuids:
                 server_usage['ft_secondary_usage'] = relations[uuid]
 
     @wsgi.extends
