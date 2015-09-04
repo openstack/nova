@@ -6227,7 +6227,6 @@ def ft_relation_get_by_secondary_instance_uuid(context, instance_uuid):
 
 @require_context
 def ft_relation_get_by_instance_uuids(context, instance_uuids):
-    print instance_uuids
     model = models.FaultToleranceRelation
     q = model_query(context, model)
     q = q.filter(or_(model.primary_instance_uuid.in_(instance_uuids),
