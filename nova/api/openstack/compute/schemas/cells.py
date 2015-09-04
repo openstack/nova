@@ -21,7 +21,7 @@ create = {
         'cell': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.cell_name,
                 'type': {
                     'type': 'string',
                     'enum': ['parent', 'child'],
@@ -61,7 +61,7 @@ update = {
         'cell': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.cell_name,
                 'type': {
                     'type': 'string',
                     'enum': ['parent', 'child'],
