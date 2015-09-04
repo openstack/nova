@@ -119,6 +119,7 @@
     "compute_extension:v3:os-extended-volumes:discoverable": "",
     "compute_extension:v3:os-extended-volumes:attach": "",
     "compute_extension:v3:os-extended-volumes:detach": "",
+    "compute_extension:fault_tolerance:show_secondary": "rule:admin_api",
     "compute_extension:fixed_ips": "rule:admin_api",
     "compute_extension:flavor_access": "",
     "compute_extension:flavor_access:addTenantAccess": "rule:admin_api",
