@@ -930,7 +930,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.serial_console.enabled:
             try:
-                serials = self._get_serial_ports_from_instance(instance)
+                guest = self._host.get_guest(instance)
+                serials = self._get_serial_ports_from_guest(guest)
                 for hostname, port in serials:
                     serial_console.release_port(host=hostname, port=port)
             except exception.InstanceNotFound:
@@ -946,13 +947,11 @@ class LibvirtDriver(driver.ComputeDriver):
         for path in encrypted_volumes:
             dmcrypt.delete_volume(path)
 
-    def _get_serial_ports_from_instance(self, instance, mode=None):
-        """Returns an iterator over serial port(s) configured on instance.
+    def _get_serial_ports_from_guest(self, guest, mode=None):
+        """Returns an iterator over serial port(s) configured on guest.
 
         :param mode: Should be a value in (None, bind, connect)
         """
-        guest = self._host.get_guest(instance)
-
         xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
 
@@ -2595,8 +2594,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return ctype.ConsoleSpice(host=host, port=ports[0], tlsPort=ports[1])
 
     def get_serial_console(self, context, instance):
-        for hostname, port in self._get_serial_ports_from_instance(
-                instance, mode='bind'):
+        guest = self._host.get_guest(instance)
+        for hostname, port in self._get_serial_ports_from_guest(
+                guest, mode='bind'):
             return ctype.ConsoleSerial(host=hostname, port=port)
         raise exception.ConsoleTypeUnavailable(console_type='serial')
 

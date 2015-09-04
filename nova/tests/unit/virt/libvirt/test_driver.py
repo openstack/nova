@@ -2900,47 +2900,46 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._get_guest_config, instance_ref, [],
             image_meta, disk_info)
 
-    @mock.patch.object(host.Host, "get_domain")
-    def test_get_serial_ports_from_instance(self, mock_get_domain):
-        i = self._test_get_serial_ports_from_instance(None,
-                                                      mock_get_domain)
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def test_get_serial_ports_from_guest(self, mock_get_xml_desc):
+        i = self._test_get_serial_ports_from_guest(None,
+                                                   mock_get_xml_desc)
         self.assertEqual([
             ('127.0.0.1', 100),
             ('127.0.0.1', 101),
             ('127.0.0.2', 100),
             ('127.0.0.2', 101)], list(i))
 
-    @mock.patch.object(host.Host, "get_domain")
-    def test_get_serial_ports_from_instance_bind_only(self, mock_get_domain):
-        i = self._test_get_serial_ports_from_instance('bind',
-                                                      mock_get_domain)
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def test_get_serial_ports_from_guest_bind_only(self, mock_get_xml_desc):
+        i = self._test_get_serial_ports_from_guest('bind',
+                                                   mock_get_xml_desc)
         self.assertEqual([
             ('127.0.0.1', 101),
             ('127.0.0.2', 100)], list(i))
 
-    @mock.patch.object(host.Host, "get_domain")
-    def test_get_serial_ports_from_instance_connect_only(self,
-                                                         mock_get_domain):
-        i = self._test_get_serial_ports_from_instance('connect',
-                                                      mock_get_domain)
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def test_get_serial_ports_from_guest_connect_only(self,
+                                                      mock_get_xml_desc):
+        i = self._test_get_serial_ports_from_guest('connect',
+                                                   mock_get_xml_desc)
         self.assertEqual([
             ('127.0.0.1', 100),
             ('127.0.0.2', 101)], list(i))
 
-    @mock.patch.object(host.Host, "get_domain")
-    def test_get_serial_ports_from_instance_on_s390(self, mock_get_domain):
-
-        i = self._test_get_serial_ports_from_instance(None,
-                                                      mock_get_domain,
-                                                      'console')
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def test_get_serial_ports_from_guest_on_s390(self, mock_get_xml_desc):
+        i = self._test_get_serial_ports_from_guest(None,
+                                                   mock_get_xml_desc,
+                                                   'console')
         self.assertEqual([
             ('127.0.0.1', 100),
             ('127.0.0.1', 101),
             ('127.0.0.2', 100),
             ('127.0.0.2', 101)], list(i))
 
-    def _test_get_serial_ports_from_instance(self, mode, mock_get_domain,
-                                             dev_name='serial'):
+    def _test_get_serial_ports_from_guest(self, mode, mock_get_xml_desc,
+                                          dev_name='serial'):
         xml = """
         <domain type='kvm'>
           <devices>
@@ -2959,14 +2958,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
           </devices>
         </domain>""" % {'dev_name': dev_name}
 
-        dom = mock.MagicMock()
-        dom.XMLDesc.return_value = xml
-        mock_get_domain.return_value = dom
+        mock_get_xml_desc.return_value = xml
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance = objects.Instance(**self.test_instance)
-        return drvr._get_serial_ports_from_instance(
-            instance, mode=mode)
+        guest = libvirt_guest.Guest(FakeVirtDomain())
+        return drvr._get_serial_ports_from_guest(guest, mode=mode)
 
     def test_get_guest_config_with_type_xen(self):
         self.flags(enabled=True, group='vnc')
@@ -11754,12 +11750,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               drvr.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
 
-    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_get_serial_ports_from_instance')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    @mock.patch.object(driver, 'block_device_info_get_mapping')
+    @mock.patch.object(host.Host, "get_guest")
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_serial_ports_from_guest')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
     def test_cleanup_serial_console_enabled(
-            self, undefine, get_ports,
+            self, undefine, get_ports, get_guest,
             block_device_info_get_mapping):
         self.flags(enabled="True", group='serial_console')
         instance = 'i1'
@@ -11767,6 +11764,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         bdm_info = {}
         firewall_driver = mock.MagicMock()
 
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        get_guest.return_value = guest
         get_ports.return_value = iter([('127.0.0.1', 10000)])
         block_device_info_get_mapping.return_value = ()
 
@@ -11783,18 +11782,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             block_device_info=bdm_info,
             destroy_disks=False, destroy_vifs=False)
 
-        get_ports.assert_called_once_with(instance)
+        get_ports.assert_called_once_with(guest)
         undefine.assert_called_once_with(instance)
         firewall_driver.unfilter_instance.assert_called_once_with(
             instance, network_info=network_info)
         block_device_info_get_mapping.assert_called_once_with(bdm_info)
 
-    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_get_serial_ports_from_instance')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    @mock.patch.object(driver, 'block_device_info_get_mapping')
+    @mock.patch.object(host.Host, "get_guest")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
     def test_cleanup_serial_console_domain_gone(
-            self, undefine, get_ports, block_device_info_get_mapping):
+            self, undefine, get_guest, block_device_info_get_mapping):
         self.flags(enabled="True", group='serial_console')
         instance = {'name': 'i1'}
         network_info = {}
@@ -11803,12 +11801,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         block_device_info_get_mapping.return_value = ()
 
-        # Ensure _get_serial_ports_from_instance raises same exception
-        # that would have occurred if domain was gone.
-        def exception_with_yield(instance):
-            raise exception.InstanceNotFound("domain undefined")
-            yield
-        get_ports.side_effect = exception_with_yield
+        # Ensure get_guest raises same exception that would have occurred
+        # if domain was gone.
+        get_guest.side_effect = exception.InstanceNotFound("domain undefined")
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         drvr.firewall_driver = firewall_driver
@@ -11817,7 +11812,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             block_device_info=bdm_info,
             destroy_disks=False, destroy_vifs=False)
 
-        get_ports.assert_called_once_with(instance)
+        get_guest.assert_called_once_with(instance)
         undefine.assert_called_once_with(instance)
         firewall_driver.unfilter_instance.assert_called_once_with(
             instance, network_info=network_info)
