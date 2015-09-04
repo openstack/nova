@@ -295,6 +295,7 @@ class API(base_api.NetworkAPI):
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
         :raises NoMoreFixedIps: If neutron fails with
             IpAddressGenerationFailure error.
+        :raises: PortBindingFailed: If port binding failed.
         """
         try:
             if fixed_ip:
@@ -313,7 +314,12 @@ class API(base_api.NetworkAPI):
                 port_req_body['port']['mac_address'] = mac_address
             if dhcp_opts is not None:
                 port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
-            port_id = port_client.create_port(port_req_body)['port']['id']
+            port = port_client.create_port(port_req_body)
+            port_id = port['port']['id']
+            if (port['port'].get('binding:vif_type') ==
+                network_model.VIF_TYPE_BINDING_FAILED):
+                port_client.delete_port(port_id)
+                raise exception.PortBindingFailed(port_id=port_id)
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
@@ -461,6 +467,12 @@ class API(base_api.NetworkAPI):
                     # instance.
                     if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
+
+                    # Make sure the port is usable
+                    if (port.get('binding:vif_type') ==
+                        network_model.VIF_TYPE_BINDING_FAILED):
+                        raise exception.PortBindingFailed(
+                            port_id=request.port_id)
 
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
