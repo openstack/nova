@@ -2025,6 +2025,19 @@ def ft_relation_get_by_secondary_instance_uuid(context, instance_uuid):
                                                            instance_uuid)
 
 
+def ft_relation_get_by_instance_uuids(context, instance_uuids):
+    """Get all relations matching any of the provided UUIDs.
+
+    Returns a list of relations where either the relation's primary instance or
+    secondary instance UUID is in the of provided UUIDs.
+
+    :param instance_uuids: List of instance UUIDs
+    :returns: A list of fault tolerance relation models
+    """
+    return IMPL.ft_relation_get_by_instance_uuids(context,
+                                                  instance_uuids)
+
+
 ####################
 
 

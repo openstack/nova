@@ -34,6 +34,10 @@ class FaultToleranceRelation(base.NovaPersistentObject, base.NovaObject):
                 "Secondary instance: %s]" % (self.primary_instance_uuid,
                                              self.secondary_instance_uuid)
 
+    def __contains__(self, instance_uuid):
+        return instance_uuid in (self.primary_instance_uuid,
+                                 self.secondary_instance_uuid)
+
     @staticmethod
     def _from_db_object(context, ft_relation, db_relation):
         """Method to help with migration to objects.
@@ -110,8 +114,17 @@ class FaultToleranceRelationList(base.ObjectListBase, base.NovaObject):
 
         :raises: FaultToleranceRelationByPrimaryNotFound
         """
-        relations = db.ft_relation_get_by_primary_instance_uuid(
-                context, instance_uuid)
+        db_relations = db.ft_relation_get_by_primary_instance_uuid(
+            context, instance_uuid)
 
         return base.obj_make_list(context, FaultToleranceRelationList(),
-                                  FaultToleranceRelation, relations)
+                                  FaultToleranceRelation, db_relations)
+
+    @base.remotable_classmethod
+    def get_by_instance_uuids(cls, context, instance_uuids):
+        """Get all relations where the the provided UUID is included."""
+        db_relations = db.ft_relation_get_by_instance_uuids(context,
+                                                            instance_uuids)
+
+        return base.obj_make_list(context, FaultToleranceRelationList(),
+                                  FaultToleranceRelation, db_relations)
