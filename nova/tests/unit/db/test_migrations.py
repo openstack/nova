@@ -800,6 +800,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'compute_nodes',
                                 'ram_allocation_ratio')
 
+    def _check_302(self, engine, data):
+        self.assertIndexMembers(engine, 'instance_system_metadata',
+                                'instance_uuid', ['instance_uuid'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
