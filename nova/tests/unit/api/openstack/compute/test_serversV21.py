@@ -2662,8 +2662,10 @@ class ServersControllerCreateTest(test.TestCase):
         self._do_test_create_instance_above_quota('cores', 1, 10, msg)
 
     def test_create_instance_above_quota_server_group_members(self):
-        ctxt = context.get_admin_context()
+        ctxt = self.req.environ['nova.context']
         fake_group = objects.InstanceGroup(ctxt)
+        fake_group.project_id = ctxt.project_id
+        fake_group.user_id = ctxt.user_id
         fake_group.create()
 
         def fake_count(context, name, group, user_id):
@@ -2694,8 +2696,10 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(e.explanation, expected_msg)
 
     def test_create_instance_with_group_hint(self):
-        ctxt = context.get_admin_context()
+        ctxt = self.req.environ['nova.context']
         test_group = objects.InstanceGroup(ctxt)
+        test_group.project_id = ctxt.project_id
+        test_group.user_id = ctxt.user_id
         test_group.create()
 
         def fake_instance_destroy(context, uuid, constraint):
