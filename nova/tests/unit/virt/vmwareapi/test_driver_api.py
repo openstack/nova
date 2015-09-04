@@ -696,11 +696,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         mock_destroy.assert_called_once_with(self.instance, True)
 
     @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
-                       side_effect=exception.StorageError(reason='oh man'))
+                       side_effect=exception.NovaException())
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
-    def test_destroy_with_attached_volumes_with_exception(self,
-                                                          mock_destroy,
-                                                          mock_detach_volume):
+    def test_destroy_with_attached_volumes_with_exception(
+        self, mock_destroy, mock_detach_volume):
         self._create_vm()
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'connection_info': connection_info,
@@ -708,12 +707,31 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 'device_name': 'fake-name',
                 'mount_device': '/dev/sdb'}]
         bdi = {'block_device_mapping': bdm, 'root_device_name': '/dev/sda'}
-        self.assertRaises(exception.StorageError,
+        self.assertRaises(exception.NovaException,
                           self.conn.destroy, self.context, self.instance,
                           self.network_info, block_device_info=bdi)
         mock_detach_volume.assert_called_once_with(
             connection_info, self.instance, 'fake-name')
         self.assertFalse(mock_destroy.called)
+
+    @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
+                       side_effect=exception.StorageError(reason='oh man'))
+    @mock.patch.object(vmops.VMwareVMOps, 'destroy')
+    def test_destroy_with_attached_volumes_with_storage_error(
+        self, mock_destroy, mock_detach_volume):
+        self._create_vm()
+        connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
+        bdm = [{'connection_info': connection_info,
+                'disk_bus': 'fake-bus',
+                'device_name': 'fake-name',
+                'mount_device': '/dev/sdb'}]
+        bdi = {'block_device_mapping': bdm, 'root_device_name': '/dev/sda'}
+        self.conn.destroy(self.context, self.instance, self.network_info,
+                          block_device_info=bdi)
+        mock_detach_volume.assert_called_once_with(
+            connection_info, self.instance, 'fake-name')
+        self.assertTrue(mock_destroy.called)
+        mock_destroy.assert_called_once_with(self.instance, True)
 
     def test_spawn(self):
         self._create_vm()
