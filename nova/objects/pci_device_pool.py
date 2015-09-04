@@ -87,7 +87,7 @@ def from_pci_stats(pci_stats):
     which can be either the serialized object, or, prior to the creation of the
     device pool objects, a simple dict or a list of such dicts.
     """
-    pools = None
+    pools = []
     if isinstance(pci_stats, six.string_types):
         try:
             pci_stats = jsonutils.loads(pci_stats)
@@ -96,13 +96,12 @@ def from_pci_stats(pci_stats):
     if pci_stats:
         # Check for object-ness, or old-style storage format.
         if 'nova_object.namespace' in pci_stats:
-            pools = objects.PciDevicePoolList.obj_from_primitive(pci_stats)
+            return objects.PciDevicePoolList.obj_from_primitive(pci_stats)
         else:
             # This can be either a dict or a list of dicts
             if isinstance(pci_stats, list):
-                pool_list = [objects.PciDevicePool.from_dict(stat)
-                             for stat in pci_stats]
+                pools = [objects.PciDevicePool.from_dict(stat)
+                         for stat in pci_stats]
             else:
-                pool_list = [objects.PciDevicePool.from_dict(pci_stats)]
-            pools = objects.PciDevicePoolList(objects=pool_list)
-    return pools
+                pools = [objects.PciDevicePool.from_dict(pci_stats)]
+    return objects.PciDevicePoolList(objects=pools)

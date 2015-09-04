@@ -708,8 +708,11 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node.current_workload)
         expected = pci_device_pool.from_pci_stats(driver.pci_stats)
-        self.assertEqual(expected,
-                         self.tracker.compute_node.pci_device_pools)
+        self.assertEqual(len(expected),
+                         len(self.tracker.compute_node.pci_device_pools))
+        for expected_pool, actual_pool in zip(
+                expected, self.tracker.compute_node.pci_device_pools):
+            self.assertEqual(expected_pool, actual_pool)
 
     def test_set_instance_host_and_node(self):
         inst = objects.Instance()

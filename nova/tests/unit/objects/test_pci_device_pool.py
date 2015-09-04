@@ -109,4 +109,4 @@ class TestConvertPciStats(test.NoDBTestCase):
     def test_from_pci_stats_bad(self):
         prim = "not a valid json string for an object"
         pools = pci_device_pool.from_pci_stats(prim)
-        self.assertIsNone(pools)
+        self.assertEqual(len(pools), 0)
