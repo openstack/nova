@@ -1183,7 +1183,7 @@ def instance_topology_from_instance(instance):
     Instance object, this makes sure we get beck either None, or an instance
     of objects.InstanceNUMATopology class.
     """
-    if isinstance(instance, obj_instance._BaseInstance):
+    if isinstance(instance, obj_instance.Instance):
         # NOTE (ndipanov): This may cause a lazy-load of the attribute
         instance_numa_topology = instance.numa_topology
     else:

@@ -57,12 +57,12 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     """
     instance = instances[0]
     if instance_type is None:
-        if isinstance(instance, obj_instance._BaseInstance):
+        if isinstance(instance, obj_instance.Instance):
             instance_type = instance.get_flavor()
         else:
             instance_type = flavors.extract_flavor(instance)
 
-    if isinstance(instance, obj_instance._BaseInstance):
+    if isinstance(instance, obj_instance.Instance):
         instance = obj_base.obj_to_primitive(instance)
         # obj_to_primitive doesn't copy this enough, so be sure
         # to detach our metadata blob because we modify it below.

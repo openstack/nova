@@ -86,7 +86,7 @@ class RequestSpec(base.NovaObject):
             self.image = None
 
     def _from_instance(self, instance):
-        if isinstance(instance, obj_instance._BaseInstance):
+        if isinstance(instance, obj_instance.Instance):
             # NOTE(sbauza): Instance should normally be a NovaObject...
             getter = getattr
         elif isinstance(instance, dict):
