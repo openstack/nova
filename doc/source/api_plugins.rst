@@ -123,6 +123,39 @@ code still needs modularity. Here are rules for how to separate modules:
   in existing extended models. New extended attributes needn't any namespace
   prefix anymore.
 
+JSON-Schema
+~~~~~~~~~~~
+
+The v2.1 API validates a REST request body with JSON-Schema library.
+Valid body formats are defined with JSON-Schema in the directory
+'nova/api/openstack/compute/schemas'. Each definition is used at the
+corresponding method with the ``validation.schema`` decorator like::
+
+    @validation.schema(schema.update_something)
+    def update(self, req, id, body):
+        ....
+
+Nova supports the extension of JSON-Schema definitions based on the
+loaded API extensions for some APIs. Stevedore library tries to find
+specific name methods which return additional parameters and extends
+them to the original JSON-Schema definitions.
+The following are the combinations of extensible API and method name
+which returns additional parameters:
+
+* Create a server API  - get_server_create_schema()
+* Update a server API  - get_server_update_schema()
+* Rebuild a server API - get_server_rebuild_schema()
+* Resize a server API  - get_server_resize_schema()
+
+For example, keypairs extension(Keypairs class) contains the method
+get_server_create_schema() which returns::
+
+    {
+        'key_name': parameter_types.name,
+    }
+
+then the parameter key_name is allowed on Create a server API.
+
 Support files
 -------------
 
