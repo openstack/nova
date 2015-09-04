@@ -9085,7 +9085,7 @@ class ComputeAPITestCase(BaseTestCase):
         params = {'vm_state': vm_states.RESCUED}
         instance = self._create_fake_instance_obj(params=params)
 
-        volume = {'id': 1, 'attach_status': 'in-use',
+        volume = {'id': 1, 'attach_status': 'attached',
                   'instance_uuid': instance['uuid']}
 
         self.assertRaises(exception.InstanceInvalidState,
@@ -9527,7 +9527,8 @@ class ComputeAPITestCase(BaseTestCase):
         # Ensure volume can be detached from instance
         called = {}
         instance = self._create_fake_instance_obj()
-        volume = {'id': 1, 'attach_status': 'in-use',
+        # Set attach_status to 'fake' as nothing is reading the value.
+        volume = {'id': 1, 'attach_status': 'fake',
                   'instance_uuid': instance['uuid']}
 
         def fake_check_detach(*args, **kwargs):
@@ -9571,7 +9572,7 @@ class ComputeAPITestCase(BaseTestCase):
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE,
                     'task_state': None})
-        volume = {'id': 1, 'attach_status': 'in-use',
+        volume = {'id': 1, 'attach_status': 'attached',
                   'instance_uuid': 'uuid2'}
 
         self.assertRaises(exception.VolumeUnattached,
@@ -9584,8 +9585,8 @@ class ComputeAPITestCase(BaseTestCase):
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.SUSPENDED,
                     'task_state': None})
-        volume = {'id': 1, 'attach_status': 'in-use',
-                  'instance_uuid': 'uuid2'}
+        # Unused
+        volume = {}
 
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.detach_volume, self.context,
