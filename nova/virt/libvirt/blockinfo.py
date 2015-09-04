@@ -162,7 +162,9 @@ def get_dev_count_for_disk_bus(disk_bus):
         return 26
 
 
-def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
+def find_disk_dev_for_disk_bus(mapping, bus,
+                               last_device=False,
+                               assigned_devices=None):
     """Identify a free disk dev name for a bus.
 
        Determines the possible disk dev names for
@@ -179,6 +181,9 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
     if dev_prefix is None:
         return None
 
+    if assigned_devices is None:
+        assigned_devices = []
+
     max_dev = get_dev_count_for_disk_bus(bus)
     if last_device:
         devs = [max_dev - 1]
@@ -188,7 +193,8 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
     for idx in devs:
         disk_dev = dev_prefix + chr(ord('a') + idx)
         if not has_disk_dev(mapping, disk_dev):
-            return disk_dev
+            if disk_dev not in assigned_devices:
+                return disk_dev
 
     raise exception.NovaException(
         _("No free disk device names for prefix '%s'"),
@@ -311,7 +317,8 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
 def get_next_disk_info(mapping, disk_bus,
                        device_type='disk',
                        last_device=False,
-                       boot_index=None):
+                       boot_index=None,
+                       assigned_devices=None):
     """Determine the disk info for the next device on disk_bus.
 
        Considering the disks already listed in the disk mapping,
@@ -323,7 +330,8 @@ def get_next_disk_info(mapping, disk_bus,
 
     disk_dev = find_disk_dev_for_disk_bus(mapping,
                                           disk_bus,
-                                          last_device)
+                                          last_device,
+                                          assigned_devices)
     info = {'bus': disk_bus,
             'dev': disk_dev,
             'type': device_type}
@@ -565,8 +573,8 @@ def get_disk_mapping(virt_type, instance,
         mapping['disk.swap'] = swap_info
         update_bdm(swap, swap_info)
     elif inst_type['swap'] > 0:
-        swap_info = get_next_disk_info(mapping,
-                                       disk_bus)
+        swap_info = get_next_disk_info(mapping, disk_bus,
+            assigned_devices=pre_assigned_device_names)
         if not block_device.volume_in_mapping(swap_info['dev'],
                                               block_device_info):
             mapping['disk.swap'] = swap_info

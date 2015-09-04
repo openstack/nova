@@ -279,6 +279,43 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             }
         self.assertEqual(expect, mapping)
 
+    def test_get_disk_mapping_volumes_swap(self):
+        # A disk mapping setup with volumes attached, then a swap device added
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.root_device_name = '/dev/vda'
+        instance_ref.ephemeral_gb = 0
+
+        block_dev_info = {'swap': None, 'root_device_name': u'/dev/vda',
+            'ephemerals': [],
+            'block_device_mapping': [{'boot_index': None,
+                                      'mount_device': u'/dev/vdb',
+                                      'connection_info': {},
+                                      'disk_bus': None,
+                                      'device_type': None},
+                                     {'boot_index': 0,
+                                      'mount_device': u'/dev/vda',
+                                      'connection_info': {},
+                                      'disk_bus': u'virtio',
+                                      'device_type': u'disk'}]}
+        instance_ref.flavor.swap = 5
+        image_meta = {}
+
+        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                             "virtio", "ide",
+                                             image_meta,
+                                             block_device_info=block_dev_info)
+
+        expect = {
+            '/dev/vda': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            '/dev/vdb': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'disk.swap': {'bus': 'virtio', 'dev': 'vdc', 'type': 'disk'},
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            }
+        self.assertEqual(expect, mapping)
+
     def test_get_disk_mapping_simple_configdrive(self):
         # A simple disk mapping setup, but with configdrive added
         # It's necessary to check if the architecture is power, because
