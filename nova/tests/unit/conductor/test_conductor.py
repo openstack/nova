@@ -395,6 +395,29 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.assertIn('dict', updates)
         self.assertEqual({'foo': 'bar'}, updates['dict'])
 
+    def test_object_class_action_versions(self):
+        @obj_base.NovaObjectRegistry.register
+        class TestObject(obj_base.NovaObject):
+            VERSION = '1.10'
+
+            @classmethod
+            def foo(cls, context):
+                return cls()
+
+        versions = {
+            'TestObject': '1.2',
+            'OtherObj': '1.0',
+        }
+        with mock.patch.object(self.conductor_manager,
+                               '_object_dispatch') as m:
+            m.return_value = TestObject()
+            m.return_value.obj_to_primitive = mock.MagicMock()
+            self.conductor.object_class_action_versions(
+                self.context, TestObject.obj_name(), 'foo', versions,
+                tuple(), {})
+            m.return_value.obj_to_primitive.assert_called_once_with(
+                target_version='1.2', version_manifest=versions)
+
     def _test_expected_exceptions(self, db_method, conductor_method, errors,
                                   *args, **kwargs):
         # Tests that expected exceptions are handled properly.
