@@ -163,7 +163,6 @@ class RevokeCertsTest(test.TestCase):
         self.assertRaises(exception.RevokeCertFailure, crypto.revoke_cert,
                           2, 'test_file')
 
-    @mock.patch.object(os, 'chdir', mock.Mock(side_effect=OSError))
     def test_revoke_cert_project_not_found_chdir_fails(self, *args, **kargs):
         self.assertRaises(exception.ProjectNotFound, crypto.revoke_cert,
                           2, 'test_file')
