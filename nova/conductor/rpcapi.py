@@ -188,6 +188,7 @@ class ConductorAPI(object):
     * 2.2 - Add object_backport_versions()
     * 2.3 - Add object_class_action_versions()
     * Remove compute_node_create()
+    * Remove object_backport()
     """
 
     VERSION_ALIASES = {
@@ -212,6 +213,9 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'provider_fw_rule_get_all')
 
+    # TODO(hanlind): This method can be removed once oslo.versionedobjects
+    # has been converted to use version_manifests in remotable_classmethod
+    # operations, which will use the new class action handler.
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
         if self.client.can_send_version('2.3'):
@@ -241,11 +245,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'object_action', objinst=objinst,
                           objmethod=objmethod, args=args, kwargs=kwargs)
-
-    def object_backport(self, context, objinst, target_version):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'object_backport', objinst=objinst,
-                          target_version=target_version)
 
     def object_backport_versions(self, context, objinst, object_versions):
         cctxt = self.client.prepare(version='2.2')
