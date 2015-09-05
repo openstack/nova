@@ -341,8 +341,10 @@ class FakeIndirectionHack(fixture.FakeIndirectionAPI):
         with mock.patch('nova.objects.base.NovaObject.'
                         'indirection_api', new=None):
             result = getattr(cls, objmethod)(context, *args, **kwargs)
+        manifest = ovo_base.obj_tree_get_versions(objname)
         return (base.NovaObject.obj_from_primitive(
-            result.obj_to_primitive(target_version=objver),
+            result.obj_to_primitive(target_version=objver,
+                                    version_manifest=manifest),
             context=context)
             if isinstance(result, base.NovaObject) else result)
 
