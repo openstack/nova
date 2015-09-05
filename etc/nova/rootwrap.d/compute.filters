@@ -211,6 +211,11 @@ vgc-cluster: CommandFilter, vgc-cluster, root
 # os_brick/initiator/connector.py
 drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid, root
 
+# TODO(smcginnis) Temporary fix.
+# Need to pull in os-brick os-brick.filters file instead and clean
+# out stale brick values from this file.
+scsi_id: CommandFilter, /lib/udev/scsi_id, root
+
 # nova/storage/linuxscsi.py: sg_scan device
 sg_scan: CommandFilter, sg_scan, root
 
