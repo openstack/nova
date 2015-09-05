@@ -1119,6 +1119,40 @@ class TestArgsSerializer(test.NoDBTestCase):
                                   a='untouched', b=self.now, c=self.now)
 
 
+class TestRegistry(test.NoDBTestCase):
+    @mock.patch('nova.objects.base.objects')
+    def test_hook_chooses_newer_properly(self, mock_objects):
+        reg = base.NovaObjectRegistry()
+        reg.registration_hook(MyObj, 0)
+
+        class MyNewerObj(object):
+            VERSION = '1.123'
+
+            @classmethod
+            def obj_name(cls):
+                return 'MyObj'
+
+        self.assertEqual(MyObj, mock_objects.MyObj)
+        reg.registration_hook(MyNewerObj, 0)
+        self.assertEqual(MyNewerObj, mock_objects.MyObj)
+
+    @mock.patch('nova.objects.base.objects')
+    def test_hook_keeps_newer_properly(self, mock_objects):
+        reg = base.NovaObjectRegistry()
+        reg.registration_hook(MyObj, 0)
+
+        class MyOlderObj(object):
+            VERSION = '1.1'
+
+            @classmethod
+            def obj_name(cls):
+                return 'MyObj'
+
+        self.assertEqual(MyObj, mock_objects.MyObj)
+        reg.registration_hook(MyOlderObj, 0)
+        self.assertEqual(MyObj, mock_objects.MyObj)
+
+
 # NOTE(danms): The hashes in this list should only be changed if
 # they come with a corresponding version bump in the affected
 # objects
