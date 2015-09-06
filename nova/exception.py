@@ -1310,7 +1310,7 @@ class QuotaError(NovaException):
 
 class TooManyInstances(QuotaError):
     msg_fmt = _("Quota exceeded for %(overs)s: Requested %(req)s,"
-                " but already used %(used)d of %(allowed)d %(resource)s")
+                " but already used %(used)s of %(allowed)s %(overs)s")
 
 
 class FloatingIpLimitExceeded(QuotaError):
