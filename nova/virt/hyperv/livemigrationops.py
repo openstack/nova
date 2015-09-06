@@ -98,6 +98,9 @@ class LiveMigrationOps(object):
     @check_os_version_requirement
     def post_live_migration(self, context, instance, block_device_info):
         self._volumeops.disconnect_volumes(block_device_info)
+        self._pathutils.get_instance_dir(instance.name,
+                                         create_dir=False,
+                                         remove_dir=True)
 
     @check_os_version_requirement
     def post_live_migration_at_destination(self, ctxt, instance_ref,
