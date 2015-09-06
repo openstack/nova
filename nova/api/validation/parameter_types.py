@@ -40,6 +40,7 @@ def _get_all_chars():
     for i in range(0xFFFF):
         yield six.unichr(i)
 
+
 # build a regex that matches all printable characters. This allows
 # spaces in the middle of the name. Also note that the regexp below
 # deliberately allows the empty string. This is so only the constraint
@@ -47,13 +48,25 @@ def _get_all_chars():
 # empty string is tested. Otherwise it is not deterministic which
 # constraint fails and this causes issues for some unittests when
 # PYTHONHASHSEED is set randomly.
-_printable = ''.join(c for c in _get_all_chars() if _is_printable(c))
+def _get_printable(exclude=None):
+    if exclude is None:
+        exclude = []
+    return ''.join(c for c in _get_all_chars()
+                       if _is_printable(c) and c not in exclude)
+
+
 _printable_ws = ''.join(c for c in _get_all_chars()
                         if unicodedata.category(c) == "Zs")
 
 valid_name_regex = '^(?![%s])[%s]*(?<![%s])$' % (
-    re.escape(_printable_ws), re.escape(_printable), re.escape(_printable_ws))
+    re.escape(_printable_ws), re.escape(_get_printable()),
+    re.escape(_printable_ws))
 
+# cell's name disallow '!',  '.' and '@'.
+valid_cell_name_regex = '^(?![%s])[%s]*(?<![%s])$' % (
+    re.escape(_printable_ws),
+    re.escape(_get_printable(exclude=['!', '.', '@'])),
+    re.escape(_printable_ws))
 
 boolean = {
     'type': ['boolean', 'string'],
@@ -106,6 +119,12 @@ name = {
     # This definition is used for all their parameters.
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'pattern': valid_name_regex,
+}
+
+
+cell_name = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'pattern': valid_cell_name_regex,
 }
 
 
