@@ -192,9 +192,6 @@ lvs: CommandFilter, lvs, root
 # nova/virt/libvirt/utils.py:
 vgs: CommandFilter, vgs, root
 
-# nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
-tgtadm: CommandFilter, tgtadm, root
-
 # nova/utils.py:read_file_as_root: 'cat', file_path
 # (called from nova/virt/disk/vfs/localfs.py:VFSLocalFS.read_file)
 read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
@@ -224,9 +221,6 @@ cryptsetup: CommandFilter, cryptsetup, root
 
 # nova/virt/xenapi/vm_utils.py:
 xenstore-read: CommandFilter, xenstore-read, root
-
-# nova/virt/baremetal/tilera.py: 'rpc.mountd'
-rpc.mountd: CommandFilter, rpc.mountd, root
 
 # nova/virt/libvirt/utils.py:
 rbd: CommandFilter, rbd, root
