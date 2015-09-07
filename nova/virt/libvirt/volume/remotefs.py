@@ -60,7 +60,7 @@ def mount_share(mount_path, export_path,
     try:
         utils.execute(*mount_cmd, run_as_root=True)
     except processutils.ProcessExecutionError as exc:
-        if 'Device or resource busy' in exc.message:
+        if 'Device or resource busy' in six.text_type(exc):
             LOG.warn(_LW("%s is already mounted"), export_path)
         else:
             raise
@@ -76,7 +76,7 @@ def unmount_share(mount_path, export_path):
         utils.execute('umount', mount_path, run_as_root=True,
                       attempts=3, delay_on_retry=True)
     except processutils.ProcessExecutionError as exc:
-        if 'target is busy' in exc.message:
+        if 'target is busy' in six.text_type(exc):
             LOG.debug("The share %s is still in use.", export_path)
         else:
             LOG.exception(_LE("Couldn't unmount the share %s"),

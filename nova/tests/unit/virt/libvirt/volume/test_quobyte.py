@@ -112,8 +112,8 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        utils.get_hash_str(quobyte_volume))
 
         def exec_side_effect(*cmd, **kwargs):
-            exerror = processutils.ProcessExecutionError()
-            exerror.message = "Device or resource busy"
+            exerror = processutils.ProcessExecutionError(
+                                       "Device or resource busy")
             raise exerror
         mock_execute.side_effect = exec_side_effect
 
