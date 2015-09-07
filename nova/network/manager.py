@@ -639,7 +639,7 @@ class NetworkManager(manager.Manager):
                 except (TypeError, KeyError):
                     pass
                 if fixed_ip.network.cidr_v6 and vif.address:
-                    # NOTE(vish): I strongy suspect the v6 subnet is not used
+                    # NOTE(vish): I strongly suspect the v6 subnet is not used
                     #             anywhere, but support it just in case
                     # add the v6 address to the v6 subnet
                     address = ipv6.to_global(fixed_ip.network.cidr_v6,
