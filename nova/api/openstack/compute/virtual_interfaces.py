@@ -27,7 +27,7 @@ ALIAS = 'os-virtual-interfaces'
 authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-def _translate_vif_summary_view(req, _context, vif):
+def _translate_vif_summary_view(req, vif):
     """Maps keys for VIF summary view."""
     d = {}
     d['id'] = vif.uuid
@@ -55,7 +55,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
 
         vifs = self.network_api.get_vifs_by_instance(context, instance)
         limited_list = common.limited(vifs, req)
-        res = [entity_maker(req, context, vif) for vif in limited_list]
+        res = [entity_maker(req, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
     @extensions.expected_errors((404))
