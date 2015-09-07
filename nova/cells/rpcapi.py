@@ -194,8 +194,6 @@ class CellsAPI(object):
 
     def instance_update_at_top(self, ctxt, instance):
         """Update instance at API level."""
-        if not CONF.cells.enable:
-            return
         version = '1.35'
         if not self.client.can_send_version('1.35'):
             instance = objects_base.obj_to_primitive(instance)
@@ -205,8 +203,6 @@ class CellsAPI(object):
 
     def instance_destroy_at_top(self, ctxt, instance):
         """Destroy instance at API level."""
-        if not CONF.cells.enable:
-            return
         version = '1.35'
         if not self.client.can_send_version('1.35'):
             instance = objects_base.obj_to_primitive(instance)
@@ -219,8 +215,6 @@ class CellsAPI(object):
         or 'hard'.  This is generally only used to resolve races
         when API cell doesn't know to what cell an instance belongs.
         """
-        if not CONF.cells.enable:
-            return
         if self.client.can_send_version('1.27'):
             version = '1.27'
         else:
@@ -232,8 +226,6 @@ class CellsAPI(object):
 
     def instance_fault_create_at_top(self, ctxt, instance_fault):
         """Create an instance fault at the top."""
-        if not CONF.cells.enable:
-            return
         instance_fault_p = jsonutils.to_primitive(instance_fault)
         self.client.cast(ctxt, 'instance_fault_create_at_top',
                          instance_fault=instance_fault_p)
@@ -241,8 +233,6 @@ class CellsAPI(object):
     def bw_usage_update_at_top(self, ctxt, uuid, mac, start_period,
             bw_in, bw_out, last_ctr_in, last_ctr_out, last_refreshed=None):
         """Broadcast upwards that bw_usage was updated."""
-        if not CONF.cells.enable:
-            return
         bw_update_info = {'uuid': uuid,
                           'mac': mac,
                           'start_period': start_period,
@@ -256,8 +246,6 @@ class CellsAPI(object):
 
     def instance_info_cache_update_at_top(self, ctxt, instance_info_cache):
         """Broadcast up that an instance's info_cache has changed."""
-        if not CONF.cells.enable:
-            return
         version = '1.35'
         instance = objects.Instance(uuid=instance_info_cache.instance_uuid,
                                     info_cache=instance_info_cache)
@@ -277,8 +265,6 @@ class CellsAPI(object):
     def sync_instances(self, ctxt, project_id=None, updated_since=None,
             deleted=False):
         """Ask all cells to sync instance data."""
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.1')
         return cctxt.cast(ctxt, 'sync_instances',
                           project_id=project_id,
@@ -416,9 +402,6 @@ class CellsAPI(object):
         update but fall back to create.  If create is False, only attempt
         to update.  This maps to nova-conductor's behavior.
         """
-        if not CONF.cells.enable:
-            return
-
         if self.client.can_send_version('1.28'):
             version = '1.28'
         else:
@@ -437,8 +420,6 @@ class CellsAPI(object):
         """Broadcast upwards that a block device mapping was destroyed.
         One of device_name or volume_id should be specified.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.10')
         try:
             cctxt.cast(ctxt, 'bdm_destroy_at_top',
@@ -459,8 +440,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.16')
         cctxt.cast(ctxt, 'instance_update_from_api',
                    instance=instance,
@@ -473,8 +452,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.12')
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
@@ -483,8 +460,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         msg_args = {'instance': instance,
                     'do_cast': do_cast}
         if self.client.can_send_version('1.31'):
@@ -519,8 +494,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.14')
         cctxt.cast(ctxt, 'reboot_instance', instance=instance,
                    reboot_type=reboot_type)
@@ -530,8 +503,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.19')
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
@@ -540,8 +511,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.19')
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
@@ -550,8 +519,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.15')
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
@@ -560,8 +527,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.15')
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
@@ -571,8 +536,6 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         msg_kwargs = {'instance': instance}
         if self.client.can_send_version('1.36'):
             version = '1.36'
@@ -587,16 +550,12 @@ class CellsAPI(object):
 
         This method takes a new-world instance object.
         """
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.18')
         cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
                        scheduler_hint, flavor, reservations,
                        clean_shutdown=True):
-        if not CONF.cells.enable:
-            return
         flavor_p = jsonutils.to_primitive(flavor)
         version = '1.33'
         msg_args = {'instance': instance,
@@ -612,8 +571,6 @@ class CellsAPI(object):
 
     def live_migrate_instance(self, ctxt, instance, host_name,
                               block_migration, disk_over_commit):
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.20')
         cctxt.cast(ctxt, 'live_migrate_instance',
                    instance=instance,
@@ -623,15 +580,11 @@ class CellsAPI(object):
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations):
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.21')
         cctxt.cast(ctxt, 'revert_resize', instance=instance)
 
     def confirm_resize(self, ctxt, instance, migration, host,
                        reservations, cast=True):
-        if not CONF.cells.enable:
-            return
         # NOTE(comstud): This is only used in the API cell where we should
         # always cast and ignore the 'cast' kwarg.
         # Also, the compute api method normally takes an optional
@@ -642,28 +595,20 @@ class CellsAPI(object):
 
     def reset_network(self, ctxt, instance):
         """Reset networking for an instance."""
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.22')
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def inject_network_info(self, ctxt, instance):
         """Inject networking for an instance."""
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.23')
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.24')
         cctxt.cast(ctxt, 'snapshot_instance',
                    instance=instance, image_id=image_id)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type, rotation):
-        if not CONF.cells.enable:
-            return
         cctxt = self.client.prepare(version='1.24')
         cctxt.cast(ctxt, 'backup_instance',
                    instance=instance,
@@ -675,9 +620,6 @@ class CellsAPI(object):
                          image_ref, orig_image_ref, orig_sys_metadata, bdms,
                          recreate=False, on_shared_storage=False, host=None,
                          preserve_ephemeral=False, kwargs=None):
-        if not CONF.cells.enable:
-            return
-
         cctxt = self.client.prepare(version='1.25')
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance, image_href=image_ref,
@@ -685,9 +627,6 @@ class CellsAPI(object):
                    preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        if not CONF.cells.enable:
-            return
-
         cctxt = self.client.prepare(version='1.29')
         cctxt.cast(ctxt, 'set_admin_password', instance=instance,
                 new_pass=new_pass)
