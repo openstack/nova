@@ -960,7 +960,7 @@ class VerifyChecksumTestCase(test.NoDBTestCase):
                 log = stream.getvalue()
 
                 # NOTE(mikal): this is a skip not a fail because the file is
-                # present, but is not in valid json format and therefore is
+                # present, but is not in valid JSON format and therefore is
                 # skipped.
                 self.assertNotEqual(log.find('image verification skipped'), -1)
 

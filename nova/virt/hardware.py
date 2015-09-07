@@ -1242,7 +1242,7 @@ def host_topology_and_format_from_host(host):
     get beck either None, or an instance of objects.NUMATopology class.
 
     :returns: A two-tuple, first element is the topology itself or None, second
-              is a boolean set to True if topology was in json format.
+              is a boolean set to True if topology was in JSON format.
     """
     was_json = False
     try:
