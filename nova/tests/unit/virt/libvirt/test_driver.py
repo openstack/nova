@@ -11805,7 +11805,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Ensure _get_serial_ports_from_instance raises same exception
         # that would have occurred if domain was gone.
-        get_ports.side_effect = exception.InstanceNotFound("domain undefined")
+        def exception_with_yield(instance):
+            raise exception.InstanceNotFound("domain undefined")
+            yield
+        get_ports.side_effect = exception_with_yield
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         drvr.firewall_driver = firewall_driver
