@@ -2077,8 +2077,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
-    @mock.patch('nova.conductor.manager.ConductorManager.vol_usage_update')
-    def _test_detach_volume(self, vol_usage_update, notify_inst_usage, detach,
+    def _test_detach_volume(self, notify_inst_usage, detach,
                             bdm_get, destroy_bdm=True):
         volume_id = '123'
         inst_obj = mock.sentinel.inst_obj
