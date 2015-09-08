@@ -1397,6 +1397,11 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, FAKE_UUID, body)
 
+    def test_update_server_name_with_spaces_in_the_middle(self):
+        body = {'server': {'name': 'abc     def'}}
+        req = self._get_request(body)
+        self.controller.update(req, FAKE_UUID, body)
+
     def test_update_server_personality(self):
         body = {
             'server': {
@@ -1625,6 +1630,11 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, self.body)
+
+    def test_rebuild_instance_name_with_spaces_in_middle(self):
+        self.body['rebuild']['name'] = 'abc   def'
+        self.req.body = jsonutils.dumps(self.body)
+        self.controller._action_rebuild(self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_metadata_key_too_long(self):
         self.body['rebuild']['accessIPv4'] = '0.0.0.0'
@@ -2210,6 +2220,11 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, self.body)
+
+    def test_create_instance_name_with_spaces_in_middle(self):
+        self.body['server']['name'] = 'abc   def'
+        self.req.body = jsonutils.dumps(self.body)
+        self.controller.create(self.req, self.body)
 
     def test_create_instance_name_too_long(self):
         self.body['server']['name'] = 'X' * 256
