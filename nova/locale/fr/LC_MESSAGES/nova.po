@@ -25,8 +25,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-12 06:30+0000\n"
-"PO-Revision-Date: 2015-08-12 06:27+0000\n"
+"POT-Creation-Date: 2015-09-08 06:23+0000\n"
+"PO-Revision-Date: 2015-09-06 22:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -58,6 +58,20 @@ msgstr ""
 #, python-format
 msgid "%(cidr)s is not a valid ip network."
 msgstr "%(cidr)s n'est pas une adresse ip réseau valide."
+
+#, python-format
+msgid ""
+"%(desc)r\n"
+"command: %(cmd)r\n"
+"exit code: %(code)r\n"
+"stdout: %(stdout)r\n"
+"stderr: %(stderr)r"
+msgstr ""
+"%(desc)r\n"
+"commande: %(cmd)r\n"
+"Code de sortie: %(code)r\n"
+"stdout: %(stdout)r\n"
+"stderr: %(stderr)r"
 
 #, python-format
 msgid "%(err)s"
@@ -129,6 +143,14 @@ msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr ""
 "La valeur %(worker_name)s de %(workers)s est invalide, elle doit être "
 "supérieure à 0"
+
+#, python-format
+msgid "%r failed. Not Retrying."
+msgstr "Echec de %r. Nouvelle tentative."
+
+#, python-format
+msgid "%r failed. Retrying."
+msgstr "Echec de %r. Nouvelle tentative."
 
 #, python-format
 msgid "%s format is not supported"
@@ -636,9 +658,6 @@ msgstr ""
 
 msgid "Cell name cannot be empty"
 msgstr "Le nom de cellule ne peut pas être vide"
-
-msgid "Cell name cannot contain '!' or '.'"
-msgstr "Le nom de cellules ne peut pas contenir '!' ou '.'"
 
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "Le type de cellule doit être 'parent' ou 'enfant'"
@@ -1239,9 +1258,6 @@ msgstr "Le type d'instance nommé %(flavor_name)s ne peut être trouvé."
 #, python-format
 msgid "Flavor with name %(name)s already exists."
 msgstr "Le type d'instance avec le nom %(name)s existe déjà."
-
-msgid "Flavor's disk is too small for requested image."
-msgstr "Le disque du type d'instance est trop petit pour l'image demandée."
 
 msgid "Flavor's memory is too small for requested image."
 msgstr "La mémoire du type d'instance est trop petite pour l'image demandée."
@@ -2375,10 +2391,6 @@ msgid "No free port available for instance %(instance)s."
 msgstr "Aucun port disponible pour l'instance %(instance)s."
 
 #, python-format
-msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
-msgstr "Aucun hôte identifié ayant une valeur '%s' définie pour 'force_hosts'"
-
-#, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr "Aucun hyperviseur correspondant à '%s' n'a été trouvé."
 
@@ -2400,10 +2412,6 @@ msgstr "Aucun réseau défini."
 
 msgid "No networks found"
 msgstr "Pas de résaux trouvés"
-
-#, python-format
-msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
-msgstr "Aucun noeud identifié ayant une valeur '%s' définie pour 'force_nodes'"
 
 msgid "No nova entries in syslog!"
 msgstr "Aucune entrée nova dans syslog!"
@@ -2653,14 +2661,6 @@ msgid "Quota could not be found"
 msgstr "Le quota ne peut pas être trouvé"
 
 #, python-format
-msgid ""
-"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)d "
-"of %(allowed)d %(resource)s"
-msgstr ""
-"Quota dépassé pour %(overs)s : Demandé %(req)s, mais %(used)d déjà utilisés "
-"sur %(allowed)d %(resource)s"
-
-#, python-format
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr "Quota dépassé pour les ressources : %(overs)s"
 
@@ -2841,6 +2841,10 @@ msgid "Rules must be an instance of dict or Rules, got %s instead"
 msgstr ""
 "Les Règles doivent être une instance d'un dict ou une Règle, pris %s à la "
 "place"
+
+#, python-format
+msgid "Running cmd (subprocess): %s"
+msgstr "Exécution de la commande (sous-processus): %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."

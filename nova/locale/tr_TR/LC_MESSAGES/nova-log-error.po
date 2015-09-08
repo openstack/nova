@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:21+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
@@ -886,9 +886,6 @@ msgstr "Canlı öncesi göç %s de başarısız"
 msgid "Read/Write data failed"
 msgstr "Veri okuma/yazma başarısız"
 
-msgid "Recovered model server connection!"
-msgstr "Kurtarılmış model sunucu bağlantısı!"
-
 #, python-format
 msgid "Requested VM Generation %s is not supported on  this OS."
 msgstr "İstenen VM Üretimi %s bu  işletim sisteminde desteklenmiyor."
@@ -1163,9 +1160,6 @@ msgstr "kill -HUP dnsmasq %s fırlattı"
 #, python-format
 msgid "killing radvd threw %s"
 msgstr "radvd öldürme işlemi %s fırlattı"
-
-msgid "model server went away"
-msgstr "Model sunucusu gitti."
 
 msgid "nbd module not loaded"
 msgstr "nbd modülü yüklü değil"

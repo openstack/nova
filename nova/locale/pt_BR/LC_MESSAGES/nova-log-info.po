@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/openstack/nova/"
 "language/pt_BR/)\n"
@@ -297,6 +297,10 @@ msgstr "Recebido requisição para destruir instância"
 #, python-format
 msgid "HTTP exception thrown: %s"
 msgstr "Exceção de HTTP lançada: %s"
+
+#, python-format
+msgid "Host filter ignoring hosts: %s"
+msgstr "Filtro de host ignorando hosts: %s"
 
 #, python-format
 msgid "Import key %s"

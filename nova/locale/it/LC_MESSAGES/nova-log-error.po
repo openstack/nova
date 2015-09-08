@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:21+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/openstack/nova/language/"
 "it/)\n"
@@ -774,9 +774,6 @@ msgstr "Pool-set_name_label fallito: %s"
 msgid "Pre live migration failed at %s"
 msgstr "Migrazione pre live fallita su %s"
 
-msgid "Recovered model server connection!"
-msgstr "Connessione al model server ripristinata!"
-
 #, python-format
 msgid "Returning exception %s to caller"
 msgstr "Sollevando eccezione %s al chiamante"
@@ -992,9 +989,6 @@ msgstr ""
 #, python-format
 msgid "killing radvd threw %s"
 msgstr "interruzione di radvd %s"
-
-msgid "model server went away"
-msgstr "model server é scomparso"
 
 msgid "nbd module not loaded"
 msgstr "modulo nbd non caricato"

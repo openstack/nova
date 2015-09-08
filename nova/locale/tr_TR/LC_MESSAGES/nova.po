@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-12 06:30+0000\n"
-"PO-Revision-Date: 2015-08-12 06:27+0000\n"
+"POT-Creation-Date: 2015-09-08 06:23+0000\n"
+"PO-Revision-Date: 2015-09-06 22:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
@@ -114,6 +114,10 @@ msgstr "%(vendor)s %(product)s %(version)s"
 #, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr "%(workers)s in %(worker_name)s değeri geçersiz, 0'dan büyük olmalı"
+
+#, python-format
+msgid "%r failed. Retrying."
+msgstr "%r hatalı. Yeniden deneniyor."
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -289,16 +293,8 @@ msgid "Aggregates does not have %s action"
 msgstr "Kümeler %s işlemine sahip değil"
 
 #, python-format
-msgid "All clusters specified %s were not found in the vCenter"
-msgstr "%s belirten tüm kümeler vCenter'de bulunamadı"
-
-#, python-format
 msgid "An error has occurred when calling the iscsi initiator: %s"
 msgstr "Iscsi başlatıcısı çağrılırken bir hata oluştu: %s"
-
-#, python-format
-msgid "An object of type %(type)s is required in field %(attr)s"
-msgstr "%(attr)s alanında %(type)s türünde bir nesne gerekli"
 
 msgid "An unexpected error has occurred."
 msgstr "Beklenmedik bir hata oluştu."
@@ -707,9 +703,6 @@ msgstr "Hücre iletisi azami sekme sayısına ulaştı: %(hop_count)s"
 
 msgid "Cell name cannot be empty"
 msgstr "Hücre ismi boş olamaz"
-
-msgid "Cell name cannot contain '!' or '.'"
-msgstr "Hücre ismi '!' veya '.' içeremez"
 
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "Hücre türü 'parent' veya 'child' olmalı"
@@ -1543,9 +1536,6 @@ msgstr "%(flavor_name)s ismine sahip nitelik bulunamadı."
 msgid "Flavor with name %(name)s already exists."
 msgstr "%(name)s ismine sahip nitelik zaten mevcut."
 
-msgid "Flavor's disk is too small for requested image."
-msgstr "Niteliğin diski istenen imaj için çok küçük."
-
 msgid "Flavor's memory is too small for requested image."
 msgstr "Niteliğin hafızası istenen imaj için çok küçük."
 
@@ -1683,18 +1673,6 @@ msgstr "İstemci NUMA toploji kümesine sahip konukları desteklemiyor"
 
 msgid "Host does not support guests with custom memory page sizes"
 msgstr "İstemci özel hafıza sayfa boyutlarına sahip konukları desteklemiyor"
-
-#, python-format
-msgid "Host filter forcing available hosts to %s"
-msgstr "İstemci filtresi kullanılabilir istemcileri %s'e zorluyor"
-
-#, python-format
-msgid "Host filter forcing available nodes to %s"
-msgstr "İstemci filtresi kullanılabilir düğümleri %s'e zorluyor"
-
-#, python-format
-msgid "Host filter ignoring hosts: %s"
-msgstr "İstemci filtresi istemcileri göz ardı ediyor: %s"
 
 msgid "Host parameter must be specified"
 msgstr "İstemci parametresi belirtilmelidir"
@@ -2941,10 +2919,6 @@ msgid "No host available on cluster"
 msgstr "Kümede kullanılabilir istemci yok"
 
 #, python-format
-msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
-msgstr "'%s'in 'force_hosts' değeri eşleşmediğinden hiçbir istemci eşleşmedi"
-
-#, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr "'%s' ile eşleşen bir hipervizör bulunamadı."
 
@@ -2977,10 +2951,6 @@ msgstr "Tanımlı bir ağ yok."
 
 msgid "No networks found"
 msgstr "Ağ bulunamadı"
-
-#, python-format
-msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
-msgstr "'%s'in 'force_nodes' değeri eşleşmediğinden hiçbir düğüm eşleşmedi"
 
 msgid "No nova entries in syslog!"
 msgstr "Syslog'da nova girdisi yok!"
@@ -3303,14 +3273,6 @@ msgid "Quota could not be found"
 msgstr "Kota bulunamadı."
 
 #, python-format
-msgid ""
-"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)d "
-"of %(allowed)d %(resource)s"
-msgstr ""
-"%(overs)s için kota aşıldı: İstenen %(req)s, hali hazırda kullanılan "
-"%(used)d / %(allowed)d %(resource)s"
-
-#, python-format
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr "Kaynaklar için kota aşıldı: %(overs)s"
 
@@ -3518,6 +3480,10 @@ msgstr "Kurallar bir dict ya da Rules örneği olmalıdır, ama %s alındı"
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
 msgstr ""
 "Nova'yı parallels virt_type ile çalıştırma libvirt sürümü %s'e ihtiyaç duyar"
+
+#, python-format
+msgid "Running cmd (subprocess): %s"
+msgstr "Çalışan komut(alt süreç): %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -3910,11 +3876,6 @@ msgstr ""
 "Ağ aralığı %(num_networks)s ağının sığacağı kadar büyük değil. Ağ boyutu "
 "%(network_size)s"
 
-#, python-format
-msgid "The number of defined ports: %(ports)dis over the limit: %(quota)d"
-msgstr ""
-"Tanımlanan bağlantı noktası sayısı: %(ports)d sınırın üstünde: %(quota)d"
-
 msgid "The only partition should be partition 1."
 msgstr "Tek bölüm bölüm 1 olmalı."
 
@@ -3947,10 +3908,6 @@ msgstr "İstenen konsol türü deteayları erişilebilir değil"
 
 msgid "The requested functionality is not supported."
 msgstr "İstenen işlevsellik desteklenmiyor"
-
-#, python-format
-msgid "The resource %s does not exist"
-msgstr "%s kaynağı mevcut değil"
 
 #, python-format
 msgid ""
