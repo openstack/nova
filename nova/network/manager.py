@@ -1074,7 +1074,8 @@ class NetworkManager(manager.Manager):
                     if (instance_uuid == fixed_ip_ref.instance_uuid and
                             not fixed_ip_ref.leased):
                         LOG.debug('Explicitly disassociating fixed IP %s from '
-                                  'instance.', instance_uuid=instance_uuid)
+                                  'instance.', address,
+                                  instance_uuid=instance_uuid)
                         fixed_ip_ref.disassociate()
                 else:
                     # We can't try to free the IP address so just call teardown
