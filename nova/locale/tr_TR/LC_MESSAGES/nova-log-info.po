@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-30 14:41+0000\n"
-"Last-Translator: İşbaran Akçayır <isbaran@gmail.com>\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:41+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
 "Language: tr_TR\n"
@@ -489,6 +489,18 @@ msgid "HTTP exception thrown: %s"
 msgstr "HTTP istisnası fırlatıldı: %s"
 
 #, python-format
+msgid "Host filter forcing available hosts to %s"
+msgstr "İstemci filtresi kullanılabilir istemcileri %s'e zorluyor"
+
+#, python-format
+msgid "Host filter forcing available nodes to %s"
+msgstr "İstemci filtresi kullanılabilir düğümleri %s'e zorluyor"
+
+#, python-format
+msgid "Host filter ignoring hosts: %s"
+msgstr "İstemci filtresi istemcileri göz ardı ediyor: %s"
+
+#, python-format
 msgid ""
 "Ignoring request to release fixed IP %(address)s with MAC %(mac)s since it "
 "is now associated with a new instance that is in the process of allocating "
@@ -614,10 +626,6 @@ msgid "Instance was successfully rebuilt"
 msgstr "Sunucu başarıyla yeniden inşa edildi"
 
 #, python-format
-msgid "Invalid cluster or resource pool name : %s"
-msgstr "Geçersiz küme ya da kaynak havuz ismi: %s"
-
-#, python-format
 msgid "Invalid request: %s"
 msgstr "Geçersiz istek: %s"
 
@@ -698,6 +706,14 @@ msgid ""
 msgstr ""
 "Zamanlamada hiçbir hücre kullanılabilir değil.  %(sleep_time)s saniye içinde "
 "tekrar denenecek"
+
+#, python-format
+msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
+msgstr "'%s'in 'force_hosts' değeri eşleşmediğinden hiçbir istemci eşleşmedi"
+
+#, python-format
+msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
+msgstr "'%s'in 'force_nodes' değeri eşleşmediğinden hiçbir düğüm eşleşmedi"
 
 msgid "Pausing"
 msgstr "Durduruluyor"

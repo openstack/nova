@@ -10,8 +10,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-09-04 00:55+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -604,10 +604,6 @@ msgstr ""
 "Valeur des métadonnées %(value)s pour %(key)s n'est pas du type %(type)s. "
 "Utilisation de la valeur par défaut %(default)s."
 
-#, python-format
-msgid "Metric name unknown of %r"
-msgstr "Nom de la mesure inconnu de %r"
-
 msgid "Migration operation was cancelled"
 msgstr "La migration a été annulée."
 
@@ -674,10 +670,6 @@ msgstr "Pas de correspondance en essayant de mettre à jour BDM : %(bdm)s"
 
 msgid "No more network or fixed IP to be allocated"
 msgstr "Aucun réseau ou adresse IP fixes ne peuvent être alloués"
-
-#, python-format
-msgid "No service record for host %s"
-msgstr "Aucun enregistrement de service pour l'hôte %s"
 
 msgid "No valid host found for rebuild"
 msgstr "Hôte valide non trouvée pour la regénération."
@@ -860,10 +852,6 @@ msgstr ""
 "assurée. Cette situation peut changer a l'avenir, mais les actuels "
 "utilisateurs doivent être averti que l'utilisation immédiate de ce service "
 "en production peut être risquée."
-
-#, python-format
-msgid "The following clusters could not be found in the vCenter %s"
-msgstr "Les clusters suivants ne peuvent pas être trouvés dans le vCenter %s"
 
 #, python-format
 msgid ""

@@ -10,8 +10,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-09-04 00:55+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
@@ -392,10 +392,6 @@ msgstr "No se ha podido extraer el soporte de instancia de %s"
 #, python-format
 msgid "Failed to get cluster references %s"
 msgstr "Fallo al obtener las referencias del cluster %s"
-
-#, python-format
-msgid "Failed to get resource pool references %s"
-msgstr "Fallo al obtener las referencias del pool de recursos %s"
 
 #, python-format
 msgid "Failed to load extension %(classpath)s: %(exc)s"
@@ -780,10 +776,6 @@ msgstr ""
 "Valor de metadatos %(value)s para %(key)s no es de tipo %(type)s. Utilizando "
 "valor por defecto %(default)s."
 
-#, python-format
-msgid "Metric name unknown of %r"
-msgstr "Nombre de métrica desconocido para %r"
-
 msgid "Migration operation was cancelled"
 msgstr "Se ha cancelado la operación de migración"
 
@@ -869,10 +861,6 @@ msgstr "No se encontró resultado al intentar actualizar BDM: %(bdm)s"
 
 msgid "No more network or fixed IP to be allocated"
 msgstr "No hay más redes o IP fijas para asignar"
-
-#, python-format
-msgid "No service record for host %s"
-msgstr "Ningún registro de servicio para el host %s "
 
 msgid "No valid host found for rebuild"
 msgstr "No se ha encontrado un host válido para reconstruir"
@@ -1119,15 +1107,6 @@ msgstr ""
 "%(instance_id)s."
 
 msgid ""
-"The \"cluster_name\" setting should have only one cluster name. The "
-"capability of allowing multiple clusters may be dropped in the Liberty "
-"release."
-msgstr ""
-"La configuración \"cluster_name\" solo ebe tener un nombre de clúster. la "
-"funcionalidad de permitir múltiples clústers puede ser eliminado en la "
-"versión Liberty."
-
-msgid ""
 "The ZooKeeper service group driver in Nova is not tested by the OpenStack "
 "project and thus its quality can not be ensured. This may change in the "
 "future, but current deployers should be aware that the use of it in "
@@ -1137,10 +1116,6 @@ msgstr ""
 "ZooKeeper en Nova por lo cual, no se puede asegurar su calidad. Esto puede "
 "cambiar en el futuro, pero los implementadores actuales deben estar "
 "conscientes que su uso en producción puede ser riesgoso en este momento."
-
-#, python-format
-msgid "The following clusters could not be found in the vCenter %s"
-msgstr "Los siguientes clusters no pueden ser encontrados en el vcenter %s"
 
 msgid ""
 "The in tree EC2 API is deprecated as of Kilo release and may be removed in a "

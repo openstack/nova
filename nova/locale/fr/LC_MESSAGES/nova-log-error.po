@@ -10,8 +10,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:21+0000\n"
-"PO-Revision-Date: 2015-08-05 00:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -122,8 +122,22 @@ msgid "Could not decode scheduler options"
 msgstr "Impossible de décoder les potions de l'ordonnanceur "
 
 #, python-format
+msgid ""
+"Could not disconnect encrypted volume %(volume)s. If dm-crypt device is "
+"still active it will have to be destroyed manually for cleanup to succeed."
+msgstr ""
+"Impossible de déconnecter le volume crypté %(volume)s. Si dm-crypt device "
+"est toujours activé il faudra le détruire manuellement pour réussir le "
+"nétoyage "
+
+#, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "Impossible de supprimer tmpdir : %s"
+
+#, python-format
+msgid "Could not start encryption for disk %(device)s: %(exception)s"
+msgstr ""
+"Impossible de commencer l’encryptions des disques %(device)s: %(exception)s  "
 
 msgid "Couldn't communicate with any cells"
 msgstr "Impossible de communiquer avec les cellules"
@@ -131,6 +145,10 @@ msgstr "Impossible de communiquer avec les cellules"
 #, python-format
 msgid "Couldn't communicate with cell '%s'"
 msgstr "N'a pas pu communiquer avec la cellule '%s'"
+
+#, python-format
+msgid "Couldn't lookup app: %s"
+msgstr "Impossible de trouver l'app: %s"
 
 #, python-format
 msgid "Couldn't unmount the GlusterFS share %s"
@@ -330,6 +348,10 @@ msgstr "Erreur en essayant de Sauver l'Instance"
 msgid "Error trying to reschedule"
 msgstr "Erreur lors de la tentative de replanification"
 
+#, python-format
+msgid "Error updating resources for node %(node)s: %(e)s"
+msgstr "Erreur lors de la mise a jour des ressources du nœud %(node)s: %(e)s"
+
 msgid "Error waiting for responses from neighbor cells"
 msgstr "Erreur lors de l'attente de réponses des cellules voisines"
 
@@ -492,6 +514,15 @@ msgid "Failed to get default networks"
 msgstr "Échec à obtenir les réseaux par défaut"
 
 #, python-format
+msgid ""
+"Failed to get instance id for metadata request, provider %(provider)s "
+"networks %(networks)s requester %(requester)s. Error: %(error)s"
+msgstr ""
+"Echec de l'obtention de l'id de l'instance pour la requete des métadonnées, "
+"fournisseur %(provider)s réseaux %(networks)s demandeur %(requester)s. "
+"Erreur: %(error)s"
+
+#, python-format
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Echec d'obtention des métadonnées pour l'ID instance : %s"
 
@@ -649,8 +680,14 @@ msgstr "Impossible d'écrire le fichier de configuration."
 msgid "Failed to write inbound.csr"
 msgstr "Impossible d'écrire inbound.csr"
 
+msgid "Failed while plugging ib hostdev vif"
+msgstr "Échec du branchement de ib hostdev vif"
+
 msgid "Failed while plugging vif"
 msgstr "Échec lors de la connexion int. virt."
+
+msgid "Failed while unplugging ib hostdev vif"
+msgstr "Échec du débranchement de ib hostdev vif"
 
 msgid "Failed while unplugging vif"
 msgstr "Echec lors du débranchement d'int. virt."
@@ -664,6 +701,9 @@ msgstr "Echec lors du nettoyage des VDI connectées"
 #, python-format
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
+
+msgid "FaultWrapper error"
+msgstr "Erreur FaultWrapper"
 
 msgid "Get version 2 connection error"
 msgstr "Impossible de recevoir la version 2, erreur de connexion"
@@ -807,6 +847,10 @@ msgid "Neutron error creating port on network %s"
 msgstr "Erreur Neutron en créant un port sur le network %s "
 
 #, python-format
+msgid "No compute node record for host %s"
+msgstr "Pas de noeud de calcul enregistré pour l'hôte %s"
+
+#, python-format
 msgid "No db access allowed in nova-compute: %s"
 msgstr "Pas d'accès db permis dans nova-compute : %s"
 
@@ -825,6 +869,11 @@ msgstr "Aucun gestionnaire pour les correspondances de type %s"
 #, python-format
 msgid "No save handler for %s"
 msgstr "Pas de gestionnaire de sauvegarde pour %s"
+
+msgid "Not all properties needed are implemented in the compute driver"
+msgstr ""
+"Toute les propriétés requises ne sont pas implémentées par le pilote de "
+"calcul"
 
 #, python-format
 msgid "PCI device %s not found"
@@ -857,9 +906,6 @@ msgstr "Pré migration en directe a échoué a %s"
 
 msgid "Read/Write data failed"
 msgstr "Echec de Lecture/Ecriture des données"
-
-msgid "Recovered model server connection!"
-msgstr "Récupération du modelle de connexion serveur terminée!"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on  this OS."
@@ -1036,6 +1082,10 @@ msgstr "%(ex_name)s inattendu levé : %(ex_str)s"
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Échec inexpliqué de la génération, pas de construction re-planifiée."
 
+#, python-format
+msgid "Unexpected error while checking process %(pid)s."
+msgstr "Erreur inattendue durant la vérification du processus %(pid)s."
+
 msgid "Unexpected exception in API method"
 msgstr "Exception inattendue dans la méthode API"
 
@@ -1055,9 +1105,12 @@ msgstr ""
 msgid "Unknown content in connection_info/access_mode: %s"
 msgstr "Contenu inconnu dans connection_info/access_mode : %s"
 
+msgid "Unshelve attempted but an error has occurred"
+msgstr "Tentative de dé-catalogage, mais une erreur est survenue"
+
 msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
 msgstr ""
-"Tentative d'arrêt de suspension mais vm_state non SHELVED ou  "
+"Tentative de dé-catalogage mais le vm_state n'est pas SHELVED ou  "
 "SHELVED_OFFLOADED"
 
 msgid "Vifs plug failed"
@@ -1066,6 +1119,12 @@ msgstr "Échec Vifs plug"
 #, python-format
 msgid "Volume %s is associated with the instance but no SR was found for it"
 msgstr "Volume %s est associé avec une instance mais pas de SR trouvé "
+
+#, python-format
+msgid "Volume is not writable. Please broaden the file permissions. Mount: %s"
+msgstr ""
+"Le volume ne peut être écrit. Veuillez étendre les permissions dans le "
+"fichier des permissions. Montage: %s"
 
 #, python-format
 msgid ""
@@ -1113,11 +1172,12 @@ msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
 
 #, python-format
+msgid "kill -HUP dnsmasq threw %s"
+msgstr "kill -HUP dnsmasq  a lancé %s"
+
+#, python-format
 msgid "killing radvd threw %s"
 msgstr "La destruction de radvd à renvoyé %s"
-
-msgid "model server went away"
-msgstr "Le modèle de serveur à disparu"
 
 msgid "nbd module not loaded"
 msgstr "Module nbd non chargé"

@@ -15,8 +15,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-12 06:30+0000\n"
-"PO-Revision-Date: 2015-08-12 06:27+0000\n"
+"POT-Creation-Date: 2015-09-08 06:23+0000\n"
+"PO-Revision-Date: 2015-09-06 22:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
@@ -48,6 +48,20 @@ msgstr ""
 #, python-format
 msgid "%(cidr)s is not a valid ip network."
 msgstr "%(cidr)s no es una red ip valida."
+
+#, python-format
+msgid ""
+"%(desc)r\n"
+"command: %(cmd)r\n"
+"exit code: %(code)r\n"
+"stdout: %(stdout)r\n"
+"stderr: %(stderr)r"
+msgstr ""
+"%(desc)r\n"
+"comando: %(cmd)r\n"
+"código de salida: %(code)r\n"
+"stdout: %(stdout)r\n"
+"stderr: %(stderr)r"
 
 #, python-format
 msgid "%(err)s"
@@ -124,6 +138,14 @@ msgstr "%(vendor)s %(product)s %(version)s"
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr ""
 "El valor %(worker_name)s de %(workers)s es inválido, debe ser mayor que 0."
+
+#, python-format
+msgid "%r failed. Not Retrying."
+msgstr "%r ha fallado. No se está intentando de nuevo."
+
+#, python-format
+msgid "%r failed. Retrying."
+msgstr "%r ha fallado. Intentando de nuevo."
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -305,16 +327,8 @@ msgid "Aggregates does not have %s action"
 msgstr "Los agregados no tienen la acción %s "
 
 #, python-format
-msgid "All clusters specified %s were not found in the vCenter"
-msgstr "Todos los clusters especificados %s no fueron encontrados en vCenter"
-
-#, python-format
 msgid "An error has occurred when calling the iscsi initiator: %s"
 msgstr "Se ha producido un error al llamar al iniciador iscsi: %s "
-
-#, python-format
-msgid "An object of type %(type)s is required in field %(attr)s"
-msgstr "Se requiere un objeto de tipo %(type)s en campo %(attr)s"
 
 msgid "An unexpected error has occurred."
 msgstr "Ha ocurrido un error inesperado."
@@ -760,9 +774,6 @@ msgstr ""
 
 msgid "Cell name cannot be empty"
 msgstr "El nombre de célula no puede estar vacío"
-
-msgid "Cell name cannot contain '!' or '.'"
-msgstr "El nombre de célula no puede contener '!' o '.'"
 
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "El tipo de célula debe ser 'padre' o 'hijo'"
@@ -1642,9 +1653,6 @@ msgstr "No se puede encontrar el tipo con nombre %(flavor_name)s."
 msgid "Flavor with name %(name)s already exists."
 msgstr "El tipo de nombre %(name)s ya existe."
 
-msgid "Flavor's disk is too small for requested image."
-msgstr "El disco del tipo  es demasiado pequeño para la imagen solicitada."
-
 msgid "Flavor's memory is too small for requested image."
 msgstr "La memoria del tipo es demasiado pequeña para la imagen solicitada."
 
@@ -1793,18 +1801,6 @@ msgstr "Host no soporta invitados con conjunto de topología NUMA"
 msgid "Host does not support guests with custom memory page sizes"
 msgstr ""
 "Host no soporta invitados con tamaños de página de memoria perzonalizados"
-
-#, python-format
-msgid "Host filter forcing available hosts to %s"
-msgstr "Filtro de anfitrión forzando a los huéspedes disponibles a %s"
-
-#, python-format
-msgid "Host filter forcing available nodes to %s"
-msgstr "Filtro de anfitriones forzando nodos disponibles a %s"
-
-#, python-format
-msgid "Host filter ignoring hosts: %s"
-msgstr "Filtro de anfitrión ignorando huéspedes: %s"
 
 msgid "Host parameter must be specified"
 msgstr "Se debe especificar el parámetro host"
@@ -3079,12 +3075,6 @@ msgid "No host available on cluster"
 msgstr "No hay anfitrión disponible en cluster."
 
 #, python-format
-msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
-msgstr ""
-"No se han relacionado anfitriones debido a que no hay valores relacionados "
-"de '%s' a 'force_hosts'"
-
-#, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr "No es ha podido encontrar ningún hipervisor que coincida con '%s'. "
 
@@ -3117,12 +3107,6 @@ msgstr "No se han definido redes."
 
 msgid "No networks found"
 msgstr "No se han encontrado redes"
-
-#, python-format
-msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
-msgstr ""
-"No se han relacionado nodos debido a que no hay valores relacionados de '%s' "
-"a 'force_nodes'"
 
 msgid "No nova entries in syslog!"
 msgstr "No hay entradas de nova en el registro de sistema!"
@@ -3447,14 +3431,6 @@ msgid "Quota could not be found"
 msgstr "No se ha podido encontrar la cuota"
 
 #, python-format
-msgid ""
-"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)d "
-"of %(allowed)d %(resource)s"
-msgstr ""
-"Se ha superado la cuota para %(overs)s: se ha solicitado %(req)s, pero ya se "
-"utiliza %(used)d de %(allowed)d %(resource)s."
-
-#, python-format
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr "Cuota superada para recursos: %(overs)s"
 
@@ -3672,6 +3648,10 @@ msgstr ""
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
 msgstr ""
 "La ejecución de Nova con paralelos virt_type requiere versión libvirt %s"
+
+#, python-format
+msgid "Running cmd (subprocess): %s"
+msgstr "Ejecutando cmd (subproceso): %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -4086,11 +4066,6 @@ msgstr ""
 "El rango de red no es suficientemente grande para acomodar %(num_networks)s "
 "redes. El tamaño de red es %(network_size)s"
 
-#, python-format
-msgid "The number of defined ports: %(ports)dis over the limit: %(quota)d"
-msgstr ""
-"El número de puertos definidos: %(ports)d sobrepasa el límite: %(quota)d"
-
 msgid "The only partition should be partition 1."
 msgstr "La unica partición debe ser la partición 1."
 
@@ -4125,10 +4100,6 @@ msgstr "Los detalles del tipo de consola solicitada no son accesibles"
 
 msgid "The requested functionality is not supported."
 msgstr "No se soporta la funcionalidad solicitada."
-
-#, python-format
-msgid "The resource %s does not exist"
-msgstr "El recurso %s no existe"
 
 #, python-format
 msgid ""

@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/openstack/nova/language/"
 "it/)\n"
@@ -490,10 +490,6 @@ msgstr "Avvio a caldo dell'istanza eseguito correttamente."
 
 msgid "Instance spawned successfully."
 msgstr "Istanza generata correttamente."
-
-#, python-format
-msgid "Invalid cluster or resource pool name : %s"
-msgstr "Cluster o nome di pool di risorsa non valido: %s"
 
 #, python-format
 msgid "Invalid request: %s"

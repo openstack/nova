@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-12 06:31+0000\n"
-"PO-Revision-Date: 2015-08-11 12:58+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 04:53+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Language: cs\n"
@@ -391,6 +391,13 @@ msgid "Error in handshake: %s"
 msgstr "Chyba při zahájení komunikace: %s"
 
 #, python-format
+msgid ""
+"Executing RootwrapDaemonHelper.execute cmd=[%(cmd)r] kwargs=[%(kwargs)r]"
+msgstr ""
+"Spouštění  RootwrapDaemonHelper.execute příkaz=[%(cmd)r] argumenty klíčových "
+"slov=[%(kwargs)r]"
+
+#, python-format
 msgid "Failed to get image info from path %(path)s; error: %(error)s"
 msgstr "Nelze získat informace o obrazu z cesty %(path)s; chyba: %(error)s"
 
@@ -398,6 +405,10 @@ msgstr "Nelze získat informace o obrazu z cesty %(path)s; chyba: %(error)s"
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr ""
 "Nelze připojit souborový systém (očekáváno u nelinuxových instancí): %s"
+
+#, python-format
+msgid "Failed to process external instance event %(event)s due to: %(error)s"
+msgstr "Nelze zpracovat událost vnější instance %(event)s kvůli: %(error)s"
 
 #, python-format
 msgid ""
@@ -412,6 +423,15 @@ msgstr "Vyvolána chyba: %s"
 #, python-format
 msgid "Filter %s returned 0 hosts"
 msgstr "Filtr %s vrátil 0 hostitelů"
+
+#, python-format
+msgid ""
+"Filtering removed all hosts for the request with reservation ID '%(res_id)s' "
+"and instance ID '%(inst_uuid)s'. Filter results: %(str_results)s"
+msgstr ""
+"Filtrování odstranilo všechny hostitele z žádosti mající ID rezervace "
+"'%(res_id)s' a ID instance '%(inst_uuid)s'. Výsledky filtrování: "
+"%(str_results)s"
 
 #, python-format
 msgid ""
@@ -495,6 +515,18 @@ msgstr "Obdržena žádost o zničení instance"
 #, python-format
 msgid "HTTP exception thrown: %s"
 msgstr "Vyvolána výjimka HTTP: %s"
+
+#, python-format
+msgid "Host filter forcing available hosts to %s"
+msgstr "Filtr hostitelů si vynutil dostupnost hostitelů na %s"
+
+#, python-format
+msgid "Host filter forcing available nodes to %s"
+msgstr "Filtr hostitelů vynucuje dostupnost uzlů na %s"
+
+#, python-format
+msgid "Host filter ignoring hosts: %s"
+msgstr "Filtr hostitelů ignoruje hostitele: %s"
 
 #, python-format
 msgid ""
@@ -629,10 +661,6 @@ msgid "Instance was successfully rebuilt"
 msgstr "Instance byla úspěšně znovu sestavena"
 
 #, python-format
-msgid "Invalid cluster or resource pool name : %s"
-msgstr "Neplatný název clusteru nebo zásoby zdrojů : %s"
-
-#, python-format
 msgid "Invalid request: %s"
 msgstr "Neplatný požadavek: %s"
 
@@ -709,9 +737,29 @@ msgstr "Přidělení sítě zrušeno pro instanci (pevné ip adresy: '%s')"
 
 #, python-format
 msgid ""
+"Neutron deleted interface %(intf)s; detaching it from the instance and "
+"deleting it from the info cache"
+msgstr ""
+"Neutron smazal rozhraní %(intf)s; bylo odpojeno z instance a smazáno z "
+"mezipaměti informací"
+
+#, python-format
+msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr ""
 "Žádné dostupné buňky při plánování. Další pokus za %(sleep_time)s vteřin"
+
+#, python-format
+msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
+msgstr ""
+"Žádní hostitelé neodpovídají, protože nebyla nalezena shoda s hodnotou '%s' "
+"ve 'force_hosts'"
+
+#, python-format
+msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
+msgstr ""
+"Žádné uzly neodpovídají, protože nebyla nalezena shoda s hodnotou '%s' ve "
+"'force_hosts'"
 
 msgid "Pausing"
 msgstr "Pozastavování"
@@ -781,6 +829,15 @@ msgstr ""
 
 msgid "Reclaiming deleted instance"
 msgstr "Znovu získávání smazané instance"
+
+msgid "Recovered connection to memcache server for reporting service status."
+msgstr ""
+"Připojení k serveru memcache obnoveno a stav služby může být znovu "
+"kontrolován."
+
+msgid "Recovered connection to nova-conductor for reporting service status."
+msgstr ""
+"Připojení k nová-conductor obnoveno a stav služby může být znovu kontrolován."
 
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"

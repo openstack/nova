@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"POT-Creation-Date: 2015-09-08 06:24+0000\n"
+"PO-Revision-Date: 2015-08-30 00:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
@@ -507,6 +507,18 @@ msgid "HTTP exception thrown: %s"
 msgstr "Excepción de HTTP emitida: %s"
 
 #, python-format
+msgid "Host filter forcing available hosts to %s"
+msgstr "Filtro de anfitrión forzando a los huéspedes disponibles a %s"
+
+#, python-format
+msgid "Host filter forcing available nodes to %s"
+msgstr "Filtro de anfitriones forzando nodos disponibles a %s"
+
+#, python-format
+msgid "Host filter ignoring hosts: %s"
+msgstr "Filtro de anfitrión ignorando huéspedes: %s"
+
+#, python-format
 msgid ""
 "Ignoring request to release fixed IP %(address)s with MAC %(mac)s since it "
 "is now associated with a new instance that is in the process of allocating "
@@ -643,10 +655,6 @@ msgid "Instance was successfully rebuilt"
 msgstr "Instancia recreada satisfactoriamente."
 
 #, python-format
-msgid "Invalid cluster or resource pool name : %s"
-msgstr "Cluster o nombre de pool de recursos inválido: %s"
-
-#, python-format
 msgid "Invalid request: %s"
 msgstr "Solicitud no válida: %s "
 
@@ -729,6 +737,18 @@ msgid ""
 msgstr ""
 "No hay celdas disponibles al planificar. Se reintentará dentro de "
 "%(sleep_time)s segundo(s)"
+
+#, python-format
+msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
+msgstr ""
+"No se han relacionado anfitriones debido a que no hay valores relacionados "
+"de '%s' a 'force_hosts'"
+
+#, python-format
+msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
+msgstr ""
+"No se han relacionado nodos debido a que no hay valores relacionados de '%s' "
+"a 'force_nodes'"
 
 msgid "Pausing"
 msgstr "Poniéndose en pausa"
