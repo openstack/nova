@@ -43,7 +43,7 @@ Setting up iSCSI targets: unused
         driver = iscsi.LibvirtISCSIVolumeDriver("none")
         out = driver.connector._get_target_portals_from_iscsiadm_output(
             sample_input)
-        self.assertEqual(out, targets)
+        self.assertEqual(targets, out)
 
     def test_libvirt_iscsi_driver(self, transport=None):
         libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)

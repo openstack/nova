@@ -28,16 +28,16 @@ class LibvirtNetVolumeDriverTestCase(
     """Tests the libvirt network volume driver."""
 
     def _assertNetworkAndProtocolEquals(self, tree):
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
+        self.assertEqual('network', tree.get('type'))
+        self.assertEqual('rbd', tree.find('./source').get('protocol'))
         rbd_name = '%s/%s' % ('rbd', self.name)
-        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+        self.assertEqual(rbd_name, tree.find('./source').get('name'))
 
     def _assertISCSINetworkAndProtocolEquals(self, tree):
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'iscsi')
+        self.assertEqual('network', tree.get('type'))
+        self.assertEqual('iscsi', tree.find('./source').get('protocol'))
         iscsi_name = '%s/%s' % (self.iqn, self.vol['id'])
-        self.assertEqual(tree.find('./source').get('name'), iscsi_name)
+        self.assertEqual(iscsi_name, tree.find('./source').get('name'))
 
     def sheepdog_connection(self, volume):
         return {
@@ -52,9 +52,9 @@ class LibvirtNetVolumeDriverTestCase(
         connection_info = self.sheepdog_connection(self.vol)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
-        self.assertEqual(tree.get('type'), 'network')
-        self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
-        self.assertEqual(tree.find('./source').get('name'), self.name)
+        self.assertEqual('network', tree.get('type'))
+        self.assertEqual('sheepdog', tree.find('./source').get('protocol'))
+        self.assertEqual(self.name, tree.find('./source').get('name'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def rbd_connection(self, volume):
@@ -96,8 +96,8 @@ class LibvirtNetVolumeDriverTestCase(
         self._assertNetworkAndProtocolEquals(tree)
         self.assertIsNone(tree.find('./source/auth'))
         found_hosts = tree.findall('./source/host')
-        self.assertEqual([host.get('name') for host in found_hosts], hosts)
-        self.assertEqual([host.get('port') for host in found_hosts], ports)
+        self.assertEqual(hosts, [host.get('name') for host in found_hosts])
+        self.assertEqual(ports, [host.get('port') for host in found_hosts])
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_enabled(self):
@@ -112,9 +112,9 @@ class LibvirtNetVolumeDriverTestCase(
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), self.user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), self.uuid)
+        self.assertEqual(self.user, tree.find('./auth').get('username'))
+        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
+        self.assertEqual(self.uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
@@ -135,9 +135,9 @@ class LibvirtNetVolumeDriverTestCase(
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
+        self.assertEqual(flags_user, tree.find('./auth').get('username'))
+        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
+        self.assertEqual(flags_uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_disabled(self):
@@ -175,9 +175,9 @@ class LibvirtNetVolumeDriverTestCase(
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
+        self.assertEqual(flags_user, tree.find('./auth').get('username'))
+        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
+        self.assertEqual(flags_uuid, tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     @mock.patch.object(host.Host, 'find_secret')
@@ -195,8 +195,8 @@ class LibvirtNetVolumeDriverTestCase(
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertISCSINetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth').get('username'), flags_user)
-        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
-        self.assertEqual(tree.find('./auth/secret').get('uuid'),
-                         test_volume.SECRET_UUID)
+        self.assertEqual(flags_user, tree.find('./auth').get('username'))
+        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
+        self.assertEqual(test_volume.SECRET_UUID,
+                         tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info, 'vde')
