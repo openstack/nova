@@ -78,6 +78,9 @@
 
     "compute:rebuild": "",
     "compute:reboot": "",
+    "compute:delete": "rule:admin_or_owner",
+    "compute:soft_delete": "rule:admin_or_owner",
+    "compute:force_delete": "rule:admin_or_owner",
 
     "compute:security_groups:add_to_instance": "",
     "compute:security_groups:remove_from_instance": "",
