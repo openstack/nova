@@ -1184,8 +1184,8 @@ object_data = {
     'FloatingIPList': '1.10-7f2ba670714e1b7bab462ab3290f7159',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HVSpec': '1.1-6b4f7c0f688cbd03e24142a44eb9010d',
-    'ImageMeta': '1.6-642d1b2eb3e880a367f37d72dd76162d',
-    'ImageMetaProps': '1.6-07a6d9f3576c4927220331584661ce45',
+    'ImageMeta': '1.7-642d1b2eb3e880a367f37d72dd76162d',
+    'ImageMetaProps': '1.7-f12fc4cf3e25d616f69a66fb9d2a7aa6',
     'Instance': '2.0-ff56804dce87d81d9a04834d4bd1e3d2',
     # NOTE(danms): Reviewers: do not approve changes to the Instance1
     # object schema. It is frozen for Liberty and will be removed in
@@ -1233,7 +1233,7 @@ object_data = {
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'Quotas': '1.2-1fe4cd50593aaf5d36a6dc5ab3f98fb3',
     'QuotasNoOp': '1.2-e041ddeb7dc8188ca71706f78aad41c1',
-    'RequestSpec': '1.3-6922fe208b5d1186bdd825513f677921',
+    'RequestSpec': '1.4-6922fe208b5d1186bdd825513f677921',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',

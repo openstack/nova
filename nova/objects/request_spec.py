@@ -25,7 +25,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.1: ImageMeta version 1.6
     # Version 1.2: SchedulerRetries version 1.1
     # Version 1.3: InstanceGroup version 1.10
-    VERSION = '1.3'
+    # Version 1.4: ImageMeta version 1.7
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -52,7 +53,8 @@ class RequestSpec(base.NovaObject):
     }
 
     obj_relationships = {
-        'image': [('1.0', '1.5'), ('1.1', '1.6')],
+        'image': [('1.0', '1.5'), ('1.1', '1.6'),
+                  ('1.4', '1.7')],
         'numa_topology': [('1.0', '1.2')],
         'flavor': [('1.0', '1.1')],
         'pci_requests': [('1.0', '1.1')],
