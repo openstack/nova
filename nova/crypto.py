@@ -127,8 +127,19 @@ def ensure_ca_filesystem():
 
 
 def _generate_fingerprint(public_key_file):
-    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f', public_key_file)
+    # NOTE(haypo): OpenSSH 6.7 and older doesn't support the -E option to
+    # specify the hash method. First try without -E since most Linux
+    # distribution for OpenStack Kilo still use OpenSSH 6.7.
+    args = ('ssh-keygen', '-q', '-l', '-f', public_key_file)
+    (out, err) = utils.execute(*args)
     fingerprint = out.split(' ')[1]
+    if fingerprint.startswith('SHA256:'):
+        # OpenSSH 6.8 and newer uses SHA256 by default: hash the fingerprint
+        # using MD5 for backward compatibility
+        (out, err) = utils.execute(*(args + ('-E', 'md5')))
+        fingerprint = out.split(' ')[1]
+        # strip the hash method ("MD5:" prefix)
+        fingerprint = fingerprint[4:]
     return fingerprint
 
 

@@ -264,3 +264,47 @@ class ConversionTests(test.TestCase):
     def test_convert_failure(self):
         self.assertRaises(exception.EncryptionFailure,
                           crypto.convert_from_sshrsa_to_pkcs8, '')
+
+
+class FingerprintTests(test.TestCase):
+    @mock.patch.object(utils, 'execute')
+    def test_openssh_67(self, mock_execute):
+        # test ssh-keygen of OpenSSH 6.7 and older
+        mock_execute.side_effect = [
+            (('2048 67:6e:f8:21:5c:b4:d5:95:74:54:e4:9e:f8:63:7d:60 '
+                  'test (RSA)',
+              '')),
+        ]
+
+        fingerprint = crypto.generate_fingerprint('public key')
+        self.assertEqual('67:6e:f8:21:5c:b4:d5:95:74:54:e4:9e:f8:63:7d:60',
+                         fingerprint)
+
+        self.assertEqual(1, len(mock_execute.call_args_list),
+                         mock_execute.call_args)
+        self.assertEqual([('ssh-keygen', '-q', '-l', '-f', mock.ANY)],
+                         mock_execute.call_args_list[0])
+
+    @mock.patch.object(utils, 'execute')
+    def test_openssh_68(self, mock_execute):
+        # test ssh-keygen of OpenSSH 6.8 and newer
+        mock_execute.side_effect = [
+            (('2048 SHA256:p3Wk0H3odRa1ugL+7YNP5PC9R/OkUKlY6/6/Md2+yho '
+                  'test (RSA)\n',
+              '')),
+            (('2048 MD5:b7:7d:ca:d5:31:9c:27:c6:b4:60:b2:d0:fa:0d:b4:9d '
+                  'test (RSA)\n',
+              '')),
+        ]
+
+        fingerprint = crypto.generate_fingerprint('public key')
+        self.assertEqual('b7:7d:ca:d5:31:9c:27:c6:b4:60:b2:d0:fa:0d:b4:9d',
+                         fingerprint)
+
+        self.assertEqual(2, len(mock_execute.call_args_list),
+                         mock_execute.call_args)
+        self.assertEqual([('ssh-keygen', '-q', '-l', '-f', mock.ANY)],
+                         mock_execute.call_args_list[0])
+        self.assertEqual([('ssh-keygen', '-q', '-l', '-f', mock.ANY,
+                           '-E', 'md5')],
+                         mock_execute.call_args_list[1])
