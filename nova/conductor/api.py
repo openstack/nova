@@ -64,9 +64,6 @@ class LocalAPI(object):
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
-    def compute_node_create(self, context, values):
-        return self._manager.compute_node_create(context, values)
-
     def object_backport(self, context, objinst, target_version):
         return self._manager.object_backport(context, objinst, target_version)
 

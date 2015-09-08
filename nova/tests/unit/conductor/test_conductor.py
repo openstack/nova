@@ -102,15 +102,6 @@ class _BaseTestCase(object):
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual(result, fake_rules)
 
-    def test_compute_node_create(self):
-        self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(self.context, 'fake-values').AndReturn(
-            'fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.compute_node_create(self.context,
-                                                    'fake-values')
-        self.assertEqual(result, 'fake-result')
-
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
@@ -801,6 +792,15 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.assertEqual('volume.usage', msg.event_type)
         self.assertEqual('INFO', msg.priority)
         self.assertEqual('fake-info', msg.payload)
+
+    def test_compute_node_create(self):
+        self.mox.StubOutWithMock(db, 'compute_node_create')
+        db.compute_node_create(self.context, 'fake-values').AndReturn(
+            'fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.compute_node_create(self.context,
+                                                    'fake-values')
+        self.assertEqual(result, 'fake-result')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
