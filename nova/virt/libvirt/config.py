@@ -79,7 +79,6 @@ class LibvirtConfigObject(object):
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
         xml_str = etree.tostring(root, pretty_print=pretty_print)
-        LOG.debug("Generated XML %s ", (xml_str,))
         return xml_str
 
 

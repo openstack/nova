@@ -247,7 +247,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.attachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("attach device xml: %s", device_xml)
+        self._domain.attachDeviceFlags(device_xml, flags=flags)
 
     def get_disk(self, device):
         """Returns the disk mounted at device
@@ -354,7 +356,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("detach device xml: %s", device_xml)
+        self._domain.detachDeviceFlags(device_xml, flags=flags)
 
     def get_xml_desc(self, dump_inactive=False, dump_sensitive=False,
                      dump_migratable=False):
