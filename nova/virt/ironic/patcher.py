@@ -47,8 +47,7 @@ class GenericDriverFields(object):
         """Build a patch to add the required fields to deploy a node.
 
         :param instance: the instance object.
-        :param image_meta: the metadata associated with the instance
-                           image.
+        :param image_meta: the nova.objects.ImageMeta object instance
         :param flavor: the flavor object.
         :param preserve_ephemeral: preserve_ephemeral status (bool) to be
                                    specified during rebuild.
@@ -57,7 +56,7 @@ class GenericDriverFields(object):
         """
         patch = []
         patch.append({'path': '/instance_info/image_source', 'op': 'add',
-                      'value': image_meta['id']})
+                      'value': image_meta.id})
         patch.append({'path': '/instance_info/root_gb', 'op': 'add',
                       'value': str(instance.root_gb)})
         patch.append({'path': '/instance_info/swap_mb', 'op': 'add',

@@ -799,11 +799,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
 
-        self.driver.spawn(self.ctx, instance, None, [], None)
+        image_meta = ironic_utils.get_test_image_meta()
+
+        self.driver.spawn(self.ctx, instance, image_meta, [], None)
 
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_adf.assert_called_once_with(node, instance, None, fake_flavor)
+        mock_adf.assert_called_once_with(node, instance,
+                                         test.MatchType(objects.ImageMeta),
+                                         fake_flavor)
         mock_pvifs.assert_called_once_with(node, instance, None)
         mock_sf.assert_called_once_with(instance, None)
         mock_node.set_provision_state.assert_called_once_with(node_uuid,
@@ -875,11 +879,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
-        image_meta = ironic_utils.get_test_image_meta()
+        image_meta = ironic_utils.get_test_image_meta_object()
         flavor = ironic_utils.get_test_flavor()
         self.driver._add_driver_fields(node, instance, image_meta, flavor)
         expected_patch = [{'path': '/instance_info/image_source', 'op': 'add',
-                           'value': image_meta['id']},
+                           'value': image_meta.id},
                           {'path': '/instance_info/root_gb', 'op': 'add',
                            'value': str(instance.root_gb)},
                           {'path': '/instance_info/swap_mb', 'op': 'add',
@@ -902,7 +906,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
-        image_meta = ironic_utils.get_test_image_meta()
+        image_meta = ironic_utils.get_test_image_meta_object()
         flavor = ironic_utils.get_test_flavor()
         self.assertRaises(exception.InstanceDeployFailure,
                           self.driver._add_driver_fields,
@@ -1541,8 +1545,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_save.assert_called_once_with(
             expected_task_state=[task_states.REBUILDING])
-        mock_driver_fields.assert_called_once_with(node, instance, image_meta,
-                                                   flavor, preserve)
+        mock_driver_fields.assert_called_once_with(
+            node, instance,
+            test.MatchType(objects.ImageMeta),
+            flavor, preserve)
         mock_set_pstate.assert_called_once_with(node_uuid,
                                                 ironic_states.REBUILD)
         mock_looping.assert_called_once_with(mock_wait_active,
