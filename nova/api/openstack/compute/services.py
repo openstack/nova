@@ -190,7 +190,7 @@ class ServiceController(wsgi.Controller):
         return {'services': _services}
 
     @extensions.expected_errors((400, 404))
-    @validation.schema(services.service_update, '2.1', '2.10')
+    @validation.schema(services.service_update, '2.0', '2.10')
     @validation.schema(services.service_update_v211, '2.11')
     def update(self, req, id, body):
         """Perform service update"""

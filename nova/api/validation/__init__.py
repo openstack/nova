@@ -49,7 +49,19 @@ def schema(request_body_schema, min_version=None, max_version=None):
             else:
                 ver = args[1].api_version_request
                 legacy_v2 = args[1].is_legacy_v2()
-            if ver.matches(min_ver, max_ver):
+
+            if legacy_v2:
+                # NOTE: For v2.0 compatible API, here should work like
+                #    client  | schema min_version | schema
+                # -----------+--------------------+--------
+                #  legacy_v2 | None               | work
+                #  legacy_v2 | 2.0                | work
+                #  legacy_v2 | 2.1+               | don't
+                if min_version is None or min_version == '2.0':
+                    schema_validator = validators._SchemaValidator(
+                        request_body_schema, legacy_v2)
+                    schema_validator.validate(kwargs['body'])
+            elif ver.matches(min_ver, max_ver):
                 # Only validate against the schema if it lies within
                 # the version range specified. Note that if both min
                 # and max are not specified the validator will always
