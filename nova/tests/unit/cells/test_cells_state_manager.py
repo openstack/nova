@@ -239,7 +239,7 @@ class TestCellStateManagerException(test.NoDBTestCase):
                 super(TestCellStateManagerDB, self).__init__()
         test = TestCellStateManagerDB()
         mock_sleep.assert_called_once_with(30)
-        self.assertEqual(test._cell_data_sync.call_count, 2)
+        self.assertEqual(2, test._cell_data_sync.call_count)
 
 
 class TestCellsGetCapacity(TestCellsStateManager):
@@ -291,28 +291,28 @@ class TestSyncDecorators(test.NoDBTestCase):
         manager = FakeCellStateManager()
 
         def test(inst, *args, **kwargs):
-            self.assertEqual(inst, manager)
-            self.assertEqual(args, (1, 2, 3))
-            self.assertEqual(kwargs, dict(a=4, b=5, c=6))
+            self.assertEqual(manager, inst)
+            self.assertEqual((1, 2, 3), args)
+            self.assertEqual(dict(a=4, b=5, c=6), kwargs)
             return 'result'
         wrapper = state.sync_before(test)
 
         result = wrapper(manager, 1, 2, 3, a=4, b=5, c=6)
 
-        self.assertEqual(result, 'result')
-        self.assertEqual(manager.called, [('_cell_data_sync', False)])
+        self.assertEqual('result', result)
+        self.assertEqual([('_cell_data_sync', False)], manager.called)
 
     def test_sync_after(self):
         manager = FakeCellStateManager()
 
         def test(inst, *args, **kwargs):
-            self.assertEqual(inst, manager)
-            self.assertEqual(args, (1, 2, 3))
-            self.assertEqual(kwargs, dict(a=4, b=5, c=6))
+            self.assertEqual(manager, inst)
+            self.assertEqual((1, 2, 3), args)
+            self.assertEqual(dict(a=4, b=5, c=6), kwargs)
             return 'result'
         wrapper = state.sync_after(test)
 
         result = wrapper(manager, 1, 2, 3, a=4, b=5, c=6)
 
-        self.assertEqual(result, 'result')
-        self.assertEqual(manager.called, [('_cell_data_sync', True)])
+        self.assertEqual('result', result)
+        self.assertEqual([('_cell_data_sync', True)], manager.called)

@@ -34,7 +34,7 @@ class CertRpcAPITestCase(test.NoDBTestCase):
 
         rpcapi = cert_rpcapi.CertAPI()
         self.assertIsNotNone(rpcapi.client)
-        self.assertEqual(rpcapi.client.target.topic, CONF.cert_topic)
+        self.assertEqual(CONF.cert_topic, rpcapi.client.target.topic)
 
         orig_prepare = rpcapi.client.prepare
 
@@ -51,7 +51,7 @@ class CertRpcAPITestCase(test.NoDBTestCase):
                 lambda v: orig_prepare().can_send_version())
 
             retval = getattr(rpcapi, method)(ctxt, **kwargs)
-            self.assertEqual(retval, rpc_mock.return_value)
+            self.assertEqual(rpc_mock.return_value, retval)
 
             prepare_mock.assert_called_once_with()
             rpc_mock.assert_called_once_with(ctxt, method, **kwargs)

@@ -128,19 +128,19 @@ class Base64ValidationTest(test.TestCase):
     def test_decode_base64(self):
         value = "A random string"
         result = self.controller._decode_base64(base64.b64encode(value))
-        self.assertEqual(result, value)
+        self.assertEqual(value, result)
 
     def test_decode_base64_binary(self):
         value = "\x00\x12\x75\x99"
         result = self.controller._decode_base64(base64.b64encode(value))
-        self.assertEqual(result, value)
+        self.assertEqual(value, result)
 
     def test_decode_base64_whitespace(self):
         value = "A random string"
         encoded = base64.b64encode(value)
         white = "\n \n%s\t%s\n" % (encoded[:2], encoded[2:])
         result = self.controller._decode_base64(white)
-        self.assertEqual(result, value)
+        self.assertEqual(value, result)
 
     def test_decode_base64_invalid(self):
         invalid = "A random string"
@@ -271,7 +271,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_server_by_uuid(self):
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
 
     def test_unique_host_id(self):
         """Create two servers with the same host and different
@@ -495,7 +495,7 @@ class ServersControllerTest(ControllerTest):
 
         i = 0
         for s in res_dict['servers']:
-            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            self.assertEqual('server%d' % (i + 1), s.get('name'))
             i += 1
 
     def test_get_server_list_with_reservation_id_empty(self):
@@ -505,7 +505,7 @@ class ServersControllerTest(ControllerTest):
 
         i = 0
         for s in res_dict['servers']:
-            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            self.assertEqual('server%d' % (i + 1), s.get('name'))
             i += 1
 
     def test_get_server_list_with_reservation_id_details(self):
@@ -515,17 +515,17 @@ class ServersControllerTest(ControllerTest):
 
         i = 0
         for s in res_dict['servers']:
-            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            self.assertEqual('server%d' % (i + 1), s.get('name'))
             i += 1
 
     def test_get_server_list(self):
         req = fakes.HTTPRequest.blank('/fake/servers')
         res_dict = self.controller.index(req)
 
-        self.assertEqual(len(res_dict['servers']), 5)
+        self.assertEqual(5, len(res_dict['servers']))
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['name'], 'server%d' % (i + 1))
+            self.assertEqual(fakes.get_fake_uuid(i), s['id'])
+            self.assertEqual('server%d' % (i + 1), s['name'])
             self.assertIsNone(s.get('image', None))
 
             expected_links = [
@@ -539,18 +539,18 @@ class ServersControllerTest(ControllerTest):
                 },
             ]
 
-            self.assertEqual(s['links'], expected_links)
+            self.assertEqual(expected_links, s['links'])
 
     def test_get_servers_with_limit(self):
         req = fakes.HTTPRequest.blank('/fake/servers?limit=3')
         res_dict = self.controller.index(req)
 
         servers = res_dict['servers']
-        self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in range(len(servers))])
+        self.assertEqual([fakes.get_fake_uuid(i) for i in range(len(servers))],
+                         [s['id'] for s in servers])
 
         servers_links = res_dict['servers_links']
-        self.assertEqual(servers_links[0]['rel'], 'next')
+        self.assertEqual('next', servers_links[0]['rel'])
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
@@ -578,11 +578,11 @@ class ServersControllerTest(ControllerTest):
         res = self.controller.detail(req)
 
         servers = res['servers']
-        self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in range(len(servers))])
+        self.assertEqual([fakes.get_fake_uuid(i) for i in range(len(servers))],
+                         [s['id'] for s in servers])
 
         servers_links = res['servers_links']
-        self.assertEqual(servers_links[0]['rel'], 'next')
+        self.assertEqual('next', servers_links[0]['rel'])
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers/detail', href_parts.path)
@@ -602,11 +602,11 @@ class ServersControllerTest(ControllerTest):
         res = self.controller.detail(req)
 
         servers = res['servers']
-        self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in range(len(servers))])
+        self.assertEqual([fakes.get_fake_uuid(i) for i in range(len(servers))],
+                         [s['id'] for s in servers])
 
         servers_links = res['servers_links']
-        self.assertEqual(servers_links[0]['rel'], 'next')
+        self.assertEqual('next', servers_links[0]['rel'])
         # Retrieve the parameters from the next link, they should contain the
         # same limit, filter, and sort information as the original request as
         # well as a marker; this ensures that the caller can simply use the
@@ -634,13 +634,13 @@ class ServersControllerTest(ControllerTest):
         url = '/v2/fake/servers?marker=%s' % fakes.get_fake_uuid(2)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
-        self.assertEqual([s['name'] for s in servers], ["server4", "server5"])
+        self.assertEqual(["server4", "server5"], [s['name'] for s in servers])
 
     def test_get_servers_with_limit_and_marker(self):
         url = '/v2/fake/servers?limit=2&marker=%s' % fakes.get_fake_uuid(1)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
-        self.assertEqual([s['name'] for s in servers], ['server3', 'server4'])
+        self.assertEqual(['server3', 'server4'], [s['name'] for s in servers])
 
     def test_get_servers_with_bad_marker(self):
         req = fakes.HTTPRequest.blank('/fake/servers?limit=2&marker=asdf')
@@ -654,7 +654,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers'
                                       '?sort_key=id1&sort_dir=asc')
         self.controller.index(req)
-        self.assertEqual(mock_compute_get_all.call_count, 1)
+        self.assertEqual(1, mock_compute_get_all.call_count)
         # Ensure that sort_dirs and sort_dirs is correct
         kwargs = mock_compute_get_all.call_args[1]
         self.assertEqual(['id1'], kwargs['sort_keys'])
@@ -667,7 +667,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers'
                                       '?sort_key=id1&sort_dir=asc')
         self.controller.index(req)
-        self.assertEqual(mock_compute_get_all.call_count, 1)
+        self.assertEqual(1, mock_compute_get_all.call_count)
         # Ensure that sort_dirs and sort_dirs is None
         kwargs = mock_compute_get_all.call_args[1]
         self.assertIsNone(kwargs['sort_keys'])
@@ -689,8 +689,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?unknownoption=whee')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_allows_image(self):
         server_uuid = str(uuid.uuid4())
@@ -701,7 +701,7 @@ class ServersControllerTest(ControllerTest):
                          expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('image', search_opts)
-            self.assertEqual(search_opts['image'], '12345')
+            self.assertEqual('12345', search_opts['image'])
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
                 context, objects.InstanceList(), db_list, FIELDS)
@@ -711,8 +711,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?image=12345')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_all_tenants_param_normal(self):
         def fake_get_all(context, search_opts=None, **kwargs):
@@ -724,7 +724,7 @@ class ServersControllerTest(ControllerTest):
         with mock.patch.object(compute_api.API, 'get_all') as mock_get:
             mock_get.side_effect = fake_get_all
             servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_param_one(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -735,7 +735,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=1',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_param_zero(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -747,7 +747,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=0',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_param_false(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -759,7 +759,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=false',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_param_invalid(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -776,7 +776,7 @@ class ServersControllerTest(ControllerTest):
     def test_admin_restricted_tenant(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
             self.assertIsNotNone(search_opts)
-            self.assertEqual(search_opts['project_id'], 'fake')
+            self.assertEqual('fake', search_opts['project_id'])
             return [fakes.stub_instance(100)]
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
@@ -784,7 +784,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_pass_policy(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -806,7 +806,7 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=1')
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 1)
+        self.assertEqual(1, len(servers))
 
     def test_all_tenants_fail_policy(self):
         def fake_get_all(api, context, search_opts=None, **kwargs):
@@ -837,7 +837,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('flavor', search_opts)
             # flavor is an integer ID
-            self.assertEqual(search_opts['flavor'], '12345')
+            self.assertEqual('12345', search_opts['flavor'])
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
                 context, objects.InstanceList(), db_list, FIELDS)
@@ -847,8 +847,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?flavor=12345')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_with_bad_flavor(self):
         req = fakes.HTTPRequest.blank('/fake/servers?flavor=abcde')
@@ -856,7 +856,7 @@ class ServersControllerTest(ControllerTest):
             mock_get.return_value = objects.InstanceList(objects=[])
             servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 0)
+        self.assertEqual(0, len(servers))
 
     def test_get_server_details_with_bad_flavor(self):
         req = fakes.HTTPRequest.blank('/fake/servers/detail?flavor=abcde')
@@ -885,8 +885,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?status=active')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_allows_multi_status(self, get_all_mock):
@@ -996,8 +996,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/servers?status=reboot')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_resize_status(self):
         # Test when resize status, it maps list of vm states.
@@ -1019,15 +1019,15 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?status=resize')
 
         servers = self.controller.detail(req)['servers']
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_invalid_status(self):
         # Test getting servers by invalid status.
         req = fakes.HTTPRequest.blank('/fake/servers?status=baloney',
                                       use_admin_context=False)
         servers = self.controller.index(req)['servers']
-        self.assertEqual(len(servers), 0)
+        self.assertEqual(0, len(servers))
 
     def test_get_servers_deleted_status_as_user(self):
         req = fakes.HTTPRequest.blank('/fake/servers?status=deleted',
@@ -1043,7 +1043,7 @@ class ServersControllerTest(ControllerTest):
                          sort_keys=None, sort_dirs=None,
                          expected_attrs=None):
             self.assertIn('vm_state', search_opts)
-            self.assertEqual(search_opts['vm_state'], ['deleted'])
+            self.assertEqual(['deleted'], search_opts['vm_state'])
 
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
@@ -1054,8 +1054,8 @@ class ServersControllerTest(ControllerTest):
                                       use_admin_context=True)
 
         servers = self.controller.detail(req)['servers']
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_deleted_filter_str_to_bool(self, mock_get_all):
@@ -1115,7 +1115,7 @@ class ServersControllerTest(ControllerTest):
                          expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
-            self.assertEqual(search_opts['name'], 'whee.*')
+            self.assertEqual('whee.*', search_opts['name'])
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1124,8 +1124,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?name=whee.*')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_allows_changes_since(self):
         server_uuid = str(uuid.uuid4())
@@ -1138,7 +1138,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
                                               tzinfo=iso8601.iso8601.UTC)
-            self.assertEqual(search_opts['changes-since'], changes_since)
+            self.assertEqual(changes_since, search_opts['changes-since'])
             self.assertNotIn('deleted', search_opts)
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
@@ -1149,8 +1149,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?%s' % params)
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_allows_changes_since_bad_value(self):
         params = 'changes-since=asdf'
@@ -1186,8 +1186,8 @@ class ServersControllerTest(ControllerTest):
         res = self.controller.index(req)
 
         servers = res['servers']
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_admin_options_as_admin(self):
         """Test getting servers by admin-only or unknown options when
@@ -1217,8 +1217,8 @@ class ServersControllerTest(ControllerTest):
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_allows_ip(self):
         """Test getting servers by ip."""
@@ -1230,7 +1230,7 @@ class ServersControllerTest(ControllerTest):
                          expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
-            self.assertEqual(search_opts['ip'], '10\..*')
+            self.assertEqual('10\..*', search_opts['ip'])
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1239,8 +1239,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers?ip=10\..*')
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_servers_admin_allows_ip6(self):
         """Test getting servers by ip6 with admin_api enabled and
@@ -1254,7 +1254,7 @@ class ServersControllerTest(ControllerTest):
                          expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
-            self.assertEqual(search_opts['ip6'], 'ffff.*')
+            self.assertEqual('ffff.*', search_opts['ip6'])
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1264,8 +1264,8 @@ class ServersControllerTest(ControllerTest):
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
 
     def test_get_all_server_details(self):
         expected_flavor = {
@@ -1290,13 +1290,13 @@ class ServersControllerTest(ControllerTest):
         res_dict = self.controller.detail(req)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['hostId'], '')
-            self.assertEqual(s['name'], 'server%d' % (i + 1))
-            self.assertEqual(s['image'], expected_image)
-            self.assertEqual(s['flavor'], expected_flavor)
-            self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], str(i + 1))
+            self.assertEqual(fakes.get_fake_uuid(i), s['id'])
+            self.assertEqual('', s['hostId'])
+            self.assertEqual('server%d' % (i + 1), s['name'])
+            self.assertEqual(expected_image, s['image'])
+            self.assertEqual(expected_flavor, s['flavor'])
+            self.assertEqual('BUILD', s['status'])
+            self.assertEqual(str(i + 1), s['metadata']['seq'])
 
     def test_get_all_server_details_with_host(self):
         """We want to make sure that if two instances are on the same host,
@@ -1326,9 +1326,9 @@ class ServersControllerTest(ControllerTest):
         self.assertNotEqual(host_ids[0], host_ids[1])
 
         for i, s in enumerate(server_list):
-            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['hostId'], host_ids[i % 2])
-            self.assertEqual(s['name'], 'server%d' % (i + 1))
+            self.assertEqual(fakes.get_fake_uuid(i), s['id'])
+            self.assertEqual(host_ids[i % 2], s['hostId'])
+            self.assertEqual('server%d' % (i + 1), s['name'])
 
 
 class ServersControllerUpdateTest(ControllerTest):
@@ -1354,10 +1354,10 @@ class ServersControllerUpdateTest(ControllerTest):
                                        'access_ipv6': 'beef::0123'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server_test')
-        self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
-        self.assertEqual(res_dict['server']['accessIPv6'], 'beef::123')
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('server_test', res_dict['server']['name'])
+        self.assertEqual('0.0.0.0', res_dict['server']['accessIPv4'])
+        self.assertEqual('beef::123', res_dict['server']['accessIPv6'])
 
     def test_update_server_invalid_xml_raises_lookup(self):
         body = """<?xml version="1.0" encoding="TF-8"?>
@@ -1366,7 +1366,7 @@ class ServersControllerUpdateTest(ControllerTest):
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(400, res.status_int)
 
     def test_update_server_invalid_xml_raises_expat(self):
         body = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1375,15 +1375,15 @@ class ServersControllerUpdateTest(ControllerTest):
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(400, res.status_int)
 
     def test_update_server_name(self):
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body, {'name': 'server_test'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('server_test', res_dict['server']['name'])
 
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
@@ -1420,7 +1420,7 @@ class ServersControllerUpdateTest(ControllerTest):
             filtered_dict = {
                 'display_name': 'server_test',
             }
-            self.assertEqual(params, filtered_dict)
+            self.assertEqual(filtered_dict, params)
             filtered_dict['uuid'] = id
             return filtered_dict
 
@@ -1435,8 +1435,8 @@ class ServersControllerUpdateTest(ControllerTest):
         req.body = jsonutils.dumps(body)
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('server_test', res_dict['server']['name'])
 
     def test_update_server_not_found(self):
         def fake_get(*args, **kwargs):
@@ -1591,7 +1591,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
         # even if reclaim_instance_interval has been set.
-        self.assertEqual(self.server_delete_called, True)
+        self.assertEqual(True, self.server_delete_called)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
@@ -1763,17 +1763,17 @@ class ServerStatusTest(test.TestCase):
 
     def test_active(self):
         response = self._get_with_state(vm_states.ACTIVE)
-        self.assertEqual(response['server']['status'], 'ACTIVE')
+        self.assertEqual('ACTIVE', response['server']['status'])
 
     def test_reboot(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.REBOOTING)
-        self.assertEqual(response['server']['status'], 'REBOOT')
+        self.assertEqual('REBOOT', response['server']['status'])
 
     def test_reboot_hard(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.REBOOTING_HARD)
-        self.assertEqual(response['server']['status'], 'HARD_REBOOT')
+        self.assertEqual('HARD_REBOOT', response['server']['status'])
 
     @mock.patch.object(servers.Controller, "_get_server")
     def test_reboot_resize_policy_fail(self, mock_get_server):
@@ -1785,16 +1785,16 @@ class ServerStatusTest(test.TestCase):
     def test_rebuild(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.REBUILDING)
-        self.assertEqual(response['server']['status'], 'REBUILD')
+        self.assertEqual('REBUILD', response['server']['status'])
 
     def test_rebuild_error(self):
         response = self._get_with_state(vm_states.ERROR)
-        self.assertEqual(response['server']['status'], 'ERROR')
+        self.assertEqual('ERROR', response['server']['status'])
 
     def test_resize(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.RESIZE_PREP)
-        self.assertEqual(response['server']['status'], 'RESIZE')
+        self.assertEqual('RESIZE', response['server']['status'])
 
     @mock.patch.object(servers.Controller, "_get_server")
     def test_confirm_resize_policy_fail(self, mock_get_server):
@@ -1804,12 +1804,12 @@ class ServerStatusTest(test.TestCase):
 
     def test_verify_resize(self):
         response = self._get_with_state(vm_states.RESIZED, None)
-        self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
+        self.assertEqual('VERIFY_RESIZE', response['server']['status'])
 
     def test_revert_resize(self):
         response = self._get_with_state(vm_states.RESIZED,
                                         task_states.RESIZE_REVERTING)
-        self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
+        self.assertEqual('REVERT_RESIZE', response['server']['status'])
 
     @mock.patch.object(servers.Controller, "_get_server")
     def test_revert_resize_policy_fail(self, mock_get_server):
@@ -1820,11 +1820,11 @@ class ServerStatusTest(test.TestCase):
     def test_password_update(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.UPDATING_PASSWORD)
-        self.assertEqual(response['server']['status'], 'PASSWORD')
+        self.assertEqual('PASSWORD', response['server']['status'])
 
     def test_stopped(self):
         response = self._get_with_state(vm_states.STOPPED)
-        self.assertEqual(response['server']['status'], 'SHUTOFF')
+        self.assertEqual('SHUTOFF', response['server']['status'])
 
 
 class ServersControllerCreateTest(test.TestCase):
@@ -2087,8 +2087,8 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['min_count'], 2)
-            self.assertEqual(len(kwargs['block_device_mapping']), 2)
+            self.assertEqual(2, kwargs['min_count'])
+            self.assertEqual(2, len(kwargs['block_device_mapping']))
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2426,7 +2426,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self.assertEqual(server['adminPass'], self.body['server']['adminPass'])
+        self.assertEqual(self.body['server']['adminPass'], server['adminPass'])
 
     def test_create_instance_admin_pass_pass_disabled(self):
         self.flags(enable_instance_password=False)
@@ -2456,7 +2456,7 @@ class ServersControllerCreateTest(test.TestCase):
             # NOTE(vish): if the security groups extension is not
             #             enabled, then security groups passed in
             #             are ignored.
-            self.assertEqual(kwargs['security_group'], ['default'])
+            self.assertEqual(['default'], kwargs['security_group'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2471,7 +2471,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['auto_disk_config'], 'AUTO')
+            self.assertEqual('AUTO', kwargs['auto_disk_config'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2482,7 +2482,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['auto_disk_config'], False)
+            self.assertEqual(False, kwargs['auto_disk_config'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2495,7 +2495,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], hints)
+            self.assertEqual(hints, kwargs['scheduler_hints'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2507,7 +2507,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {})
+            self.assertEqual({}, kwargs['scheduler_hints'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2547,7 +2547,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['user_data'], user_data)
+            self.assertEqual(user_data, kwargs['user_data'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2581,7 +2581,7 @@ class ServersControllerCreateTest(test.TestCase):
                         name=name)
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['key_name'], key_name)
+            self.assertEqual(key_name, kwargs['key_name'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(db, 'key_pair_get', key_pair_get)
@@ -2608,7 +2608,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['availability_zone'], availability_zone)
+            self.assertEqual(availability_zone, kwargs['availability_zone'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -2617,7 +2617,7 @@ class ServersControllerCreateTest(test.TestCase):
             self._test_create_extra(params)
         except webob.exc.HTTPBadRequest as e:
             expected = 'The requested availability zone is not available'
-            self.assertEqual(e.explanation, expected)
+            self.assertEqual(expected, e.explanation)
         admin_context = context.get_admin_context()
         db.service_create(admin_context, {'host': 'host1_zones',
                                           'binary': "nova-compute",
@@ -2786,7 +2786,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         robj = self.controller.create(self.req, self.body)
-        self.assertEqual(robj['Location'], selfhref)
+        self.assertEqual(selfhref, robj['Location'])
 
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
@@ -2797,7 +2797,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPForbidden as e:
-            self.assertEqual(e.explanation, expected_msg)
+            self.assertEqual(expected_msg, e.explanation)
 
     def test_create_instance_above_quota_instances(self):
         msg = ('Quota exceeded for instances: Requested 1, but'
@@ -2822,10 +2822,10 @@ class ServersControllerCreateTest(test.TestCase):
         fake_group.create()
 
         def fake_count(context, name, group, user_id):
-            self.assertEqual(name, "server_group_members")
-            self.assertEqual(group.uuid, fake_group.uuid)
-            self.assertEqual(user_id,
-                             self.req.environ['nova.context'].user_id)
+            self.assertEqual("server_group_members", name)
+            self.assertEqual(fake_group.uuid, group.uuid)
+            self.assertEqual(self.req.environ['nova.context'].user_id,
+                             user_id)
             return 10
 
         def fake_limit_check(context, **kwargs):
@@ -2849,7 +2849,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPForbidden as e:
-            self.assertEqual(e.explanation, expected_msg)
+            self.assertEqual(expected_msg, e.explanation)
 
     def test_create_instance_with_group_hint(self):
         ctxt = self.req.environ['nova.context']
@@ -2888,7 +2888,7 @@ class ServersControllerCreateTest(test.TestCase):
         for test_list in [list1, list2, list3, list4]:
             result = self.controller._resolve_exception(test_list)
             # Since CC is the most specific, we always expect that returned.
-            self.assertEqual(result, CC)
+            self.assertEqual(CC, result)
 
 
 class ServersControllerCreateTestWithMock(test.TestCase):
@@ -2969,8 +2969,8 @@ class ServersControllerCreateTestWithMock(test.TestCase):
             self._test_create_extra(params)
             self.fail()
         except webob.exc.HTTPBadRequest as ex:
-            self.assertEqual(ex.explanation,
-                             'Invalid fixed IP address (%s)' % address)
+            self.assertEqual('Invalid fixed IP address (%s)' % address,
+                             ex.explanation)
         self.assertFalse(create_mock.called)
 
     @mock.patch.object(compute_api.API, 'create',
@@ -3092,7 +3092,7 @@ class ServersViewBuilderTest(test.TestCase):
                     "links": [{"rel": "bookmark",
                                "href": self.flavor_bookmark}]}
         result = self.view_builder._get_flavor(self.request, self.instance)
-        self.assertEqual(result, expected)
+        self.assertEqual(expected, result)
 
     def test_build_server(self):
         output = self.view_builder.basic(self.request, self.instance)
@@ -3114,7 +3114,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_no_image(self):
         self.instance["image_ref"] = ""
         output = self.view_builder.show(self.request, self.instance)
-        self.assertEqual(output['server']['image'], "")
+        self.assertEqual("", output['server']['image'])
 
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR

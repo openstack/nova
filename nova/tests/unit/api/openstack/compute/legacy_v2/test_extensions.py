@@ -280,15 +280,13 @@ class ExtensionControllerTest(ExtensionTestCase):
         # Make sure that at least Fox in Sox is correct.
         (fox_ext, ) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
-        self.assertEqual(fox_ext, {
-                'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
+        self.assertEqual(
+            {'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
                 'name': 'Fox In Socks',
                 'updated': '2011-01-22T13:25:27-06:00',
                 'description': 'The Fox In Socks Extension.',
                 'alias': 'FOXNSOX',
-                'links': []
-            },
-        )
+                'links': []}, fox_ext)
 
         for ext in data['extensions']:
             url = '/fake/extensions/%s' % ext['alias']
@@ -304,13 +302,13 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.assertEqual(200, response.status_int)
 
         data = jsonutils.loads(response.body)
-        self.assertEqual(data['extension'], {
-                "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
-                "name": "Fox In Socks",
-                "updated": "2011-01-22T13:25:27-06:00",
-                "description": "The Fox In Socks Extension.",
-                "alias": "FOXNSOX",
-                "links": []})
+        self.assertEqual({
+            "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
+            "name": "Fox In Socks",
+            "updated": "2011-01-22T13:25:27-06:00",
+            "description": "The Fox In Socks Extension.",
+            "alias": "FOXNSOX",
+            "links": []}, data['extension'])
 
     def test_get_non_existing_extension_json(self):
         app = compute.APIRouter(init_only=('extensions',))
@@ -621,12 +619,12 @@ class ExtensionControllerIdFormatTest(test.NoDBTestCase):
 
     def test_id_with_xml_format(self):
         result = self._bounce_id('foo.xml')
-        self.assertEqual(result, 'foo')
+        self.assertEqual('foo', result)
 
     def test_id_with_json_format(self):
         result = self._bounce_id('foo.json')
-        self.assertEqual(result, 'foo')
+        self.assertEqual('foo', result)
 
     def test_id_with_bad_format(self):
         result = self._bounce_id('foo.bad')
-        self.assertEqual(result, 'foo.bad')
+        self.assertEqual('foo.bad', result)

@@ -38,9 +38,9 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         @staticmethod
         def instance_get_all_by_filters(context, filters,
                 sort_key, sort_dir):
-            self.assertEqual(context, fake_context)
-            self.assertEqual(sort_key, 'deleted')
-            self.assertEqual(sort_dir, 'asc')
+            self.assertEqual(fake_context, context)
+            self.assertEqual('deleted', sort_key)
+            self.assertEqual('asc', sort_dir)
             call_info['got_filters'] = filters
             call_info['get_all'] += 1
             return ['fake_instance1', 'fake_instance2', 'fake_instance3']
@@ -51,38 +51,37 @@ class CellsUtilsTestCase(test.NoDBTestCase):
 
         instances = cells_utils.get_instances_to_sync(fake_context)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertEqual(len([x for x in instances]), 3)
-        self.assertEqual(call_info['get_all'], 1)
-        self.assertEqual(call_info['got_filters'], {})
-        self.assertEqual(call_info['shuffle'], 0)
+        self.assertEqual(3, len([x for x in instances]))
+        self.assertEqual(1, call_info['get_all'])
+        self.assertEqual({}, call_info['got_filters'])
+        self.assertEqual(0, call_info['shuffle'])
 
         instances = cells_utils.get_instances_to_sync(fake_context,
                                                       shuffle=True)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertEqual(len([x for x in instances]), 3)
-        self.assertEqual(call_info['get_all'], 2)
-        self.assertEqual(call_info['got_filters'], {})
-        self.assertEqual(call_info['shuffle'], 1)
+        self.assertEqual(3, len([x for x in instances]))
+        self.assertEqual(2, call_info['get_all'])
+        self.assertEqual({}, call_info['got_filters'])
+        self.assertEqual(1, call_info['shuffle'])
 
         instances = cells_utils.get_instances_to_sync(fake_context,
                 updated_since='fake-updated-since')
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertEqual(len([x for x in instances]), 3)
-        self.assertEqual(call_info['get_all'], 3)
-        self.assertEqual(call_info['got_filters'],
-                {'changes-since': 'fake-updated-since'})
-        self.assertEqual(call_info['shuffle'], 1)
+        self.assertEqual(3, len([x for x in instances]))
+        self.assertEqual(3, call_info['get_all'])
+        self.assertEqual({'changes-since': 'fake-updated-since'},
+                         call_info['got_filters'])
+        self.assertEqual(1, call_info['shuffle'])
 
         instances = cells_utils.get_instances_to_sync(fake_context,
                 project_id='fake-project',
                 updated_since='fake-updated-since', shuffle=True)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertEqual(len([x for x in instances]), 3)
-        self.assertEqual(call_info['get_all'], 4)
-        self.assertEqual(call_info['got_filters'],
-                {'changes-since': 'fake-updated-since',
-                 'project_id': 'fake-project'})
-        self.assertEqual(call_info['shuffle'], 2)
+        self.assertEqual(3, len([x for x in instances]))
+        self.assertEqual(4, call_info['get_all'])
+        self.assertEqual({'changes-since': 'fake-updated-since',
+                 'project_id': 'fake-project'}, call_info['got_filters'])
+        self.assertEqual(2, call_info['shuffle'])
 
     def test_split_cell_and_item(self):
         path = 'australia', 'queensland', 'gold_coast'
