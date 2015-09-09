@@ -1104,6 +1104,7 @@ class TestArgsSerializer(test.NoDBTestCase):
         super(TestArgsSerializer, self).setUp()
         self.now = timeutils.utcnow()
         self.str_now = timeutils.strtime(at=self.now)
+        self.unicode_str = u'\xF0\x9F\x92\xA9'
 
     @base.serialize_args
     def _test_serialize_args(self, *args, **kwargs):
@@ -1112,13 +1113,14 @@ class TestArgsSerializer(test.NoDBTestCase):
             self.assertEqual(expected_args[index], val)
 
         expected_kwargs = {'a': 'untouched', 'b': self.str_now,
-                           'c': self.str_now}
+                           'c': self.str_now, 'exc_val': self.unicode_str}
         for key, val in six.iteritems(kwargs):
             self.assertEqual(expected_kwargs[key], val)
 
     def test_serialize_args(self):
         self._test_serialize_args('untouched', self.now, self.now,
-                                  a='untouched', b=self.now, c=self.now)
+                                  a='untouched', b=self.now, c=self.now,
+                                  exc_val=self.unicode_str)
 
 
 class TestRegistry(test.NoDBTestCase):
