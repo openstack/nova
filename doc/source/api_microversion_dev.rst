@@ -56,6 +56,10 @@ changed. The user contract covers many kinds of information such as:
 
   - new headers accepted on a request
 
+  - the list of attributes and data structures accepted.
+
+    Example: adding a new attribute 'locked': True/False to the request body
+
 - the Response
 
   - the list of attributes and data structures returned
