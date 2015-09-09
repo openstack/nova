@@ -500,10 +500,11 @@ class ConductorManager(manager.Manager):
     def object_backport_versions(self, context, objinst, object_versions):
         target = object_versions[objinst.obj_name()]
         LOG.debug('Backporting %(obj)s to %(ver)s with versions %(manifest)s',
-                  obj=objinst.obj_name(), ver=target,
-                  manifest=','.join(
-                      ['%s=%s' % (name, ver)
-                       for name, ver in object_versions.items()]))
+                  {'obj': objinst.obj_name(),
+                   'ver': target,
+                   'manifest': ','.join(
+                       ['%s=%s' % (name, ver)
+                       for name, ver in object_versions.items()])})
         return objinst.obj_to_primitive(target_version=target,
                                         version_manifest=object_versions)
 
