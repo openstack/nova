@@ -284,6 +284,9 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    # This always refers to the availability_zone kwarg passed in /servers and
+    # provided as an API option, not at all related to the host AZ the instance
+    # belongs to.
     availability_zone = Column(String(255))
 
     # User editable field for display in user-facing UIs
