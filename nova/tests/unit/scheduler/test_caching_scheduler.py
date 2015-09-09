@@ -18,6 +18,7 @@ from oslo_utils import timeutils
 from six.moves import range
 
 from nova import exception
+from nova import objects
 from nova.scheduler import caching_scheduler
 from nova.scheduler import host_manager
 from nova.tests.unit.scheduler import test_scheduler
@@ -137,6 +138,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         }
         host_state.cpu_allocation_ratio = 16.0
         host_state.ram_allocation_ratio = 1.5
+        host_state.metrics = objects.MonitorMetricList(objects=[])
         return host_state
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',

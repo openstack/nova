@@ -84,9 +84,12 @@ class MetricsWeigher(weights.BaseHostWeigher):
     def _weigh_object(self, host_state, weight_properties):
         value = 0.0
 
+        # NOTE(sbauza): Keying a dict of Metrics per metric name given that we
+        # have a MonitorMetricList object
+        metrics_dict = {m.name: m for m in host_state.metrics}
         for (name, ratio) in self.setting:
             try:
-                value += host_state.metrics[name].value * ratio
+                value += metrics_dict[name].value * ratio
             except KeyError:
                 if CONF.metrics.required:
                     raise exception.ComputeHostMetricNotFound(
