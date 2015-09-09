@@ -121,12 +121,25 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
                 'bar': {'type': 'string'}
              },
             'additionalProperties': False}
+        self.schema_allow = {
+            'type': 'object',
+            'properties': {
+                'foo': {'type': 'string'},
+                'bar': {'type': 'string'}
+             },
+            'additionalProperties': True}
         self.schema_with_pattern = {
             'type': 'object',
             'patternProperties': {
                 '^[a-zA-Z0-9-_:. ]{1,255}$': {'type': 'string'}
             },
             'additionalProperties': False}
+        self.schema_allow_with_pattern = {
+            'type': 'object',
+            'patternProperties': {
+                '^[a-zA-Z0-9-_:. ]{1,255}$': {'type': 'string'}
+            },
+            'additionalProperties': True}
 
     def test_strip_extra_properties_out_without_extra_props(self):
         validator = validators._SchemaValidator(self.schema).validator
@@ -143,6 +156,23 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
             validator, False, instance, self.schema)
         self.assertRaises(StopIteration, gen.next)
         self.assertEqual({'foo': '1'}, instance)
+
+    def test_not_strip_extra_properties_out_with_allow_extra_props(self):
+        validator = validators._SchemaValidator(self.schema_allow).validator
+        instance = {'foo': '1', 'extra_foo': 'extra'}
+        gen = validators._soft_validate_additional_properties(
+            validator, True, instance, self.schema_allow)
+        self.assertRaises(StopIteration, gen.next)
+        self.assertEqual({'foo': '1', 'extra_foo': 'extra'}, instance)
+
+    def test_pattern_properties_with_invalid_property_and_allow_extra_props(
+            self):
+        validator = validators._SchemaValidator(
+            self.schema_with_pattern).validator
+        instance = {'foo': '1', 'b' * 300: 'extra'}
+        gen = validators._soft_validate_additional_properties(
+            validator, True, instance, self.schema_with_pattern)
+        self.assertRaises(StopIteration, gen.next)
 
     def test_pattern_properties(self):
         validator = validators._SchemaValidator(
