@@ -1135,12 +1135,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def test_destroy(self, mock_cleanup_deploy, mock_node):
+    def _test_destroy(self, state, mock_cleanup_deploy, mock_node):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         network_info = 'foo'
 
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid,
-                                          provision_state=ironic_states.ACTIVE)
+                                          provision_state=state)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
 
         def fake_set_provision_state(*_):
@@ -1149,54 +1149,22 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.get_by_instance_uuid.return_value = node
         mock_node.set_provision_state.side_effect = fake_set_provision_state
         self.driver.destroy(self.ctx, instance, network_info, None)
-        mock_node.set_provision_state.assert_called_once_with(node_uuid,
-                                                              'deleted')
+
         mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
         mock_cleanup_deploy.assert_called_with(self.ctx, node,
                                                instance, network_info)
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def test_destroy_ignore_unexpected_state(self, mock_cleanup_deploy,
-                                             mock_node):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        network_info = 'foo'
+        # For states that makes sense check if set_provision_state has
+        # been called
+        if state in ironic_driver._UNPROVISION_STATES:
+            mock_node.set_provision_state.assert_called_once_with(
+                node_uuid, 'deleted')
+        else:
+            self.assertFalse(mock_node.set_provision_state.called)
 
-        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid,
-                                        provision_state=ironic_states.DELETING)
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-
-        mock_node.get_by_instance_uuid.return_value = node
-        self.driver.destroy(self.ctx, instance, network_info, None)
-        self.assertFalse(mock_node.set_provision_state.called)
-        mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
-        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance,
-                                               network_info)
-
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def _test_destroy_cleaning(self, mock_cleanup_deploy, mock_node,
-                               state=None):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        network_info = 'foo'
-
-        node = ironic_utils.get_test_node(
-            driver='fake', uuid=node_uuid,
-            provision_state=state)
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-
-        mock_node.get_by_instance_uuid.return_value = node
-        self.driver.destroy(self.ctx, instance, network_info, None)
-        self.assertFalse(mock_node.set_provision_state.called)
-        mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
-        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance,
-                                               network_info)
-
-    def test_destroy_cleaning(self):
-        self._test_destroy_cleaning(state=ironic_states.CLEANING)
-
-    def test_destroy_cleanwait(self):
-        self._test_destroy_cleaning(state=ironic_states.CLEANWAIT)
+    def test_destroy(self):
+        for state in ironic_states.PROVISION_STATE_LIST:
+            self._test_destroy(state)
 
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')

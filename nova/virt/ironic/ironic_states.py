@@ -128,7 +128,6 @@ This is the provision state used when inspection is started. A successfully
 inspected node shall transition to MANAGEABLE status.
 """
 
-
 INSPECTFAIL = 'inspect failed'
 """ Node inspection failed. """
 
@@ -145,3 +144,13 @@ POWER_OFF = 'power off'
 
 REBOOT = 'rebooting'
 """ Node is rebooting. """
+
+##################
+# Helper constants
+##################
+
+PROVISION_STATE_LIST = (NOSTATE, MANAGEABLE, AVAILABLE, ACTIVE, DEPLOYWAIT,
+                        DEPLOYING, DEPLOYFAIL, DEPLOYDONE, DELETING, DELETED,
+                        CLEANING, CLEANWAIT, CLEANFAIL, ERROR, REBUILD,
+                        INSPECTING, INSPECTFAIL)
+""" A list of all provision states. """
