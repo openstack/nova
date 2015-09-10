@@ -253,7 +253,6 @@ CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
 CONF.register_opts(instance_cleaning_opts)
-CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('enabled', 'nova.vnc', group='vnc')
@@ -3559,10 +3558,6 @@ class ComputeManager(manager.Manager):
             if not self.driver.capabilities['supports_migrate_to_same_host']:
                 raise exception.UnableToMigrateToSelf(
                     instance_id=instance.uuid, host=self.host)
-        elif same_host and not CONF.allow_resize_to_same_host:
-            self._set_instance_obj_error_state(context, instance)
-            msg = _('destination same as source!')
-            raise exception.MigrationError(reason=msg)
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
