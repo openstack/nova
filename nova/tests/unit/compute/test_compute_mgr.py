@@ -1057,6 +1057,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self._test_init_instance_retries_reboot(instance, 'HARD',
                                                     power_state.RUNNING)
 
+    def test_init_instance_retries_reboot_pending_soft_became_hard(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.task_state = task_states.REBOOT_PENDING
+        for state in vm_states.ALLOW_HARD_REBOOT:
+            # NOTE(dave-mcnally) while a reboot of a vm in error state is
+            # possible we don't attempt to recover an error during init
+            if state == vm_states.ERROR:
+                continue
+            instance.vm_state = state
+            self._test_init_instance_retries_reboot(instance, 'HARD',
+                                                    power_state.SHUTDOWN)
+            self.assertEqual(task_states.REBOOT_PENDING_HARD,
+                             instance.task_state)
+
     def test_init_instance_retries_reboot_started(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'
