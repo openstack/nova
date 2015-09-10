@@ -82,6 +82,10 @@ class ServersController(wsgi.Controller):
     schema_server_rebuild = schema_servers.base_rebuild
     schema_server_resize = schema_servers.base_resize
 
+    schema_server_create_v20 = schema_servers.base_create_v20
+    schema_server_update_v20 = schema_servers.base_update_v20
+    schema_server_rebuild_v20 = schema_servers.base_rebuild_v20
+
     @staticmethod
     def _add_location(robj):
         # Just in case...
@@ -201,7 +205,10 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
             self.create_schema_manager.map(self._create_extension_schema,
-                                           self.schema_server_create)
+                                           self.schema_server_create, '2.1')
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v20,
+                                           '2.0')
         else:
             LOG.debug("Did not find any server create schemas")
 
@@ -215,7 +222,10 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.update_schema_manager):
             self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update)
+                                           self.schema_server_update, '2.1')
+            self.update_schema_manager.map(self._update_extension_schema,
+                                           self.schema_server_update_v20,
+                                           '2.0')
         else:
             LOG.debug("Did not find any server update schemas")
 
@@ -229,7 +239,10 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.rebuild_schema_manager):
             self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild)
+                                            self.schema_server_rebuild, '2.1')
+            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
+                                            self.schema_server_rebuild_v20,
+                                            '2.0')
         else:
             LOG.debug("Did not find any server rebuild schemas")
 
@@ -243,7 +256,7 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.resize_schema_manager):
             self.resize_schema_manager.map(self._resize_extension_schema,
-                                           self.schema_server_resize)
+                                           self.schema_server_resize, '2.1')
         else:
             LOG.debug("Did not find any server resize schemas")
 
@@ -506,14 +519,15 @@ class ServersController(wsgi.Controller):
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 409, 413))
-    @validation.schema(schema_server_create)
+    @validation.schema(schema_server_create_v20, '2.0', '2.0')
+    @validation.schema(schema_server_create, '2.1')
     def create(self, req, body):
         """Creates a new server for a given user."""
 
         context = req.environ['nova.context']
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
-        name = server_dict['name']
+        name = common.normalize_name(server_dict['name'])
 
         # Arguments to be passed to instance create function
         create_kwargs = {}
@@ -704,11 +718,11 @@ class ServersController(wsgi.Controller):
         LOG.debug("Running _update_extension_point for %s", ext.obj)
         handler.server_update(update_dict, update_kwargs)
 
-    def _create_extension_schema(self, ext, create_schema):
+    def _create_extension_schema(self, ext, create_schema, version):
         handler = ext.obj
         LOG.debug("Running _create_extension_schema for %s", ext.obj)
 
-        schema = handler.get_server_create_schema()
+        schema = handler.get_server_create_schema(version)
         if ext.obj.name == 'SchedulerHints':
             # NOTE(oomichi): The request parameter position of scheduler-hint
             # extension is different from the other extensions, so here handles
@@ -717,25 +731,25 @@ class ServersController(wsgi.Controller):
         else:
             create_schema['properties']['server']['properties'].update(schema)
 
-    def _update_extension_schema(self, ext, update_schema):
+    def _update_extension_schema(self, ext, update_schema, version):
         handler = ext.obj
         LOG.debug("Running _update_extension_schema for %s", ext.obj)
 
-        schema = handler.get_server_update_schema()
+        schema = handler.get_server_update_schema(version)
         update_schema['properties']['server']['properties'].update(schema)
 
-    def _rebuild_extension_schema(self, ext, rebuild_schema):
+    def _rebuild_extension_schema(self, ext, rebuild_schema, version):
         handler = ext.obj
         LOG.debug("Running _rebuild_extension_schema for %s", ext.obj)
 
-        schema = handler.get_server_rebuild_schema()
+        schema = handler.get_server_rebuild_schema(version)
         rebuild_schema['properties']['rebuild']['properties'].update(schema)
 
-    def _resize_extension_schema(self, ext, resize_schema):
+    def _resize_extension_schema(self, ext, resize_schema, version):
         handler = ext.obj
         LOG.debug("Running _resize_extension_schema for %s", ext.obj)
 
-        schema = handler.get_server_resize_schema()
+        schema = handler.get_server_resize_schema(version)
         resize_schema['properties']['resize']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
@@ -753,7 +767,8 @@ class ServersController(wsgi.Controller):
             self.compute_api.delete(context, instance)
 
     @extensions.expected_errors((400, 404))
-    @validation.schema(schema_server_update)
+    @validation.schema(schema_server_update_v20, '2.0', '2.0')
+    @validation.schema(schema_server_update, '2.1')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -762,7 +777,8 @@ class ServersController(wsgi.Controller):
         authorize(ctxt, action='update')
 
         if 'name' in body['server']:
-            update_dict['display_name'] = body['server']['name']
+            update_dict['display_name'] = common.normalize_name(
+                body['server']['name'])
 
         if list(self.update_extension_manager):
             self.update_extension_manager.map(self._update_extension_point,
@@ -949,7 +965,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.action('rebuild')
-    @validation.schema(schema_server_rebuild)
+    @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
+    @validation.schema(schema_server_rebuild, '2.1')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -976,8 +993,12 @@ class ServersController(wsgi.Controller):
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
-                rebuild_kwargs[instance_attribute] = rebuild_dict[
-                    request_attribute]
+                if request_attribute == 'name':
+                    rebuild_kwargs[instance_attribute] = common.normalize_name(
+                        rebuild_dict[request_attribute])
+                else:
+                    rebuild_kwargs[instance_attribute] = rebuild_dict[
+                        request_attribute]
             except (KeyError, TypeError):
                 pass
 
@@ -1023,14 +1044,15 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
     @common.check_snapshots_enabled
-    @validation.schema(schema_servers.create_image)
+    @validation.schema(schema_servers.create_image, '2.0', '2.0')
+    @validation.schema(schema_servers.create_image, '2.1')
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
         authorize(context, action='create_image')
 
         entity = body["createImage"]
-        image_name = entity["name"]
+        image_name = common.normalize_name(entity["name"])
         metadata = entity.get('metadata', {})
 
         common.check_img_metadata_properties_quota(context, metadata)

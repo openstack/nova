@@ -21,6 +21,7 @@ from webob import exc
 from nova.api.openstack.compute import aggregates as aggregates_v21
 from nova.api.openstack.compute.legacy_v2.contrib import aggregates \
         as aggregates_v2
+from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import test
@@ -142,6 +143,27 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                      {"foo": "test",
                                       "availability_zone": "nova1"}})
 
+    def test_create_name_with_leading_trailing_spaces(self):
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
+                                          {"name": "  test  ",
+                                           "availability_zone": "nova1"}})
+
+    def test_create_name_with_leading_trailing_spaces_compat_mode(self):
+
+        def fake_mock_aggs(context, name, az):
+            self.assertEqual('test', name)
+            return AGGREGATE
+
+        with mock.patch.object(compute_api.AggregateAPI,
+                               'create_aggregate') as mock_aggs:
+            mock_aggs.side_effect = fake_mock_aggs
+            self.req.set_legacy_v2()
+            self.controller.create(self.req,
+                                   body={"aggregate":
+                                         {"name": "  test  ",
+                                          "availability_zone": "nova1"}})
+
     def test_create_with_no_availability_zone(self):
         def stub_create_aggregate(context, name, availability_zone):
             self.assertEqual(context, self.context, "context")
@@ -172,6 +194,28 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           self.req, body={"aggregate":
                                      {"name": "test",
                                       "availability_zone": "x" * 256}})
+
+    def test_create_availability_zone_with_leading_trailing_spaces(self):
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
+                                          {"name": "test",
+                                           "availability_zone": "  nova1  "}})
+
+    def test_create_availabiltiy_zone_with_leading_trailing_spaces_compat_mode(
+            self):
+
+        def fake_mock_aggs(context, name, az):
+            self.assertEqual('nova1', az)
+            return AGGREGATE
+
+        with mock.patch.object(compute_api.AggregateAPI,
+                               'create_aggregate') as mock_aggs:
+            mock_aggs.side_effect = fake_mock_aggs
+            self.req.set_legacy_v2()
+            self.controller.create(self.req,
+                                   body={"aggregate":
+                                         {"name": "test",
+                                          "availability_zone": "  nova1  "}})
 
     def test_create_with_null_availability_zone(self):
         aggregate = {"name": "aggregate1",
@@ -682,3 +726,40 @@ class AggregateTestCaseV2(AggregateTestCaseV21):
         self.assertRaises(exception.AdminRequired,
                           self.controller._remove_host, self.user_req,
                           '1', {'host': 'fake_host'})
+
+    def test_create_name_with_leading_trailing_spaces(self):
+
+        def fake_mock_aggs(context, name, az):
+            # NOTE(alex_xu): legacy v2 api didn't strip the spaces.
+            self.assertEqual('  test  ', name)
+            return AGGREGATE
+
+        with mock.patch.object(compute_api.AggregateAPI,
+                               'create_aggregate') as mock_aggs:
+            mock_aggs.side_effect = fake_mock_aggs
+            self.controller.create(self.req,
+                                   body={"aggregate":
+                                         {"name": "  test  ",
+                                          "availability_zone": "nova1"}})
+
+    def test_create_name_with_leading_trailing_spaces_compat_mode(self):
+        pass
+
+    def test_create_availability_zone_with_leading_trailing_spaces(self):
+
+        def fake_mock_aggs(context, name, az):
+            # NOTE(alex_xu): legacy v2 api didn't strip the spaces.
+            self.assertEqual('  nova1  ', az)
+            return AGGREGATE
+
+        with mock.patch.object(compute_api.AggregateAPI,
+                               'create_aggregate') as mock_aggs:
+            mock_aggs.side_effect = fake_mock_aggs
+            self.controller.create(self.req,
+                                   body={"aggregate":
+                                         {"name": "  test  ",
+                                          "availability_zone": "  nova1  "}})
+
+    def test_create_availabiltiy_zone_with_leading_trailing_spaces_compat_mode(
+            self):
+        pass

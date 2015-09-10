@@ -19,6 +19,7 @@ import datetime
 
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import aggregates
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -52,7 +53,8 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of aggregates resource.
     @extensions.expected_errors((400, 409))
-    @validation.schema(aggregates.create)
+    @validation.schema(aggregates.create_v20, '2.0', '2.0')
+    @validation.schema(aggregates.create, '2.1')
     def create(self, req, body):
         """Creates an aggregate, given its name and
         optional availability zone.
@@ -60,8 +62,10 @@ class AggregateController(wsgi.Controller):
         context = _get_context(req)
         authorize(context, action='create')
         host_aggregate = body["aggregate"]
-        name = host_aggregate["name"]
+        name = common.normalize_name(host_aggregate["name"])
         avail_zone = host_aggregate.get("availability_zone")
+        if avail_zone:
+            avail_zone = common.normalize_name(avail_zone)
 
         try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)
@@ -91,12 +95,15 @@ class AggregateController(wsgi.Controller):
         return self._marshall_aggregate(aggregate)
 
     @extensions.expected_errors((400, 404, 409))
-    @validation.schema(aggregates.update)
+    @validation.schema(aggregates.update_v20, '2.0', '2.0')
+    @validation.schema(aggregates.update, '2.1')
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
         authorize(context, action='update')
         updates = body["aggregate"]
+        if 'name' in updates:
+            updates['name'] = common.normalize_name(updates['name'])
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)

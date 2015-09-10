@@ -73,5 +73,5 @@ class ConfigDrive(extensions.V21APIExtensionBase):
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
         return schema_config_drive.server_create

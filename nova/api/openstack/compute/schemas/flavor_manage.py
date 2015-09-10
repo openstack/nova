@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 create = {
@@ -56,3 +58,8 @@ create = {
     'required': ['flavor'],
     'additionalProperties': False,
 }
+
+
+create_v20 = copy.deepcopy(create)
+create_v20['properties']['flavor']['properties']['name'] = (parameter_types.
+    name_with_leading_trailing_spaces)

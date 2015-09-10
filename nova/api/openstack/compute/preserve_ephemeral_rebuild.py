@@ -40,5 +40,5 @@ class PreserveEphemeralRebuild(extensions.V21APIExtensionBase):
             rebuild_kwargs['preserve_ephemeral'] = strutils.bool_from_string(
                 rebuild_dict['preserve_ephemeral'], strict=True)
 
-    def get_server_rebuild_schema(self):
+    def get_server_rebuild_schema(self, version):
         return preserve_ephemeral_rebuild.server_rebuild

@@ -180,8 +180,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def test_create_missing_disk(self):
         self._test_create_missing_parameter('disk')
 
-    def _create_flavor_success_case(self, body):
-        req = self._get_http_request(url=self.base_url)
+    def _create_flavor_success_case(self, body, req=None):
+        req = req if req else self._get_http_request(url=self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -226,6 +226,17 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def test_create_with_name_too_long(self):
         self.request_body['flavor']['name'] = 'a' * 256
         self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_name_leading_trailing_spaces(self):
+        self.request_body['flavor']['name'] = '  test  '
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_name_leading_trailing_spaces_compat_mode(self):
+        req = self._get_http_request(url=self.base_url)
+        req.set_legacy_v2()
+        self.request_body['flavor']['name'] = '  test  '
+        body = self._create_flavor_success_case(self.request_body, req)
+        self.assertEqual('test', body['flavor']['name'])
 
     def test_create_without_flavorname(self):
         del self.request_body['flavor']['name']
@@ -443,6 +454,15 @@ class FlavorManageTestV2(FlavorManageTestV21):
 
     def _get_http_request(self, url=''):
         return fakes.HTTPRequest.blank(url, use_admin_context=False)
+
+    def test_create_with_name_leading_trailing_spaces(self):
+        req = self._get_http_request(url=self.base_url)
+        self.request_body['flavor']['name'] = '  test  '
+        body = self._create_flavor_success_case(self.request_body, req)
+        self.assertEqual('test', body['flavor']['name'])
+
+    def test_create_with_name_leading_trailing_spaces_compat_mode(self):
+        pass
 
 
 class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):

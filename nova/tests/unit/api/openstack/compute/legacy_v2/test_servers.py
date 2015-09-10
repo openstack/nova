@@ -36,6 +36,7 @@ from nova.api.openstack.compute.legacy_v2 import ips
 from nova.api.openstack.compute.legacy_v2 import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
+from nova import availability_zones
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import task_states
@@ -1385,6 +1386,14 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertEqual(FAKE_UUID, res_dict['server']['id'])
         self.assertEqual('server_test', res_dict['server']['name'])
 
+    def test_update_server_name_with_leading_trailing_spaces(self):
+        body = {'server': {'name': '  abc  def  '}}
+        req = self._get_request(body, {'name': 'server_test'})
+        res_dict = self.controller.update(req, FAKE_UUID, body)
+
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('abc  def', res_dict['server']['name'])
+
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
         req = self._get_request(body, {'name': 'server_test'})
@@ -1630,6 +1639,19 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, self.body)
+
+    def test_rebuild_instance_name_with_leading_trailing_spaces(self):
+        self.body['rebuild']['name'] = '  abc  def  '
+        self.req.body = jsonutils.dumps(self.body)
+
+        def fake_rebuild(*args, **kwargs):
+            # NOTE(alex_xu): V2 API rebuild didn't strip the leading/trailing
+            # spaces.
+            self.assertEqual('  abc  def  ', kwargs['display_name'])
+
+        with mock.patch.object(compute_api.API, 'rebuild') as mock_rebuild:
+            mock_rebuild.side_effect = fake_rebuild
+            self.controller._action_rebuild(self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_name_with_spaces_in_middle(self):
         self.body['rebuild']['name'] = 'abc   def'
@@ -1964,6 +1986,7 @@ class ServersControllerCreateTest(test.TestCase):
         server = self.controller.create(self.req, self.body).obj['server']
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
+        return server
 
     def test_create_instance_private_flavor(self):
         values = {
@@ -2163,6 +2186,22 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, params)
 
+    def test_create_instance_sg_with_leading_trailing_spaces(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network}]
+        params = {'networks': requested_networks,
+                  'security_groups': [{'name': '  sg  '}]}
+
+        def fake_create(*args, **kwargs):
+            self.assertEqual(['  sg  '], kwargs['security_group'])
+            return (objects.InstanceList(objects=[fakes.stub_instance_obj(
+                self.req.environ['nova.context'])]), None)
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.ext_mgr.extensions = {'os-security-groups'}
+        self._test_create_extra(params)
+
     def test_create_instance_with_port_with_no_fixed_ips(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         port_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
@@ -2231,6 +2270,21 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, self.body)
+
+    def test_create_instance_name_with_leading_trailing_spaces(self):
+        self.body['server']['name'] = '  abc  def   '
+        self.req.body = jsonutils.dumps(self.body)
+        server = self._test_create_instance()
+        self.assertEqual(
+            self.body['server']['name'].strip(),
+            self.instance_cache_by_uuid[server['id']]['display_name'])
+
+    def test_create_instance_az_with_leading_trailing_spaces(self):
+        self.body['server']['availability_zone'] = '  zone1   '
+        self.req.body = jsonutils.dumps(self.body)
+        with mock.patch.object(availability_zones, 'get_availability_zones',
+                               return_value=['  zone1  ']):
+            self._test_create_instance()
 
     def test_create_instance(self):
         self.req.body = jsonutils.dumps(self.body)

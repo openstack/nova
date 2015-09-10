@@ -313,6 +313,31 @@ class CellsTestV21(BaseCellsTest):
         self.assertRaises(self.bad_request, self.controller.create,
                           req, body=body)
 
+    def test_cell_create_name_with_leading_trailing_spaces(self):
+        body = {'cell': {'name': '  moocow  ',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request, self.controller.create,
+                          req, body=body)
+
+    def test_cell_create_name_with_leading_trailing_spaces_compat_mode(self):
+        body = {'cell': {'name': '  moocow  ',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        req.set_legacy_v2()
+        resp = self.controller.create(req, body=body)
+        self.assertEqual('moocow', resp['cell']['name'])
+
     def test_cell_create_name_with_invalid_type_raises(self):
         body = {'cell': {'name': 'moocow',
                          'username': 'fred',
@@ -733,3 +758,19 @@ class CellsTestV2(CellsTestV21):
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
         self.controller.update(req, 'cell1', body=body)
+
+    def test_cell_create_name_with_leading_trailing_spaces_compat_mode(self):
+        pass
+
+    def test_cell_create_name_with_leading_trailing_spaces(self):
+        body = {'cell': {'name': '  moocow  ',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        resp = self.controller.create(req, body=body)
+        # NOTE(alex_xu): legacy v2 didn't strip the spaces.
+        self.assertEqual('  moocow  ', resp['cell']['name'])

@@ -139,7 +139,13 @@ class AvailabilityZone(extensions.V21APIExtensionBase):
     # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
+        # NOTE(alex_xu): For v2.1 compat mode, we strip the spaces when create
+        # availability_zone. But we don't strip at here for backward-compatible
+        # with some users already created availability_zone with
+        # leading/trailing spaces with legacy v2 API.
         create_kwargs['availability_zone'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
+        if version == "2.0":
+            return schema.server_create_v20
         return schema.server_create
