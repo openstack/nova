@@ -86,6 +86,8 @@ class EvacuateController(wsgi.Controller):
         try:
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password)
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate', id)
