@@ -407,6 +407,11 @@ def object_compat(function):
     def decorated_function(self, context, *args, **kwargs):
         def _load_instance(instance_or_dict):
             if isinstance(instance_or_dict, dict):
+                # try to get metadata and system_metadata for most cases but
+                # only attempt to load those if the db instance already has
+                # those fields joined
+                metas = [meta for meta in ('metadata', 'system_metadata')
+                         if meta in instance_or_dict]
                 instance = objects.Instance._from_db_object(
                     context, objects.Instance(), instance_or_dict,
                     expected_attrs=metas)
@@ -414,7 +419,6 @@ def object_compat(function):
                 return instance
             return instance_or_dict
 
-        metas = ['metadata', 'system_metadata']
         try:
             kwargs['instance'] = _load_instance(kwargs['instance'])
         except KeyError:
