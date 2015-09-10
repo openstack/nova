@@ -27,6 +27,7 @@ from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import volumeops
 
@@ -438,3 +439,78 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         attach_disk_to_vm.assert_called_once_with(
             volume_ref, instance, adapter_type, disk_type,
             vmdk_path=new_file_name)
+
+    def test_iscsi_get_host_iqn(self):
+        host_mor = mock.Mock()
+        iqn = 'iscsi-name'
+        hba = vmwareapi_fake.HostInternetScsiHba(iqn)
+        hbas = mock.MagicMock(HostHostBusAdapter=[hba])
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_host_ref_for_vm',
+                              return_value=host_mor),
+            mock.patch.object(self._volumeops._session, '_call_method',
+                              return_value=hbas)
+        ) as (fake_get_host_ref_for_vm, fake_call_method):
+            result = self._volumeops._iscsi_get_host_iqn(self._instance)
+
+            fake_get_host_ref_for_vm.assert_called_once_with(
+                            self._volumeops._session, self._instance)
+            fake_call_method.assert_called_once_with(vim_util,
+                                    "get_dynamic_property",
+                                    host_mor, "HostSystem",
+                                    "config.storageDevice.hostBusAdapter")
+
+            self.assertEqual(iqn, result)
+
+    def test_iscsi_get_host_iqn_instance_not_found(self):
+        host_mor = mock.Mock()
+        iqn = 'iscsi-name'
+        hba = vmwareapi_fake.HostInternetScsiHba(iqn)
+        hbas = mock.MagicMock(HostHostBusAdapter=[hba])
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_host_ref_for_vm',
+                              side_effect=exception.InstanceNotFound('fake')),
+            mock.patch.object(vm_util, 'get_host_ref',
+                              return_value=host_mor),
+            mock.patch.object(self._volumeops._session, '_call_method',
+                              return_value=hbas)
+        ) as (fake_get_host_ref_for_vm,
+              fake_get_host_ref,
+              fake_call_method):
+            result = self._volumeops._iscsi_get_host_iqn(self._instance)
+
+            fake_get_host_ref_for_vm.assert_called_once_with(
+                        self._volumeops._session, self._instance)
+            fake_get_host_ref.assert_called_once_with(
+                        self._volumeops._session, self._volumeops._cluster)
+            fake_call_method.assert_called_once_with(vim_util,
+                                    "get_dynamic_property",
+                                    host_mor, "HostSystem",
+                                    "config.storageDevice.hostBusAdapter")
+
+            self.assertEqual(iqn, result)
+
+    def test_get_volume_connector(self):
+        vm_id = 'fake-vm'
+        vm_ref = mock.MagicMock(value=vm_id)
+        iqn = 'iscsi-name'
+        url = 'test_url'
+        self.flags(host_ip=url, group='vmware')
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
+            mock.patch.object(self._volumeops, '_iscsi_get_host_iqn',
+                              return_value=iqn)
+        ) as (fake_get_vm_ref, fake_iscsi_get_host_iqn):
+            connector = self._volumeops.get_volume_connector(self._instance)
+
+            fake_get_vm_ref.assert_called_once_with(self._volumeops._session,
+                                                    self._instance)
+            fake_iscsi_get_host_iqn.assert_called_once_with(self._instance)
+
+            self.assertEqual(url, connector['ip'])
+            self.assertEqual(url, connector['host'])
+            self.assertEqual(iqn, connector['initiator'])
+            self.assertEqual(vm_id, connector['instance'])
