@@ -17,6 +17,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_versionedobjects import base as ovo_base
 
 from nova import baserpc
 from nova.conductor import manager
@@ -65,7 +66,11 @@ class LocalAPI(object):
         return self._manager.provider_fw_rule_get_all(context)
 
     def object_backport(self, context, objinst, target_version):
-        return self._manager.object_backport(context, objinst, target_version)
+        # NOTE(hanlind): This shouldn't be called anymore but leaving it for
+        # now just in case. Collect the object version manifest and redirect
+        # to the newer backport call.
+        object_versions = ovo_base.obj_tree_get_versions(objinst.obj_name())
+        return self.object_backport_versions(context, objinst, object_versions)
 
     def object_backport_versions(self, context, objinst, object_versions):
         return self._manager.object_backport_versions(context, objinst,

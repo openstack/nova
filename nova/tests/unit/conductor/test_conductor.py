@@ -840,6 +840,20 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.assertEqual(timeouts.count(10), 10)
         self.assertIn(None, timeouts)
 
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_object_backport_redirect(self, mock_ovo):
+        mock_ovo.return_value = mock.sentinel.obj_versions
+        mock_objinst = mock.Mock()
+
+        with mock.patch.object(self.conductor,
+                               'object_backport_versions') as mock_call:
+            self.conductor.object_backport(mock.sentinel.ctxt,
+                                           mock_objinst,
+                                           mock.sentinel.target_version)
+            mock_call.assert_called_once_with(mock.sentinel.ctxt,
+                                              mock_objinst,
+                                              mock.sentinel.obj_versions)
+
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):
     """Conductor LocalAPI Tests."""

@@ -447,6 +447,7 @@ class ConductorManager(manager.Manager):
         except Exception:
             raise messaging.ExpectedException()
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def object_class_action(self, context, objname, objmethod,
                             objver, args, kwargs):
         """Perform a classmethod action on an object."""
@@ -494,6 +495,7 @@ class ConductorManager(manager.Manager):
         updates['obj_what_changed'] = objinst.obj_what_changed()
         return updates, result
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def object_backport(self, context, objinst, target_version):
         return objinst.obj_to_primitive(target_version=target_version)
 
