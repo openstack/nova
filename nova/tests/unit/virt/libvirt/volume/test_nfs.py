@@ -44,7 +44,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
         device_path = os.path.join(export_mnt_base,
                                    connection_info['data']['name'])
-        self.assertEqual(device_path, connection_info['data']['device_path'])
+        self.assertEqual(connection_info['data']['device_path'], device_path)
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', export_string, export_mnt_base),
@@ -104,7 +104,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             ('findmnt', '--target', export_mnt_base, '--source',
              export_string),
             ('umount', export_mnt_base)]
-        self.assertEqual(self.executes, expected_commands)
+        self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_nfs_driver_with_opts(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)

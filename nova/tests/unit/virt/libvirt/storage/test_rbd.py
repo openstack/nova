@@ -202,7 +202,7 @@ class RbdTestCase(test.NoDBTestCase):
                 client_stack[1].ioctx, str(self.volume_name)]
         kwargs = {'features': client.features}
         rbd.clone.assert_called_once_with(*args, **kwargs)
-        self.assertEqual(client.__enter__.call_count, 2)
+        self.assertEqual(2, client.__enter__.call_count)
 
     @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     def test_resize(self, mock_proxy):
@@ -235,7 +235,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertTrue(self.mock_rados.Rados.connect.called)
         self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
         self.assertIsInstance(ret[0], self.mock_rados.Rados)
-        self.assertEqual(ret[1], self.mock_rados.Rados.ioctx)
+        self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])
         self.mock_rados.Rados.open_ioctx.assert_called_with(self.rbd_pool)
 
     @mock.patch.object(rbd_utils, 'rbd')
@@ -245,7 +245,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertTrue(self.mock_rados.Rados.connect.called)
         self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
         self.assertIsInstance(ret[0], self.mock_rados.Rados)
-        self.assertEqual(ret[1], self.mock_rados.Rados.ioctx)
+        self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])
         self.mock_rados.Rados.open_ioctx.assert_called_with('alt_pool')
 
     @mock.patch.object(rbd_utils, 'rados')

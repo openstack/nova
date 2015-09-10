@@ -87,8 +87,8 @@ class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
         self.user = 'foo'
 
     def _assertFileTypeEquals(self, tree, file_path):
-        self.assertEqual(tree.get('type'), 'file')
-        self.assertEqual(tree.find('./source').get('file'), file_path)
+        self.assertEqual('file', tree.get('type'))
+        self.assertEqual(file_path, tree.find('./source').get('file'))
 
 
 class LibvirtISCSIVolumeBaseTestCase(LibvirtVolumeBaseTestCase):
@@ -124,11 +124,9 @@ class LibvirtISCSIVolumeBaseTestCase(LibvirtVolumeBaseTestCase):
 class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
 
     def _assertDiskInfoEquals(self, tree, disk_info):
-        self.assertEqual(tree.get('device'), disk_info['type'])
-        self.assertEqual(tree.find('./target').get('bus'),
-                         disk_info['bus'])
-        self.assertEqual(tree.find('./target').get('dev'),
-                         disk_info['dev'])
+        self.assertEqual(disk_info['type'], tree.get('device'))
+        self.assertEqual(disk_info['bus'], tree.find('./target').get('bus'))
+        self.assertEqual(disk_info['dev'], tree.find('./target').get('dev'))
 
     def _test_libvirt_volume_driver_disk_info(self):
         libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)

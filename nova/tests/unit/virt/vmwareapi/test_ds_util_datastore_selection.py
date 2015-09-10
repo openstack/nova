@@ -81,7 +81,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
                               capacity=0, freespace=0)
         rec = ds_util._select_datastore(None, datastores, best_match)
 
-        self.assertEqual(rec, best_match)
+        self.assertEqual(best_match, rec)
 
     def test_filter_datastores_no_match(self):
         datastores = self.build_result_set(self.data)
@@ -93,7 +93,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
                                         best_match,
                                         datastore_regex)
 
-        self.assertEqual(rec, best_match, "did not match datastore properly")
+        self.assertEqual(best_match, rec, "did not match datastore properly")
 
     def test_filter_datastores_specific_match(self):
 
@@ -141,7 +141,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
                               capacity=0, freespace=0)
 
         rec = ds_util._select_datastore(None, datastores, best_match)
-        self.assertEqual(rec, best_match, "no matches were expected")
+        self.assertEqual(best_match, rec, "no matches were expected")
 
     def test_filter_datastores_best_match(self):
         data = [
@@ -163,4 +163,4 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
                                         datastores,
                                         best_match,
                                         datastore_regex)
-        self.assertEqual(rec, best_match, "did not match datastore properly")
+        self.assertEqual(best_match, rec, "did not match datastore properly")

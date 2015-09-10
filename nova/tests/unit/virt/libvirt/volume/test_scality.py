@@ -53,8 +53,7 @@ class LibvirtScalityVolumeDriverTestCase(
 
         device_path = os.path.join(TEST_MOUNT,
                                    TEST_CONN_INFO['data']['sofs_path'])
-        self.assertEqual(device_path,
-                         TEST_CONN_INFO['data']['device_path'])
+        self.assertEqual(TEST_CONN_INFO['data']['device_path'], device_path)
 
         conf = driver.get_config(TEST_CONN_INFO, self.disk_info)
         tree = conf.format_dom()
