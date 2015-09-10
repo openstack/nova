@@ -330,7 +330,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             node = self.node_name
         if not uuid:
             uuid = uuidutils.generate_uuid()
-        self.type_data = self._get_instance_type_by_name(instance_type)
+        self.type_data = dict(self._get_instance_type_by_name(instance_type))
         if instance_type_updates:
             self.type_data.update(instance_type_updates)
         if ephemeral is not None:
