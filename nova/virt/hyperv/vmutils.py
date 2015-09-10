@@ -96,6 +96,15 @@ class VMUtils(object):
     _PHYS_DISK_CONNECTION_ATTR = "HostResource"
     _VIRT_DISK_CONNECTION_ATTR = "Connection"
 
+    _CONCRETE_JOB_CLASS = "Msvm_ConcreteJob"
+
+    _KILL_JOB_STATE_CHANGE_REQUEST = 5
+
+    _completed_job_states = [constants.JOB_STATE_COMPLETED,
+                             constants.JOB_STATE_TERMINATED,
+                             constants.JOB_STATE_KILLED,
+                             constants.JOB_STATE_COMPLETED_WITH_WARNINGS]
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_SHUTTING_DOWN: 4,
@@ -594,6 +603,10 @@ class VMUtils(object):
         while job.JobState == constants.WMI_JOB_STATE_RUNNING:
             time.sleep(0.1)
             job = self._get_wmi_obj(job_path)
+        if job.JobState == constants.JOB_STATE_KILLED:
+            LOG.debug("WMI job killed with status %s.", job.JobState)
+            return job
+
         if job.JobState != constants.WMI_JOB_STATE_COMPLETED:
             job_state = job.JobState
             if job.path().Class == "Msvm_ConcreteJob":
@@ -827,3 +840,17 @@ class VMUtils(object):
     def get_vm_power_state(self, vm_enabled_state):
         return self._enabled_states_map.get(vm_enabled_state,
                                             constants.HYPERV_VM_STATE_OTHER)
+
+    def stop_vm_jobs(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+        vm_jobs = vm.associators(wmi_result_class=self._CONCRETE_JOB_CLASS)
+
+        for job in vm_jobs:
+            if job and job.Cancellable and not self._is_job_completed(job):
+
+                job.RequestStateChange(self._KILL_JOB_STATE_CHANGE_REQUEST)
+
+        return vm_jobs
+
+    def _is_job_completed(self, job):
+        return job.JobState in self._completed_job_states
