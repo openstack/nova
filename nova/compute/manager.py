@@ -878,6 +878,7 @@ class ComputeManager(manager.Manager):
         """Complete deletion for instances in DELETED status but not marked as
         deleted in the DB
         """
+        system_meta = instance.system_metadata
         instance.destroy()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -890,7 +891,7 @@ class ComputeManager(manager.Manager):
                                 instance,
                                 bdms,
                                 quotas,
-                                instance.system_metadata)
+                                system_meta)
 
     def _complete_deletion(self, context, instance, bdms,
                            quotas, system_meta):
@@ -1294,7 +1295,7 @@ class ComputeManager(manager.Manager):
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(
-            context, self.host, expected_attrs=['info_cache'])
+            context, self.host, expected_attrs=['info_cache', 'metadata'])
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()
