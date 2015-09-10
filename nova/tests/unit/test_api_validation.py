@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import re
 
 from nova.api.openstack import api_version_request as api_version
@@ -24,16 +25,19 @@ from nova import test
 class FakeRequest(object):
     api_version_request = api_version.APIVersionRequest("2.1")
     environ = {}
+    legacy_v2 = False
 
     def is_legacy_v2(self):
-        return False
+        return self.legacy_v2
 
 
 class APIValidationTestCase(test.NoDBTestCase):
 
-    def check_validation_error(self, method, body, expected_detail):
+    def check_validation_error(self, method, body, expected_detail, req=None):
+        if not req:
+            req = FakeRequest()
         try:
-            method(body=body, req=FakeRequest(),)
+            method(body=body, req=req,)
         except exception.ValidationError as ex:
             self.assertEqual(400, ex.kwargs['code'])
             if not re.match(expected_detail, ex.kwargs['detail']):
@@ -43,6 +47,48 @@ class APIValidationTestCase(test.NoDBTestCase):
             self.fail('An unexpected exception happens: %s' % ex)
         else:
             self.fail('Any exception does not happen.')
+
+
+class MicroversionsSchemaTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(MicroversionsSchemaTestCase, self).setUp()
+        schema_v21_int = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'integer',
+                }
+            }
+        }
+        schema_v20_str = copy.deepcopy(schema_v21_int)
+        schema_v20_str['properties']['foo'] = {'type': 'string'}
+
+        @validation.schema(schema_v20_str, '2.0', '2.0')
+        @validation.schema(schema_v21_int, '2.1')
+        def post(req, body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_v2compatible_request(self):
+        req = FakeRequest()
+        req.legacy_v2 = True
+        self.assertEqual(self.post(body={'foo': 'bar'}, req=req),
+                         'Validation succeeded.')
+        detail = ("Invalid input for field/attribute foo. Value: 1. "
+                  "1 is not of type 'string'")
+        self.check_validation_error(self.post, body={'foo': 1},
+                                    expected_detail=detail, req=req)
+
+    def test_validate_v21_request(self):
+        req = FakeRequest()
+        self.assertEqual(self.post(body={'foo': 1}, req=req),
+                         'Validation succeeded.')
+        detail = ("Invalid input for field/attribute foo. Value: bar. "
+                  "'bar' is not of type 'integer'")
+        self.check_validation_error(self.post, body={'foo': 'bar'},
+                                    expected_detail=detail, req=req)
 
 
 class RequiredDisableTestCase(APIValidationTestCase):
