@@ -1400,6 +1400,19 @@ class ServersControllerTestV29(ServersControllerTest):
         self._test_list_server_detail_with_lock('not_locked',
                                                 'not_locked')
 
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_remove_non_search_options(self, get_all_mock):
+        req = fakes.HTTPRequestV21.blank('/servers'
+                                         '?sort_key=id1&sort_dir=asc'
+                                         '&sort_key=id2&sort_dir=desc'
+                                         '&limit=1&marker=123',
+                                         use_admin_context=True)
+        self.controller.index(req)
+        kwargs = get_all_mock.call_args[1]
+        search_opts = kwargs['search_opts']
+        for key in ('sort_key', 'sort_dir', 'limit', 'marker'):
+            self.assertNotIn(key, search_opts)
+
 
 class ServersControllerDeleteTest(ControllerTest):
 
