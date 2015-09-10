@@ -1552,10 +1552,6 @@ class InstanceFaultRollback(NovaException):
         super(InstanceFaultRollback, self).__init__(message % inner_exception)
 
 
-class InstanceUpdateConflict(NovaException):
-    msg_fmt = _('Conflict updating instance %(instance_uuid)s')
-
-
 class OrphanedObjectError(NovaException):
     msg_fmt = _('Cannot call %(method)s on orphaned %(objtype)s object')
 
