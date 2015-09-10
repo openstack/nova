@@ -87,6 +87,10 @@ def _soft_validate_additional_properties(validator,
     the schema, this will return without any effect. If there are any such
     extra properties, they will be handled as follows:
 
+    - if the validator passed to the method is not of type "object", this
+      method will return without any effect.
+    - if the 'additional_properties_value' parameter is True, this method will
+      return without any effect.
     - if the schema has an additionalProperties value of True, the extra
       properties on the instance will not be touched.
     - if the schema has an additionalProperties value of False and there
