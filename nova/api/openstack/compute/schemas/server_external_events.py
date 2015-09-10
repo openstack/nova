@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.validation import parameter_types
 from nova.objects import external_event as external_event_obj
 
 create = {
@@ -26,7 +25,10 @@ create = {
                     'server_uuid': {
                         'type': 'string', 'format': 'uuid'
                     },
-                    'name': parameter_types.name,
+                    'name': {
+                        'type': 'string',
+                        'enum': external_event_obj.EVENT_NAMES
+                    },
                     'status': {
                        'type': 'string',
                        'enum': external_event_obj.EVENT_STATUSES,
