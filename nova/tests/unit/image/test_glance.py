@@ -427,6 +427,31 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
             '1', 'https://host4:9295', insecure=False, ssl_compression=False,
             cert_file='bar.cert', key_file='wut.key', cacert='foo.cert')
 
+    @mock.patch.object(glanceclient.common.http.HTTPClient, 'get')
+    def test_determine_curr_major_version(self, http_client_mock):
+        result = ("http://host1:9292/v2/", {'versions': [
+            {'status': 'CURRENT', 'id': 'v2.3'},
+            {'status': 'SUPPORTED', 'id': 'v1.0'}]})
+        http_client_mock.return_value = result
+        maj_ver = glance._determine_curr_major_version('http://host1:9292')
+        self.assertEqual(2, maj_ver)
+
+    @mock.patch.object(glanceclient.common.http.HTTPClient, 'get')
+    def test_determine_curr_major_version_invalid(self, http_client_mock):
+        result = ("http://host1:9292/v2/", "Invalid String")
+        http_client_mock.return_value = result
+        curr_major_version = glance._determine_curr_major_version('abc')
+        self.assertIsNone(curr_major_version)
+
+    @mock.patch.object(glanceclient.common.http.HTTPClient, 'get')
+    def test_determine_curr_major_version_unsupported(self, http_client_mock):
+        result = ("http://host1:9292/v2/", {'versions': [
+            {'status': 'CURRENT', 'id': 'v666.0'},
+            {'status': 'SUPPORTED', 'id': 'v1.0'}]})
+        http_client_mock.return_value = result
+        maj_ver = glance._determine_curr_major_version('http://host1:9292')
+        self.assertIsNone(maj_ver)
+
 
 class TestDownloadNoDirectUri(test.NoDBTestCase):
 
