@@ -206,7 +206,7 @@ systool: CommandFilter, systool, root
 sginfo: CommandFilter, sginfo, root
 vgc-cluster: CommandFilter, vgc-cluster, root
 # os_brick/initiator/connector.py
-drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid, root
+drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, root, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid
 
 # TODO(smcginnis) Temporary fix.
 # Need to pull in os-brick os-brick.filters file instead and clean
