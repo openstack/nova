@@ -1497,12 +1497,10 @@ class TestObjectVersions(test.NoDBTestCase):
                                     '1.2')
 
     def test_list_obj_make_compatible_when_no_objects(self):
-        """Test to make sure obj_make_compatible works with no 'objects'
-
-        If a List object ever has a version that did not contain the 'objects'
-        key, we need to make sure converting back to that version doesn't
-        cause backporting problems.
-        """
+        # Test to make sure obj_make_compatible works with no 'objects'
+        # If a List object ever has a version that did not contain the
+        # 'objects' key, we need to make sure converting back to that version
+        # doesn't cause backporting problems.
         @base.NovaObjectRegistry.register_if(False)
         class TestObj(base.NovaObject):
             VERSION = '1.1'
