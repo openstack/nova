@@ -6862,6 +6862,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     instance)
             timer.start(interval=0.5).wait()
 
+        LOG.debug("finish_migration finished successfully.", instance=instance)
+
     def _cleanup_failed_migration(self, inst_base):
         """Make sure that a failed migrate doesn't prevent us from rolling
         back in a revert.
