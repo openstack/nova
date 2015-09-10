@@ -423,6 +423,9 @@ MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 MIN_LIBVIRT_KVM_S390_VERSION = (1, 2, 13)
 MIN_QEMU_S390_VERSION = (2, 3, 0)
 
+# Names of the types that do not get compressed during migration
+NO_COMPRESSION_TYPES = ('qcow2',)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -6727,9 +6730,11 @@ class LibvirtDriver(driver.ComputeDriver):
                         instance, process.pid)
                     on_completion = lambda process: self.job_tracker.\
                         remove_job(instance, process.pid)
+                    compression = info['type'] not in NO_COMPRESSION_TYPES
                     libvirt_utils.copy_image(from_path, img_path, host=dest,
                                              on_execute=on_execute,
-                                             on_completion=on_completion)
+                                             on_completion=on_completion,
+                                             compression=compression)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,

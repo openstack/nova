@@ -12399,7 +12399,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             pass
 
         def fake_copy_image(src, dest, host=None, receive=False,
-                            on_execute=None, on_completion=None):
+                            on_execute=None, on_completion=None,
+                            compression=True):
             self.assertIsNotNone(on_execute)
             self.assertIsNotNone(on_completion)
 

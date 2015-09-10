@@ -185,7 +185,8 @@ def get_disk_backing_file(path, basename=True):
 
 
 def copy_image(src, dest, host=None, receive=False,
-               on_execute=None, on_completion=None):
+               on_execute=None, on_completion=None,
+               compression=True):
     """Copy a disk image to an existing directory
 
     :param src: Source image
@@ -194,6 +195,8 @@ def copy_image(src, dest, host=None, receive=False,
     :param receive: Reverse the rsync direction
     :param on_execute: Callback method to store pid of process in cache
     :param on_completion: Callback method to remove pid of process from cache
+    :param compression: Allows to use rsync operation with or without
+                        compression
     """
 
     if not host:
@@ -210,7 +213,8 @@ def copy_image(src, dest, host=None, receive=False,
 
         remote_filesystem_driver = remotefs.RemoteFilesystem()
         remote_filesystem_driver.copy_file(src, dest,
-            on_execute=on_execute, on_completion=on_completion)
+            on_execute=on_execute, on_completion=on_completion,
+            compression=compression)
 
 
 def write_to_file(path, contents, umask=None):
