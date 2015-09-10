@@ -90,6 +90,29 @@ class MicroversionsSchemaTestCase(APIValidationTestCase):
         self.check_validation_error(self.post, body={'foo': 'bar'},
                                     expected_detail=detail, req=req)
 
+    def test_validate_v2compatible_request_with_none_min_version(self):
+        schema_none = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'integer'
+                }
+            }
+        }
+
+        @validation.schema(schema_none)
+        def post(req, body):
+            return 'Validation succeeded.'
+
+        req = FakeRequest()
+        req.legacy_v2 = True
+        self.assertEqual('Validation succeeded.',
+                         post(body={'foo': 1}, req=req))
+        detail = ("Invalid input for field/attribute foo. Value: bar. "
+                  "'bar' is not of type 'integer'")
+        self.check_validation_error(post, body={'foo': 'bar'},
+                                    expected_detail=detail, req=req)
+
 
 class RequiredDisableTestCase(APIValidationTestCase):
 
