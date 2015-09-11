@@ -396,7 +396,7 @@ class API(base.Base):
 
         # Check the quota
         try:
-            quotas = objects.Quotas(context)
+            quotas = objects.Quotas(context=context)
             quotas.reserve(instances=max_count,
                            cores=req_cores, ram=req_ram)
         except exception.OverQuota as exc:
@@ -1771,7 +1771,7 @@ class API(base.Base):
                 instance_vcpus, instance_memory_mb = get_inst_attrs(migration,
                                                                     instance)
 
-        quotas = objects.Quotas(context)
+        quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,
                        user_id=user_id,
                        instances=-1,
@@ -3888,7 +3888,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.security_group_ensure_default(context)
 
     def create_security_group(self, context, name, description):
-        quotas = objects.Quotas(context)
+        quotas = objects.Quotas(context=context)
         try:
             quotas.reserve(security_groups=1)
         except exception.OverQuota:
