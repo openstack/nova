@@ -414,7 +414,7 @@ def serialize_args(fn):
                 else arg for arg in args]
         for k, v in six.iteritems(kwargs):
             if k == 'exc_val' and v:
-                kwargs[k] = str(v)
+                kwargs[k] = six.text_type(v)
             elif k == 'exc_tb' and v and not isinstance(v, six.string_types):
                 kwargs[k] = ''.join(traceback.format_tb(v))
             elif isinstance(v, datetime.datetime):
