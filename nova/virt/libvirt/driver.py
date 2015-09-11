@@ -6684,15 +6684,29 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = []
         doc = etree.fromstring(xml)
-        disk_nodes = doc.findall('.//devices/disk')
-        path_nodes = doc.findall('.//devices/disk/source')
-        driver_nodes = doc.findall('.//devices/disk/driver')
-        target_nodes = doc.findall('.//devices/disk/target')
+
+        def find_nodes(doc, device_type):
+            return (doc.findall('.//devices/%s' % device_type),
+                    doc.findall('.//devices/%s/source' % device_type),
+                    doc.findall('.//devices/%s/driver' % device_type),
+                    doc.findall('.//devices/%s/target' % device_type))
+
+        if (CONF.libvirt.virt_type == 'parallels' and
+            doc.find('os/type').text == vm_mode.EXE):
+            node_type = 'filesystem'
+        else:
+            node_type = 'disk'
+
+        (disk_nodes, path_nodes,
+         driver_nodes, target_nodes) = find_nodes(doc, node_type)
 
         for cnt, path_node in enumerate(path_nodes):
             disk_type = disk_nodes[cnt].get('type')
             path = path_node.get('file') or path_node.get('dev')
-            target = target_nodes[cnt].attrib['dev']
+            if (node_type == 'filesystem'):
+                target = target_nodes[cnt].attrib['dir']
+            else:
+                target = target_nodes[cnt].attrib['dev']
 
             if not path:
                 LOG.debug('skipping disk for %s as it does not have a path',
@@ -6711,7 +6725,14 @@ class LibvirtDriver(driver.ComputeDriver):
             # get the real disk size or
             # raise a localized error if image is unavailable
             if disk_type == 'file':
-                dk_size = int(os.path.getsize(path))
+                if driver_nodes[cnt].get('type') == 'ploop':
+                    dk_size = 0
+                    for dirpath, dirnames, filenames in os.walk(path):
+                        for f in filenames:
+                            fp = os.path.join(dirpath, f)
+                            dk_size += os.path.getsize(fp)
+                else:
+                    dk_size = int(os.path.getsize(path))
             elif disk_type == 'block' and block_device_info:
                 dk_size = lvm.get_volume_size(path)
             else:
@@ -6721,7 +6742,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 continue
 
             disk_type = driver_nodes[cnt].get('type')
-            if disk_type == "qcow2":
+
+            if disk_type in ("qcow2", "ploop"):
                 backing_file = libvirt_utils.get_disk_backing_file(path)
                 virt_size = disk.get_disk_size(path)
                 over_commit_size = int(virt_size) - dk_size

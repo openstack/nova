@@ -14038,6 +14038,61 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertFalse(self._test_prepare_domain_for_snapshot(
                 True, test_power_state))
 
+    @mock.patch('os.walk')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.path.getsize')
+    @mock.patch('os.path.isdir')
+    @mock.patch('nova.utils.execute')
+    @mock.patch.object(host.Host, "get_domain")
+    def test_get_instance_disk_info_parallels_ct(self, mock_get_domain,
+                                                 mock_execute,
+                                                 mock_isdir,
+                                                 mock_getsize,
+                                                 mock_exists,
+                                                 mock_walk):
+
+        dummyxml = ("<domain type='parallels'><name>instance-0000000a</name>"
+                    "<os><type>exe</type></os>"
+                    "<devices>"
+                    "<filesystem type='file'>"
+                    "<driver format='ploop' type='ploop'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dir='/'/></filesystem>"
+                    "</devices></domain>")
+
+        ret = ("image: /test/disk/root.hds\n"
+               "file format: parallels\n"
+               "virtual size: 20G (21474836480 bytes)\n"
+               "disk size: 789M\n")
+
+        self.flags(virt_type='parallels', group='libvirt')
+        instance = objects.Instance(**self.test_instance)
+        instance.vm_mode = vm_mode.EXE
+        fake_dom = FakeVirtDomain(fake_xml=dummyxml)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_get_domain.return_value = fake_dom
+        mock_walk.return_value = [('/test/disk', [],
+                                   ['DiskDescriptor.xml', 'root.hds'])]
+
+        def getsize_sideeffect(*args, **kwargs):
+            if args[0] == '/test/disk/DiskDescriptor.xml':
+                return 790
+            if args[0] == '/test/disk/root.hds':
+                return 827326464
+
+        mock_getsize.side_effect = getsize_sideeffect
+        mock_exists.return_value = True
+        mock_isdir.return_value = True
+        mock_execute.return_value = (ret, '')
+
+        info = drvr.get_instance_disk_info(instance)
+        info = jsonutils.loads(info)
+        self.assertEqual(info[0]['type'], 'ploop')
+        self.assertEqual(info[0]['path'], '/test/disk')
+        self.assertEqual(info[0]['disk_size'], 827327254)
+        self.assertEqual(info[0]['over_committed_disk_size'], 20647509226)
+        self.assertEqual(info[0]['virt_disk_size'], 21474836480)
+
 
 class HostStateTestCase(test.NoDBTestCase):
 
