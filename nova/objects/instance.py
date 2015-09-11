@@ -322,7 +322,7 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
             else:
                 instance.migration_context = None
         if 'info_cache' in expected_attrs:
-            if db_inst['info_cache'] is None:
+            if db_inst.get('info_cache') is None:
                 instance.info_cache = None
             elif not instance.obj_attr_is_set('info_cache'):
                 # TODO(danms): If this ever happens on a backlevel instance
@@ -350,7 +350,7 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
         if 'security_groups' in expected_attrs:
             sec_groups = base.obj_make_list(
                     context, objects.SecurityGroupList(context),
-                    objects.SecurityGroup, db_inst['security_groups'])
+                    objects.SecurityGroup, db_inst.get('security_groups', []))
             instance['security_groups'] = sec_groups
 
         if 'tags' in expected_attrs:
