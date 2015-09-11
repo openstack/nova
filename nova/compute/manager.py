@@ -897,12 +897,11 @@ class ComputeManager(manager.Manager):
         instance.destroy()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        quotas = objects.Quotas(context)
+        quotas = objects.Quotas(context=context)
         project_id, user_id = objects.quotas.ids_from_instance(context,
                                                                instance)
-        quotas.reserve(context, project_id=project_id, user_id=user_id,
-                       instances=-1, cores=-instance.vcpus,
-                       ram=-instance.memory_mb)
+        quotas.reserve(project_id=project_id, user_id=user_id, instances=-1,
+                       cores=-instance.vcpus, ram=-instance.memory_mb)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
