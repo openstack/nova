@@ -1085,7 +1085,7 @@ def dnsdomain_get_all(context):
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
-                       reserved=False):
+                       reserved=False, virtual_interface_id=None):
     """Keyword arguments:
     reserved -- should be a boolean value(True or False), exact value will be
     used to filter on the fixed ip address
@@ -1111,9 +1111,12 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
             raise exception.FixedIpAlreadyInUse(address=address,
                                                 instance_uuid=instance_uuid)
 
-        params = {'instance_uuid': instance_uuid}
+        params = {'instance_uuid': instance_uuid,
+                  'allocated': virtual_interface_id is not None}
         if not fixed_ip_ref.network_id:
             params['network_id'] = network_id
+        if virtual_interface_id:
+            params['virtual_interface_id'] = virtual_interface_id
 
         rows_updated = model_query(context, models.FixedIp, session=session,
                                    read_deleted="no").\
@@ -1135,7 +1138,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
-                            host=None):
+                            host=None, virtual_interface_id=None):
     if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
@@ -1154,13 +1157,15 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
         if not fixed_ip_ref:
             raise exception.NoMoreFixedIps(net=network_id)
 
-        params = {}
+        params = {'allocated': virtual_interface_id is not None}
         if fixed_ip_ref['network_id'] is None:
             params['network_id'] = network_id
         if instance_uuid:
             params['instance_uuid'] = instance_uuid
         if host:
             params['host'] = host
+        if virtual_interface_id:
+            params['virtual_interface_id'] = virtual_interface_id
 
         rows_updated = model_query(context, models.FixedIp, session=session,
                                    read_deleted="no").\

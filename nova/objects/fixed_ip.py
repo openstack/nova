@@ -44,7 +44,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     # Version 1.11: Instance 1.21
     # Version 1.12: Instance 1.22, FloatingIPList 1.9
     # Version 1.13: Instance 1.23, FloatingIPList 1.10
-    VERSION = '1.13'
+    # Version 1.14: Added vif_id kwarg to associate(_pool), FloatingIPList 1.11
+    VERSION = '1.14'
 
     fields = {
         'id': fields.IntegerField(),
@@ -75,7 +76,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         'network': [('1.0', '1.2')],
         'virtual_interface': [('1.1', '1.0')],
         'floating_ips': [('1.5', '1.7'), ('1.11', '1.8'), ('1.12', '1.9'),
-                         ('1.13', '1.10')],
+                         ('1.13', '1.10'), ('1.14', '1.11')],
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -153,18 +154,20 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
 
     @obj_base.remotable_classmethod
     def associate(cls, context, address, instance_uuid, network_id=None,
-                  reserved=False):
+                  reserved=False, vif_id=None):
         db_fixedip = db.fixed_ip_associate(context, address, instance_uuid,
                                            network_id=network_id,
-                                           reserved=reserved)
+                                           reserved=reserved,
+                                           virtual_interface_id=vif_id)
         return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
     def associate_pool(cls, context, network_id, instance_uuid=None,
-                       host=None):
+                       host=None, vif_id=None):
         db_fixedip = db.fixed_ip_associate_pool(context, network_id,
                                                 instance_uuid=instance_uuid,
-                                                host=host)
+                                                host=host,
+                                                virtual_interface_id=vif_id)
         return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
@@ -225,7 +228,8 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.11: FixedIP <= version 1.11
     # Version 1.12: FixedIP <= version 1.12
     # Version 1.13: FixedIP <= version 1.13
-    VERSION = '1.13'
+    # Version 1.14: FixedIP <= version 1.14
+    VERSION = '1.14'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
@@ -235,7 +239,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
                     ('1.3', '1.3'), ('1.4', '1.4'), ('1.5', '1.5'),
                     ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
                     ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
-                    ('1.12', '1.12'), ('1.13', '1.13')],
+                    ('1.12', '1.12'), ('1.13', '1.13'), ('1.14', '1.14')],
         }
 
     @obj_base.remotable_classmethod

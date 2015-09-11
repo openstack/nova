@@ -163,7 +163,20 @@ class _TestFixedIPObject(object):
         fixedip = fixed_ip.FixedIP.associate(self.context, '1.2.3.4',
                                              'fake-uuid')
         associate.assert_called_with(self.context, '1.2.3.4', 'fake-uuid',
-                                     network_id=None, reserved=False)
+                                     network_id=None, reserved=False,
+                                     virtual_interface_id=None)
+        self._compare(fixedip, fake_fixed_ip)
+
+    @mock.patch('nova.db.fixed_ip_associate')
+    def test_associate_with_vif(self, associate):
+        associate.return_value = fake_fixed_ip
+        fixedip = fixed_ip.FixedIP.associate(self.context, '1.2.3.4',
+                                             'fake-uuid',
+                                             vif_id=0)
+        associate.assert_called_with(self.context, '1.2.3.4',
+                                     'fake-uuid',
+                                     network_id=None, reserved=False,
+                                     virtual_interface_id=0)
         self._compare(fixedip, fake_fixed_ip)
 
     @mock.patch('nova.db.fixed_ip_associate_pool')
@@ -173,7 +186,18 @@ class _TestFixedIPObject(object):
                                                   'fake-uuid', 'host')
         associate.assert_called_with(self.context, 123,
                                      instance_uuid='fake-uuid',
-                                     host='host')
+                                     host='host', virtual_interface_id=None)
+        self._compare(fixedip, fake_fixed_ip)
+
+    @mock.patch('nova.db.fixed_ip_associate_pool')
+    def test_associate_pool_with_vif(self, associate):
+        associate.return_value = fake_fixed_ip
+        fixedip = fixed_ip.FixedIP.associate_pool(self.context, 123,
+                                                  'fake-uuid', 'host',
+                                                  vif_id=0)
+        associate.assert_called_with(self.context, 123,
+                                     instance_uuid='fake-uuid',
+                                     host='host', virtual_interface_id=0)
         self._compare(fixedip, fake_fixed_ip)
 
     @mock.patch('nova.db.fixed_ip_disassociate')
