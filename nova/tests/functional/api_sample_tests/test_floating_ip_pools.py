@@ -22,7 +22,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV3):
+class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-floating-ip-pools"
 
     def _get_flags(self):

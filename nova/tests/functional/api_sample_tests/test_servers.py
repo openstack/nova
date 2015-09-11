@@ -23,7 +23,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
+class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     extra_extensions_to_load = ["os-access-ips"]
 
     def _post_server(self, use_common_server_api_samples=True):

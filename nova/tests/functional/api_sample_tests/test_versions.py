@@ -16,7 +16,7 @@
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
-class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'versions'
     scenarios = [('', {'_test': ''})]
 

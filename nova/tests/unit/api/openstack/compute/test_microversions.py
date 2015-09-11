@@ -38,7 +38,7 @@ class MicroversionsTest(test.NoDBTestCase):
         return res
 
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_no_header(self, mock_namespace):
         app = fakes.wsgi_app_v21(init_only='test-microversions')
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
@@ -48,7 +48,7 @@ class MicroversionsTest(test.NoDBTestCase):
         self.assertEqual('val', resp_json['param'])
 
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_return_header(self, mock_namespace):
         app = fakes.wsgi_app_v21(init_only='test-microversions')
         req = fakes.HTTPRequest.blank('/v2/fake/microversions')
@@ -61,7 +61,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_return_header_non_default(self, mock_namespace,
                                                         mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("2.3")
@@ -78,7 +78,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_return_header_fault(self, mock_namespace,
                                                         mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.0")
@@ -93,7 +93,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def _check_microversion_response(self, url, req_version, resp_param,
                                      mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest('2.3')
@@ -120,7 +120,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions2_later_version(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.1")
 
@@ -134,7 +134,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions2_version_too_high(self, mock_namespace,
                                              mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
@@ -146,7 +146,7 @@ class MicroversionsTest(test.NoDBTestCase):
         self.assertEqual(404, res.status_int)
 
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions2_version_too_low(self, mock_namespace):
         app = fakes.wsgi_app_v21(init_only='test-microversions')
         req = fakes.HTTPRequest.blank('/v2/fake/microversions2')
@@ -156,7 +156,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_global_version_too_high(self, mock_namespace,
                                                    mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
@@ -173,7 +173,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_schema(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
@@ -193,7 +193,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_schema_fail(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
 
@@ -212,7 +212,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_schema_out_of_version_check(self, mock_namespace,
                                                        mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
@@ -232,7 +232,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_microversions_schema_second_version(self, mock_namespace,
                                                        mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("3.3")
@@ -252,7 +252,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def _test_microversions_inner_function(self, version, expected_resp,
                                            mock_namespace,
                                            mock_maxver):
@@ -277,7 +277,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def test_with_extends_decorator(self, mock_namespace, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest('2.4')
 
@@ -300,7 +300,7 @@ class MicroversionsTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
-                return_value='nova.api.v3.test_extensions')
+                return_value='nova.api.v21.test_extensions')
     def _test_microversions_actions(self, ret_code, ret_header, req_header,
                                     mock_namespace,
                                     mock_maxver):

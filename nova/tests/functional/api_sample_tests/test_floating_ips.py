@@ -25,7 +25,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV3):
+class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-floating-ips"
 
     def _get_flags(self):

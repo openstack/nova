@@ -22,7 +22,7 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class SecurityGroupDefaultRulesSampleJsonTest(
-        api_sample_base.ApiSampleTestBaseV3):
+        api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = 'os-security-group-default-rules'
 

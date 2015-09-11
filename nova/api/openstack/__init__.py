@@ -312,9 +312,7 @@ class APIRouterV21(base_wsgi.Router):
 
     @staticmethod
     def api_extension_namespace():
-        # TODO(oomichi): This namespaces will be changed after moving all v3
-        # APIs to v2.1.
-        return 'nova.api.v3.extensions'
+        return 'nova.api.v21.extensions'
 
     def __init__(self, init_only=None, v3mode=False):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load

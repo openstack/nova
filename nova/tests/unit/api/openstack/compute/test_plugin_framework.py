@@ -26,7 +26,7 @@ class PluginTest(test.NoDBTestCase):
 
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace")
     def test_plugin_framework_index(self, mock_namespace):
-        mock_namespace.return_value = 'nova.api.v3.test_extensions'
+        mock_namespace.return_value = 'nova.api.v21.test_extensions'
 
         app = fakes.wsgi_app_v21(init_only='test-basic')
         req = fakes.HTTPRequest.blank('/v2/fake/test')

@@ -26,7 +26,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     request_api_version = None
     sample_dir = "keypairs"
     expected_delete_status_code = 202

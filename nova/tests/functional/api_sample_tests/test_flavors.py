@@ -22,7 +22,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'flavors'
 
     def _get_flags(self):

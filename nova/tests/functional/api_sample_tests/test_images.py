@@ -23,7 +23,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = 'images'
     extra_extensions_to_load = ["image-metadata"]
 

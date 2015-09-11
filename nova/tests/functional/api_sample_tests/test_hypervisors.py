@@ -27,7 +27,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-hypervisors"
 
@@ -114,7 +114,7 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
 
 
 @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
-class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-hypervisors"
 

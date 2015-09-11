@@ -21,7 +21,7 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = 'flavor-access'
 
