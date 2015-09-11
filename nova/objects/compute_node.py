@@ -215,6 +215,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         db_compute = db.compute_node_get(context, compute_id)
         return cls._from_db_object(context, cls(), db_compute)
 
+    # NOTE(hanlind): This is deprecated and should be removed on the next
+    # major version bump
     @base.remotable_classmethod
     def get_by_service_id(cls, context, service_id):
         db_computes = db.compute_nodes_get_by_service_id(context, service_id)
@@ -320,13 +322,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     def destroy(self):
         db.compute_node_delete(self._context, self.id)
 
-    @property
-    def service(self):
-        if not hasattr(self, '_cached_service'):
-            self._cached_service = objects.Service.get_by_id(self._context,
-                                                             self.service_id)
-        return self._cached_service
-
     def update_from_virt_driver(self, resources):
         # NOTE(pmurray): the virt driver provides a dict of values that
         # can be copied into the compute node. The names and representation
@@ -395,6 +390,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
+    # NOTE(hanlind): This is deprecated and should be removed on the next
+    # major version bump
     @base.remotable_classmethod
     def _get_by_service(cls, context, service_id, use_slave=False):
         try:
@@ -406,10 +403,6 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
             db_computes = []
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
-
-    @classmethod
-    def get_by_service(cls, context, service, use_slave=False):
-        return cls._get_by_service(context, service.id, use_slave=use_slave)
 
     @base.remotable_classmethod
     def get_all_by_host(cls, context, host, use_slave=False):

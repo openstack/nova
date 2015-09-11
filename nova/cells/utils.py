@@ -21,7 +21,6 @@ import sys
 
 import six
 
-from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 
@@ -176,12 +175,6 @@ def add_cell_to_compute_node(compute_node, cell_name):
     # NOTE(sbauza): As compute_node is a ComputeNode object, we need to wrap it
     # for adding the cell_path information
     compute_proxy = ComputeNodeProxy(compute_node, cell_name)
-    try:
-        service = compute_proxy.service
-    except exception.ServiceNotFound:
-        service = None
-    if isinstance(service, objects.Service):
-        compute_proxy.service = ServiceProxy(service, cell_name)
     return compute_proxy
 
 
