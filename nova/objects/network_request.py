@@ -47,12 +47,6 @@ class NetworkRequest(obj_base.NovaObject,
             network_id, address, port_id, pci_request_id = net_tuple
             return cls(network_id=network_id, address=address,
                        port_id=port_id, pci_request_id=pci_request_id)
-        elif len(net_tuple) == 3:
-            # NOTE(alex_xu): This is only for compatible with icehouse , and
-            # should be removed in the next cycle.
-            network_id, address, port_id = net_tuple
-            return cls(network_id=network_id, address=address,
-                       port_id=port_id)
         else:
             network_id, address = net_tuple
             return cls(network_id=network_id, address=address)
