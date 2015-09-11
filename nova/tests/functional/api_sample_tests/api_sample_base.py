@@ -18,7 +18,7 @@ from oslo_config import cfg
 import testscenarios
 
 from nova.api import openstack
-from nova.api.openstack import API_V3_CORE_EXTENSIONS  # noqa
+from nova.api.openstack import API_V21_CORE_EXTENSIONS  # noqa
 from nova.api.openstack import compute
 from nova import test
 from nova.tests.functional import api_paste_fixture
@@ -47,7 +47,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
             # Set the whitelist to ensure only the extensions we are
             # interested in are loaded so the api samples don't include
             # data from extensions we are not interested in
-            whitelist = API_V3_CORE_EXTENSIONS.copy()
+            whitelist = API_V21_CORE_EXTENSIONS.copy()
             if self.extension_name:
                 whitelist.add(self.extension_name)
             if self.extra_extensions_to_load:

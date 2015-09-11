@@ -60,7 +60,7 @@ class fake_loaded_extension_info(object):
 class ExtensionLoadingTestCase(test.NoDBTestCase):
 
     def _set_v21_core(self, core_extensions):
-        openstack.API_V3_CORE_EXTENSIONS = core_extensions
+        openstack.API_V21_CORE_EXTENSIONS = core_extensions
 
     def test_extensions_loaded(self):
         app = compute.APIRouterV21()
@@ -95,8 +95,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_extensions_whitelist_accept(self):
         # NOTE(maurosr): just to avoid to get an exception raised for not
         # loading all core api.
-        v21_core = openstack.API_V3_CORE_EXTENSIONS
-        openstack.API_V3_CORE_EXTENSIONS = set(['servers'])
+        v21_core = openstack.API_V21_CORE_EXTENSIONS
+        openstack.API_V21_CORE_EXTENSIONS = set(['servers'])
         self.addCleanup(self._set_v21_core, v21_core)
 
         app = compute.APIRouterV21()
@@ -109,8 +109,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_extensions_whitelist_block(self):
         # NOTE(maurosr): just to avoid to get an exception raised for not
         # loading all core api.
-        v21_core = openstack.API_V3_CORE_EXTENSIONS
-        openstack.API_V3_CORE_EXTENSIONS = set(['servers'])
+        v21_core = openstack.API_V21_CORE_EXTENSIONS
+        openstack.API_V21_CORE_EXTENSIONS = set(['servers'])
         self.addCleanup(self._set_v21_core, v21_core)
 
         app = compute.APIRouterV21()
@@ -122,8 +122,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
     def test_blacklist_overrides_whitelist(self):
         # NOTE(maurosr): just to avoid to get an exception raised for not
         # loading all core api.
-        v21_core = openstack.API_V3_CORE_EXTENSIONS
-        openstack.API_V3_CORE_EXTENSIONS = set(['servers'])
+        v21_core = openstack.API_V21_CORE_EXTENSIONS
+        openstack.API_V21_CORE_EXTENSIONS = set(['servers'])
         self.addCleanup(self._set_v21_core, v21_core)
 
         app = compute.APIRouterV21()
@@ -137,8 +137,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(app._loaded_extension_info.extensions))
 
     def test_get_missing_core_extensions(self):
-        v21_core = openstack.API_V3_CORE_EXTENSIONS
-        openstack.API_V3_CORE_EXTENSIONS = set(['core1', 'core2'])
+        v21_core = openstack.API_V21_CORE_EXTENSIONS
+        openstack.API_V21_CORE_EXTENSIONS = set(['core1', 'core2'])
         self.addCleanup(self._set_v21_core, v21_core)
         self.assertEqual(0, len(
             compute.APIRouterV21.get_missing_core_extensions(
@@ -162,8 +162,8 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
                        fake_stevedore_enabled_extensions)
         self.stubs.Set(extension_info, 'LoadedExtensionInfo',
                        fake_loaded_extension_info)
-        v21_core = openstack.API_V3_CORE_EXTENSIONS
-        openstack.API_V3_CORE_EXTENSIONS = set(['core1', 'core2'])
+        v21_core = openstack.API_V21_CORE_EXTENSIONS
+        openstack.API_V21_CORE_EXTENSIONS = set(['core1', 'core2'])
         self.addCleanup(self._set_v21_core, v21_core)
         # if no core API extensions are missing then an exception will
         # not be raised when creating an instance of compute.APIRouterV21

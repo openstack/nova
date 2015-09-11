@@ -69,20 +69,20 @@ CONF = cfg.CONF
 CONF.register_group(api_opts_group)
 CONF.register_opts(api_opts, api_opts_group)
 
-# List of v3 API extensions which are considered to form
+# List of v21 API extensions which are considered to form
 # the core API and so must be present
-# TODO(cyeoh): Expand this list as the core APIs are ported to V3
-API_V3_CORE_EXTENSIONS = set(['os-consoles',
-                              'extensions',
-                              'os-flavor-extra-specs',
-                              'os-flavor-manage',
-                              'flavors',
-                              'ips',
-                              'os-keypairs',
-                              'os-flavor-access',
-                              'server-metadata',
-                              'servers',
-                              'versions'])
+# TODO(cyeoh): Expand this list as the core APIs are ported to v21
+API_V21_CORE_EXTENSIONS = set(['os-consoles',
+                               'extensions',
+                               'os-flavor-extra-specs',
+                               'os-flavor-manage',
+                               'flavors',
+                               'ips',
+                               'os-keypairs',
+                               'os-flavor-access',
+                               'server-metadata',
+                               'servers',
+                               'versions'])
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -337,7 +337,7 @@ class APIRouterV21(base_wsgi.Router):
             return False
 
         if not CONF.osapi_v21.enabled:
-            LOG.info(_LI("V3 API has been disabled by configuration"))
+            LOG.info(_LI("V2.1 API has been disabled by configuration"))
             LOG.warning(_LW("In the M release you must run the v2.1 API."))
             return
 
@@ -349,9 +349,9 @@ class APIRouterV21(base_wsgi.Router):
                 'the codebase to ensure there is a single Compute API.'))
 
         self.init_only = init_only
-        LOG.debug("v3 API Extension Blacklist: %s",
+        LOG.debug("v21 API Extension Blacklist: %s",
                   CONF.osapi_v21.extensions_blacklist)
-        LOG.debug("v3 API Extension Whitelist: %s",
+        LOG.debug("v21 API Extension Whitelist: %s",
                   CONF.osapi_v21.extensions_whitelist)
 
         in_blacklist_and_whitelist = set(
@@ -416,7 +416,7 @@ class APIRouterV21(base_wsgi.Router):
     @staticmethod
     def get_missing_core_extensions(extensions_loaded):
         extensions_loaded = set(extensions_loaded)
-        missing_extensions = API_V3_CORE_EXTENSIONS - extensions_loaded
+        missing_extensions = API_V21_CORE_EXTENSIONS - extensions_loaded
         return list(missing_extensions)
 
     @property
