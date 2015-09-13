@@ -450,10 +450,9 @@ class VMwareVCDriver(driver.ComputeDriver):
                     self.detach_volume(connection_info, instance,
                                        disk.get('device_name'))
                 except exception.StorageError:
-                    # The volume does not exist
-                    # NOTE(garyk): change to warning after string freeze
-                    LOG.debug('%s does not exist!', disk.get('device_name'),
-                              instance=instance)
+                    LOG.warning(_LW('The volume %s does not exist!'),
+                                disk.get('device_name'),
+                                instance=instance)
                 except Exception as e:
                     with excutils.save_and_reraise_exception():
                         LOG.error(_LE("Failed to detach %(device_name)s. "
