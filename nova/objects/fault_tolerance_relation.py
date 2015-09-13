@@ -38,6 +38,14 @@ class FaultToleranceRelation(base.NovaPersistentObject, base.NovaObject):
         return instance_uuid in (self.primary_instance_uuid,
                                  self.secondary_instance_uuid)
 
+    def get_counterpart(self, uuid):
+        if uuid == self.primary_instance_uuid:
+            return self.secondary_instance_uuid
+        elif uuid == self.secondary_instance_uuid:
+            return self.primary_instance_uuid
+        else:
+            raise AttributeError("UUID '%s' not in relation %s.", uuid, self)
+
     @staticmethod
     def _from_db_object(context, ft_relation, db_relation):
         """Method to help with migration to objects.

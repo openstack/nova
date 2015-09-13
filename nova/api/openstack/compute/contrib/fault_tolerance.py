@@ -21,6 +21,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import conductor
+from nova import compute
 from nova import exception
 from nova import objects
 from nova import utils
@@ -34,8 +35,10 @@ soft_authorize = extensions.soft_extension_authorizer('compute',
 
 
 class FaultServerToleranceController(servers.Controller):
+
     def __init__(self, *args, **kwargs):
         super(FaultServerToleranceController, self).__init__(*args, **kwargs)
+        self.compute_api = compute.API()
         self.conductor_api = conductor.API()
 
     @wsgi.action('failover')
@@ -92,7 +95,7 @@ class FaultServerToleranceController(servers.Controller):
         except exception.FaultToleranceRelationByPrimaryNotFound as e:
             LOG.debug(e.format_message())
 
-    def _extend_server(self, req, server, relations):
+    def _add_ft_status(self, req, server, relations):
         db_instance = req.get_db_instance(server['id'])
 
         has_relation = False
@@ -113,7 +116,16 @@ class FaultServerToleranceController(servers.Controller):
 
         server["%s:ft_status" % Fault_tolerance.alias] = status
 
-        return status
+    def _add_relations(self, req, server, relations):
+        search_opts = {"uuid": []}
+        for relation in relations:
+            if server["id"] in relation:
+                relation_id = relation.get_counterpart(server["id"])
+                search_opts["uuid"].append(relation_id)
+
+        instances = self.compute_api.get_all(req.environ['nova.context'],
+                                             search_opts=search_opts)
+        server["%s:ft_relations" % Fault_tolerance.alias] = xml
 
     def _get_relations(self, context, instance_uuids):
         relations = (objects.FaultToleranceRelationList.
@@ -123,8 +135,9 @@ class FaultServerToleranceController(servers.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
+        server = resp_obj.obj['server']
 
-        db_instance = req.get_db_instance(id)
+        db_instance = req.get_db_instance(server['id'])
 
         is_secondary = utils.ft_secondary(db_instance)
         if is_secondary:
@@ -132,8 +145,9 @@ class FaultServerToleranceController(servers.Controller):
 
         resp_obj.attach(xml=FaultToleranceTemplate())
 
-        relations = self._get_relations(context, [id])
-        self._extend_server(req, resp_obj.obj['server'], relations)
+        relations = self._get_relations(context, [server['id']])
+        self._add_ft_status(req, server, relations)
+        self._add_relations(req, server, relations)
 
     def _filter_passive_servers(self, req, resp_obj):
         for key, server in enumerate(list(resp_obj.obj['servers'])):
@@ -154,7 +168,7 @@ class FaultServerToleranceController(servers.Controller):
         server_ids = [server['id'] for server in servers]
         relations = self._get_relations(context, server_ids)
         for server in servers:
-            status = self._extend_server(req, server, relations)
+            self._add_ft_status(req, server, relations)
 
 
 class Fault_tolerance(extensions.ExtensionDescriptor):
@@ -172,15 +186,22 @@ class Fault_tolerance(extensions.ExtensionDescriptor):
         return [servers_extension]
 
 
-def _add_ft_element(elem):
+def _make_ft_status(elem):
     elem.set('{%s}ft_state' % Fault_tolerance.namespace,
              '%s:ft_state' % Fault_tolerance.alias)
+
+
+def _make_ft_relations(elem):
+    xmlutil.SubTemplateElement(
+        elem, '{%s}ft_relation' % Fault_tolerance.namespace,
+        selector='%s:ft_relations' % Fault_tolerance.alias)
 
 
 class FaultToleranceTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('server', selector='server')
-        _add_ft_element(root)
+        _make_ft_status(root)
+        _make_ft_relations(root)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
             Fault_tolerance.alias: Fault_tolerance.namespace})
 
@@ -189,6 +210,6 @@ class FaultToleranceListTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('servers')
         elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        _add_ft_element(elem)
+        _make_ft_status(elem)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
             Fault_tolerance.alias: Fault_tolerance.namespace})
