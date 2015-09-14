@@ -546,7 +546,7 @@
         },
         {
             "alias": "os-multiple-create",
-            "description": "Allow multiple create in the Create Server v3 API.",
+            "description": "Allow multiple create in the Create Server v2.1 API.",
             "links": [],
             "name": "MultipleCreate",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",

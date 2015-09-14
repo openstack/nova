@@ -145,7 +145,7 @@ class CellsController(wsgi.Controller):
     def capacities(self, req, id=None):
         """Return capacities for a given cell or all cells."""
         # TODO(kaushikc): return capacities as a part of cell info and
-        # cells detail calls in v3, along with capabilities
+        # cells detail calls in v2.1, along with capabilities
         context = req.environ['nova.context']
         authorize(context)
         try:

@@ -19,7 +19,7 @@ Using this middleware provides a convenient way to attach the
 x-compute-request-id to only v2 responses. Previously, this header was set in
 api/openstack/wsgi.py
 
-Responses for APIv3 are taken care of by the request_id middleware provided
+Responses for v2.1 API are taken care of by the request_id middleware provided
 in oslo.
 """
 

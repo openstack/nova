@@ -27,7 +27,7 @@ RRID_ATTRIBUTE_NAME = "return_reservation_id"
 
 
 class MultipleCreate(extensions.V21APIExtensionBase):
-    """Allow multiple create in the Create Server v3 API."""
+    """Allow multiple create in the Create Server v2.1 API."""
 
     name = "MultipleCreate"
     alias = ALIAS
