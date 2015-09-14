@@ -77,7 +77,7 @@ class ClaimTestCase(test.NoDBTestCase):
             db_numa_topology = {
                     'id': 1, 'created_at': None, 'updated_at': None,
                     'deleted_at': None, 'deleted': None,
-                    'instance_uuid': instance['uuid'],
+                    'instance_uuid': instance.uuid,
                     'numa_topology': numa_topology._to_json()
                 }
         else:
