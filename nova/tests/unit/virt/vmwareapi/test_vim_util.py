@@ -12,26 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vim_util
-
-
-def _fake_get_object_properties(vim, collector, mobj,
-                                type, properties):
-    fake_objects = fake.FakeRetrieveResult()
-    fake_objects.add_object(fake.ObjectContent(None))
-    return fake_objects
-
-
-def _fake_get_object_properties_missing(vim, collector, mobj,
-                                type, properties):
-    fake_objects = fake.FakeRetrieveResult()
-    ml = [fake.MissingProperty()]
-    fake_objects.add_object(fake.ObjectContent(None, missing_list=ml))
-    return fake_objects
 
 
 class VMwareVIMUtilTestCase(test.NoDBTestCase):
@@ -41,12 +24,6 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
         fake.reset()
         self.vim = fake.FakeVim()
         self.vim._login()
-
-    @mock.patch.object(vim_util, 'get_object_properties', return_value=None)
-    def test_get_dynamic_properties_no_objects(self, mock_get_object_props):
-        res = vim_util.get_dynamic_properties('fake-vim', 'fake-obj',
-                                              'fake-type', 'fake-property')
-        self.assertEqual({}, res)
 
     def test_get_inner_objects(self):
         property = ['summary.name']

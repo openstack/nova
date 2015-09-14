@@ -1124,8 +1124,9 @@ def get_stats_from_cluster(session, cluster):
     vcpus = 0
     mem_info = {'total': 0, 'free': 0}
     # Get the Host and Resource Pool Managed Object Refs
-    prop_dict = session._call_method(vim_util, "get_dynamic_properties",
-                                     cluster, "ClusterComputeResource",
+    prop_dict = session._call_method(vutil,
+                                     "get_object_properties_dict",
+                                     cluster,
                                      ["host", "resourcePool"])
     if prop_dict:
         host_ret = prop_dict.get('host')

@@ -22,8 +22,6 @@ from oslo_log import log as logging
 from oslo_vmware import vim_util as vutil
 import six
 
-from nova.i18n import _LW
-
 vmware_opts = cfg.IntOpt('maximum_objects', default=100,
                          help='The maximum number of ObjectContent data '
                               'objects that should be returned in a single '
@@ -89,30 +87,6 @@ def get_object_properties(vim, collector, mobj, type, properties):
                                     options=options)
 
 
-def get_dynamic_properties(vim, mobj, type, property_names):
-    """Gets the specified properties of the Managed Object."""
-    obj_content = get_object_properties(vim, None, mobj, type, property_names)
-    if obj_content is None:
-        return {}
-    if hasattr(obj_content, 'token'):
-        cancel_retrieve(vim, obj_content.token)
-    property_dict = {}
-    if obj_content.objects:
-        if hasattr(obj_content.objects[0], 'propSet'):
-            dynamic_properties = obj_content.objects[0].propSet
-            if dynamic_properties:
-                for prop in dynamic_properties:
-                    property_dict[prop.name] = prop.val
-        # The object may have information useful for logging
-        if hasattr(obj_content.objects[0], 'missingSet'):
-            for m in obj_content.objects[0].missingSet:
-                LOG.warning(_LW("Unable to retrieve value for %(path)s "
-                                "Reason: %(reason)s"),
-                            {'path': m.path,
-                             'reason': m.fault.localizedMessage})
-    return property_dict
-
-
 def get_objects(vim, type, properties_to_collect=None, all=False):
     """Gets the list of objects of the type specified."""
     return vutil.get_objects(vim, type, CONF.vmware.maximum_objects,
@@ -139,13 +113,6 @@ def get_inner_objects(vim, base_obj, path, inner_type,
     return vim.RetrievePropertiesEx(
             vim.service_content.propertyCollector,
             specSet=[property_filter_spec], options=options)
-
-
-def cancel_retrieve(vim, token):
-    """Cancels the retrieve operation."""
-    return vim.CancelRetrievePropertiesEx(
-            vim.service_content.propertyCollector,
-            token=token)
 
 
 def get_prop_spec(client_factory, spec_type, properties):
