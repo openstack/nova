@@ -31,6 +31,8 @@ from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
 from nova import availability_zones as az
 from nova import block_device
+from nova.cells import opts as cells_opts
+from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import network
 from nova import objects
@@ -313,9 +315,15 @@ class InstanceMetadata(object):
                 self.instance.key_name: self.instance.key_data
             }
 
-            keypair = keypair_obj.KeyPair.get_by_name(
-                context.get_admin_context(), self.instance.user_id,
-                self.instance.key_name)
+            if cells_opts.get_cell_type() == 'compute':
+                cells_api = cells_rpcapi.CellsAPI()
+                keypair = cells_api.get_keypair_at_top(
+                  context.get_admin_context(), self.instance.user_id,
+                  self.instance.key_name)
+            else:
+                keypair = keypair_obj.KeyPair.get_by_name(
+                    context.get_admin_context(), self.instance.user_id,
+                    self.instance.key_name)
             metadata['keys'] = [
                 {'name': keypair.name,
                  'type': keypair.type,

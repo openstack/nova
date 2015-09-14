@@ -57,6 +57,7 @@ CONF = cfg.CONF
 
 USER_DATA_STRING = (b"This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
+FAKE_SEED = '7qtD24mpMR2'
 
 
 def fake_inst_obj(context):
@@ -92,6 +93,12 @@ def fake_inst_obj(context):
     with mock.patch.object(inst, 'save'):
         inst.set_flavor(flavors.get_default_flavor())
     return inst
+
+
+def fake_keypair_obj(name, data):
+    return objects.KeyPair(name=name,
+                           type='fake_type',
+                           public_key=data)
 
 
 def return_non_existing_address(*args, **kwarg):
@@ -154,6 +161,8 @@ class MetadataTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.flags(use_local=True, group='conductor')
+        self.keypair = fake_keypair_obj(self.instance.key_name,
+                                        self.instance.key_data)
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
     def test_can_pickle_metadata(self):
@@ -360,6 +369,69 @@ class MetadataTestCase(test.TestCase):
                                    network_info=[], address="fake")
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-ipv4'], expected_local)
+
+    @mock.patch.object(base64, 'b64encode', lambda data: FAKE_SEED)
+    @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top')
+    @mock.patch.object(objects.KeyPair, 'get_by_name')
+    @mock.patch.object(jsonutils, 'dumps')
+    def _test_as_json_with_options(self, mock_json_dumps,
+                          mock_keypair, mock_cells_keypair,
+                          is_cells=False, os_version=base.GRIZZLY):
+        if is_cells:
+            self.flags(enable=True, group='cells')
+            self.flags(cell_type='compute', group='cells')
+            mock_keypair = mock_cells_keypair
+
+        instance = self.instance
+        keypair = self.keypair
+        md = fake_InstanceMetadata(self.stubs, instance)
+
+        expected_metadata = {
+            'uuid': md.uuid,
+            'hostname': md._get_hostname(),
+            'name': instance.display_name,
+            'launch_index': instance.launch_index,
+            'availability_zone': md.availability_zone,
+        }
+        if md.launch_metadata:
+            expected_metadata['meta'] = md.launch_metadata
+        if md.files:
+            expected_metadata['files'] = md.files
+        if md.extra_md:
+            expected_metadata['extra_md'] = md.extra_md
+        if md.network_config:
+            expected_metadata['network_config'] = md.network_config
+        if instance.key_name:
+            expected_metadata['public_keys'] = {
+                keypair.name: keypair.public_key
+            }
+            expected_metadata['keys'] = [{'type': keypair.type,
+                                          'data': keypair.public_key,
+                                          'name': keypair.name}]
+        if md._check_os_version(base.GRIZZLY, os_version):
+            expected_metadata['random_seed'] = FAKE_SEED
+        if md._check_os_version(base.LIBERTY, os_version):
+            expected_metadata['project_id'] = instance.project_id
+
+        mock_keypair.return_value = keypair
+        md._metadata_as_json(os_version, 'non useless path parameter')
+        if instance.key_name:
+            mock_keypair.assert_called_once_with(mock.ANY,
+                                                 instance.user_id,
+                                                 instance.key_name)
+            self.assertIsInstance(mock_keypair.call_args[0][0],
+                                  context.RequestContext)
+        self.assertEqual(md.md_mimetype, base.MIME_TYPE_APPLICATION_JSON)
+        mock_json_dumps.assert_called_once_with(expected_metadata)
+
+    def test_as_json(self):
+        for os_version in base.OPENSTACK_VERSIONS:
+            self._test_as_json_with_options(os_version=os_version)
+
+    def test_as_json_with_cells_mode(self):
+        for os_version in base.OPENSTACK_VERSIONS:
+            self._test_as_json_with_options(is_cells=True,
+                                            os_version=os_version)
 
 
 class OpenStackMetadataTestCase(test.TestCase):

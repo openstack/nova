@@ -76,7 +76,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.36')
+    target = oslo_messaging.Target(version='1.37')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '
@@ -583,3 +583,19 @@ class CellsManager(manager.Manager):
 
     def set_admin_password(self, ctxt, instance, new_pass):
         self.msg_runner.set_admin_password(ctxt, instance, new_pass)
+
+    def get_keypair_at_top(self, ctxt, user_id, name):
+        responses = self.msg_runner.get_keypair_at_top(ctxt, user_id, name)
+        keypairs = [resp.value for resp in responses if resp.value is not None]
+
+        if len(keypairs) == 0:
+            return None
+        elif len(keypairs) > 1:
+            cell_names = ', '.join([resp.cell_name for resp in responses
+                                    if resp.value is not None])
+            LOG.warning(_LW("The same keypair name '%(name)s' exists in the "
+                            "following cells: %(cell_names)s. The keypair "
+                            "value from the first cell is returned."),
+                        {'name': name, 'cell_names': cell_names})
+
+        return keypairs[0]

@@ -760,3 +760,25 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'new_pass': 'fake-password'}
         self._check_result(call_info, 'set_admin_password',
                 expected_args, version='1.29')
+
+    def test_get_keypair_at_top(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.get_keypair_at_top(self.fake_context,
+                                              'fake_user_id', 'fake_name')
+
+        expected_args = {'user_id': 'fake_user_id',
+                         'name': 'fake_name'}
+        self._check_result(call_info, 'get_keypair_at_top',
+                           expected_args, version='1.37')
+        self.assertEqual(result, 'fake_response')
+
+    def test_get_keypair_at_top_with_not_found(self):
+        call_info = self._stub_rpc_method('call', None)
+        self.assertRaises(exception.KeypairNotFound,
+                          self.cells_rpcapi.get_keypair_at_top,
+                          self.fake_context, 'fake_user_id', 'fake_name')
+
+        expected_args = {'user_id': 'fake_user_id',
+                         'name': 'fake_name'}
+        self._check_result(call_info, 'get_keypair_at_top',
+                           expected_args, version='1.37')
