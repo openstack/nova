@@ -746,36 +746,37 @@ class ResourceTracker(object):
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, migrations):
-
-        self.tracked_migrations.clear()
-
         filtered = {}
+        instances = {}
+        self.tracked_migrations.clear()
 
         # do some defensive filtering against bad migrations records in the
         # database:
         for migration in migrations:
+            uuid = migration.instance_uuid
+
             try:
-                instance = migration.instance
+                if uuid not in instances:
+                    instances[uuid] = migration.instance
             except exception.InstanceNotFound as e:
                 # migration referencing deleted instance
                 LOG.debug('Migration instance not found: %s', e)
                 continue
 
-            uuid = instance.uuid
-
             # skip migration if instance isn't in a resize state:
-            if not _instance_in_resize_state(instance):
+            if not _instance_in_resize_state(instances[uuid]):
                 LOG.warning(_LW("Instance not resizing, skipping migration."),
                             instance_uuid=uuid)
                 continue
 
             # filter to most recently updated migration for each instance:
-            m = filtered.get(uuid, None)
-            if not m or migration.updated_at >= m.updated_at:
+            other_migration = filtered.get(uuid, None)
+            if (not other_migration or
+                    migration.updated_at >= other_migration.updated_at):
                 filtered[uuid] = migration
 
         for migration in filtered.values():
-            instance = migration.instance
+            instance = instances[migration.instance_uuid]
             try:
                 self._update_usage_from_migration(context, instance, None,
                                                   migration)
