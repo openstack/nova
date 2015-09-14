@@ -17,6 +17,7 @@ Tests for Crypto module.
 """
 
 import os
+import uuid
 
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
@@ -164,8 +165,9 @@ class RevokeCertsTest(test.TestCase):
                           2, 'test_file')
 
     def test_revoke_cert_project_not_found_chdir_fails(self, *args, **kargs):
+        self.flags(use_project_ca=True)
         self.assertRaises(exception.ProjectNotFound, crypto.revoke_cert,
-                          2, 'test_file')
+                          str(uuid.uuid4()), 'test_file')
 
 
 class CertExceptionTests(test.TestCase):
