@@ -20,10 +20,12 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI, _LE
 from nova import objects
 from nova.objects import base as objects_base
+from nova.objects import service as service_obj
 from nova import rpc
 
 rpcapi_opts = [
@@ -318,10 +320,44 @@ class ComputeAPI(object):
     def __init__(self):
         super(ComputeAPI, self).__init__()
         target = messaging.Target(topic=CONF.compute_topic, version='4.0')
-        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.compute,
-                                               CONF.upgrade_levels.compute)
+        upgrade_level = CONF.upgrade_levels.compute
+        if upgrade_level == 'auto':
+            version_cap = self._determine_version_cap(target)
+        else:
+            version_cap = self.VERSION_ALIASES.get(upgrade_level,
+                                                   upgrade_level)
         serializer = objects_base.NovaObjectSerializer()
         self.client = self.get_client(target, version_cap, serializer)
+
+    def _determine_version_cap(self, target):
+        # FIXME(danms): We should reload this on SIGHUP, or by timer
+        service_version = objects.Service.get_minimum_version(
+            context.get_admin_context(), 'compute')
+        history = service_obj.SERVICE_VERSION_HISTORY
+        try:
+            version_cap = history[service_version]['compute_rpc']
+        except IndexError:
+            LOG.error(_LE('Failed to extract compute RPC version from '
+                          'service history because I am too '
+                          'old (minimum version is now %(version)i)'),
+                      {'version': service_version})
+            raise exception.ServiceTooOld()
+        except KeyError:
+            LOG.error(_LE('Failed to extract compute RPC version from '
+                          'service history for version %(version)i'),
+                      {'version': service_version})
+            return target.version
+        LOG.info(_LI('Automatically selected compute RPC version %(rpc)s '
+                     'from minimum service version %(service)i'),
+                 {'rpc': version_cap,
+                  'service': service_version})
+        return version_cap
+
+    def _compat_ver(self, current, legacy):
+        if self.client.can_send_version(current):
+            return current
+        else:
+            return legacy
 
     # Cells overrides this
     def get_client(self, target, version_cap, serializer):
