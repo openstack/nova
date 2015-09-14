@@ -293,13 +293,7 @@ class API(object):
             msg = _("volume %s already attached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
         if instance and not CONF.cinder.cross_az_attach:
-            # NOTE(sorrison): If instance is on a host we match against it's AZ
-            #                 else we check the intended AZ
-            if instance.get('host'):
-                instance_az = az.get_instance_availability_zone(
-                    context, instance)
-            else:
-                instance_az = instance['availability_zone']
+            instance_az = az.get_instance_availability_zone(context, instance)
             if instance_az != volume['availability_zone']:
                 msg = _("Instance %(instance)s and volume %(vol)s are not in "
                         "the same availability_zone. Instance is in "

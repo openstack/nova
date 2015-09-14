@@ -23,8 +23,8 @@ import six
 from nova import availability_zones as az
 from nova import context
 from nova import db
+from nova import objects
 from nova import test
-from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('internal_service_availability_zone',
@@ -239,8 +239,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def test_get_instance_availability_zone_default_value(self):
         """Test get right availability zone by given an instance."""
-        fake_inst_id = 162
-        fake_inst = fakes.stub_instance(fake_inst_id, host=self.host)
+        fake_inst = objects.Instance(host=self.host)
 
         self.assertEqual(self.default_az,
                 az.get_instance_availability_zone(self.context, fake_inst))
@@ -251,8 +250,21 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('compute', host)
         self._add_to_aggregate(service, self.agg)
 
-        fake_inst_id = 174
-        fake_inst = fakes.stub_instance(fake_inst_id, host=host)
+        fake_inst = objects.Instance(host=host)
 
         self.assertEqual(self.availability_zone,
                 az.get_instance_availability_zone(self.context, fake_inst))
+
+    def test_get_instance_availability_zone_no_host(self):
+        """Test get availability zone from instance if host not set."""
+        fake_inst = objects.Instance(host=None, availability_zone='inst-az')
+
+        result = az.get_instance_availability_zone(self.context, fake_inst)
+        self.assertEqual('inst-az', result)
+
+    def test_get_instance_availability_zone_no_host_no_az(self):
+        """Test get availability zone if neither host nor az is set."""
+        fake_inst = objects.Instance(host=None, availability_zone=None)
+
+        result = az.get_instance_availability_zone(self.context, fake_inst)
+        self.assertIsNone(result)
