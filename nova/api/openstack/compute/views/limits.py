@@ -103,10 +103,10 @@ class ViewBuilder(object):
         }
 
 
-class ViewBuilderV3(ViewBuilder):
+class ViewBuilderV21(ViewBuilder):
 
     def __init__(self):
-        super(ViewBuilderV3, self).__init__()
+        super(ViewBuilderV21, self).__init__()
         # NOTE In v2.0 these are added by a specific extension
         self.limit_names["server_groups"] = ["maxServerGroups"]
         self.limit_names["server_group_members"] = ["maxServerGroupMembers"]

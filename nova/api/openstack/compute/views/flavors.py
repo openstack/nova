@@ -81,9 +81,9 @@ class ViewBuilder(common.ViewBuilder):
         return flavors_dict
 
 
-class V3ViewBuilder(ViewBuilder):
+class ViewBuilderV21(ViewBuilder):
     def show(self, request, flavor):
-        flavor_dict = super(V3ViewBuilder, self).show(request, flavor)
+        flavor_dict = super(ViewBuilderV21, self).show(request, flavor)
         flavor_dict['flavor'].update({
             "swap": flavor["swap"] or "",
             "OS-FLV-EXT-DATA:ephemeral": flavor["ephemeral_gb"],

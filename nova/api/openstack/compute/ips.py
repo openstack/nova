@@ -31,7 +31,7 @@ class IPsController(wsgi.Controller):
     # Note(gmann): here using V2 view builder instead of V3 to have V2.1
     # server ips response same as V2 which does not include "OS-EXT-IPS:type"
     # & "OS-EXT-IPS-MAC:mac_addr". If needed those can be added with
-    # microversion by using V3 view builder.
+    # microversion by using V2.1 view builder.
     _view_builder_class = views_addresses.ViewBuilder
 
     def __init__(self, **kwargs):

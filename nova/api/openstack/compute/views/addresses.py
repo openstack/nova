@@ -45,7 +45,7 @@ class ViewBuilder(common.ViewBuilder):
         return dict(addresses=addresses)
 
 
-class ViewBuilderV3(ViewBuilder):
+class ViewBuilderV21(ViewBuilder):
     """Models server addresses as a dictionary."""
     def basic(self, ip, extend_address=False):
         """Return a dictionary describing an IP address."""

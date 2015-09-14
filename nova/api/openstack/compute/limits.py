@@ -48,7 +48,7 @@ class LimitsController(wsgi.Controller):
         return builder.build(rate_limits, abs_limits)
 
     def _get_view_builder(self, req):
-        return limits_views.ViewBuilderV3()
+        return limits_views.ViewBuilderV21()
 
 
 class Limits(extensions.V21APIExtensionBase):

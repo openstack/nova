@@ -2994,7 +2994,7 @@ class ServersViewBuilderTest(test.TestCase):
         fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
 
         self.uuid = db_inst['uuid']
-        self.view_builder = views.servers.ViewBuilderV3()
+        self.view_builder = views.servers.ViewBuilderV21()
         self.request = fakes.HTTPRequestV21.blank("/fake")
         self.request.context = context.RequestContext('fake', 'fake')
         self.instance = fake_instance.fake_instance_obj(
