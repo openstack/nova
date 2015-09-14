@@ -503,6 +503,22 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertEqual(result['volumeAttachment']['id'],
             '00000000-aaaa-aaaa-aaaa-000000000000')
 
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       return_value='/dev/myfake')
+    def test_attach_volume_with_auto_device(self, mock_attach):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': None}}
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertEqual(result['volumeAttachment']['id'],
+            '00000000-aaaa-aaaa-aaaa-000000000000')
+        self.assertEqual(result['volumeAttachment']['device'],
+            '/dev/myfake')
+
     def test_attach_volume_to_locked_server(self):
         def fake_attach_volume_to_locked_server(self, context, instance,
                                                 volume_id, device=None):
