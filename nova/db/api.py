@@ -100,6 +100,12 @@ def service_get(context, service_id, use_slave=False):
                             use_slave=use_slave)
 
 
+def service_get_minimum_version(context, binary, use_slave=False):
+    """Get the minimum service version in the database."""
+    return IMPL.service_get_minimum_version(context, binary,
+                                            use_slave=use_slave)
+
+
 def service_get_by_host_and_topic(context, host, topic):
     """Get a service by hostname and topic it listens to."""
     return IMPL.service_get_by_host_and_topic(context, host, topic)

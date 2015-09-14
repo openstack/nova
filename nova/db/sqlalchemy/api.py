@@ -440,6 +440,17 @@ def service_get(context, service_id, use_slave=False):
                         use_slave=use_slave)
 
 
+def service_get_minimum_version(context, binary, use_slave=False):
+    session = get_session(use_slave=use_slave)
+    with session.begin():
+        min_version = session.query(
+            func.min(models.Service.version)).\
+                             filter(models.Service.binary == binary).\
+                             filter(models.Service.forced_down == false()).\
+                             scalar()
+    return min_version
+
+
 def service_get_all(context, disabled=None):
     query = model_query(context, models.Service)
 
