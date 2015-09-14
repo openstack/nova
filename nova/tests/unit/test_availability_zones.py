@@ -17,6 +17,7 @@
 Tests for availability zones
 """
 
+import mock
 from oslo_config import cfg
 import six
 
@@ -239,7 +240,8 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def test_get_instance_availability_zone_default_value(self):
         """Test get right availability zone by given an instance."""
-        fake_inst = objects.Instance(host=self.host)
+        fake_inst = objects.Instance(host=self.host,
+                                     availability_zone=None)
 
         self.assertEqual(self.default_az,
                 az.get_instance_availability_zone(self.context, fake_inst))
@@ -250,10 +252,24 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('compute', host)
         self._add_to_aggregate(service, self.agg)
 
-        fake_inst = objects.Instance(host=host)
+        fake_inst = objects.Instance(host=host,
+                                     availability_zone=self.availability_zone)
 
         self.assertEqual(self.availability_zone,
                 az.get_instance_availability_zone(self.context, fake_inst))
+
+    @mock.patch.object(az._get_cache(), 'get')
+    def test_get_instance_availability_zone_cache_differs(self, cache_get):
+        host = 'host170'
+        service = self._create_service_with_topic('compute', host)
+        self._add_to_aggregate(service, self.agg)
+        cache_get.return_value = self.default_az
+
+        fake_inst = objects.Instance(host=host,
+                                     availability_zone=self.availability_zone)
+        self.assertEqual(
+            self.availability_zone,
+            az.get_instance_availability_zone(self.context, fake_inst))
 
     def test_get_instance_availability_zone_no_host(self):
         """Test get availability zone from instance if host not set."""

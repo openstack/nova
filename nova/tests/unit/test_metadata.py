@@ -83,7 +83,8 @@ def fake_inst_obj(context):
         metadata={},
         default_ephemeral_device=None,
         default_swap_device=None,
-        system_metadata={})
+        system_metadata={},
+        availability_zone=None)
     nwinfo = network_model.NetworkInfo([])
     inst.info_cache = objects.InstanceInfoCache(context=context,
                                                 instance_uuid=inst.uuid,
