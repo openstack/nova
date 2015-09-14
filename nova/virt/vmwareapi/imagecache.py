@@ -40,11 +40,11 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 from oslo_vmware import exceptions as vexc
+from oslo_vmware import vim_util as vutil
 
 from nova.i18n import _LI, _LW
 from nova.virt import imagecache
 from nova.virt.vmwareapi import ds_util
-from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
 
@@ -121,9 +121,9 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _get_ds_browser(self, ds_ref):
         ds_browser = self._ds_browser.get(ds_ref.value)
         if not ds_browser:
-            ds_browser = vim_util.get_dynamic_property(
-                    self._session.vim, ds_ref,
-                    "Datastore", "browser")
+            ds_browser = vutil.get_object_property(self._session.vim,
+                                                   ds_ref,
+                                                   "browser")
             self._ds_browser[ds_ref.value] = ds_browser
         return ds_browser
 

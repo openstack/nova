@@ -18,12 +18,12 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_vmware import exceptions as vexc
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _LW
 from nova.network import model
 from nova.virt.vmwareapi import network_util
-from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
@@ -124,8 +124,9 @@ def _get_network_ref_from_opaque(opaque_networks, integration_bridge, bridge):
 def _get_opaque_network(session, cluster):
     host = vm_util.get_host_ref(session, cluster)
     try:
-        opaque = session._call_method(vim_util, "get_dynamic_property", host,
-                                      "HostSystem",
+        opaque = session._call_method(vutil,
+                                      "get_object_property",
+                                      host,
                                       "config.network.opaqueNetwork")
     except vexc.InvalidPropertyException:
         opaque = None

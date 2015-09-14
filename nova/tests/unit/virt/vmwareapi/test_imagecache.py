@@ -19,6 +19,7 @@ import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
 from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import vim_util as vutil
 
 from nova import objects
 from nova import test
@@ -26,7 +27,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import imagecache
-from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vmops
 
 CONF = cfg.CONF
@@ -118,16 +118,14 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         moref = fake.ManagedObjectReference('datastore-100')
         self.assertIsNone(cache.get(moref.value))
         mock_get_method = mock.Mock(return_value=ds_browser)
-        with mock.patch.object(vim_util, 'get_dynamic_property',
-                               mock_get_method):
+        with mock.patch.object(vutil, 'get_object_property', mock_get_method):
             ret = self._imagecache._get_ds_browser(moref)
-            mock_get_method.assert_called_once_with(mock.ANY, moref,
-                                                    'Datastore', 'browser')
+            mock_get_method.assert_called_once_with(mock.ANY, moref, 'browser')
             self.assertIs(ds_browser, ret)
             self.assertIs(ds_browser, cache.get(moref.value))
 
     def test_list_base_images(self):
-        def fake_get_dynamic_property(vim, mobj, type, property_name):
+        def fake_get_object_property(vim, mobj, property_name):
             return 'fake-ds-browser'
 
         def fake_get_sub_folders(session, ds_browser, ds_path):
@@ -136,8 +134,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             return files
 
         with contextlib.nested(
-            mock.patch.object(vim_util, 'get_dynamic_property',
-                              fake_get_dynamic_property),
+            mock.patch.object(vutil, 'get_object_property',
+                              fake_get_object_property),
             mock.patch.object(ds_util, 'get_sub_folders',
                               fake_get_sub_folders)
         ) as (_get_dynamic, _get_sub_folders):

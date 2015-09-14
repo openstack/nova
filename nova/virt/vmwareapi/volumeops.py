@@ -47,9 +47,10 @@ class VMwareVolumeOps(object):
         """Attach disk to VM by reconfiguration."""
         instance_name = instance.name
         client_factory = self._session.vim.client.factory
-        devices = self._session._call_method(vim_util,
-                                    "get_dynamic_property", vm_ref,
-                                    "VirtualMachine", "config.hardware.device")
+        devices = self._session._call_method(vutil,
+                                             "get_object_property",
+                                             vm_ref,
+                                             "config.hardware.device")
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
                                                               client_factory,
@@ -89,9 +90,9 @@ class VMwareVolumeOps(object):
 
     def _get_volume_uuid(self, vm_ref, volume_uuid):
         prop = 'config.extraConfig["volume-%s"]' % volume_uuid
-        opt_val = self._session._call_method(vim_util,
-                                             'get_dynamic_property',
-                                             vm_ref, 'VirtualMachine',
+        opt_val = self._session._call_method(vutil,
+                                             'get_object_property',
+                                             vm_ref,
                                              prop)
         if opt_val is not None:
             return opt_val.value
@@ -200,13 +201,15 @@ class VMwareVolumeOps(object):
         """Rescan the iSCSI HBA to discover iSCSI targets."""
         host_mor = vm_util.get_host_ref(self._session, self._cluster)
         storage_system_mor = self._session._call_method(
-            vim_util, "get_dynamic_property",
-            host_mor, "HostSystem",
-            "configManager.storageSystem")
+                                                vutil,
+                                                "get_object_property",
+                                                host_mor,
+                                                "configManager.storageSystem")
         hbas_ret = self._session._call_method(
-            vim_util, "get_dynamic_property",
-            storage_system_mor, "HostStorageSystem",
-            "storageDeviceInfo.hostBusAdapter")
+                                            vutil,
+                                            "get_object_property",
+                                            storage_system_mor,
+                                            "storageDeviceInfo.hostBusAdapter")
         # Meaning there are no host bus adapters on the host
         if hbas_ret is None:
             return
@@ -271,9 +274,10 @@ class VMwareVolumeOps(object):
             host_mor = vm_util.get_host_ref(self._session, self._cluster)
 
         hbas_ret = self._session._call_method(
-            vim_util, "get_dynamic_property",
-            host_mor, "HostSystem",
-            "config.storageDevice.hostBusAdapter")
+                                      vutil,
+                                      "get_object_property",
+                                      host_mor,
+                                      "config.storageDevice.hostBusAdapter")
 
         # Meaning there are no host bus adapters on the host
         if hbas_ret is None:
@@ -305,9 +309,11 @@ class VMwareVolumeOps(object):
 
     def _get_vmdk_base_volume_device(self, volume_ref):
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", volume_ref,
-                        "VirtualMachine", "config.hardware.device")
+        hardware_devices = self._session._call_method(
+                                                    vutil,
+                                                    "get_object_property",
+                                                    volume_ref,
+                                                    "config.hardware.device")
         return vm_util.get_vmdk_volume_disk(hardware_devices)
 
     def _attach_volume_vmdk(self, connection_info, instance,
@@ -358,8 +364,7 @@ class VMwareVolumeOps(object):
         if adapter_type is None:
             # Get the vmdk file name that the VM is pointing to
             hardware_devices = self._session._call_method(
-                vim_util, "get_dynamic_property", vm_ref,
-                "VirtualMachine", "config.hardware.device")
+                vutil, "get_object_property", vm_ref, "config.hardware.device")
             adapter_type = vm_util.get_scsi_adapter_type(hardware_devices)
 
         self.attach_disk_to_vm(vm_ref, instance,
@@ -397,20 +402,20 @@ class VMwareVolumeOps(object):
 
     def _get_host_of_vm(self, vm_ref):
         """Get the ESX host of given VM."""
-        return self._session._call_method(vim_util, 'get_dynamic_property',
-                                          vm_ref, 'VirtualMachine',
-                                          'runtime').host
+        return self._session._call_method(vutil, 'get_object_property',
+                                          vm_ref, 'runtime').host
 
     def _get_res_pool_of_host(self, host):
         """Get the resource pool of given host's cluster."""
         # Get the compute resource, the host belongs to
-        compute_res = self._session._call_method(vim_util,
-                                                 'get_dynamic_property',
-                                                 host, 'HostSystem',
+        compute_res = self._session._call_method(vutil,
+                                                 'get_object_property',
+                                                 host,
                                                  'parent')
         # Get resource pool from the compute resource
-        return self._session._call_method(vim_util, 'get_dynamic_property',
-                                          compute_res, compute_res._type,
+        return self._session._call_method(vutil,
+                                          'get_object_property',
+                                          compute_res,
                                           'resourcePool')
 
     def _get_res_pool_of_vm(self, vm_ref):
@@ -495,9 +500,10 @@ class VMwareVolumeOps(object):
 
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
+        hardware_devices = self._session._call_method(vutil,
+                                                      "get_object_property",
+                                                      vm_ref,
+                                                      "config.hardware.device")
 
         # Get disk uuid
         disk_uuid = self._get_volume_uuid(vm_ref,
@@ -556,9 +562,10 @@ class VMwareVolumeOps(object):
                 reason=_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
+        hardware_devices = self._session._call_method(vutil,
+                                                      "get_object_property",
+                                                      vm_ref,
+                                                      "config.hardware.device")
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
             raise exception.StorageError(reason=_("Unable to find volume"))

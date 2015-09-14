@@ -18,6 +18,7 @@ import contextlib
 import mock
 from oslo_config import cfg
 from oslo_vmware import exceptions as vexc
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.network import model as network_model
@@ -27,7 +28,6 @@ from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
-from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 CONF = cfg.CONF
@@ -227,9 +227,8 @@ class VMwareVifTestCase(test.NoDBTestCase):
                 self.cluster).AndReturn('fake-host')
         opaque = fake.DataObject()
         opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vim_util, "get_dynamic_property",
-                 'fake-host', 'HostSystem',
-                 'config.network.opaqueNetwork').AndReturn(opaque)
+        self.session._call_method(vutil, "get_object_property",
+                 'fake-host', 'config.network.opaqueNetwork').AndReturn(opaque)
         vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
                 CONF.vmware.integration_bridge,
                 self.vif['network']['id']).AndReturn('fake-network-ref')
@@ -248,9 +247,8 @@ class VMwareVifTestCase(test.NoDBTestCase):
                 self.cluster).AndReturn('fake-host')
         opaque = fake.DataObject()
         opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vim_util, "get_dynamic_property",
-                 'fake-host', 'HostSystem',
-                 'config.network.opaqueNetwork').AndReturn(opaque)
+        self.session._call_method(vutil, "get_object_property",
+                 'fake-host', 'config.network.opaqueNetwork').AndReturn(opaque)
         vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
                 CONF.vmware.integration_bridge,
                 self.vif['network']['id']).AndReturn(None)
@@ -267,9 +265,8 @@ class VMwareVifTestCase(test.NoDBTestCase):
                 self.cluster).AndReturn('fake-host')
         opaque = fake.DataObject()
         opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vim_util, "get_dynamic_property",
-                 'fake-host', 'HostSystem',
-                 'config.network.opaqueNetwork').AndReturn(None)
+        self.session._call_method(vutil, "get_object_property",
+                 'fake-host', 'config.network.opaqueNetwork').AndReturn(None)
         network_util.get_network_with_the_name(self.session, 0,
             self.cluster).AndReturn(None)
         self.mox.ReplayAll()
@@ -311,7 +308,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
 
     def test_get_neutron_network_invalid_property(self):
         def fake_call_method(module, method, *args, **kwargs):
-            if method == 'get_dynamic_property':
+            if method == 'get_object_property':
                 raise vexc.InvalidPropertyException()
 
         with contextlib.nested(
