@@ -3814,7 +3814,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         with mock.patch.object(conn, "destroy") as mock_destroy:
             conn.rollback_live_migration_at_destination("context",
-                    "instance", [], None)
+                    "instance", [], {'block_device_mapping': []})
             self.assertFalse(mock_destroy.called)
 
 

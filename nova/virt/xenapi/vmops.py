@@ -2370,6 +2370,23 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_utils.strip_base_mirror_from_vdis(self._session, vm_ref)
 
+    def rollback_live_migration_at_destination(self, instance,
+                                               block_device_info):
+        bdms = block_device_info['block_device_mapping'] or []
+
+        for bdm in bdms:
+            conn_data = bdm['connection_info']['data']
+            uuid, label, params = volume_utils.parse_sr_info(conn_data)
+            try:
+                sr_ref = volume_utils.find_sr_by_uuid(self._session,
+                                                      uuid)
+
+                if sr_ref:
+                    volume_utils.forget_sr(self._session, sr_ref)
+            except Exception:
+                LOG.exception(_LE('Failed to forget the SR for volume %s'),
+                              params['id'], instance=instance)
+
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""
         usage = {}
