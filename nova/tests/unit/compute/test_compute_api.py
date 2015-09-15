@@ -2405,6 +2405,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_snapshot_volume_backed(True, True,
                                           vm_state=vm_states.STOPPED)
 
+    def test_snapshot_volume_backed_with_quiesce_suspended(self):
+        self._test_snapshot_volume_backed(True, True,
+                                          vm_state=vm_states.SUSPENDED)
+
+    def test_snapshot_volume_backed_with_suspended(self):
+        self._test_snapshot_volume_backed(False, True,
+                                          vm_state=vm_states.SUSPENDED)
+
     def test_volume_snapshot_create(self):
         volume_id = '1'
         create_info = {'id': 'eyedee'}
