@@ -3479,7 +3479,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
     def setUp(self):
         super(ServersAllExtensionsTestCase, self).setUp()
-        self.app = compute.APIRouterV3()
+        self.app = compute.APIRouterV21()
 
     def test_create_missing_server(self):
         # Test create with malformed body.
@@ -3489,7 +3489,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'create', fake_create)
 
-        req = fakes.HTTPRequestV21.blank('/servers')
+        req = fakes.HTTPRequestV21.blank('/fake/servers')
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
@@ -3501,7 +3501,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
     def test_update_missing_server(self):
         # Test update with malformed body.
 
-        req = fakes.HTTPRequestV21.blank('/servers/1')
+        req = fakes.HTTPRequestV21.blank('/fake/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
