@@ -144,3 +144,9 @@ user documentation.
   automatically detect if the instance is on shared storage.
   Also adminPass is removed from the response body. The user can get the
   password with the server's os-server-password action.
+
+2.15
+----
+
+  From this version of the API users can choose 'soft-affinity' and
+  'soft-anti-affinity' rules too for server-groups.
