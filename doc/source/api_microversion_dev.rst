@@ -60,6 +60,12 @@ changed. The user contract covers many kinds of information such as:
 
     Example: adding a new attribute 'locked': True/False to the request body
 
+    However, the attribute ``os.scheduler_hints`` of the "create a server" API
+    is an exception to this. A new scheduler which adds a new attribute
+    to ``os:scheduler_hints`` doesn't require a new microversion, because
+    available schedulers depend on cloud environments, and we accept customized
+    schedulers as a rule.
+
 - the Response
 
   - the list of attributes and data structures returned
