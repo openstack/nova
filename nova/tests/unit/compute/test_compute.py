@@ -8470,30 +8470,6 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.update_instance_metadata, self.context,
                 instance, "key")
 
-    def test_get_instance_faults(self):
-        # Get an instances latest fault.
-        instance = self._create_fake_instance_obj()
-
-        fault_fixture = {
-                'code': 404,
-                'instance_uuid': instance['uuid'],
-                'message': "HTTPNotFound",
-                'details': "Stock details for test",
-                'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
-            }
-
-        def return_fault(_ctxt, instance_uuids):
-            return dict.fromkeys(instance_uuids, [fault_fixture])
-
-        self.stubs.Set(nova.db,
-                       'instance_fault_get_by_instance_uuids',
-                       return_fault)
-
-        _context = context.get_admin_context()
-        output = self.compute_api.get_instance_faults(_context, [instance])
-        expected = {instance['uuid']: [fault_fixture]}
-        self.assertEqual(output, expected)
-
     @staticmethod
     def _parse_db_block_device_mapping(bdm_ref):
         attr_list = ('delete_on_termination', 'device_name', 'no_device',
@@ -10887,20 +10863,6 @@ class ComputePolicyTestCase(BaseTestCase):
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get_all, self.context)
-
-    def test_get_instance_faults(self):
-        instance1 = self._create_fake_instance_obj()
-        instance2 = self._create_fake_instance_obj()
-        instances = [instance1, instance2]
-
-        rules = {
-            "compute:get_instance_faults": [["false:false"]],
-        }
-        self.policy.set_rules(rules)
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.compute_api.get_instance_faults,
-                          context.get_admin_context(), instances)
 
     def test_force_host_fail(self):
         rules = {"compute:create": [],

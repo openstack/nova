@@ -432,7 +432,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute:detach_volume",
 "compute:backup",
 "compute:get_instance_diagnostics",
-"compute:get_instance_faults",
 "compute:get_instance_metadata",
 "compute:get_lock",
 "compute:get_mks_console",
