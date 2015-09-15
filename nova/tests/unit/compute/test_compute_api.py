@@ -2536,8 +2536,31 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Quotas.reserve')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
-    def test_restore(self, action_start, instance_save, quota_reserve,
-                     quota_commit):
+    def test_restore_by_admin(self, action_start, instance_save,
+                              quota_reserve, quota_commit):
+        admin_context = context.RequestContext('admin_user',
+                                               'admin_project',
+                                               True)
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.SOFT_DELETED
+        instance.task_state = None
+        instance.save()
+        with mock.patch.object(self.compute_api, 'compute_rpcapi') as rpc:
+            self.compute_api.restore(admin_context, instance)
+            rpc.restore_instance.assert_called_once_with(admin_context,
+                                                         instance)
+        self.assertEqual(instance.task_state, task_states.RESTORING)
+        self.assertEqual(1, quota_commit.call_count)
+        quota_reserve.assert_called_once_with(instances=1,
+            cores=instance.flavor.vcpus, ram=instance.flavor.memory_mb,
+            project_id=instance.project_id, user_id=instance.user_id)
+
+    @mock.patch('nova.objects.Quotas.commit')
+    @mock.patch('nova.objects.Quotas.reserve')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.InstanceAction.action_start')
+    def test_restore_by_instance_owner(self, action_start, instance_save,
+                                       quota_reserve, quota_commit):
         instance = self._create_instance_obj()
         instance.vm_state = vm_states.SOFT_DELETED
         instance.task_state = None
@@ -2546,8 +2569,12 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.restore(self.context, instance)
             rpc.restore_instance.assert_called_once_with(self.context,
                                                          instance)
+        self.assertEqual(instance.project_id, self.context.project_id)
         self.assertEqual(instance.task_state, task_states.RESTORING)
         self.assertEqual(1, quota_commit.call_count)
+        quota_reserve.assert_called_once_with(instances=1,
+            cores=instance.flavor.vcpus, ram=instance.flavor.memory_mb,
+            project_id=instance.project_id, user_id=instance.user_id)
 
     def test_external_instance_event(self):
         instances = [
