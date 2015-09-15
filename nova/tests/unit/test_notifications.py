@@ -480,6 +480,31 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(n.context, ctxt)
         self.assertTrue(self.decorated_function_called)
 
+    def test_notify_decorator_wrong_default_notification_level(self):
+        func_name = self._decorated_function.__name__
+
+        self.flags(default_notification_level='fake_level')
+        self._decorated_function = notifications.notify_decorator(
+            func_name,
+            self._decorated_function)
+
+        mock_info = mock.Mock()
+
+        class FakeNotifier(object):
+
+            info = mock_info
+
+        mock_notifier_p = mock.patch.object(
+            notifications.rpc,
+            'get_notifier',
+            mock.Mock(return_value=FakeNotifier)
+        )
+        with mock_notifier_p:
+            self._decorated_function(1, 2)
+
+        self.assertTrue(self.decorated_function_called)
+        self.assertTrue(mock_info.called)
+
 
 class NotificationsFormatTestCase(test.NoDBTestCase):
 

@@ -89,7 +89,7 @@ def notify_decorator(name, fn):
                                     publisher_id=(CONF.default_publisher_id
                                                   or CONF.host))
         method = getattr(notifier, CONF.default_notification_level.lower(),
-                         'info')
+                         notifier.info)
         method(ctxt, name, body)
 
         return fn(*args, **kwarg)
