@@ -415,3 +415,25 @@ class MoveClaimTestCase(ClaimTestCase):
     def test_abort(self, mock_get):
         claim = self._abort()
         self.assertTrue(claim.tracker.rcalled)
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    def test_create_migration_context(self, mock_get):
+        numa_topology = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
+        self.instance.numa_topology = None
+        claim = self._claim(numa_topology=numa_topology)
+        migration = objects.Migration(context=self.context, id=42)
+        claim.migration = migration
+        fake_mig_context = mock.Mock(spec=objects.MigrationContext)
+        with mock.patch('nova.objects.MigrationContext',
+                        return_value=fake_mig_context) as ctxt_mock:
+            claim.create_migration_context()
+            ctxt_mock.assert_called_once_with(
+                context=self.context, instance_uuid=self.instance.uuid,
+                migration_id=42, old_numa_topology=None,
+                new_numa_topology=mock.ANY)
+            self.assertIsInstance(ctxt_mock.call_args[1]['new_numa_topology'],
+                                  objects.InstanceNUMATopology)
+            self.assertEqual(migration, claim.migration)

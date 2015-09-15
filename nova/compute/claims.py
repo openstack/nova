@@ -293,3 +293,17 @@ class MoveClaim(Claim):
             self.context,
             self.instance, instance_type=self.instance_type,
             image_meta=self.image_meta)
+
+    def create_migration_context(self):
+        if not self.migration:
+            # FIXME(ndipanov): Move this to a LOG.warn once Mitaka opens up
+            LOG.debug("Can't create a migration_context record without a "
+                      "migration object specified.")
+            return
+
+        mig_context = objects.MigrationContext(
+            context=self.context, instance_uuid=self.instance.uuid,
+            migration_id=self.migration.id,
+            old_numa_topology=self.instance.numa_topology,
+            new_numa_topology=self.claimed_numa_topology)
+        return mig_context
