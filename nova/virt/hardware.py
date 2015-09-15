@@ -754,7 +754,7 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
 
 
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
-    """Check if a instance cell can fit and set it's cell id
+    """Check if an instance cell can fit and set it's cell id
 
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit

@@ -33,7 +33,7 @@ volume_opts = [
                     'case offload support is desired. Default format is of '
                     'the form <transport_name>.<hwaddress> where '
                     '<transport_name> is one of (be2iscsi, bnx2i, cxgb3i, '
-                    'cxgb4i, qla4xxx, ocs) and <hwadress> is the MAC address '
+                    'cxgb4i, qla4xxx, ocs) and <hwaddress> is the MAC address '
                     'of the interface and can be generated via the '
                     'iscsiadm -m iface command. Do not confuse the '
                     'iscsi_iface parameter to be provided here with the '
