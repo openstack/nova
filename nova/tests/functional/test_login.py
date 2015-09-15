@@ -15,7 +15,6 @@
 
 from oslo_log import log as logging
 
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
@@ -32,5 +31,5 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
             LOG.debug("flavor: %s", flavor)
 
 
-class LoginTestV3(client.TestOpenStackClientV3Mixin, LoginTest):
+class LoginTestV21(LoginTest):
     _api_version = 'v2.1'
