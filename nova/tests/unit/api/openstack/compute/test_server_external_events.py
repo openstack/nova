@@ -147,6 +147,12 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         self.assertRaises(self.invalid_error,
                           self.api.create, self.req, body=body)
 
+    def test_create_unkown_events(self):
+        self.event_1['name'] = 'unkown_event'
+        body = {'events': self.event_1}
+        self.assertRaises(self.invalid_error,
+                          self.api.create, self.req, body=body)
+
 
 @mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
 class ServerExternalEventsTestV2(ServerExternalEventsTestV21):

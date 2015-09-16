@@ -60,6 +60,10 @@ class ServerExternalEventsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(
                     _('Invalid event status `%s\'') % status)
 
+            if client_event.get('name') not in external_event_obj.EVENT_NAMES:
+                raise webob.exc.HTTPBadRequest(
+                    _('Invalid event name %s') % client_event.get('name'))
+
             try:
                 event.instance_uuid = client_event.pop('server_uuid')
                 event.name = client_event.pop('name')
