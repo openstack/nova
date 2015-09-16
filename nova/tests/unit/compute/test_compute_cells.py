@@ -19,6 +19,7 @@ import functools
 import inspect
 
 import mock
+from mox3 import mox
 from oslo_config import cfg
 from oslo_utils import timeutils
 
@@ -143,10 +144,14 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
+        self.mox.StubOutWithMock(compute_api.API, '_local_delete')
         inst = self._create_fake_instance_obj()
         delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, delete_type)
+        compute_api.API._local_delete(self.context, inst,
+                                      mox.IsA(objects.BlockDeviceMappingList),
+                                      method_name, mox.IgnoreArg())
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)

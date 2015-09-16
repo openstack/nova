@@ -20,7 +20,6 @@ import oslo_messaging as messaging
 from oslo_utils import excutils
 
 from nova import availability_zones
-from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
@@ -220,9 +219,8 @@ class ComputeCellsAPI(compute_api.API):
             delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
-            bdms = block_device.legacy_mapping(
-                self.db.block_device_mapping_get_all_by_instance(
-                    context, instance.uuid))
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
             try:
