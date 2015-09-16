@@ -6,13 +6,15 @@
 # Frédéric <frosmont@free.fr>, 2014
 # Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014
+# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-09-04 00:55+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-13 01:37+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
@@ -21,6 +23,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid "%(cmd)s failed. Sleeping %(time)s seconds before retry."
@@ -512,11 +515,8 @@ msgstr ""
 "L'image %s n'est pas trouvée sur l'espace disque. Continuer sans injonction "
 "de données."
 
-#, python-format
-msgid "Image config drive option %(image_prop)s is invalid and will be ignored"
-msgstr ""
-"L'option de l'image de l'unité de configuration %(image_prop)s est invalide "
-"et sera ignorée"
+msgid "In the M release you must run the v2.1 API."
+msgstr "Dans la livraison M, vous devez utiliser l'API v2.1."
 
 #, python-format
 msgid ""
@@ -970,10 +970,6 @@ msgid "Unable to mount image %(image)s with error %(error)s. Cannot resize."
 msgstr ""
 "Impossible de monter %(image)s avec l'erreur %(error)s. Impossible de "
 "redimentionner."
-
-#, python-format
-msgid "Unable to retrieve value for %(path)s Reason: %(reason)s"
-msgstr "Impossible de récupérer les valeurs pour %(path)s Raison: %(reason)s"
 
 #, python-format
 msgid "Unexpected power state %d"

@@ -6,13 +6,15 @@
 # Frédéric <frosmont@free.fr>, 2014
 # Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
+# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-08-30 00:41+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-12 08:50+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
@@ -21,6 +23,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Zanata 3.7.1\n"
+
+msgid "\"Look for the VDIs failed"
+msgstr "Échec de la recherche du VDIs"
 
 #, python-format
 msgid ""
@@ -159,6 +165,10 @@ msgid "Couldn't unmount the NFS share %s"
 msgstr "Impossible de démonter le partage NFS %s"
 
 #, python-format
+msgid "Couldn't unmount the Quobyte Volume at %s"
+msgstr "Impossible de démonter le Volume Quobyte %s"
+
+#, python-format
 msgid "Couldn't unmount the share %s"
 msgstr "Impossible de démonter le partage %s"
 
@@ -216,6 +226,10 @@ msgstr "Erreur lors de la création de la clé: %s"
 #, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Erreur définissant un domaine avec XML : %s"
+
+#, python-format
+msgid "Error defining a secret with XML: %s"
+msgstr "Erreur lors de la définition d'un secret avec XML: %s"
 
 #, python-format
 msgid "Error deleting conntrack entries for %s"
@@ -360,6 +374,10 @@ msgid "Error while trying to clean up image %s"
 msgstr "Erreur en tentant de nettoyer l'image %s"
 
 #, python-format
+msgid "Error writing to %(path)s: %(exception)s"
+msgstr "Erreur lors de l'écriture sur %(path)s: %(exception)s"
+
+#, python-format
 msgid "Error writing vm console log file from serial console pipe. Error: %s"
 msgstr ""
 "Erreur lors de l'écriture du fichier journal de la console de la vm depuis "
@@ -394,8 +412,16 @@ msgid "Exception while seeding instance_types table"
 msgstr "Exception lors de la distribution de la table instance_types"
 
 #, python-format
+msgid "Exception while waiting completion of volume snapshots: %s"
+msgstr "Exception en attendant la finalisation des instantanés de volume: %s"
+
+#, python-format
 msgid "Extending virtual disk failed with error: %s"
 msgstr "Extension du disque virtuel a échoué avec l'erreur : %s"
+
+#, python-format
+msgid "Failed removing bridge device: '%s'"
+msgstr "Échec lors du retrait du périphérique bridge: '%s'"
 
 #, python-format
 msgid "Failed removing net device: '%s'"
@@ -483,6 +509,10 @@ msgid "Failed to destroy instance: %s"
 msgstr "Echec de la destruction de l'instance : %s"
 
 #, python-format
+msgid "Failed to detach %(device_name)s. Exception: %(exc)s"
+msgstr "Impossible de détacher %(device_name)s. Exception: %(exc)s"
+
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "Echec de la déconnexion du volume %(volume_id)s de %(mp)s"
 
@@ -536,6 +566,14 @@ msgstr "Echec d'obtention de nw_info"
 #, python-format
 msgid "Failed to instantiate the download handler for %(scheme)s"
 msgstr "Échec à instancier le gestionnaire de téléchargement pour %(scheme)s"
+
+#, python-format
+msgid ""
+"Failed to kill process %(pid)s due to %(reason)s, while deleting the "
+"instance."
+msgstr ""
+"Impossible de tuer le process %(pid)s à cause de %(reason)s, lors de la "
+"suppression de l'instance."
 
 #, python-format
 msgid "Failed to load %(cfgfile)s: %(ex)s"
@@ -948,6 +986,10 @@ msgid "Temporary directory is invalid: %s"
 msgstr "Le répertoire temporaire n'est pas valide : %s"
 
 #, python-format
+msgid "The Quobyte volume at %s is still in use."
+msgstr "Le volume Quobyte %s est en cours d'utilisation."
+
+#, python-format
 msgid ""
 "The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
 msgstr ""
@@ -1061,6 +1103,10 @@ msgid "Unable to parse rrd of %s"
 msgstr "Impossible d’analyser %s de rrd"
 
 #, python-format
+msgid "Unable to preallocate image at path: %(path)s"
+msgstr "Impossible de pré-allouer une image à l'emplacement: %(path)s"
+
+#, python-format
 msgid "Unable to retrieve storage policy with name %s"
 msgstr "Impossible de récuper les détails du stockage ayant le nom %s"
 
@@ -1142,6 +1188,15 @@ msgstr ""
 "configuration (e.g positionner un SR par défaut pour le pool) et/ou "
 "configurer l'indicateur 'sr_matching_filter'."
 
+msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
+msgstr "_migrate_disk_resizing_down failed. Restauration de la vm d'origine"
+
+#, python-format
+msgid "_migrate_disk_resizing_up failed. Restoring orig vm due_to: %s."
+msgstr ""
+"_migrate_disk_resizing_up failed. Restauration de la vm d'origine à cause "
+"de: %s."
+
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
 msgstr "allocate_port_for_instance a renvoyé les ports %(ports)s"
@@ -1170,6 +1225,12 @@ msgstr "erreur en ouvrant image rbd %s"
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
+
+#, python-format
+msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"
+msgstr ""
+"image %(volume)s du pool %(pool)s possède des instantanés, impossible de la "
+"supprimer"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"

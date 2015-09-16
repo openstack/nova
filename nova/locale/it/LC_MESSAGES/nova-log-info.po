@@ -5,12 +5,13 @@
 # Translators:
 # Davide Pajot <davidepajot1@gmail.com>, 2015
 # Saverio <saverio.brancaccio@gmail.com>, 2014
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-08-30 00:40+0000\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-08-30 12:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/openstack/nova/language/"
 "it/)\n"
@@ -20,6 +21,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -783,9 +785,6 @@ msgstr "Utilizzo unità di config"
 
 msgid "Using config drive for instance"
 msgstr "Utilizzo del drive di configurazione per l'istanza"
-
-msgid "V3 API has been disabled by configuration"
-msgstr "Le API V3 sono state disabilitate dalla configurazione"
 
 #, python-format
 msgid ""

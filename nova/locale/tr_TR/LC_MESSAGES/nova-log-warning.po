@@ -3,21 +3,23 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-09-04 00:55+0000\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-08 05:38+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
-"Language: tr_TR\n"
+"Language: tr-TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid ""
@@ -563,12 +565,6 @@ msgstr "%s sebebiyle mantıksal sürücü temizliği göz ardı edildi"
 #, python-format
 msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr "İmaj %s disk depolamada bulunamadı. Veri eklemeden devam et"
-
-#, python-format
-msgid "Image config drive option %(image_prop)s is invalid and will be ignored"
-msgstr ""
-"İmaj yapılandırma sürücüsü seçeneği %(image_prop)s geçersiz ve göz ardı "
-"edilecek"
 
 msgid "Image not found during snapshot"
 msgstr "İmaj anlık görüntü sırasında bulunamadı"
@@ -1220,10 +1216,6 @@ msgid "Unable to mount image %(image)s with error %(error)s. Cannot resize."
 msgstr ""
 "İmaj %(image)s bağlaması %(error)s hatasıyla yapılamadı. Yeniden "
 "boyutlandırılamıyor."
-
-#, python-format
-msgid "Unable to retrieve value for %(path)s Reason: %(reason)s"
-msgstr "%(path)s için değer alınamıyor Sebep: %(reason)s"
 
 msgid "Unable to update metadata, VM not found."
 msgstr "Metadata güncellenemiyor, VM bulunamadı."

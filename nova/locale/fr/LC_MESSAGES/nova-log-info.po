@@ -6,13 +6,15 @@
 # Frédéric <frosmont@free.fr>, 2014
 # Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014
+# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-08-30 00:40+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-14 10:47+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
@@ -21,6 +23,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -114,6 +117,10 @@ msgstr "Amorçage avec le volume %(volume_id)s à %(mountpoint)s"
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "setup_basic_filtering appelé dans nwfilter"
 
+#, python-format
+msgid "Checking Token: %(token)s, %(token_valid)s"
+msgstr "Vérification du Jeton: %(token)s, %(token_valid)s"
+
 msgid "Claim successful"
 msgstr "Réclamation réussie"
 
@@ -204,9 +211,16 @@ msgstr "Supprimer le volume avec l'ID : %s"
 msgid "Deleted %s snapshots."
 msgstr "Snapshots %s supprimés."
 
+msgid "Deleting instance as it has been evacuated from this host"
+msgstr "Suppression de l'instance, puisqu’elle a été évacuée de cet hôte "
+
 #, python-format
 msgid "Deleting instance files %s"
 msgstr "Suppression des fichiers d'instance %s "
+
+#, python-format
+msgid "Deleting orphan compute node %s"
+msgstr "Suppression du compute node orphelin %s"
 
 #, python-format
 msgid "Deletion of %s complete"
@@ -331,6 +345,13 @@ msgstr ""
 "Détection de %(migration_count)d migrations non confirmées antérieures à "
 "%(confirm_window)d secondes"
 
+#, python-format
+msgid ""
+"Found an unconfirmed migration during delete, id: %(id)s, status: %(status)s"
+msgstr ""
+"Migration non confirmée trouvée pendant la suppression, id: %(id)s, status: "
+"%(status)s"
+
 msgid "Get console output"
 msgstr "Obtenir l'affichage de la console"
 
@@ -381,6 +402,9 @@ msgstr "Instance déjà arrêtée."
 msgid "Instance destroyed successfully."
 msgstr "Instance détruite avec succès."
 
+msgid "Instance disappeared during terminate"
+msgstr "L'instance a disparue pendant sa terminaison"
+
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr "Échec de l'arrêt de l'instance dans %d seconds. "
@@ -403,12 +427,18 @@ msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 "L'instance est déjà éteinte dans l'hyperviseur quand l'arrêt est appelé."
 
+msgid "Instance is not found during confirmation"
+msgstr "Instance introuvable lors de la confirmation "
+
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr "L'instance lancée a l'info CPU : %s"
 
 msgid "Instance may be started again."
 msgstr "L'instance peut être redémarrée."
+
+msgid "Instance may have been confirmed during delete"
+msgstr "L'instance a sans doute été confirmée pendant la suppression"
 
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "L'instance a sans doute été redémarrée par logiciel ; retour en cours."
@@ -459,6 +489,18 @@ msgid "Migrating"
 msgstr "Migration"
 
 #, python-format
+msgid "Migrating instance to %s finished successfully."
+msgstr "La migration de l'instance vers %s s'est terminée avec succès."
+
+#, python-format
+msgid "Migration %s is already confirmed"
+msgstr "La migration %s est déjà confirmée."
+
+#, python-format
+msgid "Migration %s may have been confirmed during delete"
+msgstr "La migration %s a sans doute été confirmée pendant la suppression"
+
+#, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
 msgstr ""
 "Le point de montage %(mountpoint)s à été détaché de l'instance "
@@ -467,6 +509,14 @@ msgstr ""
 #, python-format
 msgid "NBD mount error: %s"
 msgstr "Erreur d'installation NBD : %s"
+
+#, python-format
+msgid ""
+"Neutron deleted interface %(intf)s; detaching it from the instance and "
+"deleting it from the info cache"
+msgstr ""
+"Neutron a supprimé l'interface %(intf)s; Détachement de celle-ci de "
+"l'instance et suppression des infos de cache"
 
 #, python-format
 msgid ""
@@ -505,6 +555,10 @@ msgstr "Redémarrage de l'instance après redémarrage de nova-compute."
 
 msgid "Rebuilding instance"
 msgstr "Régénération de l'instance"
+
+#, python-format
+msgid "Received Token: %(token)s, %(token_dict)s"
+msgstr "Jeton reçu: %(token)s, %(token_dict)s"
 
 msgid "Reclaiming deleted instance"
 msgstr "Récupération de l'instance supprimée"
@@ -558,6 +612,17 @@ msgstr ""
 "Exécution de l'audit d'utilisation de l'instance pour l'hôte %(host)s de "
 "%(begin_time)s à %(end_time)s. %(number_instances)s instances."
 
+msgid ""
+"Service started deleting the instance during the previous run, but did not "
+"finish. Restarting the deletion now."
+msgstr ""
+"Le service a commencé à supprimer l'instance lors de la dernière exécution, "
+"mais n'a pas terminé. Redémarrage de la suppression. "
+
+#, python-format
+msgid "Setting instance back to %(state)s after: %(error)s"
+msgstr "Remise de l'instance dans l'état %(state)s après: %(error)s"
+
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr "Rétablissement de l'instance en statut ACTIVE après: %s"
@@ -602,6 +667,10 @@ msgstr "Démarrage du noeud nova-xvpvncproxy (version %s)"
 msgid "Stopping WSGI server."
 msgstr "Arrêt du serveur WSGI."
 
+#, python-format
+msgid "Swapping volume %(old_volume)s for %(new_volume)s"
+msgstr "Remplacement du volume %(old_volume)s par %(new_volume)s"
+
 msgid "The ISCSI initiator name can't be found. Choosing the default one"
 msgstr ""
 "Le nom d'initiateur ISCSI est introuvable. Le nom par défaut est sélectionné."
@@ -612,6 +681,10 @@ msgstr "L'horodatage n'est pas valide."
 #, python-format
 msgid "Total %(type)s: %(total)d %(unit)s, used: %(used).02f %(unit)s"
 msgstr "Total %(type)s: %(total)d %(unit)s, utilisé: %(used).02f %(unit)s"
+
+#, python-format
+msgid "Total usable vcpus: %(tcpu)s, total allocated vcpus: %(ucpu)s"
+msgstr "Nombre total de vcpus: %(tcpu)s, nombre de vcpus alloués: %(ucpu)s"
 
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
@@ -660,15 +733,20 @@ msgstr "Mise à jour à partir de la migration %s"
 msgid "Updating image %s publicity"
 msgstr "Mis à jour de la publication de l'image %s"
 
+#, python-format
+msgid "Updating instance to original state: '%s'"
+msgstr "Mise à jour de l'instance à l'état d'origine: '%s'"
+
 msgid "Using config drive"
 msgstr "Utilisation de l'unité de config"
-
-msgid "V3 API has been disabled by configuration"
-msgstr "L'API V3 a été désactivée par configuration "
 
 #, python-format
 msgid "VBD %s already detached"
 msgstr "VBD %s déjà déconnecté"
+
+#, python-format
+msgid "VM %(state)s (Lifecycle Event)"
+msgstr "VM %(state)s (Lifecycle Event)"
 
 #, python-format
 msgid ""
@@ -729,6 +807,11 @@ msgstr "data: %(data)r, fpath: %(fpath)r"
 msgid "deleted %s"
 msgstr "suppression de %s"
 
+#, python-format
+msgid "disk not on shared storage, rebuilding from: '%s'"
+msgstr ""
+"Le disque n'est pas sur un stockage partagé, reconstruction à partir de: '%s'"
+
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
 "Disque sur la mémoire partagée ; recréation à l'aide du disque existant"
@@ -765,6 +848,9 @@ msgstr "exécution d'instantané d'instance"
 
 msgid "instance termination disabled"
 msgstr "Arrêt de l'instance désactivé"
+
+msgid "nova-conductor connection established successfully"
+msgstr "Connexion au nova-conductor établie avec succès "
 
 #, python-format
 msgid "preserve multipath_id %s"

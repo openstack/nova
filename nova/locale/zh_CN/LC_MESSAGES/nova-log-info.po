@@ -7,21 +7,23 @@
 # Chen Peng <goldenarmour@sina.com>, 2015
 # 汪军 <wwyyzz08@sina.com>, 2015
 # 颜海峰 <yanheven@gmail.com>, 2014
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-05 06:20+0000\n"
-"PO-Revision-Date: 2015-07-23 20:46+0000\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-08-30 12:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
-"Language: zh_CN\n"
+"Language: zh-CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -605,9 +607,6 @@ msgstr "正在将实例更新为原始状态：‘%s’"
 
 msgid "Using config drive"
 msgstr "正在使用配置驱动器"
-
-msgid "V3 API has been disabled by configuration"
-msgstr "V3 API 已经通过配置被禁用了"
 
 #, python-format
 msgid "VBD %s already detached"

@@ -11,12 +11,13 @@
 # Jose Ramirez Garcia <jose.ramirez.rk@gmail.com>, 2014
 # Edgar Carballo <karvayoEdgar@gmail.com>, 2013
 # Pablo Sanchez <furybeat@gmail.com>, 2015
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:23+0000\n"
-"PO-Revision-Date: 2015-09-06 22:17+0000\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
@@ -845,10 +846,6 @@ msgid ""
 msgstr ""
 "La configuración ha solicitado un modelo CPU explícito, pero el hipervisor "
 "libvirt actual '%s' no soporta la selección de modelos de CPU"
-
-#, python-format
-msgid "Conflict updating instance %(instance_uuid)s"
-msgstr "Conflicto actualizando instancia %(instance_uuid)s"
 
 msgid "Conflicting policies configured!"
 msgstr "Políticas conflictivas configuradas!"
@@ -5055,9 +5052,6 @@ msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr ""
 "el destino es %(target_cell)s pero la vía de acceso de direccionamiento es "
 "%(routing_path)s"
-
-msgid "destination same as source!"
-msgstr "destino igual que origen"
 
 msgid "disk"
 msgstr "Disco"
