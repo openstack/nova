@@ -193,7 +193,7 @@ class VMUtils(object):
 
         vm = self._lookup_vm(vm_name)
         if not vm:
-            raise exception.NotFound(_('VM not found: %s') % vm_name)
+            raise exception.InstanceNotFound(_('VM not found: %s') % vm_name)
         return vm
 
     def _lookup_vm(self, vm_name):

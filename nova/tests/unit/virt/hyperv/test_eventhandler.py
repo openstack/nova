@@ -122,7 +122,7 @@ class EventHandlerTestCase(test_base.HyperVBaseTestCase):
             side_effect = (mock.sentinel.instance_uuid
                            if not missing_uuid else None, )
         else:
-            side_effect = exception.NotFound
+            side_effect = exception.InstanceNotFound('fake_instance_uuid')
         mock_get_uuid = self._event_handler._vmutils.get_instance_uuid
         mock_get_uuid.side_effect = side_effect
 
