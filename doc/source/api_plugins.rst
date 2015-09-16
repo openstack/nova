@@ -160,14 +160,14 @@ Support files
 -------------
 
 At least one entry needs to made in ``setup.cfg`` for each plugin.
-An entry point for the plugin must be added to nova.api.v3.extensions
+An entry point for the plugin must be added to nova.api.v21.extensions
 even if no resource or controller is added. Other entry points available
 are
 
-* Modify create behaviour (nova.api.v3.extensions.server.create)
-* Modify rebuild behaviour (nova.api.v3.extensions.server.rebuild)
-* Modify update behaviour (nova.api.v3.extensions.server.update)
-* Modify resize behaviour (nova.api.v3.extensions.server.resize)
+* Modify create behaviour (nova.api.v21.extensions.server.create)
+* Modify rebuild behaviour (nova.api.v21.extensions.server.rebuild)
+* Modify update behaviour (nova.api.v21.extensions.server.update)
+* Modify resize behaviour (nova.api.v21.extensions.server.resize)
 
 These are essentially hooks into the servers plugin which allow other
 plugins to modify behaviour without having to modify servers.py. In
