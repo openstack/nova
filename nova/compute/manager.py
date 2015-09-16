@@ -6115,7 +6115,6 @@ class ComputeManager(manager.Manager):
         """
         new_resource_tracker_dict = {}
 
-        # Delete orphan compute node not reported by driver but still in db
         compute_nodes_in_db = self._get_compute_nodes_in_db(context,
                                                             use_slave=True)
         nodenames = set(self.driver.get_available_nodes())
