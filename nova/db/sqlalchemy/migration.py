@@ -1026,11 +1026,12 @@ def db_expand(dryrun=False, database='main'):
     for op in expand:
         op.execute(ddlop)
 
-    repository = _find_migrate_repo(database)
-    if not _set_db_sync_lock(repository, locked=True):
-        # No rows exist yet. Might be 'db sync' was never run
-        db_version_control(INIT_VERSION)
-        _set_db_sync_lock(repository, locked=True)
+    if not dryrun:
+        repository = _find_migrate_repo(database)
+        if not _set_db_sync_lock(repository, locked=True):
+            # No rows exist yet. Might be 'db sync' was never run
+            db_version_control(INIT_VERSION)
+            _set_db_sync_lock(repository, locked=True)
 
 
 def db_migrate(dryrun=False, database='main'):
