@@ -20,6 +20,7 @@ from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
 import mock
 from mox3 import mox
+import netaddr
 from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_utils import importutils
@@ -46,6 +47,7 @@ from nova import test
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_instance_fault
@@ -3829,6 +3831,41 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             create_end_call = mock_notify.call_args_list[
                     mock_notify.call_count - 1]
             self.assertEqual(expected_call, create_end_call)
+
+    def test_access_ip_set_when_instance_set_to_active(self):
+
+        self.flags(default_access_ip_network_name='test1')
+        instance = fake_instance.fake_db_instance()
+
+        @mock.patch.object(db, 'instance_update_and_get_original',
+                return_value=({}, instance))
+        @mock.patch.object(self.compute.driver, 'spawn')
+        @mock.patch.object(self.compute, '_build_networks_for_instance',
+                return_value=fake_network.fake_get_instance_nw_info(
+                    self.stubs))
+        @mock.patch.object(db, 'instance_extra_update_by_uuid')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        def _check_access_ip(mock_notify, mock_extra, mock_networks,
+                mock_spawn, mock_db_update):
+            self.compute._build_and_run_instance(self.context, self.instance,
+                    self.image, self.injected_files, self.admin_pass,
+                    self.requested_networks, self.security_groups,
+                    self.block_device_mapping, self.node, self.limits,
+                    self.filter_properties)
+
+            updates = {'vm_state': u'active', 'access_ip_v6':
+                    netaddr.IPAddress('2001:db8:0:1:dcad:beff:feef:1'),
+                    'access_ip_v4': netaddr.IPAddress('192.168.1.100'),
+                    'power_state': 0, 'task_state': None, 'launched_at':
+                    mock.ANY, 'expected_task_state': 'spawning'}
+            expected_call = mock.call(self.context, self.instance.uuid,
+                    updates, columns_to_join=['metadata', 'system_metadata',
+                        'info_cache'])
+            last_update_call = mock_db_update.call_args_list[
+                mock_db_update.call_count - 1]
+            self.assertEqual(expected_call, last_update_call)
+
+        _check_access_ip()
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_create_end_on_instance_delete(self, mock_instance_update):

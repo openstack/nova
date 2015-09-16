@@ -1607,25 +1607,6 @@ class ComputeManager(manager.Manager):
         network_info = self._allocate_network(context, instance,
                 requested_networks, macs, security_groups, dhcp_options)
 
-        if not instance.access_ip_v4 and not instance.access_ip_v6:
-            # If CONF.default_access_ip_network_name is set, grab the
-            # corresponding network and set the access ip values accordingly.
-            # Note that when there are multiple ips to choose from, an
-            # arbitrary one will be chosen.
-            network_name = CONF.default_access_ip_network_name
-            if not network_name:
-                return network_info
-
-            for vif in network_info:
-                if vif['network']['label'] == network_name:
-                    for ip in vif.fixed_ips():
-                        if ip['version'] == 4:
-                            instance.access_ip_v4 = ip['address']
-                        if ip['version'] == 6:
-                            instance.access_ip_v6 = ip['address']
-                    instance.save()
-                    break
-
         return network_info
 
     def _allocate_network(self, context, instance, requested_networks, macs,
@@ -2074,6 +2055,22 @@ class ComputeManager(manager.Manager):
 
         # NOTE(alaski): This is only useful during reschedules, remove it now.
         instance.system_metadata.pop('network_allocated', None)
+
+        # If CONF.default_access_ip_network_name is set, grab the
+        # corresponding network and set the access ip values accordingly.
+        network_name = CONF.default_access_ip_network_name
+        if (network_name and not instance.access_ip_v4 and
+                not instance.access_ip_v6):
+            # Note that when there are multiple ips to choose from, an
+            # arbitrary one will be chosen.
+            for vif in network_info:
+                if vif['network']['label'] == network_name:
+                    for ip in vif.fixed_ips():
+                        if not instance.access_ip_v4 and ip['version'] == 4:
+                            instance.access_ip_v4 = ip['address']
+                        if not instance.access_ip_v6 and ip['version'] == 6:
+                            instance.access_ip_v6 = ip['address']
+                    break
 
         self._update_instance_after_spawn(context, instance)
 
