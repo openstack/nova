@@ -45,7 +45,6 @@ def set_vif_host_backend_bridge_config(conf, brname, tapname=None):
     conf.source_dev = brname
     if tapname:
         conf.target_dev = tapname
-    conf.script = ""
 
 
 def set_vif_host_backend_ethernet_config(conf, tapname):

@@ -1196,6 +1196,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", type=self.vhostuser_type,
                                      mode=self.vhostuser_mode,
                                      path=self.vhostuser_path))
+        elif self.net_type == "bridge":
+            dev.append(etree.Element("source", bridge=self.source_dev))
+            if self.script is not None:
+                dev.append(etree.Element("script", path=self.script))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
 
