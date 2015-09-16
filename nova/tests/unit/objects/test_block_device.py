@@ -347,47 +347,6 @@ class _TestBlockDeviceMappingListObject(object):
                     self.context, 'fake_instance_uuid'))
         self.assertEqual(0, len(bdm_list))
 
-    def test_root_volume_metadata(self):
-        fake_volume = {
-                'volume_image_metadata': {'vol_test_key': 'vol_test_value'}}
-
-        class FakeVolumeApi(object):
-            def get(*args, **kwargs):
-                return fake_volume
-
-        block_device_mapping = block_device_obj.block_device_make_list(None, [
-            fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1,
-                 'boot_index': 0,
-                 'source_type': 'volume',
-                 'destination_type': 'volume',
-                 'volume_id': 'fake_volume_id',
-                 'delete_on_termination': False})])
-
-        volume_meta = block_device_mapping.root_metadata(
-            self.context, None, FakeVolumeApi())
-        self.assertEqual(fake_volume['volume_image_metadata'], volume_meta)
-
-    def test_root_image_metadata(self):
-        fake_image = {'properties': {'img_test_key': 'img_test_value'}}
-
-        class FakeImageApi(object):
-            def show(*args, **kwargs):
-                return fake_image
-
-        block_device_mapping = block_device_obj.block_device_make_list(None, [
-            fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1,
-                 'boot_index': 0,
-                 'source_type': 'image',
-                 'destination_type': 'local',
-                 'image_id': "fake-image",
-                 'delete_on_termination': True})])
-
-        image_meta = block_device_mapping.root_metadata(
-            self.context, FakeImageApi(), None)
-        self.assertEqual(fake_image['properties'], image_meta)
-
 
 class TestBlockDeviceMappingListObject(test_objects._LocalTest,
                                        _TestBlockDeviceMappingListObject):
