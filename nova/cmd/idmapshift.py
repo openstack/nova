@@ -81,6 +81,7 @@ inaccessible inside the container.
 
 
 import argparse
+from nova.i18n import _
 import os
 import sys
 
@@ -202,7 +203,13 @@ def id_map_type(val):
 
 
 def main():
-    parser = argparse.ArgumentParser('User Namespace FS Owner Shift')
+    parser = argparse.ArgumentParser(
+                     description=_('nova-idmapshift is a tool that properly '
+                                   'sets the ownership of a filesystem for '
+                                   'use with linux user namespaces.  '
+                                   'This tool can only be used with linux '
+                                   'lxc containers.  See the man page for '
+                                   'details.'))
     parser.add_argument('path')
     parser.add_argument('-u', '--uid', type=id_map_type, default=[])
     parser.add_argument('-g', '--gid', type=id_map_type, default=[])
