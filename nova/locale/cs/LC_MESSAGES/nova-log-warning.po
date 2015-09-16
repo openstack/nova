@@ -4,13 +4,14 @@
 #
 # Translators:
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-09-04 11:16+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-08 05:38+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
@@ -18,6 +19,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid ""
@@ -624,12 +626,6 @@ msgstr "Ignorování selhání čištění svazku kvůli %s"
 msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr ""
 "Obraz %s nebyl na diskovém úložišti nalezen. Pokračuje se bez vložení dat"
-
-#, python-format
-msgid "Image config drive option %(image_prop)s is invalid and will be ignored"
-msgstr ""
-"Volba konfigurační jednotky obrazu %(image_prop)s je neplatná a bude "
-"ignorována"
 
 msgid "Image not found during snapshot"
 msgstr "Obraz nenalezen během snímkování"
@@ -1396,10 +1392,6 @@ msgstr "Nelze zvýšit maximální čas odstávky na %(time)dms: %(e)s"
 msgid "Unable to mount image %(image)s with error %(error)s. Cannot resize."
 msgstr ""
 "Nelze připojit obraz %(image)s s chybou %(error)s. Nelze změnit velikost."
-
-#, python-format
-msgid "Unable to retrieve value for %(path)s Reason: %(reason)s"
-msgstr "Nelze získat hodnotu %(path)s Důvod: %(reason)s"
 
 #, python-format
 msgid "Unable to stat %(disk)s: %(ex)s"

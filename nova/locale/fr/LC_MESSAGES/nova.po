@@ -21,13 +21,15 @@
 # Patrice LACHANCE <patlachance@gmail.com>, 2013
 # Vincent JOBARD <vinzjobard@gmail.com>, 2013
 # Benjamin Godard <ben@hacktopie.net>, 2013
+# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:23+0000\n"
-"PO-Revision-Date: 2015-09-06 22:17+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-12 08:58+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -721,10 +723,6 @@ msgstr ""
 "La config a demandé un modèle d'UC explicite, mais l'hyperviseur libvirt "
 "'%s' actuel ne prend pas en charge la sélection des modèles d'UC"
 
-#, python-format
-msgid "Conflict updating instance %(instance_uuid)s"
-msgstr "Conflit durant la mise a jour de l'instance %(instance_uuid)s"
-
 msgid "Conflicting policies configured!"
 msgstr "Politiques contradictoires configurées!"
 
@@ -1258,6 +1256,14 @@ msgstr "Le type d'instance nommé %(flavor_name)s ne peut être trouvé."
 #, python-format
 msgid "Flavor with name %(name)s already exists."
 msgstr "Le type d'instance avec le nom %(name)s existe déjà."
+
+#, python-format
+msgid ""
+"Flavor's disk is too small for requested image. Flavor disk is "
+"%(flavor_size)i bytes, image is %(image_size)i bytes."
+msgstr ""
+"Le disque du gabaris est trop petit pour l'image demandée. Le disque du "
+"gabarit fait %(flavor_size)i bytes, l'image fait %(image_size)i bytes."
 
 msgid "Flavor's memory is too small for requested image."
 msgstr "La mémoire du type d'instance est trop petite pour l'image demandée."
@@ -3110,6 +3116,9 @@ msgstr ""
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "L'intervalle de ports console %(min_port)d-%(max_port)d est épuisé."
 
+msgid "The created instance's disk would be too small."
+msgstr "Le disque de l'instance créée serait trop petit."
+
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "Le pilote actuel ne permet pas de préserver les partitions éphémères."
 
@@ -3721,8 +3730,18 @@ msgstr ""
 msgid "Volume %(volume_id)s is not attached to anything"
 msgstr "Le volume %(volume_id)s n'est lié à rien"
 
+#, python-format
+msgid ""
+"Volume encryption is not supported for %(volume_type)s volume %(volume_id)s"
+msgstr ""
+"L'encryptage de volume n'est pas supporté pour le volume %(volume_id)s de "
+"type %(volume_type)s"
+
 msgid "Volume must be attached in order to detach."
 msgstr "Le volume doit être connecté pour pouvoir être déconnecté."
+
+msgid "Volume resource quota exceeded"
+msgstr "Quota de ressource de Volume dépassé."
 
 #, python-format
 msgid "WARNING: fixed ip %s allocated to missing instance"
@@ -3832,9 +3851,6 @@ msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr ""
 "La destination est %(target_cell)s mais le chemin de routage routing_path "
 "est %(routing_path)s"
-
-msgid "destination same as source!"
-msgstr "destination identique à la source !"
 
 msgid "disk"
 msgstr "disque"

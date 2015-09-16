@@ -4,12 +4,13 @@
 #
 # Translators:
 # Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:23+0000\n"
-"PO-Revision-Date: 2015-09-06 22:17+0000\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
 "language/tr_TR/)\n"
@@ -4814,9 +4815,6 @@ msgstr "createImage varlığının isim özelliğine ihtiyacı var"
 #, python-format
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr "hedef %(target_cell)s ama routing_path %(routing_path)s"
-
-msgid "destination same as source!"
-msgstr "dedef kaynak ile aynı!"
 
 msgid "disk"
 msgstr "disk"

@@ -6,13 +6,15 @@
 # Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
 # Jorge Guerrero <lavidadigital@gmail.com>, 2014
 # Pablo Sanchez <furybeat@gmail.com>, 2015
+# Elizabeth K. Joseph <lyz@princessleia.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-09-04 00:55+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"PO-Revision-Date: 2015-09-09 10:48+0000\n"
+"Last-Translator: Elizabeth K. Joseph <lyz@princessleia.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
 "Language: es\n"
@@ -21,6 +23,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid ""
@@ -580,12 +583,6 @@ msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr ""
 "La imagen %s no se ha encontrado en el almacenamiento de disco. Continuando "
 "sin inyectar datos."
-
-#, python-format
-msgid "Image config drive option %(image_prop)s is invalid and will be ignored"
-msgstr ""
-"La opción del controlador para la configuración de imagen %(image_prop)s es "
-"inválida y será ignorada"
 
 msgid "Image not found during snapshot"
 msgstr "No se ha encontrado la imagen durante la instantánea"
@@ -1270,10 +1267,6 @@ msgid "Unable to mount image %(image)s with error %(error)s. Cannot resize."
 msgstr ""
 "No se puede montar la imagen %(image)s con error %(error)s. No se puede "
 "redimensionar."
-
-#, python-format
-msgid "Unable to retrieve value for %(path)s Reason: %(reason)s"
-msgstr "Incapaz de obtener valor de %(path)s Razón: %(reason)s"
 
 msgid "Unable to update metadata, VM not found."
 msgstr "Incapaz de actualizar metadatos, la VM no ha sido encontrada."
