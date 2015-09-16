@@ -361,6 +361,14 @@ class GuestTestCase(test.NoDBTestCase):
         power = self.guest.get_power_state(self.host)
         self.assertEqual(1, power)
 
+    def test_is_active_when_domain_is_active(self):
+        with mock.patch.object(self.domain, "isActive", return_value=True):
+            self.assertTrue(self.guest.is_active())
+
+    def test_is_active_when_domain_not_active(self):
+        with mock.patch.object(self.domain, "isActive", return_value=False):
+            self.assertFalse(self.guest.is_active())
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
