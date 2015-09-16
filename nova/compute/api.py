@@ -2186,10 +2186,8 @@ class API(base.Base):
         props_copy = dict(extra_properties, backup_type=backup_type)
 
         if self.is_volume_backed_instance(context, instance):
-            # TODO(flwang): The log level will be changed to INFO after
-            # string freeze (Liberty).
-            LOG.debug("It's not supported to backup volume backed instance.",
-                      context=context, instance=instance)
+            LOG.info(_LI("It's not supported to backup volume backed "
+                         "instance."), context=context, instance=instance)
             raise exception.InvalidRequest()
         else:
             image_meta = self._create_image(context, instance,
