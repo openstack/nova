@@ -27,7 +27,7 @@ ALIAS = "os-admin-actions"
 
 # States usable in resetState action
 # NOTE: It is necessary to update the schema of nova/api/openstack/compute/
-# schemas/v3/reset_server_state.py, when updating this state_map.
+# schemas/reset_server_state.py, when updating this state_map.
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
 authorize = extensions.os_compute_authorizer(ALIAS)

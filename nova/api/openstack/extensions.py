@@ -405,9 +405,9 @@ def os_compute_soft_authorizer(extension_name):
 
 @six.add_metaclass(abc.ABCMeta)
 class V21APIExtensionBase(object):
-    """Abstract base class for all V3 API extensions.
+    """Abstract base class for all v2.1 API extensions.
 
-    All V3 API extensions must derive from this class and implement
+    All v2.1 API extensions must derive from this class and implement
     the abstract methods get_resources and get_controller_extensions
     even if they just return an empty list. The extensions must also
     define the abstract properties.
@@ -465,7 +465,7 @@ class V21APIExtensionBase(object):
 
 
 def expected_errors(errors):
-    """Decorator for v3 API methods which specifies expected exceptions.
+    """Decorator for v2.1 API methods which specifies expected exceptions.
 
     Specify which exceptions may occur when an API method is called. If an
     unexpected exception occurs then return a 500 instead and ask the user
