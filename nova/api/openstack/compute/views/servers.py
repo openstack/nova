@@ -262,13 +262,13 @@ class ViewBuilder(common.ViewBuilder):
         return fault_dict
 
 
-class ViewBuilderV3(ViewBuilder):
-    """Model a server V3 API response as a python dictionary."""
+class ViewBuilderV21(ViewBuilder):
+    """Model a server v2.1 API response as a python dictionary."""
 
     def __init__(self):
         """Initialize view builder."""
-        super(ViewBuilderV3, self).__init__()
-        self._address_builder = views_addresses.ViewBuilderV3()
+        super(ViewBuilderV21, self).__init__()
+        self._address_builder = views_addresses.ViewBuilderV21()
         # TODO(alex_xu): In V3 API, we correct the image bookmark link to
         # use glance endpoint. We revert back it to use nova endpoint for v2.1.
         self._image_builder = views_images.ViewBuilder()

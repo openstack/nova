@@ -27,7 +27,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 
 class FlavorManageController(wsgi.Controller):
     """The Flavor Lifecycle API controller for the OpenStack API."""
-    _view_builder_class = flavors_view.V3ViewBuilder
+    _view_builder_class = flavors_view.ViewBuilderV21
 
     def __init__(self):
         super(FlavorManageController, self).__init__()

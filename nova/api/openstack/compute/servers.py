@@ -75,7 +75,7 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_RESIZE_NAMESPACE = 'nova.api.v21.extensions.server.resize'
 
-    _view_builder_class = views_servers.ViewBuilderV3
+    _view_builder_class = views_servers.ViewBuilderV21
 
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
