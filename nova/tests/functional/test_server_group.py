@@ -408,5 +408,5 @@ class ServerGroupAntiAffinityConfTest(ServerGroupTestBase):
         self.assertEqual(400, failed_server['fault']['code'])
 
 
-class ServerGroupTestV21(client.TestOpenStackClientV3Mixin, ServerGroupTest):
+class ServerGroupTestV21(ServerGroupTest):
     _api_version = 'v2.1'

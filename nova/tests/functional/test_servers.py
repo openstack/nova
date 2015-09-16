@@ -509,5 +509,5 @@ class ServersTest(ServersTestBase):
         self._delete_server(created_server_id)
 
 
-class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
+class ServersTestV21(ServersTest):
     _api_version = 'v2.1'
