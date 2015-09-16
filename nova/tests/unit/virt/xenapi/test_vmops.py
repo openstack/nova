@@ -349,7 +349,7 @@ class SpawnTestCase(VMOpsTestBase):
         if include_root_vdi:
             vdis["root"] = {"ref": "fake_ref"}
         self.vmops._get_vdis_for_instance(context, instance,
-                name_label, "image_id", di_type,
+                name_label, image_meta, di_type,
                 block_device_info).AndReturn(vdis)
         self.vmops._resize_up_vdis(instance, vdis)
         step += 1
