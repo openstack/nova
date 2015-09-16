@@ -111,7 +111,7 @@ need with::
 
     apt-get install texlive-full imagemagick
 
-Then you can then use the ``build_latex_pdf.sh`` script in toos/ to take care
+Then you can then use the ``build_latex_pdf.sh`` script in tools/ to take care
 of both the the sphinx latex generation and the latex compilation. For example::
 
     tools/build_latex_pdf.sh
