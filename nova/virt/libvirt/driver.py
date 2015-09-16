@@ -5925,7 +5925,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if (len(downtime_steps) > 0 and
                     elapsed > downtime_steps[0][0]):
                     downtime = downtime_steps.pop(0)
-                    LOG.info(_LI("Increasing downtime to %(downtime)dms "
+                    LOG.info(_LI("Increasing downtime to %(downtime)d ms "
                                  "after %(waittime)d sec elapsed time"),
                              {"downtime": downtime[1],
                               "waittime": downtime[0]},

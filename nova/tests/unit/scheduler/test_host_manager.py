@@ -375,8 +375,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # node 3 host physical disk space is greater than database
         host_manager.LOG.warning("Host %(hostname)s has more disk space "
-                                 "than database expected (%(physical)sgb >"
-                                 " %(database)sgb)",
+                                 "than database expected (%(physical)s GB >"
+                                 " %(database)s GB)",
                                  {'physical': 3333, 'database': 3072,
                                   'hostname': 'node3'})
         # Invalid service

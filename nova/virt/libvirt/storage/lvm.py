@@ -64,7 +64,7 @@ def create_volume(vg, lv, size, sparse=False):
         if size > free_space:
             raise RuntimeError(_('Insufficient Space on Volume Group %(vg)s.'
                                  ' Only %(free_space)db available,'
-                                 ' but %(size)db required'
+                                 ' but %(size)d bytes required'
                                  ' by volume %(lv)s.') %
                                {'vg': vg,
                                 'free_space': free_space,
@@ -77,7 +77,7 @@ def create_volume(vg, lv, size, sparse=False):
         if free_space < size:
             LOG.warn(_LW('Volume group %(vg)s will not be able'
                          ' to hold sparse volume %(lv)s.'
-                         ' Virtual volume size is %(size)db,'
+                         ' Virtual volume size is %(size)d bytes,'
                          ' but free space on volume group is'
                          ' only %(free_space)db.'),
                         {'vg': vg,
