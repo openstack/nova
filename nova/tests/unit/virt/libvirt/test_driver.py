@@ -92,6 +92,7 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
@@ -13875,6 +13876,85 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         vcpu_model_1 = drv._cpu_config_to_vcpu_model(cpu, vcpu_model)
         self.assertEqual(cpumodel.MODE_HOST_MODEL, vcpu_model.mode)
         self.assertEqual(vcpu_model, vcpu_model_1)
+
+    @mock.patch.object(lvm, 'get_volume_size', return_value=10)
+    @mock.patch.object(host.Host, "get_guest")
+    @mock.patch.object(dmcrypt, 'delete_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unfilter_instance')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_cleanup_lvm_encrypted(self, mock_save, mock_undefine_domain,
+                                   mock_unfilter, mock_delete_volume,
+                                   mock_get_guest, mock_get_size):
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(uuid='fake-uuid', id=1,
+                                    ephemeral_key_uuid='000-000-000')
+        instance.system_metadata = {}
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'block_device_mapping': []}
+        self.flags(images_type="lvm",
+                   group='libvirt')
+        dom_xml = """
+              <domain type="kvm">
+                <devices>
+                  <disk type="block">
+                    <driver name='qemu' type='raw' cache='none'/>
+                    <source dev="/dev/mapper/fake-dmcrypt"/>
+                    <target dev="vda" bus="virtio" serial="1234"/>
+                  </disk>
+                </devices>
+              </domain>
+              """
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = dom_xml
+        guest = libvirt_guest.Guest(dom)
+        mock_get_guest.return_value = guest
+        drv.cleanup(self.context, instance, 'fake_network', destroy_vifs=False,
+                        block_device_info=block_device_info)
+        mock_delete_volume.assert_called_once_with('/dev/mapper/fake-dmcrypt')
+
+    @mock.patch.object(lvm, 'get_volume_size', return_value=10)
+    @mock.patch.object(host.Host, "get_guest")
+    @mock.patch.object(dmcrypt, 'delete_volume')
+    def _test_cleanup_lvm(self, mock_delete_volume, mock_get_guest, mock_size,
+                          encrypted=False):
+
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(uuid='fake-uuid', id=1,
+                                    ephemeral_key_uuid='000-000-000')
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'block_device_mapping': []}
+        dev_name = 'fake-dmcrypt' if encrypted else 'fake'
+        dom_xml = """
+              <domain type="kvm">
+                <devices>
+                  <disk type="block">
+                    <driver name='qemu' type='raw' cache='none'/>
+                    <source dev="/dev/mapper/%s"/>
+                    <target dev="vda" bus="virtio" serial="1234"/>
+                  </disk>
+                </devices>
+              </domain>
+              """ % dev_name
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = dom_xml
+        guest = libvirt_guest.Guest(dom)
+        mock_get_guest.return_value = guest
+        drv._cleanup_lvm(instance, block_device_info)
+
+        if encrypted:
+            mock_delete_volume.assert_called_once_with(
+                '/dev/mapper/fake-dmcrypt')
+        else:
+            self.assertFalse(mock_delete_volume.called)
+
+    def test_cleanup_lvm(self):
+        self._test_cleanup_lvm()
+
+    def test_cleanup_encrypted_lvm(self):
+        self._test_cleanup_lvm(encrypted=True)
 
     def test_vcpu_model_to_config(self):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
