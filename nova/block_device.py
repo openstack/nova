@@ -194,8 +194,11 @@ class BlockDeviceDict(dict):
                         details=_("Missing device UUID."))
                 api_dict[source_type + '_id'] = device_uuid
             if source_type == 'image' and destination_type == 'local':
-                boot_index = api_dict.get('boot_index', -1)
-
+                try:
+                    boot_index = int(api_dict.get('boot_index', -1))
+                except ValueError:
+                    raise exception.InvalidBDMFormat(
+                        details=_("Boot index is invalid."))
                 # if this bdm is generated from --image ,then
                 # source_type = image and destination_type = local is allowed
                 if not (image_uuid_specified and boot_index == 0):
