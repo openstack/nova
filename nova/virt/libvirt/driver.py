@@ -2926,14 +2926,14 @@ class LibvirtDriver(driver.ComputeDriver):
         testfile = os.path.join(dirpath, ".directio.test")
 
         hasDirectIO = True
+        fd = None
         try:
-            f = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
+            fd = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
             # Check is the write allowed with 512 byte alignment
             align_size = 512
             m = mmap.mmap(-1, align_size)
             m.write(r"x" * align_size)
-            os.write(f, m)
-            os.close(f)
+            os.write(fd, m)
             LOG.debug("Path '%(path)s' supports direct I/O",
                       {'path': dirpath})
         except OSError as e:
@@ -2951,6 +2951,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.error(_LE("Error on '%(path)s' while checking direct I/O: "
                               "'%(ex)s'"), {'path': dirpath, 'ex': e})
         finally:
+            # ensure unlink(filepath) will actually remove the file by deleting
+            # the remaining link to it in close(fd)
+            if fd is not None:
+                os.close(fd)
+
             try:
                 os.unlink(testfile)
             except Exception:
