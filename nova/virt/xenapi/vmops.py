@@ -347,7 +347,7 @@ class VMOps(object):
             bad_volumes_callback(bad_devices)
 
     def _get_vdis_for_instance(self, context, instance, name_label,
-                               image_id, image_type, block_device_info):
+                               image_meta, image_type, block_device_info):
         """Create or connect to all virtual disks for this instance."""
 
         vdis = self._connect_cinder_volumes(instance, block_device_info)
@@ -356,7 +356,7 @@ class VMOps(object):
         # then use the Glance image as the root device
         if 'root' not in vdis:
             create_image_vdis = vm_utils.create_image(context, self._session,
-                    instance, name_label, image_id, image_type)
+                    instance, name_label, image_meta.id, image_type)
             vdis.update(create_image_vdis)
 
         # Fetch VDI refs now so we don't have to fetch the ref multiple times
@@ -416,7 +416,7 @@ class VMOps(object):
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
             vdis = self._get_vdis_for_instance(context, instance, name_label,
-                        image_meta.id, disk_image_type,
+                        image_meta, disk_image_type,
                         block_device_info)
 
             def undo_create_disks():
