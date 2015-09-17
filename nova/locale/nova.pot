@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev214\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"POT-Creation-Date: 2015-09-17 06:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3895,6 +3895,13 @@ msgstr ""
 msgid "Netmask to push into openvpn config"
 msgstr ""
 
+#: nova/cmd/idmapshift.py:207
+msgid ""
+"nova-idmapshift is a tool that properly sets the ownership of a "
+"filesystem for use with linux user namespaces.  This tool can only be "
+"used with linux lxc containers.  See the man page for details."
+msgstr ""
+
 #: nova/cmd/manage.py:221
 msgid ""
 "The above error may show that the database has not been created.\n"
@@ -5978,7 +5985,7 @@ msgid ""
 "[Error Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/guest.py:452
+#: nova/virt/libvirt/guest.py:456
 msgid "libvirt error while requesting blockjob info."
 msgstr ""
 
