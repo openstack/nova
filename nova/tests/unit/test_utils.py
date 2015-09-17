@@ -123,6 +123,40 @@ class GenericUtilsTestCase(test.NoDBTestCase):
             self.assertEqual(data, fake_contents)
             self.assertTrue(self.reload_called)
 
+    def test_hostname_has_default(self):
+        hostname = u"\u7684hello"
+        defaultname = "Server-1"
+        self.assertEqual("hello", utils.sanitize_hostname(hostname,
+                                                          defaultname))
+
+    def test_hostname_empty_has_default(self):
+        hostname = u"\u7684"
+        defaultname = "Server-1"
+        self.assertEqual(defaultname, utils.sanitize_hostname(hostname,
+                                                              defaultname))
+
+    def test_hostname_empty_has_default_too_long(self):
+        hostname = u"\u7684"
+        defaultname = "a" * 64
+        self.assertEqual("a" * 63, utils.sanitize_hostname(hostname,
+                                                           defaultname))
+
+    def test_hostname_empty_no_default(self):
+        hostname = u"\u7684"
+        self.assertEqual("", utils.sanitize_hostname(hostname))
+
+    def test_hostname_empty_minus_period(self):
+        hostname = "---..."
+        self.assertEqual("", utils.sanitize_hostname(hostname))
+
+    def test_hostname_with_space(self):
+        hostname = " a b c "
+        self.assertEqual("a-b-c", utils.sanitize_hostname(hostname))
+
+    def test_hostname_too_long(self):
+        hostname = "a" * 64
+        self.assertEqual(63, len(utils.sanitize_hostname(hostname)))
+
     def test_generate_password(self):
         password = utils.generate_password()
         self.assertTrue([c for c in password if c in '0123456789'])
