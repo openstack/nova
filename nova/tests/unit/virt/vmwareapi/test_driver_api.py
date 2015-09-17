@@ -56,6 +56,7 @@ from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt import driver as v_driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import images
@@ -167,6 +168,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
     def setUp(self, mock_register):
         super(VMwareAPIVMTestCase, self).setUp()
+        ds_util.dc_cache_reset()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
         self.flags(cluster_name='test_cluster',
@@ -2222,11 +2224,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.instance)
 
     def test_datastore_dc_map(self):
-        vmops = self.conn._vmops
-        self.assertEqual({}, vmops._datastore_dc_mapping)
+        self.assertEqual({}, ds_util._DS_DC_MAPPING)
         self._create_vm()
         # currently there are 2 data stores
-        self.assertEqual(2, len(vmops._datastore_dc_mapping))
+        self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
     def test_rollback_live_migration_at_destination(self):
         with mock.patch.object(self.conn, "destroy") as mock_destroy:

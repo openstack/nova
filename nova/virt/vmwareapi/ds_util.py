@@ -15,6 +15,7 @@
 """
 Datastore utility functions
 """
+import collections
 
 from oslo_log import log as logging
 from oslo_vmware import exceptions as vexc
@@ -33,6 +34,14 @@ ALL_SUPPORTED_DS_TYPES = frozenset([constants.DATASTORE_TYPE_VMFS,
                                     constants.DATASTORE_TYPE_NFS,
                                     constants.DATASTORE_TYPE_NFS41,
                                     constants.DATASTORE_TYPE_VSAN])
+
+
+DcInfo = collections.namedtuple('DcInfo',
+                                ['ref', 'name', 'vmFolder'])
+
+# A cache for datastore/datacenter mappings. The key will be
+# the datastore moref. The value will the the DcInfo object.
+_DS_DC_MAPPING = {}
 
 
 def _select_datastore(session, data_stores, best_match, datastore_regex=None,
@@ -436,3 +445,42 @@ def _filter_datastores_matching_storage_policy(session, data_stores,
             return data_stores
     LOG.error(_LE("Unable to retrieve storage policy with name %s"),
               storage_policy)
+
+
+def _update_datacenter_cache_from_objects(session, dcs):
+    """Updates the datastore/datacenter cache."""
+    while dcs:
+        for dco in dcs.objects:
+            dc_ref = dco.obj
+            ds_refs = []
+            prop_dict = vm_util.propset_dict(dco.propSet)
+            name = prop_dict.get('name')
+            vmFolder = prop_dict.get('vmFolder')
+            datastore_refs = prop_dict.get('datastore')
+            if datastore_refs:
+                datastore_refs = datastore_refs.ManagedObjectReference
+                for ds in datastore_refs:
+                    ds_refs.append(ds.value)
+            else:
+                LOG.debug("Datacenter %s doesn't have any datastore "
+                          "associated with it, ignoring it", name)
+            for ds_ref in ds_refs:
+                _DS_DC_MAPPING[ds_ref] = DcInfo(ref=dc_ref, name=name,
+                                                vmFolder=vmFolder)
+        dcs = session._call_method(vutil, 'continue_retrieval', dcs)
+
+
+def get_dc_info(session, ds_ref):
+    """Get the datacenter name and the reference."""
+    dc_info = _DS_DC_MAPPING.get(ds_ref.value)
+    if not dc_info:
+        dcs = session._call_method(vim_util, "get_objects",
+                "Datacenter", ["name", "datastore", "vmFolder"])
+        _update_datacenter_cache_from_objects(session, dcs)
+        dc_info = _DS_DC_MAPPING.get(ds_ref.value)
+    return dc_info
+
+
+def dc_cache_reset():
+    global _DS_DC_MAPPING
+    _DS_DC_MAPPING = {}
