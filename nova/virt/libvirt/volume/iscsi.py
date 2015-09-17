@@ -26,7 +26,7 @@ volume_opts = [
                help='Number of times to rescan iSCSI target to find volume'),
     cfg.BoolOpt('iscsi_use_multipath',
                 default=False,
-                help='Use multipath connection of the iSCSI volume'),
+                help='Use multipath connection of the iSCSI or FC volume'),
     cfg.StrOpt('iscsi_iface',
                deprecated_name='iscsi_transport',
                help='The iSCSI transport iface to use to connect to target in '
