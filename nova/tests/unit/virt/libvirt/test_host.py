@@ -874,6 +874,24 @@ Active:          8381604 kB
         self.host.compare_cpu("cpuxml")
         mock_compareCPU.assert_called_once_with("cpuxml", 0)
 
+    def test_is_cpu_control_policy_capable_ok(self):
+        m = mock.mock_open(
+            read_data="""cg /cgroup/cpu,cpuacct cg opt1,cpu,opt3 0 0
+cg /cgroup/memory cg opt1,opt2 0 0
+""")
+        with mock.patch(
+                "six.moves.builtins.open", m, create=True):
+            self.assertTrue(self.host.is_cpu_control_policy_capable())
+
+    def test_is_cpu_control_policy_capable_ko(self):
+        m = mock.mock_open(
+            read_data="""cg /cgroup/cpu,cpuacct cg opt1,opt2,opt3 0 0
+cg /cgroup/memory cg opt1,opt2 0 0
+""")
+        with mock.patch(
+                "six.moves.builtins.open", m, create=True):
+            self.assertFalse(self.host.is_cpu_control_policy_capable())
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 

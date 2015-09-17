@@ -1305,7 +1305,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.idmaps[1],
                               vconfig.LibvirtConfigGuestGIDMap)
 
-    def test_get_guest_config_numa_host_instance_fits(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_fits(self, is_able):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
@@ -1335,7 +1337,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
-    def test_get_guest_config_numa_host_instance_no_fit(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_no_fit(self, is_able):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
@@ -1434,7 +1438,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             host_topology, inst_topology, numa_tune)
         self.assertIsNone(result)
 
-    def test_get_guest_config_numa_host_instance_pci_no_numa_info(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_pci_no_numa_info(
+            self, is_able):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
@@ -1480,7 +1487,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
-    def test_get_guest_config_numa_host_instance_2pci_no_fit(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_2pci_no_fit(self, is_able):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
@@ -1675,7 +1684,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.NUMATopologyUnsupported,
             2048)
 
-    def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(
+            self, is_able):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1024, vcpus=2, root_gb=496,
@@ -1713,7 +1725,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
-    def test_get_guest_config_non_numa_host_instance_topo(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_non_numa_host_instance_topo(self, is_able):
         instance_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=0, cpuset=set([0]), memory=1024),
@@ -1759,7 +1773,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
 
-    def test_get_guest_config_numa_host_instance_topo(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_numa_host_instance_topo(self, is_able):
         instance_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([0, 1]), memory=1024, pagesize=None),
@@ -3804,7 +3820,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           [],
                           image_meta, disk_info)
 
-    def test_guest_cpu_shares_with_multi_vcpu(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_guest_cpu_shares_with_multi_vcpu(self, is_able):
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3822,7 +3840,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(4096, cfg.cputune.shares)
 
-    def test_get_guest_config_with_cpu_quota(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_with_cpu_quota(self, is_able):
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3842,7 +3862,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(10000, cfg.cputune.shares)
         self.assertEqual(20000, cfg.cputune.period)
 
-    def test_get_guest_config_with_bogus_cpu_quota(self):
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=True)
+    def test_get_guest_config_with_bogus_cpu_quota(self, is_able):
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3859,6 +3881,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(ValueError,
                           drvr._get_guest_config,
                           instance_ref, [], image_meta, disk_info)
+
+    @mock.patch.object(
+        host.Host, "is_cpu_control_policy_capable", return_value=False)
+    def test_get_update_guest_cputune(self, is_able):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.extra_specs = {'quota:cpu_shares': '10000',
+                                           'quota:cpu_period': '20000'}
+        self.assertRaises(
+            exception.UnsupportedHostCPUControlPolicy,
+            drvr._update_guest_cputune, {}, instance_ref.flavor, "kvm")
 
     def _test_get_guest_config_sysinfo_serial(self, expected_serial):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
