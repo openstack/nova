@@ -3373,9 +3373,10 @@ def _get_project_user_quota_usages(context, session, project_id,
     rows = model_query(context, models.QuotaUsage,
                        read_deleted="no",
                        session=session).\
-                   filter_by(project_id=project_id).\
-                   with_lockmode('update').\
-                   all()
+        filter_by(project_id=project_id).\
+        order_by(models.QuotaUsage.id.asc()).\
+        with_lockmode('update').\
+        all()
     proj_result = dict()
     user_result = dict()
     # Get the total count of in_use,reserved
