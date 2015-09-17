@@ -110,9 +110,17 @@ class LiveMigrationTask(base.TaskBase):
                     instance_id=self.instance.uuid, host=self.destination)
 
     def _check_destination_has_enough_memory(self):
-        avail = self._get_compute_info(self.destination)['free_ram_mb']
+        compute = self._get_compute_info(self.destination)
+        free_ram_mb = compute.free_ram_mb
+        total_ram_mb = compute.memory_mb
         mem_inst = self.instance.memory_mb
+        # NOTE(sbauza): Now the ComputeNode object reports an allocation ratio
+        # that can be provided by the compute_node if new or by the controller
+        ram_ratio = compute.ram_allocation_ratio
 
+        # NOTE(sbauza): Mimic the RAMFilter logic in order to have the same
+        # ram validation
+        avail = total_ram_mb * ram_ratio - (total_ram_mb - free_ram_mb)
         if not mem_inst or avail <= mem_inst:
             instance_uuid = self.instance.uuid
             dest = self.destination

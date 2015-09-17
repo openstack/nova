@@ -150,11 +150,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         objects.Service.get_by_compute_host(
             self.context, self.destination).AndReturn("service")
         self.task.servicegroup_api.service_is_up("service").AndReturn(True)
-        hypervisor_details = {
-            "hypervisor_type": "a",
-            "hypervisor_version": 6.1,
-            "free_ram_mb": 513
-        }
+        hypervisor_details = objects.ComputeNode(
+            hypervisor_type="a",
+            hypervisor_version=6.1,
+            free_ram_mb=513,
+            memory_mb=512,
+            ram_allocation_ratio=1.0,
+        )
         self.task._get_compute_info(self.destination)\
                 .AndReturn(hypervisor_details)
         self.task._get_compute_info(self.instance_host)\
@@ -194,9 +196,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task._check_host_is_up(self.destination)
         objects.ComputeNode.get_first_node_by_host_for_old_compat(self.context,
-            self.destination).AndReturn({"free_ram_mb": 511})
+            self.destination).AndReturn(
+                objects.ComputeNode(free_ram_mb=513,
+                                    memory_mb=1024,
+                                    ram_allocation_ratio=0.9,
+                                    ))
 
         self.mox.ReplayAll()
+        # free_ram is bigger than instance.ram (512) but the allocation ratio
+        # reduces the total available RAM to 410MB (1024 * 0.9 - (1024 - 513))
         self.assertRaises(exception.MigrationPreCheckError,
                           self.task._check_requested_destination)
 
