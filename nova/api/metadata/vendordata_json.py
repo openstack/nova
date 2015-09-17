@@ -37,21 +37,21 @@ class JsonFileVendorData(base.VendorDataDriver):
         super(JsonFileVendorData, self).__init__(*args, **kwargs)
         data = {}
         fpath = CONF.vendordata_jsonfile_path
-        logprefix = "%s[%s]: " % (file_opt.name, fpath)
+        logprefix = "%s[%s]:" % (file_opt.name, fpath)
         if fpath:
             try:
                 with open(fpath, "r") as fp:
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.warning(_LW("%(logprefix)sfile does not exist"),
+                    LOG.warning(_LW("%(logprefix)s file does not exist"),
                                 {'logprefix': logprefix})
                 else:
-                    LOG.warning(_LW("%(logprefix)unexpected IOError when "
+                    LOG.warning(_LW("%(logprefix)s unexpected IOError when "
                                     "reading"), {'logprefix': logprefix})
                 raise e
             except ValueError:
-                LOG.warning(_LW("%(logprefix)sfailed to load json"),
+                LOG.warning(_LW("%(logprefix)s failed to load json"),
                             {'logprefix': logprefix})
                 raise
 
