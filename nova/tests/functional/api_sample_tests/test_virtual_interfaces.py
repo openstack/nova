@@ -25,6 +25,13 @@ CONF.import_opt('osapi_compute_extension',
 class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-virtual-interfaces"
 
+    def setUp(self):
+        super(VirtualInterfacesJsonTest, self).setUp()
+        self.template = 'vifs-list-resp'
+        if (hasattr(self, '_test') and self._test in ('v2',
+                                                      'v2.1_compatible')):
+            self.template = 'vifs-list-resp-v2'
+
     def _get_flags(self):
         f = super(VirtualInterfacesJsonTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
@@ -43,10 +50,7 @@ class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
 
         subs = self._get_regexes()
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
-        template = 'vifs-list-resp'
-        if (hasattr(self, '_test') and self._test == 'v2'):
-            template = 'vifs-list-resp-v2'
-        self._verify_response(template, subs, response, 200)
+        self._verify_response(self.template, subs, response, 200)
 
 
 class VirtualInterfacesJsonV212Test(VirtualInterfacesJsonTest):

@@ -131,6 +131,14 @@ class ExtensionInfoController(wsgi.Controller):
     def _create_fake_ext(self, alias, name):
         return FakeExtension(alias, name)
 
+    def _add_vif_extension(self, discoverable_extensions):
+        vif_extension = {}
+        vif_extension_info = {'name': 'ExtendedVIFNet',
+                              'alias': 'OS-EXT-VIF-NET'}
+        vif_extension[vif_extension_info["alias"]] = self._create_fake_ext(
+            vif_extension_info["name"], vif_extension_info["alias"])
+        discoverable_extensions.update(vif_extension)
+
     def _get_extensions(self, context):
         """Filter extensions list based on policy."""
 
@@ -174,9 +182,14 @@ class ExtensionInfoController(wsgi.Controller):
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-
+        discoverable_extensions = self._get_extensions(context)
+        # NOTE(gmann): This is for v2.1 compatible mode where
+        # extension list should show all extensions as shown by v2.
+        # Here we add VIF extension which has been removed from v2.1 list.
+        if req.is_legacy_v2():
+            self._add_vif_extension(discoverable_extensions)
         sorted_ext_list = sorted(
-            six.iteritems(self._get_extensions(context)))
+            six.iteritems(discoverable_extensions))
 
         extensions = []
         for _alias, ext in sorted_ext_list:

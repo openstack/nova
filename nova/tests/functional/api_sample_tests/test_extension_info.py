@@ -41,6 +41,8 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         template = 'extensions-list-resp'
         if self._test == 'v2':
             template = 'extensions-list-resp-v2'
+        if self._test == 'v2.1_compatible':
+            template = 'extensions-list-resp-v21-compatible'
         self._verify_response(template, subs, response, 200)
 
 
