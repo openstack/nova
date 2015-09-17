@@ -2176,10 +2176,17 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfInstances([instance], result)
 
     def test_instance_get_all_by_filters_unicode_value(self):
-        instance = self.create_instance_with_args(display_name=u'test♥')
+        i1 = self.create_instance_with_args(display_name=u'test♥')
+        i2 = self.create_instance_with_args(display_name=u'test')
+        i3 = self.create_instance_with_args(display_name=u'test♥test')
+        self.create_instance_with_args(display_name='diff')
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 {'display_name': u'test'})
-        self._assertEqualListsOfInstances([instance], result)
+        self._assertEqualListsOfInstances([i1, i2, i3], result)
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'display_name': u'test♥'})
+        self._assertEqualListsOfInstances(result, [i1, i3])
 
     def test_instance_get_all_by_filters_tags(self):
         instance = self.create_instance_with_args(
