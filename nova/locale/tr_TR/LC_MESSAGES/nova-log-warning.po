@@ -6,9 +6,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"POT-Creation-Date: 2015-09-18 06:26+0000\n"
 "PO-Revision-Date: 2015-09-08 05:38+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
@@ -33,18 +33,6 @@ msgstr "%(cmd)s başarısız. Tekrar denemeden önce %(time)s saniye uyunuyor."
 #, python-format
 msgid "%(host_state)s has not been heard from in a while"
 msgstr "%(host_state)s'den yakın zamanda haber alınamadı"
-
-#, python-format
-msgid "%(logprefix)sfailed to load json"
-msgstr "%(logprefix)s json yükleyemedi"
-
-#, python-format
-msgid "%(logprefix)sfile does not exist"
-msgstr "%(logprefix)s dosyası mevcut değil."
-
-#, python-format
-msgid "%(logprefix)unexpected IOError when reading"
-msgstr "Okumada %(logprefix)unexpected IOError"
 
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."

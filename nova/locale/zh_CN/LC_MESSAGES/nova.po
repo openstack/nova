@@ -26,10 +26,10 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev213\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-17 06:26+0000\n"
-"PO-Revision-Date: 2015-09-17 06:25+0000\n"
+"POT-Creation-Date: 2015-09-18 06:26+0000\n"
+"PO-Revision-Date: 2015-09-17 03:02+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
@@ -143,6 +143,10 @@ msgid "%(value_name)s must be an integer"
 msgstr "%(value_name)s 必须为整数"
 
 #, python-format
+msgid "%(vendor)s %(product)s %(version)s"
+msgstr "%(vendor)s %(product)s %(version)s"
+
+#, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr "工作线程%(worker_name)s的数量%(workers)s非法，必须大于0"
 
@@ -155,6 +159,14 @@ msgid "%r failed. Retrying."
 msgstr "%r 失败，重试。"
 
 #, python-format
+msgid "%s does not support disk hotplug."
+msgstr "%s 不支持磁盘热插。"
+
+#, python-format
+msgid "%s format is not supported"
+msgstr "不支持格式%s"
+
+#, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s 不是字符串或 Unicode"
 
@@ -165,6 +177,10 @@ msgstr "无效ip网络%s"
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
 msgstr "%s不是这台计算主机管理的有效节点。"
+
+#, python-format
+msgid "%s is not supported."
+msgstr "不支持%s"
 
 #, python-format
 msgid "%s must be either 'MANUAL' or 'AUTO'."
@@ -355,6 +371,9 @@ msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
 msgstr "尝试从空池子中消费PCI设备%(compute_node_id)s:%(address)s"
 
+msgid "Attempted overwrite of an existing value."
+msgstr "尝试覆盖一个已存在的值。"
+
 #, python-format
 msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
 msgstr "尝试声明：内存%(memory_mb)d MB, 磁盘 %(disk_gb)d GB"
@@ -537,6 +556,12 @@ msgstr "只能再多运行 %s 个此类型的实例。"
 msgid "Can't detach root device volume"
 msgstr "不能断开root设备卷"
 
+msgid "Can't resize a disk to 0 GB."
+msgstr "不能调整磁盘到0GB."
+
+msgid "Can't resize down ephemeral disks."
+msgstr "不能向下调整瞬时磁盘。"
+
 msgid "Can't retrieve root device path from instance libvirt configuration"
 msgstr "无法从实例 libvirt 配置中检索到根设备路径"
 
@@ -577,8 +602,19 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "无法将一个或多个卷连接至多个实例"
 
 #, python-format
+msgid "Cannot block migrate instance %s with mapped volumes"
+msgstr "不能迁移带有映射卷的实例"
+
+#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "对于孤立对象 %(objtype)s 无法调用 %(method)s"
+
+msgid ""
+"Cannot create default bittorrent URL without xenserver.torrent_base_url "
+"configuration option set."
+msgstr ""
+"没有设置配置选项xenserver.torrent_base_url ，不能创建缺省比特流bittorrent  "
+"URL。"
 
 msgid "Cannot disassociate auto assigned floating ip"
 msgstr "无法取消关联自动分配的浮动 IP"
@@ -602,6 +638,12 @@ msgstr "无法找到用来重新创建的镜像"
 #, python-format
 msgid "Cannot get VM summary data for: %s"
 msgstr "无法为以下项获取 VM 摘要数据：%s"
+
+#, python-format
+msgid ""
+"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
+"method: %(auth_method)s."
+msgstr "不能登录到目标%(target_iqn)s。不支持iSCSI认证方法：%(auth_method)s。"
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "无法安装 Scality SOFS，请检查系统日志以获取错误"
@@ -793,6 +835,10 @@ msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
 msgstr "连接 Glance 主机 %(host)s:%(port)s 失败：%(reason)s"
 
 #, python-format
+msgid "Connection to libvirt lost: %s"
+msgstr "到libvirt的连接丢失：%s"
+
+#, python-format
 msgid "Connection to the hypervisor is broken on host: %(host)s"
 msgstr "在主机: %(host)s上面，监测器的连接断开。"
 
@@ -879,6 +925,10 @@ msgid "Could not get instance console log. Error: %s"
 msgstr "不能获取实例控制台日志。错误：%s"
 
 #, python-format
+msgid "Could not load line %(line)s, got error %(error)s"
+msgstr "不能加载行%(line)s，得到的错误是%(error)s"
+
+#, python-format
 msgid "Could not load paste app '%(name)s' from %(path)s"
 msgstr "无法从路径 %(path)s 中加载应用 '%(name)s'"
 
@@ -933,8 +983,15 @@ msgstr "DNS2"
 msgid "Database migration failed: %(reason)s"
 msgstr "数据库迁移失败：%(reason)s"
 
+#, python-format
+msgid "Datastore regex %s did not match any datastores"
+msgstr "存储正则表达式%s没有匹配存储"
+
 msgid "Datetime is in invalid format"
 msgstr "时间格式无效"
+
+msgid "Default PBM policy is required if PBM is enabled."
+msgstr "如果PBM启用，缺省的PBM策略是必须的。"
 
 msgid "Default rule. Enforced when a requested rule is not found."
 msgstr "默认规则。当一个请求的规则没有找到时强制使用的规则。"
@@ -954,8 +1011,25 @@ msgid "Desired state must be specified.  Valid states are: %s"
 msgstr "必须指定所需状态。有效状态如下：%s"
 
 #, python-format
+msgid "Destination host:%s must be in the same aggregate as the source server"
+msgstr "目的主机：%s 必须与源服务器在同一个聚合中"
+
+#, python-format
+msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
+msgstr "libvirt< %(ver)s，不允许断开PCI设备"
+
+#, python-format
+msgid "Detaching SR-IOV ports with libvirt < %(ver)s is not permitted"
+msgstr "libvirt< %(ver)s，不允许断开SR-IOV 端口"
+
+#, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "检测到具有标识 %(vlan)d 的现有 vlan"
+
+#, python-format
+msgid ""
+"Device id %(id)s specified is not supported by hypervisor version %(version)s"
+msgstr "在监测器版本%(version)s，不支持指定的设备%(id)s"
 
 msgid "Device name contains spaces."
 msgstr "Device名称中包含了空格"
@@ -970,6 +1044,16 @@ msgid ""
 msgstr ""
 "在%(table)s.%(column)s和影子表 : %(c_type)s %(shadow_c_type)s有不同的类型"
 
+msgid ""
+"Directories where policy configuration files are stored. They can be "
+"relative to any directory in the search path defined by the config_dir "
+"option, or absolute paths. The file defined by policy_file must exist for "
+"these directories to be searched.  Missing or empty directories are ignored."
+msgstr ""
+"策略配置文件存放的目录。它们可以是在config_dir中配置查找路径的任何相对路径，"
+"或者绝对路径。在这些查找的目录中，policy_file 定义的文件必须存在。忽略丢失或"
+"者空目录。"
+
 msgid "Disassociate host is not implemented by the configured Network API"
 msgstr "配置的网络Network API没有实现与主机解绑功能"
 
@@ -980,12 +1064,23 @@ msgid "Disassociate project is not implemented by the configured Network API"
 msgstr "配置的网络Network API没有实现与项目解绑功能"
 
 #, python-format
+msgid "Disk contains a filesystem we are unable to resize: %s"
+msgstr "磁盘包含一个我们无法调整的文件系统：%s"
+
+#, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
 msgstr "磁盘格式 %(disk_format)s 不能接受"
 
 #, python-format
 msgid "Disk info file is invalid: %(reason)s"
 msgstr "磁盘信息文件无效：%(reason)s"
+
+msgid "Disk must have only one partition."
+msgstr "磁盘必须只能有一个分区。"
+
+#, python-format
+msgid "Disk with id: %s not found attached to instance."
+msgstr " id: %s 磁盘没有绑定到实例。"
 
 #, python-format
 msgid "Driver Error: %s"
@@ -1030,6 +1125,20 @@ msgid "Ephemeral disks requested are larger than the instance type allows."
 msgstr "临时磁盘的请求大于实例类型允许。"
 
 #, python-format
+msgid ""
+"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
+"%(total)d"
+msgstr ""
+" 针对'%(method)s'与Ironic服务器联系时出错。总尝试次数%(total)d，已尝"
+"试%(attempt)d"
+
+#, python-format
+msgid ""
+"Error destroying the instance on node %(node)s. Provision state still "
+"'%(state)s'."
+msgstr "在节点%(node)s销毁实例出错。准备状态仍然是'%(state)s'。"
+
+#, python-format
 msgid "Error during following call to agent: %(method)s"
 msgstr "调用代理的%(method)s 方法出错"
 
@@ -1039,9 +1148,45 @@ msgstr "取消搁置实例 %(instance_id)s 期间出错：%(reason)s"
 
 #, python-format
 msgid ""
+"Error from libvirt while getting domain info for %(instance_name)s: [Error "
+"Code %(error_code)s] %(ex)s"
+msgstr ""
+"获取%(instance_name)s域信息时libvirt报错：[错误号 %(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while injecting an NMI to %(instance_uuid)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"当注入 NMI到实例%(instance_uuid)s时，libvirt报错： [错误号 %(error_code)s] "
+"%(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while looking up %(instance_id)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"查找实例%(instance_id)s时，libvirt出错： [错误号 %(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr "查找 %(instance_name)s时libvirt出错：[错误代码 %(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while quiescing %(instance_name)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"当停顿%(instance_name)s时，libvirt报错： [错误代号 %(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while set password for username \"%(user)s\": [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"当为用户\"%(user)s\"设置密码时，libvirt报错：[错误号 %(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -1115,6 +1260,13 @@ msgstr "期望 tagSet 是键值对"
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "在影子表中有额外列%(table)s.%(column)s"
 
+msgid "Extracting vmdk from OVA failed."
+msgstr "从OVA提前vmdk失败。"
+
+#, python-format
+msgid "Fail to clean up node %s parameters"
+msgstr "清理节点 %s参数失败"
+
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr "验证提供的额外特性关键字失败。期望是字符串"
 
@@ -1125,6 +1277,12 @@ msgstr "访问端口%(port_id)s失败：%(reason)s"
 #, python-format
 msgid "Failed to add bridge: %s"
 msgstr "添加桥%s失败"
+
+#, python-format
+msgid ""
+"Failed to add deploy parameters on node %(node)s when provisioning the "
+"instance %(instance)s"
+msgstr "在准备实例%(instance)s时，在主机%(node)s上停机部署参数失败"
 
 #, python-format
 msgid "Failed to add interface: %s"
@@ -1185,12 +1343,19 @@ msgid "Failed to launch instances: %(reason)s"
 msgstr "无法启动云主机：%(reason)s"
 
 #, python-format
+msgid "Failed to login target %s"
+msgstr "登录目标%s失败"
+
+#, python-format
 msgid "Failed to map partitions: %s"
 msgstr "映射分区失败：%s"
 
 #, python-format
 msgid "Failed to mount filesystem: %s"
 msgstr "挂载文件系统失败：%s"
+
+msgid "Failed to parse information about a pci device for passthrough"
+msgstr "为了直通，解析pci设备的信息失败"
 
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
@@ -1205,6 +1370,10 @@ msgid ""
 "Failed to prepare PCI device %(id)s for instance %(instance_uuid)s: "
 "%(reason)s"
 msgstr "为实例%(instance_uuid)s准备PCI设备%(id)s失败：%(reason)s"
+
+#, python-format
+msgid "Failed to provision instance %(inst)s: %(reason)s"
+msgstr "准备实例%(inst)s失败：%(reason)s"
 
 #, python-format
 msgid "Failed to read or write disk info file: %(reason)s"
@@ -1229,6 +1398,10 @@ msgstr "释放MAC%(mac_address)s的IP %(address)s失败"
 #, python-format
 msgid "Failed to remove volume(s): (%(reason)s)"
 msgstr "移除卷失败：(%(reason)s)"
+
+#, python-format
+msgid "Failed to request Ironic to rebuild instance %(inst)s: %(reason)s"
+msgstr "请求Ironic 重新构建实例%(inst)s失败：%(reason)s"
 
 #, python-format
 msgid "Failed to resume instance: %(reason)s"
@@ -1474,6 +1647,9 @@ msgstr "传入镜像元数据的串口数不能超过云主机类型中的设定
 msgid "Found no PIF for device %s"
 msgstr "没有找到设备 %s 的PIF"
 
+msgid "Found no disk to snapshot."
+msgstr "发现没有盘来做快照。"
+
 #, python-format
 msgid "Found no network for bridge %s"
 msgstr "发现网桥 %s 没有网络"
@@ -1616,6 +1792,12 @@ msgstr "映像 %(image_id)s 处于不活动状态。"
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
 msgstr "镜像 %(image_id)s 无法接受，原因是： %(reason)s"
 
+msgid "Image disk size greater than requested disk size"
+msgstr "镜像磁盘大小大于请求磁盘大小"
+
+msgid "Image is not raw format"
+msgstr "镜像不是裸格式镜像"
+
 msgid "Image metadata key cannot be blank"
 msgstr "映像元数据键不能为空白"
 
@@ -1684,6 +1866,11 @@ msgstr "正在使用"
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "处于状态 %(vm_state)s/%(task_state)s，而不是处于状态“已调整大小”/“无”"
 
+msgid ""
+"Incompatible settings: ephemeral storage encryption is supported only for "
+"LVM images."
+msgstr "不兼容的设置：只有LVM镜像支持瞬时存储加密。"
+
 #, python-format
 msgid "Inconsistency in cell routing: %(reason)s"
 msgstr "单元路由中存在不一致之处：%(reason)s"
@@ -1694,6 +1881,14 @@ msgstr "不正确的请求主体格式"
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
 msgstr "找不到用于实例 %(instance_uuid)s 的信息高速缓存。"
+
+#, python-format
+msgid ""
+"Instance %(instance)s and volume %(vol)s are not in the same "
+"availability_zone. Instance is in %(ins_zone)s. Volume is in %(vol_zone)s"
+msgstr ""
+"实例%(instance)s和卷%(vol)s没有在同一个可用域availability_zone。实例"
+"在%(ins_zone)s。卷在%(vol_zone)s"
 
 #, python-format
 msgid "Instance %(instance)s does not have a port with id %(port)s"
@@ -1775,8 +1970,15 @@ msgstr "未连接实例 %s。"
 msgid "Instance %s not found"
 msgstr "找不到实例 %s"
 
+#, python-format
+msgid "Instance %s provisioning was aborted"
+msgstr "废弃准备实例%s"
+
 msgid "Instance could not be found"
 msgstr "无法找到实例"
+
+msgid "Instance disk to be encrypted but no context provided"
+msgstr "实例磁盘将被加密，但是没有提供上下文"
 
 msgid "Instance event failed"
 msgstr "实例事件无效"
@@ -1893,6 +2095,10 @@ msgstr "无效PCI别名定义：%(reason)s"
 #, python-format
 msgid "Invalid PCI devices Whitelist config %(reason)s"
 msgstr "无效PCI设备白名单配置%(reason)s"
+
+#, python-format
+msgid "Invalid Regular Expression %s"
+msgstr "无效的正则表达式%s"
 
 msgid "Invalid adminPass"
 msgstr "无效的adminPass"
@@ -2037,6 +2243,10 @@ msgid "Invalid key_name provided."
 msgstr "提供了无效的key_name。"
 
 #, python-format
+msgid "Invalid libvirt version %(version)s"
+msgstr "无效的libvirt版本%(version)s"
+
+#, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "内存页大小“%(pagesize)s”无效"
 
@@ -2127,6 +2337,9 @@ msgstr "共享存储器上实例文件的状态无效"
 msgid "Invalid status: '%s'"
 msgstr "无效的状态：'%s'"
 
+msgid "Invalid target_lun"
+msgstr "无效 target_lun"
+
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "对于日期 %s，时间戳记无效"
@@ -2142,6 +2355,10 @@ msgstr "对于%s输入，无效类型"
 #, python-format
 msgid "Invalid update setting: '%s'"
 msgstr "无效的更新设置：'%s'"
+
+#, python-format
+msgid "Invalid usage_type: %s"
+msgstr "usage_type： %s无效"
 
 #, python-format
 msgid ""
@@ -2162,12 +2379,26 @@ msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "非法的Config Drive值： %(option)s"
 
 #, python-format
+msgid ""
+"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
+"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
+msgstr ""
+"无效的vcpu_pin_set 配置，一个或多个指定的cpuset没有在线。在线cpuset(s): "
+"%(online)s,请求的 cpuset(s): %(req)s"
+
+msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
+msgstr "无效的vcpu_pin_set 配置，超过监测器cpu范围。"
+
+#, python-format
 msgid "Invalid virtual interface address %s in request"
 msgstr "请求中无效虚拟接口地址%s"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
 msgstr "无效的卷访问模式: %(access_mode)s"
+
+msgid "Invalid volume source data"
+msgstr "无效卷源数据"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
@@ -2178,6 +2409,24 @@ msgstr "无效volume_size."
 
 msgid "Ironic client unavailable, cannot access Ironic."
 msgstr "Ironic客户端不可用，不能访问Ironic。"
+
+#, python-format
+msgid "Ironic node uuid not supplied to driver for instance %s."
+msgstr "Ironic节点uuid不提供实例 %s的驱动。"
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
+"%(power)s)"
+msgstr "Ironic节点%(id)s校验失败。 (部署: %(deploy)s， 电源: %(power)s)"
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
+"count: %(vif_count)d, Pif count: %(pif_count)d)"
+msgstr ""
+"Ironic节点：%(id)s 虚拟到物理接口的计数不匹配(Vif count: %(vif_count)d, Pif "
+"count: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "正确的服务在运行吗？"
@@ -2226,6 +2475,11 @@ msgstr "最近的nova 系统日志输出:-"
 msgid "Length in request body must be an integer value"
 msgstr "请求主体中的长度必须为整数值"
 
+#, python-format
+msgid ""
+"Libvirt '%s' or later is required for online deletion of volume snapshots."
+msgstr "在线删除卷快照，必须Libvirt '%s'或更高"
+
 msgid "Limit"
 msgstr "限制"
 
@@ -2241,6 +2495,11 @@ msgid ""
 "List of file systems that are configured in this file in the image_file_url:"
 "<list entry name> sections"
 msgstr "列出在文件的 image_file_url:<list entry name>段配置的文件系统"
+
+msgid ""
+"Live migration can not be used without shared storage except a booted from "
+"volume VM which does not have a local disk."
+msgstr "热迁移离开共享存储不能使用，除非从卷启动的虚拟机没有本地磁盘。"
 
 #, python-format
 msgid "Live migration failed: %s"
@@ -2348,6 +2607,9 @@ msgid ""
 "%(node)s."
 msgstr "在计算主机节点上%(host)s.%(node)s，测量%(name)s没有找到。"
 
+msgid "Metrics collection is not supported on this version of Hyper-V"
+msgstr "在 Hyper-V的这个版本不支持计量收集器"
+
 msgid "Migrate Receive failed"
 msgstr "Migrate Receive 失败"
 
@@ -2361,6 +2623,9 @@ msgstr "迁移 %(migration_id)s 没有找到。"
 #, python-format
 msgid "Migration error: %(reason)s"
 msgstr "迁移错误：%(reason)s"
+
+msgid "Migration is not supported for LVM backed instances"
+msgstr "对于LVM作为后台的实例，不支持迁移"
 
 #, python-format
 msgid ""
@@ -2451,6 +2716,13 @@ msgstr "对于名称“%s”，找到多个浮动 IP 池匹配项"
 msgid "Multiple floating ips are found for address %(address)s."
 msgstr "对于地址 %(address)s，找到多个浮动 IP。"
 
+msgid ""
+"Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
+"not return uptime for just one host."
+msgstr ""
+" VMWare vCenter驱动可能管理者多个主机；然而，我们因为只有一台主机，没有及时反"
+"馈。"
+
 msgid "Multiple possible networks found, use a Network ID to be more specific."
 msgstr "发现多个可能的网络，用Network ID会更加明确。"
 
@@ -2467,6 +2739,19 @@ msgstr "network_id和port_id必须同时输入"
 
 msgid "Must specify an ExtensionManager class"
 msgstr "必须明确一个ExtensionManager类"
+
+msgid ""
+"Must specify connection_url, connection_username (optionally), and "
+"connection_password to use compute_driver=xenapi.XenAPIDriver"
+msgstr ""
+"为了使用compute_driver=xenapi.XenAPIDriver，必须指定connection_url, "
+"connection_username (可选), 和 connection_password"
+
+msgid ""
+"Must specify host_ip, host_username and host_password to use vmwareapi."
+"VMwareVCDriver"
+msgstr ""
+"使用vmwareapi.VMwareVCDriver必须指定host_ip, host_username 和 host_password"
 
 msgid "Must supply a positive value for max_rows"
 msgstr "必须为最大行max_rows提供一个正数"
@@ -2598,6 +2883,14 @@ msgid "No compute host specified"
 msgstr "未指定计算宿主机"
 
 #, python-format
+msgid "No device with MAC address %s exists on the VM"
+msgstr "在VM上面没有MAC 地址 % 的设备"
+
+#, python-format
+msgid "No device with interface-id %s exists on VM"
+msgstr "在VM上面没有 interface-id %s 的设备"
+
+#, python-format
 msgid "No disk at %(location)s"
 msgstr "在 %(location)s 没有磁盘"
 
@@ -2642,6 +2935,9 @@ msgstr "没有可用的主机在集群中"
 msgid "No hypervisor matching '%s' could be found."
 msgstr "找不到任何与“%s”匹配的管理程序。"
 
+msgid "No image locations are accessible"
+msgstr "没有镜像位置可以访问"
+
 msgid "No instances found for any event"
 msgstr "在所有事件中没有发现实例"
 
@@ -2679,11 +2975,21 @@ msgstr "不存在任何与实例关联的 nw_info 高速缓存"
 msgid "No operating system found in %s"
 msgstr "在 %s 中找不到任何操作系统"
 
+#, python-format
+msgid "No primary VDI found for %s"
+msgstr "对于%s，没有找到主VDI"
+
 msgid "No request body"
 msgstr "不存在任何请求主体"
 
+msgid "No root disk defined."
+msgstr "没有定义根磁盘。"
+
 msgid "No rule for the specified parameters."
 msgstr "对给定的参数无特定规则。"
+
+msgid "No suitable network for migrate"
+msgstr "对于迁移，没有合适的网络"
 
 msgid "No valid host found for cold migrate"
 msgstr "冷迁移过程中发现无效主机"
@@ -2743,6 +3049,10 @@ msgid "Not stored in rbd"
 msgstr "未存储在 rbd 中"
 
 #, python-format
+msgid "Nova requires libvirt version %s or greater."
+msgstr "Nova请求的 libvirt 版本%s 或更高。"
+
+#, python-format
 msgid "Number of retries to plugin (%(num_retries)d) exceeded."
 msgstr "到插件(%(num_retries)d)的尝试次数超过最大值。"
 
@@ -2776,6 +3086,12 @@ msgstr "只有 'updated_since', 'project_id' and 'deleted' 可以理解。"
 
 msgid "Only administrators may list deleted instances"
 msgstr "仅管理员可列示已删除的实例"
+
+#, python-format
+msgid ""
+"Only file-based SRs (ext/NFS) are supported by this feature.  SR %(uuid)s is "
+"of type %(type)s"
+msgstr "只有基于文件的SRs(ext/NFS)支持这个特性。SR %(uuid)s 是类型 %(type)s"
 
 msgid "Only host parameter can be specified"
 msgstr "只能指定主机 参数"
@@ -2833,6 +3149,25 @@ msgstr "无法找到PCI设备 %(id)s"
 msgid "PCI device request (%requests)s failed"
 msgstr "PCI设备请求(%requests)s失败"
 
+#, python-format
+msgid ""
+"PCS doesn't support images in %s format. You should either set "
+"force_raw_images=True in config or upload an image in ploop or raw format."
+msgstr ""
+"PCS不支持%s 格式的镜像。您应该在配置中设置force_raw_images=True，或者上传一个"
+"ploop或裸磁盘格式 镜像。"
+
+#, python-format
+msgid ""
+"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
+"%(vlan_num)d"
+msgstr ""
+"网络%(bridge)s的PIF %(pif_uuid)s 用VLAN号 %(pif_vlan)d。期望%(vlan_num)d"
+
+#, python-format
+msgid "PIF %s does not contain IP address"
+msgstr "PIF %s 没有包含IP地址"
+
 msgid "PROJECT"
 msgstr "工程"
 
@@ -2889,6 +3224,14 @@ msgstr "请以root身份重新执行nova-manage。"
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "请指定fixed_range或uuid"
+
+#, python-format
+msgid "Plug vif failed because of unexpected vif_type=%s"
+msgstr "以为未预期的vif_type=%s，插入vif失败"
+
+#, python-format
+msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
+msgstr "插件版本不匹配 (预期 %(exp)s，获取 %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -3040,6 +3383,14 @@ msgstr "找不到项目 %(project_id)s 的配额使用量。"
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "已达到尝试拔出 VBD %s 的最大重试次数"
 
+#, python-format
+msgid ""
+"Relative blockcommit support was not detected. Libvirt '%s' or later is "
+"required for online deletion of file/network storage-backed volume snapshots."
+msgstr ""
+"没有检测到相对的块提交支持。对于文件/网络作为后台的卷快照的在线删除，必须"
+"Libvirt '%s' 或更高。"
+
 msgid "Request body and URI mismatch"
 msgstr "请求主体和URI不匹配"
 
@@ -3094,6 +3445,10 @@ msgstr ""
 "请求的 vCPU 限制 %(sockets)d:%(cores)d:%(threads)d 无法满足vcpus 计数 "
 "%(vcpus)d"
 
+#, python-format
+msgid "Rescue device does not exist for instance %s"
+msgstr "对于实例%s，营救设备不存在"
+
 msgid "Reserved"
 msgstr "保留的"
 
@@ -3119,6 +3474,10 @@ msgstr "资源没有找到。"
 msgid "Resumed"
 msgstr "已恢复"
 
+#, python-format
+msgid "Root element name should be '%(name)s' not '%(tag)s'"
+msgstr "根元素名应该是 '%(name)s' 而不是'%(tag)s'"
+
 msgid "Rotation param is required for backup image_type"
 msgstr "备份 image_type 要求循环参数。"
 
@@ -3133,6 +3492,18 @@ msgstr "组中已有此规则：%(rule)s"
 #, python-format
 msgid "Rules must be an instance of dict or Rules, got %s instead"
 msgstr "规则必须是字典或者规则的实例化对像，获取 %s 取代"
+
+#, python-format
+msgid "Running Nova with parallels virt_type requires libvirt version %s"
+msgstr "运行串行virt_type的nova串行virt_type需要libvirt版本%s"
+
+#, python-format
+msgid ""
+"Running Nova with qemu/kvm virt_type on s390/s390x requires libvirt version "
+"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
+msgstr ""
+"在s390/s390x运行带qemu/kvm virt_type 的Nova需要libvirt版本%(libvirt_ver)s 并"
+"且qemu版本%(qemu_ver)s，或更高"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
@@ -3286,8 +3657,22 @@ msgstr "设置管理员密码不支持"
 msgid "Shadow table with name %(name)s already exists."
 msgstr "影子数据表 %(name)s已经存在"
 
+#, python-format
+msgid "Share '%s' is not supported"
+msgstr "不支持共享 '%s' "
+
+#, python-format
+msgid "Share level '%s' cannot have share configured"
+msgstr "共享级别 '%s' 不用共享配置"
+
 msgid "Should we use a CA for each project?"
 msgstr "是否每个项目都使用认证权威？"
+
+msgid ""
+"Shrinking the filesystem down with resize2fs has failed, please check if you "
+"have enough free space on your disk."
+msgstr ""
+"使用resize2fs向下压缩文件系统失败，请检查您的磁盘上是否有足够的剩余空间。"
 
 msgid "Signature not provided"
 msgstr "签名没有提供"
@@ -3344,6 +3729,10 @@ msgid "Storage error: %(reason)s"
 msgstr "存储错误：%(reason)s"
 
 #, python-format
+msgid "Storage policy %s did not match any datastores"
+msgstr "存储策略 %s 不匹配任何存储"
+
+#, python-format
 msgid "Subject for certificate for projects, %s for project, timestamp"
 msgstr "项目证书的标题，%s 依次分别为项目，时间戳"
 
@@ -3359,6 +3748,9 @@ msgstr "已挂起"
 
 msgid "Swap drive requested is larger than instance type allows."
 msgstr "交换驱动器的请求大于实例类型允许。"
+
+msgid "Swap only supports host devices"
+msgstr "Swap 只支持主机设备"
 
 #, python-format
 msgid "Target live migration host \"%s\" is unreachable"
@@ -3438,6 +3830,9 @@ msgstr "将创建的实例磁盘太小。"
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "当前驱动不支持保存瞬时分区。"
 
+msgid "The default PBM policy doesn't exist on the backend."
+msgstr "在后台，缺省的PBM策略不存在。"
+
 #, python-format
 msgid "The file copy from %(src)s to %(dest)s failed"
 msgstr "将文件从 %(src)s 复制到 %(dest)s 失败"
@@ -3484,6 +3879,10 @@ msgid "The module %(module)s is misconfigured: %(reason)s."
 msgstr "模块%(module)s配置错误：%(reason)s。"
 
 #, python-format
+msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
+msgstr "挂载的 %(mount_path)s 不是一个有效的Quobyte 卷。错误：%(exc)s"
+
+#, python-format
 msgid ""
 "The mount point advertised by glance: %(glance_mount)s, does not match the "
 "URL path: %(path)s"
@@ -3499,6 +3898,9 @@ msgstr ""
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
 msgstr "定义的端口数量：%(ports)d 超过限制：%(quota)d"
+
+msgid "The only partition should be partition 1."
+msgstr "唯一的分区应该是分区1。"
 
 msgid "The path at which the file system is mounted."
 msgstr "文件系统挂接的路径。"
@@ -3532,6 +3934,10 @@ msgstr "不支持请求的功能"
 msgid ""
 "The service from servicegroup driver %(driver)s is temporarily unavailable."
 msgstr "这个服务来自服务群组驱动的%(driver)s 暂时不可用"
+
+#, python-format
+msgid "The specified cluster '%s' was not found in vCenter"
+msgstr "在vCenter中没有找到指定的集群'%s'"
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "
@@ -3634,6 +4040,9 @@ msgstr "没有找到instance_uuid为NULL的记录。"
 msgid "This default rule already exists."
 msgstr "此缺省规则已存在。"
 
+msgid "This domU must be running on the host specified by connection_url"
+msgstr "这个domU 必须运行在connection_url指定的主机上"
+
 msgid "This driver only supports type 'a'"
 msgstr "驱动仅支持类型 'a'"
 
@@ -3704,6 +4113,9 @@ msgstr ""
 msgid "Unable to attach volume to instance %s"
 msgstr "无法附加卷到实例 %s"
 
+msgid "Unable to authenticate Ironic client."
+msgstr "不能认证Ironic客户端。"
+
 msgid ""
 "Unable to claim IP for VPN instances, ensure it isn't running, and try again "
 "in a few minutes"
@@ -3749,12 +4161,32 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "无法为 %s 确定磁盘前缀"
 
 #, python-format
+msgid "Unable to eject %s from the pool; No master found"
+msgstr "不能从池中弹出%s；没有找到主"
+
+#, python-format
+msgid "Unable to eject %s from the pool; pool not empty"
+msgstr "不能从池中弹出%s ；池不空"
+
+#, python-format
 msgid "Unable to find SR from VBD %s"
 msgstr "无法在VBD %s找到存储库"
 
 #, python-format
+msgid "Unable to find SR from VDI %s"
+msgstr "从VDI %s 不能找到SR"
+
+#, python-format
 msgid "Unable to find a mounted disk for target_iqn: %s"
 msgstr "对于 target_iqn，找不到已安装的磁盘：%s"
+
+#, python-format
+msgid ""
+"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
+"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
+msgstr ""
+"不能为target_iqn: %s找到一个挂载磁盘。请确保主机SAN策略设置为\"OfflineAll\" "
+"或 \"OfflineShared\""
 
 #, python-format
 msgid "Unable to find ca_file : %s"
@@ -3799,6 +4231,12 @@ msgstr "无法获取dns域"
 msgid "Unable to get dns entry"
 msgstr "无法获取dns入口"
 
+msgid "Unable to get host UUID: /etc/machine-id does not exist"
+msgstr "不能获取主机UUID：/etc/machine-id不存在"
+
+msgid "Unable to get host UUID: /etc/machine-id is empty"
+msgstr "不能获取主机UUID：/etc/machine-id 为空"
+
 msgid "Unable to get rdp console, functionality not implemented"
 msgstr "无法获取rdp控制台，功能没有实现"
 
@@ -3822,6 +4260,10 @@ msgstr "无法为存储库 %s 引入VDI"
 #, python-format
 msgid "Unable to introduce VDI on SR %s"
 msgstr "无法在存储库 %s 上引入VDI"
+
+#, python-format
+msgid "Unable to join %s in the pool"
+msgstr "在池中不能加入%s"
 
 msgid ""
 "Unable to launch multiple instances with a single configured port ID. Please "
@@ -3870,11 +4312,24 @@ msgid ""
 "Unable to obtain internal size from VHDX: %(vhd_path)s. Exception: %(ex)s"
 msgstr "不能VHDX: %(vhd_path)s从获取内部大小。异常：%(ex)s"
 
+#, python-format
+msgid "Unable to obtain target information %s"
+msgstr "不能获取目标信息%s"
+
 msgid "Unable to parse metadata key/value pairs."
 msgstr "无法解析元数据键/值对"
 
+msgid "Unable to resize disk down."
+msgstr "不能向下调整磁盘。"
+
 msgid "Unable to set password on instance"
 msgstr "无法对实例设置密码"
+
+msgid "Unable to shrink disk."
+msgstr "不能压缩磁盘。"
+
+msgid "Unable to terminate instance."
+msgstr "不能终止实例。"
 
 #, python-format
 msgid "Unable to unplug VBD %s"
@@ -3912,6 +4367,12 @@ msgstr ""
 #, python-format
 msgid "Unexpected aggregate action %s"
 msgstr "未预期的聚合动作%s"
+
+#, python-format
+msgid ""
+"Unexpected sysinfo_serial setting '%(actual)s'. Permitted values are "
+"%(expect)s'"
+msgstr "未预期的sysinfo_serial设置'%(actual)s'。允许的值是%(expect)s'"
 
 msgid "Unexpected type adding stats"
 msgstr "类型添加统计发生意外"
@@ -3956,6 +4417,10 @@ msgstr "未知链：%r"
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
 msgstr "配置驱动器格式 %(format)s 未知。请选择下列其中一项：iso9660 或 vfat。"
 
+#, python-format
+msgid "Unknown delete_info type %s"
+msgstr "未知delete_info类型%s"
+
 msgid "Unknown error occurred."
 msgstr "发生未知错误。"
 
@@ -3981,6 +4446,10 @@ msgstr "配额资源 %(unknown)s 未知。"
 
 msgid "Unknown sort direction, must be 'desc' or 'asc'"
 msgstr "排序方向未知，必须为“降序”或“升序”"
+
+#, python-format
+msgid "Unknown type: %s"
+msgstr "未知类型：%s"
 
 msgid "Unrecognized legacy format."
 msgstr "不能识别的格式。"
@@ -4056,6 +4525,17 @@ msgid ""
 msgstr ""
 "VDI %(vdi_ref)s 的大小为 %(virtual_size)d 字节，比云主机类型定义的 "
 "%(new_disk_size)d 字节还大。"
+
+#, python-format
+msgid ""
+"VDI not found on SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
+msgstr ""
+"SR %(sr)s (vdi_uuid %(vdi_uuid)s上没有找到VDI，目标lun target_lun "
+"%(target_lun)s)"
+
+#, python-format
+msgid "VHD coalesce attempts exceeded (%d), giving up..."
+msgstr "VHD coalesce 尝试超过(%d)，放弃。。。"
 
 #, python-format
 msgid "VIF driver not found for network_api_class: %s"
@@ -4184,6 +4664,22 @@ msgid "Volume resource quota exceeded"
 msgstr "超出卷资源配额"
 
 #, python-format
+msgid "Volume sets block size, but libvirt '%s' or later is required."
+msgstr "卷设置块大小，但是必须libvirt  '%s' 或更高"
+
+#, python-format
+msgid ""
+"Volume sets block size, but the current libvirt hypervisor '%s' does not "
+"support custom block size"
+msgstr "卷设置块大小，但是当前libvirt监测器 '%s'不支持定制化块大小"
+
+#, python-format
+msgid ""
+"Volume sets discard option, but libvirt %(libvirt)s or later is required, "
+"qemu %(qemu)s or later is required."
+msgstr "卷设置忽略选项，必须libvirt %(libvirt)s 或更高，qemu %(qemu)s 或更高。"
+
+#, python-format
 msgid "WARNING: fixed ip %s allocated to missing instance"
 msgstr "警告：固定IP %s 分配给丢失的实例"
 
@@ -4246,6 +4742,9 @@ msgstr "请求中缺少X-Metadata-Provider。"
 msgid "X-Tenant-ID header is missing from request."
 msgstr "请求中缺少 X-Tenant-ID 。"
 
+msgid "XAPI supporting relax-xsm-sr-check=true required"
+msgstr "XAPI 支持必须的 relax-xsm-sr-check=true"
+
 msgid "You are not allowed to delete the image."
 msgstr "不允许删除该映像。"
 
@@ -4255,6 +4754,33 @@ msgstr "您无权访问实例启动的镜像。"
 
 msgid "You must implement __call__"
 msgstr "你必须执行 __call__"
+
+msgid "You should specify images_rbd_pool flag to use rbd images."
+msgstr "为了使用rbd镜像，您应该指定 images_rbd_pool标记。"
+
+msgid "You should specify images_volume_group flag to use LVM images."
+msgstr "为了使用LVM镜像，您应该指定 images_volume_group标记"
+
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
+"your destination node does not support retrieving listen addresses.  In "
+"order for live migration to work properly you must either disable serial "
+"console or upgrade your libvirt version."
+msgstr ""
+"您的libvirt版本不支持VIR_DOMAIN_XML_MIGRATABLE标记或者您的目的地址不支持获取"
+"监听地址。为了热迁移能够正常工作，您必须禁用串口控制台或者更新您的libvirt版"
+"本。"
+
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
+"your destination node does not support retrieving listen addresses.  In "
+"order for live migration to work properly, you must configure the graphics "
+"(VNC and/or SPICE) listen addresses to be either the catch-all address "
+"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
+msgstr ""
+"您的libvirt版本不支持VIR_DOMAIN_XML_MIGRATABLE标记或者您的目的节点不支持获取"
+"监听地址。为了热迁移能够正常工作，您必须配置图像(VNC 且/或 SPICE)监听所有地"
+"址 (0.0.0.0 或 ::)或者本地地址(127.0.0.1 或 ::1)。"
 
 msgid "Zero fixed ips could be found."
 msgstr "找不到固定IP。"
@@ -4280,6 +4806,16 @@ msgstr "accessIPv6 不是正确的 IPv6 格式"
 msgid "admin password can't be changed on existing disk"
 msgstr "无法在现有磁盘上更改管理员密码"
 
+msgid "aggregate deleted"
+msgstr "删除的聚合"
+
+msgid "aggregate in error"
+msgstr "聚合在错误状态"
+
+#, python-format
+msgid "assert_can_migrate failed because: %s"
+msgstr "assert_can_migrate失败，原因是：%s"
+
 msgid "block_device_mapping must be a list"
 msgstr "block_device_mapping必须是列表"
 
@@ -4300,6 +4836,9 @@ msgstr "无法理解JSON"
 
 msgid "cell_uuid must be set"
 msgstr "必须设置cell_uuid"
+
+msgid "clone() is not implemented"
+msgstr "clone()没有实现"
 
 #, python-format
 msgid "connect info: %s"
@@ -4325,6 +4864,10 @@ msgstr "目标为 %(target_cell)s，但是 routing_path 为 %(routing_path)s"
 
 msgid "disk"
 msgstr "磁盘"
+
+#, python-format
+msgid "disk type '%s' not supported"
+msgstr "不支持磁盘类型'%s' "
 
 #, python-format
 msgid "empty project id for instance %s"
@@ -4354,6 +4897,9 @@ msgstr "生成X509指纹失败。错误消息：%s"
 
 msgid "failed to generate fingerprint"
 msgstr "生成fingerprint失败"
+
+msgid "filename cannot be None"
+msgstr "文件名不能为None"
 
 msgid "floating ip is already associated"
 msgstr "已关联浮动 IP"
@@ -4463,6 +5009,9 @@ msgstr "libguestfs安装了，但是不可用(%s)"
 msgid "libguestfs is not installed (%s)"
 msgstr "libguestfs没有安装 (%s)"
 
+msgid "libvirt error while requesting blockjob info."
+msgstr "当请求blockjob 信息时，libvirt出错"
+
 #, python-format
 msgid "marker [%s] not found"
 msgstr "没有找到标记 [%s]"
@@ -4498,8 +5047,19 @@ msgstr "需要 group_name 或 group_id"
 msgid "network"
 msgstr "网络"
 
+msgid "no hosts to remove"
+msgstr "没有主见可移除"
+
+#, python-format
+msgid "no match found for %s"
+msgstr "对于%s没有找到匹配的"
+
 msgid "node"
 msgstr "节点"
+
+#, python-format
+msgid "not able to execute ssh command: %s"
+msgstr "不能执行ssh命令：%s"
 
 msgid ""
 "nova-idmapshift is a tool that properly sets the ownership of a filesystem "
@@ -4514,6 +5074,9 @@ msgstr "必须指定onSharedStorage。"
 
 msgid "only group \"all\" is supported"
 msgstr "仅仅支持组\"all\""
+
+msgid "operation time out"
+msgstr "操作超时"
 
 msgid "operation_type must be add or remove"
 msgstr "operation_type必须添加或者移除"
@@ -4548,6 +5111,9 @@ msgstr "quota_set没有指定"
 msgid "ramdisk"
 msgstr "内存盘"
 
+msgid "rbd python libraries not found"
+msgstr "没有找到rbd pyhon库"
+
 #, python-format
 msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr "read_deleted 只能是“no”、“yes”或“only”其中一项，而不能是 %r"
@@ -4573,12 +5139,18 @@ msgstr "service 对于基于 Memcached 的 ServiceGroup 驱动程序是必需的
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "此驱动程序或 guest 实例未实现 set_admin_password。"
 
+msgid "setup in progress"
+msgstr "建立处理中"
+
 #, python-format
 msgid "snapshot for %s"
 msgstr "%s 的快照"
 
 msgid "snapshot not specified"
 msgstr "未指定快照"
+
+msgid "snapshot_id required in create_info"
+msgstr "在create_info中必须有snapshot_id"
 
 msgid "start address"
 msgstr "起始地址"
@@ -4646,6 +5218,23 @@ msgstr "对于此 vif_driver 实现，必须存在 vif_type 参数"
 
 msgid "vlan must be an integer"
 msgstr "vlan必须是整数"
+
+#, python-format
+msgid "volume %s already attached"
+msgstr "卷%s已经绑定"
+
+#, python-format
+msgid "volume %s already detached"
+msgstr "卷%s已经解绑定"
+
+#, python-format
+msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
+msgstr "卷 '%(vol)s' 状态必须是‘可用‘。当前处于 '%(status)s' 状态"
+
+#, python-format
+msgid ""
+"volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
+msgstr "卷 '%(vol)s' 状态必须是‘使用中‘。当前处于 '%(status)s' 状态"
 
 msgid "volume not specified"
 msgstr "未指定卷"
