@@ -2,7 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-pbr<2.0,>=1.6
+pbr>=1.6
 SQLAlchemy<1.1.0,>=0.9.9
 boto>=2.32.1
 decorator>=3.4.0
