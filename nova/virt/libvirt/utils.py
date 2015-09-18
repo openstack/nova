@@ -389,6 +389,17 @@ def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
                         max_size=max_size)
 
 
+def fetch_raw_image(context, target, image_id, user_id, project_id,
+                    max_size=0):
+    """Grab initrd or kernel image.
+
+    This function does not attempt raw conversion, as these images will
+    already be in raw format.
+    """
+    images.fetch(context, image_id, target, user_id, project_id,
+                 max_size=max_size)
+
+
 def get_instance_path(instance, forceold=False, relative=False):
     """Determine the correct path for instance storage.
 

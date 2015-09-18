@@ -8220,6 +8220,85 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       filename=ephemeral_file_name,
                                       mkfs=True)
 
+    @mock.patch('nova.virt.libvirt.driver.imagecache')
+    def test_create_image_initrd(self, mock_imagecache):
+        INITRD = self._EPHEMERAL_20_DEFAULT + '.initrd'
+        KERNEL = 'vmlinuz.' + self._EPHEMERAL_20_DEFAULT
+
+        mock_imagecache.get_cache_fname.side_effect = \
+                [KERNEL,
+                 INITRD,
+                 self._EPHEMERAL_20_DEFAULT + '.img']
+        filename = self._EPHEMERAL_20_DEFAULT
+
+        gotFiles = []
+
+        outer = self
+
+        def fake_image(self, instance, name, image_type=''):
+            class FakeImage(imagebackend.Image):
+                def __init__(self, instance, name, is_block_dev=False):
+                    self.path = os.path.join(instance['name'], name)
+                    self.is_block_dev = is_block_dev
+
+                def create_image(self, prepare_template, base,
+                                 size, *args, **kwargs):
+                    pass
+
+                def cache(self, fetch_func, filename, size=None,
+                          *args, **kwargs):
+                    gotFiles.append({'filename': filename,
+                                     'size': size})
+                    if filename == INITRD:
+                        outer.assertEqual(fetch_func,
+                                fake_libvirt_utils.fetch_raw_image)
+                    if filename == KERNEL:
+                        outer.assertEqual(fetch_func,
+                                fake_libvirt_utils.fetch_raw_image)
+
+                def resize_image(self, size):
+                    pass
+
+                def snapshot(self, name):
+                    pass
+
+            return FakeImage(instance, name)
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 1
+        instance_ref['kernel_id'] = 2
+        instance_ref['ramdisk_id'] = 3
+        instance_ref['os_type'] = 'test'
+        instance = objects.Instance(**instance_ref)
+
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+            mock.patch.object(nova.virt.libvirt.imagebackend.Backend,
+              "image", fake_image),
+            mock.patch.object(driver, '_get_guest_xml'),
+            mock.patch.object(driver, '_create_domain_and_network'),
+            mock.patch.object(driver, 'get_info',
+              return_value=[hardware.InstanceInfo(state=power_state.RUNNING)])
+            ):
+            image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+            disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                instance,
+                                                image_meta)
+            driver._create_image(context, instance, disk_info['mapping'])
+
+        wantFiles = [
+            {'filename': KERNEL,
+             'size': None},
+            {'filename': INITRD,
+             'size': None},
+            {'filename': self._EPHEMERAL_20_DEFAULT + '.img',
+             'size': 10 * units.Gi},
+            {'filename': filename,
+             'size': 20 * units.Gi},
+            ]
+        self.assertEqual(wantFiles, gotFiles)
+
     def _create_image_helper(self, callback, suffix=''):
         gotFiles = []
         imported_files = []

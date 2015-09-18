@@ -2819,7 +2819,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if disk_images['kernel_id']:
             fname = imagecache.get_cache_fname(disk_images, 'kernel_id')
-            raw('kernel').cache(fetch_func=libvirt_utils.fetch_image,
+            raw('kernel').cache(fetch_func=libvirt_utils.fetch_raw_image,
                                 context=context,
                                 filename=fname,
                                 image_id=disk_images['kernel_id'],
@@ -2827,7 +2827,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 project_id=instance.project_id)
             if disk_images['ramdisk_id']:
                 fname = imagecache.get_cache_fname(disk_images, 'ramdisk_id')
-                raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_image,
+                raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_raw_image,
                                      context=context,
                                      filename=fname,
                                      image_id=disk_images['ramdisk_id'],
