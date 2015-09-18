@@ -436,6 +436,17 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                                        'fake_uuid', bdm_dict['device_name'],
                                         mode=access_mode).AndRaise(
                                             test.TestingException)
+                if driver_attach:
+                    self.virt_driver.detach_volume(
+                            expected_conn_info, instance,
+                            bdm_dict['device_name'],
+                            encryption=enc_data).AndReturn(None)
+                self.volume_api.terminate_connection(
+                        elevated_context, fake_volume['id'],
+                        connector).AndReturn(None)
+                self.volume_api.detach(elevated_context,
+                                       fake_volume['id']).AndReturn(None)
+
         driver_bdm._bdm_obj.save().AndReturn(None)
         return instance, expected_conn_info
 
@@ -563,6 +574,20 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertRaises(test.TestingException, test_bdm.attach, self.context,
                          instance, self.volume_api, self.virt_driver,
                          do_driver_attach=True)
+
+    def test_volume_attach_no_driver_attach_volume_attach_fails(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached'}
+
+        instance, _ = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, fail_volume_attach=True)
+        self.mox.ReplayAll()
+
+        self.assertRaises(test.TestingException, test_bdm.attach, self.context,
+                         instance, self.volume_api, self.virt_driver,
+                         do_driver_attach=False)
 
     def test_refresh_connection(self):
         test_bdm = self.driver_classes['snapshot'](
