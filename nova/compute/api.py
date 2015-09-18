@@ -759,8 +759,10 @@ class API(base.Base):
                                      image_defined_bdms)
 
         if image_mapping:
-            image_defined_bdms += self._prepare_image_mapping(
-                instance_type, image_mapping)
+            image_mapping = self._prepare_image_mapping(instance_type,
+                                                        image_mapping)
+            image_defined_bdms = self._merge_bdms_lists(
+                image_mapping, image_defined_bdms)
 
         return image_defined_bdms
 
@@ -781,12 +783,18 @@ class API(base.Base):
 
         return flavor_defined_bdms
 
-    def _merge_with_image_bdms(self, block_device_mapping, image_mappings):
-        """Override any block devices from the image by device name"""
-        device_names = set(bdm['device_name'] for bdm in block_device_mapping
+    def _merge_bdms_lists(self, overrideable_mappings, overrider_mappings):
+        """Override any block devices from the first list by device name
+
+        :param overridable_mappings: list which items are overriden
+        :param overrider_mappings: list which items override
+
+        :returns: A merged list of bdms
+        """
+        device_names = set(bdm['device_name'] for bdm in overrider_mappings
                            if bdm['device_name'])
-        return (block_device_mapping +
-                [bdm for bdm in image_mappings
+        return (overrider_mappings +
+                [bdm for bdm in overrideable_mappings
                  if bdm['device_name'] not in device_names])
 
     def _check_and_transform_bdm(self, context, base_options, instance_type,
@@ -833,8 +841,8 @@ class API(base.Base):
             block_device_mapping = (
                 filter(not_image_and_root_bdm, block_device_mapping))
 
-        block_device_mapping = self._merge_with_image_bdms(
-            block_device_mapping, image_defined_bdms)
+        block_device_mapping = self._merge_bdms_lists(
+            image_defined_bdms, block_device_mapping)
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',
