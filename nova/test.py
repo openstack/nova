@@ -28,7 +28,6 @@ eventlet.monkey_patch(os=False)
 
 import copy
 import inspect
-import logging as std_logging
 import mock
 import os
 
@@ -104,23 +103,6 @@ class SampleNetworks(fixtures.Fixture):
 
 class TestingException(Exception):
     pass
-
-
-class NullHandler(std_logging.Handler):
-    """custom default NullHandler to attempt to format the record.
-
-    Used in conjunction with
-    log_fixture.get_logging_handle_error_fixture to detect formatting errors in
-    debug level logs without saving the logs.
-    """
-    def handle(self, record):
-        self.format(record)
-
-    def emit(self, record):
-        pass
-
-    def createLock(self):
-        self.lock = None
 
 
 class skipIf(object):
