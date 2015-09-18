@@ -224,7 +224,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return subs
 
     def _verify_response(self, name, subs, response, exp_code):
-        self.assertEqual(response.status_code, exp_code)
+        self.assertEqual(exp_code, response.status_code)
         response_data = response.content
         response_data = self._pretty_data(response_data)
         if not os.path.exists(self._get_template(name,

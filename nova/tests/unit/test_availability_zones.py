@@ -98,9 +98,9 @@ class AvailabilityZoneTestCases(test.TestCase):
         agg_az1 = self._create_az('agg-az1', az_name)
         self._add_to_aggregate(service, agg_az1)
         az.update_host_availability_zone_cache(self.context, self.host)
-        self.assertEqual(az._get_cache().get(cache_key), 'az1')
+        self.assertEqual('az1', az._get_cache().get(cache_key))
         az.update_host_availability_zone_cache(self.context, self.host, 'az2')
-        self.assertEqual(az._get_cache().get(cache_key), 'az2')
+        self.assertEqual('az2', az._get_cache().get(cache_key))
 
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""
@@ -110,15 +110,14 @@ class AvailabilityZoneTestCases(test.TestCase):
         # The service is not add into aggregate, so confirm it is default
         # availability zone.
         new_service = az.set_availability_zones(self.context, services)[0]
-        self.assertEqual(new_service['availability_zone'],
-                         self.default_az)
+        self.assertEqual(self.default_az, new_service['availability_zone'])
 
         # The service is added into aggregate, confirm return the aggregate
         # availability zone.
         self._add_to_aggregate(service, self.agg)
         new_service = az.set_availability_zones(self.context, services)[0]
-        self.assertEqual(new_service['availability_zone'],
-                         self.availability_zone)
+        self.assertEqual(self.availability_zone,
+                         new_service['availability_zone'])
 
         self._destroy_service(service)
 
@@ -137,8 +136,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
         new_service = az.set_availability_zones(self.context, services)[0]
-        self.assertEqual(new_service['availability_zone'],
-                         self.default_in_az)
+        self.assertEqual(self.default_in_az, new_service['availability_zone'])
         self._destroy_service(service)
 
     def test_get_host_availability_zone(self):
@@ -221,12 +219,12 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         zones, not_zones = az.get_availability_zones(self.context)
 
-        self.assertEqual(zones, ['nova-test', 'nova-test2'])
-        self.assertEqual(not_zones, ['nova-test3', 'nova'])
+        self.assertEqual(['nova-test', 'nova-test2'], zones)
+        self.assertEqual(['nova-test3', 'nova'], not_zones)
 
         zones = az.get_availability_zones(self.context, True)
 
-        self.assertEqual(zones, ['nova-test', 'nova-test2'])
+        self.assertEqual(['nova-test', 'nova-test2'], zones)
 
         zones, not_zones = az.get_availability_zones(self.context,
                                                      with_hosts=True)
