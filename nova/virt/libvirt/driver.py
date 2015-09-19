@@ -495,13 +495,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._sysinfo_serial_func = sysinfo_serial_funcs.get(
             CONF.libvirt.sysinfo_serial)
-        if not self._sysinfo_serial_func:
-            raise exception.NovaException(
-                _("Unexpected sysinfo_serial setting '%(actual)s'. "
-                  "Permitted values are %(expect)s'") %
-                  {'actual': CONF.libvirt.sysinfo_serial,
-                   'expect': ', '.join("'%s'" % k for k in
-                                       sysinfo_serial_funcs.keys())})
 
         self.job_tracker = instancejobtracker.InstanceJobTracker()
         self._remotefs = remotefs.RemoteFilesystem()
