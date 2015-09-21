@@ -4711,6 +4711,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu_info['vendor'] = caps.host.cpu.vendor
 
         topology = dict()
+        topology['cells'] = len(getattr(caps.host.topology, 'cells', [1]))
         topology['sockets'] = caps.host.cpu.sockets
         topology['cores'] = caps.host.cpu.cores
         topology['threads'] = caps.host.cpu.threads

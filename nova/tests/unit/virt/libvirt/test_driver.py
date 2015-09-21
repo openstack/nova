@@ -9557,6 +9557,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cpu.vendor = "AMD"
             cpu.arch = arch.X86_64
 
+            cpu.cells = 1
             cpu.cores = 2
             cpu.threads = 1
             cpu.sockets = 4
@@ -9589,7 +9590,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "features": set(["extapic", "3dnow"]),
                 "model": "Opteron_G4",
                 "arch": arch.X86_64,
-                "topology": {"cores": 2, "threads": 1, "sockets": 4}}
+                "topology": {"cells": 1, "cores": 2, "threads": 1,
+                             "sockets": 4}}
         got = drvr._get_cpu_info()
         self.assertEqual(want, got)
 
