@@ -1042,7 +1042,9 @@ class TestInstanceClaim(BaseTestCase):
         self.rt.compute_node = None
         self.assertTrue(self.rt.disabled)
 
-        claim = self.rt.instance_claim(mock.sentinel.ctx, self.instance, None)
+        with mock.patch.object(self.instance, 'save'):
+            claim = self.rt.instance_claim(mock.sentinel.ctx, self.instance,
+                                           None)
 
         self.assertEqual(self.rt.host, self.instance.host)
         self.assertEqual(self.rt.host, self.instance.launched_on)
@@ -1068,7 +1070,8 @@ class TestInstanceClaim(BaseTestCase):
             'pci_device_pools': [],
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
-            self.rt.instance_claim(self.ctx, self.instance, None)
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, None)
             update_mock.assert_called_once_with(self.elevated, expected)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
@@ -1108,7 +1111,8 @@ class TestInstanceClaim(BaseTestCase):
             cell.memory_usage += _2MB
             cell.cpu_usage += 1
         with mock.patch.object(self.rt, '_update') as update_mock:
-            self.rt.instance_claim(self.ctx, self.instance, limits)
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, limits)
             self.assertTrue(update_mock.called)
             updated_compute_node = update_mock.call_args[0][1]
             new_numa = updated_compute_node['numa_topology']
@@ -1217,7 +1221,8 @@ class TestResizeClaim(BaseTestCase):
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
 
-        self.rt.instance_claim(self.ctx, self.instance, None)
+        with mock.patch.object(self.instance, 'save'):
+            self.rt.instance_claim(self.ctx, self.instance, None)
         expected = copy.deepcopy(self.rt.compute_node)
 
         with mock.patch.object(self.rt, '_create_migration') as migr_mock:
@@ -1258,7 +1263,8 @@ class TestResizeClaim(BaseTestCase):
 
         # Register the instance with dst_rt
         expected = copy.deepcopy(dst_rt.compute_node)
-        dst_rt.instance_claim(self.ctx, dst_instance)
+        with mock.patch.object(dst_instance, 'save'):
+            dst_rt.instance_claim(self.ctx, dst_instance)
         self.adjust_expected(expected, new_itype)
         expected['stats'] = ("{'num_task_resize_migrating': 1, "
                              "'io_workload': 1, "
