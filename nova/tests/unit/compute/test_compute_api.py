@@ -2059,6 +2059,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_image_meta = {
             'is_public': True,
             'name': 'base-name',
+            'disk_format': 'fake',
+            'container_format': 'fake',
             'properties': {
                 'user_id': 'meow',
                 'foo': 'bar',
@@ -2070,6 +2072,8 @@ class _ComputeAPIUnitTestMixIn(object):
         sent_meta = {
             'is_public': False,
             'name': 'fake-name',
+            'disk_format': 'fake',
+            'container_format': 'fake',
             'properties': {
                 'user_id': self.context.user_id,
                 'instance_uuid': instance.uuid,
@@ -2088,6 +2092,8 @@ class _ComputeAPIUnitTestMixIn(object):
             if min_disk is not None:
                 fake_image_meta['min_disk'] = min_disk
                 sent_meta['min_disk'] = min_disk
+            sent_meta.pop('disk_format', None)
+            sent_meta.pop('container_format', None)
         else:
             sent_meta['properties']['backup_type'] = 'fake-backup-type'
 
