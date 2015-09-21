@@ -45,7 +45,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
     def test_call_good_no_args(self, mock_get_client, mock_multi_getattr):
         mock_get_client.return_value = FAKE_CLIENT
         self.ironicclient.call("node.list")
-        mock_get_client.assert_called_once_with()
+        mock_get_client.assert_called_once_with(retry_on_conflict=True)
         mock_multi_getattr.assert_called_once_with(FAKE_CLIENT, "node.list")
         mock_multi_getattr.return_value.assert_called_once_with()
 
@@ -54,7 +54,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
     def test_call_good_with_args(self, mock_get_client, mock_multi_getattr):
         mock_get_client.return_value = FAKE_CLIENT
         self.ironicclient.call("node.list", 'test', associated=True)
-        mock_get_client.assert_called_once_with()
+        mock_get_client.assert_called_once_with(retry_on_conflict=True)
         mock_multi_getattr.assert_called_once_with(FAKE_CLIENT, "node.list")
         mock_multi_getattr.return_value.assert_called_once_with(
             'test', associated=True)
