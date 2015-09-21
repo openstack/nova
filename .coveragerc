@@ -4,4 +4,4 @@ source = nova
 omit = nova/tests/*,nova/openstack/*
 
 [report]
-ignore-errors = True
+ignore_errors = True
