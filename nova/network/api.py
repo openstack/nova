@@ -173,20 +173,20 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def allocate_floating_ip(self, context, pool=None):
-        """Adds (allocates) a floating ip to a project from a pool."""
+        """Adds (allocates) a floating IP to a project from a pool."""
         return self.floating_manager.allocate_floating_ip(context,
                  context.project_id, False, pool)
 
     @wrap_check_policy
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
-        """Removes (deallocates) a floating ip with address from a project."""
+        """Removes (deallocates) a floating IP with address from a project."""
         return self.floating_manager.deallocate_floating_ip(context, address,
                  affect_auto_assigned)
 
     def disassociate_and_release_floating_ip(self, context, instance,
                                            floating_ip):
-        """Removes (deallocates) and deletes the floating ip.
+        """Removes (deallocates) and deletes the floating IP.
 
         This api call was added to allow this to be done in one operation
         if using neutron.
@@ -197,7 +197,7 @@ class API(base_api.NetworkAPI):
             try:
                 self.disassociate_floating_ip(context, instance, address)
             except exception.FloatingIpNotAssociated:
-                msg = ("Floating ip %s has already been disassociated, "
+                msg = ("Floating IP %s has already been disassociated, "
                        "perhaps by another concurrent action.") % address
                 LOG.debug(msg)
 
@@ -209,10 +209,10 @@ class API(base_api.NetworkAPI):
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
-        """Associates a floating ip with a fixed ip.
+        """Associates a floating IP with a fixed IP.
 
-        Ensures floating ip is allocated to the project in context.
-        Does not verify ownership of the fixed ip. Caller is assumed to have
+        Ensures floating IP is allocated to the project in context.
+        Does not verify ownership of the fixed IP. Caller is assumed to have
         checked that the instance is properly owned.
 
         """
@@ -235,7 +235,7 @@ class API(base_api.NetworkAPI):
     @base_api.refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
-        """Disassociates a floating ip from fixed ip it is associated with."""
+        """Disassociates a floating IP from fixed IP it is associated with."""
         return self.floating_manager.disassociate_floating_ip(context, address,
                 affect_auto_assigned)
 
@@ -316,7 +316,7 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     @base_api.refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
-        """Adds a fixed ip to instance from specified network."""
+        """Adds a fixed IP to instance from specified network."""
         flavor = instance.get_flavor()
         args = {'instance_id': instance.uuid,
                 'rxtx_factor': flavor['rxtx_factor'],
@@ -329,7 +329,7 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     @base_api.refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
-        """Removes a fixed ip from instance from specified network."""
+        """Removes a fixed IP from instance from specified network."""
 
         flavor = instance.get_flavor()
         args = {'instance_id': instance.uuid,
@@ -415,7 +415,7 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
-        These can be used to create DNS entries for floating ips.
+        These can be used to create DNS entries for floating IPs.
         """
         return self.network_rpcapi.get_dns_domains(context)
 

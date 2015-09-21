@@ -69,7 +69,7 @@ class FloatingIP(object):
     servicegroup_api = None
 
     def init_host_floating_ips(self):
-        """Configures floating ips owned by host."""
+        """Configures floating IPs owned by host."""
 
         admin_context = context.get_admin_context()
         try:
@@ -83,7 +83,7 @@ class FloatingIP(object):
                 try:
                     fixed_ip = floating_ip.fixed_ip
                 except exception.FixedIpNotFound:
-                    LOG.debug('Fixed ip %s not found', floating_ip.fixed_ip_id)
+                    LOG.debug('Fixed IP %s not found', floating_ip.fixed_ip_id)
                     continue
                 interface = CONF.public_interface or floating_ip.interface
                 try:
@@ -186,7 +186,7 @@ class FloatingIP(object):
         super(FloatingIP, self).deallocate_for_instance(context, **kwargs)
 
     def _floating_ip_owned_by_project(self, context, floating_ip):
-        """Raises if floating ip does not belong to project."""
+        """Raises if floating IP does not belong to project."""
         if context.is_admin:
             return
 
@@ -203,7 +203,7 @@ class FloatingIP(object):
                 raise exception.Forbidden()
 
     def _floating_ip_pool_exists(self, context, name):
-        """Returns true if the specified floating ip pool exists. Otherwise,
+        """Returns true if the specified floating IP pool exists. Otherwise,
         returns false.
         """
         pools = [pool.get('name') for pool in
@@ -215,7 +215,7 @@ class FloatingIP(object):
 
     def allocate_floating_ip(self, context, project_id, auto_assigned=False,
                              pool=None):
-        """Gets a floating ip from the pool."""
+        """Gets a floating IP from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
         pool = pool or CONF.default_floating_pool
         use_quota = not auto_assigned
@@ -255,7 +255,7 @@ class FloatingIP(object):
     @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
-        """Returns a floating ip to the pool."""
+        """Returns a floating IP to the pool."""
         floating_ip = objects.FloatingIP.get_by_address(context, address)
 
         # handle auto_assigned
@@ -306,7 +306,7 @@ class FloatingIP(object):
     @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
-        """Associates a floating ip with a fixed ip.
+        """Associates a floating IP with a fixed IP.
 
         Makes sure everything makes sense then calls _associate_floating_ip,
         rpc'ing to correct host if i'm not it.
@@ -365,7 +365,7 @@ class FloatingIP(object):
 
     def _associate_floating_ip(self, context, floating_address, fixed_address,
                                interface, instance_uuid):
-        """Performs db and driver calls to associate floating ip & fixed ip."""
+        """Performs db and driver calls to associate floating IP & fixed IP."""
         interface = CONF.public_interface or interface
 
         @utils.synchronized(six.text_type(floating_address))
@@ -408,7 +408,7 @@ class FloatingIP(object):
     @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
-        """Disassociates a floating ip from its fixed ip.
+        """Disassociates a floating IP from its fixed IP.
 
         Makes sure everything makes sense then calls _disassociate_floating_ip,
         rpc'ing to correct host if i'm not it.
@@ -461,7 +461,7 @@ class FloatingIP(object):
 
     def _disassociate_floating_ip(self, context, address, interface,
                                   instance_uuid):
-        """Performs db and driver calls to disassociate floating ip."""
+        """Performs db and driver calls to disassociate floating IP."""
         interface = CONF.public_interface or interface
 
         @utils.synchronized(six.text_type(address))
@@ -552,7 +552,7 @@ class FloatingIP(object):
             floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
-                LOG.warning(_LW("Floating ip address |%(address)s| no longer "
+                LOG.warning(_LW("Floating IP address |%(address)s| no longer "
                                 "belongs to instance %(instance_uuid)s. "
                                 "Will not migrate it "),
                             {'address': address,
@@ -589,7 +589,7 @@ class FloatingIP(object):
             floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
-                LOG.warning(_LW("Floating ip address |%(address)s| no longer "
+                LOG.warning(_LW("Floating IP address |%(address)s| no longer "
                                 "belongs to instance %(instance_uuid)s. "
                                 "Will not setup it."),
                             {'address': address,

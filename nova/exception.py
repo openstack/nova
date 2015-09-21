@@ -689,11 +689,11 @@ class InvalidIntValue(Invalid):
 
 
 class InvalidCidr(Invalid):
-    msg_fmt = _("%(cidr)s is not a valid ip network.")
+    msg_fmt = _("%(cidr)s is not a valid IP network.")
 
 
 class InvalidAddress(Invalid):
-    msg_fmt = _("%(address)s is not a valid ip address.")
+    msg_fmt = _("%(address)s is not a valid IP address.")
 
 
 class AddressOutOfRange(Invalid):
@@ -810,7 +810,7 @@ class PortBindingFailed(Invalid):
 
 
 class FixedIpExists(NovaException):
-    msg_fmt = _("Fixed ip %(address)s already exists.")
+    msg_fmt = _("Fixed IP %(address)s already exists.")
 
 
 class FixedIpNotFound(NotFound):
@@ -818,20 +818,20 @@ class FixedIpNotFound(NotFound):
 
 
 class FixedIpNotFoundForAddress(FixedIpNotFound):
-    msg_fmt = _("Fixed ip not found for address %(address)s.")
+    msg_fmt = _("Fixed IP not found for address %(address)s.")
 
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
-    msg_fmt = _("Instance %(instance_uuid)s has zero fixed ips.")
+    msg_fmt = _("Instance %(instance_uuid)s has zero fixed IPs.")
 
 
 class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
-    msg_fmt = _("Network host %(host)s has zero fixed ips "
+    msg_fmt = _("Network host %(host)s has zero fixed IPs "
                 "in network %(network_id)s.")
 
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
-    msg_fmt = _("Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'.")
+    msg_fmt = _("Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'.")
 
 
 class FixedIpNotFoundForNetwork(FixedIpNotFound):
@@ -849,7 +849,7 @@ class FixedIpAlreadyInUse(NovaException):
 
 
 class FixedIpAssociatedWithMultipleInstances(NovaException):
-    msg_fmt = _("More than one instance is associated with fixed ip address "
+    msg_fmt = _("More than one instance is associated with fixed IP address "
                 "'%(address)s'.")
 
 
@@ -863,16 +863,16 @@ class NoMoreFixedIps(NovaException):
 
 
 class NoFixedIpsDefined(NotFound):
-    msg_fmt = _("Zero fixed ips could be found.")
+    msg_fmt = _("Zero fixed IPs could be found.")
 
 
 class FloatingIpExists(NovaException):
-    msg_fmt = _("Floating ip %(address)s already exists.")
+    msg_fmt = _("Floating IP %(address)s already exists.")
 
 
 class FloatingIpNotFound(NotFound):
     ec2_code = "UnsupportedOperation"
-    msg_fmt = _("Floating ip not found for id %(id)s.")
+    msg_fmt = _("Floating IP not found for ID %(id)s.")
 
 
 class FloatingIpDNSExists(Invalid):
@@ -880,38 +880,38 @@ class FloatingIpDNSExists(Invalid):
 
 
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):
-    msg_fmt = _("Floating ip not found for address %(address)s.")
+    msg_fmt = _("Floating IP not found for address %(address)s.")
 
 
 class FloatingIpNotFoundForHost(FloatingIpNotFound):
-    msg_fmt = _("Floating ip not found for host %(host)s.")
+    msg_fmt = _("Floating IP not found for host %(host)s.")
 
 
 class FloatingIpMultipleFoundForAddress(NovaException):
-    msg_fmt = _("Multiple floating ips are found for address %(address)s.")
+    msg_fmt = _("Multiple floating IPs are found for address %(address)s.")
 
 
 class FloatingIpPoolNotFound(NotFound):
-    msg_fmt = _("Floating ip pool not found.")
+    msg_fmt = _("Floating IP pool not found.")
     safe = True
 
 
 class NoMoreFloatingIps(FloatingIpNotFound):
-    msg_fmt = _("Zero floating ips available.")
+    msg_fmt = _("Zero floating IPs available.")
     safe = True
 
 
 class FloatingIpAssociated(NovaException):
     ec2_code = "UnsupportedOperation"
-    msg_fmt = _("Floating ip %(address)s is associated.")
+    msg_fmt = _("Floating IP %(address)s is associated.")
 
 
 class FloatingIpNotAssociated(NovaException):
-    msg_fmt = _("Floating ip %(address)s is not associated.")
+    msg_fmt = _("Floating IP %(address)s is not associated.")
 
 
 class NoFloatingIpsDefined(NotFound):
-    msg_fmt = _("Zero floating ips exist.")
+    msg_fmt = _("Zero floating IPs exist.")
 
 
 class NoFloatingIpInterface(NotFound):
@@ -934,7 +934,7 @@ class FloatingIpBadRequest(Invalid):
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
     ec2_code = "UnsupportedOperation"
-    msg_fmt = _("Cannot disassociate auto assigned floating ip")
+    msg_fmt = _("Cannot disassociate auto assigned floating IP")
 
 
 class KeypairNotFound(NotFound):
@@ -1336,11 +1336,11 @@ class TooManyInstances(QuotaError):
 
 
 class FloatingIpLimitExceeded(QuotaError):
-    msg_fmt = _("Maximum number of floating ips exceeded")
+    msg_fmt = _("Maximum number of floating IPs exceeded")
 
 
 class FixedIpLimitExceeded(QuotaError):
-    msg_fmt = _("Maximum number of fixed ips exceeded")
+    msg_fmt = _("Maximum number of fixed IPs exceeded")
 
 
 class MetadataLimitExceeded(QuotaError):

@@ -78,7 +78,7 @@ linux_net_opts = [
     cfg.MultiStrOpt('force_snat_range',
                default=[],
                help='Traffic to this range will always be snatted to the '
-                    'fallback ip, even if it would normally be bridged out '
+                    'fallback IP, even if it would normally be bridged out '
                     'of the node. Can be specified multiple times.'),
     cfg.StrOpt('dnsmasq_config_file',
                default='',
@@ -761,11 +761,11 @@ def send_arp_for_ip(ip, device, count):
                         run_as_root=True, check_exit_code=False)
 
     if err:
-        LOG.debug('arping error for ip %s', ip)
+        LOG.debug('arping error for IP %s', ip)
 
 
 def bind_floating_ip(floating_ip, device):
-    """Bind ip to public interface."""
+    """Bind IP to public interface."""
     _execute('ip', 'addr', 'add', str(floating_ip) + '/32',
              'dev', device,
              run_as_root=True, check_exit_code=[0, 2, 254])
@@ -775,14 +775,14 @@ def bind_floating_ip(floating_ip, device):
 
 
 def unbind_floating_ip(floating_ip, device):
-    """Unbind a public ip from public interface."""
+    """Unbind a public IP from public interface."""
     _execute('ip', 'addr', 'del', str(floating_ip) + '/32',
              'dev', device,
              run_as_root=True, check_exit_code=[0, 2, 254])
 
 
 def ensure_metadata_ip():
-    """Sets up local metadata ip."""
+    """Sets up local metadata IP."""
     _execute('ip', 'addr', 'add', '169.254.169.254/32',
              'scope', 'link', 'dev', 'lo',
              run_as_root=True, check_exit_code=[0, 2, 254])
@@ -806,12 +806,12 @@ def ensure_vpn_forward(public_ip, port, private_ip):
 
 
 def ensure_floating_forward(floating_ip, fixed_ip, device, network):
-    """Ensure floating ip forwarding rule."""
+    """Ensure floating IP forwarding rule."""
     # NOTE(vish): Make sure we never have duplicate rules for the same ip
     regex = '.*\s+%s(/32|\s+|$)' % floating_ip
     num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
     if num_rules:
-        msg = _LW('Removed %(num)d duplicate rules for floating ip %(float)s')
+        msg = _LW('Removed %(num)d duplicate rules for floating IP %(float)s')
         LOG.warn(msg, {'num': num_rules, 'float': floating_ip})
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
@@ -821,7 +821,7 @@ def ensure_floating_forward(floating_ip, fixed_ip, device, network):
 
 
 def remove_floating_forward(floating_ip, fixed_ip, device, network):
-    """Remove forwarding for floating ip."""
+    """Remove forwarding for floating IP."""
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].remove_rule(chain, rule)
     iptables_manager.apply()
@@ -1324,7 +1324,7 @@ def _ra_pid_for(dev):
 
 
 def _ip_bridge_cmd(action, params, device):
-    """Build commands to add/del ips to bridges/devices."""
+    """Build commands to add/del IPs to bridges/devices."""
     cmd = ['ip', 'addr', action]
     cmd.extend(params)
     cmd.extend(['dev', device])
@@ -1598,7 +1598,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
         the ip_v6 address specified in net_attrs['cidr_v6'] if use_ipv6 is set.
 
-        The code will attempt to move any ips that already exist on the
+        The code will attempt to move any IPs that already exist on the
         interface onto the bridge and reset the default gateway if necessary.
 
         """

@@ -1620,7 +1620,7 @@ class VlanNetworkTestCase(test.TestCase):
     def test_ip_association_and_allocation_of_other_project(self, net_get,
                                                             fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
-        a public ip of other project.
+        a public IP of other project.
         """
         net_get.return_value = dict(test_network.fake_network,
                                     **networks[1])

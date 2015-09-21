@@ -128,7 +128,7 @@ def main():
             conductor_rpcapi.ConductorAPI()
 
     if CONF.action.name in ['add', 'del', 'old']:
-        LOG.debug("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'",
+        LOG.debug("Called '%(action)s' for mac '%(mac)s' with IP '%(ip)s'",
                   {"action": CONF.action.name,
                    "mac": CONF.action.mac,
                    "ip": CONF.action.ip})

@@ -80,7 +80,7 @@ def disassociate_floating_ip(self, context, instance, address):
     except exception.Forbidden:
         raise webob.exc.HTTPForbidden()
     except exception.CannotDisassociateAutoAssignedFloatingIP:
-        msg = _('Cannot disassociate auto assigned floating ip')
+        msg = _('Cannot disassociate auto assigned floating IP')
         raise webob.exc.HTTPForbidden(explanation=msg)
 
 
@@ -94,14 +94,14 @@ class FloatingIPController(object):
 
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
-        """Return data about the given floating ip."""
+        """Return data about the given floating IP."""
         context = req.environ['nova.context']
         authorize(context)
 
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
         except (exception.NotFound, exception.FloatingIpNotFound):
-            msg = _("Floating ip not found for id %s") % id
+            msg = _("Floating IP not found for ID %s") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.InvalidID as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
@@ -110,7 +110,7 @@ class FloatingIPController(object):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """Return a list of floating ips allocated to a project."""
+        """Return a list of floating IPs allocated to a project."""
         context = req.environ['nova.context']
         authorize(context)
 
@@ -131,9 +131,9 @@ class FloatingIPController(object):
             ip = self.network_api.get_floating_ip_by_address(context, address)
         except exception.NoMoreFloatingIps:
             if pool:
-                msg = _("No more floating ips in pool %s.") % pool
+                msg = _("No more floating IPs in pool %s.") % pool
             else:
-                msg = _("No more floating ips available.")
+                msg = _("No more floating IPs available.")
             raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.FloatingIpLimitExceeded:
             if pool:
@@ -158,7 +158,7 @@ class FloatingIPController(object):
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
         except (exception.NotFound, exception.FloatingIpNotFound):
-            msg = _("Floating ip not found for id %s") % id
+            msg = _("Floating IP not found for ID %s") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.InvalidID as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
@@ -173,7 +173,7 @@ class FloatingIPController(object):
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
         except exception.CannotDisassociateAutoAssignedFloatingIP:
-            msg = _('Cannot disassociate auto assigned floating ip')
+            msg = _('Cannot disassociate auto assigned floating IP')
             raise webob.exc.HTTPForbidden(explanation=msg)
 
 
@@ -204,7 +204,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         fixed_ips = cached_nwinfo.fixed_ips()
         if not fixed_ips:
-            msg = _('No fixed ips associated to instance')
+            msg = _('No fixed IPs associated to instance')
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         fixed_address = None
@@ -222,7 +222,7 @@ class FloatingIPActionController(wsgi.Controller):
                 fixed_address = next(ip['address'] for ip in fixed_ips
                                      if netaddr.valid_ipv4(ip['address']))
             except StopIteration:
-                msg = _('Unable to associate floating ip %(address)s '
+                msg = _('Unable to associate floating IP %(address)s '
                         'to any fixed IPs for instance %(id)s. '
                         'Instance has no fixed IPv4 addresses to '
                         'associate.') % (
@@ -237,21 +237,21 @@ class FloatingIPActionController(wsgi.Controller):
                                   floating_address=address,
                                   fixed_address=fixed_address)
         except exception.FloatingIpAssociated:
-            msg = _('floating ip is already associated')
+            msg = _('floating IP is already associated')
             raise webob.exc.HTTPBadRequest(explanation=msg)
         except exception.NoFloatingIpInterface:
-            msg = _('l3driver call to add floating ip failed')
+            msg = _('l3driver call to add floating IP failed')
             raise webob.exc.HTTPBadRequest(explanation=msg)
         except exception.InstanceUnknownCell as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.FloatingIpNotFoundForAddress:
-            msg = _('floating ip not found')
+            msg = _('floating IP not found')
             raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.Forbidden as e:
             raise webob.exc.HTTPForbidden(explanation=e.format_message())
         except Exception as e:
-            msg = _('Unable to associate floating ip %(address)s to '
-                    'fixed ip %(fixed_address)s for instance %(id)s. '
+            msg = _('Unable to associate floating IP %(address)s to '
+                    'fixed IP %(fixed_address)s for instance %(id)s. '
                     'Error: %(error)s') % (
                     {'address': address, 'fixed_address': fixed_address,
                      'id': id, 'error': e})
@@ -275,7 +275,7 @@ class FloatingIPActionController(wsgi.Controller):
             floating_ip = self.network_api.get_floating_ip_by_address(context,
                                                                       address)
         except exception.FloatingIpNotFoundForAddress:
-            msg = _("floating ip not found")
+            msg = _("floating IP not found")
             raise webob.exc.HTTPNotFound(explanation=msg)
 
         # get the associated instance object (if any)
@@ -290,11 +290,11 @@ class FloatingIPActionController(wsgi.Controller):
             try:
                 disassociate_floating_ip(self, context, instance, address)
             except exception.FloatingIpNotAssociated:
-                msg = _('Floating ip is not associated')
+                msg = _('Floating IP is not associated')
                 raise webob.exc.HTTPBadRequest(explanation=msg)
             return webob.Response(status_int=202)
         else:
-            msg = _("Floating ip %(address)s is not associated with instance "
+            msg = _("Floating IP %(address)s is not associated with instance "
                     "%(id)s.") % {'address': address, 'id': id}
             raise webob.exc.HTTPConflict(explanation=msg)
 

@@ -41,7 +41,7 @@ class FixedIPController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
-        """Return data about the given fixed ip."""
+        """Return data about the given fixed IP."""
         context = req.environ['nova.context']
         authorize(context)
 

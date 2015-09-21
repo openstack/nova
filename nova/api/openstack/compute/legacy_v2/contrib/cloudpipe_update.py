@@ -25,7 +25,7 @@ authorize = extensions.extension_authorizer('compute', 'cloudpipe_update')
 
 
 class CloudpipeUpdateController(wsgi.Controller):
-    """Handle updating the vpn ip/port for cloudpipe instances."""
+    """Handle updating the VPN IP/port for cloudpipe instances."""
 
     def __init__(self):
         super(CloudpipeUpdateController, self).__init__()
@@ -60,7 +60,7 @@ class CloudpipeUpdateController(wsgi.Controller):
 
 
 class Cloudpipe_update(extensions.ExtensionDescriptor):
-    """Adds the ability to set the vpn ip/port for cloudpipe instances."""
+    """Adds the ability to set the VPN IP/port for cloudpipe instances."""
 
     name = "CloudpipeUpdate"
     alias = "os-cloudpipe-update"

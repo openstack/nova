@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Network Hosts are responsible for allocating ips and setting up network.
+"""Network Hosts are responsible for allocating IPs and setting up network.
 
 There are multiple backend drivers that handle specific types of networking
 topologies.  All of the network commands are issued to a subclass of
@@ -346,7 +346,7 @@ class NetworkManager(manager.Manager):
                                                               self.host,
                                                               time)
             if num:
-                LOG.debug('Disassociated %s stale fixed ip(s)', num)
+                LOG.debug('Disassociated %s stale fixed IP(s)', num)
 
     def set_network_host(self, context, network_ref):
         """Safely sets the host of the network."""
@@ -571,7 +571,7 @@ class NetworkManager(manager.Manager):
         # deallocate vifs (mac addresses)
         objects.VirtualInterface.delete_by_instance_uuid(
                 read_deleted_context, instance_uuid)
-        LOG.info(_LI("Network deallocated for instance (fixed ips: '%s')"),
+        LOG.info(_LI("Network deallocated for instance (fixed IPs: '%s')"),
                  fixed_ips, context=context, instance_uuid=instance_uuid)
 
     @messaging.expected_exceptions(exception.InstanceNotFound)
@@ -784,12 +784,12 @@ class NetworkManager(manager.Manager):
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id,
                                  rxtx_factor=None):
-        """Adds a fixed ip to an instance from specified network."""
+        """Adds a fixed IP to an instance from specified network."""
         if uuidutils.is_uuid_like(network_id):
             network = self.get_network(context, network_id)
         else:
             network = self._get_network_by_id(context, network_id)
-        LOG.debug('Add fixed ip on network %s', network['uuid'],
+        LOG.debug('Add fixed IP on network %s', network['uuid'],
                   instance_uuid=instance_id)
         self._allocate_fixed_ips(context, instance_id, host, [network])
         return self.get_instance_nw_info(context, instance_id, rxtx_factor,
@@ -803,8 +803,8 @@ class NetworkManager(manager.Manager):
 
     def remove_fixed_ip_from_instance(self, context, instance_id, host,
                                       address, rxtx_factor=None):
-        """Removes a fixed ip from an instance from specified network."""
-        LOG.debug('Remove fixed ip %s', address, instance_uuid=instance_id)
+        """Removes a fixed IP from an instance from specified network."""
+        LOG.debug('Remove fixed IP %s', address, instance_uuid=instance_id)
         fixed_ips = objects.FixedIPList.get_by_instance_uuid(context,
                                                              instance_id)
         for fixed_ip in fixed_ips:
@@ -848,7 +848,7 @@ class NetworkManager(manager.Manager):
             return True
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
-        """Gets a fixed ip from the pool."""
+        """Gets a fixed IP from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
@@ -858,7 +858,7 @@ class NetworkManager(manager.Manager):
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
         instance = objects.Instance.get_by_uuid(context, instance_id)
-        LOG.debug('Allocate fixed ip on network %s', network['uuid'],
+        LOG.debug('Allocate fixed IP on network %s', network['uuid'],
                   instance=instance)
 
         # A list of cleanup functions to call on error
@@ -966,7 +966,7 @@ class NetworkManager(manager.Manager):
                           'the specific IP from the base network manager.',
                           network['uuid'], instance=instance)
             else:
-                LOG.debug('Allocated fixed ip %s on network %s', address,
+                LOG.debug('Allocated fixed IP %s on network %s', address,
                           network['uuid'], instance=instance)
             return address
 
@@ -976,18 +976,18 @@ class NetworkManager(manager.Manager):
                     try:
                         f()
                     except Exception:
-                        LOG.warning(_LW('Error cleaning up fixed ip '
+                        LOG.warning(_LW('Error cleaning up fixed IP '
                                         'allocation. Manual cleanup may '
                                         'be required.'), exc_info=True)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
             instance=None):
-        """Returns a fixed ip to the pool."""
+        """Returns a fixed IP to the pool."""
         fixed_ip_ref = objects.FixedIP.get_by_address(
             context, address, expected_attrs=['network'])
         instance_uuid = fixed_ip_ref.instance_uuid
         vif_id = fixed_ip_ref.virtual_interface_id
-        LOG.debug('Deallocate fixed ip %s', address,
+        LOG.debug('Deallocate fixed IP %s', address,
                   instance_uuid=instance_uuid)
 
         if not instance:
@@ -1082,14 +1082,14 @@ class NetworkManager(manager.Manager):
                     quotas.rollback()
                 except Exception:
                     LOG.warning(_LW("Failed to rollback quota for "
-                                    "deallocate fixed ip: %s"), address,
+                                    "deallocate fixed IP: %s"), address,
                                 instance=instance)
 
         # Commit the reservations
         quotas.commit()
 
     def lease_fixed_ip(self, context, address):
-        """Called by dhcp-bridge when ip is leased."""
+        """Called by dhcp-bridge when IP is leased."""
         LOG.debug('Leased IP |%s|', address, context=context)
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
@@ -1104,7 +1104,7 @@ class NetworkManager(manager.Manager):
                         context=context, instance_uuid=fixed_ip.instance_uuid)
 
     def release_fixed_ip(self, context, address, mac=None):
-        """Called by dhcp-bridge when ip is released."""
+        """Called by dhcp-bridge when IP is released."""
         LOG.debug('Released IP |%s|', address, context=context)
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
@@ -1468,18 +1468,18 @@ class NetworkManager(manager.Manager):
 
     @property
     def _bottom_reserved_ips(self):
-        """Number of reserved ips at the bottom of the range."""
+        """Number of reserved IPs at the bottom of the range."""
         return 2  # network, gateway
 
     @property
     def _top_reserved_ips(self):
-        """Number of reserved ips at the top of the range."""
+        """Number of reserved IPs at the top of the range."""
         return 1  # broadcast
 
     def _create_fixed_ips(self, context, network_id, fixed_cidr=None,
                           extra_reserved=None, bottom_reserved=0,
                           top_reserved=0):
-        """Create all fixed ips for network."""
+        """Create all fixed IPs for network."""
         network = self._get_network_by_id(context, network_id)
         if extra_reserved is None:
             extra_reserved = []
@@ -1617,7 +1617,7 @@ class NetworkManager(manager.Manager):
         return [dict(vif) for vif in vifs]
 
     def get_instance_id_by_floating_address(self, context, address):
-        """Returns the instance id a floating ip's fixed ip is allocated to."""
+        """Returns the instance id a floating IP's fixed IP is allocated to."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         LOG.debug('Get instance for floating address %s', address)
@@ -1648,7 +1648,7 @@ class NetworkManager(manager.Manager):
         network.disassociate(context, network.id)
 
     def get_fixed_ip(self, context, id):
-        """Return a fixed ip."""
+        """Return a fixed IP."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         return objects.FixedIP.get_by_id(context, id)
@@ -1715,7 +1715,7 @@ class FlatManager(NetworkManager):
     config into the guest.  It attempts to modify /etc/network/interfaces and
     currently only works on debian based systems. To support a wider range of
     OSes, some other method may need to be devised to let the guest know which
-    ip it should be using so that it can configure itself. Perhaps an attached
+    IP it should be using so that it can configure itself. Perhaps an attached
     disk or serial device with configuration info.
 
     Metadata forwarding must be handled by the gateway, and since nova does
@@ -1746,7 +1746,7 @@ class FlatManager(NetworkManager):
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
             instance=None):
-        """Returns a fixed ip to the pool."""
+        """Returns a fixed IP to the pool."""
         super(FlatManager, self).deallocate_fixed_ip(context, address, host,
                                                      teardown,
                                                      instance=instance)
@@ -1781,7 +1781,7 @@ class FlatManager(NetworkManager):
         return {}
 
     def get_floating_ip_pools(self, context):
-        """Returns list of floating ip pools."""
+        """Returns list of floating IP pools."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         return {}
@@ -1806,19 +1806,19 @@ class FlatManager(NetworkManager):
 
     # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def allocate_floating_ip(self, context, project_id, pool):
-        """Gets a floating ip from the pool."""
+        """Gets a floating IP from the pool."""
         return None
 
     # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned):
-        """Returns a floating ip to the pool."""
+        """Returns a floating IP to the pool."""
         return None
 
     # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
-        """Associates a floating ip with a fixed ip.
+        """Associates a floating IP with a fixed IP.
 
         Makes sure everything makes sense then calls _associate_floating_ip,
         rpc'ing to correct host if i'm not it.
@@ -1828,7 +1828,7 @@ class FlatManager(NetworkManager):
     # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
-        """Disassociates a floating ip from its fixed ip.
+        """Disassociates a floating IP from its fixed IP.
 
         Makes sure everything makes sense then calls _disassociate_floating_ip,
         rpc'ing to correct host if i'm not it.
@@ -1970,9 +1970,9 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         self.driver.iptables_manager.defer_apply_off()
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
-        """Gets a fixed ip from the pool."""
+        """Gets a fixed IP from the pool."""
 
-        LOG.debug('Allocate fixed ip on network %s', network['uuid'],
+        LOG.debug('Allocate fixed IP on network %s', network['uuid'],
                   instance_uuid=instance_id)
 
         # NOTE(mriedem): allocate the vif before associating the
@@ -2027,7 +2027,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                                    self.instance_dns_domain)
 
         self._setup_network_on_host(context, network)
-        LOG.debug('Allocated fixed ip %s on network %s', address,
+        LOG.debug('Allocated fixed IP %s on network %s', address,
                   network['uuid'], instance=instance)
         return address
 
@@ -2215,11 +2215,11 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
     @property
     def _bottom_reserved_ips(self):
-        """Number of reserved ips at the bottom of the range."""
+        """Number of reserved IPs at the bottom of the range."""
         return super(VlanManager, self)._bottom_reserved_ips + 1  # vpn server
 
     @property
     def _top_reserved_ips(self):
-        """Number of reserved ips at the top of the range."""
+        """Number of reserved IPs at the top of the range."""
         parent_reserved = super(VlanManager, self)._top_reserved_ips
         return parent_reserved + CONF.cnt_vpn_clients

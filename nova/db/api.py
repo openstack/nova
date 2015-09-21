@@ -319,13 +319,13 @@ def floating_ip_get(context, id):
 
 
 def floating_ip_get_pools(context):
-    """Returns a list of floating ip pools."""
+    """Returns a list of floating IP pools."""
     return IMPL.floating_ip_get_pools(context)
 
 
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
-    """Allocate free floating ip from specified pool and return the address.
+    """Allocate free floating IP from specified pool and return the address.
 
     Raises if one is not available.
 
@@ -335,24 +335,24 @@ def floating_ip_allocate_address(context, project_id, pool,
 
 
 def floating_ip_bulk_create(context, ips, want_result=True):
-    """Create a lot of floating ips from the values dictionary.
-        :param want_result: If set to True, return floating ips inserted
+    """Create a lot of floating IPs from the values dictionary.
+        :param want_result: If set to True, return floating IPs inserted
     """
     return IMPL.floating_ip_bulk_create(context, ips, want_result=want_result)
 
 
 def floating_ip_bulk_destroy(context, ips):
-    """Destroy a lot of floating ips from the values dictionary."""
+    """Destroy a lot of floating IPs from the values dictionary."""
     return IMPL.floating_ip_bulk_destroy(context, ips)
 
 
 def floating_ip_create(context, values):
-    """Create a floating ip from the values dictionary."""
+    """Create a floating IP from the values dictionary."""
     return IMPL.floating_ip_create(context, values)
 
 
 def floating_ip_deallocate(context, address):
-    """Deallocate a floating ip by address."""
+    """Deallocate a floating IP by address."""
     return IMPL.floating_ip_deallocate(context, address)
 
 
@@ -362,10 +362,10 @@ def floating_ip_destroy(context, address):
 
 
 def floating_ip_disassociate(context, address):
-    """Disassociate a floating ip from a fixed ip by address.
+    """Disassociate a floating IP from a fixed IP by address.
 
-    :returns: the fixed ip record joined to network record or None
-              if the ip was not associated to an ip.
+    :returns: the fixed IP record joined to network record or None
+              if the IP was not associated to an IP.
 
     """
     return IMPL.floating_ip_disassociate(context, address)
@@ -373,10 +373,10 @@ def floating_ip_disassociate(context, address):
 
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
-    """Associate a floating ip to a fixed_ip by address.
+    """Associate a floating IP to a fixed_ip by address.
 
-    :returns: the fixed ip record joined to network record or None
-              if the ip was already associated to the fixed ip.
+    :returns: the fixed IP record joined to network record or None
+              if the IP was already associated to the fixed IP.
     """
 
     return IMPL.floating_ip_fixed_ip_associate(context,
@@ -386,37 +386,37 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 
 
 def floating_ip_get_all(context):
-    """Get all floating ips."""
+    """Get all floating IPs."""
     return IMPL.floating_ip_get_all(context)
 
 
 def floating_ip_get_all_by_host(context, host):
-    """Get all floating ips by host."""
+    """Get all floating IPs by host."""
     return IMPL.floating_ip_get_all_by_host(context, host)
 
 
 def floating_ip_get_all_by_project(context, project_id):
-    """Get all floating ips by project."""
+    """Get all floating IPs by project."""
     return IMPL.floating_ip_get_all_by_project(context, project_id)
 
 
 def floating_ip_get_by_address(context, address):
-    """Get a floating ip by address or raise if it doesn't exist."""
+    """Get a floating IP by address or raise if it doesn't exist."""
     return IMPL.floating_ip_get_by_address(context, address)
 
 
 def floating_ip_get_by_fixed_address(context, fixed_address):
-    """Get a floating ips by fixed address."""
+    """Get a floating IPs by fixed address."""
     return IMPL.floating_ip_get_by_fixed_address(context, fixed_address)
 
 
 def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
-    """Get a floating ips by fixed address."""
+    """Get a floating IPs by fixed address."""
     return IMPL.floating_ip_get_by_fixed_ip_id(context, fixed_ip_id)
 
 
 def floating_ip_update(context, address, values):
-    """Update a floating ip by address or raise if it doesn't exist."""
+    """Update a floating IP by address or raise if it doesn't exist."""
     return IMPL.floating_ip_update(context, address, values)
 
 
@@ -495,9 +495,9 @@ def migration_get_all_by_filters(context, filters):
 
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False, virtual_interface_id=None):
-    """Associate fixed ip to instance.
+    """Associate fixed IP to instance.
 
-    Raises if fixed ip is not available.
+    Raises if fixed IP is not available.
 
     """
     return IMPL.fixed_ip_associate(context, address, instance_uuid, network_id,
@@ -506,7 +506,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None, virtual_interface_id=None):
-    """Find free ip in network and associate it to instance or host.
+    """Find free IP in network and associate it to instance or host.
 
     Raises if one is not available.
 
@@ -517,27 +517,27 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
 
 
 def fixed_ip_create(context, values):
-    """Create a fixed ip from the values dictionary."""
+    """Create a fixed IP from the values dictionary."""
     return IMPL.fixed_ip_create(context, values)
 
 
 def fixed_ip_bulk_create(context, ips):
-    """Create a lot of fixed ips from the values dictionary."""
+    """Create a lot of fixed IPs from the values dictionary."""
     return IMPL.fixed_ip_bulk_create(context, ips)
 
 
 def fixed_ip_disassociate(context, address):
-    """Disassociate a fixed ip from an instance by address."""
+    """Disassociate a fixed IP from an instance by address."""
     return IMPL.fixed_ip_disassociate(context, address)
 
 
 def fixed_ip_disassociate_all_by_timeout(context, host, time):
-    """Disassociate old fixed ips from host."""
+    """Disassociate old fixed IPs from host."""
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
 def fixed_ip_get(context, id, get_network=False):
-    """Get fixed ip by id or raise if it does not exist.
+    """Get fixed IP by id or raise if it does not exist.
 
     If get_network is true, also return the associated network.
     """
@@ -545,43 +545,43 @@ def fixed_ip_get(context, id, get_network=False):
 
 
 def fixed_ip_get_all(context):
-    """Get all defined fixed ips."""
+    """Get all defined fixed IPs."""
     return IMPL.fixed_ip_get_all(context)
 
 
 def fixed_ip_get_by_address(context, address, columns_to_join=None):
-    """Get a fixed ip by address or raise if it does not exist."""
+    """Get a fixed IP by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address,
                                         columns_to_join=columns_to_join)
 
 
 def fixed_ip_get_by_floating_address(context, floating_address):
-    """Get a fixed ip by a floating address."""
+    """Get a fixed IP by a floating address."""
     return IMPL.fixed_ip_get_by_floating_address(context, floating_address)
 
 
 def fixed_ip_get_by_instance(context, instance_uuid):
-    """Get fixed ips by instance or raise if none exist."""
+    """Get fixed IPs by instance or raise if none exist."""
     return IMPL.fixed_ip_get_by_instance(context, instance_uuid)
 
 
 def fixed_ip_get_by_host(context, host):
-    """Get fixed ips by compute host."""
+    """Get fixed IPs by compute host."""
     return IMPL.fixed_ip_get_by_host(context, host)
 
 
 def fixed_ip_get_by_network_host(context, network_uuid, host):
-    """Get fixed ip for a host in a network."""
+    """Get fixed IP for a host in a network."""
     return IMPL.fixed_ip_get_by_network_host(context, network_uuid, host)
 
 
 def fixed_ips_by_virtual_interface(context, vif_id):
-    """Get fixed ips by virtual interface or raise if none exist."""
+    """Get fixed IPs by virtual interface or raise if none exist."""
     return IMPL.fixed_ips_by_virtual_interface(context, vif_id)
 
 
 def fixed_ip_update(context, address, values):
-    """Create a fixed ip from the values dictionary."""
+    """Create a fixed IP from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
 
 
@@ -732,7 +732,7 @@ def instance_get_all_by_grantee_security_groups(context, group_ids):
 
 
 def instance_floating_address_get_all(context, instance_uuid):
-    """Get all floating ip addresses of an instance."""
+    """Get all floating IP addresses of an instance."""
     return IMPL.instance_floating_address_get_all(context, instance_uuid)
 
 
@@ -931,7 +931,7 @@ def network_associate(context, project_id, network_id=None, force=False):
 
 
 def network_count_reserved_ips(context, network_id):
-    """Return the number of reserved ips in the network."""
+    """Return the number of reserved IPs in the network."""
     return IMPL.network_count_reserved_ips(context, network_id)
 
 
@@ -987,7 +987,7 @@ def network_in_use_on_host(context, network_id, host=None):
 
 
 def network_get_associated_fixed_ips(context, network_id, host=None):
-    """Get all network's ips that have been associated."""
+    """Get all network's IPs that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id, host)
 
 

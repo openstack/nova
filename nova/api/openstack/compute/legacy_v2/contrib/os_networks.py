@@ -166,7 +166,7 @@ class NetworkController(wsgi.Controller):
         try:
             params["network_size"] = netaddr.IPNetwork(cidr).size
         except netaddr.AddrFormatError:
-            msg = _('%s is not a valid ip network') % cidr
+            msg = _('%s is not a valid IP network') % cidr
             raise exc.HTTPBadRequest(explanation=msg)
 
         if not self.extended:
