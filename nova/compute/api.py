@@ -2270,6 +2270,13 @@ class API(base.Base):
 
         image_meta = self._initialize_instance_snapshot_metadata(
             instance, name, properties)
+        # if we're making a snapshot, omit the disk and container formats,
+        # since the image may have been converted to another format, and the
+        # original values won't be accurate.  The driver will populate these
+        # with the correct values later, on image upload.
+        if image_type == 'snapshot':
+            image_meta.pop('disk_format', None)
+            image_meta.pop('container_format', None)
         return self.image_api.create(context, image_meta)
 
     def _initialize_instance_snapshot_metadata(self, instance, name,
