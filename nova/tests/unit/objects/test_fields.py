@@ -600,6 +600,31 @@ class TestMonitorMetricType(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'cpufrequency')
 
 
+class TestDiskFormat(TestField):
+    def setUp(self):
+        super(TestDiskFormat, self).setUp()
+        self.field = fields.DiskFormatField()
+        self.coerce_good_values = [('qcow2', 'qcow2'),
+                                   ('raw', 'raw'),
+                                   ('lvm', 'lvm'),
+                                   ('rbd', 'rbd'),
+                                   ('ploop', 'ploop'),
+                                   ('vhd', 'vhd'),
+                                   ('vmdk', 'vmdk'),
+                                   ('vdi', 'vdi'),
+                                   ('iso', 'iso')]
+
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'rbd'", self.field.stringify('rbd'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestInteger(TestField):
     def setUp(self):
         super(TestInteger, self).setUp()
