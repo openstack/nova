@@ -148,6 +148,7 @@ Open Development.
    hooks
    block_device_mapping
    addmethod.openstackapi
+   conductor
 
 Architecture Evolution Plans
 -----------------------------
