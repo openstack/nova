@@ -22,6 +22,7 @@ from oslo_log import log as logging
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
+from nova.i18n import _LW
 from nova import objects
 from nova.virt import hardware
 
@@ -296,9 +297,9 @@ class MoveClaim(Claim):
 
     def create_migration_context(self):
         if not self.migration:
-            # FIXME(ndipanov): Move this to a LOG.warn once Mitaka opens up
-            LOG.debug("Can't create a migration_context record without a "
-                      "migration object specified.")
+            LOG.warn(_LW("Can't create a migration_context record without a "
+                         "migration object specified."),
+                     instance=self.instance)
             return
 
         mig_context = objects.MigrationContext(
