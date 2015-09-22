@@ -420,6 +420,12 @@ MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 MIN_LIBVIRT_KVM_S390_VERSION = (1, 2, 13)
 MIN_QEMU_S390_VERSION = (2, 3, 0)
 
+# libvirt < 1.3 reported virt_functions capability
+# only when VFs are enabled.
+# libvirt 1.3 fix f391889f4e942e22b9ef8ecca492de05106ce41e
+MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION = (1, 3, 0)
+
+
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
@@ -4805,7 +4811,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_pcidev_info(self, devname):
         """Returns a dict of PCI device."""
 
-        def _get_device_type(cfgdev):
+        def _get_device_type(cfgdev, pci_address):
             """Get a PCI device's device type.
 
             An assignable PCI device can be a normal PCI device,
@@ -4813,26 +4819,35 @@ class LibvirtDriver(driver.ComputeDriver):
             Function (VF). Only normal PCI devices or SR-IOV VFs
             are assignable, while SR-IOV PFs are always owned by
             hypervisor.
-
-            Please notice that a PCI device with SR-IOV
-            capability but not enabled is reported as normal PCI device.
             """
             for fun_cap in cfgdev.pci_capability.fun_capability:
-                if len(fun_cap.device_addrs) != 0:
-                    if fun_cap.type == 'virt_functions':
-                        return {
-                            'dev_type': fields.PciDeviceType.SRIOV_PF,
-                        }
-                    if fun_cap.type == 'phys_function':
-                        phys_address = "%04x:%02x:%02x.%01x" % (
-                            fun_cap.device_addrs[0][0],
-                            fun_cap.device_addrs[0][1],
-                            fun_cap.device_addrs[0][2],
-                            fun_cap.device_addrs[0][3])
-                        return {
-                            'dev_type': fields.PciDeviceType.SRIOV_VF,
-                            'phys_function': phys_address,
-                        }
+                if fun_cap.type == 'virt_functions':
+                    return {
+                        'dev_type': fields.PciDeviceType.SRIOV_PF,
+                    }
+                if (fun_cap.type == 'phys_function' and
+                    len(fun_cap.device_addrs) != 0):
+                    phys_address = "%04x:%02x:%02x.%01x" % (
+                        fun_cap.device_addrs[0][0],
+                        fun_cap.device_addrs[0][1],
+                        fun_cap.device_addrs[0][2],
+                        fun_cap.device_addrs[0][3])
+                    return {
+                        'dev_type': fields.PciDeviceType.SRIOV_VF,
+                        'phys_function': phys_address,
+                    }
+
+            # Note(moshele): libvirt < 1.3 reported virt_functions capability
+            # only when VFs are enabled. The check below is a workaround
+            # to get the correct report regardless of whether or not any
+            # VFs are enabled for the device.
+            if not self._host.has_min_version(
+                MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION):
+                is_physical_function = pci_utils.is_physical_function(
+                    *pci_utils.get_pci_address_fields(pci_address))
+                if is_physical_function:
+                    return {'dev_type': fields.PciDeviceType.SRIOV_PF}
+
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
         virtdev = self._host.device_lookup_by_name(devname)
@@ -4857,7 +4872,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
-        device.update(_get_device_type(cfgdev))
+        device.update(_get_device_type(cfgdev, address))
         return device
 
     def _get_pci_passthrough_devices(self):

@@ -18,6 +18,7 @@ import glob
 import os
 
 import mock
+from six.moves import builtins
 
 from nova import exception
 from nova.pci import utils
@@ -68,27 +69,28 @@ class PciDeviceAddressParserTestCase(test.NoDBTestCase):
 
 class GetFunctionByIfnameTestCase(test.NoDBTestCase):
 
+    @mock.patch('os.path.isdir', return_value=True)
     @mock.patch.object(os, 'readlink')
-    @mock.patch.object(os, 'listdir')
-    def test_virtual_function(self, mock_listdir, mock_readlink):
-        mock_listdir.return_value = ['foo', 'bar']
+    def test_virtual_function(self, mock_readlink, *args):
         mock_readlink.return_value = '../../../0000.00.00.1'
-        address, physical_function = utils.get_function_by_ifname('eth0')
-        self.assertEqual(address, '0000.00.00.1')
-        self.assertFalse(physical_function)
+        with mock.patch.object(
+            builtins, 'open', side_effect=IOError()):
+            address, physical_function = utils.get_function_by_ifname('eth0')
+            self.assertEqual(address, '0000.00.00.1')
+            self.assertFalse(physical_function)
 
+    @mock.patch('os.path.isdir', return_value=True)
     @mock.patch.object(os, 'readlink')
-    @mock.patch.object(os, 'listdir')
-    def test_physical_function(self, mock_listdir, mock_readlink):
-        mock_listdir.return_value = ['foo', 'virtfn1', 'bar']
+    def test_physical_function(self, mock_readlink, *args):
         mock_readlink.return_value = '../../../0000:00:00.1'
-        address, physical_function = utils.get_function_by_ifname('eth0')
-        self.assertEqual(address, '0000:00:00.1')
-        self.assertTrue(physical_function)
+        with mock.patch.object(
+            builtins, 'open', mock.mock_open(read_data='4')):
+            address, physical_function = utils.get_function_by_ifname('eth0')
+            self.assertEqual(address, '0000:00:00.1')
+            self.assertTrue(physical_function)
 
-    @mock.patch.object(os, 'listdir')
-    def test_exception(self, mock_listdir):
-        mock_listdir.side_effect = OSError('No such file or directory')
+    @mock.patch('os.path.isdir', return_value=False)
+    def test_exception(self, *args):
         address, physical_function = utils.get_function_by_ifname('lo')
         self.assertIsNone(address)
         self.assertFalse(physical_function)
@@ -96,31 +98,25 @@ class GetFunctionByIfnameTestCase(test.NoDBTestCase):
 
 class IsPhysicalFunctionTestCase(test.NoDBTestCase):
 
-    class FakePciAddress(object):
-        def __init__(self):
-            self.domain = 0
-            self.bus = 0
-            self.slot = 0
-            self.func = 0
-
     def setUp(self):
         super(IsPhysicalFunctionTestCase, self).setUp()
-        self.pci_address = self.FakePciAddress()
+        self.pci_args = utils.get_pci_address_fields('0000:00:00.1')
 
-    @mock.patch.object(os, 'listdir')
-    def test_virtual_function(self, mock_listdir):
-        mock_listdir.return_value = ['foo', 'bar']
-        self.assertFalse(utils.is_physical_function(self.pci_address))
+    @mock.patch('os.path.isdir', return_value=True)
+    def test_virtual_function(self, *args):
+        with mock.patch.object(
+            builtins, 'open', side_effect=IOError()):
+            self.assertFalse(utils.is_physical_function(*self.pci_args))
 
-    @mock.patch.object(os, 'listdir')
-    def test_physical_function(self, mock_listdir):
-        mock_listdir.return_value = ['foo', 'virtfn1', 'bar']
-        self.assertTrue(utils.is_physical_function(self.pci_address))
+    @mock.patch('os.path.isdir', return_value=True)
+    def test_physical_function(self, *args):
+        with mock.patch.object(
+            builtins, 'open', mock.mock_open(read_data='4')):
+            self.assertTrue(utils.is_physical_function(*self.pci_args))
 
-    @mock.patch.object(os, 'listdir')
-    def test_exception(self, mock_listdir):
-        mock_listdir.side_effect = OSError('No such file or directory')
-        self.assertFalse(utils.is_physical_function(self.pci_address))
+    @mock.patch('os.path.isdir', return_value=False)
+    def test_exception(self, *args):
+        self.assertFalse(utils.is_physical_function(*self.pci_args))
 
 
 class GetIfnameByPciAddressTestCase(test.NoDBTestCase):
