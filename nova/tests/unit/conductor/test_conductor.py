@@ -1373,13 +1373,10 @@ class _BaseTaskTestCase(object):
                                        'hosts': []}}
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        self.conductor_manager.image_api.get(self.context,
-                'fake_image_id', show_deleted=False).AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
                 None, filter_properties, instance).AndReturn(
                         [{'host': 'fake_host',
@@ -1395,7 +1392,6 @@ class _BaseTaskTestCase(object):
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
-        system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
 
