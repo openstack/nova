@@ -13,25 +13,82 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Compute API v2
-==============
+===========
+Compute API
+===========
 
-This section describes the Compute API version 2 and is intended for software
-developers interested in developing applications using the OpenStack Compute
-Application Programming Interface (API).
+OpenStack Nova has a ReSTful HTTP service called the OpenStack Compute API.
+Through this API, Nova provides massively scalable, on demand, self service
+access to compute resources. Depending on the deployment those compute
+resources might be Virtual Machines, Physical Machines or Containers.
+
+We welcome feedback, comments, and bug reports at
+`bugs.launchpad.net/nova <http://bugs.launchpad.net/nova>`__.
+
+
+Intended Audience
+=================
+
+This guide assists software developers who want to develop applications
+using the OpenStack Compute API. To use this information, you should
+have access to an account from an OpenStack Compute provider, or have
+access to your own deployment, and you should also be familiar with the
+following concepts:
+
+*  OpenStack Compute service
+*  ReSTful web services
+*  HTTP/1.1
+*  JSON data serialization formats
+
+
+Versions and Extensions
+=======================
+
+Following the Liberty release, every Nova deployment should have
+the following endpoints:
+
+* / - list of available versions
+* /v2.0 - the first version of the Compute API, uses extensions
+* /v1.1 - an alias for v2.0 for backwards compatibility
+* /v2.1 - same API, except uses microversions
+
+For more information on how to make use the API, how to get the endpoint
+from the keystone service catalog and pick what version of the API to use,
+please read:
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 1
+
+    versions
+    extensions
+    microversions
+
+
+Key API Concepts
+================
+
+The following documents go into more details about the key concepts of the
+OpenStack Compute API:
+
+.. toctree::
+    :maxdepth: 2
 
     2.0_general_info
     2.0_server_concepts
     authentication
-    extensions
     faults
     limits
     links_and_references
     paginated_collections
     polling_changes-since_parameter
     request_and_response_formats
-    versions
 
+
+Full Reference
+==============
+
+For a full reference listing for the OpenStack Compute API, please see:
+
+* `*Compute API v2.1 extensions (CURRENT)* <http://developer.openstack.org/api-ref-compute-v2.1.html>`__.
+* `*Compute API v2 reference (SUPPORTED)* <http://developer.openstack.org/api-ref-compute-v2.html>`__.
+* `*Compute API v2 extensions (SUPPORTED)* <http://developer.openstack.org/api-ref-compute-v2-ext.html>`__.

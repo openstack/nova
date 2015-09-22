@@ -2,8 +2,8 @@
 Server concepts
 ===============
 
-For the OpenStack Compute API, a server is a virtual machine (VM) instance in
-the compute system.
+For the OpenStack Compute API, a server is a virtual machine (VM) instance,
+a physical machine or a container.
 
 Server status
 ~~~~~~~~~~~~~
@@ -103,6 +103,51 @@ when creating a server, only the server ID, its links, and the
 administrative password are guaranteed to be returned in the request.
 You can retrieve additional attributes by performing subsequent **GET**
 operations on the server.
+
+Server actions
+~~~~~~~~~~~~~~~
+
+-  **Reboot**
+
+   Use this function to perform either a soft or hard reboot of a
+   server. With a soft reboot, the operating system is signaled to
+   restart, which allows for a graceful shutdown of all processes. A
+   hard reboot is the equivalent of power cycling the server. The
+   virtualization platform should ensure that the reboot action has
+   completed successfully even in cases in which the underlying
+   domain/VM is paused or halted/stopped.
+
+-  **Rebuild**
+
+   Use this function to remove all data on the server and replaces it
+   with the specified image. Server ID and IP addresses remain the same.
+
+-  **Resize**
+
+   Use this function to convert an existing server to a different
+   flavor, in essence, scaling the server up or down. The original
+   server is saved for a period of time to allow rollback if there is a
+   problem. All resizes should be tested and explicitly confirmed, at
+   which time the original server is removed. All resizes are
+   automatically confirmed after 24 hours if you do not confirm or
+   revert them.
+
+-  **Pause**
+
+   You can pause a server by making a pause request. This request stores
+   the state of the VM in RAM. A paused instance continues to run in a
+   frozen state.
+
+-  **Suspend**
+
+   Administrative users might want to suspend an instance if it is
+   infrequently used or to perform system maintenance. When you suspend
+   an instance, its VM state is stored on disk, all memory is written to
+   disk, and the virtual machine is stopped. Suspending an instance is
+   similar to placing a device in hibernation; memory and vCPUs become
+   available to create other instances.
+
+TODO - need to add many more actions in here
 
 Server passwords
 ~~~~~~~~~~~~~~~~
