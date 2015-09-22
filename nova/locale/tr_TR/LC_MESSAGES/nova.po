@@ -7,9 +7,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"POT-Creation-Date: 2015-09-22 07:45+0000\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
@@ -4349,14 +4349,6 @@ msgstr ""
 #, python-format
 msgid "Unexpected aggregate action %s"
 msgstr "Beklenmedik takım eylemi %s"
-
-#, python-format
-msgid ""
-"Unexpected sysinfo_serial setting '%(actual)s'. Permitted values are "
-"%(expect)s'"
-msgstr ""
-"Beklenmeyen sysinfo_serial ayarı '%(actual)s'. İzin verilen değerler "
-"%(expect)s'"
 
 msgid "Unexpected type adding stats"
 msgstr "Durum eklemede beklenmedik tür"

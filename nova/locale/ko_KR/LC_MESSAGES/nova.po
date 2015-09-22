@@ -1,0 +1,5025 @@
+# Korean (South Korea) translations for nova.
+# Copyright (C) 2015 ORGANIZATION
+# This file is distributed under the same license as the nova project.
+#
+# Translators:
+# Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
+# Sungjin Kang <potopro@gmail.com>, 2013
+# Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
+# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2015-09-22 07:45+0000\n"
+"PO-Revision-Date: 2015-09-11 12:06+0000\n"
+"Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
+"Language-Team: Korean (Korea) (http://www.transifex.com/openstack/nova/"
+"language/ko_KR/)\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.0\n"
+
+#, python-format
+msgid "%(address)s is not a valid IP v4/6 address."
+msgstr "%(address)s는 v4/6주소에 맞지 않은 IP입니다."
+
+#, python-format
+msgid "%(address)s is not a valid ip address."
+msgstr "%(address)s이(가) 올바른 IP 주소가 아닙니다."
+
+#, python-format
+msgid "%(address)s is not within %(cidr)s."
+msgstr "%(address)s이(가) %(cidr)s에 속하지 않습니다."
+
+#, python-format
+msgid ""
+"%(binary)s attempted direct database access which is not allowed by policy"
+msgstr ""
+"%(binary)s에서 정책적으로 허용되지 않는 직접 데이터베이스 액세스를 시도함"
+
+#, python-format
+msgid "%(cidr)s is not a valid ip network."
+msgstr "%(cidr)s이(가) 올바른 ip 네트워크가 아닙니다."
+
+#, python-format
+msgid "%(err)s"
+msgstr "%(err)s"
+
+#, python-format
+msgid "%(host)s:%(port)s: Target closed"
+msgstr "%(host)s:%(port)s: 대상 처리완료됨"
+
+#, python-format
+msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
+msgstr "%(key)s이(가) 올바른 할당량 키가 아닙니다. 올바른 옵션: %(options)s."
+
+#, python-format
+msgid "%(key)s must be an integer."
+msgstr "%(key)s은(는) 정수여야 합니다."
+
+#, python-format
+msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
+msgstr "%(memtotal)dMB를 예상했지만 %(memsize)dMB의 메모리가 지정됨"
+
+#, python-format
+msgid "%(name)s has a minimum character requirement of %(min_length)s."
+msgstr "%(name)s에 최소 문자 요구사항(%(min_length)s)이 있습니다."
+
+#, python-format
+msgid "%(name)s has more than %(max_length)s characters."
+msgstr "%(name)s의 문자 수가 %(max_length)s문자를 초과합니다."
+
+#, python-format
+msgid "%(path)s is not on local storage: %(reason)s"
+msgstr "%(path)s이(가) 로컬 스토리지에 없음: %(reason)s"
+
+#, python-format
+msgid "%(path)s is not on shared storage: %(reason)s"
+msgstr "%(path)s이(가) 공유 스토리지에 없음: %(reason)s"
+
+#, python-format
+msgid "%(req)s is required to create a network."
+msgstr "네트워크를 작성하려면 %(req)s이(가) 필요합니다. "
+
+#, python-format
+msgid "%(type)s hypervisor does not support PCI devices"
+msgstr "%(type)s 하이퍼바이저가 PCI 디바이스를 지원하지 않음"
+
+#, python-format
+msgid "%(value_name)s must be <= %(max_value)d"
+msgstr "%(value_name)s은(는) %(max_value)d보다 작거나 같아야 함"
+
+#, python-format
+msgid "%(value_name)s must be >= %(min_value)d"
+msgstr "%(value_name)s은(는) >= %(min_value)d이어야 함. "
+
+#, python-format
+msgid "%(value_name)s must be an integer"
+msgstr "%(value_name)s은(는) 정수여야 함"
+
+#, python-format
+msgid "%(vendor)s %(product)s %(version)s"
+msgstr "%(vendor)s %(product)s %(version)s"
+
+#, python-format
+msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
+msgstr ""
+"%(workers)s의 %(worker_name)s 값이 올바르지 않습니다. 해당 값은 0보다 커야 합"
+"니다."
+
+#, python-format
+msgid "%r failed. Retrying."
+msgstr "%r 실패. 재시도 중입니다. "
+
+#, python-format
+msgid "%s does not support disk hotplug."
+msgstr "%s에서 디스크 hotplug를 지원하지 않습니다."
+
+#, python-format
+msgid "%s format is not supported"
+msgstr "%s 형식이 지원되지 않음"
+
+#, python-format
+msgid "%s is not a string or unicode"
+msgstr "%s이(가) 문자열 또는 Unicode가 아님"
+
+#, python-format
+msgid "%s is not a valid ip network"
+msgstr "%s이(가) 올바른 ip 네트워크가 아님"
+
+#, python-format
+msgid "%s is not a valid node managed by this compute host."
+msgstr "%s이(가) 이 계산 호스트가 관리하는 유효한 노드가 아닙니다. "
+
+#, python-format
+msgid "%s is not supported."
+msgstr "%s이(가) 지원되지 않습니다."
+
+#, python-format
+msgid "%s must be either 'MANUAL' or 'AUTO'."
+msgstr "%s은(는) 'MANUAL' 또는 'AUTO'여야 합니다. "
+
+#, python-format
+msgid "'%s' is either missing or empty."
+msgstr "'%s'이(가) 누락되었거나 비어 있습니다."
+
+#, python-format
+msgid "'%s' is not a list"
+msgstr "'%s'이(가) 목록이 아님"
+
+msgid "'qemu-img info' parsing failed."
+msgstr "'qemu-img info' 구문 분석에 실패했습니다. "
+
+#, python-format
+msgid "'rxtx_factor' argument must be a float between 0 and %g"
+msgstr "'rxtx_factor' 인수는 0에서 %g 까지의 부동수여야 함 "
+
+msgid "'status' or 'maintenance_mode' needed for host update"
+msgstr "'status' 또는 'maintenance_mode'가 호스트 업데이트에 필요함"
+
+#, python-format
+msgid "/%s should be specified as single address(es) not in cidr format"
+msgstr "/%s이(가) cidr 형식이 아니라 단일 주소로 지정되어야 함"
+
+msgid "A CPU model name should not be set when a host CPU model is requested"
+msgstr "호스트 CPU 모델이 요청될 때 CPU 모델 이름이 설정되지 않아야 함"
+
+msgid ""
+"A unique ID given to each file system.  This is value is set in Glance and "
+"agreed upon here so that the operator knowns they are dealing with the same "
+"file system."
+msgstr ""
+"각 파일 시스템에 제공된 고유한 ID. 이 값은 글랜스에 설정되고 허용되므로 운영"
+"자가 동일한 파일 시스템을 처리하고 있음을 알 수 있습니다. "
+
+msgid "A valid disk parameter is required"
+msgstr "올바른 디스크 매개변수가 필요함"
+
+msgid "A valid name parameter is required"
+msgstr "올바른 이름 매개변수가 필요함"
+
+msgid "A valid ram parameter is required"
+msgstr "올바른 ram 매개변수가 필요함"
+
+msgid "A valid vcpus parameter is required"
+msgstr "올바른 vcpus 매개변수가 필요함"
+
+#, python-format
+msgid ""
+"API Version String %(version)s is of invalid format. Must be of format "
+"MajorNum.MinorNum."
+msgstr ""
+"API 버전 문자열 %(version)s의 형식이 올바르지 않습니다. 형식은 MajorNum."
+"MinorNum이어야 합니다."
+
+#, python-format
+msgid "API version %(version)s is not supported on this method."
+msgstr "API 버전 %(version)s이(가) 이 메소드에서 지원되지 않습니다."
+
+msgid "Access key not provided"
+msgstr "액세스 키가 제공되지 않음"
+
+msgid "Access list not available for public flavors."
+msgstr "액세스 목록이 공용 플레이버에 사용할 수 없습니다. "
+
+#, python-format
+msgid "Action %s not found"
+msgstr "조치 %s을(를) 찾을 수 없음"
+
+#, python-format
+msgid ""
+"Action for request_id %(request_id)s on instance %(instance_uuid)s not found"
+msgstr ""
+"%(instance_uuid)s 인스턴스에서 request_id %(request_id)s에 대한 조치를 찾을 "
+"수 없음"
+
+#, python-format
+msgid "Action: '%(action)s', calling method: %(meth)s, body: %(body)s"
+msgstr "조치: '%(action)s', 호출 메소드: %(meth)s, 본문: %(body)s"
+
+#, python-format
+msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
+msgstr "%(retries)s 재시도 후 %(id)s 집계에 대한 메타데이터 추가가 실패함 "
+
+msgid "Address could not be converted."
+msgstr "주소를 변환할 수 없습니다. "
+
+msgid "Address not specified"
+msgstr "주소가 지정되지 않음"
+
+#, python-format
+msgid "Agent does not support the call: %(method)s"
+msgstr "에이전트가 호출을 지원하지 않음: %(method)s"
+
+#, python-format
+msgid ""
+"Agent-build with hypervisor %(hypervisor)s os %(os)s architecture "
+"%(architecture)s exists."
+msgstr ""
+"하이퍼바이저 %(hypervisor)s  OS %(os)s 아키텍처%(architecture)s이(가) 있는 에"
+"이전트 빌드가 존재합니다."
+
+#, python-format
+msgid "Aggregate %(aggregate_id)s already has host %(host)s."
+msgstr "%(aggregate_id)s 집계에 이미 %(host)s 호스트가 있습니다. "
+
+#, python-format
+msgid "Aggregate %(aggregate_id)s could not be found."
+msgstr "%(aggregate_id)s 집계를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Aggregate %(aggregate_id)s has no host %(host)s."
+msgstr "%(aggregate_id)s 집계에 %(host)s 호스트가 없습니다. "
+
+#, python-format
+msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
+msgstr ""
+"%(aggregate_id)s 집계에 %(metadata_key)s 키를 갖는 메타데이터가 없습니다. "
+
+#, python-format
+msgid ""
+"Aggregate %(aggregate_id)s: action '%(action)s' caused an error: %(reason)s."
+msgstr ""
+"집계 %(aggregate_id)s: ''%(action)s' 조치로 다음 오류가 발생함: %(reason)s."
+
+#, python-format
+msgid "Aggregate %(aggregate_name)s already exists."
+msgstr "%(aggregate_name)s 집계가 이미 존재합니다. "
+
+#, python-format
+msgid "Aggregate for host %(host)s count not be found."
+msgstr "%(host)s 호스트에 대한 집계를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Aggregates does not have %s action"
+msgstr "집계가 %s 조치를 갖지 않음"
+
+#, python-format
+msgid "An error has occurred when calling the iscsi initiator: %s"
+msgstr "iSCSI 개시자를 호출할 때 오류가 발생했음: %s"
+
+msgid "An unexpected error has occurred."
+msgstr "예상치 않은 오류가 발생함．"
+
+msgid "An unknown error has occurred. Please try your request again."
+msgstr "알 수 없는 오류가 발생했습니다. 요청을 다시 시도하십시오. "
+
+msgid "An unknown exception occurred."
+msgstr "알 수 없는 예외가 발생했습니다. "
+
+msgid "Anti-affinity instance group policy was violated."
+msgstr "안티 선호도 인스턴스 그룹 정책을 위반했습니다."
+
+#, python-format
+msgid "Architecture name '%(arch)s' is not recognised"
+msgstr "아키텍처 이름 '%(arch)s'이(가) 인식되지 않음"
+
+msgid "Argument 'type' for reboot is not HARD or SOFT"
+msgstr "다시 부팅에 대한 인수 'type'이 HARD 또는 SOFT가 아님"
+
+msgid "Argument 'type' for reboot must be a string"
+msgstr "재부팅에 대한 인수 'type'은 문자열이어야 함"
+
+msgid "Associate host is not implemented by the configured Network API"
+msgstr "구성된 네트워크 API에서 호스트 연관이 구현되지 않음"
+
+msgid ""
+"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
+"nodes in image or flavor"
+msgstr ""
+"비대칭 NUMA 토폴로지의 경우 이미지 또는 플레이버에서 노드에 CPU 및 메모리를 "
+"명시적으로 지정해야 함"
+
+#, python-format
+msgid ""
+"Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
+msgstr ""
+"비어 있는 풀에서 PCI 디바이스 %(compute_node_id)s:%(address)s을(를) 이용하려"
+"고시도함"
+
+msgid "Attempted overwrite of an existing value."
+msgstr "기존 값을 겹쳐쓰려 했습니다."
+
+#, python-format
+msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
+msgstr "청구 시도 중: 메모리 %(memory_mb)dMB, 디스크 %(disk_gb)dGB"
+
+#, python-format
+msgid "Attribute not supported: %(attr)s"
+msgstr "지원되지 않는 속성: %(attr)s"
+
+msgid "Bad extra_specs provided"
+msgstr "잘못된 추가 스펙이 제공됨"
+
+#, python-format
+msgid "Bad key(s) %s in quota_set"
+msgstr "quota_set에 잘못된 키 %s이(가) 있음"
+
+#, python-format
+msgid "Bad mac for to_global_ipv6: %s"
+msgstr "to_global_ipv6에 대한 잘못된 MAC: %s"
+
+#, python-format
+msgid "Bad network format: missing %s"
+msgstr "잘못된 네트워크 형식: %s 누락"
+
+msgid "Bad networks format"
+msgstr "잘못된 네트워크 형식"
+
+#, python-format
+msgid "Bad networks format: network uuid is not in proper format (%s)"
+msgstr "잘못된 네트워크 형식: 네트워크 uuid의 적절한 형식(%s)이 아님"
+
+msgid "Bad personality format"
+msgstr "잘못된 특성 형식"
+
+#, python-format
+msgid "Bad personality format: missing %s"
+msgstr "잘못된 특성 형식: %s 누락"
+
+#, python-format
+msgid "Bad port format: port uuid is not in proper format (%s)"
+msgstr "잘못된 포트 형식: 포트 uuid의 적절한 형식(%s)이 아님"
+
+#, python-format
+msgid "Bad prefix for network in cidr %s"
+msgstr "cidr %s의 네트워크에 대한 접두부가 올바르지 않음"
+
+#, python-format
+msgid "Bad prefix for to_global_ipv6: %s"
+msgstr "to_global_ipv6에 대한 잘못된 접두부: %s"
+
+#, python-format
+msgid "Bad project_id for to_global_ipv6: %s"
+msgstr "to_global_ipv6에 대한 잘못된 project_id: %s"
+
+#, python-format
+msgid "Bad volumeId format: volumeId is not in proper format (%s)"
+msgstr "잘못된 volumeId 형식: volumeId가 적절한 형식(%s)이 아님"
+
+msgid "Binary"
+msgstr "2진"
+
+msgid "Blank components"
+msgstr "비어 있는 구성요소"
+
+#, python-format
+msgid "Block Device %(id)s is not bootable."
+msgstr "블록 디바이스 %(id)s은(는) 부트 가능하지 않습니다."
+
+msgid "Block Device Mapping cannot be converted to legacy format. "
+msgstr "블록 디바이스 맵핑을 레거시 형식으로 변환할 수 없습니다. "
+
+msgid "Block Device Mapping is Invalid."
+msgstr "블록 디바이스 맵핑이 올바르지 않습니다. "
+
+#, python-format
+msgid "Block Device Mapping is Invalid: %(details)s"
+msgstr "블록 디바이스 맵핑이 올바르지 않음: %(details)s"
+
+msgid ""
+"Block Device Mapping is Invalid: Boot sequence for the instance and image/"
+"block device mapping combination is not valid."
+msgstr ""
+"블록 디바이스 맵핑이 올바르지 않음: 인스턴스 및 이미지/블록 디바이스 맵핑 조"
+"합에 대한 부트 시퀀스가 올바르지 않습니다."
+
+msgid ""
+"Block Device Mapping is Invalid: You specified more local devices than the "
+"limit allows"
+msgstr ""
+"블록 디바이스 맵핑이 올바르지 않음: 허용 한도보다 많은 로컬 디바이스를지정했"
+"습니다."
+
+#, python-format
+msgid "Block Device Mapping is Invalid: failed to get image %(id)s."
+msgstr ""
+"블록 디바이스 맵핑이 올바르지 않음: %(id)s 이미지를 가져오지 못했습니다. "
+
+#, python-format
+msgid "Block Device Mapping is Invalid: failed to get snapshot %(id)s."
+msgstr ""
+"블록 디바이스 맵핑이 올바르지 않습니다. %(id)s 스냅샷을 가져오지 못했습니다. "
+
+#, python-format
+msgid "Block Device Mapping is Invalid: failed to get volume %(id)s."
+msgstr ""
+"블록 디바이스 맵핑이 올바르지 않습니다. %(id)s 볼륨을 가져오지 못했습니다. "
+
+msgid "Block migration can not be used with shared storage."
+msgstr "블록 마이그레이션은 공유 스토리지에서 사용할 수 없습니다. "
+
+msgid "Boot index is invalid."
+msgstr "부트 인덱스가 유효하지 않습니다."
+
+#, python-format
+msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
+msgstr "인스턴스 %(instance_uuid)s의 빌드가 중단됨: %(reason)s"
+
+#, python-format
+msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
+msgstr "인스턴스 %(instance_uuid)s의 빌드가 다시 예정됨: %(reason)s"
+
+msgid "CIDR is malformed."
+msgstr "CIDR의 형식이 틀렸습니다. "
+
+msgid "CPU and memory allocation must be provided for all NUMA nodes"
+msgstr "모든 NUMA 노드에 CPU 및 메모리 할당을 제공해야 함"
+
+#, python-format
+msgid ""
+"CPU doesn't have compatibility.\n"
+"\n"
+"%(ret)s\n"
+"\n"
+"Refer to %(u)s"
+msgstr ""
+"CPU가 호환성을 갖지 않습니다.\n"
+"\n"
+"%(ret)s\n"
+"\n"
+"%(u)s을(를) 참조하십시오. "
+
+#, python-format
+msgid "CPU number %(cpunum)d is assigned to two nodes"
+msgstr "CPU 번호 %(cpunum)d이(가) 두 개의 노드에 지정됨"
+
+#, python-format
+msgid "CPU number %(cpunum)d is larger than max %(cpumax)d"
+msgstr "CPU 번호 %(cpunum)d은(는) 최대값 %(cpumax)d 보다 큼"
+
+#, python-format
+msgid "CPU number %(cpuset)s is not assigned to any node"
+msgstr "CPU 번호 %(cpuset)s이(가) 어느 노드에도 지정되지 않았음"
+
+msgid "Can not find requested image"
+msgstr "요청된 이미지를 찾을 수 없음"
+
+#, python-format
+msgid "Can not handle authentication request for %d credentials"
+msgstr "%d 신임 정보에 대한 인증 정보를 처리할 수 없음"
+
+#, python-format
+msgid "Can only run %s more instances of this type."
+msgstr "이 유형의 %s 추가 인스턴스만 실행할 수 있습니다. "
+
+msgid "Can't detach root device volume"
+msgstr "루트 디바이스 볼륨을 분리할 수 없음"
+
+msgid "Can't resize a disk to 0 GB."
+msgstr "디스크 크기를 0GB로 조정할 수 없습니다."
+
+msgid "Can't resize down ephemeral disks."
+msgstr "ephemeral 디스크의 크기를 줄일 수 없습니다."
+
+msgid "Can't retrieve root device path from instance libvirt configuration"
+msgstr "인스턴스 libvirt 구성에서 루트 디바이스 경로를 검색할 수 없음"
+
+#, python-format
+msgid ""
+"Cannot '%(action)s' instance %(server_id)s while it is in %(attr)s %(state)s"
+msgstr ""
+"다음 상태에서는 인스턴스 %(server_id)s에 '%(action)s' 조치를 수행할 수 없음: "
+"%(attr)s %(state)s"
+
+#, python-format
+msgid ""
+"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
+"have the proper permissions. In particular Nova-Compute must not be executed "
+"with the builtin SYSTEM account or other accounts unable to authenticate on "
+"a remote host."
+msgstr ""
+"\"%(instances_path)s\"에 액세스할 수 없습니다. 경로가 있는지 필요한 권한이 있"
+"는지 확인하십시오. 특히 Nova-Compute를 내장 SYSTEM 계정이나 원격 호스트에서 "
+"인증할 수 없는 다른 계정으로 실행하지 않아야 합니다."
+
+#, python-format
+msgid "Cannot access 'scality_sofs_config': %s"
+msgstr "'scality_sofs_config'에 액세스할 수 없음: %s"
+
+#, python-format
+msgid "Cannot add host %(host)s in aggregate %(id)s: host exists"
+msgstr "집계 %(id)s에 호스트 %(host)s을(를) 추가할 수 없음: 호스트가 있음"
+
+#, python-format
+msgid "Cannot add host %(host)s in aggregate %(id)s: not found"
+msgstr "집계 %(id)s에 호스트 %(host)s을(를) 추가할 수 없음: 찾을 수 없음"
+
+#, python-format
+msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
+msgstr "호스트를 집계 %(aggregate_id)s에 추가할 수 없음. 이유: %(reason)s."
+
+msgid "Cannot attach one or more volumes to multiple instances"
+msgstr "복수 인스턴스에 하나 이상의 볼륨을 첨부할 수 없음"
+
+#, python-format
+msgid "Cannot block migrate instance %s with mapped volumes"
+msgstr "맵핑된 볼륨으로 마이그레이션 인스턴스 %s을(를) 차단할 수 없음"
+
+#, python-format
+msgid "Cannot call %(method)s on orphaned %(objtype)s object"
+msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
+
+msgid "Cannot disassociate auto assigned floating ip"
+msgstr "자동 지정된 부동 IP를 연관 해제할 수 없음"
+
+msgid "Cannot execute /sbin/mount.sofs"
+msgstr "/sbin/mount.sofs를 실행할 수 없음"
+
+msgid "Cannot find SR of content-type ISO"
+msgstr "컨텐츠 유형 ISO의 SR을 찾을 수 없음"
+
+msgid "Cannot find SR to read/write VDI."
+msgstr "VDI를 읽기/쓰기할 SR을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Cannot find boot VHD file for instance: %s"
+msgstr "인스턴스에 대한 부트 VHD 파일을 찾을 수 없음: %s"
+
+msgid "Cannot find image for rebuild"
+msgstr "다시 빌드할 이미지를 찾을 수 없음"
+
+#, python-format
+msgid "Cannot get VM summary data for: %s"
+msgstr "VM 요약 데이터를 가져올 수 없음: %s"
+
+#, python-format
+msgid ""
+"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
+"method: %(auth_method)s."
+msgstr ""
+"대상 %(target_iqn)s을(를) 로그인할 수 없습니다. 지원되지 않는 iSCSI 인증 메소"
+"드: %(auth_method)s."
+
+msgid "Cannot mount Scality SOFS, check syslog for errors"
+msgstr "스케일 SOFS를 마운트할 수 없음. syslog에서 오류 확인"
+
+#, python-format
+msgid ""
+"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
+msgstr ""
+"다음 고정 세트의 cpus %(requested)s을(를) 고정/고정 해제할 수 없음.%(pinned)s"
+
+#, python-format
+msgid "Cannot remove host %(host)s in aggregate %(id)s"
+msgstr "%(id)s 집계에서 %(host)s 호스트를 제거할 수 없음"
+
+#, python-format
+msgid "Cannot remove host %(host)s in aggregate %(id)s: invalid"
+msgstr "집계 %(id)s에서 호스트 %(host)s을(를) 제거할 수 없음: 올바르지 않음"
+
+#, python-format
+msgid "Cannot remove host %(host)s in aggregate %(id)s: not found"
+msgstr "집계 %(id)s에서 호스트 %(host)s을(를) 제거할 수 없음: 찾을 수 없음"
+
+#, python-format
+msgid "Cannot remove host from aggregate %(aggregate_id)s. Reason: %(reason)s."
+msgstr ""
+"집계 %(aggregate_id)s에서 호스트를 제거할 수 없습니다. 이유: %(reason)s."
+
+msgid "Cannot rescue a volume-backed instance"
+msgstr "volume-backed 인스턴스를 구조할 수 없음"
+
+msgid "Cannot resize a VHD to a smaller size"
+msgstr "VHD를 더 작은 크기로 조정할 수 없음"
+
+#, python-format
+msgid ""
+"Cannot resize a VHD to a smaller size, the original size is %(old_size)s, "
+"the newer size is %(new_size)s"
+msgstr ""
+"VHD를 더 작은 크기로 조정할 수 없음. 원래 크기는 %(old_size)s이고 새 크기는 "
+"%(new_size)s임"
+
+#, python-format
+msgid ""
+"Cannot resize the image to a size smaller than the VHD max. internal size: "
+"%(vhd_size)s. Requested disk size: %(root_vhd_size)s"
+msgstr ""
+"VHD 최대값 미만으로 이미지의 크기를 조정할 수 없습니다: %(vhd_size)s. 요청된 "
+"디스크 크기: %(root_vhd_size)s"
+
+#, python-format
+msgid ""
+"Cannot resize the root disk to a smaller size. Current size: "
+"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB"
+msgstr ""
+"루트 디스크를 더 적은 크기로 조정할 수 없음. 현재 크기: %(curr_root_gb)sGB. "
+"요청된 크기: %(new_root_gb)sGB"
+
+msgid "Cannot run any more instances of this type."
+msgstr "이 유형의 인스턴스를 추가로 실행할 수 없습니다. "
+
+#, python-format
+msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
+msgstr "%(id)s 집계에 %(metadata)s 메타데이터를 설정할 수 없음"
+
+#, python-format
+msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
+msgstr "집계 %(aggregate_id)s을(를) 업데이트할 수 없습니다. 이유: %(reason)s."
+
+msgid "Cannot update cells configuration file."
+msgstr "셀 구성 파일을 업데이트할 수 없습니다. "
+
+#, python-format
+msgid ""
+"Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
+msgstr ""
+"집계 %(aggregate_id)s의 메타데이터를 업데이트할 수 없습니다. 이유: "
+"%(reason)s."
+
+#, python-format
+msgid "Cell %(cell_name)s doesn't exist."
+msgstr "%(cell_name)s 셀이 없습니다. "
+
+#, python-format
+msgid "Cell %(id)s not found."
+msgstr "%(id)s 셀을 찾을 수 없음"
+
+#, python-format
+msgid "Cell %(uuid)s has no mapping."
+msgstr "셀 %(uuid)s에 맵핑이 없습니다."
+
+#, python-format
+msgid "Cell %s doesn't exist."
+msgstr "%s 셀이 없습니다. "
+
+#, python-format
+msgid "Cell is not known for instance %(instance_uuid)s"
+msgstr "%(instance_uuid)s 인스턴스에 대한 셀을 알 수 없음"
+
+#, python-format
+msgid "Cell message has reached maximum hop count: %(hop_count)s"
+msgstr "셀 메시지가 최대 홉 계수에 도달함: %(hop_count)s"
+
+msgid "Cell name cannot be empty"
+msgstr "셀 이름은 공백일 수 없음"
+
+msgid "Cell type must be 'parent' or 'child'"
+msgstr "셀 유형은 'parent' 또는 'child'여야 함"
+
+#, python-format
+msgid "Cell with name %(name)s already exists."
+msgstr "이름이 %(name)s인 셀이 이미 존재합니다. "
+
+#, python-format
+msgid ""
+"Change would make usage less than 0 for the following resources: %(unders)s"
+msgstr "변경하면 다음 자원에 대한 사용량이 0보다 작아집니다: %(unders)s"
+
+msgid "Claim pci failed."
+msgstr "pci 청구에 실패했습니다."
+
+#, python-format
+msgid "Class %(class_name)s could not be found: %(exception)s"
+msgstr "%(class_name)s 클래스를 찾을 수 없음: %(exception)s"
+
+#, python-format
+msgid ""
+"Command Not supported. Please use Ironic command %(cmd)s to perform this "
+"action."
+msgstr ""
+"명령이 지원되지 않습니다. 이 조치를 수행하려면 아이로닉 명령 %(cmd)s을(를) 사"
+"용하십시오."
+
+msgid "Command failed, please check log for more info"
+msgstr "명령에 실패, 자세한 정보는 로그를 확인하십시오. "
+
+#, python-format
+msgid "Compute host %(host)s could not be found."
+msgstr "%(host)s 계산 호스트를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Compute host %(name)s needs to be created first before updating."
+msgstr "업데이트하기 전에 계산 호스트 %(name)s을(를) 먼저 작성해야 합니다."
+
+#, python-format
+msgid "Compute host %s not found."
+msgstr "계산 호스트 %s을(를) 찾을 수 없음."
+
+#, python-format
+msgid "Compute service of %(host)s is still in use."
+msgstr "%(host)s의 계산 서비스가 아직 사용 중입니다."
+
+#, python-format
+msgid "Compute service of %(host)s is unavailable at this time."
+msgstr "%(host)s의 계산 서비스가 지금 사용 불가능합니다. "
+
+#, python-format
+msgid "Config drive is required by instance: %s, but it does not exist."
+msgstr "%s 인스턴스에 구성 드라이브가 필요하지만 존재하지 않습니다."
+
+msgid "Config requested a custom CPU model, but no model name was provided"
+msgstr "구성이 사용자 정의 CPU 모델을 요청했지만 모델 이름을 제공하지 않았음"
+
+#, python-format
+msgid ""
+"Config requested an explicit CPU model, but the current libvirt hypervisor "
+"'%s' does not support selecting CPU models"
+msgstr ""
+"구성이 명시적 CPU 모델을 요청했지만 현재 libvirt 하이퍼바이저 '%s'이(가) CPU "
+"모델 선택을 지원하지 않음"
+
+msgid "Conflicting policies configured!"
+msgstr "구성된 정책이 충돌함!"
+
+#, python-format
+msgid "Connection to cinder host failed: %(reason)s"
+msgstr "cinder 호스트 연결 실패: %(reason)s"
+
+#, python-format
+msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
+msgstr "글랜스 호스트 %(host)s:%(port)s에 대한 연결 실패: %(reason)s"
+
+#, python-format
+msgid "Connection to libvirt lost: %s"
+msgstr "libvirt 연결 유실: %s"
+
+#, python-format
+msgid "Connection to the hypervisor is broken on host: %(host)s"
+msgstr "하이퍼바이저에 대한 연결이 %(host)s 호스트에서 끊겼습니다."
+
+#, python-format
+msgid "Console %(console_id)s could not be found."
+msgstr "%(console_id)s 콘솔을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Console for instance %(instance_uuid)s could not be found."
+msgstr "%(instance_uuid)s 인스턴스에 대한 콘솔을 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Console for instance %(instance_uuid)s in pool %(pool_id)s could not be "
+"found."
+msgstr ""
+"%(pool_id)s 풀에 있는 %(instance_uuid)s 인스턴스의 콘솔을 찾을 수 없습니다."
+
+#, python-format
+msgid "Console pool %(pool_id)s could not be found."
+msgstr "%(pool_id)s 콘솔 풀을 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Console pool of type %(console_type)s for compute host %(compute_host)s on "
+"proxy host %(host)s not found."
+msgstr ""
+"프록시 호스트 %(host)s의 계산 호스트 %(compute_host)s에 대해 "
+"%(console_type)s 유형의 콘솔 풀을 찾을 수 없음"
+
+#, python-format
+msgid ""
+"Console pool with host %(host)s, console_type %(console_type)s and "
+"compute_host %(compute_host)s already exists."
+msgstr ""
+"호스트 %(host)s, 콘솔 유형 %(console_type)s, 컴퓨트 호스트 %(compute_host)s"
+"인 콘솔 풀이 이미 존재합니다."
+
+msgid "Constraint not met."
+msgstr "제한조건이 만족되지 않았습니다. "
+
+#, python-format
+msgid "Converted to raw, but format is now %s"
+msgstr "원시로 변환되었지만 형식은 지금 %s임"
+
+#, python-format
+msgid "Core API extensions are missing: %(missing_apis)s"
+msgstr "코어 API 확장기능이 누락되어 있음: %(missing_apis)s"
+
+#, python-format
+msgid "Could not attach image to loopback: %s"
+msgstr "루프백에 이미지를 첨부할 수 없음: %s"
+
+msgid "Could not clean up failed build, not rescheduling"
+msgstr "살패한 빌드를 정리할 수 없음. 다시 스케줄하지 않음"
+
+#, python-format
+msgid "Could not fetch image %(image_id)s"
+msgstr "%(image_id)s 이미지를 페치할 수 없음"
+
+#, python-format
+msgid "Could not find a handler for %(driver_type)s volume."
+msgstr "%(driver_type)s 볼륨에 대한 핸들러를 찾을 수 없습니다. "
+
+msgid "Could not find another compute"
+msgstr "다른 계산을 찾을 수 없음"
+
+#, python-format
+msgid "Could not find binary %(binary)s on host %(host)s."
+msgstr "%(host)s 호스트에서 2진 %(binary)s을(를) 찾을 수 없습니다. "
+
+#, python-format
+msgid "Could not find config at %(path)s"
+msgstr "%(path)s에서 구성을 찾을 수 없음"
+
+#, python-format
+msgid "Could not find key pair(s): %s"
+msgstr "키 쌍을 찾을 수 없음: %s"
+
+msgid "Could not find the datastore reference(s) which the VM uses."
+msgstr "VM이 사용하는 데이터 저장소 참조를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Could not get instance console log. Error: %s"
+msgstr "인스턴스 콘솔 로그를 가져올 수 없습니다. 오류: %s"
+
+#, python-format
+msgid "Could not load line %(line)s, got error %(error)s"
+msgstr "%(line)s 행을 로드할 수 없음. %(error)s 오류가 발생했음"
+
+#, python-format
+msgid "Could not load paste app '%(name)s' from %(path)s"
+msgstr "%(path)s에서 페이스트 앱 '%(name)s'을(를) 로드할 수 없음"
+
+#, python-format
+msgid ""
+"Could not mount vfat config drive. %(operation)s failed. Error: %(error)s"
+msgstr ""
+"vfat 구성 드라이브를 마운트할 수 없습니다. %(operation)s에 실패했습니다. 오"
+"류: %(error)s"
+
+msgid "Could not parse imageRef from request."
+msgstr "요청의 imageRef를 구문 분석할 수 없습니다. "
+
+#, python-format
+msgid "Could not read %s. Re-running with sudo"
+msgstr "%s을(를) 읽을 수 없음. sudo로 다시 실행합니다. "
+
+#, python-format
+msgid "Could not unmount share: %s"
+msgstr "공유를 마운트 해제할 수 없음: %s"
+
+#, python-format
+msgid "Could not upload image %(image_id)s"
+msgstr "%(image_id)s 이미지를 업로드할 수 없음"
+
+#, python-format
+msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
+msgstr "%(interface)s의 링크 로컬 IP를 가져올 수 없음 :%(ex)s"
+
+#, python-format
+msgid ""
+"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
+"%(vm_state)s, current task_state: %(task_state)s"
+msgstr ""
+"%(instance)s 인스턴스를 1시간 내에 중지할 수 없습니다. 현재 vm_state: "
+"%(vm_state)s, 현재 task_state: %(task_state)s"
+
+msgid "Create networks failed"
+msgstr "네트워크 작성 실패"
+
+msgid "Creation of virtual interface with unique mac address failed"
+msgstr "고유한 MAC 주소가 있는 가상 인터페이스 작성에 실패함"
+
+msgid "DNS entries not found."
+msgstr "DNS 항목을 찾을 수 없습니다. "
+
+msgid "DNS1"
+msgstr "DNS1"
+
+msgid "DNS2"
+msgstr "DNS2"
+
+#, python-format
+msgid "Datastore regex %s did not match any datastores"
+msgstr "데이터 저장소 regex %s이(가) 데이터 저장소와 일치하지 않음"
+
+msgid "Datetime is in invalid format"
+msgstr "Datetime이 올바르지 않은 형식임"
+
+msgid "Default PBM policy is required if PBM is enabled."
+msgstr "PBM을 사용하는 경우 기본 PBM 정책이 필요합니다."
+
+msgid "Default rule. Enforced when a requested rule is not found."
+msgstr "기본 룰입니다. 요청된 룰이 없을 때, 이 값으로 강제 설정됩니다."
+
+#, python-format
+msgid "Deleted %(records)d records from table '%(table_name)s'."
+msgstr "테이블 '%(table_name)s'에서 %(records)d개의 레코드를 삭제했습니다."
+
+msgid "Deleting by fixed_range is not supported with the NeutronManager"
+msgstr "NeutronManager는 고정 범위에 의한 삭제를 지원하지 않습니다. "
+
+#, python-format
+msgid "Desired state must be specified.  Valid states are: %s"
+msgstr "원하는 상태가 지정되어야 합니다. 유효한 상태: %s"
+
+#, python-format
+msgid "Destination host:%s must be in the same aggregate as the source server"
+msgstr "대상 호스트:%s은(는) 소스 서버와 동일한 집계에 있어야 함"
+
+#, python-format
+msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
+msgstr "PCI 디바이스를 libvirt < %(ver)s과(와) 분리하는 것이 허용되지 않음"
+
+#, python-format
+msgid "Detaching SR-IOV ports with libvirt < %(ver)s is not permitted"
+msgstr "SR-IOV 포트를 libvirt < %(ver)s과(와) 분리하는 것이 허용되지 않음"
+
+#, python-format
+msgid "Detected existing vlan with id %(vlan)d"
+msgstr "ID가 %(vlan)d인 기존 VLAN 발견"
+
+#, python-format
+msgid ""
+"Device id %(id)s specified is not supported by hypervisor version %(version)s"
+msgstr "지정된 디바이스 ID %(id)s은(는) 하이퍼바이저 버전 %(version)s임"
+
+msgid "Device name contains spaces."
+msgstr "장치 이름에 공백이 있음."
+
+msgid "Device name empty or too long."
+msgstr "장치 이름이 비어있거나 너무 깁니다."
+
+#, python-format
+msgid ""
+"Different types in %(table)s.%(column)s and shadow table: %(c_type)s "
+"%(shadow_c_type)s"
+msgstr ""
+"%(table)s.%(column)s 및 새도우 테이블에서 서로 다른 유형: %(c_type)s "
+"%(shadow_c_type)s"
+
+msgid ""
+"Directories where policy configuration files are stored. They can be "
+"relative to any directory in the search path defined by the config_dir "
+"option, or absolute paths. The file defined by policy_file must exist for "
+"these directories to be searched.  Missing or empty directories are ignored."
+msgstr ""
+"정책 구성 파일을 저장하는 디렉토리입니다. 이러한 디렉토리는 config_dir 옵션에"
+"서 정의하는 검색 경로의 디렉토리에 대해 상대적이거나 절대 경로일 수 있습니"
+"다. 이러한 디렉토리를 검색하려면 policy_file에서 정의하는 파일이 있어야 합니"
+"다. 누락되거나 비어 있는 디렉토리는 무시됩니다. "
+
+msgid "Disassociate host is not implemented by the configured Network API"
+msgstr "구성된 네트워크 API에서 호스트 연관 해제가 구현되지 않음"
+
+msgid "Disassociate network is not implemented by the configured Network API"
+msgstr "구성된 네트워크 API에서 네트워크 연관 해제가 구현되지 않음"
+
+msgid "Disassociate project is not implemented by the configured Network API"
+msgstr "구성된 네트워크 API에서 프로젝트 연관 해제가 구현되지 않음"
+
+#, python-format
+msgid "Disk contains a filesystem we are unable to resize: %s"
+msgstr "디스크에 사용자가 크기를 조정할 수 없는 파일 시스템이 포함됨: %s"
+
+#, python-format
+msgid "Disk format %(disk_format)s is not acceptable"
+msgstr "Disk format %(disk_format)s를 알 수 없습니다."
+
+#, python-format
+msgid "Disk info file is invalid: %(reason)s"
+msgstr "디스크 정보 파일이 올바르지 않음: %(reason)s"
+
+msgid "Disk must have only one partition."
+msgstr "디스크에는 하나의 파티션만 있어야 합니다. "
+
+#, python-format
+msgid "Disk with id: %s not found attached to instance."
+msgstr "인스턴스에 접속된 ID가 %s인 디스크를 찾을 수 없습니다."
+
+#, python-format
+msgid "Driver Error: %s"
+msgstr "드라이버 오류: %s"
+
+msgid "Driver must implement select_destinations"
+msgstr "드라이버가 select_destinations를 구현해야 합니다."
+
+#, python-format
+msgid "Duplicate VM name found: %s"
+msgstr "중복 VM 이름 발견: %s"
+
+#, python-format
+msgid "Duplicate networks (%s) are not allowed"
+msgstr "중복 네트워크(%s)는 허용되지 않음"
+
+msgid "Duplicate policies configured!"
+msgstr "중복 정책이 구성되었습니다!"
+
+msgid ""
+"ERROR: Network commands are not supported when using the Neutron API.  Use "
+"python-neutronclient instead."
+msgstr ""
+"오류: Neutron API를 사용할 때 네트워크 명령이 지원되지 않습니다. 대신 python-"
+"neutronclient를 사용하십시오."
+
+msgid ""
+"ESX SOAP server returned an empty port group for the host system in its "
+"response"
+msgstr ""
+"ESX SOAP 서버가 응답에서 호스트 시스템에 대해 비어 있는 포트 그룹을 리턴함"
+
+#, python-format
+msgid "Ec2 id %(ec2_id)s is unacceptable."
+msgstr "Ec2 id %(ec2_id)s은(는) 허용할 수 없습니다. "
+
+#, python-format
+msgid ""
+"Either network uuid %(network_uuid)s is not present or is not assigned to "
+"the project %(project_id)s."
+msgstr ""
+"네트워크 UUID %(network_uuid)s이(가) 존재하지 않거나%(project_id)s 프로젝트"
+"에 지정되지 않았습니다. "
+
+msgid "Ephemeral disks requested are larger than the instance type allows."
+msgstr "요청한 임시 디스크가 허용되는 인스턴스 유형보다 큽니다."
+
+#, python-format
+msgid ""
+"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
+"%(total)d"
+msgstr ""
+"'%(method)s'의 아이로닉 서버를 연결하는 중에 오류가 발생했습니다. %(total)d "
+"중 %(attempt)d 시도"
+
+#, python-format
+msgid ""
+"Error destroying the instance on node %(node)s. Provision state still "
+"'%(state)s'."
+msgstr ""
+"%(node)s 노드에서 인스턴스를 영구 삭제하는 중 오류가 발생했습니다. 프로비저"
+"닝 상태는 아직 '%(state)s'입니다."
+
+#, python-format
+msgid "Error during following call to agent: %(method)s"
+msgstr "에이전트에 대한 다음 호출 중 오류: %(method)s"
+
+#, python-format
+msgid "Error during unshelve instance %(instance_id)s: %(reason)s"
+msgstr "%(instance_id)s 인스턴스 언쉘브 중 오류 발생: %(reason)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while getting domain info for %(instance_name)s: [Error "
+"Code %(error_code)s] %(ex)s"
+msgstr ""
+"%(instance_name)s의 도메인 정보를 가져오는 중 libvirt에서 오류 발생: [오류 코"
+"드 %(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while looking up %(instance_id)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"%(instance_id)s 검색 중 libvirt에서 오류 발생: [오류 코드 %(error_code)s] "
+"%(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while looking up %(instance_name)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"%(instance_name)s 검색 중 libvirt에서 오류 발생: [오류 코드 %(error_code)s] "
+"%(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while quiescing %(instance_name)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"%(instance_name)s을(를) Quiesce하는 중 libvirt에서 오류 발생: [오류 코드 "
+"%(error_code)s] %(ex)s"
+
+#, python-format
+msgid "Error when creating resource monitor: %(monitor)s"
+msgstr "자원 모니터 작성 중에 오류 발생: %(monitor)s"
+
+msgid "Error: Agent is disabled"
+msgstr "오류: 에이전트가 사용 안됨"
+
+#, python-format
+msgid "Event %(event)s not found for action id %(action_id)s"
+msgstr "조치 ID %(action_id)s에 대한 %(event)s 이벤트를 찾을 수 없음"
+
+msgid "Event must be an instance of nova.virt.event.Event"
+msgstr "이벤트는 nova.virt.event.Event의 인스턴스여야 함"
+
+#, python-format
+msgid ""
+"Exceeded max scheduling attempts %(max_attempts)d for instance "
+"%(instance_uuid)s. Last exception: %(exc)s"
+msgstr ""
+"%(instance_uuid)s 인스턴스에 대한 최대 스케줄링 시도 %(max_attempts)d "
+"%(instance_uuid)s. 마지막 예외: %(exc)s"
+
+#, python-format
+msgid ""
+"Exceeded max scheduling retries %(max_retries)d for instance "
+"%(instance_uuid)s during live migration"
+msgstr ""
+"인스턴스에 대한 최대 스케줄링 재시도 %(max_retries)d을(를) 초과"
+"함%(instance_uuid)s"
+
+msgid "Exceeded the maximum number of slots"
+msgstr "최대 슬롯 수를 초과함"
+
+#, python-format
+msgid "Expected a uuid but received %(uuid)s."
+msgstr "uuid를 예상했지만 %(uuid)s을(를) 수신했습니다. "
+
+#, python-format
+msgid "Expected object of type: %s"
+msgstr "예상한 오브젝트 유형: %s"
+
+msgid "Expecting a list of resources"
+msgstr "자원 목록 예상"
+
+msgid "Expecting a list of tagSets"
+msgstr "tagSets의 목록 예상"
+
+msgid "Expecting both key and value to be set"
+msgstr "키와 값을 모두 설정해야 함"
+
+msgid "Expecting key to be set"
+msgstr "키 설정을 예상"
+
+msgid "Expecting tagSet to be key/value pairs"
+msgstr "tagSet는 키/값 쌍이어야 함"
+
+#, python-format
+msgid "Extra column %(table)s.%(column)s in shadow table"
+msgstr "새도우 테이블에 %(table)s.%(column)s 열이 추가로 있음"
+
+msgid "Extracting vmdk from OVA failed."
+msgstr "OVA에서 vmdk의 압축을 풀지 못했습니다."
+
+#, python-format
+msgid "Fail to clean up node %s parameters"
+msgstr "노드 %s 매개변수 정리 실패"
+
+msgid "Fail to validate provided extra specs keys. Expected string"
+msgstr "제공된 추가 스펙 키의 유효성을 검증하지 못함. 문자열을 예상함"
+
+#, python-format
+msgid ""
+"Failed to add deploy parameters on node %(node)s when provisioning the "
+"instance %(instance)s"
+msgstr ""
+"인스턴스 %(instance)s을(를) 프로비저닝할 때 %(node)s 노드에 배치 매개변수 추"
+"가 실패"
+
+#, python-format
+msgid "Failed to add interface: %s"
+msgstr "인터페이스 추가 실패: %s"
+
+#, python-format
+msgid "Failed to allocate the network(s) with error %s, not rescheduling."
+msgstr "%s 오류로 인해 네트워크 할당 실패. 다시 스케줄하지 않음"
+
+msgid "Failed to allocate the network(s), not rescheduling."
+msgstr "네트워크 할당 실패. 다시 스케줄하지 않음"
+
+msgid "Failed to attach interface"
+msgstr "인터페이스에 첨부하지 못했음"
+
+#, python-format
+msgid "Failed to attach network adapter device to %(instance_uuid)s"
+msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에 접속하는 데 실패함"
+
+#, python-format
+msgid "Failed to create vswitch port %(port_name)s on switch %(vswitch_path)s"
+msgstr "%(vswitch_path)s 스위치에 vswitch 포트 %(port_name)s 작성 실패"
+
+#, python-format
+msgid "Failed to decrypt image file %(image_file)s: %(err)s"
+msgstr "%(image_file)s 이미지 파일을 복호화하지 못했음: %(err)s"
+
+#, python-format
+msgid "Failed to decrypt initialization vector: %s"
+msgstr "초기화 벡터를 복호화하지 못했음: %s"
+
+#, python-format
+msgid "Failed to decrypt private key: %s"
+msgstr "개인 키를 복호화하지 못했음: %s"
+
+#, python-format
+msgid "Failed to decrypt text: %(reason)s"
+msgstr "텍스트를 복호화하지 못했음: %(reason)s"
+
+#, python-format
+msgid "Failed to deploy instance: %(reason)s"
+msgstr "인스턴스 배치 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to detach PCI device %(dev)s: %(reason)s"
+msgstr "PCI 디바이스 %(dev)s을(를) 분리하지 못함: %(reason)s"
+
+#, python-format
+msgid "Failed to detach network adapter device from %(instance_uuid)s"
+msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에서 분리하는 데 실패함"
+
+#, python-format
+msgid "Failed to encrypt text: %(reason)s"
+msgstr "텍스트를 암호화하지 못했음: %(reason)s"
+
+#, python-format
+msgid "Failed to launch instances: %(reason)s"
+msgstr "인스턴스 실행 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to login target %s"
+msgstr "%s 대상 로그인 실패"
+
+#, python-format
+msgid "Failed to map partitions: %s"
+msgstr "파티션을 맵핑하지 못했음: %s"
+
+#, python-format
+msgid "Failed to mount filesystem: %s"
+msgstr "파일 시스템 마운트 실패: %s"
+
+msgid "Failed to parse information about a pci device for passthrough"
+msgstr "패스스루용 pci 디바이스에 대한 정책을 구문 분석하지 못함"
+
+#, python-format
+msgid "Failed to power off instance: %(reason)s"
+msgstr "인스턴스 전원 차단 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to power on instance: %(reason)s"
+msgstr "인스턴스 전원 공급 실패: %(reason)s"
+
+#, python-format
+msgid ""
+"Failed to prepare PCI device %(id)s for instance %(instance_uuid)s: "
+"%(reason)s"
+msgstr ""
+"%(instance_uuid)s 인스턴스에 대해 PCI 디바이스 %(id)s을(를) 준비하지 못함: "
+"%(reason)s"
+
+#, python-format
+msgid "Failed to provision instance %(inst)s: %(reason)s"
+msgstr "인스턴스 %(inst)s 프로비저닝 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to read or write disk info file: %(reason)s"
+msgstr "디스크 정보 파일을 읽거나 쓰지 못함: %(reason)s"
+
+#, python-format
+msgid "Failed to reboot instance: %(reason)s"
+msgstr "인스턴스 재부팅 실패: %(reason)s"
+
+#, python-format
+msgid ""
+"Failed to reconnect image %(child_vhd_path)s to parent %(parent_vhd_path)s. "
+"The child image has no parent path property."
+msgstr ""
+"이미지 %(child_vhd_path)s을(를) 상위 %(parent_vhd_path)s에 다시 연결하지 못했"
+"습니다. 하위 이미지에 상위 경로 특성이 없습니다."
+
+#, python-format
+msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
+msgstr "MAC %(mac_address)s(으)로 IP %(address)s 해제 실패"
+
+#, python-format
+msgid "Failed to remove volume(s): (%(reason)s)"
+msgstr "볼륨을 제거하지 못함: (%(reason)s)"
+
+#, python-format
+msgid "Failed to request Ironic to rebuild instance %(inst)s: %(reason)s"
+msgstr "%(inst)s 인스턴스를 다시 빌드하기 위한 아이로닉 요청 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to resume instance: %(reason)s"
+msgstr "인스턴스 재개 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to revoke certificate for %(project_id)s"
+msgstr "%(project_id)s에 대한 인증서를 취소하는 데 실패"
+
+#, python-format
+msgid "Failed to run qemu-img info on %(path)s : %(error)s"
+msgstr "%(path)s에서 qemu-img 정보 실행 실패: %(error)s"
+
+msgid "Failed to run xvp."
+msgstr "xvp를 실행하지 못했습니다. "
+
+#, python-format
+msgid "Failed to set admin password on %(instance)s because %(reason)s"
+msgstr "%(reason)s 때문에 %(instance)s에 관리 비밀번호를 설정하지 못했음"
+
+msgid "Failed to spawn, rolling back"
+msgstr "파생 실패. 롤백 중"
+
+#, python-format
+msgid "Failed to suspend instance: %(reason)s"
+msgstr "인스턴스 일시중단 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to terminate instance: %(reason)s"
+msgstr "인스턴스 종료 실패: %(reason)s"
+
+#, python-format
+msgid "Failure parsing response from keystone: %s"
+msgstr "키스톤에서 응답을 구문 분석하지 못함: %s"
+
+msgid "Failure prepping block device."
+msgstr "블록 디바이스 준비 실패"
+
+#, python-format
+msgid ""
+"Field labels list %(labels)s has different number of elements than fields "
+"list %(fields)s"
+msgstr ""
+"필드 레이블 목록 %(labels)s의 요소 수가 필드 목록 %(fields)s과(와) 다름"
+
+#, python-format
+msgid "File %(file_path)s could not be found."
+msgstr "%(file_path)s 파일을 찾을 수 없습니다. "
+
+#, python-format
+msgid "File path %s not valid"
+msgstr "파일 경로 %s이(가) 올바르지 않음"
+
+msgid "Filename of private key"
+msgstr "개인 Key의 파일 이름"
+
+msgid "Filename of root CA"
+msgstr "root CA의 파일 이름"
+
+msgid "Filename of root Certificate Revocation List"
+msgstr "Root 증서 폐기 목록 파일 이름"
+
+#, python-format
+msgid "Fixed IP %s has been deleted"
+msgstr "고정 IP %s이(가) 삭제되었음"
+
+#, python-format
+msgid "Fixed IP %s is already in use."
+msgstr "고정 IP %s을(를) 이미 사용하고 있습니다."
+
+#, python-format
+msgid "Fixed IP %s not found"
+msgstr "고정 IP %s을(를) 찾을 수 없음"
+
+#, python-format
+msgid "Fixed IP %s not valid"
+msgstr "고정 IP %s이(가) 올바르지 않음"
+
+#, python-format
+msgid ""
+"Fixed IP address %(address)s is already in use on instance %(instance_uuid)s."
+msgstr ""
+"고정 IP 주소 %(address)s이(가) 이미 %(instance_uuid)s 인스턴스에서 사용되고 "
+"있습니다."
+
+#, python-format
+msgid "Fixed IP address %(address)s is invalid."
+msgstr "고정 IP 주소 %(address)s이(가) 올바르지 않습니다. "
+
+#, python-format
+msgid ""
+"Fixed IP address (%(address)s) does not exist in network (%(network_uuid)s)."
+msgstr ""
+"고정 IP 주소(%(address)s)가 (%(network_uuid)s) 네트워크에 존재하지 않습니다."
+
+#, python-format
+msgid "Fixed IP associate failed for network: %(net)s."
+msgstr "네트워크에 대한 고정 IP 연관 실패: %(net)s."
+
+#, python-format
+msgid "Fixed ip %(address)s already exists."
+msgstr "고정 IP %(address)s이(가) 이미 존재합니다. "
+
+#, python-format
+msgid "Fixed ip not found for address %(address)s."
+msgstr "주소 %(address)s에 대한 고정 IP를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Flavor %(flavor_id)s could not be found."
+msgstr "%(flavor_id)s 플레이버를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Flavor %(flavor_id)s has no extra specs with key %(extra_specs_key)s."
+msgstr ""
+"플레이버 %(flavor_id)s에 %(extra_specs_key)s 키가 있는 추가 스펙이 없습니다."
+
+#, python-format
+msgid "Flavor %(flavor_id)s has no extra specs with key %(key)s."
+msgstr "플레이버 %(flavor_id)s에 %(key)s 키가 있는 추가 스펙이 없습니다."
+
+#, python-format
+msgid ""
+"Flavor %(id)d extra spec cannot be updated or created after %(retries)d "
+"retries."
+msgstr ""
+"%(retries)d번 재시도 후 플레이버 %(id)d 추가 스펙을 업데이트하거나 작성할 수 "
+"없습니다."
+
+#, python-format
+msgid ""
+"Flavor access already exists for flavor %(flavor_id)s and project "
+"%(project_id)s combination."
+msgstr ""
+"플레이버 %(flavor_id)s 및 %(project_id)s 프로젝트 조합에 대한 플레이버 액세스"
+"가 이미 존재합니다. "
+
+#, python-format
+msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
+msgstr ""
+"%(flavor_id)s / %(project_id)s 조합에 대한 플레이버 액세스를 찾을 수 없습니"
+"다. "
+
+msgid "Flavor for vpn instances"
+msgstr "vpn 인스턴스에 대한 플레이버"
+
+msgid ""
+"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
+"underscores and spaces."
+msgstr ""
+"플레이버 ID는 A-Z(대소문자) 문자, 마침표, 대시, 밑줄 및 공백만 포함할 수 있습"
+"니다."
+
+msgid ""
+"Flavor names can only contain printable characters and horizontal spaces."
+msgstr ""
+"플레이버 이름에는 인쇄할 수 있는 문자와 가로 간격만 포함할 수 있습니다."
+
+msgid "Flavor used by the instance could not be found."
+msgstr "인스턴스가 사용한 플레이버를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Flavor with ID %(flavor_id)s already exists."
+msgstr "ID가 %(flavor_id)s인 플레이버가 이미 있습니다."
+
+#, python-format
+msgid "Flavor with name %(flavor_name)s could not be found."
+msgstr "이름이 %(flavor_name)s인 플레이버를 찾을 수 없습니다."
+
+#, python-format
+msgid "Flavor with name %(name)s already exists."
+msgstr "이름이 %(name)s인 플레이버가 이미 있습니다."
+
+msgid "Flavor's memory is too small for requested image."
+msgstr "플레이버의 메모리가 요청된 이미지에 대해 너무 작습니다."
+
+msgid "Floating IP allocate failed."
+msgstr "부동 IP 할당에 실패했습니다."
+
+#, python-format
+msgid "Floating ip %(address)s already exists."
+msgstr "부동 IP %(address)s이(가) 이미 존재합니다. "
+
+#, python-format
+msgid "Floating ip %(address)s is associated."
+msgstr "부동 IP %(address)s이(가) 연관되어 있습니다. "
+
+#, python-format
+msgid "Floating ip %(address)s is not associated with instance %(id)s."
+msgstr "부동 IP %(address)s이(가) %(id)s 인스턴스와 연관되지 않았습니다."
+
+#, python-format
+msgid "Floating ip %(address)s is not associated."
+msgstr "부동 IP %(address)s이(가) 연관되지 않습니다. "
+
+msgid "Floating ip is not associated"
+msgstr "부동 IP가 연관되지 않음"
+
+msgid "Floating ip is not associated."
+msgstr "부동 IP가 연관되지 않았습니다. "
+
+#, python-format
+msgid "Floating ip not found for address %(address)s."
+msgstr "주소 %(address)s에 대한 부동 IP를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Floating ip not found for host %(host)s."
+msgstr "%(host)s 호스트에 대한 부동 IP를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Floating ip not found for id %(id)s."
+msgstr "ID %(id)s에 대한 부동 IP를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Floating ip not found for id %s"
+msgstr "ID %s에 대한 부동 IP를 찾을 수 없음"
+
+msgid "Floating ip pool not found."
+msgstr "부동 IP 풀을 찾을 수 없습니다. "
+
+msgid ""
+"For \"noauth\" authentication strategy, the endpoint must be specified conf."
+"neutron.url"
+msgstr ""
+"\"noauth\" 인증 전략에서는 엔드포인트가 conf.neutron.url로 지정되어야 함"
+
+msgid ""
+"Forbidden to exceed flavor value of number of serial ports passed in image "
+"meta."
+msgstr ""
+"이미지 메타에 패스된 직렬 포트 수의 플레이버 값 초과가 금지되어 있습니다."
+
+#, python-format
+msgid "Found no PIF for device %s"
+msgstr "%s에 대한 PIF를 찾지 못함"
+
+msgid "Found no disk to snapshot."
+msgstr "스냅샷할 디스크를 찾지 못함."
+
+#, python-format
+msgid "Found no network for bridge %s"
+msgstr "브릿지 %s에 대한 네트워크를 발견하지 못함"
+
+#, python-format
+msgid "Found non-unique network for bridge %s"
+msgstr "브릿지 %s에 대한 고유하지 않은 네트워크 발견"
+
+#, python-format
+msgid "Found non-unique network for name_label %s"
+msgstr "name_label %s에 대한 고유하지 않은 네트워크 발견"
+
+#, python-format
+msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
+msgstr "여유 %(type)s %(free).02f %(unit)s < 요청된 %(requested)d %(unit)s"
+
+#, python-format
+msgid "Glance image %(image_id)s is in unknown state - %(state)s"
+msgstr "글랜스 이미지 %(image_id)s이(가) 알 수 없는 상태에 있음 - %(state)s"
+
+#, python-format
+msgid "Glance image %s is in killed state"
+msgstr "글랜스 이미지 %s이(가) 강제 종료 상태에 있음"
+
+#, python-format
+msgid "Group not valid. Reason: %(reason)s"
+msgstr "그룹이 올바르지 않습니다. 이유: %(reason)s"
+
+msgid "Guest does not have a console available"
+msgstr "게스트에 사용 가능한 콘솔이 없음"
+
+msgid "HOST"
+msgstr "호스트"
+
+msgid "Host"
+msgstr "호스트"
+
+#, python-format
+msgid "Host %(action)s is not supported by the Hyper-V driver"
+msgstr "Hyper-V 드라이버에서 호스트 %(action)s을(를) 지원하지 않음"
+
+#, python-format
+msgid "Host %(host)s could not be found."
+msgstr "%(host)s 호스트를 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Host %(server)s is running an old version of Nova, live migrations involving "
+"that version may cause data loss. Upgrade Nova on %(server)s and try again."
+msgstr ""
+"%(server)s 호스트에서 이전 버전의 Nova를 실행 중이며 해당 버전과 연관된 실시"
+"간 마이그레이션을 수행할 경우 데이터가 유실될 수 있습니다. %(server)s에서 "
+"Nova를 업그레이드하여 다시 시도하십시오."
+
+msgid "Host PowerOn is not supported by the Hyper-V driver"
+msgstr "Hyper-V 드라이버에서 호스트 PowerOn을 지원하지 않습니다."
+
+msgid "Host aggregate is not empty"
+msgstr "호스트 집계가 비어 있지 않음"
+
+msgid "Host does not support guests with NUMA topology set"
+msgstr "호스트에서 NUMA 토폴로지 세트가 있는 게스트를 지원하지 않음"
+
+msgid "Host does not support guests with custom memory page sizes"
+msgstr ""
+"호스트에서 사용자 정의 메모리 페이지 크기를 사용하는 게스트를 지원하지 않음"
+
+msgid "Host parameter must be specified"
+msgstr "호스트 매개변수를 지정해야 함"
+
+msgid "Host startup on XenServer is not supported."
+msgstr "XenServer에서의 호스트 시작은 지원되지 않습니다. "
+
+msgid "HostId cannot be updated."
+msgstr "HostId는 업데이트할 수 없습니다. "
+
+msgid "Hypervisor driver does not support post_live_migration_at_source method"
+msgstr ""
+"하이퍼바이저 드라이버가 post_live_migration_at_source 메소드를 지원하지 않음"
+
+#, python-format
+msgid "Hypervisor version %s is invalid."
+msgstr "하이퍼바이저 버전 %s이(가) 올바르지 않습니다."
+
+#, python-format
+msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
+msgstr "하이퍼바이저 가상화 유형 '%(hv_type)s'이(가) 인식되지 않음"
+
+#, python-format
+msgid "Hypervisor with ID '%s' could not be found."
+msgstr "ID가 '%s'인 하이퍼바이저를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Hypervisor: %s"
+msgstr "하이퍼바이저: %s"
+
+msgid "IP address"
+msgstr "IP 주소"
+
+#, python-format
+msgid "IP allocation over quota in pool %s."
+msgstr "%s 풀에서 IP 할당이 할당량을 초과했습니다."
+
+msgid "IP allocation over quota."
+msgstr "IP 할당이 할당량을 초과했습니다."
+
+msgid "IPv4"
+msgstr "IPv4"
+
+msgid "IPv6"
+msgstr "IPv6"
+
+#, python-format
+msgid "IPv6 netmask \"%s\" must be a netmask or integral prefix"
+msgstr "IPv6 넷마스크 \"%s\"은(는) 넷마스크이거나 적분 접두부여야 함"
+
+#, python-format
+msgid "Image %(image_id)s could not be found."
+msgstr "%(image_id)s 이미지를 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
+"dynamically when they are listed for the first time. Have you listed image "
+"ids since adding this image?"
+msgstr ""
+"%(image_id)s 이미지를 찾을 수 없습니다. Nova EC2 API는 이미지 ID가 처음 나열"
+"될 때 동적으로 해당 ID를 지정합니다. 이 이미지를 추가한 이후 이미지를 나열했"
+"습니까?"
+
+#, python-format
+msgid "Image %(image_id)s is not active."
+msgstr "%(image_id)s 이미지가 활성 상태가 아닙니다. "
+
+#, python-format
+msgid "Image %(image_id)s is unacceptable: %(reason)s"
+msgstr "%(image_id)s 이미지는 허용할 수 없음: %(reason)s"
+
+msgid "Image disk size greater than requested disk size"
+msgstr "이미지 디스크 크기가 요청된 디스크 크기보다 큼"
+
+msgid "Image is not raw format"
+msgstr "이미지가 원시 형식이 아님"
+
+msgid "Image metadata key cannot be blank"
+msgstr "이미지 메타데이터 키는 공백일 수 없음"
+
+msgid "Image metadata key too long"
+msgstr "이미지 메타데이터 키가 너무 김"
+
+msgid "Image metadata limit exceeded"
+msgstr "이미지 메타데이터 한계 초과"
+
+msgid "Image must be available"
+msgstr "이미지가 사용 가능해야 함"
+
+msgid "Image not found."
+msgstr "이미지를 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Image property '%(name)s' is not permitted to override NUMA configuration "
+"set against the flavor"
+msgstr ""
+"이미지 특성 '%(name)s'은(는) 플레이버에 대해 설정된 NUMA 구성을 대체할 수 없"
+"음"
+
+msgid ""
+"Image property 'hw_cpu_policy' is not permitted to override CPU pinning "
+"policy set against the flavor"
+msgstr ""
+"이미지 특성 'hw_cpu_policy'는 플레이버에 맞지 않는 CPU 고정 정책 세트를 대체"
+"할 수 없음"
+
+msgid "Image that the instance was started with could not be found."
+msgstr "인스턴스가 시작되었던 해당 이미지를 찾을 수 없음. "
+
+#, python-format
+msgid ""
+"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
+"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
+msgstr ""
+"이미지 vCPU 한계 %(sockets)d:%(cores)d:%(threads)d이(가) 허용값 "
+"%(maxsockets)d:%(maxcores)d:%(maxthreads)d을(를) 초과함"
+
+#, python-format
+msgid ""
+"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
+"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
+msgstr ""
+"이미지 vCPU 토폴로지 %(sockets)d:%(cores)d:%(threads)d이(가) 허용값 "
+"%(maxsockets)d:%(maxcores)d:%(maxthreads)d을(를) 초과함"
+
+#, python-format
+msgid "Image's config drive option '%(config_drive)s' is invalid"
+msgstr ""
+"이미지의 구성 드라이브 옵션 '%(config_drive)s'이(가) 올바르지 않습니다. "
+
+msgid ""
+"Images with destination_type 'volume' need to have a non-zero size specified"
+msgstr "destination_type이 '볼륨'인 이미지는 0이 아닌 크기를 지정해야 함"
+
+msgid "In ERROR state"
+msgstr "ERROR 상태에 있음"
+
+msgid "In Use"
+msgstr "사용중"
+
+#, python-format
+msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
+msgstr "%(vm_state)s/%(task_state)s 상태에 있음, RESIZED/None이 아님"
+
+msgid ""
+"Incompatible settings: ephemeral storage encryption is supported only for "
+"LVM images."
+msgstr ""
+"호환되지 않는 설정: ephemeral 스토리지 암호화가 LVM 이미지에만 지원됩니다."
+
+#, python-format
+msgid "Inconsistency in cell routing: %(reason)s"
+msgstr "셀 라우팅에 불일치: %(reason)s"
+
+msgid "Incorrect request body format"
+msgstr "올바르지 않은 요청 본문 형식"
+
+#, python-format
+msgid "Info cache for instance %(instance_uuid)s could not be found."
+msgstr "%(instance_uuid)s 인스턴스에 대한 정보 캐시를 찾을 수 없습니다."
+
+#, python-format
+msgid ""
+"Instance %(instance)s and volume %(vol)s are not in the same "
+"availability_zone. Instance is in %(ins_zone)s. Volume is in %(vol_zone)s"
+msgstr ""
+"인스턴스 %(instance)s 및 볼륨 %(vol)s이(가) 같은 availability_zone에 있지 않"
+"습니다. 인스턴스는 %(ins_zone)s에 볼륨은 %(vol_zone)s에 있음"
+
+#, python-format
+msgid "Instance %(instance)s does not have a port with id %(port)s"
+msgstr "%(instance)s 인스턴스에 ID가 %(port)s인 포트가 없음"
+
+#, python-format
+msgid "Instance %(instance_id)s cannot be rescued: %(reason)s"
+msgstr "%(instance_id)s 인스턴스를 구조할 수 없습니다: %(reason)s"
+
+#, python-format
+msgid "Instance %(instance_id)s could not be found."
+msgstr "%(instance_id)s 인스턴스를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Instance %(instance_id)s has no tag '%(tag)s'"
+msgstr "인스턴스 %(instance_id)s에 '%(tag)s' 태그가 없음"
+
+#, python-format
+msgid "Instance %(instance_id)s is not in rescue mode"
+msgstr "%(instance_id)s 인스턴스가 구조 모드에 있지 않음"
+
+#, python-format
+msgid "Instance %(instance_id)s is not ready"
+msgstr "%(instance_id)s 인스턴스가 준비 상태가 아님"
+
+#, python-format
+msgid "Instance %(instance_id)s is not running."
+msgstr "%(instance_id)s 인스턴스가 실행 중이 아닙니다. "
+
+#, python-format
+msgid "Instance %(instance_id)s is unacceptable: %(reason)s"
+msgstr "%(instance_id)s 인스턴스는 허용할 수 없음: %(reason)s"
+
+#, python-format
+msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
+msgstr "인스턴스 %(instance_uuid)s이(가) NUMA 토폴로지를 지정하지 않음"
+
+#, python-format
+msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
+msgstr "%(instance_uuid)s 인스턴스에 고정 IP '%(ip)s'이(가) 없습니다. "
+
+#, python-format
+msgid "Instance %(instance_uuid)s has zero fixed ips."
+msgstr "%(instance_uuid)s 인스턴스는 0개의 고정 IP를 갖고 있습니다. "
+
+#, python-format
+msgid ""
+"Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
+"the instance is in this state."
+msgstr ""
+"%(instance_uuid)s 인스턴스가 %(attr)s %(state)s에 있습니다. 인스턴스가 이 상"
+"태에 있는 중에는 %(method)s할 수 없습니다."
+
+#, python-format
+msgid "Instance %(instance_uuid)s is locked"
+msgstr "%(instance_uuid)s 인스턴스가 잠겼음"
+
+#, python-format
+msgid "Instance %(name)s already exists."
+msgstr "%(name)s 인스턴스가 이미 존재합니다. "
+
+#, python-format
+msgid "Instance %(server_id)s is in an invalid state for '%(action)s'"
+msgstr "인스턴스 %(server_id)s의 상태가 '%(action)s'에 대해 올바르지 않음"
+
+#, python-format
+msgid "Instance %(uuid)s has no mapping to a cell."
+msgstr "%(uuid)s 인스턴스에 셀에 대한 맵핑이 없습니다."
+
+#, python-format
+msgid "Instance %s is not attached."
+msgstr "%s 인스턴스가 첨부되지 않았습니다. "
+
+#, python-format
+msgid "Instance %s not found"
+msgstr "%s 인스턴스를 찾을 수 없음"
+
+msgid "Instance could not be found"
+msgstr "인스턴스를 찾을 수 없음"
+
+msgid "Instance disk to be encrypted but no context provided"
+msgstr "인스턴스 디스크를 암호화히자만 제공된 텍스트가 없음"
+
+msgid "Instance event failed"
+msgstr "인스턴스 이벤트에 실패"
+
+#, python-format
+msgid "Instance group %(group_uuid)s already exists."
+msgstr "%(group_uuid)s 인스턴스 그룹이 이미 존재합니다. "
+
+#, python-format
+msgid "Instance group %(group_uuid)s could not be found."
+msgstr "인스턴스 그룹 %(group_uuid)s을(를) 찾을 수 없습니다. "
+
+#, python-format
+msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
+msgstr "%(group_uuid)s 인스턴스 그룹에 ID가 %(instance_id)s인 멤버가 없습니다."
+
+#, python-format
+msgid "Instance group %(group_uuid)s has no policy %(policy)s."
+msgstr "%(group_uuid)s 인스턴스 그룹에 정책 %(policy)s이(가) 없습니다. "
+
+msgid "Instance has no source host"
+msgstr "인스턴스에 소스 호스트가 없음"
+
+msgid "Instance has not been resized."
+msgstr "인스턴스 크기가 조정되지 않았습니다. "
+
+#, python-format
+msgid "Instance is already in Rescue Mode: %s"
+msgstr "인스턴스가 이미 복구 모드에 있음: %s"
+
+msgid "Instance is not a member of specified network"
+msgstr "인스턴스가 지정된 네트워크의 멤버가 아님"
+
+msgid "Instance not found"
+msgstr "인스턴스를 찾을 수 없음"
+
+msgid "Instance not yet ready"
+msgstr "인스턴스가 아직 준비되지 않음"
+
+msgid "Instance recreate is not supported."
+msgstr "인스턴스 재작성이 지원되지 않습니다."
+
+#, python-format
+msgid "Instance rollback performed due to: %s"
+msgstr "인스턴스 롤백이 수행됨. 원인: %s"
+
+msgid "Instance snapshots are not permitted at this time."
+msgstr "인스턴스 스냅샷은 지금 허용되지 않습니다. "
+
+#, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)db required by volume %(lv)s."
+msgstr ""
+"볼륨 그룹 %(vg)s의 공간이 충분하지 않습니다. %(free_space)db만 사용 가능하지"
+"만 %(lv)s 볼륨에 %(size)db이(가) 필요합니다."
+
+#, python-format
+msgid "Insufficient compute resources: %(reason)s."
+msgstr "충분하지 않은 계산 자원: %(reason)s."
+
+#, python-format
+msgid "Insufficient free memory on compute node to start %(uuid)s."
+msgstr ""
+"%(uuid)s을(를) 시작하기에는 계산 노드의 사용 가능한 메모리가 부족합니다. "
+
+#, python-format
+msgid "IntegrityError detected when archiving table %s"
+msgstr "테이블 %s을(를) 아카이브할 때 IntegrityError 발견"
+
+#, python-format
+msgid "Interface %(interface)s not found."
+msgstr "%(interface)s 인터페이스를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Invalid Base 64 data for file %(path)s"
+msgstr "파일 %(path)s에 대해 올바르지 않은 Base 64 데이터"
+
+msgid "Invalid CIDR"
+msgstr "올바르지 않은 CIDR"
+
+msgid "Invalid Connection Info"
+msgstr "올바르지 않은 연결 정보"
+
+#, python-format
+msgid "Invalid ID received %(id)s."
+msgstr "올바르지 않은 ID가 %(id)s을(를) 수신했습니다."
+
+#, python-format
+msgid "Invalid IP format %s"
+msgstr "올바르지 않은 IP 형식 %s"
+
+#, python-format
+msgid "Invalid IP protocol %(protocol)s"
+msgstr "올바르지 않은 IP 프로토콜 %(protocol)s"
+
+#, python-format
+msgid "Invalid IP protocol %(protocol)s."
+msgstr "올바르지 않은 IP 프로토콜 %(protocol)s."
+
+#, python-format
+msgid ""
+"Invalid PCI Whitelist: The PCI address %(address)s has an invalid %(field)s."
+msgstr ""
+"올바르지 않은 PCI 화이트리스트: PCI 주소 %(address)s에 올바르지 않은 "
+"%(field)s이(가) 있습니다."
+
+msgid ""
+"Invalid PCI Whitelist: The PCI whitelist can specify devname or address, but "
+"not both"
+msgstr ""
+"올바르지 않은 PCI 화이트리스트: PCI 화이트리스트는 디바이스 이름 또는 주소를 "
+"지정할 수 있지만 둘 다 지정할 수는 없음"
+
+#, python-format
+msgid "Invalid PCI alias definition: %(reason)s"
+msgstr "올바르지 않은 PCI 별명 정의: %(reason)s"
+
+#, python-format
+msgid "Invalid PCI devices Whitelist config %(reason)s"
+msgstr "올바르지 않은 PCI 디바이스 화이트리스트 구성: %(reason)s"
+
+#, python-format
+msgid "Invalid Regular Expression %s"
+msgstr "올바르지 않은 정규식 %s"
+
+msgid "Invalid adminPass"
+msgstr "올바르지 않은 adminPass"
+
+msgid "Invalid association."
+msgstr "연관이 올바르지 않습니다. "
+
+msgid "Invalid attribute in the request"
+msgstr "요청에 올바르지 않은 속성이 있음"
+
+#, python-format
+msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
+msgstr "Invalid broker_hosts 값: %s. hostname:port 형식을 사용해야 함"
+
+msgid "Invalid changes-since value"
+msgstr "올바르지 않은 changes-since 값"
+
+#, python-format
+msgid "Invalid characters in hostname '%(hostname)s'"
+msgstr "호스트 이름 '%(hostname)s'의 올바르지 않은 문자"
+
+msgid "Invalid config_drive provided."
+msgstr "올바르지 않은 config_drive가 제공되었습니다. "
+
+#, python-format
+msgid "Invalid config_drive_format \"%s\""
+msgstr "올바르지 않은 config_drive_format \"%s\""
+
+#, python-format
+msgid "Invalid console type %(console_type)s"
+msgstr "올바르지 않은 콘솔 유형 %(console_type)s"
+
+#, python-format
+msgid "Invalid content type %(content_type)s."
+msgstr "올바르지 않은 컨텐츠 유형 %(content_type)s."
+
+#, python-format
+msgid "Invalid datetime string: %(reason)s"
+msgstr "올바르지 않은 Datetime 문자열: %(reason)s"
+
+msgid "Invalid device UUID."
+msgstr "유효하지 않은 장치 UUID."
+
+#, python-format
+msgid "Invalid entry: '%s'"
+msgstr "올바르지 않은 항목: '%s'"
+
+#, python-format
+msgid "Invalid entry: '%s'; Expecting dict"
+msgstr "올바르지 않은 항목: '%s', 사전 예상"
+
+#, python-format
+msgid "Invalid entry: '%s'; Expecting list or dict"
+msgstr "올바르지 않은 항목: '%s', 목록 또는 사전 예상"
+
+#, python-format
+msgid "Invalid event status `%s'"
+msgstr "올바르지 않은 이벤트 상태 `%s'"
+
+#, python-format
+msgid "Invalid exclusion expression %r"
+msgstr "올바르지 않은 제외 표현식 %r"
+
+#, python-format
+msgid "Invalid field name: %s"
+msgstr "잘못된 필드 이름: %s"
+
+#, python-format
+msgid "Invalid fixed IP Address %s in request"
+msgstr "요청에서 올바르지 않은 고정 IP 주소 %s"
+
+#, python-format
+msgid "Invalid fixed IP address (%s)"
+msgstr "올바르지 않은 고정 IP 주소(%s)"
+
+msgid "Invalid flavorRef provided."
+msgstr "올바르지 않은 flavorRef가 제공되었습니다. "
+
+#, python-format
+msgid "Invalid floating IP %s in request"
+msgstr "요청에서 올바르지 않은 부동 IP %s"
+
+#, python-format
+msgid "Invalid format for name: '%s'"
+msgstr "이름에 대해 올바르지 않은 형식: '%s'"
+
+#, python-format
+msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
+msgstr "올바르지 않은 ID: %(instance_id)s (\"i-...\" 예상)"
+
+#, python-format
+msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
+msgstr "올바르지 않은 ID: %(volume_id)s (\"i-...\" 예상)"
+
+#, python-format
+msgid "Invalid image href %(image_href)s."
+msgstr "올바르지 않은 이미지 href %(image_href)s."
+
+msgid "Invalid image metadata"
+msgstr "올바르지 않은 이미지 메타데이터"
+
+msgid "Invalid imageRef provided."
+msgstr "올바르지 않은 imageRef가 제공되었습니다. "
+
+#, python-format
+msgid "Invalid inclusion expression %r"
+msgstr "올바르지 않은 포함 표현식 %r"
+
+#, python-format
+msgid ""
+"Invalid input for field/attribute %(path)s. Value: %(value)s. %(message)s"
+msgstr ""
+"필드/속성 %(path)s에 대한 올바르지 않은 입력. 값: %(value)s. %(message)s"
+
+#, python-format
+msgid "Invalid input received: %(reason)s"
+msgstr "잘못된 입력을 받음: %(reason)s"
+
+#, python-format
+msgid "Invalid input value \"%s\"."
+msgstr "올바르지 않은 입력 값 \"%s\"입니다."
+
+#, python-format
+msgid "Invalid instance id %s in request"
+msgstr "요청의 인스턴스 ID %s이(가) 올바르지 않음"
+
+msgid "Invalid instance image."
+msgstr "올바르지 않은 인스턴스 이미지"
+
+#, python-format
+msgid "Invalid is_public filter [%s]"
+msgstr "올바르지 않은 is_public 필터 [%s]"
+
+msgid "Invalid key_name provided."
+msgstr "올바르지 않은 key_name이 제공되었습니다. "
+
+#, python-format
+msgid "Invalid memory page size '%(pagesize)s'"
+msgstr "올바르지 않은 메모리 페이지 크기 '%(pagesize)s'"
+
+msgid "Invalid metadata"
+msgstr "올바르지 않은 메타데이터"
+
+msgid "Invalid metadata key"
+msgstr "올바르지 않은 메타데이터 키"
+
+#, python-format
+msgid "Invalid metadata size: %(reason)s"
+msgstr "잘못된 메타데이터 크기: %(reason)s"
+
+#, python-format
+msgid "Invalid metadata: %(reason)s"
+msgstr "잘못된 메타데이터: %(reason)s"
+
+#, python-format
+msgid "Invalid minDisk filter [%s]"
+msgstr "올바르지 않은 minDisk 필터 [%s]"
+
+#, python-format
+msgid "Invalid minRam filter [%s]"
+msgstr "올바르지 않은 minRam 필터 [%s]"
+
+#, python-format
+msgid "Invalid min_ram filter [%s]"
+msgstr "올바르지 않은 min_ram 필터 [%s]"
+
+#, python-format
+msgid "Invalid mode: '%s'"
+msgstr "올바르지 않은 모드: '%s'"
+
+msgid "Invalid name"
+msgstr "올바르지 않은 이름"
+
+#, python-format
+msgid "Invalid policies: %s"
+msgstr "올바르지 않은 정책: %s"
+
+#, python-format
+msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
+msgstr "올바르지 않은 포트 범위 %(from_port)s:%(to_port)s. %(msg)s"
+
+#, python-format
+msgid "Invalid port value: %s. It should be an integer"
+msgstr "올바르지 않은 포트 값: %s. 정수여야 함"
+
+#, python-format
+msgid "Invalid port value: %s. Should be an integer"
+msgstr "올바르지 않은 포트 값: %s. 정수여야 함"
+
+msgid "Invalid proxy request signature."
+msgstr "올바르지 않은 프록시 요청 서명입니다. "
+
+#, python-format
+msgid "Invalid range expression %r"
+msgstr "올바르지 않은 범위 표현식 %r"
+
+msgid "Invalid request body"
+msgstr "올바르지 않은 요청 본문"
+
+#, python-format
+msgid "Invalid request body: %s"
+msgstr "올바르지 않은 요청 본문: %s"
+
+#, python-format
+msgid "Invalid reservation expiration %(expire)s."
+msgstr "올바르지 않은 예약 만기 %(expire)s."
+
+#, python-format
+msgid "Invalid security group name: %(name)s."
+msgstr "올바르지 않은 보안 그룹 이름: %(name)s."
+
+msgid "Invalid service catalog json."
+msgstr "올바르지 않은 서비스 카탈로그 json입니다. "
+
+msgid "Invalid source_type field."
+msgstr "유효하지 않은 소스 타입 필드."
+
+msgid "Invalid start time. The start time cannot occur after the end time."
+msgstr ""
+"시작 시간이 올바르지 않습니다. 종료 시간 후에는 시작 시간이 올 수 없습니다."
+
+msgid "Invalid state of instance files on shared storage"
+msgstr "공유 스토리지에서 인스턴스 파일의 올바르지 않은 상태"
+
+#, python-format
+msgid "Invalid status: '%s'"
+msgstr "올바르지 않은 상태: '%s'"
+
+msgid "Invalid target_lun"
+msgstr "올바르지 않은 target_lun"
+
+#, python-format
+msgid "Invalid timestamp for date %s"
+msgstr "날짜 %s에 대한 올바르지 않은 시간소인"
+
+#, python-format
+msgid "Invalid type for %s"
+msgstr "%s에 올바르지 않은 유형"
+
+#, python-format
+msgid "Invalid type for %s entry"
+msgstr "%s 항목에 올바르지 않은 유형"
+
+#, python-format
+msgid "Invalid update setting: '%s'"
+msgstr "올바르지 않은 업데이트 설정: '%s'"
+
+#, python-format
+msgid "Invalid usage_type: %s"
+msgstr "올바르지 않은 usage_type: %s"
+
+#, python-format
+msgid ""
+"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
+"volume attached at root (%(root)s)"
+msgstr ""
+"instanceId에 대한 올바르지 않은 값 '%(ec2_instance_id)s'입니다. 루트"
+"(%(root)s)에 첨부된 볼륨이 인스턴스에 없습니다."
+
+#, python-format
+msgid "Invalid value '%s' for force."
+msgstr "강제 실행에 대한 올바르지 않은 값 '%s'입니다. "
+
+msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
+msgstr "'scheduler_max_attempts'에 대한 올바르지 않은 값, >= 1이어야 함"
+
+#, python-format
+msgid "Invalid value for Config Drive option: %(option)s"
+msgstr "구성 드라이브 옵션에 대해 올바르지 않은 값: %(option)s"
+
+msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
+msgstr "올바르지 않은 vcpu_pin_set 구성, 하이퍼바이저 cpu 범위에서 벗어남."
+
+#, python-format
+msgid "Invalid virtual interface address %s in request"
+msgstr "요청에서 올바르지 않은 가상 인터페이스 주소 %s"
+
+#, python-format
+msgid "Invalid volume access mode: %(access_mode)s"
+msgstr "올바르지 않은 볼륨 액세스 모드: %(access_mode)s"
+
+msgid "Invalid volume source data"
+msgstr "올바르지 않은 볼륨 소스 데이터"
+
+#, python-format
+msgid "Invalid volume: %(reason)s"
+msgstr "잘못된 볼륨: %(reason)s"
+
+msgid "Invalid volume_size."
+msgstr "유효하지 않은 볼륨 크기."
+
+msgid "Ironic client unavailable, cannot access Ironic."
+msgstr "아이로닉 클라이언트를 사용할 수 없음, 아이로닉에 액세스할 수 없음"
+
+#, python-format
+msgid "Ironic node uuid not supplied to driver for instance %s."
+msgstr "아이로닉 노드 uuid가 인스턴스 %s의 드라이버에 제공되지 않습니다."
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
+"%(power)s)"
+msgstr ""
+"아이로닉 노드: %(id)s이(가) 유효성을 검증하는 데 실패했습니다.(배치: "
+"%(deploy)s, 전원: %(power)s)"
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
+"count: %(vif_count)d, Pif count: %(pif_count)d)"
+msgstr ""
+"아이로닉 노드: 실제 인터페이스 개수에 대한 %(id)s 가상 불일치(Vif 개수: "
+"%(vif_count)d, Pif 개수: %(pif_count)d)"
+
+msgid "Is the appropriate service running?"
+msgstr "적합한 서버가 실행 중입니까?"
+
+#, python-format
+msgid ""
+"It is not allowed to create an interface on external network %(network_uuid)s"
+msgstr "외부 네트워크 %(network_uuid)s에 인터페이스를 작성할 수 없음"
+
+#, python-format
+msgid ""
+"Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d bytes"
+msgstr ""
+"커널/램디스크 이미지가 너무 큼: %(vdi_size)d 바이트, 최대 %(max_size)d 바이트"
+
+msgid ""
+"Key Names can only contain alphanumeric characters, periods, dashes, "
+"underscores, colons and spaces."
+msgstr ""
+"키 이름은 영숫자 문자, 마침표, 대시, 밑줄, 콜론, 공백만 포함할 수 있습니다."
+
+#, python-format
+msgid "Key manager error: %(reason)s"
+msgstr "키 관리자 오류: %(reason)s"
+
+#, python-format
+msgid "Key pair '%(key_name)s' already exists."
+msgstr "'%(key_name)s' 키 쌍이 이미 존재합니다. "
+
+#, python-format
+msgid "Keypair %(name)s not found for user %(user_id)s"
+msgstr "%(user_id)s 사용자에 대한 키 쌍 %(name)s을(를) 찾을 수 없음"
+
+#, python-format
+msgid "Keypair data is invalid: %(reason)s"
+msgstr "키 쌍 데이터가 올바르지 않음: %(reason)s"
+
+msgid "Keypair name contains unsafe characters"
+msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
+
+msgid "Keypair name must be string and between 1 and 255 characters long"
+msgstr "키 쌍 이름은 문자열이고 길이가 1 - 255자 범위에 속해야 함"
+
+#, python-format
+msgid "Last %s nova syslog entries:-"
+msgstr "마지막 %s nova syslog 항목:-"
+
+msgid "Length in request body must be an integer value"
+msgstr "요청 본문의 길이는 정수 값이어야 함"
+
+#, python-format
+msgid ""
+"Libvirt '%s' or later is required for online deletion of volume snapshots."
+msgstr "볼륨 스냅샷을 온라인으로 삭제하려면 Libvirt '%s' 이상이 필요합니다."
+
+msgid "Limit"
+msgstr "제한"
+
+#, python-format
+msgid "Line %(linenum)d : %(line)s"
+msgstr "행 %(linenum)d : %(line)s"
+
+#, python-format
+msgid "Link Local address is not found.:%s"
+msgstr "링크 로컬 주소를 찾을 수 없음.:%s"
+
+msgid ""
+"List of file systems that are configured in this file in the image_file_url:"
+"<list entry name> sections"
+msgstr ""
+"이 파일의 image_file_url:<list entry name> 섹션에서 구성된 파일 시스템 목록"
+
+#, python-format
+msgid "Live migration failed: %s"
+msgstr "라이브 마이그레이션 실패: %s"
+
+msgid "Live migration is not enabled on this host"
+msgstr "이 호스트에서 라이브 마이그레이션을 사용할 수 없음"
+
+#, python-format
+msgid "Live migration is not supported on target host \"%s\""
+msgstr "대상 호스트 \"%s\"에서 라이브 마이그레이션이 지원되지 않음"
+
+msgid "Live migration is supported starting with Hyper-V Server 2012"
+msgstr "Hyper-V Server 2012부터 라이브 마이그레이션이 지원됨 "
+
+msgid "Live migration networks are not configured on this host"
+msgstr "이 호스트에서 라이브 마이그레이션 네트워크가 구성되지 않음"
+
+#, python-format
+msgid "Live migration of instance %(id)s to host %(host)s failed"
+msgstr "%(host)s 호스트로 %(id)s 인스턴스의 라이브 마이그레이션 실패"
+
+#, python-format
+msgid "Live migration of instance %s to another host failed"
+msgstr "다른 호스트로 %s 인스턴스의 라이브 마이그레이션에 실패함"
+
+msgid ""
+"Live migration of instances with config drives is not supported in libvirt "
+"unless libvirt instance path and drive data is shared across compute nodes."
+msgstr ""
+"구성 드라이브가 포함된 인스턴스의 실시간 마이그레이션은 libvirt 인스턴스 경로"
+"와 드라이브 데이터를 계산 노드에서 공유하는 경우에만 libvirt에서 지원됩니다."
+
+msgid "Malformed createBackup entity"
+msgstr "형식이 틀린 createBackup 엔티티"
+
+#, python-format
+msgid "Malformed message body: %(reason)s"
+msgstr "잘못된 메시지 본문: %(reason)s"
+
+#, python-format
+msgid ""
+"Malformed request URL: URL's project_id '%(project_id)s' doesn't match "
+"Context's project_id '%(context_project_id)s'"
+msgstr ""
+"잘못 구성된 요청 URL: URL의 프로젝트 ID '%(project_id)s'이(가)컨텍스트의 프로"
+"젝트 ID '%(context_project_id)s'과(와) 일치하지 않습니다. "
+
+msgid "Malformed request body"
+msgstr "형식이 틀린 요청 본문"
+
+msgid "Malformed request body. meta item must be object"
+msgstr "형식이 틀린 요청 본문입니다. 메타 항목은 오브젝트여야 함"
+
+msgid "Malformed request body. metadata must be object"
+msgstr "형식이 틀린 요청 본문입니다. 메타데이터는 오브젝트여야 함"
+
+msgid "Malformed scheduler_hints attribute"
+msgstr "형식이 틀린 scheduler_hints 속성"
+
+msgid "Mapping image to local is not supported."
+msgstr "이미지에 대한 로컬 매핑은 지원되지 않습니다."
+
+#, python-format
+msgid "Marker %(marker)s could not be found."
+msgstr "%(marker)s 마커를 찾을 수 없습니다. "
+
+msgid "Maximum allowed length for 'label' is 255."
+msgstr "'레이블'의 최대 허용 길이는 255입니다. "
+
+msgid "Maximum number of fixed ips exceeded"
+msgstr "고정 IP의 최대 수를 초과함"
+
+msgid "Maximum number of floating ips exceeded"
+msgstr "부동 IP의 최대 수 초과"
+
+msgid "Maximum number of key pairs exceeded"
+msgstr "키 쌍의 최대 수 초과"
+
+#, python-format
+msgid "Maximum number of metadata items exceeds %(allowed)d"
+msgstr "메타데이터의 최대 수가 %(allowed)d을(를) 초과함"
+
+msgid "Maximum number of ports exceeded"
+msgstr "최대 포트 수를 초과함"
+
+msgid "Maximum number of security groups or rules exceeded"
+msgstr "보안 그룹 또는 규칙의 최대 수 초과"
+
+msgid "Metadata item was not found"
+msgstr "메타데이터 항목이 없음"
+
+msgid "Metadata property key greater than 255 characters"
+msgstr "메타데이터 특성 키가 255자보다 큼"
+
+msgid "Metadata property value greater than 255 characters"
+msgstr "메타데이터 특성 값이 255자보다 큼"
+
+msgid "Metadata type should be dict."
+msgstr "메타데이터 유형은 dict여야 합니다."
+
+#, python-format
+msgid ""
+"Metric %(name)s could not be found on the compute host node %(host)s."
+"%(node)s."
+msgstr ""
+"메트릭 %(name)s을(를) 계산 호스트 노드 %(host)s.%(node)s.에서 찾을 수 없습니"
+"다."
+
+msgid "Metrics collection is not supported on this version of Hyper-V"
+msgstr "이 버전의 Hyper-V에서는 메트릭 콜렉션이 지원되지 않음"
+
+msgid "Migrate Receive failed"
+msgstr "마이그레이션 수신 실패"
+
+msgid "Migrate Send failed"
+msgstr "마이그레이션 전송 실패"
+
+#, python-format
+msgid "Migration %(migration_id)s could not be found."
+msgstr "%(migration_id)s 마이그레이션을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Migration error: %(reason)s"
+msgstr "마이그레이션 오류: %(reason)s"
+
+msgid "Migration is not supported for LVM backed instances"
+msgstr "LVM 지원 인스턴스에 마이그레이션이 지원되지 않음"
+
+#, python-format
+msgid ""
+"Migration not found for instance %(instance_id)s with status %(status)s."
+msgstr ""
+"%(status)s 상태를 갖는 %(instance_id)s 인스턴스에 대한 마이그레이션을 찾을 "
+"수 없습니다. "
+
+#, python-format
+msgid "Migration pre-check error: %(reason)s"
+msgstr "마이그레이션 사전 확인 오류: %(reason)s"
+
+msgid "Missing 'address' argument for removeFixedIp"
+msgstr "removeFixedIp에 대한 'address' 인수 누락"
+
+msgid "Missing 'networkId' argument for addFixedIp"
+msgstr "addFixedIp에 대한 'networkId' 인수 누락"
+
+msgid "Missing argument 'type' for reboot"
+msgstr "다시 부팅에 대한 인수 'type' 누락"
+
+#, python-format
+msgid "Missing arguments: %s"
+msgstr "누락된 인수: %s"
+
+#, python-format
+msgid "Missing column %(table)s.%(column)s in shadow table"
+msgstr "새도우 테이블에 %(table)s.%(column)s 열이 누락됨"
+
+msgid "Missing device UUID."
+msgstr "장치 UUID가 빠져있음."
+
+msgid "Missing disabled reason field"
+msgstr "사용 안함 이유 필드가 누락됨"
+
+msgid "Missing flavorRef attribute"
+msgstr "flavorRef 속성 누락"
+
+msgid "Missing imageRef attribute"
+msgstr "imageRef 속성 누락"
+
+#, python-format
+msgid "Missing keys: %s"
+msgstr "누락 키: %s"
+
+msgid "Missing network in body"
+msgstr "본문에서 네트워크 누락"
+
+#, python-format
+msgid "Missing parameter %s"
+msgstr "누락된 매개변수 %s"
+
+msgid "Missing parameter dict"
+msgstr "매개변수 사전 누락"
+
+msgid "Missing tenant parameter"
+msgstr "테넌트 매개변수 누락"
+
+#, python-format
+msgid ""
+"More than one instance is associated with fixed ip address '%(address)s'."
+msgstr ""
+"둘 이상의 인스턴스가 고정 IP 주소 '%(address)s'과(와) 연관되어 있습니다. "
+
+msgid ""
+"More than one possible network found. Specify network ID(s) to select which "
+"one(s) to connect to."
+msgstr ""
+"사용 가능한 네트워크를 두 개 이상 발견했습니다. 네트워크 ID를 지정하여 연결"
+"할 항목을 선택하십시오."
+
+msgid "More than one swap drive requested."
+msgstr "둘 이상의 스왑 드라이브를 요청함 "
+
+#, python-format
+msgid "Multi-boot operating system found in %s"
+msgstr "%s에 다중 부트 운영 체제가 있음"
+
+msgid "Multiple X-Instance-ID headers found within request."
+msgstr "요청에 다중 X-Instance-ID 헤더가 있습니다. "
+
+msgid "Multiple X-Tenant-ID headers found within request."
+msgstr "요청 내에 다중 ltiple X-Tenant-ID 헤더가 있습니다."
+
+#, python-format
+msgid "Multiple floating IP pools matches found for name '%s'"
+msgstr "'%s' 이름에 대해 다중 부동 IP 풀 일치가 발견됨"
+
+#, python-format
+msgid "Multiple floating ips are found for address %(address)s."
+msgstr "주소 %(address)s에 대한 복수 부동 IP를 찾았습니다. "
+
+msgid ""
+"Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
+"not return uptime for just one host."
+msgstr ""
+"VMWare vCenter 드라이버에서 다중 호스트를 관리할 수도 있습니다. 따라서 단지 "
+"하나의 호스트에 대해서만 가동 시간을 리턴하지는 않습니다."
+
+msgid "Multiple possible networks found, use a Network ID to be more specific."
+msgstr ""
+"가능한 여러 개의 네트워크가 발견됨. 좀 더 구체적인 네트워크 ID를 사용하십시"
+"오. "
+
+#, python-format
+msgid ""
+"Multiple security groups found matching '%s'. Use an ID to be more specific."
+msgstr ""
+"여러 개의 보안 그룹에서 일치하는 '%s'을(를) 찾았습니다. 좀 더 구체적인 ID를 "
+"사용하십시오."
+
+msgid "Must input network_id when request IP address"
+msgstr "IP 주소 요청 시 network_id를 입력해야 함"
+
+msgid "Must not input both network_id and port_id"
+msgstr "network_id 및 port_id 둘 다 입력하지 않아야 함"
+
+msgid "Must specify an ExtensionManager class"
+msgstr "ExtensionManager 클래스를 지정해야 함"
+
+msgid ""
+"Must specify connection_url, connection_username (optionally), and "
+"connection_password to use compute_driver=xenapi.XenAPIDriver"
+msgstr ""
+"connection_url, connection_username (optionally), connection_password를 지정"
+"해야 compute_driver=xenapi.XenAPIDriver를 사용할 수 있음"
+
+msgid ""
+"Must specify host_ip, host_username and host_password to use vmwareapi."
+"VMwareVCDriver"
+msgstr ""
+"host_ip, host_username 및 host_password를 지정해야 vmwareapi.VMwareVCDriver"
+"를 사용할 수 있음"
+
+msgid "Must supply a positive value for max_rows"
+msgstr "최대 행 값으로 양수를 제공해야 합니다. "
+
+msgid "Netmask to push into openvpn config"
+msgstr "openvpn 구성에 푸시할 넷마스크"
+
+#, python-format
+msgid "Network %(network_id)s could not be found."
+msgstr "%(network_id)s 네트워크를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Network %(network_id)s is duplicated."
+msgstr "%(network_id)s 네트워크가 중복입니다. "
+
+#, python-format
+msgid "Network %(network_id)s is still in use."
+msgstr "%(network_id)s 네트워크가 아직 사용 중입니다. "
+
+#, python-format
+msgid ""
+"Network %(network_uuid)s requires a subnet in order to boot instances on."
+msgstr "인스턴스를 부팅하려면 %(network_uuid)s 네트워크에 서브넷이 필요합니다."
+
+#, python-format
+msgid "Network adapter %(adapter)s could not be found."
+msgstr "%(adapter)s 네트워크 어댑터를 찾을 수 없습니다. "
+
+msgid "Network cidr or cidr_v6 is required"
+msgstr "네트워크 cidr 또는 cidr_v6이 필수임"
+
+#, python-format
+msgid "Network could not be found for bridge %(bridge)s"
+msgstr "%(bridge)s 브릿지에 대한 네트워크를 찾을 수 없음"
+
+#, python-format
+msgid "Network could not be found for instance %(instance_id)s."
+msgstr "%(instance_id)s 인스턴스에 대한 네트워크를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Network could not be found for uuid %(uuid)s"
+msgstr "UUID %(uuid)s에 대한 네트워크를 찾을 수 없음"
+
+#, python-format
+msgid "Network could not be found with cidr %(cidr)s."
+msgstr "cidr %(cidr)s에 대한 네트워크를 찾을 수 없습니다. "
+
+msgid "Network driver does not support this function."
+msgstr "네트워크 드라이버가 이 기능을 지원하지 않습니다."
+
+#, python-format
+msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
+msgstr ""
+"%(host)s 네트워크 호스트는 %(network_id)s 네트워크에서 0개의 고정 IP를 갖고 "
+"있습니다. "
+
+msgid "Network label is required"
+msgstr "네트워크 레이블 필수"
+
+#, python-format
+msgid ""
+"Network must be disassociated from project %(project_id)s before it can be "
+"deleted."
+msgstr ""
+"삭제하려면 먼저 %(project_id)s 프로젝트에서 네트워크를 연관 해제해야 합니다."
+
+msgid "Network not found"
+msgstr "네트워크를 찾을 수 없음"
+
+msgid ""
+"Network requires port_security_enabled and subnet associated in order to "
+"apply security groups."
+msgstr ""
+"보안 그룹을 적용하기 위해서는 네트워크에 port_security_enabled 및 서브넷이 연"
+"관되어 있어야 합니다."
+
+#, python-format
+msgid "Network set host failed for network %(network_id)s."
+msgstr "%(network_id)s 네트워크에 대해 네트워크 세트 호스트가 실패했습니다. "
+
+msgid "Network to push into openvpn config"
+msgstr "openvpn 구성에 푸시할 네트워크"
+
+msgid "New volume must be detached in order to swap."
+msgstr "스왑하려면 새 볼륨을 분리해야 합니다."
+
+msgid "New volume must be the same size or larger."
+msgstr "새 볼륨은 동일한 크기이거나 이상이어야 합니다."
+
+msgid "No CIDR requested"
+msgstr "요청된 CIDR이 없음"
+
+#, python-format
+msgid "No CPUs available after parsing %r"
+msgstr "%r 구문 분석한 후 사용 가능한 CPU가 없음"
+
+msgid "No Request Body"
+msgstr "요청 본문 없음"
+
+msgid "No Unique Match Found."
+msgstr "고유한 일치점을 찾지 못했습니다."
+
+msgid "No adminPass was specified"
+msgstr "adminPass가 지정되지 않았음"
+
+#, python-format
+msgid "No agent-build associated with id %(id)s."
+msgstr "ID %(id)s과(와) 연관된 에이전트 빌드가 없습니다. "
+
+msgid "No cell given in routing path."
+msgstr "라우팅 경로에 셀이 없습니다."
+
+msgid "No cell information in request"
+msgstr "요청에 셀 정보가 없음"
+
+msgid "No cell name in request"
+msgstr "요청에 셀 이름이 없음"
+
+msgid "No cells available matching scheduling criteria."
+msgstr "스케줄링 기준과 일치하는 셀을 사용할 수 없습니다. "
+
+msgid "No compute host specified"
+msgstr "지정된 계산 호스트가 없음"
+
+#, python-format
+msgid "No device with MAC address %s exists on the VM"
+msgstr "VM에 MAC 주소가 %s인 디바이스가 없음"
+
+#, python-format
+msgid "No device with interface-id %s exists on VM"
+msgstr "VM에 인터페이스 ID가 %s인 디바이스가 없음"
+
+#, python-format
+msgid "No disk at %(location)s"
+msgstr "%(location)s에 디스크가 없음"
+
+msgid "No errors in logfiles!"
+msgstr "로그 파일에 오류가 없습니다!"
+
+msgid "No external vswitch found"
+msgstr "외부 vswitch를 찾을 수 없음"
+
+#, python-format
+msgid "No fixed IP addresses available for network: %(net)s"
+msgstr "네트워크에 사용 가능한 고정 IP 주소가 없음: %(net)s"
+
+#, python-format
+msgid "No fixed IP associated with id %(id)s."
+msgstr "ID %(id)s과(와) 연관된 고정 IP가 없습니다. "
+
+msgid "No fixed IP found."
+msgstr "고정 IP를 찾을 수 없음."
+
+msgid "No fixed ips associated to instance"
+msgstr "인스턴스와 연관된 고정 IP가 없음"
+
+msgid "No floating IP addresses have been defined."
+msgstr "정의된 부동 IP 주소가 없습니다. "
+
+#, python-format
+msgid "No free disk device names for prefix '%s'"
+msgstr "'%s' 접두부에 대한 여유 디스크 디바이스 이름이 없음"
+
+msgid "No free nbd devices"
+msgstr "여유 nbd 디바이스 없음"
+
+#, python-format
+msgid "No free port available for instance %(instance)s."
+msgstr "%(instance)s 인스턴스를 위해 사용할 수 있는 여유 포트가 없습니다. "
+
+msgid "No host available on cluster"
+msgstr "클러스터에서 사용 가능한 호스트가 없음"
+
+#, python-format
+msgid "No hypervisor matching '%s' could be found."
+msgstr "'%s'과(와) 일치하는 하이퍼바이저를 찾을 수 없습니다. "
+
+msgid "No image locations are accessible"
+msgstr "액세스 가능한 이미지 위치가 없음"
+
+msgid "No instances found for any event"
+msgstr "이벤트에 대한 인스턴스를 찾을 수 없음"
+
+#, python-format
+msgid "No matching ID for the URL %s was found."
+msgstr "%s URL에 대해 일치하는 ID를 찾을 수 없습니다."
+
+msgid "No more available networks."
+msgstr "더 이상 사용 가능한 네트워크가 없습니다."
+
+msgid "No more floating ips available."
+msgstr "추가 부동 IP를 사용할 수 없습니다. "
+
+#, python-format
+msgid "No more floating ips in pool %s."
+msgstr "%s 풀에 추가 부동 IP가 없습니다. "
+
+msgid "No networks defined."
+msgstr "정의된 네트워크가 없습니다. "
+
+msgid "No networks found"
+msgstr "네트워크를 찾을 수 없음"
+
+msgid "No nova entries in syslog!"
+msgstr "syslog에 nova 항목이 없음!"
+
+msgid "No nw_info cache associated with instance"
+msgstr "인스턴스와 연관된 nw_info 캐시가 없음"
+
+#, python-format
+msgid "No operating system found in %s"
+msgstr "%s에 운영 체제가 없음"
+
+#, python-format
+msgid "No primary VDI found for %s"
+msgstr "%s에 대한 1차 VDI를 찾을 수 없음"
+
+msgid "No request body"
+msgstr "요청 본문 없음"
+
+msgid "No root disk defined."
+msgstr "루트 디스크가 정의되지 않았습니다."
+
+msgid "No rule for the specified parameters."
+msgstr "지정된 매개변수에 대한 규칙이 없습니다. "
+
+msgid "No suitable network for migrate"
+msgstr "마이그레이션을 위한 지속 가능한 네트워크 없음"
+
+msgid "No valid host found for cold migrate"
+msgstr "콜드 마이그레이션에 대한 유효한 호스트를 찾을 수 없음"
+
+msgid "No valid host found for resize"
+msgstr "크기 조정할 올바른 호스트를 찾을 수 없음"
+
+#, python-format
+msgid "No valid host was found. %(reason)s"
+msgstr "유효한 호스트가 없습니다. %(reason)s"
+
+#, python-format
+msgid "No volume Block Device Mapping at path: %(path)s"
+msgstr "경로 %(path)s에 볼륨 블록 디바이스 맵핑이 없음"
+
+#, python-format
+msgid "No volume Block Device Mapping with id %(volume_id)s."
+msgstr "ID가 %(volume_id)s인 볼륨 블록 디바이스 맵핑이 없습니다."
+
+#, python-format
+msgid "Node %s could not be found."
+msgstr "%s 노드를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Not able to acquire a free port for %(host)s"
+msgstr "%(host)s에 사용 가능한 포트를 획득할 수 없음"
+
+#, python-format
+msgid "Not able to bind %(host)s:%(port)d, %(error)s"
+msgstr "%(host)s:%(port)d, %(error)s을(를) 바인드할 수 없음"
+
+#, python-format
+msgid "Not allowed to modify attributes for image %s"
+msgstr "%s 이미지의 속성을 수정하도록 허용하지 않음"
+
+msgid "Not an rbd snapshot"
+msgstr "rbd 스냅샷이 아님"
+
+#, python-format
+msgid "Not authorized for image %(image_id)s."
+msgstr "%(image_id)s 이미지에 대한 권한이 없습니다. "
+
+msgid "Not authorized."
+msgstr "인증되지 않음."
+
+msgid "Not enough parameters to build a valid rule."
+msgstr "유효한 규칙을 빌드하기엔 매개변수가 부족합니다. "
+
+#, python-format
+msgid "Not enough parameters: %(reason)s"
+msgstr "매개변수가 충분하지 않음: %(reason)s"
+
+msgid "Not implemented on Windows"
+msgstr "Windows에서 구현되지 않음"
+
+msgid "Not stored in rbd"
+msgstr "rbd에 저장되지 않음"
+
+#, python-format
+msgid "Nova requires libvirt version %s or greater."
+msgstr "Nova에 libvirt 버전 %s 이상이 필요합니다."
+
+#, python-format
+msgid "Number of retries to plugin (%(num_retries)d) exceeded."
+msgstr "플러그인에 대한 재시도 횟수 %(num_retries)d)이(가) 초과됨."
+
+#, python-format
+msgid ""
+"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
+"valid."
+msgstr ""
+"'%(property)s'에 지정된 직렬 포트의 수 '%(num_ports)s'이(가) 올바르지 않습니"
+"다."
+
+#, python-format
+msgid "Object action %(action)s failed because: %(reason)s"
+msgstr "%(action)s 오브젝트 조치가 실패함. 이유: %(reason)s"
+
+msgid "Old volume is attached to a different instance."
+msgstr "이전 볼륨이 다른 인스턴스에 접속되어 있습니다."
+
+#, python-format
+msgid ""
+"Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
+"%(unit_string)s."
+msgstr ""
+"모든 %(unit_string)s의 %(uri)s에는 %(value)s %(verb)s 요청만 작성할 수 있습니"
+"다."
+
+msgid "Only 'updated_since', 'project_id' and 'deleted' are understood."
+msgstr "'updated_since', 'project_id', 'deleted'만 이해됩니다."
+
+msgid "Only administrators may list deleted instances"
+msgstr "관리자만 삭제된 인스턴스를 나열할 수 있음"
+
+#, python-format
+msgid ""
+"Only file-based SRs (ext/NFS) are supported by this feature.  SR %(uuid)s is "
+"of type %(type)s"
+msgstr ""
+"이 기능에서는 파일 기반 SR(ext/NFS)만 지원합니다. SR %(uuid)s이(가) %(type)s "
+"유형입니다."
+
+msgid "Only host parameter can be specified"
+msgstr "호스트 매개변수만 지정할 수 있음"
+
+msgid "Only instances implemented"
+msgstr "인스턴스만 구현됨"
+
+msgid "Only root certificate can be retrieved."
+msgstr "루트 인증서만 검색할 수 있습니다. "
+
+#, python-format
+msgid "OpenSSL error: %s"
+msgstr "OpenSSL 오류: %s"
+
+#, python-format
+msgid "Operation failed with return value: %s"
+msgstr "오퍼레이션 실패. 리턴값: %s"
+
+msgid "Origin header does not match this host."
+msgstr "원본 헤더가 이 호스트와 일치하지 않습니다."
+
+msgid "Origin header not valid."
+msgstr "원본 헤더가 올바르지 않습니다."
+
+msgid "Origin header protocol does not match this host."
+msgstr "원본 헤더 프로토콜이 이 호스트와 일치하지 않습니다."
+
+#, python-format
+msgid "PCI Device %(node_id)s:%(address)s not found."
+msgstr "PCI 디바이스 %(node_id)s:%(address)s을(를) 찾을 수 없음"
+
+#, python-format
+msgid "PCI alias %(alias)s is not defined"
+msgstr "PCI 별명 %(alias)s이(가) 정의되지 않음 "
+
+#, python-format
+msgid ""
+"PCI device %(compute_node_id)s:%(address)s is %(status)s instead of "
+"%(hopestatus)s"
+msgstr ""
+"PCI 디바이스 %(compute_node_id)s:%(address)s이(가) %(status)s 상태임"
+"(%(hopestatus)s 대신)"
+
+#, python-format
+msgid ""
+"PCI device %(compute_node_id)s:%(address)s is owned by %(owner)s instead of "
+"%(hopeowner)s"
+msgstr ""
+"PCI 디바이스 %(compute_node_id)s:%(address)s을(를) %(owner)s이(가) 소유함"
+"(%(hopeowner)s 대신)"
+
+#, python-format
+msgid "PCI device %(id)s not found"
+msgstr "PCI 디바이스 %(id)s을(를) 찾을 수 없음"
+
+#, python-format
+msgid "PCI device request (%requests)s failed"
+msgstr "PCI 디바이스 요청(%requests)이 실패함"
+
+#, python-format
+msgid ""
+"PCS doesn't support images in %s format. You should either set "
+"force_raw_images=True in config or upload an image in ploop or raw format."
+msgstr ""
+"PCS에서 %s 형식의 이미지를 지원하지 않습니다. 구성에 force_raw_images=True를 "
+"설정하거나 ploop 또는 원시 형식으로 이미지를 업로드하십시오."
+
+#, python-format
+msgid ""
+"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
+"%(vlan_num)d"
+msgstr ""
+"네트워크 %(bridge)s에 대한 PIF %(pif_uuid)s이(가) VLAN id %(pif_vlan)d을(를) "
+"갖고 있습니다. 예상 %(vlan_num)d"
+
+#, python-format
+msgid "PIF %s does not contain IP address"
+msgstr "PIF %s에 IP 주소가 없음"
+
+msgid "PROJECT"
+msgstr "PROJECT"
+
+#, python-format
+msgid "Page size %(pagesize)s forbidden against '%(against)s'"
+msgstr "페이지 크기 %(pagesize)s이(가) '%(against)s'에 대해 금지됨"
+
+#, python-format
+msgid "Page size %(pagesize)s is not supported by the host."
+msgstr "호스트에서 페이지 크기 %(pagesize)s을(를) 지원하지 않습니다."
+
+#, python-format
+msgid "Path %s must be LVM logical volume"
+msgstr "경로 %s은(는) LVM 논리적 볼륨이어야 함"
+
+#, python-format
+msgid "Path does not exist %(path)s"
+msgstr "경로가 %(path)s에 존재하지 않음"
+
+msgid "Paused"
+msgstr "정지함"
+
+msgid "Personality cannot be updated."
+msgstr "특성은 업데이트할 수 없습니다. "
+
+#, python-format
+msgid "Personality content for %s cannot be decoded"
+msgstr "%s의 특성 컨텐츠를 디코드할 수 없음"
+
+msgid "Personality file content too long"
+msgstr "특성 파일 컨텐츠가 너무 김"
+
+msgid "Personality file limit exceeded"
+msgstr "특성 파일 한계 초과"
+
+msgid "Personality file path too long"
+msgstr "특성 파일 경로가 너무 김"
+
+#, python-format
+msgid "Physical network is missing for network %(network_uuid)s"
+msgstr "%(network_uuid)s 네트워크의 실제 네트워크가 누락됨"
+
+msgid "Please re-run nova-manage as root."
+msgstr "루트로 nova-manage를 다시 실행하십시오."
+
+msgid "Please specify either fixed_range or uuid"
+msgstr "고정 범위 또는 UUID를 지정하십시오. "
+
+#, python-format
+msgid "Plug vif failed because of unexpected vif_type=%s"
+msgstr "예상치 않은 vif_type=%s(으)로 인해 vif 플러그 실패"
+
+#, python-format
+msgid "Plugin version mismatch (Expected %(exp)s, got %(got)s)"
+msgstr "플러그인 버전 불일치(예상: %(exp)s, 결과: %(got)s)"
+
+#, python-format
+msgid "Policy doesn't allow %(action)s to be performed."
+msgstr "정책이 %(action)s이(가) 수행되도록 허용하지 않습니다. "
+
+#, python-format
+msgid "Policy doesn't allow %s to be performed."
+msgstr "정책에서 수행해야 할 %s을(를) 허용하지 않습니다."
+
+#, python-format
+msgid "Port %(port_id)s is still in use."
+msgstr "%(port_id)s 포트가 아직 사용 중입니다. "
+
+#, python-format
+msgid "Port %(port_id)s not usable for instance %(instance)s."
+msgstr "%(port_id)s 포트를 %(instance)s 인스턴스에 사용할 수 없습니다. "
+
+#, python-format
+msgid "Port %(port_id)s requires a FixedIP in order to be used."
+msgstr "%(port_id)s 포트를 사용하려면 FixedIP가 필요합니다."
+
+#, python-format
+msgid "Port %s is not attached"
+msgstr "%s 포트가 접속되지 않음"
+
+#, python-format
+msgid "Port id %(port_id)s could not be found."
+msgstr "포트 ID %(port_id)s을(를) 찾을 수 없습니다."
+
+#, python-format
+msgid "Project %(project_id)s could not be found."
+msgstr "%(project_id)s 프로젝트를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Provided video model (%(model)s) is not supported."
+msgstr "제공된 비디오 모델(%(model)s)이 지원되지 않습니다."
+
+#, python-format
+msgid "Provided watchdog action (%(action)s) is not supported."
+msgstr "제공된 watchdog 조치(%(action)s)가 지원되지 않습니다."
+
+msgid "QEMU guest agent is not enabled"
+msgstr "QEMU 게스트 에이전트가 사용되지 않음"
+
+msgid "Quota"
+msgstr "Quota"
+
+#, python-format
+msgid "Quota class %(class_name)s could not be found."
+msgstr "%(class_name)s 할당량 클래스를 찾을 수 없습니다. "
+
+msgid "Quota could not be found"
+msgstr "할당량을 찾을 수 없음"
+
+#, python-format
+msgid "Quota exceeded for resources: %(overs)s"
+msgstr "자원에 대한 할당량 초과: %(overs)s"
+
+msgid "Quota exceeded, too many key pairs."
+msgstr "할당량 초과. 키 쌍이 너무 많습니다. "
+
+msgid "Quota exceeded, too many networks."
+msgstr "할당량 초과. 네트워크가 너무 많습니다. "
+
+msgid "Quota exceeded, too many security group rules."
+msgstr "할당량 초과. 보안 그룹 규칙이 너무 많습니다. "
+
+msgid "Quota exceeded, too many security groups."
+msgstr "할당량 초과. 보안 그룹이 너무 많습니다. "
+
+msgid "Quota exceeded, too many server groups."
+msgstr "할당량 초과. 서버 그룹이 너무 많습니다. "
+
+msgid "Quota exceeded, too many servers in group"
+msgstr "할당량 초과. 그룹에 서버가 너무 많습니다. "
+
+#, python-format
+msgid "Quota exceeded: code=%(code)s"
+msgstr "할당량 초과: 코드=%(code)s"
+
+#, python-format
+msgid "Quota exists for project %(project_id)s, resource %(resource)s"
+msgstr ""
+"프로젝트 %(project_id)s, 자원 %(resource)s에 대한 할당량이 존재합니다. "
+
+#, python-format
+msgid "Quota for project %(project_id)s could not be found."
+msgstr "%(project_id)s 프로젝트에 대한 할당량을 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Quota for user %(user_id)s in project %(project_id)s could not be found."
+msgstr ""
+"%(project_id)s 프로젝트의 %(user_id)s 사용자에 대한 할당량을 찾을 수 없습니"
+"다."
+
+#, python-format
+msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
+msgstr "%(resource)s의 할당량 한계 %(limit)s은(는) -1 이상이어야 합니다. "
+
+#, python-format
+msgid ""
+"Quota limit %(limit)s for %(resource)s must be greater than or equal to "
+"already used and reserved %(minimum)s."
+msgstr ""
+"%(resource)s의 할당량 한계 %(limit)s은(는) 이미 사용되고 예약된 %(minimum)s "
+"이상이어야 합니다."
+
+#, python-format
+msgid ""
+"Quota limit %(limit)s for %(resource)s must be less than or equal to "
+"%(maximum)s."
+msgstr ""
+"%(resource)s의 할당량 한계 %(limit)s은(는) %(maximum)s 이하여야 합니다."
+
+msgid "Quota limit must be -1 or greater."
+msgstr "할당량 한계는 -1 이상이어야 합니다. "
+
+#, python-format
+msgid "Quota limit must be greater than %s."
+msgstr "할당량 한계가 %s보다 커야 합니다."
+
+#, python-format
+msgid "Quota limit must be less than %s."
+msgstr "할당량 한계가 %s보다 작아야 합니다."
+
+#, python-format
+msgid "Quota reservation %(uuid)s could not be found."
+msgstr "할당 예약 %(uuid)s을(를) 찾을 수 없습니다. "
+
+#, python-format
+msgid "Quota usage for project %(project_id)s could not be found."
+msgstr "%(project_id)s 프로젝트에 대한 할당 사용량을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Reached maximum number of retries trying to unplug VBD %s"
+msgstr "VBD %s을(를) 언플러그하려는 최대 재시도 횟수에 도달했음"
+
+msgid "Request body and URI mismatch"
+msgstr "요청 본문 및 URI 불일치"
+
+msgid "Request body contains too many items"
+msgstr "요청 본문에 너무 많은 항목이 들어있음"
+
+msgid "Request is too large."
+msgstr "요청이 너무 큽니다. "
+
+msgid ""
+"Request must include either Timestamp or Expires, but cannot contain both"
+msgstr ""
+"요청은 Timestamp 또는 Expires 중 하나를 포함해야 하지만, 둘 다 포함할 수는 없"
+"습니다. "
+
+#, python-format
+msgid "Requested VM Generation %s is not supported on this OS."
+msgstr "이 OS는 요청된 VM 생성 %s을(를) 지원하지 않습니다."
+
+#, python-format
+msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
+msgstr "VM 생성 %s을(를) 요청했지만 VHDX 대신 VHD를 제공했습니다."
+
+#, python-format
+msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
+msgstr "요청된 cidr(%(cidr)s)이 기존 cidr(%(other)s)과 충돌함"
+
+#, python-format
+msgid ""
+"Requested hardware '%(model)s' is not supported by the '%(virt)s' virt driver"
+msgstr ""
+"'%(virt)s' virt 드라이버가 요청된 하드웨어 '%(model)s'을(를) 지원하지 않음"
+
+#, python-format
+msgid "Requested image %(image)s has automatic disk resize disabled."
+msgstr ""
+"요청한 이미지 %(image)s에서 자동 디스크 크기 조정을 사용할 수 없습니다."
+
+msgid ""
+"Requested instance NUMA topology cannot fit the given host NUMA topology"
+msgstr ""
+"요청된 인스턴스 NUMA 토폴로지를 제공된 호스트 NUMA 토폴로지에 맞출 수 없음"
+
+msgid ""
+"Requested instance NUMA topology together with requested PCI devices cannot "
+"fit the given host NUMA topology"
+msgstr ""
+"요청된 인스턴스 NUMA 토폴로지와 요청된 PCI 디바이스를 함께 제공된 호스트 "
+"NUMA 토폴로지에 맞출 수 없음"
+
+msgid "Requested network does not contain enough (2+) usable hosts"
+msgstr "요청된 네트워크에 충분한(2+) 가용 호스트가 없음"
+
+#, python-format
+msgid ""
+"Requested vCPU limits %(sockets)d:%(cores)d:%(threads)d are impossible to "
+"satisfy for vcpus count %(vcpus)d"
+msgstr ""
+"요청된 vCPU 한계 %(sockets)d:%(cores)d:%(threads)d은(는) vcpus 개수 %(vcpus)d"
+"을(를) 충족시킬 수 없음"
+
+#, python-format
+msgid "Rescue device does not exist for instance %s"
+msgstr "%s 인스턴스에 대한 복구 디바이스가 없음"
+
+msgid "Reserved"
+msgstr "예약됨"
+
+#, python-format
+msgid "Resize error: %(reason)s"
+msgstr "크기 조정 오류: %(reason)s"
+
+msgid "Resize request has invalid 'flavorRef' attribute."
+msgstr "크기 조정 요청에 올바르지 않은 'flavorRef' 속성이 있습니다. "
+
+msgid "Resize requests require 'flavorRef' attribute."
+msgstr "크기 조정 요청은 'flavorRef' 속성이 필요합니다. "
+
+msgid "Resize requires a flavor change."
+msgstr "크기 조정은 플레이버 변경이 필요합니다. "
+
+msgid "Resize to zero disk flavor is not allowed."
+msgstr "0 디스크 플레이버로의 크기 조정은 허용되지 않습니다."
+
+msgid "Resource could not be found."
+msgstr "자원을 찾을 수 없습니다. "
+
+msgid "Resumed"
+msgstr "재시작함"
+
+#, python-format
+msgid "Root element name should be '%(name)s' not '%(tag)s'"
+msgstr "루트 요소 이름은 '%(tag)s'이(가) 아닌 '%(name)s'이어야 함"
+
+msgid "Rotation param is required for backup image_type"
+msgstr "백업 image_type에 대해 회전 매개변수가 필요함"
+
+#, python-format
+msgid "Rule (%s) not found"
+msgstr "규칙(%s)을 찾을 수 없음"
+
+#, python-format
+msgid "Rule already exists in group: %(rule)s"
+msgstr "그룹에 규칙이 이미 존재함: %(rule)s"
+
+#, python-format
+msgid "Rules must be an instance of dict or Rules, got %s instead"
+msgstr ""
+"규칙은 사전의 인스턴스이거나 규칙 그 자체여야 하지만 %s을(를) 가져왔습니다"
+
+#, python-format
+msgid "Running Nova with parallels virt_type requires libvirt version %s"
+msgstr "병렬 virt_type으로 Nova를 실행하려면 libvirt 버전 %s이(가) 필요함"
+
+#, python-format
+msgid "Running cmd (subprocess): %s"
+msgstr "cmd(하위 프로세스) 실행 중: %s"
+
+#, python-format
+msgid "Scheduler Host Filter %(filter_name)s could not be found."
+msgstr "스케줄러 호스트 필터 %(filter_name)s을(를) 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
+"%(to_port)s)"
+msgstr ""
+"보안 그룹 %(name)s이(가) %(protocol)s 입구(%(from_port)s:%(to_port)s)를 제거"
+"했음"
+
+#, python-format
+msgid "Security group %(name)s is not found for project %(project)s"
+msgstr "프로젝트 %(project)s에 대해 보안 그룹 %(name)s을(를) 찾을 수 없음"
+
+#, python-format
+msgid ""
+"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
+"%(to_port)s)"
+msgstr ""
+"보안 그룹 %(name)s이(가) %(protocol)s 입구(%(from_port)s:%(to_port)s)를 제거"
+"했음"
+
+#, python-format
+msgid ""
+"Security group %(security_group_id)s is already associated with the instance "
+"%(instance_id)s"
+msgstr ""
+"보안 그룹 %(security_group_id)s이(가) 이미 %(instance_id)s 인스턴스와 연관되"
+"어 있음"
+
+#, python-format
+msgid ""
+"Security group %(security_group_id)s is not associated with the instance "
+"%(instance_id)s"
+msgstr ""
+"보안 그룹 %(security_group_id)s이(가) %(instance_id)s 인스턴스와 연관되어 있"
+"음"
+
+#, python-format
+msgid ""
+"Security group %(security_group_id)s not found for project %(project_id)s."
+msgstr ""
+"%(project_id)s 프로젝트에 대한 %(security_group_id)s 보안 그룹을 찾을 수 없습"
+"니다. "
+
+#, python-format
+msgid "Security group %(security_group_id)s not found."
+msgstr "%(security_group_id)s 보안 그룹을 찾을 수 없습니다. "
+
+#, python-format
+msgid ""
+"Security group %(security_group_name)s already exists for project "
+"%(project_id)s."
+msgstr "보안 그룹 %(security_group_name)s이(가) 프로젝트%(project_id)s."
+
+#, python-format
+msgid ""
+"Security group %(security_group_name)s not associated with the instance "
+"%(instance)s"
+msgstr ""
+"보안 그룹 %(security_group_name)s이(가) 인스턴스와 연관되지 않음%(instance)s "
+"인스턴스와 연관되지 않음"
+
+#, python-format
+msgid "Security group %s already exists"
+msgstr "%s 보안 그룹이 이미 존재함"
+
+#, python-format
+msgid "Security group %s is not a string or unicode"
+msgstr "%s 보안 그룹이 문자열 또는 Unicode가 아님"
+
+#, python-format
+msgid "Security group default rule (%rule_id)s not found."
+msgstr "보안 그룹 기본 규칙 (%rule_id)s을(를) 찾을 수 없습니다."
+
+msgid "Security group id should be integer"
+msgstr "보안 그룹 ID는 정수여야 함"
+
+msgid "Security group id should be uuid"
+msgstr "보안 그룹 ID는 uuid여야 함"
+
+msgid "Security group is still in use"
+msgstr "보안 그룹이 아직 사용 중임"
+
+msgid "Security group name cannot be empty"
+msgstr "보안 그룹 이름은 공백일 수 없음"
+
+msgid "Security group not specified"
+msgstr "보안 그룹이 지정되지 않음"
+
+#, python-format
+msgid "Security group with rule %(rule_id)s not found."
+msgstr "%(rule_id)s 규칙을 갖는 보안 그룹을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Server disk was unable to be resized because: %(reason)s"
+msgstr "서버 디스크의 크기를 재조정할 수 없음. 이유: %(reason)s"
+
+msgid "Server does not exist"
+msgstr "서버가 없음"
+
+msgid "Server group scheduler hint must be a UUID."
+msgstr "서버 그룹 스케줄러 힌트는 UUID여야 합니다."
+
+msgid "Server name is not defined"
+msgstr "서버 이름이 정의되지 않음"
+
+msgid "Server not found"
+msgstr "서버를 찾을 수 없음"
+
+#, python-format
+msgid "ServerGroup policy is not supported: %(reason)s"
+msgstr "ServerGroup 정책이 지원되지 않음: %(reason)s"
+
+msgid "ServerGroupAffinityFilter not configured"
+msgstr "ServerGroupAffinityFilter가 구성되지 않았음"
+
+msgid "ServerGroupAntiAffinityFilter not configured"
+msgstr "ServerGroupAntiAffinityFilter가 구성되지 않았음"
+
+#, python-format
+msgid "Service %(service)s on host %(host)s disabled."
+msgstr "호스트 %(host)s에서 서비스 %(service)s을(를) 사용 안함으로 설정함."
+
+#, python-format
+msgid "Service %(service)s on host %(host)s enabled."
+msgstr "호스트 %(host)s에서 서비스 %(service)s을(를) 사용으로 설정함."
+
+#, python-format
+msgid "Service %(service_id)s could not be found."
+msgstr "%(service_id)s 서비스를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Service %s not found."
+msgstr "%s 서비스를 찾을 수 없음"
+
+#, python-format
+msgid "Service API method not found: %(detail)s"
+msgstr "서비스 API 메소드를 찾을 수 없음: %(detail)s"
+
+msgid "Service is unavailable at this time."
+msgstr "서비스가 지금 사용 불가능합니다. "
+
+#, python-format
+msgid "Service with host %(host)s binary %(binary)s exists."
+msgstr "호스트 %(host)s 바이너리 %(binary)s인 서비스가 존재합니다. "
+
+#, python-format
+msgid "Service with host %(host)s topic %(topic)s exists."
+msgstr "호스트 %(host)s 주제 %(topic)s인 서비스가 존재합니다. "
+
+#, python-format
+msgid "Shadow table with name %(name)s already exists."
+msgstr "이름이 %(name)s인 새도우 테이블이 이미 존재합니다. "
+
+msgid "Should we use a CA for each project?"
+msgstr "각 프로젝트에 대한 CA 사용 여부?"
+
+msgid ""
+"Shrinking the filesystem down with resize2fs has failed, please check if you "
+"have enough free space on your disk."
+msgstr ""
+"resize2fs를 사용한 파일 시스템 축소에 실패했습니다. 사용자의 디스크에충분한 "
+"여유 공간이 있는지 확인하십시오."
+
+msgid "Signature not provided"
+msgstr "서명이 제공되지 않음"
+
+#, python-format
+msgid "Snapshot %(snapshot_id)s could not be found."
+msgstr "%(snapshot_id)s 스냅샷을 찾을 수 없습니다. "
+
+msgid "Snapshot list encountered but no header found!"
+msgstr "스냅샷 목록이 있지만 헤더를 찾을 수 없습니다!"
+
+msgid "Some fields are invalid."
+msgstr "몇몇 필드가 유효하지 않습니다"
+
+msgid "Some required fields are missing"
+msgstr "몇몇 필수 필드가 빠져있음"
+
+msgid "Sort direction size exceeds sort key size"
+msgstr "정렬 방향 크기가 정렬 키 크기를 초과함"
+
+msgid "Sort key supplied was not valid."
+msgstr "제공되는 정렬 키가 올바르지 않습니다. "
+
+#, python-format
+msgid ""
+"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
+"already has a Fixed IP allocated."
+msgstr ""
+"지정된 고정 IP '%(addr)s'을(를) '%(port)s' 포트와 함께 사용할 수 없음: 포트"
+"에 이미 고정 IP가 할당되어 있습니다."
+
+msgid "Specified fixed address not assigned to instance"
+msgstr "지정된 고정 주소가 인스턴스에 연관되지 않음"
+
+msgid "Specify `table_name` or `table` param"
+msgstr "`table_name` 또는 `table` 매개변수를 지정하십시오. "
+
+msgid "Specify only one param `table_name` `table`"
+msgstr "하나의 매개변수 `table_name` 또는 `table`만 지정하십시오."
+
+msgid "Started"
+msgstr "작동함"
+
+msgid "State"
+msgstr "상태"
+
+msgid "Status"
+msgstr "상태"
+
+msgid "Stopped"
+msgstr "중지됨"
+
+#, python-format
+msgid "Storage error: %(reason)s"
+msgstr "스토리지 오류: %(reason)s"
+
+#, python-format
+msgid "Storage policy %s did not match any datastores"
+msgstr "스토리지 정책 %s이(가) 데이터 저장소와 일치하지 않음"
+
+#, python-format
+msgid "Subject for certificate for projects, %s for project, timestamp"
+msgstr "프로젝트에 대한 인증서 제목, 프로젝트, 시간소인에 대한 %s"
+
+#, python-format
+msgid "Subject for certificate for users, %s for project, user, timestamp"
+msgstr "사용자에 대한 인증서 제목, 프로젝트, 사용자, 시간소인에 대한 %s"
+
+msgid "Success"
+msgstr "완료"
+
+msgid "Suspended"
+msgstr "Suspended"
+
+msgid "Swap drive requested is larger than instance type allows."
+msgstr "요청한 스왑 드라이브가 허용되는 인스턴스 유형보다 큽니다."
+
+msgid "Swap only supports host devices"
+msgstr "지원되는 호스트 디바이스만 스왑합니다."
+
+#, python-format
+msgid "Target live migration host \"%s\" is unreachable"
+msgstr "대상 라이브 마이그레이션 호스트 \"%s\"에 도달할 수 없음"
+
+#, python-format
+msgid "Task %(task_name)s is already running on host %(host)s"
+msgstr "%(task_name)s 태스크가 이미 %(host)s 호스트에서 실행 중임"
+
+#, python-format
+msgid "Task %(task_name)s is not running on host %(host)s"
+msgstr "%(task_name)s 태스크가 %(host)s 호스트에서 실행 중이 아님"
+
+msgid "Template for cloudpipe instance boot script"
+msgstr "cloudpipe 인스턴스 부트 스크립트를 위한 템플리트"
+
+msgid ""
+"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
+"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
+"namespace is no longer supported."
+msgstr ""
+"WMI \"root/virtualization\" 네임스페이스가 더 이상 지원되지 않으므로 Windows "
+"Server / Hyper-V Server 2012 R2 이상에서 \"force_hyperv_utils_v1\" 옵션을 "
+"\"True\"로 설정할 수 없습니다."
+
+#, python-format
+msgid "The CA file for %(project)s could not be found"
+msgstr "%(project)s의 CA 파일을 찾을 수 없음"
+
+#, python-format
+msgid "The CRL file for %(project)s could not be found"
+msgstr "%(project)s의 CRL 파일을 찾을 수 없음"
+
+#, python-format
+msgid "The DNS entry %(name)s already exists in domain %(domain)s."
+msgstr "DNS 항목 %(name)s이(가) 이미 %(domain)s 도메인에 존재합니다. "
+
+#, python-format
+msgid "The ID %(id)s is unknown."
+msgstr "ID %(id)s을(를) 알 수 없습니다."
+
+msgid "The JSON file that defines policies."
+msgstr "JSON 파일로 정책을 정의합니다."
+
+#, python-format
+msgid "The PCI address %(address)s has an incorrect format."
+msgstr "PCI 주소 %(address)s에 올바르지 않은 형식이 있습니다."
+
+msgid ""
+"The Windows account running nova-compute on this Hyper-V host doesn't have "
+"the required permissions to create or operate the virtual machine."
+msgstr ""
+"이 Hyper-V 호스트에서 nova-compute를 실행하는 Windows 계정에 가상 머신을 작성"
+"하거나 운영할 수 있는 필요한 권한이 없습니다."
+
+msgid ""
+"The above error may show that the database has not been created.\n"
+"Please create a database using 'nova-manage db sync' before running this "
+"command."
+msgstr ""
+"위의 오류는 데이터베이스가 작성되지 않았음을 표시할 수 있습니다.\n"
+"이 명령을 실행하기 전에 'nova-manage db sync'를 사용하여 데이터베이스를작성하"
+"십시오."
+
+#, python-format
+msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
+msgstr "콘솔 포트 범위 %(min_port)d-%(max_port)d이(가) 소진되었습니다."
+
+msgid "The current driver does not support preserving ephemeral partitions."
+msgstr "현재 드라이버는 임시 파티션 유지를 지원하지 않습니다."
+
+msgid "The default PBM policy doesn't exist on the backend."
+msgstr "백엔드에 기본 PBM 정책이 없습니다."
+
+#, python-format
+msgid "The file copy from %(src)s to %(dest)s failed"
+msgstr "%(src)s에서 %(dest)s(으)로의 파일 복사에 실패함"
+
+#, python-format
+msgid "The firewall filter for %s does not exist"
+msgstr "%s의 방화벽 필터가 없음"
+
+msgid "The input is not a string or unicode"
+msgstr "입력이 문자열 또는 Unicode가 아님"
+
+msgid ""
+"The instance requires a newer hypervisor version than has been provided."
+msgstr "인스턴스는 제공된 것보다 최신 하이퍼바이저 버전이 필요합니다. "
+
+#, python-format
+msgid ""
+"The key %(r)s is required in the location metadata to access the url %(url)s."
+msgstr "위치 메타데이터가 URL에 액세스하려면 %(r)s 키가 %(url)s."
+
+#, python-format
+msgid "The key %s is required in all file system descriptions."
+msgstr "모든 파일 시스템 설명에는 %s 키가 필요합니다."
+
+#, python-format
+msgid ""
+"The metadata for this location will not work with this module %(module)s.  "
+"%(reason)s."
+msgstr ""
+"이 위치의 메타데이터가 %(module)s 모듈에서 작동하지 않습니다.%(reason)s인 동"
+"안에는 인스턴스 연관을 변경할 수 없습니다."
+
+#, python-format
+msgid "The method %(method_name)s is not implemented."
+msgstr "%(method_name)s 메소드가 구현되지 않습니다."
+
+#, python-format
+msgid "The module %(module)s is misconfigured: %(reason)s."
+msgstr "%(module)s 모듈이 잘못 구성됨: %(reason)s."
+
+#, python-format
+msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
+msgstr ""
+"마운트 %(mount_path)s이(가) 올바른 Quobyte 볼륨이 아닙니다. 오류: %(exc)s"
+
+#, python-format
+msgid ""
+"The mount point advertised by glance: %(glance_mount)s, does not match the "
+"URL path: %(path)s"
+msgstr ""
+"글랜스가 광고한 마운트 지점: %(glance_mount)s, URL 경로와 일치하지 않음: "
+"%(path)s"
+
+#, python-format
+msgid ""
+"The network range is not big enough to fit %(num_networks)s networks. "
+"Network size is %(network_size)s"
+msgstr ""
+"네트워크 범위가 %(num_networks)s에 맞추기에는 충분히 크지 않습니다. 네트워크 "
+"크기는 %(network_size)s입니다."
+
+msgid "The only partition should be partition 1."
+msgstr "유일한 파티션은 파티션 1이어야 합니다."
+
+msgid "The path at which the file system is mounted."
+msgstr "파일 시스템이 마운트되는 경로입니다."
+
+#, python-format
+msgid "The provided RNG device path: (%(path)s) is not present on the host."
+msgstr "제공된 RNG 디바이스 경로: (%(path)s)이(가) 호스트에 없습니다."
+
+msgid "The request body can't be empty"
+msgstr "요청 분문은 비어 있을 수 없음"
+
+msgid "The request is invalid."
+msgstr "그 요청은 맞지 않습니다."
+
+#, python-format
+msgid ""
+"The requested amount of video memory %(req_vram)d is higher than the maximum "
+"allowed by flavor %(max_vram)d."
+msgstr ""
+"요청된 양의 비디오 메모리 %(req_vram)d이(가) %(max_vram)d 플레이버에 의해 허"
+"용된 최대값보다 높습니다."
+
+msgid "The requested availability zone is not available"
+msgstr "요청한 가용성 구역을 사용할 수 없음"
+
+msgid "The requested console type details are not accessible"
+msgstr "요청된 콘솔 유형 세부사항에 액세스할 수 없습니다."
+
+msgid "The requested functionality is not supported."
+msgstr "요청된 기능이 지원되지 않습니다."
+
+#, python-format
+msgid ""
+"The service from servicegroup driver %(driver)s is temporarily unavailable."
+msgstr ""
+"서비스 그룹 드라이버 %(driver)s의 서비스가 일시적으로사용 불가능합니다."
+
+msgid ""
+"The string containing the reason for disabling the service contains invalid "
+"characters or is too long."
+msgstr ""
+"서비스를 사용 안함으로 설정하는 이유를 포함하는 문자열이 올바르지 않은 문자"
+"를 포함하고 있거나 너무 깁니다."
+
+msgid ""
+"The sum between the number of networks and the vlan start cannot be greater "
+"than 4094"
+msgstr "네트워크 수와 vlan 시작 사이의 합은 4094를 초과할 수 없음"
+
+#, python-format
+msgid "The supplied device (%(device)s) is busy."
+msgstr "제공된 디바이스(%(device)s)가 사용 중입니다. "
+
+#, python-format
+msgid "The supplied device path (%(path)s) is in use."
+msgstr "제공된 디바이스 경로(%(path)s)가 사용 중입니다. "
+
+#, python-format
+msgid "The supplied device path (%(path)s) is invalid."
+msgstr "제공된 디바이스 경로(%(path)s)가 올바르지 않습니다. "
+
+#, python-format
+msgid ""
+"The supplied disk path (%(path)s) already exists, it is expected not to "
+"exist."
+msgstr ""
+"제공된 디스크 경로(%(path)s)가 이미 존재합니다. 존재하지 않아야 합니다."
+
+msgid "The supplied hypervisor type of is invalid."
+msgstr "제공된 하이퍼바이저 유형이 올바르지 않습니다. "
+
+msgid "The target host can't be the same one."
+msgstr "대상 호스트가 동일한 것이어서는 안됩니다."
+
+#, python-format
+msgid "The token '%(token)s' is invalid or has expired"
+msgstr "토큰 '%(token)s'이(가) 올바르지 않거나 만료됨"
+
+msgid "The value of metadata must be a dict"
+msgstr "메타데이터 값은 dict여야 함"
+
+msgid "The vlan number cannot be greater than 4094"
+msgstr "vlan 번호는 4094 이하여야 함"
+
+msgid "The vlan number cannot be less than 1"
+msgstr "vlan 번호는 1 이상이어야 함"
+
+#, python-format
+msgid ""
+"The volume cannot be assigned the same device name as the root device %s"
+msgstr "볼륨에 루트 디바이스 %s과(와) 같은 디바이스 이름을 지정할 수 없음"
+
+msgid "The volume was either invalid or not attached to the instance."
+msgstr "볼륨이 올바르지 않거나 인스턴스에 접속되지 않았습니다."
+
+#, python-format
+msgid ""
+"There are %(records)d records in the '%(table_name)s' table where the uuid "
+"or instance_uuid column is NULL. Run this command again with the --delete "
+"option after you have backed up any necessary data."
+msgstr ""
+"uuid 또는 instance_uuid 열이 널인 '%(table_name)s' 테이블에 %(records)d개의 "
+"레코드가 있습니다. 필요한 데이터를 백업한 후에 --delete 옵션을 사용하여 이 명"
+"령을 다시 실행하십시오."
+
+#, python-format
+msgid ""
+"There are %(records)d records in the '%(table_name)s' table where the uuid "
+"or instance_uuid column is NULL. These must be manually cleaned up before "
+"the migration will pass. Consider running the 'nova-manage db "
+"null_instance_uuid_scan' command."
+msgstr ""
+"uuid 또는 instance_uuid 열이 널인 '%(table_name)s' 테이블에 %(records)d개의 "
+"레코드가 있습니다. 이러한 레코드는 마이그레이션이 지나기 전에 수동으로 정리해"
+"야 합니다. 'nova-manage db null_instance_uuid_scan' 명령을 사용해 보십시오. "
+
+msgid "There are not enough hosts available."
+msgstr "사용 가능한 호스트가 부족합니다."
+
+#, python-format
+msgid "There is no such action: %s"
+msgstr "해당 조치가 없음: %s"
+
+#, python-format
+msgid "There was an error with the download module %(module)s. %(reason)s"
+msgstr "다운로드 모듈 %(module)s에서 오류가 발생했습니다. 이유: %(reason)s"
+
+msgid "There were no records found where instance_uuid was NULL."
+msgstr "instance_uuid가 널인 레코드가 없습니다."
+
+msgid "This default rule already exists."
+msgstr "이 기본 규칙은 이미 존재합니다."
+
+msgid "This domU must be running on the host specified by connection_url"
+msgstr "이 domU가 connection_url로 지정되는 호스트에서 실행 중이어야 함"
+
+msgid "This driver only supports type 'a'"
+msgstr "이 드라이버는 유형 'a'만 지원합니다. "
+
+msgid "This driver only supports type 'a' entries."
+msgstr "이 드라이버는 유형 'a' 항목만 지원합니다. "
+
+msgid "This request was rate-limited."
+msgstr "이 요청이 비율 제한되었습니다. "
+
+#, python-format
+msgid "This rule already exists in group %s"
+msgstr "이 규칙이 이미 %s 그룹에 존재함"
+
+#, python-format
+msgid "Timeout waiting for device %s to be created"
+msgstr "%s 디바이스가 작성되기를 기다리다가 제한시간 초과함"
+
+msgid "Timeout waiting for response from cell"
+msgstr "셀의 응답을 대시하는 중에 제한시간 초과"
+
+msgid "Timestamp failed validation."
+msgstr "시간소인이 유효성 검증에 실패했습니다. "
+
+msgid "To and From ports must be integers"
+msgstr "발신 및 수신 포트는 정수여야 함"
+
+msgid "Token not found"
+msgstr "토큰을 찾을 수 없음"
+
+#, python-format
+msgid ""
+"Too many IP addresses will be generated.  Please increase /%s to reduce the "
+"number generated."
+msgstr ""
+"너무 많은 IP 주소가 생성됩니다. 생성된 숫자를 줄이려면 /%s을(를)늘리십시오. "
+
+msgid "Too many failed authentications."
+msgstr "실패한 인증이 너무 많습니다. "
+
+msgid "Type and Code must be integers for ICMP protocol type"
+msgstr "ICMP 프로토콜 유형의 경우 유형 및 코드는 정수여야 함"
+
+msgid "UUID is required to delete Neutron Networks"
+msgstr "Neutron 네트워크를 삭제하기 위해 UUID가 필요합니다. "
+
+msgid "Unable to associate IP Address, no fixed_ips."
+msgstr "IP 주소를 연관시킬 수 없습니다. fixed_ips가 없습니다. "
+
+#, python-format
+msgid ""
+"Unable to associate floating ip %(address)s to fixed ip %(fixed_address)s "
+"for instance %(id)s. Error: %(error)s"
+msgstr ""
+"부동 ip %(address)s을(를) 인스턴스 %(id)s의 고정 ip %(fixed_address)s에 연관"
+"할 수 없습니다. 오류: %(error)s"
+
+#, python-format
+msgid "Unable to attach volume to instance %s"
+msgstr "%s 인스턴스에 볼륨을 첨부할 수 없음"
+
+msgid "Unable to authenticate Ironic client."
+msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
+
+msgid ""
+"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
+"in a few minutes"
+msgstr ""
+"VPN 인스턴스에 대한 IP를 청구할 수 없습니다. 실행 중이 아닌지 확인하고 몇 분 "
+"후 다시 시도하십시오."
+
+#, python-format
+msgid "Unable to contact guest agent. The following call timed out: %(method)s"
+msgstr ""
+"게스트 에이전트에 접속할 수 없음. 다음 호출의 제한시간이 초과됨: %(method)s"
+
+msgid "Unable to create dns domain"
+msgstr "dns 도메인을 작성할 수 없음"
+
+msgid "Unable to create dns entry"
+msgstr "dns 항목을 작성할 수 없음"
+
+msgid "Unable to create flavor"
+msgstr "플레이버를 작성할 수 없습니다."
+
+msgid "Unable to delete dns domain"
+msgstr "dns 도메인을 삭제할 수 없음"
+
+msgid "Unable to delete dns entry"
+msgstr "dns 항목을 삭제할 수 없음"
+
+#, python-format
+msgid "Unable to delete system group '%s'"
+msgstr "시스템 그룹 '%s'을(를) 삭제할 수 없음"
+
+#, python-format
+msgid "Unable to destroy VBD %s"
+msgstr "VBD %s을(를) 영구 삭제할 수 없음"
+
+#, python-format
+msgid "Unable to destroy VDI %s"
+msgstr "VDI %s을(를) 영구 삭제할 수 없음"
+
+#, python-format
+msgid "Unable to determine disk bus for '%s'"
+msgstr "'%s'의 디스크 버스를 판별할 수 없음"
+
+#, python-format
+msgid "Unable to determine disk prefix for %s"
+msgstr "%s의 디스크 접두부를 판별할 수 없음"
+
+#, python-format
+msgid "Unable to eject %s from the pool; No master found"
+msgstr "풀에서 %s을(를) 방출할 수 없음. 마스터를 찾을 수 없음"
+
+#, python-format
+msgid "Unable to eject %s from the pool; pool not empty"
+msgstr "풀에서 %s을(를) 방출할 수 없음. 풀이 비어 있지 않음"
+
+#, python-format
+msgid "Unable to find SR from VBD %s"
+msgstr "VBD %s에서 SR을 찾을 수 없음"
+
+#, python-format
+msgid "Unable to find SR from VDI %s"
+msgstr "VDI %s에서 SR을 찾을 수 없음"
+
+#, python-format
+msgid "Unable to find a mounted disk for target_iqn: %s"
+msgstr "target_iqn에 대해 마운트된 디스크를 찾을 수 없음: %s"
+
+#, python-format
+msgid ""
+"Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
+"host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
+msgstr ""
+"target_iqn의 마운트된 디스크를 찾을 수 없음: %s. 호스트의 SAN 정책이 "
+"\"OfflineAll\" 또는 \"OfflineShared\" 로 설정되었는지 확인하십시오."
+
+#, python-format
+msgid "Unable to find ca_file : %s"
+msgstr "ca_file을 찾을 수 없음: %s"
+
+#, python-format
+msgid "Unable to find cert_file : %s"
+msgstr "cert_file을 찾을 수 없음: %s"
+
+#, python-format
+msgid "Unable to find host for Instance %s"
+msgstr "%s 인스턴스에 대한 호스트를 찾을 수 없음"
+
+msgid "Unable to find iSCSI Target"
+msgstr "iSCSI 대상을 찾을 수 없음"
+
+#, python-format
+msgid "Unable to find key_file : %s"
+msgstr "key_file을 찾을 수 없음: %s"
+
+msgid "Unable to find root VBD/VDI for VM"
+msgstr "VM에 대한 루트 VBD/VDI를 찾을 수 없음"
+
+msgid "Unable to find system log file!"
+msgstr "시스템 로그 파일을 찾을 수 없음!"
+
+msgid "Unable to find volume"
+msgstr "볼륨을 찾을 수 없음"
+
+msgid "Unable to get console"
+msgstr "콘솔을 가져올 수 없음"
+
+msgid "Unable to get console log, functionality not implemented"
+msgstr "콘솔 로그를 가져올 수 없음. 기능이 구현되지 않음"
+
+msgid "Unable to get diagnostics, functionality not implemented"
+msgstr "진단을 가져올 수 없음. 기능이 구현되지 않음"
+
+msgid "Unable to get dns domain"
+msgstr "dns 도메인을 가져올 수 없음"
+
+msgid "Unable to get dns entry"
+msgstr "dns 항목을 가져올 수 없음"
+
+msgid "Unable to get rdp console, functionality not implemented"
+msgstr "rdp 콘솔을 가져올 수 없음. 기능이 구현되지 않음"
+
+#, python-format
+msgid "Unable to get record of VDI %s on"
+msgstr "VDI %s의 레코드를 가져올 수 없음"
+
+msgid "Unable to get serial console, functionality not implemented"
+msgstr "직렬 콘솔을 가져올 수 없으며 기능이 구현되지 않음"
+
+msgid "Unable to get spice console, functionality not implemented"
+msgstr "spice 콘솔을 가져올 수 없음. 기능이 구현되지 않음."
+
+msgid "Unable to get vnc console, functionality not implemented"
+msgstr "vnc 콘솔을 가져올 수 없음. 기능이 구현되지 않음"
+
+#, python-format
+msgid "Unable to introduce VDI for SR %s"
+msgstr "SR %s에 대한 VDI를 도입할 수 없음"
+
+#, python-format
+msgid "Unable to introduce VDI on SR %s"
+msgstr "SR %s에서 VDI를 도입할 수 없음"
+
+#, python-format
+msgid "Unable to join %s in the pool"
+msgstr "풀에 %s을(를) 결합할 수 없음"
+
+msgid ""
+"Unable to launch multiple instances with a single configured port ID. Please "
+"launch your instance one by one with different ports."
+msgstr ""
+"단일 포트 ID가 구성된 다중 인스턴스를 실행할 수 없습니다.인스턴스를 다른 포트"
+"와 함께 하나씩 실행하십시오."
+
+msgid "Unable to locate requested flavor."
+msgstr "요청된 플레이버를 찾을 수 없습니다. "
+
+msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
+msgstr "XenAPI에 로그인할 수 없음(Dom0 디스크가 가득 찼습니까?)"
+
+#, python-format
+msgid ""
+"Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory(host:"
+"%(avail)s <= instance:%(mem_inst)s)"
+msgstr ""
+"%(instance_uuid)s을(를) %(dest)s(으)로 마이그레이션할 수 없음. 메모리 부족(호"
+"스트:%(avail)s <= 인스턴스:%(mem_inst)s)"
+
+#, python-format
+msgid ""
+"Unable to migrate %(instance_uuid)s: Disk of instance is too large(available "
+"on destination host:%(available)s < need:%(necessary)s)"
+msgstr ""
+"%(instance_uuid)s을(를) 마이그레이션할 수 없음: 인스턴스의 디스크가 너무 큼"
+"(대상 호스트의 사용 가능량:%(available)s < 필요량:%(necessary)s)"
+
+#, python-format
+msgid ""
+"Unable to migrate instance (%(instance_id)s) to current host (%(host)s)."
+msgstr ""
+"인스턴스(%(instance_id)s)를 현재 호스트(%(host)s)로 마이그레이션할 수 없습니"
+"다. "
+
+#, python-format
+msgid "Unable to mount SMBFS share: %(smbfs_share)s WMI exception: %(wmi_exc)s"
+msgstr "SMBFS 공유를 마운트할 수 없음: %(smbfs_share)s WMI 예외: %(wmi_exc)s"
+
+#, python-format
+msgid "Unable to obtain block size from VHD %(vhd_path)s"
+msgstr "VHD %(vhd_path)s에서 블록 크기를 얻을 수 없음"
+
+#, python-format
+msgid ""
+"Unable to obtain internal size from VHDX: %(vhd_path)s. Exception: %(ex)s"
+msgstr ""
+"VHDX: %(vhd_path)s(으)로부터 내부 크기를 가져올 수 없습니다. 예외: %(ex)s"
+
+#, python-format
+msgid "Unable to obtain target information %s"
+msgstr "대상 정보 %s을(를) 얻을 수 없음"
+
+msgid "Unable to parse metadata key/value pairs."
+msgstr "메타데이터 키/값 쌍을 구문 분석할 수 없습니다. "
+
+msgid "Unable to resize disk down."
+msgstr "디스크 크기를 줄일 수 없습니다."
+
+msgid "Unable to set password on instance"
+msgstr "인스턴스에 대한 비밀번호를 설정할 수 없음"
+
+msgid "Unable to shrink disk."
+msgstr "디스크를 줄일 수 없습니다."
+
+msgid "Unable to terminate instance."
+msgstr "인스턴스를 종료할 수 없음"
+
+#, python-format
+msgid "Unable to unplug VBD %s"
+msgstr "VBD %s을(를) 언플러그할 수 없음"
+
+#, python-format
+msgid "Unable to update system group '%s'"
+msgstr "시스템 그룹 '%s'을(를) 업데이트할 수 없음"
+
+#, python-format
+msgid "Unacceptable CPU info: %(reason)s"
+msgstr "허용할 수 없는 CPU 정보: %(reason)s"
+
+#, python-format
+msgid "Unacceptable attach status:%s for ec2 API."
+msgstr "ec2 API에 허용 불가능한 접속 상태 %s "
+
+msgid "Unacceptable parameters."
+msgstr "허용할 수 없는 매개변수입니다. "
+
+#, python-format
+msgid "Unavailable console type %(console_type)s."
+msgstr "사용 불가능한 콘솔 유형 %(console_type)s입니다."
+
+#, python-format
+msgid ""
+"Unexpected API Error. Please report this at http://bugs.launchpad.net/nova/ "
+"and attach the Nova API log if possible.\n"
+"%s"
+msgstr ""
+"API Error가 발생했습니다. http://bugs.launchpad.net/nova/ 에 상세 내용을 보내"
+"주십시오.  가능하면 Nova API 로그를 포함하여 보내주십시오. %s"
+
+#, python-format
+msgid "Unexpected aggregate action %s"
+msgstr "예상치 않은 집계 조치 %s"
+
+msgid "Unexpected type adding stats"
+msgstr "통계를 추가하는 예기치 않은 유형이 있음"
+
+#, python-format
+msgid "Unexpected vif_type=%s"
+msgstr "예기치 않은 vif_type=%s"
+
+msgid "Unknown"
+msgstr "알 수 없음"
+
+#, python-format
+msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
+msgstr "%(target_cell)s(으)로 라우팅할 때 알 수 없는 %(cell_type)s "
+
+msgid "Unknown action"
+msgstr "알 수 없는 조치"
+
+#, python-format
+msgid "Unknown action %s"
+msgstr "알 수 없는 조치 %s"
+
+msgid "Unknown argument : port"
+msgstr "알 수 없는 인수: 포트"
+
+msgid "Unknown argument: port"
+msgstr "알 수 없는 인수: 포트"
+
+#, python-format
+msgid "Unknown auth strategy: %s"
+msgstr "알 수 없는 인증 전략: %s"
+
+#, python-format
+msgid "Unknown chain: %r"
+msgstr "알 수 없는 체인: %r"
+
+#, python-format
+msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
+msgstr ""
+"알 수 없는 구성 드라이브 형식 %(format)s입니다. iso9660 또는 vfat 중 하나를 "
+"선택하십시오. "
+
+#, python-format
+msgid "Unknown delete_info type %s"
+msgstr "알 수 없는 delete_info 유형: %s"
+
+msgid "Unknown error occurred."
+msgstr "알 수 없는 오류가 발생했습니다."
+
+#, python-format
+msgid "Unknown image_type=%s"
+msgstr "알 수 없는 image_type=%s"
+
+#, python-format
+msgid "Unknown method '%(method)s' in compute API"
+msgstr "계산 API의 알 수 없는 메소드 '%(method)s'"
+
+#, python-format
+msgid ""
+"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
+"\"global\" or \"project\""
+msgstr ""
+"알 수 없는 osapi_compute_unique_server_name_scope 값: %s 플래그는 비어 있거"
+"나 \"global\" 또는 \"project\"여야 함."
+
+#, python-format
+msgid "Unknown quota resources %(unknown)s."
+msgstr "알 수 없는 할당량 자원 %(unknown)s."
+
+msgid "Unknown sort direction, must be 'desc' or 'asc'"
+msgstr "알 수 없는 정렬 방향입니다. 'desc' 또는 'asc'여야 함"
+
+#, python-format
+msgid "Unknown type: %s"
+msgstr "알 수 없는 유형: %s"
+
+msgid "Unrecognized legacy format."
+msgstr "인식할 수 없는 레거시 포맷."
+
+#, python-format
+msgid "Unrecognized read_deleted value '%s'"
+msgstr "인식되지 않는 read_deleted 값 '%s'"
+
+#, python-format
+msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
+msgstr "CONF.running_deleted_instance_action에 대한 인식되지 않는 값 '%s'"
+
+msgid "Unsafe filenames in image"
+msgstr "이미지에 안전하지 않은 파일 이름"
+
+#, python-format
+msgid "Unshelve attempted but the image %s cannot be found."
+msgstr "언쉘브를 시도했으나 %s 이미지를 찾을 수 없습니다."
+
+msgid "Unsupported Content-Type"
+msgstr "지원되지 않는 Content-Type"
+
+#, python-format
+msgid "Unsupported disk format: %s"
+msgstr "지원되지 않는 디스크 포맷: %s"
+
+msgid "Unsupported virtual disk format"
+msgstr "지원되지 않는 가상 디스크 형식"
+
+msgid "Updated_At"
+msgstr "업데이트 시간"
+
+msgid "Upgrade DB using Essex release first."
+msgstr "먼저 Essex 릴리스를 사용하여 DB를 업그레이드하십시오. "
+
+#, python-format
+msgid "User %(username)s not found in password file."
+msgstr "%(username)s 사용자가 비밀번호 파일에 없습니다. "
+
+#, python-format
+msgid "User %(username)s not found in shadow file."
+msgstr "%(username)s 사용자가 새도우 파일에 없습니다. "
+
+msgid "User data needs to be valid base 64."
+msgstr "사용자 데이터는 유효한 base64여야 합니다. "
+
+#, python-format
+msgid ""
+"User data too large. User data must be no larger than %(maxsize)s bytes once "
+"base64 encoded. Your data is %(length)d bytes"
+msgstr ""
+"사용자 데이터가 너무 큽니다. 사용자 데이터는 base64로 인코드되면 %(maxsize)s"
+"바이트를 초과하면 안 됩니다. 사용자 데이터는 %(length)d바이트입니다."
+
+msgid "User does not have admin privileges"
+msgstr "사용자에게 관리 권한이 없음"
+
+msgid "User is not authorized to use key manager."
+msgstr "사용자에게 키 관리자를 사용할 권한이 없습니다."
+
+msgid "Userdata content cannot be decoded"
+msgstr "사용자 데이터 컨텐츠를 디코드할 수 없음"
+
+msgid ""
+"Using different block_device_mapping syntaxes is not allowed in the same "
+"request."
+msgstr ""
+"동일한 요청에서 다른 block_device_mapping 구문 사용은 요청을 건너뛰는 중입니"
+"다."
+
+#, python-format
+msgid ""
+"VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger than flavor size "
+"of %(new_disk_size)d bytes."
+msgstr ""
+"VDI %(vdi_ref)s은(는) %(virtual_size)d바이트이며 이는 플레이버 크기인 "
+"%(new_disk_size)d바이트보다 큽니다."
+
+#, python-format
+msgid ""
+"VDI not found on SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
+msgstr ""
+"SR %(sr)s에서 VDI를 찾지 못함(vdi_uuid %(vdi_uuid)s, target_lun "
+"%(target_lun)s)"
+
+#, python-format
+msgid "VHD coalesce attempts exceeded (%d), giving up..."
+msgstr "VHD 합병 시도가 (%d)을(를) 초과했음, 포기하는 중..."
+
+#, python-format
+msgid "VIF driver not found for network_api_class: %s"
+msgstr "network_api_class에 대한 VIF 드라이버를 찾을 수 없음: %s"
+
+msgid "VIF plugging is not supported by the Hyper-V driver."
+msgstr "Hyper-V 드라이버에서 VIF 연결을 지원하지 않습니다."
+
+msgid "VIF unplugging is not supported by the Hyper-V driver."
+msgstr "Hyper-V 드라이버에서 VIF 언플러그를 지원하지 않습니다."
+
+msgid "VLAN support must be enabled"
+msgstr "VLAN 지원이 사용되어야 함"
+
+#, python-format
+msgid ""
+"VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN tag "
+"is %(tag)s, but the one associated with the port group is %(pgroup)s."
+msgstr ""
+"VLAN 태그가 포트 그룹 %(bridge)s에 적합하지 않습니다. 예상 VLAN 태그는 "
+"%(tag)s이지만 포트 그룹과 연관된 태그는 %(pgroup)s입니다."
+
+#, python-format
+msgid "VM not found: %s"
+msgstr "VM을 찾을 수 없음: %s"
+
+#, python-format
+msgid ""
+"Value (%(value)s) for parameter Group%(property)s is invalid. Content "
+"limited to '%(allowed)s'."
+msgstr ""
+"%(property)s 매개변수 그룹에 대한 값(%(value)s)이 올바르지 않습니다. 컨텐츠"
+"는 '%(allowed)s'(으)로 제한됩니다. "
+
+msgid "Value required for 'scality_sofs_config'"
+msgstr "'scality_sofs_config'에 필요한 값"
+
+#, python-format
+msgid ""
+"Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
+"maximum is %(max_ver)s."
+msgstr ""
+"API에서 버전 %(req_ver)s을(를) 지원하지 않습니다. 최소 버전은 %(min_ver)s 최"
+"대 버전은 %(max_ver)s입니다."
+
+msgid "Virt driver does not implement host disabled status."
+msgstr "가상 드라이버가 호스트 사용 안함 상태를 구현하지 않습니다. "
+
+msgid "Virt driver does not implement host maintenance mode."
+msgstr "가상 드라이버가 호스트 유지보수 모드를 구현하지 않습니다. "
+
+msgid "Virt driver does not implement host power management."
+msgstr "가상 드라이버가 호스트 전원 관리를 구현하지 않습니다. "
+
+msgid "Virt driver does not implement uptime function."
+msgstr "가상 드라이버가 작동시간 기능을 구현하지 않습니다. "
+
+msgid "Virtual Interface creation failed"
+msgstr "가상 인터페이스 생성 실패"
+
+msgid "Virtual interface plugin failed"
+msgstr "가상 인터페이스 플러그인 실패"
+
+#, python-format
+msgid "Virtual machine mode '%(vmmode)s' is not recognised"
+msgstr "가상 머신 모드 '%(vmmode)s'이(가) 인식되지 않음"
+
+#, python-format
+msgid ""
+"Virtual switch associated with the network adapter %(adapter)s not found."
+msgstr "%(adapter)s 네트워크 어댑터와 연관된 가상 스위치를 찾을 수 없습니다. "
+
+#, python-format
+msgid "Virtualization type '%(virt)s' is not supported by this compute driver"
+msgstr "이 컴퓨터 드라이버가 가상화 유형 '%(virt)s'을(를) 지원하지 않음"
+
+msgid "VlanID"
+msgstr "VlanID"
+
+#, python-format
+msgid "Volume %(volume_id)s could not be found."
+msgstr "%(volume_id)s 볼륨을 찾을 수 없습니다. "
+
+#, python-format
+msgid "Volume %(volume_id)s is not attached to anything"
+msgstr "%(volume_id)s 볼륨이 어디에도 첨부되지 않음"
+
+msgid "Volume does not belong to the requested instance."
+msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
+
+msgid "Volume must be attached in order to detach."
+msgstr "분리하려면 볼륨이 첨부되어야 합니다. "
+
+#, python-format
+msgid "Volume sets block size, but libvirt '%s' or later is required."
+msgstr "볼륨에서 블록 크기를 설정하지만 libvirt '%s' 이상이 필요합니다. "
+
+#, python-format
+msgid ""
+"Volume sets block size, but the current libvirt hypervisor '%s' does not "
+"support custom block size"
+msgstr ""
+"볼륨에서 블록 크기를 설정하지만 현재 libvirt 하이퍼바이저 '%s'이(가) 사용자 "
+"정의 블록 크기를 지원하지 않음"
+
+#, python-format
+msgid ""
+"Volume sets discard option, but libvirt %(libvirt)s or later is required, "
+"qemu %(qemu)s or later is required."
+msgstr ""
+"볼륨 세트는 옵션을 버리지만 libvirt %(libvirt)s 이상이 필요하고 qemu "
+"%(qemu)s 이상이 필요합니다."
+
+#, python-format
+msgid "WARNING: fixed ip %s allocated to missing instance"
+msgstr "경고: 고정 ip %s이(가) 누락 인스턴스에 할당됨"
+
+#, python-format
+msgid ""
+"WMI job failed with status %(job_state)d. Error details: %(err_sum_desc)s - "
+"%(err_desc)s - Error code: %(err_code)d"
+msgstr ""
+"WMI 작업이 %(job_state)d 상태로 실패했습니다. 오류 세부사항: "
+"%(err_sum_desc)s - %(err_desc)s - 오류 코드: %(err_code)d"
+
+#, python-format
+msgid "WMI job failed with status %(job_state)d. Error details: %(error)s"
+msgstr "WMI 작업이 %(job_state)d 상태로 실패했습니다. 오류 세부사항: %(error)s"
+
+#, python-format
+msgid "WMI job failed with status %d. No error description available"
+msgstr "WMI 작업이 %d 상태로 실패했습니다. 오류 설명이 없습니다"
+
+#, python-format
+msgid ""
+"We do not support scheme '%s' under Python < 2.7.4, please use http or https"
+msgstr ""
+"2.7.4 미만의 Python에서 스키마 '%s'을(를) 지원하지 않습니다. http 또는 https"
+"를 사용하십시오."
+
+msgid "When resizing, instances must change flavor!"
+msgstr "크기를 조정할 때 인스턴스는 플레이버를 변경해야 합니다!"
+
+msgid ""
+"When running server in SSL mode, you must specify both a cert_file and "
+"key_file option value in your configuration file"
+msgstr ""
+"서버를 SSL 모드에서 실행할 때 구성 파일에 cert_file 및 key_file 옵션 값을 모"
+"두 지정해야 함"
+
+msgid "Where we keep our keys"
+msgstr "키를 보관하는 장소"
+
+msgid "Where we keep our root CA"
+msgstr "루트 CA를 보관하는 장소"
+
+#, python-format
+msgid "Wrong quota method %(method)s used on resource %(res)s"
+msgstr "%(res)s 자원에서 올바르지 않은 할당량 메소드 %(method)s이(가) 사용됨"
+
+msgid "Wrong type of hook method. Only 'pre' and 'post' type allowed"
+msgstr "잘못된 유형의 후크 메소드임. 'pre' 및 'post' 유형만 허용됨"
+
+msgid "X-Instance-ID header is missing from request."
+msgstr "X-Instance-ID 헤더가 요청에서 누락되었습니다. "
+
+msgid "X-Instance-ID-Signature header is missing from request."
+msgstr "X-Instance-ID-Signature 헤더가 요청에서 누락되었습니다."
+
+msgid "X-Tenant-ID header is missing from request."
+msgstr "X-Tenant-ID 헤더가 요청에서 누락되었습니다."
+
+msgid "XAPI supporting relax-xsm-sr-check=true required"
+msgstr "XAPI 지원 relax-xsm-sr-check=true가 필요함"
+
+msgid "You are not allowed to delete the image."
+msgstr "이미지를 삭제할 수 없습니다."
+
+msgid ""
+"You are not authorized to access the image the instance was started with."
+msgstr "인스턴스가 시작되는 해당 이미지에 액세스할 권한이 없습니다. "
+
+msgid "You must implement __call__"
+msgstr "__call__을 구현해야 합니다. "
+
+msgid "You should specify images_rbd_pool flag to use rbd images."
+msgstr "rbd 이미지를 사용하려면 images_rbd_pool 플래그를 지정해야 합니다."
+
+msgid "You should specify images_volume_group flag to use LVM images."
+msgstr "LVM 이미지를 사용하려면 images_volume_group 플래그를 지정해야 합니다."
+
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
+"your destination node does not support retrieving listen addresses.  In "
+"order for live migration to work properly, you must configure the graphics "
+"(VNC and/or SPICE) listen addresses to be either the catch-all address "
+"(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
+msgstr ""
+"사용하는 libvirt 버전에서 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않거나 "
+"사용하는 대상 노드에서 청취 주소 검색을 지원하지 않습니다. 실시간 마이그레이"
+"션이 제대로 작동하려면 그래픽(VNC 및/또는 SPICE) 청취 주소를 catch-all 주소"
+"(0.0.0.0 또는 ::) 또는 로컬 주소(127.0.0.1 또는 ::1)가 되도록 구성해야 합니"
+"다."
+
+msgid "Zero fixed ips could be found."
+msgstr "0개의 고정 IP를 찾을 수 있습니다. "
+
+msgid "Zero floating ips available."
+msgstr "0개의 부동 IP가 사용 가능합니다. "
+
+msgid "Zero floating ips exist."
+msgstr "0개의 부동 IP가 존재합니다. "
+
+msgid "Zone"
+msgstr "존"
+
+msgid "[Result]"
+msgstr "[결과]"
+
+msgid "accessIPv4 is not proper IPv4 format"
+msgstr "accessIPv4가 적절한 IPv4 형식이 아님"
+
+msgid "accessIPv6 is not proper IPv6 format"
+msgstr "accessIPv6이 적절한 IPv6 형식이 아님"
+
+msgid "admin password can't be changed on existing disk"
+msgstr "관리 비밀번호는 기존 디스크에서 변경될 수 없음"
+
+msgid "aggregate deleted"
+msgstr "집계가 삭제됨"
+
+msgid "aggregate in error"
+msgstr "집계에 오류가 있음"
+
+#, python-format
+msgid "assert_can_migrate failed because: %s"
+msgstr "assert_can_migrate 실패. 원인: %s"
+
+msgid "block_device_mapping must be a list"
+msgstr "block_device_mapping은 목록이어야 함"
+
+msgid "block_device_mapping_v2 must be a list"
+msgstr "block_device_mapping_v2는 목록이어야 함"
+
+msgid "can't build a valid rule"
+msgstr "올바른 규칙을 구성할 수 없음"
+
+msgid "cannot delete non-existent key"
+msgstr "존재하지 않는 키를 삭제할 수 없음"
+
+msgid "cannot store arbitrary keys"
+msgstr "임의의 키를 저장할 수 없음"
+
+msgid "cannot understand JSON"
+msgstr "JSON을 이해할 수 없음"
+
+msgid "clone() is not implemented"
+msgstr "clone()이 구현되지 않음"
+
+#, python-format
+msgid "connect info: %s"
+msgstr "연결 정보: %s"
+
+#, python-format
+msgid "connecting to: %(host)s:%(port)s"
+msgstr "%(host)s:%(port)s에 연결 중"
+
+msgid "cpu"
+msgstr "CPU"
+
+#, python-format
+msgid "createBackup entity requires %s attribute"
+msgstr "createBackup 엔티티는 %s 속성이 필요함"
+
+msgid "createImage entity requires name attribute"
+msgstr "createImage 엔티티는 이름 속성이 필요함"
+
+#, python-format
+msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
+msgstr "대상은 %(target_cell)s이지만 라우팅 경로는 %(routing_path)s임"
+
+msgid "disk"
+msgstr "디스크"
+
+#, python-format
+msgid "disk type '%s' not supported"
+msgstr "디스크 유형 '%s'이(가) 지원되지 않음"
+
+#, python-format
+msgid "empty project id for instance %s"
+msgstr "%s 인스턴스에 대한 비어 있는 프로젝트 ID"
+
+msgid "error setting admin password"
+msgstr "관리 비밀번호 설정 오류"
+
+#, python-format
+msgid "error: %s"
+msgstr "오류: %s"
+
+#, python-format
+msgid "event entity contains unsupported items: %s"
+msgstr "이벤트 엔티티에는 지원되지 않는 항목이 포함되어 있음: %s"
+
+#, python-format
+msgid "event entity requires key %(key)s"
+msgstr "이벤트 엔티티에는 %(key)s 키가 필요함 "
+
+#, python-format
+msgid "failed to generate X509 fingerprint. Error message: %s"
+msgstr "X509 fingerprint를 생성하지 못했습니다. 에러 메시지: %s"
+
+msgid "failed to generate fingerprint"
+msgstr "Fingerprint를 생성하지 못함"
+
+msgid "filename cannot be None"
+msgstr "파일 이름은 None일 수 없음"
+
+msgid "floating ip is already associated"
+msgstr "부동 IP가 이미 연관되었음"
+
+msgid "floating ip not found"
+msgstr "부동 IP를 찾을 수 없음"
+
+#, python-format
+msgid "fmt=%(fmt)s backed by: %(backing_file)s"
+msgstr "fmt=%(fmt)s 백업: %(backing_file)s"
+
+msgid "fping utility is not found."
+msgstr "fping 유틸리티를 찾을 수 없습니다. "
+
+msgid "hdd"
+msgstr "hdd"
+
+msgid "host"
+msgstr "호스트"
+
+msgid "host must be specified."
+msgstr "호스트를 지정해야 합니다."
+
+msgid ""
+"host, block_migration and disk_over_commit must be specified for live "
+"migration."
+msgstr ""
+"호스트, block_migration, disk_over_commit를 활성 마이그레이션에 대해 지정해"
+"야 합니다. "
+
+msgid "hostname"
+msgstr "호스트 이름"
+
+#, python-format
+msgid "href %s does not contain version"
+msgstr "href %s에 버전이 없음"
+
+msgid "id"
+msgstr "ID"
+
+msgid "id cannot contain leading and/or trailing whitespace(s)"
+msgstr "id에는 선행 및/또는 후행 공백이 포함될 수 없음"
+
+msgid "image"
+msgstr "이미지"
+
+msgid "image already mounted"
+msgstr "이미지가 이미 마운트되었음"
+
+#, python-format
+msgid "image of %(instance)s at %(now)s"
+msgstr "%(now)s에 %(instance)s의 이미지"
+
+msgid "imageLocation is required"
+msgstr "imageLocation 필요"
+
+msgid "index"
+msgstr "인덱스"
+
+msgid "instance"
+msgstr "인스턴스"
+
+#, python-format
+msgid "instance %s is not running"
+msgstr "인스턴스 %s이(가) 실행 중이 아님"
+
+msgid "instance has a kernel or ramdisk but not both"
+msgstr "인스턴스가 커널 또는 램디스크를 갖지만 둘 다 갖지는 않음"
+
+msgid "instance is a required argument to use @refresh_cache"
+msgstr "인스턴스는 @refresh_cache를 사용하기 위한 필수 인수임"
+
+msgid "instance is not in a suspended state"
+msgstr "인스턴스가 일시중단 상태에 있지 않음"
+
+msgid "instance is not powered on"
+msgstr "인스턴스가 전원 공급되지 않음"
+
+msgid "instance is powered off and cannot be suspended."
+msgstr "인스턴스가 전원 차단되었고 일시중단될 수 없습니다. "
+
+#, python-format
+msgid "instance_id %s could not be found as device id on any ports"
+msgstr "포트의 디바이스 ID로 instance_id %s을(를) 찾을 수 없음"
+
+msgid "is_public must be a boolean"
+msgstr "is_public은 부울이어야 함"
+
+msgid "kernel"
+msgstr "커널"
+
+msgid "keymgr.fixed_key not defined"
+msgstr "keymgr.fixed_key가 정의되지 않음"
+
+msgid "l3driver call to add floating ip failed"
+msgstr "부동 IP를 추가하려는 l3driver 호출이 실패했음"
+
+msgid "launched"
+msgstr "시작됨"
+
+msgid "ldap not installed"
+msgstr "ldap가 설치되지 않음"
+
+#, python-format
+msgid "libguestfs installed but not usable (%s)"
+msgstr "libguestfs가 설치되었지만 사용할 수 없음(%s)"
+
+#, python-format
+msgid "libguestfs is not installed (%s)"
+msgstr "libguestfs가 설치되지 않음(%s)"
+
+msgid "libvirt error while requesting blockjob info."
+msgstr "블록 작업 정보를 요청하는 중에 libvirt 오류 발생."
+
+#, python-format
+msgid "marker [%s] not found"
+msgstr "마커 [%s]을(를) 찾을 수 없음"
+
+msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
+msgstr "fixed_ip가 지정된 경우 max_count는 1 이하여야 합니다."
+
+msgid "mem(mb)"
+msgstr "mem(mb)"
+
+msgid "memcached_servers not defined"
+msgstr "memcached_servers가 정의되지 않음"
+
+msgid "memory"
+msgstr "메모리"
+
+msgid "min_count must be <= max_count"
+msgstr "min_count는 max_count 이하여야 함"
+
+#, python-format
+msgid "nbd device %s did not show up"
+msgstr "nbd 디바이스 %s이(가) 표시되지 않음"
+
+msgid "nbd unavailable: module not loaded"
+msgstr "nbd 사용 불가능: 모듈이 로드되지 않았음"
+
+msgid "need group_name or group_id"
+msgstr "group_name 또는 group_id가 필요함"
+
+msgid "network"
+msgstr "네트워크"
+
+msgid "no hosts to remove"
+msgstr "제거할 호스트가 없음"
+
+#, python-format
+msgid "no match found for %s"
+msgstr "%s에 대한 일치 항목을 찾을 수 없음"
+
+msgid "node"
+msgstr "노드"
+
+#, python-format
+msgid "not able to execute ssh command: %s"
+msgstr "ssh 명령을 실행할 수 없음: %s"
+
+msgid "onSharedStorage must be specified."
+msgstr "onSharedStorage를 지정해야 합니다."
+
+msgid "only group \"all\" is supported"
+msgstr "\"all\" 그룹만 지원됨"
+
+msgid "operation time out"
+msgstr "조작 제한시간이 초과됨"
+
+msgid "operation_type must be add or remove"
+msgstr "operation_type이 추가 또는 제거여야 함"
+
+msgid "os-getConsoleOutput malformed or missing from request body"
+msgstr "os-getConsoleOutput이 잘못 되었거나 요청 본문에서 누락되었음"
+
+#, python-format
+msgid "partition %s not found"
+msgstr "%s 파티션을 찾을 수 없음"
+
+#, python-format
+msgid "partition search unsupported with %s"
+msgstr "파티션 검색이 %s에서 지원되지 않음"
+
+msgid "pause not supported for vmwareapi"
+msgstr "vmwareapi에 대한 일시정지는 지원되지 않음"
+
+msgid "project"
+msgstr "프로젝트"
+
+#, python-format
+msgid "qemu-nbd error: %s"
+msgstr "qemu-nbd 오류: %s"
+
+msgid "quota_class_set not specified"
+msgstr "quota_class_set가 지정되지 않음"
+
+msgid "quota_set not specified"
+msgstr "quota_set가 지정되지 않음"
+
+msgid "ramdisk"
+msgstr "램디스크"
+
+msgid "rbd python libraries not found"
+msgstr "rbd python 라이브러리를 찾을 수 없음"
+
+#, python-format
+msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
+msgstr ""
+"read_deleted는 'no', 'yes' 또는 'only' 중 하나만 가능하며, %r은(는) 불가능함"
+
+msgid "resource_id and tag are required"
+msgstr "자원 ID 와 태그가 필요함"
+
+msgid "rpc_port must be integer"
+msgstr "rpc_port는 정수여야 함"
+
+msgid "security group default rule not found"
+msgstr "보안 그룹 기본 규칙을 찾을 수 없음"
+
+msgid "serve() can only be called once"
+msgstr "serve()는 한 번만 호출할 수 있음"
+
+msgid "service is a mandatory argument for DB based ServiceGroup driver"
+msgstr "서비스는 DB 기반 ServiceGroup 드라이버의 필수 인수임"
+
+msgid "service is a mandatory argument for Memcached based ServiceGroup driver"
+msgstr "서비스는 Memcached 기반 ServiceGroup 드라이버의 필수 인수임"
+
+msgid "set_admin_password is not implemented by this driver or guest instance."
+msgstr ""
+"set_admin_password가 이 드라이버 또는 게스트 인스턴스에 의해 구현되지 않습니"
+"다. "
+
+msgid "setup in progress"
+msgstr "설정 진행 중"
+
+#, python-format
+msgid "snapshot for %s"
+msgstr "%s 스냅샷"
+
+msgid "snapshot not specified"
+msgstr "스냅샷이 지정되지 않음"
+
+msgid "snapshot_id required in create_info"
+msgstr "create_info에 snapshot_id가 필요함"
+
+msgid "start address"
+msgstr "시작 주소"
+
+msgid "state"
+msgstr "상태"
+
+msgid "sudo failed, continuing as if nothing happened"
+msgstr "sudo에 실패, 무시하고 계속합니다. "
+
+msgid "the body is invalid."
+msgstr "본문이 올바르지 않습니다."
+
+msgid "token not provided"
+msgstr "토큰이 제공되지 않음"
+
+msgid "too many body keys"
+msgstr "본문 키가 너무 많음"
+
+msgid "type"
+msgstr "type"
+
+#, python-format
+msgid "unknown ServiceGroup driver name: %s"
+msgstr "알 수 없는 ServiceGroup 드라이버 이름: %s"
+
+msgid "unpause not supported for vmwareapi"
+msgstr "vmwareapi에 대한 일시정지 해제는 지원되지 않음"
+
+#, python-format
+msgid "unsupported fields: %s"
+msgstr "지원되지 않는 필드: %s"
+
+msgid "user"
+msgstr "user"
+
+msgid "user or group not specified"
+msgstr "사용자 또는 그룹이 지정되지 않음"
+
+msgid "uuid"
+msgstr "uuid"
+
+#, python-format
+msgid ""
+"vSwitch which contains the port group %(bridge)s is not associated with the "
+"desired physical adapter. Expected vSwitch is %(expected)s, but the one "
+"associated is %(actual)s."
+msgstr ""
+"포트 그룹 %(bridge)s이(가) 포함된 vSwitch가 예상된 실제 어댑터와 연관되지 않"
+"습니다. 예상 vSwitch는 %(expected)s이지만 연관된 것은 %(actual)s입니다."
+
+msgid "version should be an integer"
+msgstr "버전은 정수여야 함"
+
+#, python-format
+msgid "vg %s must be LVM volume group"
+msgstr "vg %s은(는) LVM 볼륨 그룹이어야 함"
+
+#, python-format
+msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
+msgstr "vif %(vif_id)s의 vif_details에 vhostuser_sock_path가 표시되지 않음"
+
+msgid "vif_type parameter must be present for this vif_driver implementation"
+msgstr "이 vif_driver 구현을 위해 vif_type 매개변수가 존재해야 함"
+
+msgid "vlan must be an integer"
+msgstr "vlan은 정수여야 함"
+
+#, python-format
+msgid "volume %s already attached"
+msgstr "볼륨 %s이(가) 이미 접속됨"
+
+#, python-format
+msgid "volume %s already detached"
+msgstr "볼륨 %s이(가) 이미 분리되었음"
+
+#, python-format
+msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
+msgstr "볼륨 '%(vol)s' 상태는 '사용 가능'이어야 합니다. 현재 '%(status)s'"
+
+#, python-format
+msgid ""
+"volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
+msgstr "볼륨 '%(vol)s' 상태는 '사용 중'이어야 합니다. 현재 상태 '%(status)s'"
+
+msgid "volume not specified"
+msgstr "볼륨이 지정되지 않음"
+
+msgid "volumeAttachment not specified"
+msgstr "volumeAttachment가 지정되지 않음"
+
+msgid "volumeId must be specified."
+msgstr "volumeId가 지정되어야 합니다."
+
+#, python-format
+msgid "volume_id not found: %s"
+msgstr "volume_id를 찾을 수 없음: %s"
+
+#, python-format
+msgid "vswitch \"%s\" not found"
+msgstr "vswitch \"%s\"을(를) 찾을 수 없음"
+
+#, python-format
+msgid "xenapi.fake does not have an implementation for %s"
+msgstr "xenapi.fake가 %s에 대한 구현을 갖지 않음"
+
+#, python-format
+msgid ""
+"xenapi.fake does not have an implementation for %s or it has been called "
+"with the wrong number of arguments"
+msgstr ""
+"xenapi.fake에 %s에 대한 구현이 없거나 잘못된 수의 인수를 사용하여 호출됨"
+
+msgid "you can not pass av_zone if the scope is public"
+msgstr "공용 범위인 경우 av_zone을 전달할 수 없음"
+
+msgid "you can not pass project if the scope is private"
+msgstr "개인용 범위인 경우 프로젝트를 전달할 수 없음"
+
+msgid "zone"
+msgstr "영역"

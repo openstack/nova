@@ -10,10 +10,10 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:27+0000\n"
-"PO-Revision-Date: 2015-09-17 11:34+0000\n"
+"POT-Creation-Date: 2015-09-22 07:46+0000\n"
+"PO-Revision-Date: 2015-09-18 12:54+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
@@ -24,6 +24,15 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Zanata 3.7.1\n"
+
+msgid "\"Look for the VDIs failed"
+msgstr "查找VDI失败"
+
+#, python-format
+msgid ""
+"%(base)s virtual size %(base_size)s larger than flavor root disk size "
+"%(size)s"
+msgstr "%(base)s 虚拟大小 %(base_size)s 比云主机类型的根磁盘大小 %(size)s 大"
 
 #, python-format
 msgid ""
@@ -48,6 +57,18 @@ msgstr "刷新网络缓存时发生错误。"
 #, python-format
 msgid "Attach volume failed: %s"
 msgstr "连接卷失败：%s"
+
+#, python-format
+msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
+msgstr "绑定PCI设备%(dev)s 到 %(dom)s 失败。"
+
+#, python-format
+msgid "Attaching network adapter failed. Exception:  %s"
+msgstr "绑定网络适配器失败。异常：%s"
+
+#, python-format
+msgid "Cannot block migrate instance %s with mapped volumes"
+msgstr "不能迁移带有映射卷的实例"
 
 msgid "Cannot cleanup migration files"
 msgstr "无法清除迁移文件"
@@ -103,8 +124,20 @@ msgid "Could not decode scheduler options"
 msgstr "无法解码调度选项"
 
 #, python-format
+msgid ""
+"Could not disconnect encrypted volume %(volume)s. If dm-crypt device is "
+"still active it will have to be destroyed manually for cleanup to succeed."
+msgstr ""
+"不能断开加密卷%(volume)s。如果dm-crypt设备仍然处于活跃，为了成功清理，必须手"
+"动销毁dm-crypt。"
+
+#, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "未能除去临时目录：%s"
+
+#, python-format
+msgid "Could not start encryption for disk %(device)s: %(exception)s"
+msgstr "对于磁盘 %(device)s 不能启动加密：%(exception)s"
 
 #, python-format
 msgid "Could not stat scheduler options file %(filename)s"
@@ -122,11 +155,44 @@ msgid "Couldn't lookup app: %s"
 msgstr "无法查找应用：%s"
 
 #, python-format
+msgid "Couldn't unmount the GlusterFS share %s"
+msgstr "不能卸载GlusterFS 共享 %s"
+
+#, python-format
+msgid "Couldn't unmount the NFS share %s"
+msgstr "不能卸载 NFS 共享%s"
+
+#, python-format
+msgid "Couldn't unmount the Quobyte Volume at %s"
+msgstr "不能卸载在%s的Quobyte卷"
+
+#, python-format
+msgid "Couldn't unmount the share %s"
+msgstr "不能卸载共享%s"
+
+#, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr "创建配置驱动器失败，发生错误：%s"
 
 msgid "DB error"
 msgstr "数据库错误"
+
+msgid "Destroy VM failed"
+msgstr "销毁VM失败"
+
+msgid "Destroy instance failed"
+msgstr "销毁实例失败"
+
+#, python-format
+msgid "Detaching network adapter failed. Exception: %s"
+msgstr "解绑网络适配器失败。异常：%s"
+
+#, python-format
+msgid ""
+"Download handler '%(handler)s' raised an exception, falling back to default "
+"handler '%(default_handler)s'"
+msgstr ""
+"下载处理 '%(handler)s'  引发一个异常，回滚到缺省处理 '%(default_handler)s'"
 
 msgid "Download image error"
 msgstr "下载镜像失败"
@@ -162,6 +228,14 @@ msgid "Error creating key: %s"
 msgstr "创建key：%s 出错"
 
 #, python-format
+msgid "Error defining a domain with XML: %s"
+msgstr "定义实体出错，XML：%s"
+
+#, python-format
+msgid "Error defining a secret with XML: %s"
+msgstr "定义加密失败，XML：%s"
+
+#, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "删除跟踪连接项 %s"
 
@@ -172,6 +246,10 @@ msgstr "删除key：%s 出错"
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
 msgstr "在 baremetal 节点 %(node)s 上部署实例 %(instance)s 时出错。"
+
+#, python-format
+msgid "Error enabling hairpin mode with XML: %s"
+msgstr "启用发荚模式失败，XML：%s"
 
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
@@ -208,6 +286,14 @@ msgstr "移植中发生错误"
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
 msgstr "将数据插入到映像 %(img_id)s (%(e)s) 中时出错"
 
+#, python-format
+msgid "Error instantiating %(provider)s: %(exception)s"
+msgstr "实例化%(provider)s出错：%(exception)s"
+
+#, python-format
+msgid "Error launching a defined domain with XML: %s"
+msgstr "启动定义的实体失败，XML：%s"
+
 msgid "Error locating next hop for message"
 msgstr "定位消息的下一跳发生错误"
 
@@ -216,7 +302,11 @@ msgstr "定位消息的下一跳发生错误"
 
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
-msgstr "在卷快照创建期间发送错误，发送错误状态到Cinder。"
+msgstr "在卷快照创建期间发生错误，发送错误状态到Cinder。"
+
+msgid ""
+"Error occurred during volume_snapshot_delete, sending error status to Cinder."
+msgstr "在volume_snapshot_delete期间发生错误，发送错误状态到Cinder。"
 
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
@@ -311,6 +401,10 @@ msgid "Exception while waiting completion of volume snapshots: %s"
 msgstr "等待卷快照：%s 完成时发生异常"
 
 #, python-format
+msgid "Extending virtual disk failed with error: %s"
+msgstr "扩展虚拟磁盘失败，错误：%s"
+
+#, python-format
 msgid "Failed removing bridge device: '%s'"
 msgstr "未能移除桥接设备：%s"
 
@@ -372,6 +466,11 @@ msgstr "无法完成删除操作"
 msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
 msgstr "未能将 %(mountpoint)s 的卷连接到卷 %(volume_id)s"
 
+#, python-format
+msgid ""
+"Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
+msgstr "为调整大小，从%(source)s 到 %(dest)s复制缓存镜像失败：%(error)s"
+
 msgid "Failed to deallocate network for instance."
 msgstr "未能对实例释放网络。"
 
@@ -387,6 +486,10 @@ msgid "Failed to destroy instance: %s"
 msgstr "未能销毁实例：%s"
 
 #, python-format
+msgid "Failed to detach %(device_name)s. Exception: %(exc)s"
+msgstr "解绑%(device_name)s失败。异常：%(exc)s"
+
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "未能从 %(mp)s 断开与卷 %(volume_id)s 的连接"
 
@@ -396,6 +499,14 @@ msgstr "把 %(image_location)s 下载到 %(image_path)s失败"
 
 msgid "Failed to fetch glance image"
 msgstr "未能访存 Glance 映像"
+
+#, python-format
+msgid "Failed to find an SR for volume %s"
+msgstr "为卷%s查找SR失败"
+
+#, python-format
+msgid "Failed to forget the SR for volume %s"
+msgstr "为卷%s 断开SR失败"
 
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
@@ -430,6 +541,12 @@ msgstr "未能获取 nw_info"
 #, python-format
 msgid "Failed to instantiate the download handler for %(scheme)s"
 msgstr "未能实例化地下载处理程序 %(scheme)s"
+
+#, python-format
+msgid ""
+"Failed to kill process %(pid)s due to %(reason)s, while deleting the "
+"instance."
+msgstr "删除实例时，杀死进程 %(pid)s 失败，原因是 %(reason)s 。"
 
 #, python-format
 msgid "Failed to load %(cfgfile)s: %(ex)s"
@@ -470,6 +587,15 @@ msgstr "删除 %(base_file)s 失败，错误是 %(error)s"
 #, python-format
 msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
 msgstr "请求Ironic准备实例%(inst)s失败：%(reason)s"
+
+#, python-format
+msgid ""
+"Failed to retrieve encryption metadata for volume %(volume_id)s: "
+"%(exception)s"
+msgstr "为卷%(volume_id)s 获取加密元数据失败：%(exception)s"
+
+msgid "Failed to retrieve ephemeral encryption key"
+msgstr "获取瞬时加密关键字失败"
 
 msgid "Failed to revert crashed migration"
 msgstr "未能还原已崩溃的迁移"
@@ -553,6 +679,15 @@ msgstr "未能写入配置文件"
 msgid "Failed to write inbound.csr"
 msgstr "未能写入 inbound.csr"
 
+msgid "Failed while plugging ib hostdev vif"
+msgstr "插入ib 主机设备 vif 失败"
+
+msgid "Failed while plugging vif"
+msgstr "插入vif时失败"
+
+msgid "Failed while unplugging ib hostdev vif"
+msgstr "拔出 ib 主机 vif 失败"
+
 msgid "Failed while unplugging vif"
 msgstr "拔出 vif 时发生故障"
 
@@ -577,6 +712,16 @@ msgstr "Guest 没有控制台可用"
 
 msgid "Host is member of a pool, but DB says otherwise"
 msgstr "主机是池的成员，但数据库则不然"
+
+#, python-format
+msgid ""
+"Hostname has changed from %(old)s to %(new)s. A restart is required to take "
+"effect."
+msgstr "主机名从%(old)s 变为 %(new)s。必须重启才能生效。"
+
+#, python-format
+msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
+msgstr "镜像大小 %(size)d 超出云主机类型允许的大小 %(allowed_size)d"
 
 #, python-format
 msgid ""
@@ -613,6 +758,10 @@ msgstr "server_string 无效：%s"
 msgid "Keystone failure: %s"
 msgstr "Keystone 发生故障：%s"
 
+#, python-format
+msgid "Live Migration failure: %s"
+msgstr "在线迁移失败：%s"
+
 msgid "Migrate Receive failed"
 msgstr "Migrate Receive 失败"
 
@@ -627,6 +776,9 @@ msgstr "确认时未发现迁移%s"
 msgid ""
 "Migration of instance %(instance_id)s to host %(dest)s unexpectedly failed."
 msgstr "从实例 %(instance_id)s 迁移到主机 host %(dest)s 意外失败。"
+
+msgid "Migration operation has aborted"
+msgstr "放弃迁移操作"
 
 #, python-format
 msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
@@ -672,6 +824,10 @@ msgid "Neutron Error: %s"
 msgstr "Neutron错误：%s"
 
 #, python-format
+msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
+msgstr "对于实例%(uuid)s的事件%(event)s，Neurton报告失败"
+
+#, python-format
 msgid "Neutron error creating port on network %s"
 msgstr "在网络 %s 上创建端口发生Neutron错误"
 
@@ -713,9 +869,27 @@ msgstr "处理实例时定期任务sync_power_state发生错误"
 msgid "Periodic task failed to offload instance."
 msgstr "定期任务未能卸载实例。"
 
+msgid "Plugin config_file get_val failed"
+msgstr "插入config_file get_val失败"
+
+#, python-format
+msgid "Pool-Join failed: %s"
+msgstr "Pool-Join 失败：%s"
+
+#, python-format
+msgid "Pool-eject failed: %s"
+msgstr "Pool-eject 失败：%s"
+
+#, python-format
+msgid "Pool-set_name_label failed: %s"
+msgstr "Pool-set_name_label 失败：%s"
+
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "预热迁移失败 %s"
+
+msgid "Read/Write data failed"
+msgstr "读/写数据失败"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on  this OS."
@@ -735,6 +909,12 @@ msgstr "在cleanup_host中发生服务错误"
 msgid "Setting instance vm_state to ERROR"
 msgstr "设置实例的vm_state为ERROR"
 
+msgid "Shutting down VM (cleanly) failed."
+msgstr "关闭虚拟机(软)失败。"
+
+msgid "Shutting down VM (hard) failed"
+msgstr "关闭虚拟机(硬)失败"
+
 msgid ""
 "Something wrong happened when trying to delete snapshot from shelved "
 "instance."
@@ -749,12 +929,30 @@ msgid "Temporary directory is invalid: %s"
 msgstr "临时目录无效：%s"
 
 #, python-format
+msgid "The Quobyte volume at %s is still in use."
+msgstr "在%s 的Quobyte 卷仍然在用。"
+
+#, python-format
+msgid ""
+"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
+msgstr "代理调用%(method)s，返回一个错误：%(ret)r. args=%(args)r"
+
+#, python-format
+msgid ""
+"The agent call to %(method)s returned an invalid response: %(ret)r. args="
+"%(args)r"
+msgstr "代理调用%(method)s，返回一个无效响应：%(ret)r. args=%(args)r"
+
+#, python-format
 msgid "The call to %(method)s returned an error: %(e)s."
 msgstr "对 %(method)s 的调用返回错误：%(e)s。"
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "对 %(method)s 的调用返回了错误：%(e)s。args=%(args)r"
+
+msgid "Transfer data failed"
+msgstr "传输数据失败"
 
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
@@ -763,6 +961,9 @@ msgstr "无法访问浮动IP %(floating_ip)s 的端口 %(port_id)s"
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "无法访问浮动IP %s"
+
+msgid "Unable to access the rescue disk"
+msgstr "不能访问营救盘"
 
 #, python-format
 msgid "Unable to attach volume to instance %s"
@@ -780,16 +981,34 @@ msgid ""
 "disabled."
 msgstr "无法创建停顿VM的快照，禁用停顿后再尝试一次。"
 
+msgid "Unable to destroy VBD"
+msgstr "不能销毁VBD"
+
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "无法执行 %(cmd)s。发生异常：%(exception)s"
+
+msgid "Unable to find SR from VBD"
+msgstr "不能从VBD找到SR"
+
+msgid "Unable to find SR from VDI"
+msgstr "不能从VDI找到SR"
 
 #, python-format
 msgid "Unable to find address %r"
 msgstr "无法找到地址 %r"
 
+msgid "Unable to get record of VDI"
+msgstr "不能获取VDI记录"
+
 msgid "Unable to get updated status"
 msgstr "无法获取已更新的状态"
+
+msgid "Unable to introduce VDI for SR"
+msgstr "不能为SR引入VDI"
+
+msgid "Unable to introduce VDI on SR"
+msgstr "不能在SR上引入VDI"
 
 msgid ""
 "Unable to join. It is possible that either another node exists with the same "
@@ -803,9 +1022,32 @@ msgid "Unable to load the virtualization driver"
 msgstr "无法加载虚拟驱动"
 
 #, python-format
+msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
+msgstr "不能从%(host)s 迁移虚拟机%(vm_ref)s"
+
+#, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: %(server)s."
 msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML：%(server)s。"
+
+#, python-format
+msgid "Unable to parse rrd of %s"
+msgstr "不能解析 %s 的rrd"
+
+#, python-format
+msgid "Unable to preallocate image at path: %(path)s"
+msgstr "不能砸路径：%(path)s上面预分配镜像"
+
+#, python-format
+msgid "Unable to retrieve storage policy with name %s"
+msgstr "不能获取名称 %s 的存储策略"
+
+#, python-format
+msgid "Unable to set up pool: %s."
+msgstr "不能建立池：%s"
+
+msgid "Unable to unplug VBD"
+msgstr "不能拔出VBD"
 
 #, python-format
 msgid "Unable to update host of port %s"
@@ -822,6 +1064,10 @@ msgstr "发生意外错误 %(ex_name)s ：%(ex_str)s"
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "意外构筑失败，未重新安排构筑。"
 
+#, python-format
+msgid "Unexpected error while checking process %(pid)s."
+msgstr "检查进程 %(pid)s 时，发生未知错误。"
+
 msgid "Unexpected exception in API method"
 msgstr "在API方法中发生未预料的异常"
 
@@ -833,6 +1079,10 @@ msgstr "尝试更新功能时，遇到未知单元“%(cell_name)s”"
 msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
 msgstr "尝试更新容量时，遇到未知单元“%(cell_name)s”"
 
+#, python-format
+msgid "Unknown content in connection_info/access_mode: %s"
+msgstr "在connection_info/access_mode: %s 中有未知内容"
+
 msgid "Unshelve attempted but an error has occurred"
 msgstr "试图取消废弃但是发生了错误"
 
@@ -843,9 +1093,32 @@ msgid "Vifs plug failed"
 msgstr "Vifs插入失败"
 
 #, python-format
+msgid "Volume %s is associated with the instance but no SR was found for it"
+msgstr "卷%s 与实例关联，但是没有为它找到SR"
+
+#, python-format
+msgid "Volume is not writable. Please broaden the file permissions. Mount: %s"
+msgstr "卷不是可写。请扩大文件权限。挂载： %s"
+
+#, python-format
 msgid ""
 "When loading the module %(module_str)s the following error occurred: %(ex)s"
 msgstr "在加载 %(module_str)s 模块时发生以下错误：%(ex)s"
+
+msgid ""
+"XenAPI is unable to find a Storage Repository to install guest instances on. "
+"Please check your configuration (e.g. set a default SR for the pool) and/or "
+"configure the flag 'sr_matching_filter'."
+msgstr ""
+"XenAPI 不能找到存储仓库来安装客户机实例。请检查配置(比如设置池的缺省SR)，且/"
+"或配置标记'sr_matching_filter'。"
+
+msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
+msgstr "_migrate_disk_resizing_down失败。恢复原始VM"
+
+#, python-format
+msgid "_migrate_disk_resizing_up failed. Restoring orig vm due_to: %s."
+msgstr "_migrate_disk_resizing_up failed失败。恢复原始VM，原因是：%s。"
 
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
@@ -869,8 +1142,16 @@ msgid "error during stop() in sync_power_state."
 msgstr "在 stop()（处于 sync_power_state）期间出错。"
 
 #, python-format
+msgid "error opening rbd image %s"
+msgstr "打开rbd镜像%s 出错"
+
+#, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr "(%(base_file)s) 处的映像 %(id)s：映像验证失败"
+
+#, python-format
+msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"
+msgstr "池%(pool)s 中的镜像 %(volume)s 有快照，移除失败"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"

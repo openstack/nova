@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:26+0000\n"
+"POT-Creation-Date: 2015-09-22 07:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -231,28 +231,34 @@ msgid ""
 "mute."
 msgstr ""
 
-#: nova/compute/api.py:1611 nova/compute/manager.py:2485
+#: nova/compute/api.py:1619 nova/compute/manager.py:2485
 #, python-format
 msgid "Failed to delete snapshot from shelved instance (%s)."
 msgstr ""
 
-#: nova/compute/api.py:1796
+#: nova/compute/api.py:1804
 #, python-format
 msgid "instance's host %s is down, deleting from database"
 msgstr ""
 
-#: nova/compute/api.py:1804 nova/compute/manager.py:2360
+#: nova/compute/api.py:1812 nova/compute/manager.py:2360
 msgid "Info cache for instance could not be found. Ignore."
 msgstr ""
 
-#: nova/compute/api.py:1846
+#: nova/compute/api.py:1854
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/api.py:2659
+#: nova/compute/api.py:2667
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
+msgstr ""
+
+#: nova/compute/claims.py:300
+msgid ""
+"Can't create a migration_context record without a migration object "
+"specified."
 msgstr ""
 
 #: nova/compute/manager.py:346
@@ -361,7 +367,7 @@ msgstr ""
 msgid "Ignoring Unknown cinder exception: %s"
 msgstr ""
 
-#: nova/compute/manager.py:2316 nova/virt/block_device.py:319
+#: nova/compute/manager.py:2316 nova/virt/block_device.py:342
 #, python-format
 msgid "Failed to delete volume: %(volume_id)s due to %(exc)s"
 msgstr ""
@@ -444,7 +450,7 @@ msgstr ""
 msgid "deallocate port %(port_id)s failed"
 msgstr ""
 
-#: nova/compute/manager.py:4856 nova/compute/manager.py:6359
+#: nova/compute/manager.py:4856 nova/compute/manager.py:6360
 #, python-format
 msgid "Detach interface failed, port_id=%(port_id)s, reason: %(msg)s"
 msgstr ""
@@ -454,16 +460,16 @@ msgstr ""
 msgid "Failed to deallocate port %(port_id)s for instance. Error: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:5545
+#: nova/compute/manager.py:5546
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:5728
+#: nova/compute/manager.py:5729
 msgid "Bandwidth usage not supported by hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:5857
+#: nova/compute/manager.py:5858
 #, python-format
 msgid ""
 "While synchronizing instance power states, found %(num_db_instances)s "
@@ -471,7 +477,7 @@ msgid ""
 "hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:5985
+#: nova/compute/manager.py:5986
 #, python-format
 msgid ""
 "Instance shutdown by itself. Calling the stop API. Current vm_state: "
@@ -480,19 +486,19 @@ msgid ""
 "%(vm_power_state)s"
 msgstr ""
 
-#: nova/compute/manager.py:6012
+#: nova/compute/manager.py:6013
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:6028
+#: nova/compute/manager.py:6029
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:6034
+#: nova/compute/manager.py:6035
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:6040
+#: nova/compute/manager.py:6041
 #, python-format
 msgid ""
 "Instance is not stopped. Calling the stop API. Current vm_state: "
@@ -501,40 +507,40 @@ msgid ""
 "%(vm_power_state)s"
 msgstr ""
 
-#: nova/compute/manager.py:6062
+#: nova/compute/manager.py:6063
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:6076
+#: nova/compute/manager.py:6077
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:6110
+#: nova/compute/manager.py:6111
 #, python-format
 msgid "Periodic reclaim failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:6201
+#: nova/compute/manager.py:6202
 #, python-format
 msgid ""
 "Detected instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6216
+#: nova/compute/manager.py:6217
 msgid "set_bootable is not implemented for the current driver"
 msgstr ""
 
-#: nova/compute/manager.py:6221
+#: nova/compute/manager.py:6222
 msgid "Failed to power off instance"
 msgstr ""
 
-#: nova/compute/manager.py:6237
+#: nova/compute/manager.py:6238
 #, python-format
 msgid "Periodic cleanup failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:6487
+#: nova/compute/manager.py:6488
 #, python-format
 msgid "Migration %s is not found."
 msgstr ""
@@ -1044,6 +1050,11 @@ msgid ""
 "timeout=%(timeout)rs"
 msgstr ""
 
+#: nova/virt/block_device.py:291
+#, python-format
+msgid "Driver failed to detach volume %(volume_id)s at %(mount_point)s."
+msgstr ""
+
 #: nova/virt/configdrive.py:66
 msgid ""
 "The setting \"always\" will be deprecated in the Liberty version. Please "
@@ -1133,7 +1144,7 @@ msgstr ""
 msgid "Failed to remove snapshot for VM %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:507
+#: nova/virt/hyperv/vmops.py:511
 msgid "Timed out while waiting for soft shutdown."
 msgstr ""
 
@@ -1199,7 +1210,7 @@ msgstr ""
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:551
+#: nova/virt/libvirt/driver.py:544
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -1207,7 +1218,7 @@ msgid ""
 "see: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:573
+#: nova/virt/libvirt/driver.py:566
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers "
 "spawned by Nova will be run as the host's root user. It is highly "
@@ -1215,7 +1226,7 @@ msgid ""
 "environment."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:601
+#: nova/virt/libvirt/driver.py:594
 #, python-format
 msgid ""
 "Running Nova with a libvirt version less than %(version)s is deprecated. "
@@ -1223,126 +1234,126 @@ msgid ""
 "the 13.0.0 release."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:733
+#: nova/virt/libvirt/driver.py:726
 msgid "Cannot destroy instance, operation time out"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:754
+#: nova/virt/libvirt/driver.py:747
 #, python-format
 msgid ""
 "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s; attempt "
 "%(attempt)d of 3"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:854
+#: nova/virt/libvirt/driver.py:847
 msgid "Instance may be still running, destroy it again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:909
+#: nova/virt/libvirt/driver.py:902
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1240 nova/virt/libvirt/driver.py:1249
+#: nova/virt/libvirt/driver.py:1233 nova/virt/libvirt/driver.py:1242
 msgid "During detach_volume, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1291
+#: nova/virt/libvirt/driver.py:1284
 msgid "During detach_interface, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1948
+#: nova/virt/libvirt/driver.py:1941
 msgid ""
 "Relative blockrebase support was not detected. Continuing with old "
 "behaviour."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2058
+#: nova/virt/libvirt/driver.py:2051
 msgid "Failed to soft reboot instance. Trying hard reboot."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2557
+#: nova/virt/libvirt/driver.py:2550
 #, python-format
 msgid ""
 "my_ip address (%(my_ip)s) was not found on any of the interfaces: "
 "%(ifaces)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2771
+#: nova/virt/libvirt/driver.py:2764
 #, python-format
 msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2970
+#: nova/virt/libvirt/driver.py:2963
 msgid "File injection into a boot from volume instance is not supported"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3044
+#: nova/virt/libvirt/driver.py:3037
 msgid "Instance disappeared while detaching a PCI device from it."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3154
+#: nova/virt/libvirt/driver.py:3147
 #, python-format
 msgid "Cannot update service status on host \"%s\" since it is not registered."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3157
+#: nova/virt/libvirt/driver.py:3150
 #, python-format
 msgid ""
 "Cannot update service status on host \"%s\" due to an unexpected "
 "exception."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3488
+#: nova/virt/libvirt/driver.py:3481
 msgid "Too many id maps, only included first five."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3498
+#: nova/virt/libvirt/driver.py:3491
 #, python-format
 msgid "Invalid value for id mapping %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4254
+#: nova/virt/libvirt/driver.py:4247
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
 "removed in the next release. Use updated property name "
 "\"hw:watchdog_action\" instead"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4537
+#: nova/virt/libvirt/driver.py:4530
 #, python-format
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4563
+#: nova/virt/libvirt/driver.py:4556
 #, python-format
 msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4603
+#: nova/virt/libvirt/driver.py:4596
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. "
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4618
+#: nova/virt/libvirt/driver.py:4611
 #, python-format
 msgid ""
 "Couldn't retrieve the online CPUs due to a Libvirt error: %(error)s with "
 "error code: %(error_code)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4676
+#: nova/virt/libvirt/driver.py:4669
 #, python-format
 msgid "couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4816
+#: nova/virt/libvirt/driver.py:4810
 #, python-format
 msgid "URI %(uri)s does not support listDevices: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4835
+#: nova/virt/libvirt/driver.py:4829
 #, python-format
 msgid ""
 "You are running with libvirt version %s which is known to have broken "
@@ -1350,7 +1361,7 @@ msgid ""
 "need NUMA support."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5534
+#: nova/virt/libvirt/driver.py:5528
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag,"
 " and the  graphics (VNC and/or SPICE) listen addresses on the destination"
@@ -1360,65 +1371,65 @@ msgid ""
 "succeed, but the VM will continue to listen on the current addresses."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5633
+#: nova/virt/libvirt/driver.py:5627
 #, python-format
 msgid ""
 "An error occurred trying to live migrate. Falling back to legacy live "
 "migrate flow. Error: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5809
+#: nova/virt/libvirt/driver.py:5803
 #, python-format
 msgid "Unable to stat %(disk)s: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5897
+#: nova/virt/libvirt/driver.py:5891
 #, python-format
 msgid "Live migration stuck for %d sec"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5903
+#: nova/virt/libvirt/driver.py:5897
 #, python-format
 msgid "Live migration not completed after %d sec"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5911
+#: nova/virt/libvirt/driver.py:5905
 #, python-format
 msgid "Failed to abort migration %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5931
+#: nova/virt/libvirt/driver.py:5925
 #, python-format
 msgid "Unable to increase max downtime to %(time)dms: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5997
+#: nova/virt/libvirt/driver.py:5991
 msgid "Migration operation was cancelled"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6003
+#: nova/virt/libvirt/driver.py:5997
 #, python-format
 msgid "Unexpected migration job type: %d"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6063
+#: nova/virt/libvirt/driver.py:6057
 #, python-format
 msgid "Error monitoring migration: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6246
+#: nova/virt/libvirt/driver.py:6240
 #, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6520 nova/virt/libvirt/driver.py:6551
+#: nova/virt/libvirt/driver.py:6514 nova/virt/libvirt/driver.py:6545
 #, python-format
 msgid ""
 "Error from libvirt while getting description of %(instance_name)s: [Error"
 " Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6559
+#: nova/virt/libvirt/driver.py:6553
 #, python-format
 msgid ""
 "Periodic task is updating the host stat, it is trying to get disk "
@@ -1426,7 +1437,7 @@ msgid ""
 "resize."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6565
+#: nova/virt/libvirt/driver.py:6559
 #, python-format
 msgid ""
 "Periodic task is updating the host stat, it is trying to get disk "
@@ -1434,7 +1445,7 @@ msgid ""
 "exists on the compute node but is not managed by Nova."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6574
+#: nova/virt/libvirt/driver.py:6568
 #, python-format
 msgid ""
 "Periodic task is updating the host stats, it is trying to get disk info "
@@ -1442,14 +1453,14 @@ msgid ""
 "concurrent operations such as resize. Error: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:7178
+#: nova/virt/libvirt/driver.py:7172
 #, python-format
 msgid ""
 "Ignoring supplied device name: %(device_name)s. Libvirt can't honour "
 "user-supplied dev names"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:7201
+#: nova/virt/libvirt/driver.py:7195
 #, python-format
 msgid "Ignoring supplied device name: %(suggested_dev)s"
 msgstr ""

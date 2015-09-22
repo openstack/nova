@@ -5,13 +5,14 @@
 # Translators:
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:26+0000\n"
-"PO-Revision-Date: 2015-09-08 05:38+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-09-22 07:45+0000\n"
+"PO-Revision-Date: 2015-09-21 08:46+0000\n"
+"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
@@ -33,6 +34,18 @@ msgstr "%(cmd)s selhalo. Před dalším pokusem se bude se čekat %(time)s vteř
 #, python-format
 msgid "%(host_state)s has not been heard from in a while"
 msgstr "%(host_state)s již se nějakou dobu nehlásí"
+
+#, python-format
+msgid "%(logprefix)s failed to load json"
+msgstr "%(logprefix)s nemohl načíst json"
+
+#, python-format
+msgid "%(logprefix)s file does not exist"
+msgstr "Soubor %(logprefix)s neexistuje"
+
+#, python-format
+msgid "%(logprefix)s unexpected IOError when reading"
+msgstr "%(logprefix)s neočekávaný konec soubor při čtění"
 
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
@@ -289,6 +302,10 @@ msgstr "Doména |%(domain)s| již existuje, změna projektu na |%(project)s|."
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing zone to |%(av_zone)s|."
 msgstr "Doména |%(domain)s| již existuje, změna zóny na |%(av_zone)s|."
+
+#, python-format
+msgid "Driver failed to detach volume %(volume_id)s at %(mount_point)s."
+msgstr "Ovladač nemohl odpojit svazek %(volume_id)s v %(mount_point)s."
 
 msgid "During detach_interface, instance disappeared."
 msgstr "Instance zmizela během odpojování rozhraní."
@@ -1232,6 +1249,14 @@ msgstr ""
 "Ovladač libvirt nebyl projektem OpenStack testován na %(type)s/%(arch)s a "
 "proto jeho kvalita nemůže být zaručena. Pro další informace si přečtěte: "
 "https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
+
+#, python-format
+msgid ""
+"The same keypair name '%(name)s' exists in the following cells: "
+"%(cell_names)s. The keypair value from the first cell is returned."
+msgstr ""
+"Stejný název páru klíčů '%(name)s' existuje v následujících buňkách: "
+"%(cell_names)s. Je vrácena hodnota páru z první buňky."
 
 msgid ""
 "The setting \"always\" will be deprecated in the Liberty version. Please use "
