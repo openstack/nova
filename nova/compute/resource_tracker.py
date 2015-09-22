@@ -100,7 +100,7 @@ def _instance_in_resize_state(instance):
     if (vm in [vm_states.ACTIVE, vm_states.STOPPED]
             and task in [task_states.RESIZE_PREP,
             task_states.RESIZE_MIGRATING, task_states.RESIZE_MIGRATED,
-            task_states.RESIZE_FINISH]):
+            task_states.RESIZE_FINISH, task_states.REBUILDING]):
         return True
 
     return False
@@ -326,7 +326,8 @@ class ResourceTracker(object):
 
             if not instance_type:
                 ctxt = context.elevated()
-                instance_type = self._get_instance_type(ctxt, instance, prefix)
+                instance_type = self._get_instance_type(ctxt, instance, prefix,
+                                                        migration)
 
             if image_meta is None:
                 image_meta = objects.ImageMeta.from_instance(instance)
@@ -679,11 +680,12 @@ class ResourceTracker(object):
         self.compute_node.numa_topology = updated_numa_topology
 
     def _is_trackable_migration(self, migration):
-        # Only look at resize/migrate migration records
+        # Only look at resize/migrate migration and evacuation records
         # NOTE(danms): RT should probably examine live migration
         # records as well and do something smart. However, ignore
         # those for now to avoid them being included in below calculations.
-        return migration.migration_type in ('resize', 'migration')
+        return migration.migration_type in ('resize', 'migration',
+                                            'evacuation')
 
     def _get_migration_context_resource(self, resource, instance,
                                         prefix='new_', itype=None):
@@ -720,28 +722,28 @@ class ResourceTracker(object):
             if (instance['instance_type_id'] ==
                     migration.old_instance_type_id):
                 itype = self._get_instance_type(context, instance, 'new_',
-                        migration.new_instance_type_id)
+                        migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
             else:
                 # instance record already has new flavor, hold space for a
                 # possible revert to the old instance type:
                 itype = self._get_instance_type(context, instance, 'old_',
-                        migration.old_instance_type_id)
+                        migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix='old_')
 
         elif incoming and not record:
             # instance has not yet migrated here:
             itype = self._get_instance_type(context, instance, 'new_',
-                    migration.new_instance_type_id)
+                    migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance)
 
         elif outbound and not record:
             # instance migrated, but record usage for a possible revert:
             itype = self._get_instance_type(context, instance, 'old_',
-                    migration.old_instance_type_id)
+                    migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
 
@@ -909,10 +911,16 @@ class ResourceTracker(object):
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
 
-    def _get_instance_type(self, context, instance, prefix,
-            instance_type_id=None):
+    def _get_instance_type(self, context, instance, prefix, migration):
         """Get the instance type from instance."""
-        return getattr(instance, '%sflavor' % prefix)
+        stashed_flavors = migration.migration_type in ('resize')
+        if stashed_flavors:
+            return getattr(instance, '%sflavor' % prefix)
+        else:
+            # NOTE(ndipanov): Certain migration types (all but resize)
+            # do not change flavors so there is no need to stash
+            # them. In that case - just get the instance flavor.
+            return instance.flavor
 
     def _get_usage_dict(self, object_or_dict, **updates):
         """Make a usage dict _update methods expect.

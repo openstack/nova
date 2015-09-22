@@ -1149,8 +1149,8 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     def test_move_type_not_tracked(self, mock_get, mock_save):
-        self.claim_method(self.context, self.instance,
-                self.instance_type, limits=self.limits, move_type="evacuation")
+        self.claim_method(self.context, self.instance, self.instance_type,
+                          limits=self.limits, move_type="live-migration")
         mock_save.assert_called_once_with()
 
         self._assert(0, 'memory_mb_used')
@@ -1163,6 +1163,8 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     def test_existing_migration(self, save_mock, save_inst_mock):
         migration = objects.Migration(self.context, id=42,
                                       instance_uuid=self.instance.uuid,
+                                      source_compute='fake-other-compute',
+                                      source_node='fake-other-node',
                                       status='accepted',
                                       migration_type='evacuation')
         self.claim_method(self.context, self.instance, self.instance_type,
@@ -1170,7 +1172,7 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(self.tracker.host, migration.dest_compute)
         self.assertEqual(self.tracker.nodename, migration.dest_node)
         self.assertEqual("pre-migrating", migration.status)
-        self.assertEqual(0, len(self.tracker.tracked_migrations))
+        self.assertEqual(1, len(self.tracker.tracked_migrations))
         save_mock.assert_called_once_with()
         save_inst_mock.assert_called_once_with()
 

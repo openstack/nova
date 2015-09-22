@@ -207,6 +207,7 @@ _MIGRATION_FIXTURES = {
         dest_node='other-node',
         old_instance_type_id=1,
         new_instance_type_id=2,
+        migration_type='resize',
         status='migrating'
     ),
     # A migration that has only this compute node as the dest host
@@ -219,6 +220,7 @@ _MIGRATION_FIXTURES = {
         dest_node='fake-node',
         old_instance_type_id=1,
         new_instance_type_id=2,
+        migration_type='resize',
         status='migrating'
     ),
     # A migration that has this compute node as both the source and dest host
@@ -231,7 +233,21 @@ _MIGRATION_FIXTURES = {
         dest_node='fake-node',
         old_instance_type_id=1,
         new_instance_type_id=2,
+        migration_type='resize',
         status='migrating'
+    ),
+    # A migration that has this compute node as destination and is an evac
+    'dest-only-evac': objects.Migration(
+        id=4,
+        instance_uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
+        source_compute='other-host',
+        dest_compute='fake-host',
+        source_node='other-node',
+        dest_node='fake-node',
+        old_instance_type_id=2,
+        new_instance_type_id=None,
+        migration_type='evacuation',
+        status='pre-migrating'
     ),
 }
 
@@ -302,6 +318,28 @@ _MIGRATION_INSTANCE_FIXTURES = {
         old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
     ),
+    # dest-only-evac
+    '077fb63a-bdc8-4330-90ef-f012082703dc': objects.Instance(
+        id=102,
+        host=None,  # prevent RT trying to lazy-load this
+        node=None,
+        uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
+        memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
+        vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
+        root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
+        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+        numa_topology=None,
+        instance_type_id=2,
+        vm_state=vm_states.ACTIVE,
+        power_state=power_state.RUNNING,
+        task_state=task_states.REBUILDING,
+        system_metadata={},
+        os_type='fake-os',
+        project_id='fake-project',
+        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
+        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+    ),
 }
 
 _MIGRATION_CONTEXT_FIXTURES = {
@@ -324,6 +362,11 @@ _MIGRATION_CONTEXT_FIXTURES = {
         instance_uuid='f6ed631a-8645-4b12-8e1e-2fff55795765',
         migration_id=2,
         new_numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
+        old_numa_topology=None),
+    '077fb63a-bdc8-4330-90ef-f012082703dc': objects.MigrationContext(
+        instance_uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
+        migration_id=2,
+        new_numa_topology=None,
         old_numa_topology=None),
 }
 
@@ -696,6 +739,63 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_mock.return_value = []
         migr_obj = _MIGRATION_FIXTURES['dest-only']
+        migr_mock.return_value = [migr_obj]
+        inst_uuid = migr_obj.instance_uuid
+        instance = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
+        get_inst_mock.return_value = instance
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+        instance.migration_context = _MIGRATION_CONTEXT_FIXTURES[inst_uuid]
+
+        update_mock = self._update_available_resources()
+
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
+                                            'fake-node')
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
+            # host is added in update_available_resources()
+            # before calling _update()
+            'host': 'fake-host',
+            'host_ip': '1.1.1.1',
+            'numa_topology': None,
+            'metrics': '[]',
+            'cpu_info': '',
+            'hypervisor_hostname': 'fakehost',
+            'free_disk_gb': 1,
+            'hypervisor_version': 0,
+            'local_gb': 6,
+            'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
+            'memory_mb_used': 256,  # 256 possible confirmed amount
+            'pci_device_pools': objects.PciDevicePoolList(),
+            'vcpus_used': 0,  # See NOTE(jaypipes) above about why this is 0
+            'hypervisor_type': 'fake',
+            'local_gb_used': 5,
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
+
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_no_instances_dest_evacuation(self, get_mock, get_inst_mock,
+                                          migr_mock, get_cn_mock):
+        # We test the behavior of update_available_resource() when
+        # there is an active evacuation that involves this compute node
+        # as the destination host not the source host, and the resource
+        # tracker does not yet have any instances assigned to it. This is
+        # the case when a migration to this compute host from another host
+        # is in progress, but not finished yet.
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+        self._setup_rt()
+
+        get_mock.return_value = []
+        migr_obj = _MIGRATION_FIXTURES['dest-only-evac']
         migr_mock.return_value = [migr_obj]
         inst_uuid = migr_obj.instance_uuid
         instance = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
