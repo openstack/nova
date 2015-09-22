@@ -113,7 +113,7 @@ def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
         inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
 
     if use_no_auth:
-        api_v21 = openstack_api.FaultWrapper(auth.NoAuthMiddlewareV3(
+        api_v21 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
               limits.RateLimitingMiddleware(inner_app_v21)))
     else:
         if fake_auth_context is not None:
