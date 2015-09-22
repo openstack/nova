@@ -370,9 +370,6 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-#
-# TODO(berrange) find out what min version ppc64 needs as it
-# almost certainly wants something newer than this....
 MIN_LIBVIRT_VERSION = (0, 10, 2)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
@@ -445,12 +442,30 @@ MIN_QEMU_S390_VERSION = (2, 3, 0)
 # libvirt 1.3 fix f391889f4e942e22b9ef8ecca492de05106ce41e
 MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION = (1, 3, 0)
 
+# ppc64/ppc64le architectures with KVM
+# NOTE(rfolco): Same levels for Libvirt/Qemu on Big Endian and Little
+# Endian giving the nuance around guest vs host architectures
+MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
+MIN_QEMU_PPC64_VERSION = (2, 1, 0)
 
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
 # realtime suppport
 MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
+
+MIN_LIBVIRT_OTHER_ARCH = {arch.S390: MIN_LIBVIRT_KVM_S390_VERSION,
+                          arch.S390X: MIN_LIBVIRT_KVM_S390_VERSION,
+                          arch.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
+                          arch.PPC64: MIN_LIBVIRT_KVM_PPC64_VERSION,
+                          arch.PPC64LE: MIN_LIBVIRT_KVM_PPC64_VERSION,
+                         }
+MIN_QEMU_OTHER_ARCH = {arch.S390: MIN_QEMU_S390_VERSION,
+                       arch.S390X: MIN_QEMU_S390_VERSION,
+                       arch.PPC: MIN_QEMU_PPC64_VERSION,
+                       arch.PPC64: MIN_QEMU_PPC64_VERSION,
+                       arch.PPC64LE: MIN_QEMU_PPC64_VERSION,
+                      }
 
 
 class LibvirtDriver(driver.ComputeDriver):
@@ -624,18 +639,21 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
 
+        kvm_arch = arch.from_host()
         if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
-            arch.from_host() in (arch.S390, arch.S390X) and
-            not self._host.has_min_version(MIN_LIBVIRT_KVM_S390_VERSION,
-                                           MIN_QEMU_S390_VERSION)):
-            raise exception.NovaException(
-                _('Running Nova with qemu/kvm virt_type on s390/s390x '
-                  'requires libvirt version %(libvirt_ver)s and '
-                  'qemu version %(qemu_ver)s, or greater') %
-                {'libvirt_ver': self._version_to_string(
-                    MIN_LIBVIRT_KVM_S390_VERSION),
-                 'qemu_ver': self._version_to_string(
-                     MIN_QEMU_S390_VERSION)})
+            kvm_arch in MIN_LIBVIRT_OTHER_ARCH and
+                not self._host.has_min_version(
+                                        MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch),
+                                        MIN_QEMU_OTHER_ARCH.get(kvm_arch))):
+                raise exception.NovaException(
+                    _('Running Nova with qemu/kvm virt_type on %(arch)s '
+                      'requires libvirt version %(libvirt_ver)s and '
+                      'qemu version %(qemu_ver)s, or greater') %
+                    {'arch': kvm_arch,
+                     'libvirt_ver': self._version_to_string(
+                        MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
+                     'qemu_ver': self._version_to_string(
+                        MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
 
     def _do_migration_flag_warnings(self):
         block_migration_flag = 'VIR_MIGRATE_NON_SHARED_INC'
