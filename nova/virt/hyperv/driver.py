@@ -267,3 +267,9 @@ class HyperVDriver(driver.ComputeDriver):
 
     def get_console_output(self, context, instance):
         return self._vmops.get_console_output(instance)
+
+    def attach_interface(self, instance, image_meta, vif):
+        return self._vmops.attach_interface(instance, vif)
+
+    def detach_interface(self, instance, vif):
+        return self._vmops.detach_interface(instance, vif)

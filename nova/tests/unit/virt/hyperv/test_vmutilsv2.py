@@ -275,3 +275,20 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
 
         ret_val = self._vmutils.get_vm_dvd_disk_paths(self._FAKE_VM_NAME)
         self.assertEqual(mock.sentinel.FAKE_DVD_PATH1, ret_val[0])
+
+    @mock.patch.object(vmutilsv2.VMUtilsV2, '_get_vm_setting_data')
+    def _test_get_vm_generation(self, vm_gen, mock_get_vm_setting_data):
+        self._lookup_vm()
+        vm_gen_string = "Microsoft:Hyper-V:SubType:" + str(vm_gen)
+        mock_vssd = mock.MagicMock(VirtualSystemSubType=vm_gen_string)
+        mock_get_vm_setting_data.return_value = mock_vssd
+
+        ret = self._vmutils.get_vm_generation(mock.sentinel.FAKE_VM_NAME)
+
+        self.assertEqual(vm_gen, ret)
+
+    def test_get_vm_generation_gen1(self):
+        self._test_get_vm_generation(constants.VM_GEN_1)
+
+    def test_get_vm_generation_gen2(self):
+        self._test_get_vm_generation(constants.VM_GEN_2)
