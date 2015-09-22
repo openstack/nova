@@ -143,7 +143,6 @@ nova.tests.unit.api.openstack.compute.test_volumes.VolumeAttachTestsV21
 nova.tests.unit.api.openstack.test_common.LimiterTest
 nova.tests.unit.api.openstack.test_faults.TestFaultWrapper
 nova.tests.unit.api.openstack.test_faults.TestFaults
-nova.tests.unit.api.openstack.test_legacy_v2_compatible_wrapper.TestSoftAddtionalPropertiesValidation
 nova.tests.unit.api.openstack.test_mapper.MapperTest
 nova.tests.unit.api.openstack.test_wsgi.JSONDeserializerTest
 nova.tests.unit.api.openstack.test_wsgi.RequestTest
