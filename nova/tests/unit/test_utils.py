@@ -778,8 +778,26 @@ class MetadataToDictTestCase(test.NoDBTestCase):
                  {'key': 'foo2', 'value': 'baz'}]),
                          {'foo1': 'bar', 'foo2': 'baz'})
 
+    def test_metadata_to_dict_with_include_deleted(self):
+        metadata = [{'key': 'foo1', 'value': 'bar', 'deleted': 1442875429,
+                     'other': 'stuff'},
+                    {'key': 'foo2', 'value': 'baz', 'deleted': 0,
+                     'other': 'stuff2'}]
+        self.assertEqual({'foo1': 'bar', 'foo2': 'baz'},
+                         utils.metadata_to_dict(metadata,
+                                                include_deleted=True))
+        self.assertEqual({'foo2': 'baz'},
+                         utils.metadata_to_dict(metadata,
+                                                include_deleted=False))
+        # verify correct default behavior
+        self.assertEqual(utils.metadata_to_dict(metadata),
+                         utils.metadata_to_dict(metadata,
+                                                include_deleted=False))
+
     def test_metadata_to_dict_empty(self):
-        self.assertEqual(utils.metadata_to_dict([]), {})
+        self.assertEqual({}, utils.metadata_to_dict([]))
+        self.assertEqual({}, utils.metadata_to_dict([], include_deleted=True))
+        self.assertEqual({}, utils.metadata_to_dict([], include_deleted=False))
 
     def test_dict_to_metadata(self):
         def sort_key(adict):
