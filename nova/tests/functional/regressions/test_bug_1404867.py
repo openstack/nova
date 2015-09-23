@@ -80,9 +80,4 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
         # The volume should no longer be reserved as the deletion of the
         # server should have released all the resources.
-        # TODO(mnaser): Uncomment this in patch resolving the issue
-        # self.assertNotIn(volume_id, self.cinder.reserved_volumes)
-
-        # The volume is still reserved at this point, which it should not be.
-        # TODO(mnaser): Remove this in patch resolving the issue
-        self.assertIn(volume_id, self.cinder.reserved_volumes)
+        self.assertNotIn(volume_id, self.cinder.reserved_volumes)
