@@ -82,6 +82,11 @@ def parse_cpu_spec(spec):
         # Note the count limit in the .split() call
         range_parts = rule.split('-', 1)
         if len(range_parts) > 1:
+            reject = False
+            if range_parts[0] and range_parts[0][0] == '^':
+                reject = True
+                range_parts[0] = str(range_parts[0][1:])
+
             # So, this was a range; start by converting the parts to ints
             try:
                 start, end = [int(p.strip()) for p in range_parts]
@@ -93,7 +98,10 @@ def parse_cpu_spec(spec):
                 raise exception.Invalid(_("Invalid range expression %r")
                                         % rule)
             # Add available CPU ids to set
-            cpuset_ids |= set(range(start, end + 1))
+            if not reject:
+                cpuset_ids |= set(range(start, end + 1))
+            else:
+                cpuset_reject_ids |= set(range(start, end + 1))
         elif rule[0] == '^':
             # Not a range, the rule is an exclusion rule; convert to int
             try:
