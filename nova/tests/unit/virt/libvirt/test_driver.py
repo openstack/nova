@@ -5968,6 +5968,38 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_assert_dest_node_has_enough_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_has_local_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_booted_from_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                'get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_shared_block_storage')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_check_shared_storage_test_file')
+    def test_check_can_live_migrate_source_block_migration_with_bdm(
+            self, mock_check, mock_shared_block, mock_get_bdi,
+            mock_booted_from_volume, mock_has_local, mock_enough):
+
+        mock_check.return_value = False
+        mock_shared_block.return_value = False
+        bdi = {'block_device_mapping': ['bdm']}
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = {'filename': 'file',
+                           'image_type': 'default',
+                           'block_migration': True,
+                           'disk_over_commit': False,
+                           'disk_available_mb': 100}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.MigrationPreCheckError,
+                          drvr.check_can_live_migrate_source,
+                          self.context, instance, dest_check_data,
+                          block_device_info=bdi)
+
     def _is_shared_block_storage_test_create_mocks(self, disks):
         # Test data
         instance_xml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -7564,34 +7596,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 [mock.call(self.context, instance, mock.ANY, {},
                            fallback_from_host=instance.host)])
             self.assertIsInstance(res, dict)
-
-    def test_pre_live_migration_block_migrate_fails(self):
-        bdms = [{
-            'connection_info': {
-                'serial': '12345',
-                u'data': {
-                    'device_path':
-                    u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.t-lun-X'
-                }
-            },
-            'mount_device': '/dev/sda'}]
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
-
-        with contextlib.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
-            mock.patch.object(drvr, 'ensure_filtering_rules_for_instance'),
-            mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr, '_connect_volume'),
-            mock.patch.object(driver, 'block_device_info_get_mapping',
-                              return_value=bdms)):
-            disk_info_json = jsonutils.dumps({})
-            self.assertRaises(exception.MigrationError,
-                              drvr.pre_live_migration,
-                              self.context, instance, block_device_info=None,
-                              network_info=[], disk_info=disk_info_json,
-                              migrate_data={})
 
     def test_get_instance_disk_info_works_correctly(self):
         # Test data

@@ -5168,6 +5168,19 @@ class LibvirtDriver(driver.ComputeDriver):
                                     dest_check_data['disk_available_mb'],
                                     dest_check_data['disk_over_commit'],
                                     block_device_info)
+            if block_device_info:
+                bdm = block_device_info.get('block_device_mapping')
+                # NOTE(stpierre): if this instance has mapped volumes,
+                # we can't do a block migration, since that will
+                # result in volumes being copied from themselves to
+                # themselves, which is a recipe for disaster.
+                if bdm and len(bdm):
+                    LOG.error(_LE('Cannot block migrate instance %s with '
+                                  'mapped volumes'),
+                              instance.uuid, instance=instance)
+                    msg = (_('Cannot block migrate instance %s with mapped '
+                             'volumes') % instance.uuid)
+                    raise exception.MigrationPreCheckError(reason=msg)
 
         elif not (dest_check_data['is_shared_block_storage'] or
                   dest_check_data['is_shared_instance_path'] or
@@ -6210,18 +6223,6 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_info = blockinfo.get_info_from_bdm(
                 instance, CONF.libvirt.virt_type, image_meta, vol)
             self._connect_volume(connection_info, disk_info)
-
-        if is_block_migration and len(block_device_mapping):
-            # NOTE(stpierre): if this instance has mapped volumes,
-            # we can't do a block migration, since that will
-            # result in volumes being copied from themselves to
-            # themselves, which is a recipe for disaster.
-            LOG.error(
-                _LE('Cannot block migrate instance %s with mapped volumes'),
-                instance.uuid, instance=instance)
-            msg = (_('Cannot block migrate instance %s with mapped volumes') %
-                   instance.uuid)
-            raise exception.MigrationError(reason=msg)
 
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
