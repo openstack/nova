@@ -21,6 +21,41 @@ Host Aggregates
 
 Host aggregates can be regarded as a mechanism to further partition an availability zone; while availability zones are visible to users, host aggregates are only visible to administrators.  Host aggregates started out as a way to use Xen hypervisor resource pools, but has been generalized to provide a mechanism to allow administrators to assign key-value pairs to groups of machines.  Each node can have multiple aggregates, each aggregate can have multiple key-value pairs, and the same key-value pair can be assigned to multiple aggregate.  This information can be used in the scheduler to enable advanced scheduling, to set up xen hypervisor resources pools or to define logical groups for migration.
 
+
+Availability Zones (AZs)
+------------------------
+
+Availability Zones are the end-user visible logical abstraction for
+partitioning a cloud without knowing the physical infrastructure.
+That abstraction doesn't come up in Nova with an actual database model since
+the availability zone is actually a specific metadata information attached to
+an aggregate. Adding that specific metadata to an aggregate makes the aggregate
+visible from an end-user perspective and consequently allows to schedule upon a
+specific set of hosts (the ones belonging to the aggregate).
+
+That said, there are a few rules to know that diverge from an API perspective
+between aggregates and availability zones:
+
+- one host can be in multiple aggregates, but it can only be in one
+  availability zone
+- by default a host is part of a default availability zone even if it doesn't
+  belong to an aggregate (the configuration option is named
+  ``default_availability_zone``)
+
+.. warning:: That last rule can be very error-prone. Since the user can see the
+  list of availability zones, they have no way to know whether the default
+  availability zone name (currently *nova*) is provided because an host
+  belongs to an aggregate whose AZ metadata key is set to *nova*, or because
+  there are at least one host belonging to no aggregate. Consequently, it is
+  highly recommended for users to never ever ask for booting an instance by
+  specifying an explicit AZ named *nova* and for operators to never set the
+  AZ metadata for an aggregate to *nova*. That leads to some problems
+  due to the fact that the instance AZ information is explicitly attached to
+  *nova* which could break further move operations when either the host is
+  moved to another aggregate or when the user would like to migrate the
+  instance.
+
+
 Xen Pool Host Aggregates
 ------------------------
 Originally all aggregates were Xen resource pools, now an aggregate can be set up as a resource pool by giving the aggregate the correct key-value pair.
