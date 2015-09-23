@@ -59,6 +59,7 @@ class TestDeleteFromCell0CheckQuota(test.TestCase):
 
         self.start_service('conductor')
         self.start_service('scheduler')
+        self.start_service('consoleauth')
 
         # We don't actually start a compute service; this way we don't have any
         # compute hosts to schedule the instance to and will go into error and
