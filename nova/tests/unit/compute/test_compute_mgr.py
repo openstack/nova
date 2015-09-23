@@ -409,7 +409,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.driver.init_host(host=our_host)
             context.get_admin_context().AndReturn(self.context)
             db.instance_get_all_by_host(
-                    self.context, our_host, columns_to_join=['info_cache'],
+                    self.context, our_host,
+                    columns_to_join=['info_cache', 'metadata'],
                     use_slave=False
                     ).AndReturn(startup_instances)
             if defer_iptables_apply:
@@ -508,7 +509,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.driver.init_host(host=our_host)
         context.get_admin_context().AndReturn(self.context)
         db.instance_get_all_by_host(self.context, our_host,
-                                    columns_to_join=['info_cache'],
+                                    columns_to_join=['info_cache', 'metadata'],
                                     use_slave=False
                                     ).AndReturn([])
         self.compute.init_virt_events()
@@ -613,6 +614,90 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._set_instance_obj_error_state(mox.IgnoreArg(), instance)
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'destroy')
+    @mock.patch.object(objects.Instance, 'obj_load_attr')
+    @mock.patch.object(objects.quotas.Quotas, 'commit')
+    @mock.patch.object(objects.quotas.Quotas, 'reserve')
+    @mock.patch.object(objects.quotas, 'ids_from_instance')
+    def test_init_instance_complete_partial_deletion(
+            self, mock_ids_from_instance, mock_reserve, mock_commit,
+            mock_inst_destroy, mock_obj_load_attr, mock_get_by_instance_uuid,
+            mock_bdm_destroy):
+        """Test to complete deletion for instances in DELETED status but not
+        marked as deleted in the DB
+        """
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                project_id='fake',
+                uuid='fake-uuid',
+                vcpus=1,
+                memory_mb=64,
+                power_state=power_state.SHUTDOWN,
+                vm_state=vm_states.DELETED,
+                host=self.compute.host,
+                task_state=None,
+                deleted=False,
+                deleted_at=None,
+                metadata={},
+                system_metadata={},
+                expected_attrs=['metadata', 'system_metadata'])
+
+        # Make sure instance vm_state is marked as 'DELETED' but instance is
+        # not destroyed from db.
+        self.assertEqual(vm_states.DELETED, instance.vm_state)
+        self.assertFalse(instance.deleted)
+
+        deltas = {'instances': -1,
+                  'cores': -instance.vcpus,
+                  'ram': -instance.memory_mb}
+
+        def fake_inst_destroy():
+            instance.deleted = True
+            instance.deleted_at = timeutils.utcnow()
+
+        mock_ids_from_instance.return_value = (instance.project_id,
+                                               instance.user_id)
+        mock_inst_destroy.side_effect = fake_inst_destroy()
+
+        self.compute._init_instance(self.context, instance)
+
+        # Make sure that instance.destroy method was called and
+        # instance was deleted from db.
+        self.assertTrue(mock_reserve.called)
+        self.assertTrue(mock_commit.called)
+        self.assertNotEqual(0, instance.deleted)
+        mock_reserve.assert_called_once_with(project_id=instance.project_id,
+                                             user_id=instance.user_id,
+                                             **deltas)
+
+    @mock.patch('nova.compute.manager.LOG')
+    def test_init_instance_complete_partial_deletion_raises_exception(
+            self, mock_log):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                project_id='fake',
+                uuid='fake-uuid',
+                vcpus=1,
+                memory_mb=64,
+                power_state=power_state.SHUTDOWN,
+                vm_state=vm_states.DELETED,
+                host=self.compute.host,
+                task_state=None,
+                deleted=False,
+                deleted_at=None,
+                metadata={},
+                system_metadata={},
+                expected_attrs=['metadata', 'system_metadata'])
+
+        with mock.patch.object(self.compute,
+                               '_complete_partial_deletion') as mock_deletion:
+            mock_deletion.side_effect = test.TestingException()
+            self.compute._init_instance(self, instance)
+            msg = u'Failed to complete a deletion'
+            mock_log.exception.assert_called_once_with(msg, instance=instance)
 
     def test_init_instance_stuck_in_deleting(self):
         instance = fake_instance.fake_instance_obj(
