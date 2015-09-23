@@ -10,10 +10,10 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Project-Id-Version: nova 12.0.0.0b4.dev266\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-22 07:46+0000\n"
-"PO-Revision-Date: 2015-09-18 12:54+0000\n"
+"POT-Creation-Date: 2015-09-23 14:55+0000\n"
+"PO-Revision-Date: 2015-09-23 01:52+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
@@ -761,6 +761,9 @@ msgstr "Keystone 发生故障：%s"
 #, python-format
 msgid "Live Migration failure: %s"
 msgstr "在线迁移失败：%s"
+
+msgid "Live migration failed."
+msgstr "在线迁移失败。"
 
 msgid "Migrate Receive failed"
 msgstr "Migrate Receive 失败"
