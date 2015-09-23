@@ -2681,6 +2681,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
              mock_power_off
         ):
             instance = fake_instance.fake_instance_obj(self.context)
+            instance.migration_context = None
+            instance.numa_topology = None
             instance.task_state = task_states.REBUILDING
             instance.save(expected_task_state=[task_states.REBUILDING])
             self.compute._rebuild_default_impl(self.context,

@@ -11497,8 +11497,16 @@ class EvacuateHostTestCase(BaseTestCase):
         numa_topology = (
             test_instance_numa_topology.get_fake_obj_numa_topology(
                 self.context))
+
+        # NOTE(ndipanov): Make sure that we pass the topology from the context
+        def fake_spawn(context, instance, image_meta, injected_files,
+                       admin_password, network_info=None,
+                       block_device_info=None):
+            self.assertIsNone(instance.numa_topology)
+
         self.inst.numa_topology = numa_topology
-        patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
+        patch_spawn = mock.patch.object(self.compute.driver, 'spawn',
+                                        side_effect=fake_spawn)
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
         with patch_spawn, patch_on_disk:
