@@ -101,7 +101,7 @@ _STATE_MAP = {
         'default': 'VERIFY_RESIZE',
         # Note(maoy): the OS API spec 1.1 doesn't have CONFIRMING_RESIZE
         # state so we comment that out for future reference only.
-        #task_states.RESIZE_CONFIRMING: 'CONFIRMING_RESIZE',
+        # task_states.RESIZE_CONFIRMING: 'CONFIRMING_RESIZE',
         task_states.RESIZE_REVERTING: 'REVERT_RESIZE',
     },
     vm_states.PAUSED: {
