@@ -21,6 +21,7 @@ import time
 
 import mock
 from mox3 import mox
+import netifaces
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -1127,11 +1128,20 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self._test_add_metadata_forward_rule(expected)
 
     def test_ensure_bridge_brings_up_interface(self):
+        # We have to bypass the CONF.fake_network check so that netifaces
+        # is actually called.
+        self.flags(fake_network=False)
+        fake_mac = 'aa:bb:cc:00:11:22'
+        fake_ifaces = {
+            netifaces.AF_LINK: [{'addr': fake_mac}]
+        }
         calls = {
             'device_exists': [mock.call('bridge')],
             '_execute': [
                 mock.call('brctl', 'addif', 'bridge', 'eth0',
                           run_as_root=True, check_exit_code=False),
+                mock.call('ip', 'link', 'set', 'bridge', 'address', fake_mac,
+                          run_as_root=True),
                 mock.call('ip', 'link', 'set', 'eth0', 'up',
                           run_as_root=True, check_exit_code=False),
                 mock.call('ip', 'route', 'show', 'dev', 'eth0'),
@@ -1141,12 +1151,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             }
         with contextlib.nested(
             mock.patch.object(linux_net, 'device_exists', return_value=True),
-            mock.patch.object(linux_net, '_execute', return_value=('', ''))
-        ) as (device_exists, _execute):
+            mock.patch.object(linux_net, '_execute', return_value=('', '')),
+            mock.patch.object(netifaces, 'ifaddresses')
+        ) as (device_exists, _execute, ifaddresses):
+            ifaddresses.return_value = fake_ifaces
             driver = linux_net.LinuxBridgeInterfaceDriver()
             driver.ensure_bridge('bridge', 'eth0')
             device_exists.assert_has_calls(calls['device_exists'])
             _execute.assert_has_calls(calls['_execute'])
+            ifaddresses.assert_called_once_with('eth0')
 
     def test_ensure_bridge_brclt_addif_exception(self):
         def fake_execute(*cmd, **kwargs):

@@ -24,6 +24,7 @@ import re
 import time
 
 import netaddr
+import netifaces
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -1613,10 +1614,6 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
             _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
-            # (danwent) bridge device MAC address can't be set directly.
-            # instead it inherits the MAC address of the first device on the
-            # bridge, which will either be the vlan interface, or a
-            # physical NIC.
             _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
 
         if interface:
@@ -1628,6 +1625,18 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
                 msg = _('Failed to add interface: %s') % err
                 raise exception.NovaException(msg)
+
+            # NOTE(apmelton): Linux bridge's default behavior is to use the
+            # lowest mac of all plugged interfaces. This isn't a problem when
+            # it is first created and the only interface is the bridged
+            # interface. But, as instance interfaces are plugged, there is a
+            # chance for the mac to change. So, set it here so that it won't
+            # change in the future.
+            if not CONF.fake_network:
+                interface_addrs = netifaces.ifaddresses(interface)
+                interface_mac = interface_addrs[netifaces.AF_LINK][0]['addr']
+                _execute('ip', 'link', 'set', bridge, 'address', interface_mac,
+                         run_as_root=True)
 
             out, err = _execute('ip', 'link', 'set', interface, 'up',
                                 check_exit_code=False, run_as_root=True)
