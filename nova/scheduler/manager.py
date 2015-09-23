@@ -28,7 +28,6 @@ from oslo_utils import importutils
 
 from nova import exception
 from nova import manager
-from nova import objects
 from nova import quota
 
 
@@ -63,7 +62,6 @@ class SchedulerManager(manager.Manager):
         self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
-        self.additional_endpoints.append(_SchedulerManagerV3Proxy(self))
 
     @periodic_task.periodic_task
     def _expire_reservations(self, context):
@@ -125,34 +123,3 @@ class SchedulerManager(manager.Manager):
         """
         self.driver.host_manager.sync_instance_info(context, host_name,
                                                     instance_uuids)
-
-
-class _SchedulerManagerV3Proxy(object):
-
-    target = messaging.Target(version='3.0')
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    # NOTE(sbauza): Previous run_instance() and prep_resize() methods were
-    # removed from the Juno branch before Juno released, so we can safely
-    # remove them even from the V3.1 proxy as there is no Juno RPC client
-    # that can call them
-    @messaging.expected_exceptions(exception.NoValidHost)
-    def select_destinations(self, context, request_spec, filter_properties):
-        """Returns destinations(s) best suited for this request_spec and
-        filter_properties.
-
-        The result should be a list of dicts with 'host', 'nodename' and
-        'limits' as keys.
-        """
-        # TODO(melwitt): Remove this in version 4.0 of the RPC API
-        flavor = filter_properties.get('instance_type')
-        if flavor and not isinstance(flavor, objects.Flavor):
-            # Code downstream may expect extra_specs to be populated since it
-            # is receiving an object, so lookup the flavor to ensure this.
-            flavor = objects.Flavor.get_by_id(context, flavor['id'])
-            filter_properties = dict(filter_properties, instance_type=flavor)
-        dests = self.manager.select_destinations(context, request_spec,
-            filter_properties)
-        return dests

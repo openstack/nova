@@ -105,22 +105,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               mock.sentinel.instance_uuids)
 
 
-class SchedulerV21PassthroughTestCase(test.NoDBTestCase):
-
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def setUp(self, mock_init_agg, mock_init_inst):
-        super(SchedulerV21PassthroughTestCase, self).setUp()
-        self.manager = manager.SchedulerManager()
-        self.proxy = manager._SchedulerManagerV3Proxy(self.manager)
-
-    def test_select_destination(self):
-        with mock.patch.object(self.manager, 'select_destinations'
-                ) as select_destinations:
-            self.proxy.select_destinations(None, None, {})
-            select_destinations.assert_called_once_with(None, None, {})
-
-
 class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
 
