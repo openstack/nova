@@ -1115,7 +1115,7 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
                 self._test_delete_resized_part(inst)
-            if inst.vm_state != vm_states.SHELVED_OFFLOADED:
+            if inst.host is not None:
                 self.context.elevated().AndReturn(self.context)
                 objects.Service.get_by_compute_host(self.context,
                         inst.host).AndReturn(objects.Service())
@@ -1123,9 +1123,7 @@ class _ComputeAPIUnitTestMixIn(object):
                         mox.IsA(objects.Service)).AndReturn(
                                 inst.host != 'down-host')
 
-            if (inst.host == 'down-host' or
-                    inst.vm_state == vm_states.SHELVED_OFFLOADED):
-
+            if inst.host == 'down-host' or inst.host is None:
                 self._test_downed_host_part(inst, updates, delete_time,
                                             delete_type)
                 cast = False
@@ -1214,6 +1212,76 @@ class _ComputeAPIUnitTestMixIn(object):
                                   vm_state=vm_state,
                                   system_metadata=fake_sys_meta)
             self._test_delete('force_delete', vm_state=vm_state)
+
+    @mock.patch('nova.compute.api.API._delete_while_booting',
+                return_value=False)
+    @mock.patch('nova.compute.api.API._lookup_instance')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch('nova.compute.api.API._local_delete')
+    def test_delete_error_state_with_no_host(
+            self, mock_local_delete, mock_service_get, _mock_notify,
+            _mock_save, mock_bdm_get, mock_lookup, _mock_del_booting):
+        # Instance in error state with no host should be a local delete
+        # for non API cells
+        inst = self._create_instance_obj(params=dict(vm_state=vm_states.ERROR,
+                                                     host=None))
+        mock_lookup.return_value = None, inst
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                               'terminate_instance') as mock_terminate:
+            self.compute_api.delete(self.context, inst)
+            if self.cell_type == 'api':
+                mock_terminate.assert_called_once_with(
+                        self.context, inst, mock_bdm_get.return_value,
+                        delete_type='delete')
+                mock_local_delete.assert_not_called()
+            else:
+                mock_local_delete.assert_called_once_with(
+                        self.context, inst, mock_bdm_get.return_value,
+                        'delete', self.compute_api._do_delete)
+                mock_terminate.assert_not_called()
+        mock_service_get.assert_not_called()
+
+    @mock.patch('nova.compute.api.API._delete_while_booting',
+                return_value=False)
+    @mock.patch('nova.compute.api.API._lookup_instance')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.servicegroup.api.API.service_is_up', return_value=True)
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch('nova.compute.api.API._local_delete')
+    def test_delete_error_state_with_host_set(
+            self, mock_local_delete, _mock_record, mock_service_up,
+            mock_elevated, mock_service_get, _mock_notify, _mock_save,
+            mock_bdm_get, mock_lookup, _mock_del_booting):
+        # Instance in error state with host set should be a non-local delete
+        # for non API cells if the service is up
+        inst = self._create_instance_obj(params=dict(vm_state=vm_states.ERROR,
+                                                     host='fake-host'))
+        mock_lookup.return_value = inst
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                               'terminate_instance') as mock_terminate:
+            self.compute_api.delete(self.context, inst)
+            if self.cell_type == 'api':
+                mock_terminate.assert_called_once_with(
+                        self.context, inst, mock_bdm_get.return_value,
+                        delete_type='delete')
+                mock_local_delete.assert_not_called()
+                mock_service_get.assert_not_called()
+            else:
+                mock_service_get.assert_called_once_with(
+                        mock_elevated.return_value, 'fake-host')
+                mock_service_up.assert_called_once_with(
+                        mock_service_get.return_value)
+                mock_terminate.assert_called_once_with(
+                        self.context, inst, mock_bdm_get.return_value,
+                        delete_type='delete')
+                mock_local_delete.assert_not_called()
 
     def test_delete_fast_if_host_not_set(self):
         self.useFixture(fixtures.AllServicesCurrent())
@@ -1419,6 +1487,52 @@ class _ComputeAPIUnitTestMixIn(object):
         bdm.connection_info = jsonutils.dumps(conn_info)
         self.assertIsNone(
             self.compute_api._get_stashed_volume_connector(bdm, inst))
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    def test_local_cleanup_bdm_volumes_stashed_connector_host_none(
+            self, mock_destroy):
+        """Tests that we call volume_api.terminate_connection when we found
+        a stashed connector in the bdm.connection_info dict.
+
+        This tests the case where:
+
+            1) the instance host is None
+            2) the instance vm_state is one where we expect host to be None
+
+        We allow a mismatch of the host in this situation if the instance is
+        in a state where we expect its host to have been set to None, such
+        as ERROR or SHELVED_OFFLOADED.
+        """
+        params = dict(host=None, vm_state=vm_states.ERROR)
+        inst = self._create_instance_obj(params=params)
+        conn_info = {'connector': {'host': 'orig-host'}}
+        vol_bdm = objects.BlockDeviceMapping(self.context, id=1,
+                                             instance_uuid=inst.uuid,
+                                             volume_id=uuids.volume_id,
+                                             source_type='volume',
+                                             destination_type='volume',
+                                             delete_on_termination=True,
+                                             connection_info=jsonutils.dumps(
+                                                conn_info),
+                                             attachment_id=None)
+        bdms = objects.BlockDeviceMappingList(objects=[vol_bdm])
+
+        @mock.patch.object(self.compute_api.volume_api, 'terminate_connection')
+        @mock.patch.object(self.compute_api.volume_api, 'detach')
+        @mock.patch.object(self.compute_api.volume_api, 'delete')
+        @mock.patch.object(self.context, 'elevated', return_value=self.context)
+        def do_test(self, mock_elevated, mock_delete,
+                    mock_detach, mock_terminate):
+            self.compute_api._local_cleanup_bdm_volumes(
+                bdms, inst, self.context)
+            mock_terminate.assert_called_once_with(
+                self.context, uuids.volume_id, conn_info['connector'])
+            mock_detach.assert_called_once_with(
+                self.context, uuids.volume_id, inst.uuid)
+            mock_delete.assert_called_once_with(self.context, uuids.volume_id)
+            mock_destroy.assert_called_once_with()
+
+        do_test(self)
 
     def test_local_delete_without_info_cache(self):
         inst = self._create_instance_obj()
@@ -5749,6 +5863,57 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.context, fixed_ips='ip_address_substr=fake',
             fields=['device_id'])
         self.assertEqual([], instances.objects)
+
+    @mock.patch('nova.compute.api.API._delete_while_booting',
+                return_value=False)
+    @mock.patch('nova.compute.api.API._lookup_instance')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch.object(objects.Instance, 'destroy')
+    def _test_delete_volume_backed_instance(
+            self, vm_state, mock_instance_destroy, bdm_destroy,
+            notify_about_instance_usage, mock_save, mock_elevated,
+            bdm_get_by_instance_uuid, mock_lookup, _mock_del_booting):
+        volume_id = uuidutils.generate_uuid()
+        conn_info = {'connector': {'host': 'orig-host'}}
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 42, 'volume_id': volume_id,
+                 'source_type': 'volume', 'destination_type': 'volume',
+                 'delete_on_termination': False,
+                 'connection_info': jsonutils.dumps(conn_info)}))]
+
+        bdm_get_by_instance_uuid.return_value = bdms
+        mock_elevated.return_value = self.context
+
+        params = {'host': None, 'vm_state': vm_state}
+        inst = self._create_instance_obj(params=params)
+        mock_lookup.return_value = None, inst
+        connector = conn_info['connector']
+
+        with mock.patch.object(self.compute_api.network_api,
+                               'deallocate_for_instance') as mock_deallocate, \
+             mock.patch.object(self.compute_api.volume_api,
+                              'terminate_connection') as mock_terminate_conn, \
+             mock.patch.object(self.compute_api.volume_api,
+                              'detach') as mock_detach:
+                self.compute_api.delete(self.context, inst)
+
+        mock_deallocate.assert_called_once_with(self.context, inst)
+        mock_detach.assert_called_once_with(self.context, volume_id,
+                                            inst.uuid)
+        mock_terminate_conn.assert_called_once_with(self.context,
+                                                    volume_id, connector)
+        bdm_destroy.assert_called_once_with()
+
+    def test_delete_volume_backed_instance_in_error(self):
+        self._test_delete_volume_backed_instance(vm_states.ERROR)
+
+    def test_delete_volume_backed_instance_in_shelved_offloaded(self):
+        self._test_delete_volume_backed_instance(vm_states.SHELVED_OFFLOADED)
 
 
 class Cellsv1DeprecatedTestMixIn(object):
