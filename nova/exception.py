@@ -1952,3 +1952,8 @@ class UnsupportedImageModel(Invalid):
 
 class HostMappingNotFound(Invalid):
     msg_fmt = _("Host '%(name)s' is not mapped to any cell")
+
+
+class RealtimeConfigurationInvalid(Invalid):
+    msg_fmt = _("Cannot set realtime policy in a non dedicated "
+                "cpu pinning policy")

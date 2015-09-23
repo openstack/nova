@@ -959,6 +959,11 @@ def _numa_get_constraints_manual(nodes, flavor, cpu_list, mem_list):
     return objects.InstanceNUMATopology(cells=cells)
 
 
+def is_realtime_enabled(flavor):
+    flavor_rt = flavor.get('extra_specs', {}).get("hw:cpu_realtime")
+    return strutils.bool_from_string(flavor_rt)
+
+
 def _numa_get_constraints_auto(nodes, flavor):
     if ((flavor.vcpus % nodes) > 0 or
         (flavor.memory_mb % nodes) > 0):
@@ -988,6 +993,11 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
         requested = False
     else:
         requested = image_pinning == "dedicated"
+
+    rt = is_realtime_enabled(flavor)
+    pi = image_pinning or flavor_pinning
+    if rt and pi != "dedicated":
+        raise exception.RealtimeConfigurationInvalid()
 
     if not requested:
         return numa_topology
