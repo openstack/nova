@@ -246,9 +246,10 @@ class NetworkAPI(base.Base):
             # time we pull network info for an instance.  The periodic healing
             # of info_cache causes too many cells messages.  Healing the API
             # will happen separately.
+            update_cells = kwargs.get('update_cells', False)
             update_instance_cache_with_nw_info(self, context, instance,
                                                nw_info=result,
-                                               update_cells=False)
+                                               update_cells=update_cells)
         return result
 
     def _get_instance_nw_info(self, context, instance, **kwargs):

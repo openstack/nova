@@ -555,7 +555,8 @@ class TestNeutronv2Base(test.TestCase):
                                  networks=nets_in_requested_net_order,
                                  port_ids=ports_in_requested_net_order,
                                  admin_client=None,
-                                 preexisting_port_ids=preexisting_port_ids
+                                 preexisting_port_ids=preexisting_port_ids,
+                                 update_cells=True
                                 ).AndReturn(self._returned_nw_info)
         self.mox.ReplayAll()
         return api
