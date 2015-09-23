@@ -2154,12 +2154,16 @@ def _regex_instance_filter(query, filters):
             continue
         if 'property' == type(column_attr).__name__:
             continue
+        filter_val = filters[filter_name]
+        # Sometimes the REGEX filter value is not a string
+        if not isinstance(filter_val, six.string_types):
+            filter_val = str(filter_val)
         if db_regexp_op == 'LIKE':
             query = query.filter(column_attr.op(db_regexp_op)(
-                                 '%' + str(filters[filter_name]) + '%'))
+                                 u'%' + filter_val + u'%'))
         else:
             query = query.filter(column_attr.op(db_regexp_op)(
-                                 str(filters[filter_name])))
+                                 filter_val))
     return query
 
 
