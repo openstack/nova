@@ -88,7 +88,7 @@ class _TestBandwidthUsage(test.TestCase):
         bw_usages = bandwidth_usage.BandwidthUsageList.get_by_uuids(
             self.context, ['fake_uuid'],
             start_period=self.expected_bw_usage['start_period'])
-        self.assertEqual(len(bw_usages), 1)
+        self.assertEqual(1, len(bw_usages))
         self._compare(self, self.expected_bw_usage, bw_usages[0])
 
     @mock.patch.object(db, 'bw_usage_update')

@@ -460,7 +460,7 @@ class FlatNetworkTestCase(test.TestCase):
         nw_info = self.network.get_instance_nw_info(self.context, None,
                                                     None, None)
         for i, vif in enumerate(nw_info):
-            self.assertEqual(vif['network']['bridge'], objs[i].network.bridge)
+            self.assertEqual(objs[i].network.bridge, vif['network']['bridge'])
 
     @mock.patch.object(objects.Network, 'get_by_id')
     def test_add_fixed_ip_instance_using_id_without_vpn(self, get_by_id):
@@ -526,16 +526,16 @@ class FlatNetworkTestCase(test.TestCase):
         driver.modify_address("hostfour", "10.0.0.1", zone1)
         driver.modify_address("hostthree", "10.0.0.1", zone1)
         names = driver.get_entries_by_address("10.0.0.1", zone1)
-        self.assertEqual(len(names), 2)
+        self.assertEqual(2, len(names))
         self.assertIn('hostthree', names)
         self.assertIn('hostfour', names)
 
         names = driver.get_entries_by_address("10.0.0.5", zone2)
-        self.assertEqual(len(names), 1)
+        self.assertEqual(1, len(names))
         self.assertIn('hostfive', names)
 
         addresses = driver.get_entries_by_name("hosttwo", zone1)
-        self.assertEqual(len(addresses), 1)
+        self.assertEqual(1, len(addresses))
         self.assertIn('10.0.0.2', addresses)
 
         self.assertRaises(exception.InvalidInput,
@@ -550,11 +550,11 @@ class FlatNetworkTestCase(test.TestCase):
         driver = self.network.instance_dns_manager
         driver.create_entry("HostTen", "10.0.0.10", "A", zone1)
         addresses = driver.get_entries_by_address("10.0.0.10", zone1)
-        self.assertEqual(len(addresses), 1)
+        self.assertEqual(1, len(addresses))
         for n in addresses:
             driver.delete_entry(n, zone1)
         addresses = driver.get_entries_by_address("10.0.0.10", zone1)
-        self.assertEqual(len(addresses), 0)
+        self.assertEqual(0, len(addresses))
 
     def test_allocate_fixed_ip_instance_dns(self):
         # Test DNS entries are created when allocating a fixed IP.
@@ -629,8 +629,8 @@ class FlatNetworkTestCase(test.TestCase):
         res = self.network._get_networks_by_uuids(self.context,
                                                   requested_networks)
 
-        self.assertEqual(res[0]['id'], 1)
-        self.assertEqual(res[1]['id'], 0)
+        self.assertEqual(1, res[0]['id'])
+        self.assertEqual(0, res[1]['id'])
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.quotas.Quotas.reserve')
@@ -1049,7 +1049,7 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan_start=100, cidr='192.168.3.1/24',
                           network_size=100)
 
-        self.assertEqual(networks[0]["vlan"], 102)
+        self.assertEqual(102, networks[0]["vlan"])
 
     def test_vlan_start_multiple(self):
         # VLAN 100 and 101 are used, so these networks shoud be created in 102
@@ -1059,8 +1059,8 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan_start=100, cidr='192.168.3.1/24',
                           network_size=100)
 
-        self.assertEqual(networks[0]["vlan"], 102)
-        self.assertEqual(networks[1]["vlan"], 103)
+        self.assertEqual(102, networks[0]["vlan"])
+        self.assertEqual(103, networks[1]["vlan"])
 
     def test_vlan_start_used(self):
         # VLAN 100 and 101 are used, but vlan_start=99.
@@ -1069,7 +1069,7 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan_start=99, cidr='192.168.3.1/24',
                           network_size=100)
 
-        self.assertEqual(networks[0]["vlan"], 102)
+        self.assertEqual(102, networks[0]["vlan"])
 
     def test_vlan_parameter(self):
         # vlan parameter could not be greater than 4094
@@ -1106,8 +1106,8 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan_start=100, cidr='192.168.3.1/24',
                           network_size=100)
 
-        self.assertEqual(networks[0]["dhcp_server"], "192.168.3.1")
-        self.assertEqual(networks[1]["dhcp_server"], "192.168.3.129")
+        self.assertEqual("192.168.3.1", networks[0]["dhcp_server"])
+        self.assertEqual("192.168.3.129", networks[1]["dhcp_server"])
 
     def test_vlan_multiple_with_dhcp_server(self):
         networks = self.network.create_networks(
@@ -1115,8 +1115,8 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan_start=100, cidr='192.168.3.1/24',
                           network_size=100, dhcp_server='192.168.3.1')
 
-        self.assertEqual(networks[0]["dhcp_server"], "192.168.3.1")
-        self.assertEqual(networks[1]["dhcp_server"], "192.168.3.1")
+        self.assertEqual("192.168.3.1", networks[0]["dhcp_server"])
+        self.assertEqual("192.168.3.1", networks[1]["dhcp_server"])
 
     def test_validate_networks(self):
         self.mox.StubOutWithMock(db, "fixed_ip_get_by_address")
@@ -1884,8 +1884,8 @@ class VlanNetworkTestCase(test.TestCase):
         res = self.network._get_networks_by_uuids(self.context,
                                                   requested_networks)
 
-        self.assertEqual(res[0]['id'], 1)
-        self.assertEqual(res[1]['id'], 0)
+        self.assertEqual(1, res[0]['id'])
+        self.assertEqual(0, res[1]['id'])
 
     @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_id')
     @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
@@ -2080,7 +2080,7 @@ class CommonNetworkTestCase(test.TestCase):
                                               HOST,
                                               '10.0.0.1')
 
-        self.assertEqual(manager.deallocate_called, '10.0.0.1')
+        self.assertEqual('10.0.0.1', manager.deallocate_called)
         disassociate.assert_called_once_with(self.context, '10.0.0.1')
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
@@ -2294,7 +2294,7 @@ class CommonNetworkTestCase(test.TestCase):
         # Greedy get eveything
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '.*'})
-        self.assertEqual(len(res), len(_vifs))
+        self.assertEqual(len(_vifs), len(res))
 
         # Doesn't exist
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
@@ -2305,31 +2305,31 @@ class CommonNetworkTestCase(test.TestCase):
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '172.16.0.2'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
 
         # Get instance 2
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '173.16.0.2'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[2]['instance_uuid'], res[0]['instance_uuid'])
 
         # Get instance 0 and 1
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '172.16.0.*'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[0]['instance_uuid'])
-        self.assertEqual(res[1]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(_vifs[0]['instance_uuid'], res[0]['instance_uuid'])
+        self.assertEqual(_vifs[1]['instance_uuid'], res[1]['instance_uuid'])
 
         # Get instance 1 and 2
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '17..16.0.2'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
-        self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
+        self.assertEqual(_vifs[2]['instance_uuid'], res[1]['instance_uuid'])
 
     @mock.patch('nova.db.network_get')
     def test_get_instance_uuids_by_ipv6_regex(self, network_get):
@@ -2345,7 +2345,7 @@ class CommonNetworkTestCase(test.TestCase):
         # Greedy get eveything
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': '.*'})
-        self.assertEqual(len(res), len(_vifs))
+        self.assertEqual(len(_vifs), len(res))
 
         # Doesn't exist
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
@@ -2356,33 +2356,33 @@ class CommonNetworkTestCase(test.TestCase):
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': '2001:.*2'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
 
         # Get instance 2
         ip6 = '2001:db8:69:1f:dead:beff:feff:ef03'
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': ip6})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[2]['instance_uuid'], res[0]['instance_uuid'])
 
         # Get instance 0 and 1
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': '.*ef0[1,2]'})
         self.assertTrue(res)
-        self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[0]['instance_uuid'])
-        self.assertEqual(res[1]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(_vifs[0]['instance_uuid'], res[0]['instance_uuid'])
+        self.assertEqual(_vifs[1]['instance_uuid'], res[1]['instance_uuid'])
 
         # Get instance 1 and 2
         ip6 = '2001:db8:69:1.:dead:beff:feff:ef0.'
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': ip6})
         self.assertTrue(res)
-        self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
-        self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
+        self.assertEqual(_vifs[2]['instance_uuid'], res[1]['instance_uuid'])
 
     @mock.patch('nova.db.network_get')
     @mock.patch('nova.db.fixed_ips_by_virtual_interface')
@@ -2410,16 +2410,16 @@ class CommonNetworkTestCase(test.TestCase):
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
 
         # Get instance 2
         ip = '173.16.0.2'
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
+        self.assertEqual(1, len(res))
+        self.assertEqual(_vifs[2]['instance_uuid'], res[0]['instance_uuid'])
 
     @mock.patch('nova.db.network_get_by_uuid')
     def test_get_network(self, get):
@@ -2428,7 +2428,7 @@ class CommonNetworkTestCase(test.TestCase):
         get.return_value = dict(test_network.fake_network, **networks[0])
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         network = manager.get_network(fake_context, uuid)
-        self.assertEqual(network['uuid'], uuid)
+        self.assertEqual(uuid, network['uuid'])
 
     @mock.patch('nova.db.network_get_by_uuid')
     def test_get_network_not_found(self, get):
@@ -2446,11 +2446,11 @@ class CommonNetworkTestCase(test.TestCase):
         get_all.return_value = [dict(test_network.fake_network, **net)
                                 for net in networks]
         output = manager.get_all_networks(fake_context)
-        self.assertEqual(len(networks), 2)
-        self.assertEqual(output[0]['uuid'],
-                         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-        self.assertEqual(output[1]['uuid'],
-                         'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+        self.assertEqual(2, len(networks))
+        self.assertEqual('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                         output[0]['uuid'])
+        self.assertEqual('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                         output[1]['uuid'])
 
     @mock.patch('nova.db.network_get_by_uuid')
     @mock.patch('nova.db.network_disassociate')
@@ -2672,7 +2672,7 @@ class RPCAllocateTestCase(test.NoDBTestCase):
         rval = self.rpc_fixed._rpc_allocate_fixed_ip(self.context,
                                                      'fake_instance',
                                                      'fake_network')
-        self.assertEqual(rval, address)
+        self.assertEqual(address, rval)
 
 
 class TestFloatingIPManager(floating_ips.FloatingIP,
@@ -3027,7 +3027,7 @@ class FloatingIPTestCase(test.TestCase):
                                             source='fake_source',
                                             dest='fake_dest')
 
-        self.assertEqual(called['count'], 2)
+        self.assertEqual(2, called['count'])
 
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.floating_ip_update')
@@ -3069,7 +3069,7 @@ class FloatingIPTestCase(test.TestCase):
                                              project_id=self.project_id,
                                              source='fake_source')
 
-        self.assertEqual(called['count'], 2)
+        self.assertEqual(2, called['count'])
 
     def test_floating_dns_create_conflict(self):
         zone = "example.org"
@@ -3095,14 +3095,14 @@ class FloatingIPTestCase(test.TestCase):
         self.network.add_dns_entry(self.context, address1, name2, "A", zone)
         entries = self.network.get_dns_entries_by_address(self.context,
                                                           address1, zone)
-        self.assertEqual(len(entries), 2)
-        self.assertEqual(entries[0], name1)
-        self.assertEqual(entries[1], name2)
+        self.assertEqual(2, len(entries))
+        self.assertEqual(name1, entries[0])
+        self.assertEqual(name2, entries[1])
 
         entries = self.network.get_dns_entries_by_name(self.context,
                                                        name1, zone)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], address1)
+        self.assertEqual(1, len(entries))
+        self.assertEqual(address1, entries[0])
 
     def test_floating_dns_delete(self):
         zone = "example.org"
@@ -3116,8 +3116,8 @@ class FloatingIPTestCase(test.TestCase):
 
         entries = self.network.get_dns_entries_by_address(self.context,
                                                           address1, zone)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], name2)
+        self.assertEqual(1, len(entries))
+        self.assertEqual(name2, entries[0])
 
         self.assertRaises(exception.NotFound,
                           self.network.delete_dns_entry, self.context,
@@ -3135,18 +3135,18 @@ class FloatingIPTestCase(test.TestCase):
                                               'fakeproject')
 
         domains = self.network.get_dns_domains(self.context)
-        self.assertEqual(len(domains), 2)
-        self.assertEqual(domains[0]['domain'], domain1)
-        self.assertEqual(domains[1]['domain'], domain2)
-        self.assertEqual(domains[0]['project'], 'testproject')
-        self.assertEqual(domains[1]['project'], 'fakeproject')
+        self.assertEqual(2, len(domains))
+        self.assertEqual(domain1, domains[0]['domain'])
+        self.assertEqual(domain2, domains[1]['domain'])
+        self.assertEqual('testproject', domains[0]['project'])
+        self.assertEqual('fakeproject', domains[1]['project'])
 
         self.network.add_dns_entry(self.context, address1, entryname,
                                    'A', domain1)
         entries = self.network.get_dns_entries_by_name(self.context,
                                                        entryname, domain1)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], address1)
+        self.assertEqual(1, len(entries))
+        self.assertEqual(address1, entries[0])
 
         self.network.delete_dns_domain(self.context, domain1)
         self.network.delete_dns_domain(self.context, domain2)
@@ -3187,7 +3187,7 @@ class FloatingIPTestCase(test.TestCase):
             entries = self.network.get_dns_entries_by_address(self.context,
                                                               address,
                                                               domain['domain'])
-            self.assertEqual(len(entries), 2)
+            self.assertEqual(2, len(entries))
 
         self.network._delete_all_entries_for_ip(self.context, address)
 
@@ -3234,7 +3234,7 @@ class FloatingIPTestCase(test.TestCase):
         # Attempt to add another and make sure that both MACs are consumed
         # by the retry loop
         self.network._add_virtual_interface(ctxt, 'fake_uuid', 123)
-        self.assertEqual(macs, [])
+        self.assertEqual([], macs)
 
     def test_deallocate_client_exceptions(self):
         # Ensure that FloatingIpNotFoundForAddress is wrapped.
@@ -3363,9 +3363,9 @@ class InstanceDNSTestCase(test.TestCase):
 
         self.network.create_private_dns_domain(self.context, domain1, zone1)
         domains = self.network.get_dns_domains(self.context)
-        self.assertEqual(len(domains), 1)
-        self.assertEqual(domains[0]['domain'], domain1)
-        self.assertEqual(domains[0]['availability_zone'], zone1)
+        self.assertEqual(1, len(domains))
+        self.assertEqual(domain1, domains[0]['domain'])
+        self.assertEqual(zone1, domains[0]['availability_zone'])
 
         self.network.delete_dns_domain(self.context, domain1)
 
@@ -3400,7 +3400,7 @@ class LdapDNSTestCase(test.NoDBTestCase):
 
     def test_ldap_dns_domains(self):
         domains = self.driver.get_domains()
-        self.assertEqual(len(domains), 2)
+        self.assertEqual(2, len(domains))
         self.assertIn(domain1, domains)
         self.assertIn(domain2, domains)
 
@@ -3424,13 +3424,13 @@ class LdapDNSTestCase(test.NoDBTestCase):
         self.driver.create_entry(name1, address1, "A", domain1)
         self.driver.create_entry(name2, address1, "A", domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
-        self.assertEqual(len(entries), 2)
-        self.assertEqual(entries[0], name1)
-        self.assertEqual(entries[1], name2)
+        self.assertEqual(2, len(entries))
+        self.assertEqual(name1, entries[0])
+        self.assertEqual(name2, entries[1])
 
         entries = self.driver.get_entries_by_name(name1, domain1)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], address1)
+        self.assertEqual(1, len(entries))
+        self.assertEqual(address1, entries[0])
 
     def test_ldap_dns_delete(self):
         address1 = "10.10.10.11"
@@ -3440,13 +3440,13 @@ class LdapDNSTestCase(test.NoDBTestCase):
         self.driver.create_entry(name1, address1, "A", domain1)
         self.driver.create_entry(name2, address1, "A", domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
-        self.assertEqual(len(entries), 2)
+        self.assertEqual(2, len(entries))
 
         self.driver.delete_entry(name1, domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
         LOG.debug("entries: %s" % entries)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], name2)
+        self.assertEqual(1, len(entries))
+        self.assertEqual(name2, entries[0])
 
         self.assertRaises(exception.NotFound,
                           self.driver.delete_entry,

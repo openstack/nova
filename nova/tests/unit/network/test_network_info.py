@@ -27,9 +27,9 @@ class RouteTests(test.NoDBTestCase):
     def test_create_route_with_attrs(self):
         route = fake_network_cache_model.new_route()
         fake_network_cache_model.new_ip(dict(address='192.168.1.1'))
-        self.assertEqual(route['cidr'], '0.0.0.0/24')
-        self.assertEqual(route['gateway']['address'], '192.168.1.1')
-        self.assertEqual(route['interface'], 'eth0')
+        self.assertEqual('0.0.0.0/24', route['cidr'])
+        self.assertEqual('192.168.1.1', route['gateway']['address'])
+        self.assertEqual('eth0', route['interface'])
 
     def test_routes_equal(self):
         route1 = model.Route()
@@ -54,7 +54,7 @@ class RouteTests(test.NoDBTestCase):
                 {'gateway': fake_network_cache_model.new_ip(
                                 dict(address='192.168.1.1'))})
         self.assertIsNone(route['cidr'])
-        self.assertEqual(route['gateway']['address'], '192.168.1.1')
+        self.assertEqual('192.168.1.1', route['gateway']['address'])
         self.assertIsNone(route['interface'])
 
 
@@ -81,17 +81,17 @@ class IPTests(test.NoDBTestCase):
 class FixedIPTests(test.NoDBTestCase):
     def test_createnew_fixed_ip_with_attrs(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
-        self.assertEqual(fixed_ip['address'], '192.168.1.100')
-        self.assertEqual(fixed_ip['floating_ips'], [])
-        self.assertEqual(fixed_ip['type'], 'fixed')
-        self.assertEqual(fixed_ip['version'], 4)
+        self.assertEqual('192.168.1.100', fixed_ip['address'])
+        self.assertEqual([], fixed_ip['floating_ips'])
+        self.assertEqual('fixed', fixed_ip['type'])
+        self.assertEqual(4, fixed_ip['version'])
 
     def test_create_fixed_ipv6(self):
         fixed_ip = model.FixedIP(address='::1')
-        self.assertEqual(fixed_ip['address'], '::1')
-        self.assertEqual(fixed_ip['floating_ips'], [])
-        self.assertEqual(fixed_ip['type'], 'fixed')
-        self.assertEqual(fixed_ip['version'], 6)
+        self.assertEqual('::1', fixed_ip['address'])
+        self.assertEqual([], fixed_ip['floating_ips'])
+        self.assertEqual('fixed', fixed_ip['type'])
+        self.assertEqual(6, fixed_ip['version'])
 
     def test_create_fixed_bad_ip_fails(self):
         self.assertRaises(exception.InvalidIpAddressError,
@@ -122,21 +122,21 @@ class FixedIPTests(test.NoDBTestCase):
 
     def test_hydrate(self):
         fixed_ip = model.FixedIP.hydrate({})
-        self.assertEqual(fixed_ip['floating_ips'], [])
+        self.assertEqual([], fixed_ip['floating_ips'])
         self.assertIsNone(fixed_ip['address'])
-        self.assertEqual(fixed_ip['type'], 'fixed')
+        self.assertEqual('fixed', fixed_ip['type'])
         self.assertIsNone(fixed_ip['version'])
 
     def test_add_floating_ip(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
         fixed_ip.add_floating_ip('192.168.1.101')
-        self.assertEqual(fixed_ip['floating_ips'], ['192.168.1.101'])
+        self.assertEqual(['192.168.1.101'], fixed_ip['floating_ips'])
 
     def test_add_floating_ip_repeatedly_only_one_instance(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
         for i in range(10):
             fixed_ip.add_floating_ip('192.168.1.101')
-        self.assertEqual(fixed_ip['floating_ips'], ['192.168.1.101'])
+        self.assertEqual(['192.168.1.101'], fixed_ip['floating_ips'])
 
 
 class SubnetTests(test.NoDBTestCase):
@@ -145,18 +145,19 @@ class SubnetTests(test.NoDBTestCase):
 
         route1 = fake_network_cache_model.new_route()
 
-        self.assertEqual(subnet['cidr'], '10.10.0.0/24')
-        self.assertEqual(subnet['dns'],
-                [fake_network_cache_model.new_ip(dict(address='1.2.3.4')),
-                 fake_network_cache_model.new_ip(dict(address='2.3.4.5'))])
-        self.assertEqual(subnet['gateway']['address'], '10.10.0.1')
-        self.assertEqual(subnet['ips'],
+        self.assertEqual('10.10.0.0/24', subnet['cidr'])
+        self.assertEqual(
+            [fake_network_cache_model.new_ip(dict(address='1.2.3.4')),
+             fake_network_cache_model.new_ip(dict(address='2.3.4.5'))],
+            subnet['dns'])
+        self.assertEqual('10.10.0.1', subnet['gateway']['address'])
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                         dict(address='10.10.0.2')),
                  fake_network_cache_model.new_fixed_ip(
-                            dict(address='10.10.0.3'))])
-        self.assertEqual(subnet['routes'], [route1])
-        self.assertEqual(subnet['version'], 4)
+                            dict(address='10.10.0.3'))], subnet['ips'])
+        self.assertEqual([route1], subnet['routes'])
+        self.assertEqual(4, subnet['version'])
 
     def test_subnet_equal(self):
         subnet1 = fake_network_cache_model.new_subnet()
@@ -193,7 +194,7 @@ class SubnetTests(test.NoDBTestCase):
         route1 = fake_network_cache_model.new_route()
         route2 = fake_network_cache_model.new_route({'cidr': '1.1.1.1/24'})
         subnet.add_route(route2)
-        self.assertEqual(subnet['routes'], [route1, route2])
+        self.assertEqual([route1, route2], subnet['routes'])
 
     def test_add_route_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
@@ -201,51 +202,53 @@ class SubnetTests(test.NoDBTestCase):
         route2 = fake_network_cache_model.new_route({'cidr': '1.1.1.1/24'})
         for i in range(10):
             subnet.add_route(route2)
-        self.assertEqual(subnet['routes'], [route1, route2])
+        self.assertEqual([route1, route2], subnet['routes'])
 
     def test_add_dns(self):
         subnet = fake_network_cache_model.new_subnet()
         dns = fake_network_cache_model.new_ip(dict(address='9.9.9.9'))
         subnet.add_dns(dns)
-        self.assertEqual(subnet['dns'],
+        self.assertEqual(
                 [fake_network_cache_model.new_ip(dict(address='1.2.3.4')),
                  fake_network_cache_model.new_ip(dict(address='2.3.4.5')),
-                 fake_network_cache_model.new_ip(dict(address='9.9.9.9'))])
+                 fake_network_cache_model.new_ip(dict(address='9.9.9.9'))],
+                subnet['dns'])
 
     def test_add_dns_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
         for i in range(10):
             subnet.add_dns(fake_network_cache_model.new_ip(
                     dict(address='9.9.9.9')))
-        self.assertEqual(subnet['dns'],
+        self.assertEqual(
                 [fake_network_cache_model.new_ip(dict(address='1.2.3.4')),
                  fake_network_cache_model.new_ip(dict(address='2.3.4.5')),
-                 fake_network_cache_model.new_ip(dict(address='9.9.9.9'))])
+                 fake_network_cache_model.new_ip(dict(address='9.9.9.9'))],
+                subnet['dns'])
 
     def test_add_ip(self):
         subnet = fake_network_cache_model.new_subnet()
         subnet.add_ip(fake_network_cache_model.new_ip(
                 dict(address='192.168.1.102')))
-        self.assertEqual(subnet['ips'],
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                         dict(address='10.10.0.2')),
                  fake_network_cache_model.new_fixed_ip(
                         dict(address='10.10.0.3')),
                  fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.102'))])
+                        dict(address='192.168.1.102'))], subnet['ips'])
 
     def test_add_ip_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
         for i in range(10):
             subnet.add_ip(fake_network_cache_model.new_fixed_ip(
                         dict(address='192.168.1.102')))
-        self.assertEqual(subnet['ips'],
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                         dict(address='10.10.0.2')),
                  fake_network_cache_model.new_fixed_ip(
                         dict(address='10.10.0.3')),
                  fake_network_cache_model.new_fixed_ip(
-                        dict(address='192.168.1.102'))])
+                        dict(address='192.168.1.102'))], subnet['ips'])
 
     def test_hydrate(self):
         subnet_dict = {
@@ -259,48 +262,50 @@ class SubnetTests(test.NoDBTestCase):
                             dict(address='3.3.3.3'))}
         subnet = model.Subnet.hydrate(subnet_dict)
 
-        self.assertEqual(subnet['cidr'], '255.255.255.0')
-        self.assertEqual(subnet['dns'], [fake_network_cache_model.new_ip(
-                                         dict(address='1.1.1.1'))])
-        self.assertEqual(subnet['gateway']['address'], '3.3.3.3')
-        self.assertEqual(subnet['ips'], [fake_network_cache_model.new_fixed_ip(
-                                         dict(address='2.2.2.2'))])
-        self.assertEqual(subnet['routes'], [
-                    fake_network_cache_model.new_route()])
-        self.assertEqual(subnet['version'], 4)
+        self.assertEqual('255.255.255.0', subnet['cidr'])
+        self.assertEqual([fake_network_cache_model.new_ip(
+            dict(address='1.1.1.1'))], subnet['dns'])
+        self.assertEqual('3.3.3.3', subnet['gateway']['address'])
+        self.assertEqual([fake_network_cache_model.new_fixed_ip(
+            dict(address='2.2.2.2'))], subnet['ips'])
+        self.assertEqual([fake_network_cache_model.new_route()],
+                         subnet['routes'])
+        self.assertEqual(4, subnet['version'])
 
 
 class NetworkTests(test.NoDBTestCase):
     def test_create_network(self):
         network = fake_network_cache_model.new_network()
-        self.assertEqual(network['id'], 1)
-        self.assertEqual(network['bridge'], 'br0')
-        self.assertEqual(network['label'], 'public')
-        self.assertEqual(network['subnets'],
+        self.assertEqual(1, network['id'])
+        self.assertEqual('br0', network['bridge'])
+        self.assertEqual('public', network['label'])
+        self.assertEqual(
                 [fake_network_cache_model.new_subnet(),
                  fake_network_cache_model.new_subnet(
-                        dict(cidr='255.255.255.255'))])
+                        dict(cidr='255.255.255.255'))], network['subnets'])
 
     def test_add_subnet(self):
         network = fake_network_cache_model.new_network()
         network.add_subnet(fake_network_cache_model.new_subnet(
                     dict(cidr='0.0.0.0')))
-        self.assertEqual(network['subnets'],
+        self.assertEqual(
                 [fake_network_cache_model.new_subnet(),
                  fake_network_cache_model.new_subnet(
                         dict(cidr='255.255.255.255')),
-                 fake_network_cache_model.new_subnet(dict(cidr='0.0.0.0'))])
+                 fake_network_cache_model.new_subnet(dict(cidr='0.0.0.0'))],
+                network['subnets'])
 
     def test_add_subnet_a_lot(self):
         network = fake_network_cache_model.new_network()
         for i in range(10):
             network.add_subnet(fake_network_cache_model.new_subnet(
                     dict(cidr='0.0.0.0')))
-        self.assertEqual(network['subnets'],
+        self.assertEqual(
                 [fake_network_cache_model.new_subnet(),
                  fake_network_cache_model.new_subnet(
                         dict(cidr='255.255.255.255')),
-                 fake_network_cache_model.new_subnet(dict(cidr='0.0.0.0'))])
+                 fake_network_cache_model.new_subnet(dict(cidr='0.0.0.0'))],
+                network['subnets'])
 
     def test_network_equal(self):
         network1 = model.Network()
@@ -329,22 +334,22 @@ class NetworkTests(test.NoDBTestCase):
         fake_network_cache_model.new_subnet(dict(cidr='255.255.255.255'))
         network = model.Network.hydrate(fake_network_cache_model.new_network())
 
-        self.assertEqual(network['id'], 1)
-        self.assertEqual(network['bridge'], 'br0')
-        self.assertEqual(network['label'], 'public')
-        self.assertEqual(network['subnets'],
+        self.assertEqual(1, network['id'])
+        self.assertEqual('br0', network['bridge'])
+        self.assertEqual('public', network['label'])
+        self.assertEqual(
                 [fake_network_cache_model.new_subnet(),
                  fake_network_cache_model.new_subnet(
-                        dict(cidr='255.255.255.255'))])
+                        dict(cidr='255.255.255.255'))], network['subnets'])
 
 
 class VIFTests(test.NoDBTestCase):
     def test_create_vif(self):
         vif = fake_network_cache_model.new_vif()
-        self.assertEqual(vif['id'], 1)
-        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
-        self.assertEqual(vif['network'],
-                fake_network_cache_model.new_network())
+        self.assertEqual(1, vif['id'])
+        self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
+        self.assertEqual(fake_network_cache_model.new_network(),
+                         vif['network'])
 
     def test_vif_equal(self):
         vif1 = model.VIF()
@@ -403,11 +408,11 @@ class VIFTests(test.NoDBTestCase):
             network=fake_network_cache_model.new_network(),
             type='bridge')
         vif = fake_network_cache_model.new_vif(vif_dict)
-        self.assertEqual(vif['id'], 1)
-        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
-        self.assertEqual(vif['type'], 'bridge')
-        self.assertEqual(vif['network'],
-                fake_network_cache_model.new_network())
+        self.assertEqual(1, vif['id'])
+        self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
+        self.assertEqual('bridge', vif['type'])
+        self.assertEqual(fake_network_cache_model.new_network(),
+                         vif['network'])
 
     def test_vif_get_fixed_ips(self):
         vif = fake_network_cache_model.new_vif()
@@ -422,7 +427,7 @@ class VIFTests(test.NoDBTestCase):
         vif = fake_network_cache_model.new_vif()
         vif['network']['subnets'][0]['ips'][0].add_floating_ip('192.168.1.1')
         floating_ips = vif.floating_ips()
-        self.assertEqual(floating_ips, ['192.168.1.1'])
+        self.assertEqual(['192.168.1.1'], floating_ips)
 
     def test_vif_get_labeled_ips(self):
         vif = fake_network_cache_model.new_vif()
@@ -434,15 +439,15 @@ class VIFTests(test.NoDBTestCase):
                     fake_network_cache_model.new_ip(
                         {'address': '10.10.0.3', 'type': 'fixed'})] * 2,
             'network_label': 'public'}
-        self.assertEqual(labeled_ips, ip_dict)
+        self.assertEqual(ip_dict, labeled_ips)
 
     def test_hydrate(self):
         fake_network_cache_model.new_network()
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif())
-        self.assertEqual(vif['id'], 1)
-        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
-        self.assertEqual(vif['network'],
-                fake_network_cache_model.new_network())
+        self.assertEqual(1, vif['id'])
+        self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
+        self.assertEqual(fake_network_cache_model.new_network(),
+                         vif['network'])
 
     def test_hydrate_vif_with_type(self):
         vif_dict = dict(
@@ -451,11 +456,11 @@ class VIFTests(test.NoDBTestCase):
             network=fake_network_cache_model.new_network(),
             type='bridge')
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif(vif_dict))
-        self.assertEqual(vif['id'], 1)
-        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
-        self.assertEqual(vif['type'], 'bridge')
-        self.assertEqual(vif['network'],
-                fake_network_cache_model.new_network())
+        self.assertEqual(1, vif['id'])
+        self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
+        self.assertEqual('bridge', vif['type'])
+        self.assertEqual(fake_network_cache_model.new_network(),
+                         vif['network'])
 
 
 class NetworkInfoTests(test.NoDBTestCase):
@@ -463,11 +468,11 @@ class NetworkInfoTests(test.NoDBTestCase):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(
                     {'address': 'bb:bb:bb:bb:bb:bb'})])
-        self.assertEqual(ninfo.fixed_ips(),
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                      {'address': '10.10.0.2'}),
                  fake_network_cache_model.new_fixed_ip(
-                    {'address': '10.10.0.3'})] * 4)
+                    {'address': '10.10.0.3'})] * 4, ninfo.fixed_ips())
 
     def test_create_async_model(self):
         def async_wrapper():
@@ -477,11 +482,11 @@ class NetworkInfoTests(test.NoDBTestCase):
                             {'address': 'bb:bb:bb:bb:bb:bb'})])
 
         ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
-        self.assertEqual(ninfo.fixed_ips(),
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                     {'address': '10.10.0.2'}),
                  fake_network_cache_model.new_fixed_ip(
-                    {'address': '10.10.0.3'})] * 4)
+                    {'address': '10.10.0.3'})] * 4, ninfo.fixed_ips())
 
     def test_create_async_model_exceptions(self):
         def async_wrapper():
@@ -504,18 +509,18 @@ class NetworkInfoTests(test.NoDBTestCase):
         ninfo = model.NetworkInfo([vif,
                 fake_network_cache_model.new_vif(
                     {'address': 'bb:bb:bb:bb:bb:bb'})])
-        self.assertEqual(ninfo.floating_ips(), ['192.168.1.1'])
+        self.assertEqual(['192.168.1.1'], ninfo.floating_ips())
 
     def test_hydrate(self):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(
                         {'address': 'bb:bb:bb:bb:bb:bb'})])
         model.NetworkInfo.hydrate(ninfo)
-        self.assertEqual(ninfo.fixed_ips(),
+        self.assertEqual(
                 [fake_network_cache_model.new_fixed_ip(
                     {'address': '10.10.0.2'}),
                  fake_network_cache_model.new_fixed_ip(
-                        {'address': '10.10.0.3'})] * 4)
+                        {'address': '10.10.0.3'})] * 4, ninfo.fixed_ips())
 
     def _setup_injected_network_scenario(self, should_inject=True,
                                         use_ipv4=True, use_ipv6=False,

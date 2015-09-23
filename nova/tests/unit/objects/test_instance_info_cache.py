@@ -45,8 +45,8 @@ class _TestInstanceInfoCacheObject(object):
         self.mox.ReplayAll()
         obj = instance_info_cache.InstanceInfoCache.get_by_instance_uuid(
             self.context, 'fake-uuid')
-        self.assertEqual(obj.instance_uuid, 'fake-uuid')
-        self.assertEqual(obj.network_info, nwinfo)
+        self.assertEqual('fake-uuid', obj.instance_uuid)
+        self.assertEqual(nwinfo, obj.network_info)
 
     def test_get_by_instance_uuid_no_entries(self):
         self.mox.StubOutWithMock(db, 'instance_info_cache_get')
