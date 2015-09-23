@@ -57,6 +57,11 @@ cells_opts = [
     cfg.IntOpt('bandwidth_update_interval',
                 default=600,
                 help='Seconds between bandwidth updates for cells.'),
+    cfg.IntOpt('instance_update_sync_database_limit',
+            default=100,
+            help='Number of instances to pull from the database at one '
+                 'time for a sync.  If there are more instances to update '
+                 'the results will be paged through'),
 ]
 
 CONF = cfg.CONF
