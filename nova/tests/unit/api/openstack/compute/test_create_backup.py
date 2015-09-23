@@ -85,6 +85,39 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                           self.controller._create_backup,
                           self.req, fakes.FAKE_UUID, body=body)
 
+    def test_create_backup_name_with_leading_trailing_spaces(self):
+        body = {
+            'createBackup': {
+                'name': '  test  ',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    def test_create_backup_name_with_leading_trailing_spaces_compat_mode(
+            self):
+        body = {
+            'createBackup': {
+                'name': '  test  ',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+                     properties={})
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        self.compute_api.backup(self.context, instance, 'test',
+                                'daily', 1,
+                                extra_properties={}).AndReturn(image)
+        self.mox.ReplayAll()
+        self.req.set_legacy_v2()
+        self.controller._create_backup(self.req, instance.uuid,
+                                       body=body)
+
     def test_create_backup_no_rotation(self):
         # Rotation is required for backup requests.
         body = {
@@ -315,6 +348,29 @@ class CreateBackupTestsV2(CreateBackupTestsV21):
                           self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_non_dict_metadata(self):
+        pass
+
+    def test_create_backup_name_with_leading_trailing_spaces(self):
+        body = {
+            'createBackup': {
+                'name': '  test  ',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+                     properties={})
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        self.compute_api.backup(self.context, instance, '  test  ',
+                                'daily', 1,
+                                extra_properties={}).AndReturn(image)
+        self.mox.ReplayAll()
+        self.controller._create_backup(self.req, instance.uuid,
+                                       body=body)
+
+    def test_create_backup_name_with_leading_trailing_spaces_compat_mode(
+            self):
         pass
 
 

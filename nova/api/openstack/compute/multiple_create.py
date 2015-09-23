@@ -60,5 +60,5 @@ class MultipleCreate(extensions.V21APIExtensionBase):
         create_kwargs['max_count'] = max_count
         create_kwargs['return_reservation_id'] = return_id
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
         return schema_multiple_create.server_create

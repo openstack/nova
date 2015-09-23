@@ -18,6 +18,10 @@ from nova.api.validation import parameter_types
 
 availability_zone = copy.deepcopy(parameter_types.name)
 availability_zone['type'] = ['string', 'null']
+availability_zone_with_leading_trailing_spaces = copy.deepcopy(parameter_types.
+    name_with_leading_trailing_spaces)
+availability_zone_with_leading_trailing_spaces['type'] = ['string', 'null']
+
 
 create = {
     'type': 'object',
@@ -37,6 +41,14 @@ create = {
     'additionalProperties': False,
 }
 
+
+create_v20 = copy.deepcopy(create)
+create_v20['properties']['aggregate']['properties']['name'] = (parameter_types.
+    name_with_leading_trailing_spaces)
+create_v20['properties']['aggregate']['properties']['availability_zone'] = (
+    availability_zone_with_leading_trailing_spaces)
+
+
 update = {
     'type': 'object',
     'properties': {
@@ -44,7 +56,7 @@ update = {
         'aggregate': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.name_with_leading_trailing_spaces,
                 'availability_zone': availability_zone
             },
             'additionalProperties': False,
@@ -57,6 +69,14 @@ update = {
     'required': ['aggregate'],
     'additionalProperties': False,
 }
+
+
+update_v20 = copy.deepcopy(update)
+update_v20['properties']['aggregate']['properties']['name'] = (parameter_types.
+    name_with_leading_trailing_spaces)
+update_v20['properties']['aggregate']['properties']['availability_zone'] = (
+    availability_zone_with_leading_trailing_spaces)
+
 
 add_host = {
     'type': 'object',

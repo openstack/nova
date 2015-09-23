@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 
@@ -50,6 +52,12 @@ base_create = {
     'additionalProperties': False,
 }
 
+
+base_create_v20 = copy.deepcopy(base_create)
+base_create_v20['properties']['server'][
+    'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
+
+
 base_update = {
     'type': 'object',
     'properties': {
@@ -64,6 +72,12 @@ base_update = {
     'required': ['server'],
     'additionalProperties': False,
 }
+
+
+base_update_v20 = copy.deepcopy(base_update)
+base_update_v20['properties']['server'][
+    'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
+
 
 base_rebuild = {
     'type': 'object',
@@ -84,6 +98,12 @@ base_rebuild = {
     'required': ['rebuild'],
     'additionalProperties': False,
 }
+
+
+base_rebuild_v20 = copy.deepcopy(base_rebuild)
+base_rebuild_v20['properties']['rebuild'][
+    'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
+
 
 base_resize = {
     'type': 'object',
@@ -117,6 +137,12 @@ create_image = {
     'required': ['createImage'],
     'additionalProperties': False
 }
+
+
+create_image_v20 = copy.deepcopy(create_image)
+create_image_v20['properties']['createImage'][
+    'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
+
 
 reboot = {
     'type': 'object',

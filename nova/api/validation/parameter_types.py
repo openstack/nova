@@ -58,15 +58,47 @@ def _get_printable(exclude=None):
 _printable_ws = ''.join(c for c in _get_all_chars()
                         if unicodedata.category(c) == "Zs")
 
-valid_name_regex = '^(?![%s])[%s]*(?<![%s])$' % (
+
+def _get_printable_no_ws(exclude=None):
+    if exclude is None:
+        exclude = []
+    return ''.join(c for c in _get_all_chars()
+                   if _is_printable(c) and
+                       unicodedata.category(c) != "Zs" and
+                       c not in exclude)
+
+valid_name_regex_base = '^(?![%s])[%s]*(?<![%s])$'
+
+
+valid_name_regex = valid_name_regex_base % (
     re.escape(_printable_ws), re.escape(_get_printable()),
     re.escape(_printable_ws))
 
-# cell's name disallow '!',  '.' and '@'.
-valid_cell_name_regex = '^(?![%s])[%s]*(?<![%s])$' % (
+
+# This regex allows leading/trailing whitespace
+valid_name_leading_trailing_spaces_regex_base = (
+    "^[%(ws)s]*[%(no_ws)s]+[%(ws)s]*$|"
+    "^[%(ws)s]*[%(no_ws)s][%(no_ws)s%(ws)s]+[%(no_ws)s][%(ws)s]*$")
+
+
+valid_cell_name_regex = valid_name_regex_base % (
     re.escape(_printable_ws),
     re.escape(_get_printable(exclude=['!', '.', '@'])),
     re.escape(_printable_ws))
+
+
+# cell's name disallow '!',  '.' and '@'.
+valid_cell_name_leading_trailing_spaces_regex = (
+    valid_name_leading_trailing_spaces_regex_base % {
+        'ws': re.escape(_printable_ws),
+        'no_ws': re.escape(_get_printable_no_ws(exclude=['!', '.', '@']))})
+
+
+valid_name_leading_trailing_spaces_regex = (
+    valid_name_leading_trailing_spaces_regex_base % {
+        'ws': re.escape(_printable_ws),
+        'no_ws': re.escape(_get_printable_no_ws())})
+
 
 boolean = {
     'type': ['boolean', 'string'],
@@ -125,6 +157,18 @@ name = {
 cell_name = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'pattern': valid_cell_name_regex,
+}
+
+
+cell_name_leading_trailing_spaces = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'pattern': valid_cell_name_leading_trailing_spaces_regex,
+}
+
+
+name_with_leading_trailing_spaces = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'pattern': valid_name_leading_trailing_spaces_regex,
 }
 
 

@@ -17,3 +17,7 @@ from nova.api.validation import parameter_types
 server_create = {
     'availability_zone': parameter_types.name,
 }
+
+server_create_v20 = {
+    'availability_zone': parameter_types.name_with_leading_trailing_spaces,
+}

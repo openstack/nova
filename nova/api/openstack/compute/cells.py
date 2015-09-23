@@ -194,6 +194,9 @@ class CellsController(wsgi.Controller):
         * Merging existing transport URL with transport information.
         """
 
+        if 'name' in cell:
+            cell['name'] = common.normalize_name(cell['name'])
+
         # Start with the cell type conversion
         if 'type' in cell:
             cell['is_parent'] = cell['type'] == 'parent'
@@ -236,7 +239,8 @@ class CellsController(wsgi.Controller):
     # returning a response.
     @extensions.expected_errors((400, 403, 501))
     @common.check_cells_enabled
-    @validation.schema(cells.create)
+    @validation.schema(cells.create_v20, '2.0', '2.0')
+    @validation.schema(cells.create, '2.1')
     def create(self, req, body):
         """Create a child cell entry."""
         context = req.environ['nova.context']
@@ -253,7 +257,8 @@ class CellsController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 501))
     @common.check_cells_enabled
-    @validation.schema(cells.update)
+    @validation.schema(cells.update_v20, '2.0', '2.0')
+    @validation.schema(cells.update, '2.1')
     def update(self, req, id, body):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']

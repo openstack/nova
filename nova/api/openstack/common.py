@@ -512,6 +512,17 @@ def get_instance(compute_api, context, instance_id, expected_attrs=None):
         raise exc.HTTPNotFound(explanation=e.format_message())
 
 
+def normalize_name(name):
+    # NOTE(alex_xu): This method is used by v2.1 legacy v2 compat mode.
+    # In the legacy v2 API, some of APIs strip the spaces and some of APIs not.
+    # The v2.1 disallow leading/trailing, for compatible v2 API and consistent,
+    # we enable leading/trailing spaces and strip spaces in legacy v2 compat
+    # mode. Althrough in legacy v2 API there are some APIs didn't strip spaces,
+    # but actually leading/trailing spaces(that means user depend on leading/
+    # trailing spaces distinguish different instance) is pointless usecase.
+    return name.strip()
+
+
 def raise_feature_not_supported(msg=None):
     if msg is None:
         msg = _("The requested functionality is not supported.")

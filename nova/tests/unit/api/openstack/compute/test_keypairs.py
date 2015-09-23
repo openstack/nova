@@ -21,6 +21,7 @@ from nova.api.openstack.compute import keypairs as keypairs_v21
 from nova.api.openstack.compute.legacy_v2.contrib import keypairs \
         as keypairs_v2
 from nova.api.openstack import wsgi as os_wsgi
+from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova import objects
@@ -39,6 +40,8 @@ keypair_data = {
     'public_key': 'FAKE_KEY',
     'fingerprint': 'FAKE_FINGERPRINT',
 }
+
+FAKE_UUID = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
 
 
 def fake_keypair(name):
@@ -123,6 +126,22 @@ class KeypairsTestV21(test.TestCase):
         }
         self._test_keypair_create_bad_request_case(body,
                                                    self.validation_error)
+
+    def test_keypair_create_with_name_leading_trailing_spaces(self):
+        body = {
+            'keypair': {
+                'name': '  test  '
+            }
+        }
+        self._test_keypair_create_bad_request_case(body,
+                                                   self.validation_error)
+
+    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
+            self):
+        body = {'keypair': {'name': '  test  '}}
+        self.req.set_legacy_v2()
+        res_dict = self.controller.create(self.req, body=body)
+        self.assertEqual('test', res_dict['keypair']['name'])
 
     def test_keypair_create_with_non_alphanumeric_name(self):
         body = {
@@ -295,6 +314,36 @@ class KeypairsTestV21(test.TestCase):
     def _assert_keypair_type(self, res_dict):
         self.assertNotIn('type', res_dict['keypair'])
 
+    def test_create_server_keypair_name_with_leading_trailing(self):
+        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
+        req.method = 'POST'
+        req.headers["content-type"] = "application/json"
+        req.body = jsonutils.dumps({'server': {'name': 'test',
+                                               'flavorRef': 1,
+                                               'keypair_name': '  abc  ',
+                                               'imageRef': FAKE_UUID}})
+        res = req.get_response(self.app_server)
+        self.assertEqual(400, res.status_code)
+        self.assertIn('keypair_name', res.body)
+
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
+            self, mock_create):
+        mock_create.return_value = (
+            objects.InstanceList(objects=[
+                fakes.stub_instance_obj(ctxt=None, id=1)]),
+            None)
+        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
+        req.method = 'POST'
+        req.headers["content-type"] = "application/json"
+        req.body = jsonutils.dumps({'server': {'name': 'test',
+                                               'flavorRef': 1,
+                                               'keypair_name': '  abc  ',
+                                               'imageRef': FAKE_UUID}})
+        req.set_legacy_v2()
+        res = req.get_response(self.app_server)
+        self.assertEqual(202, res.status_code)
+
 
 class KeypairPolicyTestV21(test.TestCase):
     KeyPairController = keypairs_v21.KeypairController()
@@ -388,6 +437,37 @@ class KeypairsTestV2(KeypairsTestV21):
         self.app_server = fakes.wsgi_app(init_only=('servers',))
         self.controller = keypairs_v2.KeypairController()
 
+    def test_keypair_create_with_name_leading_trailing_spaces(
+            self):
+        body = {'keypair': {'name': '  test  '}}
+        self.req.set_legacy_v2()
+        res_dict = self.controller.create(self.req, body=body)
+        self.assertEqual('  test  ', res_dict['keypair']['name'])
+
+    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
+            self):
+        pass
+
+    def test_create_server_keypair_name_with_leading_trailing(self):
+        pass
+
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
+            self, mock_create):
+        mock_create.return_value = (
+            objects.InstanceList(objects=[
+                fakes.stub_instance_obj(ctxt=None, id=1)]),
+            None)
+        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
+        req.method = 'POST'
+        req.headers["content-type"] = "application/json"
+        req.body = jsonutils.dumps({'server': {'name': 'test',
+                                               'flavorRef': 1,
+                                               'keypair_name': '  abc  ',
+                                               'imageRef': FAKE_UUID}})
+        res = req.get_response(self.app_server)
+        self.assertEqual(202, res.status_code)
+
 
 class KeypairsTestV22(KeypairsTestV21):
     wsgi_api_version = '2.2'
@@ -401,9 +481,25 @@ class KeypairsTestV22(KeypairsTestV21):
     def _assert_keypair_type(self, res_dict):
         self.assertEqual('ssh', res_dict['keypair']['type'])
 
+    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
+            self):
+        pass
+
+    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
+            self):
+        pass
+
 
 class KeypairsTestV210(KeypairsTestV22):
     wsgi_api_version = '2.10'
+
+    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
+            self):
+        pass
+
+    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
+            self):
+        pass
 
     def test_keypair_list_other_user(self):
         req = fakes.HTTPRequest.blank(self.base_url +

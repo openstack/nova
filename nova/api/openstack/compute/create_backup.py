@@ -36,7 +36,8 @@ class CreateBackupController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createBackup')
-    @validation.schema(create_backup.create_backup)
+    @validation.schema(create_backup.create_backup_v20, '2.0', '2.0')
+    @validation.schema(create_backup.create_backup, '2.1')
     def _create_backup(self, req, id, body):
         """Backup a server instance.
 
@@ -52,7 +53,7 @@ class CreateBackupController(wsgi.Controller):
         authorize(context)
         entity = body["createBackup"]
 
-        image_name = entity["name"]
+        image_name = common.normalize_name(entity["name"])
         backup_type = entity["backup_type"]
         rotation = int(entity["rotation"])
 

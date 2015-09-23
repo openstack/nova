@@ -73,5 +73,5 @@ class BlockDeviceMapping(extensions.V21APIExtensionBase):
             # Unset the legacy_bdm flag if we got a block device mapping.
             create_kwargs['legacy_bdm'] = False
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
         return schema_block_device_mapping.server_create

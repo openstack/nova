@@ -98,7 +98,7 @@ class AccessIPs(extensions.V21APIExtensionBase):
     server_update = server_create
     server_rebuild = server_create
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
         return access_ips.server_create
 
     get_server_update_schema = get_server_create_schema

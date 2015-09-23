@@ -18,6 +18,7 @@
 import webob
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import keypairs
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -93,7 +94,8 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @extensions.expected_errors((400, 403, 409))
-    @validation.schema(keypairs.create)
+    @validation.schema(keypairs.create_v20, "2.0", "2.0")
+    @validation.schema(keypairs.create, "2.1", "2.1")
     def create(self, req, body):
         """Create or import keypair.
 
@@ -111,7 +113,7 @@ class KeypairController(wsgi.Controller):
     def _create(self, req, body, user_id=None, **keypair_filters):
         context = req.environ['nova.context']
         params = body['keypair']
-        name = params['name']
+        name = common.normalize_name(params['name'])
         key_type = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
         user_id = user_id or context.user_id
         authorize(context, action='create',
@@ -304,7 +306,14 @@ class Keypairs(extensions.V21APIExtensionBase):
     # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
+        # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
+        # keypair create. But we didn't strip spaces at here for
+        # backward-compatible some users already created keypair and name with
+        # leading/trailing spaces by legacy v2 API.
         create_kwargs['key_name'] = server_dict.get('key_name')
 
-    def get_server_create_schema(self):
-        return keypairs.server_create
+    def get_server_create_schema(self, version):
+        if version == '2.0':
+            return keypairs.server_create_v20
+        else:
+            return keypairs.server_create

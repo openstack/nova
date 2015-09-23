@@ -59,7 +59,7 @@ class Personality(extensions.V21APIExtensionBase):
             create_kwargs['files_to_inject'] = self._get_injected_files(
                                                   server_dict['personality'])
 
-    def get_server_create_schema(self):
+    def get_server_create_schema(self, version):
         return personality.server_create
 
     get_server_rebuild_schema = get_server_create_schema
