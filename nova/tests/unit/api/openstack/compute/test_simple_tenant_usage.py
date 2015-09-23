@@ -121,14 +121,13 @@ class SimpleTenantUsageTestV21(test.TestCase):
         res_dict = self.controller.index(req)
         usages = res_dict['tenant_usages']
         for i in range(TENANTS):
-            self.assertEqual(int(usages[i]['total_hours']),
-                             SERVERS * HOURS)
-            self.assertEqual(int(usages[i]['total_local_gb_usage']),
-                             SERVERS * (ROOT_GB + EPHEMERAL_GB) * HOURS)
-            self.assertEqual(int(usages[i]['total_memory_mb_usage']),
-                             SERVERS * MEMORY_MB * HOURS)
-            self.assertEqual(int(usages[i]['total_vcpus_usage']),
-                             SERVERS * VCPUS * HOURS)
+            self.assertEqual(SERVERS * HOURS, int(usages[i]['total_hours']))
+            self.assertEqual(SERVERS * (ROOT_GB + EPHEMERAL_GB) * HOURS,
+                             int(usages[i]['total_local_gb_usage']))
+            self.assertEqual(SERVERS * MEMORY_MB * HOURS,
+                             int(usages[i]['total_memory_mb_usage']))
+            self.assertEqual(SERVERS * VCPUS * HOURS,
+                             int(usages[i]['total_vcpus_usage']))
             self.assertFalse(usages[i].get('server_usages'))
 
     def test_verify_index(self):
@@ -175,7 +174,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
         for i in range(TENANTS):
             servers = usages[i]['server_usages']
             for j in range(SERVERS):
-                self.assertEqual(int(servers[j]['hours']), HOURS)
+                self.assertEqual(HOURS, int(servers[j]['hours']))
 
     def test_verify_simple_index(self):
         usages = self._get_tenant_usages(detailed='0')
@@ -198,14 +197,14 @@ class SimpleTenantUsageTestV21(test.TestCase):
 
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']
-        self.assertEqual(len(usage['server_usages']), TENANTS * SERVERS)
+        self.assertEqual(TENANTS * SERVERS, len(usage['server_usages']))
         uuids = ['00000000-0000-0000-0000-00000000000000%02d' %
                     x for x in range(SERVERS)]
         for j in range(SERVERS):
             delta = STOP - START
             uptime = delta.days * 24 * 3600 + delta.seconds
-            self.assertEqual(int(servers[j]['uptime']), uptime)
-            self.assertEqual(int(servers[j]['hours']), HOURS)
+            self.assertEqual(uptime, int(servers[j]['uptime']))
+            self.assertEqual(HOURS, int(servers[j]['hours']))
             self.assertIn(servers[j]['instance_id'], uuids)
 
     def test_verify_show_cannot_view_other_tenant(self):

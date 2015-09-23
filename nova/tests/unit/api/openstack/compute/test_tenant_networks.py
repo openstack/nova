@@ -146,7 +146,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         get_mock.return_value = NETWORKS[0]
 
         res = self.controller.show(self.req, 1)
-        self.assertEqual(res['network'], NETWORKS[0])
+        self.assertEqual(NETWORKS[0], res['network'])
 
     @mock.patch('nova.network.api.API.get')
     def test_network_show_not_found(self, get_mock):
@@ -167,7 +167,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
             expected = NETWORKS_WITH_DEFAULT_NET
 
         res = self.controller.index(self.req)
-        self.assertEqual(res['networks'], expected)
+        self.assertEqual(expected, res['networks'])
 
     def test_network_index_with_default_net(self):
         self._test_network_index()
@@ -189,7 +189,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         body = {'network': body}
         res = self.controller.create(self.req, body=body)
 
-        self.assertEqual(res['network'], NETWORKS[0])
+        self.assertEqual(NETWORKS[0], res['network'])
         commit_mock.assert_called_once_with(ctxt, 'rv')
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 

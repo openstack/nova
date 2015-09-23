@@ -33,9 +33,9 @@ class TestNoAuthMiddleware(test.NoDBTestCase):
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
         result = req.get_response(fakes.wsgi_app(use_no_auth=True))
-        self.assertEqual(result.status, '204 No Content')
-        self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://localhost/v2/user1_project")
+        self.assertEqual('204 No Content', result.status)
+        self.assertEqual("http://localhost/v2/user1_project",
+                         result.headers['X-Server-Management-Url'])
 
     def test_authorize_user_trailing_slash(self):
         # make sure it works with trailing slash on the request
@@ -44,9 +44,9 @@ class TestNoAuthMiddleware(test.NoDBTestCase):
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
         result = req.get_response(fakes.wsgi_app(use_no_auth=True))
-        self.assertEqual(result.status, '204 No Content')
-        self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://localhost/v2/user1_project")
+        self.assertEqual('204 No Content', result.status)
+        self.assertEqual("http://localhost/v2/user1_project",
+                         result.headers['X-Server-Management-Url'])
 
     def test_auth_token_no_empty_headers(self):
         req = webob.Request.blank('/v2')
@@ -54,6 +54,6 @@ class TestNoAuthMiddleware(test.NoDBTestCase):
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
         result = req.get_response(fakes.wsgi_app(use_no_auth=True))
-        self.assertEqual(result.status, '204 No Content')
+        self.assertEqual('204 No Content', result.status)
         self.assertNotIn('X-CDN-Management-Url', result.headers)
         self.assertNotIn('X-Storage-Url', result.headers)

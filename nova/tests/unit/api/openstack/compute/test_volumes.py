@@ -179,15 +179,15 @@ class BootFromVolumeTest(test.TestCase):
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app(
             init_only=('os-volumes_boot', 'servers')))
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
-        self.assertEqual(len(self._block_device_mapping_seen), 1)
+        self.assertEqual(1, len(self._block_device_mapping_seen))
         self.assertTrue(self._legacy_bdm_seen)
-        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], '1')
-        self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
-                '/dev/vda')
+        self.assertEqual('1', self._block_device_mapping_seen[0]['volume_id'])
+        self.assertEqual('/dev/vda',
+                         self._block_device_mapping_seen[0]['device_name'])
 
     def test_create_root_volume_bdm_v2(self):
         body = dict(server=dict(
@@ -207,17 +207,16 @@ class BootFromVolumeTest(test.TestCase):
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app(
             init_only=('os-volumes_boot', 'servers')))
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
-        self.assertEqual(len(self._block_device_mapping_seen), 1)
+        self.assertEqual(1, len(self._block_device_mapping_seen))
         self.assertFalse(self._legacy_bdm_seen)
-        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], '1')
-        self.assertEqual(self._block_device_mapping_seen[0]['boot_index'],
-                         0)
-        self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
-                '/dev/vda')
+        self.assertEqual('1', self._block_device_mapping_seen[0]['volume_id'])
+        self.assertEqual(0, self._block_device_mapping_seen[0]['boot_index'])
+        self.assertEqual('/dev/vda',
+                         self._block_device_mapping_seen[0]['device_name'])
 
 
 class VolumeApiTestV21(test.NoDBTestCase):
@@ -256,18 +255,17 @@ class VolumeApiTestV21(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         resp = req.get_response(self.app)
 
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(200, resp.status_int)
 
         resp_dict = jsonutils.loads(resp.body)
         self.assertIn('volume', resp_dict)
-        self.assertEqual(resp_dict['volume']['size'],
-                         vol['size'])
-        self.assertEqual(resp_dict['volume']['displayName'],
-                         vol['display_name'])
-        self.assertEqual(resp_dict['volume']['displayDescription'],
-                         vol['display_description'])
-        self.assertEqual(resp_dict['volume']['availabilityZone'],
-                         vol['availability_zone'])
+        self.assertEqual(vol['size'], resp_dict['volume']['size'])
+        self.assertEqual(vol['display_name'],
+                         resp_dict['volume']['displayName'])
+        self.assertEqual(vol['display_description'],
+                         resp_dict['volume']['displayDescription'])
+        self.assertEqual(vol['availability_zone'],
+                         resp_dict['volume']['availabilityZone'])
 
     def _test_volume_create_bad(self, cinder_exc, api_exc):
         def fake_volume_create(self, context, size, name, description,
@@ -308,31 +306,31 @@ class VolumeApiTestV21(test.NoDBTestCase):
     def test_volume_index(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(200, resp.status_int)
 
     def test_volume_detail(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/detail')
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(200, resp.status_int)
 
     def test_volume_show(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(200, resp.status_int)
 
     def test_volume_show_no_volume(self):
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 404)
+        self.assertEqual(404, resp.status_int)
         self.assertIn('Volume 456 could not be found.', resp.body)
 
     def test_volume_delete(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(202, resp.status_int)
 
     def test_volume_delete_no_volume(self):
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
@@ -340,7 +338,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 404)
+        self.assertEqual(404, resp.status_int)
         self.assertIn('Volume 456 could not be found.', resp.body)
 
 
@@ -520,8 +518,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)
-        self.assertEqual(result['volumeAttachment']['id'],
-            '00000000-aaaa-aaaa-aaaa-000000000000')
+        self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
+                         result['volumeAttachment']['id'])
 
     @mock.patch.object(compute_api.API, 'attach_volume',
                        return_value='/dev/myfake')
@@ -534,10 +532,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)
-        self.assertEqual(result['volumeAttachment']['id'],
-            '00000000-aaaa-aaaa-aaaa-000000000000')
-        self.assertEqual(result['volumeAttachment']['device'],
-            '/dev/myfake')
+        self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
+                         result['volumeAttachment']['id'])
+        self.assertEqual('/dev/myfake', result['volumeAttachment']['device'])
 
     def test_attach_volume_to_locked_server(self):
         def fake_attach_volume_to_locked_server(self, context, instance,
@@ -702,8 +699,8 @@ class VolumeAttachTestsV2(VolumeAttachTestsV21):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)
-        self.assertEqual(result['volumeAttachment']['id'],
-            '00000000-aaaa-aaaa-aaaa-000000000000')
+        self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
+                         result['volumeAttachment']['id'])
 
     def test_swap_volume_with_extra_arg(self):
         # NOTE(gmann): V2 does not perform strong input validation.

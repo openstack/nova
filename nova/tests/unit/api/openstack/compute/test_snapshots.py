@@ -99,7 +99,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         snapshot_id = '123'
         resp_dict = self.controller.show(self.req, snapshot_id)
         self.assertIn('snapshot', resp_dict)
-        self.assertEqual(resp_dict['snapshot']['id'], str(snapshot_id))
+        self.assertEqual(str(snapshot_id), resp_dict['snapshot']['id'])
 
     def test_snapshot_show_invalid_id(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -109,10 +109,10 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         resp_dict = self.controller.detail(self.req)
         self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
-        self.assertEqual(len(resp_snapshots), 3)
+        self.assertEqual(3, len(resp_snapshots))
 
         resp_snapshot = resp_snapshots.pop()
-        self.assertEqual(resp_snapshot['id'], 102)
+        self.assertEqual(102, resp_snapshot['id'])
 
     def test_snapshot_index(self):
         resp_dict = self.controller.index(self.req)
