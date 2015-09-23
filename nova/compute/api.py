@@ -1651,16 +1651,13 @@ class API(base.Base):
                 return
             shelved_offloaded = (instance.vm_state
                                  == vm_states.SHELVED_OFFLOADED)
-            if not instance.host and not shelved_offloaded:
+            if not instance.host or shelved_offloaded:
                 try:
-                    compute_utils.notify_about_instance_usage(
-                            self.notifier, context, instance,
-                            "%s.start" % delete_type)
-                    instance.destroy()
-                    compute_utils.notify_about_instance_usage(
-                            self.notifier, context, instance,
-                            "%s.end" % delete_type,
-                            system_metadata=instance.system_metadata)
+                    # If instance is in shelved_offloaded state or
+                    # instance.host is None, then delete instance
+                    # from db and clean bdms info and network info.
+                    self._local_delete(context, instance, bdms, delete_type,
+                                       cb)
                     quotas.commit()
                     return
                 except exception.ObjectActionError:
@@ -1670,42 +1667,43 @@ class API(base.Base):
                 self._confirm_resize_on_deleting(context, instance)
 
             is_local_delete = True
-            try:
-                if not shelved_offloaded:
+            if instance.host and not shelved_offloaded:
+                try:
+                    # Check if compute service is up.
                     service = objects.Service.get_by_compute_host(
                         context.elevated(), instance.host)
                     is_local_delete = not self.servicegroup_api.service_is_up(
                         service)
-                if not is_local_delete:
-                    if original_task_state in (task_states.DELETING,
-                                                  task_states.SOFT_DELETING):
-                        LOG.info(_LI('Instance is already in deleting state, '
-                                     'ignoring this request'),
-                                 instance=instance)
-                        quotas.rollback()
-                        return
-                    self._record_action_start(context, instance,
-                                              instance_actions.DELETE)
-
-                    # NOTE(snikitin): If instance's vm_state is 'soft-delete',
-                    # we should not count reservations here, because instance
-                    # in soft-delete vm_state have already had quotas
-                    # decremented. More details:
-                    # https://bugs.launchpad.net/nova/+bug/1333145
-                    if instance.vm_state == vm_states.SOFT_DELETED:
-                        quotas.rollback()
-
-                    cb(context, instance, bdms,
-                       reservations=quotas.reservations)
-            except exception.ComputeHostNotFound:
-                pass
+                except exception.ComputeHostNotFound:
+                    pass
 
             if is_local_delete:
                 # If instance is in shelved_offloaded state or compute node
                 # isn't up, delete instance from db and clean bdms info and
-                # network info
+                # network info.
                 self._local_delete(context, instance, bdms, delete_type, cb)
                 quotas.commit()
+            else:
+                if original_task_state in (task_states.DELETING,
+                                           task_states.SOFT_DELETING):
+                    LOG.info(_LI('Instance is already in deleting state, '
+                                 'ignoring this request.'),
+                             instance=instance)
+                    quotas.rollback()
+                    return
+                self._record_action_start(context, instance,
+                                          instance_actions.DELETE)
+
+                # NOTE(snikitin): If instance's vm_state is 'soft-delete',
+                # we should not count reservations here, because instance
+                # in soft-delete vm_state have already had quotas
+                # decremented. More details:
+                # https://bugs.launchpad.net/nova/+bug/1333145
+                if instance.vm_state == vm_states.SOFT_DELETED:
+                    quotas.rollback()
+
+                cb(context, instance, bdms,
+                   reservations=quotas.reservations)
 
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
