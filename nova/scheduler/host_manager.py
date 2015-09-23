@@ -105,11 +105,6 @@ class ReadOnlyDict(IterableUserDict):
         raise TypeError()
 
 
-# Representation of a single metric value from a compute node.
-MetricItem = collections.namedtuple(
-             'MetricItem', ['value', 'timestamp', 'source'])
-
-
 @utils.expects_func_args('self', 'instance')
 def set_update_time_on_success(function):
     """Set updated time of HostState when consuming succeed."""
