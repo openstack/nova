@@ -86,7 +86,7 @@ class MetricsWeigher(weights.BaseHostWeigher):
 
         # NOTE(sbauza): Keying a dict of Metrics per metric name given that we
         # have a MonitorMetricList object
-        metrics_dict = {m.name: m for m in host_state.metrics}
+        metrics_dict = {m.name: m for m in host_state.metrics or []}
         for (name, ratio) in self.setting:
             try:
                 value += metrics_dict[name].value * ratio

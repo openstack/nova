@@ -74,6 +74,15 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         self.assertEqual(expected_weight, weighed_host.weight)
         self.assertEqual(expected_host, weighed_host.obj.host)
 
+    def test_single_resource_no_metrics(self):
+        setting = [idle + '=1']
+        hostinfo_list = [fakes.FakeHostState('host1', 'node1',
+                                             {'metrics': None}),
+                         fakes.FakeHostState('host2', 'node2',
+                                             {'metrics': None})]
+        self.assertRaises(exception.ComputeHostMetricNotFound,
+                          self._get_weighed_host, hostinfo_list, setting)
+
     def test_single_resource(self):
         # host1: idle=512
         # host2: idle=1024
