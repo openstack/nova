@@ -634,6 +634,14 @@ class VolumeBDMPathNotFound(VolumeBDMNotFound):
     msg_fmt = _("No volume Block Device Mapping at path: %(path)s")
 
 
+class DeviceDetachFailed(NovaException):
+    msg_fmt = _("Device detach failed for %(device)s: %(reason)s)")
+
+
+class DeviceNotFound(NotFound):
+    msg_fmt = _("Device '%(device)s' not found.")
+
+
 class SnapshotNotFound(NotFound):
     ec2_code = 'InvalidSnapshot.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
