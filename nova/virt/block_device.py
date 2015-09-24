@@ -16,6 +16,7 @@ import functools
 import itertools
 import operator
 
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -29,6 +30,9 @@ from nova.i18n import _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.volume import encryptors
+
+CONF = cfg.CONF
+CONF.import_opt('cross_az_attach', 'nova.volume.cinder', group='cinder')
 
 LOG = logging.getLogger(__name__)
 
@@ -54,6 +58,34 @@ def update_db(method):
             obj.save()
         return ret_val
     return wrapped
+
+
+def _get_volume_create_az_value(instance):
+    """Determine az to use when creating a volume
+
+    Uses the cinder.cross_az_attach config option to determine the availability
+    zone value to use when creating a volume.
+
+    :param nova.objects.Instance instance: The instance for which the volume
+        will be created and attached.
+    :returns: The availability_zone value to pass to volume_api.create
+    """
+    # If we're allowed to attach a volume in any AZ to an instance in any AZ,
+    # then we don't care what AZ the volume is in so don't specify anything.
+    if CONF.cinder.cross_az_attach:
+        return None
+    # Else the volume has to be in the same AZ as the instance otherwise we
+    # fail. If the AZ is not in Cinder the volume create will fail. But on the
+    # other hand if the volume AZ and instance AZ don't match and
+    # cross_az_attach is False, then volume_api.check_attach will fail too, so
+    # we can't really win. :)
+    # TODO(mriedem): It would be better from a UX perspective if we could do
+    # some validation in the API layer such that if we know we're going to
+    # specify the AZ when creating the volume and that AZ is not in Cinder, we
+    # could fail the boot from volume request early with a 400 rather than
+    # fail to build the instance on the compute node which results in a
+    # NoValidHost error.
+    return instance.availability_zone
 
 
 class DriverBlockDevice(dict):
@@ -353,7 +385,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
                virt_driver, wait_func=None, do_check_attach=True):
 
         if not self.volume_id:
-            av_zone = instance.availability_zone
+            av_zone = _get_volume_create_az_value(instance)
             snapshot = volume_api.get_snapshot(context,
                                                self.snapshot_id)
             vol = volume_api.create(context, self.volume_size, '', '',
@@ -377,7 +409,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None, do_check_attach=True):
         if not self.volume_id:
-            av_zone = instance.availability_zone
+            av_zone = _get_volume_create_az_value(instance)
             vol = volume_api.create(context, self.volume_size,
                                     '', '', image_id=self.image_id,
                                     availability_zone=av_zone)
@@ -400,7 +432,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
                virt_driver, wait_func=None, do_check_attach=True):
         if not self.volume_id:
             vol_name = instance.uuid + '-blank-vol'
-            av_zone = instance.availability_zone
+            av_zone = _get_volume_create_az_value(instance)
             vol = volume_api.create(context, self.volume_size, vol_name, '',
                                     availability_zone=av_zone)
             if wait_func:
