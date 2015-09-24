@@ -330,7 +330,7 @@ class Application(object):
 
           # Option 3: a webob Response object (in case you need to play with
           # headers, or you want to be treated like an iterable, or or or)
-          res = Response();
+          res = Response()
           res.app_iter = open('somefile')
 
           # Option 4: any wsgi app to be run next
