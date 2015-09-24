@@ -139,6 +139,22 @@ class _FakeDriverBackendTestCase(object):
         def fake_delete_instance_files(_self, _instance):
             pass
 
+        def fake_wait():
+            pass
+
+        def fake_detach_device_with_retry(_self, get_device_conf_func, device,
+                                          persistent, live,
+                                          max_retry_count=7,
+                                          inc_sleep_time=2,
+                                          max_sleep_time=30):
+            # Still calling detach, but instead of returning function
+            # that actually checks if device is gone from XML, just continue
+            # because XML never gets updated in these tests
+            _self.detach_device(get_device_conf_func(device),
+                                persistent=persistent,
+                                live=live)
+            return fake_wait
+
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
                        '_get_instance_disk_info',
                        fake_get_instance_disk_info)
@@ -149,6 +165,10 @@ class _FakeDriverBackendTestCase(object):
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
                        'delete_instance_files',
                        fake_delete_instance_files)
+
+        self.stubs.Set(nova.virt.libvirt.guest.Guest,
+                       'detach_device_with_retry',
+                       fake_detach_device_with_retry)
 
         # Like the existing fakelibvirt.migrateToURI, do nothing,
         # but don't fail for these tests.

@@ -5115,7 +5115,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_get_domain):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        mock_xml = """<domain>
+        mock_xml_with_disk = """<domain>
   <devices>
     <disk type='file'>
       <source file='/path/to/fake-volume'/>
@@ -5123,8 +5123,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     </disk>
   </devices>
 </domain>"""
+        mock_xml_without_disk = """<domain>
+  <devices>
+  </devices>
+</domain>"""
         mock_dom = mock.MagicMock()
-        mock_dom.XMLDesc.return_value = mock_xml
+
+        # Second time don't return anything about disk vdc so it looks removed
+        return_list = [mock_xml_with_disk, mock_xml_without_disk]
+        # Doubling the size of return list because we test with two guest power
+        # states
+        mock_dom.XMLDesc.side_effect = return_list + return_list
 
         connection_info = {"driver_volume_type": "fake",
                            "data": {"device_path": "/fake",
@@ -5137,7 +5146,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
                 mock_get_domain.return_value = mock_dom
-
                 drvr.detach_volume(connection_info, instance, '/dev/vdc')
 
                 mock_get_domain.assert_called_with(instance)
@@ -5148,6 +5156,28 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 """, flags=flags)
                 mock_disconnect_volume.assert_called_with(
                     connection_info, 'vdc')
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
+    def test_detach_volume_disk_not_found(self, mock_get_domain):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        mock_xml_without_disk = """<domain>
+  <devices>
+  </devices>
+</domain>"""
+        mock_dom = mock.MagicMock(return_value=mock_xml_without_disk)
+
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"device_path": "/fake",
+                                    "access_mode": "rw"}}
+
+        mock_dom.info.return_value = [power_state.RUNNING, 512, 512, 2, 1234,
+                                      5678]
+        mock_get_domain.return_value = mock_dom
+        self.assertRaises(exception.DiskNotFound, drvr.detach_volume,
+                          connection_info, instance, '/dev/vdc')
+
+        mock_get_domain.assert_called_once_with(instance)
 
     def test_multi_nic(self):
         network_info = _fake_network_info(self.stubs, 2)
