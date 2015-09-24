@@ -428,15 +428,6 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return instance
 
-    def _check_string_length(self, value, name, max_length=None):
-        try:
-            if isinstance(value, six.string_types):
-                value = value.strip()
-            utils.check_string_length(value, name, min_length=1,
-                                      max_length=max_length)
-        except exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
-
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
