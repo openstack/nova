@@ -52,8 +52,11 @@ cinder_opts = [
                help='Number of cinderclient retries on failed http calls'),
     cfg.BoolOpt('cross_az_attach',
                 default=True,
-                help='Allow attach between instance and volume in different '
-                     'availability zones.'),
+                deprecated_for_removal=True,
+                help='DEPRECATED: Allow attach between instance and volume '
+                     'in different availability zones. This option is '
+                     'deprecated in the 13.0.0 release and will be removed '
+                     'in the 14.0.0 release.'),
 ]
 
 CONF = cfg.CONF
