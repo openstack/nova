@@ -135,7 +135,16 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.skipTest("Test is incompatible with cells.")
 
     def test_evacuate(self):
-        self.skipTest("Test is incompatible with cells.")
+        @mock.patch.object(compute_api.API, 'evacuate')
+        def _test(mock_evacuate):
+            instance = objects.Instance(uuid='fake-uuid',
+                                        cell_name='fake_cell_name')
+            dest_host = 'fake_cell_name@fakenode2'
+            self.compute_api.evacuate(self.context, instance, host=dest_host)
+            mock_evacuate.assert_called_once_with(
+                self.context, instance, 'fakenode2')
+
+        _test()
 
     def test_error_evacuate(self):
         self.skipTest("Test is incompatible with cells.")

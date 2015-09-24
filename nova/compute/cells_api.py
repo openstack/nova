@@ -261,11 +261,12 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'restore')
 
     @check_instance_cell
-    def evacuate(self, context, instance, *args, **kwargs):
+    def evacuate(self, context, instance, host, *args, **kwargs):
         """Evacuate the given instance with the provided attributes."""
-        super(ComputeCellsAPI, self).evacuate(context, instance, *args,
-                **kwargs)
-        self._cast_to_cells(context, instance, 'evacuate', *args, **kwargs)
+        if host:
+            cell_path, host = cells_utils.split_cell_and_item(host)
+        self._cast_to_cells(context, instance, 'evacuate',
+                host, *args, **kwargs)
 
     @check_instance_cell
     def add_fixed_ip(self, context, instance, *args, **kwargs):
