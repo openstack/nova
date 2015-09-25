@@ -5436,18 +5436,27 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                       context, instance, "live_migration.rollback.dest.start",
                       network_info=network_info)
+        try:
+            # NOTE(tr3buchet): tear down networks on destination host
+            self.network_api.setup_networks_on_host(context, instance,
+                                                    self.host, teardown=True)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                # NOTE(tdurakov): even if teardown networks fails driver
+                # should try to rollback live migration on destination.
+                LOG.exception(
+                    _LE('An error occurred while deallocating network.'),
+                    instance=instance)
+        finally:
+            # always run this even if setup_networks_on_host fails
+            # NOTE(vish): The mapping is passed in so the driver can disconnect
+            #             from remote volumes if necessary
+            block_device_info = self._get_instance_block_device_info(context,
+                                                                     instance)
+            self.driver.rollback_live_migration_at_destination(
+                context, instance, network_info, block_device_info,
+                destroy_disks=destroy_disks, migrate_data=migrate_data)
 
-        # NOTE(tr3buchet): tear down networks on destination host
-        self.network_api.setup_networks_on_host(context, instance,
-                                                self.host, teardown=True)
-
-        # NOTE(vish): The mapping is passed in so the driver can disconnect
-        #             from remote volumes if necessary
-        block_device_info = self._get_instance_block_device_info(context,
-                                                                 instance)
-        self.driver.rollback_live_migration_at_destination(
-                        context, instance, network_info, block_device_info,
-                        destroy_disks=destroy_disks, migrate_data=migrate_data)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)
