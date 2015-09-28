@@ -17,6 +17,7 @@ import six
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import instance as obj_instance
 
 
 @base.NovaObjectRegistry.register
@@ -96,7 +97,7 @@ class RequestSpec(base.NovaObject):
             self.image = None
 
     def _from_instance(self, instance):
-        if isinstance(instance, objects.Instance):
+        if isinstance(instance, obj_instance._BaseInstance):
             # NOTE(sbauza): Instance should normally be a NovaObject...
             getter = getattr
         elif isinstance(instance, dict):
