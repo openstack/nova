@@ -53,7 +53,17 @@ cinder_opts = [
     cfg.BoolOpt('cross_az_attach',
                 default=True,
                 help='Allow attach between instance and volume in different '
-                     'availability zones.'),
+                     'availability zones. If False, volumes attached to an '
+                     'instance must be in the same availability zone in '
+                     'Cinder as the instance availability zone in Nova. '
+                     'This also means care should be taken when booting an '
+                     'instance from a volume where source is not "volume" '
+                     'because Nova will attempt to create a volume using '
+                     'the same availability zone as what is assigned to the '
+                     'instance. If that AZ is not in Cinder (or '
+                     'allow_availability_zone_fallback=False in cinder.conf), '
+                     'the volume create request will fail and the instance '
+                     'will fail the build request.'),
 ]
 
 CONF = cfg.CONF
