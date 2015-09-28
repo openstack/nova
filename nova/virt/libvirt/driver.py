@@ -560,6 +560,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host.initialize()
 
         self._do_quality_warnings()
+        self._do_migration_flag_warnings()
 
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
@@ -610,6 +611,23 @@ class LibvirtDriver(driver.ComputeDriver):
                     MIN_LIBVIRT_KVM_S390_VERSION),
                  'qemu_ver': self._version_to_string(
                      MIN_QEMU_S390_VERSION)})
+
+    def _do_migration_flag_warnings(self):
+        block_migration_flag = 'VIR_MIGRATE_NON_SHARED_INC'
+        if block_migration_flag in CONF.libvirt.live_migration_flag:
+            LOG.warning(_LW('Running Nova with a live_migration_flag config '
+                            'option which contains %(flag)s '
+                            'will cause all live-migrations to be block-'
+                            'migrations instead. This setting should only be '
+                            'on the block_migration_flag instead.'),
+                        {'flag': block_migration_flag})
+        if block_migration_flag not in CONF.libvirt.block_migration_flag:
+            LOG.warning(_LW('Running Nova with a block_migration_flag config '
+                            'option which does not contain %(flag)s '
+                            'will cause all block-migrations to be live-'
+                            'migrations instead. This setting should be '
+                            'on the block_migration_flag.'),
+                        {'flag': block_migration_flag})
 
     # TODO(sahid): This method is targeted for removal when the tests
     # have been updated to avoid its use
