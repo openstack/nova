@@ -1269,7 +1269,10 @@ class TestInstanceObject(test_objects._LocalTest,
         # stuff.
         error = db_exc.DBReferenceError('table', 'constraint', 'key',
                                         'key_table')
-        instance = fake_instance.fake_instance_obj(self.context)
+        # Prevent lazy-loading any fields, results in InstanceNotFound
+        attrs = objects.instance.INSTANCE_OPTIONAL_ATTRS
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   expected_attrs=attrs)
         fields_with_save_methods = [field for field in instance.fields
                                     if hasattr(instance, '_save_%s' % field)]
         for field in fields_with_save_methods:
