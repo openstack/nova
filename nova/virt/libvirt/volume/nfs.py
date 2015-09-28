@@ -73,6 +73,9 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             if ('device is busy' in six.text_type(exc) or
                 'target is busy' in six.text_type(exc)):
                 LOG.debug("The NFS share %s is still in use.", export)
+            elif ('not mounted' in six.text_type(exc)):
+                LOG.debug("The NFS share %s has already been unmounted.",
+                          export)
             else:
                 LOG.exception(_LE("Couldn't unmount the NFS share %s"), export)
 
