@@ -19,6 +19,7 @@ Tests For weights.
 import mock
 
 from nova.scheduler import weights as scheduler_weights
+from nova.scheduler.weights import ram
 from nova import test
 from nova.tests.unit.scheduler import fakes
 from nova import weights
@@ -65,7 +66,7 @@ class TestWeigher(test.NoDBTestCase):
                     for host, node, values in host_values]
 
         weight_handler = scheduler_weights.HostWeightHandler()
-        weighers = [scheduler_weights.ram.RAMWeigher()]
+        weighers = [ram.RAMWeigher()]
         weighed_host = weight_handler.get_weighed_objects(weighers,
                                                           hostinfo, {})
         self.assertEqual(1, len(weighed_host))

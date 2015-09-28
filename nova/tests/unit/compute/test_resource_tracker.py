@@ -1342,7 +1342,7 @@ class StatsDictTestCase(BaseTrackerTestCase):
         stats = self.tracker.compute_node.stats
         # compute node stats are coerced to strings
         expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
-        for k, v in self.tracker.stats.iteritems():
+        for k, v in self.tracker.stats.items():
             expected_stats[k] = six.text_type(v)
         self.assertEqual(expected_stats, stats)
 
@@ -1374,7 +1374,7 @@ class StatsJsonTestCase(BaseTrackerTestCase):
         stats = self.tracker.compute_node.stats
         # compute node stats are coerced to strings
         expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
-        for k, v in self.tracker.stats.iteritems():
+        for k, v in self.tracker.stats.items():
             expected_stats[k] = six.text_type(v)
         self.assertEqual(expected_stats, stats)
 
