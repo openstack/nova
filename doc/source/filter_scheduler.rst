@@ -137,7 +137,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   a set of instances.
 * |RetryFilter| - filters hosts that have been attempted for scheduling.
   Only passes hosts that have not been previously attempted.
-* |TrustedFilter| - filters hosts based on their trust.  Only passes hosts
+* |TrustedFilter| (EXPERIMENTAL) - filters hosts based on their trust.  Only passes hosts
   that meet the trust requirements specified in the instance properties.
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.

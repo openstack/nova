@@ -15,7 +15,7 @@
 #    under the License.
 
 """
-Filter to add support for Trusted Computing Pools.
+Filter to add support for Trusted Computing Pools (EXPERIMENTAL).
 
 Filter that only schedules tasks on a host if the integrity (trust)
 of that host matches the trust requested in the ``extra_specs`` for the
@@ -50,6 +50,7 @@ from oslo_utils import timeutils
 import requests
 
 from nova import context
+from nova.i18n import _LW
 from nova import objects
 from nova.scheduler import filters
 
@@ -254,6 +255,12 @@ class TrustedFilter(filters.BaseHostFilter):
 
     def __init__(self):
         self.compute_attestation = ComputeAttestation()
+        LOG.warning(_LW('The TrustedFilter is considered experimental '
+                        'by the OpenStack project because it receives much '
+                        'less testing than the rest of Nova. This may change '
+                        'in the future, but current deployers should be aware '
+                        'that the use of it in production right now may be '
+                        'risky.'))
 
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
