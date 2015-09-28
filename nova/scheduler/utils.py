@@ -29,6 +29,7 @@ from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import instance as obj_instance
 from nova import rpc
 
 
@@ -56,12 +57,12 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     """
     instance = instances[0]
     if instance_type is None:
-        if isinstance(instance, objects.Instance):
+        if isinstance(instance, obj_instance._BaseInstance):
             instance_type = instance.get_flavor()
         else:
             instance_type = flavors.extract_flavor(instance)
 
-    if isinstance(instance, objects.Instance):
+    if isinstance(instance, obj_instance._BaseInstance):
         instance = obj_base.obj_to_primitive(instance)
         # obj_to_primitive doesn't copy this enough, so be sure
         # to detach our metadata blob because we modify it below.
