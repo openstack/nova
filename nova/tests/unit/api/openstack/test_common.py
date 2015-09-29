@@ -62,7 +62,7 @@ class LimiterTest(test.NoDBTestCase):
     def test_limiter_offset_medium(self):
         # Test offset key works with a medium sized number.
         req = webob.Request.blank('/?offset=10')
-        self.assertEqual(common.limited(self.tiny, req), [])
+        self.assertEqual(0, len(common.limited(self.tiny, req)))
         self.assertEqual(common.limited(self.small, req), self.small[10:])
         self.assertEqual(common.limited(self.medium, req), self.medium[10:])
         self.assertEqual(common.limited(self.large, req), self.large[10:1010])
@@ -70,9 +70,9 @@ class LimiterTest(test.NoDBTestCase):
     def test_limiter_offset_over_max(self):
         # Test offset key works with a number over 1000 (max_limit).
         req = webob.Request.blank('/?offset=1001')
-        self.assertEqual(common.limited(self.tiny, req), [])
-        self.assertEqual(common.limited(self.small, req), [])
-        self.assertEqual(common.limited(self.medium, req), [])
+        self.assertEqual(0, len(common.limited(self.tiny, req)))
+        self.assertEqual(0, len(common.limited(self.small, req)))
+        self.assertEqual(0, len(common.limited(self.medium, req)))
         self.assertEqual(
             common.limited(self.large, req), self.large[1001:2001])
 
@@ -130,7 +130,7 @@ class LimiterTest(test.NoDBTestCase):
         req = webob.Request.blank('/?offset=3&limit=1500')
         self.assertEqual(common.limited(items, req), items[3:1003])
         req = webob.Request.blank('/?offset=3000&limit=10')
-        self.assertEqual(common.limited(items, req), [])
+        self.assertEqual(0, len(common.limited(items, req)))
 
     def test_limiter_custom_max_limit(self):
         # Test a max_limit other than 1000.
@@ -145,7 +145,7 @@ class LimiterTest(test.NoDBTestCase):
         self.assertEqual(
             common.limited(items, req, max_limit=2000), items[3:])
         req = webob.Request.blank('/?offset=3000&limit=10')
-        self.assertEqual(common.limited(items, req, max_limit=2000), [])
+        self.assertEqual(0, len(common.limited(items, req, max_limit=2000)))
 
     def test_limiter_negative_limit(self):
         # Test a negative limit.
