@@ -2597,9 +2597,10 @@ class ComputeManager(manager.Manager):
         instance.save(
             expected_task_state=[task_states.REBUILD_BLOCK_DEVICE_MAPPING])
 
-        self.driver.spawn(context, instance, image_meta, injected_files,
-                          admin_password, network_info=network_info,
-                          block_device_info=new_block_device_info)
+        with instance.mutated_migration_context():
+            self.driver.spawn(context, instance, image_meta, injected_files,
+                              admin_password, network_info=network_info,
+                              block_device_info=new_block_device_info)
 
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
@@ -2821,7 +2822,8 @@ class ComputeManager(manager.Manager):
             preserve_ephemeral=preserve_ephemeral,
             recreate=recreate)
         try:
-            self.driver.rebuild(**kwargs)
+            with instance.mutated_migration_context():
+                self.driver.rebuild(**kwargs)
         except NotImplementedError:
             # NOTE(rpodolyaka): driver doesn't provide specialized version
             # of rebuild, fall back to the default implementation
