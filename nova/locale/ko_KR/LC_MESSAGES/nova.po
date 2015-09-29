@@ -8,20 +8,22 @@
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
 # Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Project-Id-Version: nova 13.0.0.dev302\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-22 07:45+0000\n"
-"PO-Revision-Date: 2015-09-11 12:06+0000\n"
-"Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
+"POT-Creation-Date: 2015-09-29 06:31+0000\n"
+"PO-Revision-Date: 2015-09-23 06:23+0000\n"
+"Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
+"Language: ko_KR\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/openstack/nova/"
 "language/ko_KR/)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
+"Generated-By: Babel 2.1.1\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -330,7 +332,7 @@ msgstr "청구 시도 중: 메모리 %(memory_mb)dMB, 디스크 %(disk_gb)dGB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
-msgstr "지원되지 않는 속성: %(attr)s"
+msgstr "지원하지 않는 속성입니다: %(attr)s"
 
 msgid "Bad extra_specs provided"
 msgstr "잘못된 추가 스펙이 제공됨"
@@ -389,52 +391,52 @@ msgstr "비어 있는 구성요소"
 
 #, python-format
 msgid "Block Device %(id)s is not bootable."
-msgstr "블록 디바이스 %(id)s은(는) 부트 가능하지 않습니다."
+msgstr "%(id)s 블록 디바이스로 부팅할 수 없습니다."
 
 msgid "Block Device Mapping cannot be converted to legacy format. "
-msgstr "블록 디바이스 맵핑을 레거시 형식으로 변환할 수 없습니다. "
+msgstr "블록 디바이스 맵핑을 레거시 형식으로 전환할 수 없습니다. "
 
 msgid "Block Device Mapping is Invalid."
 msgstr "블록 디바이스 맵핑이 올바르지 않습니다. "
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
-msgstr "블록 디바이스 맵핑이 올바르지 않음: %(details)s"
+msgstr "블록 디바이스 맵핑이 올바르지 않습니다: %(details)s"
 
 msgid ""
 "Block Device Mapping is Invalid: Boot sequence for the instance and image/"
 "block device mapping combination is not valid."
 msgstr ""
-"블록 디바이스 맵핑이 올바르지 않음: 인스턴스 및 이미지/블록 디바이스 맵핑 조"
-"합에 대한 부트 시퀀스가 올바르지 않습니다."
+"블록 디바이스 맵핑이 올바르지 않습니다: 인스턴스와 이미지/블록 디바이스 맵핑 "
+"조합에 대한 부트 시퀀스가 올바르지 않습니다."
 
 msgid ""
 "Block Device Mapping is Invalid: You specified more local devices than the "
 "limit allows"
 msgstr ""
-"블록 디바이스 맵핑이 올바르지 않음: 허용 한도보다 많은 로컬 디바이스를지정했"
-"습니다."
+"블록 디바이스 맵핑이 올바르지 않습니다: 허용 한도보다 많은 로컬 디바이스를 지"
+"정했습니다."
 
 #, python-format
 msgid "Block Device Mapping is Invalid: failed to get image %(id)s."
 msgstr ""
-"블록 디바이스 맵핑이 올바르지 않음: %(id)s 이미지를 가져오지 못했습니다. "
+"블록 디바이스 맵핑이 올바르지 않습니다: %(id)s 이미지를 가져오지 못했습니다. "
 
 #, python-format
 msgid "Block Device Mapping is Invalid: failed to get snapshot %(id)s."
 msgstr ""
-"블록 디바이스 맵핑이 올바르지 않습니다. %(id)s 스냅샷을 가져오지 못했습니다. "
+"블록 디바이스 맵핑이 올바르지 않습니다: %(id)s 스냅샷을 가져오지 못했습니다. "
 
 #, python-format
 msgid "Block Device Mapping is Invalid: failed to get volume %(id)s."
 msgstr ""
-"블록 디바이스 맵핑이 올바르지 않습니다. %(id)s 볼륨을 가져오지 못했습니다. "
+"블록 디바이스 맵핑이 올바르지 않습니다: %(id)s 볼륨을 가져오지 못했습니다. "
 
 msgid "Block migration can not be used with shared storage."
 msgstr "블록 마이그레이션은 공유 스토리지에서 사용할 수 없습니다. "
 
 msgid "Boot index is invalid."
-msgstr "부트 인덱스가 유효하지 않습니다."
+msgstr "부트 인덱스가 올바르지 않습니다."
 
 #, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
@@ -749,11 +751,11 @@ msgstr "구성된 정책이 충돌함!"
 
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
-msgstr "cinder 호스트 연결 실패: %(reason)s"
+msgstr "Cinder 호스트 연결하지 못했습니다: %(reason)s"
 
 #, python-format
 msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
-msgstr "글랜스 호스트 %(host)s:%(port)s에 대한 연결 실패: %(reason)s"
+msgstr "Glance 호스트 %(host)s:%(port)s에 연결하지 못했습니다: %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -892,7 +894,7 @@ msgid "Create networks failed"
 msgstr "네트워크 작성 실패"
 
 msgid "Creation of virtual interface with unique mac address failed"
-msgstr "고유한 MAC 주소가 있는 가상 인터페이스 작성에 실패함"
+msgstr "고유 MAC 주소가 있는 가상 인터페이 생성에 실패했습니다"
 
 msgid "DNS entries not found."
 msgstr "DNS 항목을 찾을 수 없습니다. "
@@ -949,7 +951,7 @@ msgid ""
 msgstr "지정된 디바이스 ID %(id)s은(는) 하이퍼바이저 버전 %(version)s임"
 
 msgid "Device name contains spaces."
-msgstr "장치 이름에 공백이 있음."
+msgstr "장치 이름에 공백이 있습니다."
 
 msgid "Device name empty or too long."
 msgstr "장치 이름이 비어있거나 너무 깁니다."
@@ -1217,7 +1219,7 @@ msgstr "개인 키를 복호화하지 못했음: %s"
 
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
-msgstr "텍스트를 복호화하지 못했음: %(reason)s"
+msgstr "텍스트를 복호화하지 못했습니다: %(reason)s"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -1233,7 +1235,7 @@ msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에서 분리하
 
 #, python-format
 msgid "Failed to encrypt text: %(reason)s"
-msgstr "텍스트를 암호화하지 못했음: %(reason)s"
+msgstr "텍스트를 암호화하지 못했습니다: %(reason)s"
 
 #, python-format
 msgid "Failed to launch instances: %(reason)s"
@@ -1308,7 +1310,7 @@ msgstr "인스턴스 재개 실패: %(reason)s"
 
 #, python-format
 msgid "Failed to revoke certificate for %(project_id)s"
-msgstr "%(project_id)s에 대한 인증서를 취소하는 데 실패"
+msgstr "%(project_id)s에 대한 인증서를 취소하는 데 실패했습니다"
 
 #, python-format
 msgid "Failed to run qemu-img info on %(path)s : %(error)s"
@@ -1355,13 +1357,13 @@ msgid "File path %s not valid"
 msgstr "파일 경로 %s이(가) 올바르지 않음"
 
 msgid "Filename of private key"
-msgstr "개인 Key의 파일 이름"
+msgstr "개인키 파일 이름"
 
 msgid "Filename of root CA"
-msgstr "root CA의 파일 이름"
+msgstr "루트 CA 파일 이름"
 
 msgid "Filename of root Certificate Revocation List"
-msgstr "Root 증서 폐기 목록 파일 이름"
+msgstr "Root 인증서 해지 목록 파일 이름"
 
 #, python-format
 msgid "Fixed IP %s has been deleted"
@@ -1671,7 +1673,7 @@ msgstr ""
 
 #, python-format
 msgid "Image %(image_id)s is not active."
-msgstr "%(image_id)s 이미지가 활성 상태가 아닙니다. "
+msgstr "%(image_id)s 이미지가 active 상태가 아닙니다. "
 
 #, python-format
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
@@ -2023,7 +2025,7 @@ msgid "Invalid datetime string: %(reason)s"
 msgstr "올바르지 않은 Datetime 문자열: %(reason)s"
 
 msgid "Invalid device UUID."
-msgstr "유효하지 않은 장치 UUID."
+msgstr "장치 UUID가 올바르지 않습니다."
 
 #, python-format
 msgid "Invalid entry: '%s'"
@@ -2197,7 +2199,7 @@ msgid "Invalid service catalog json."
 msgstr "올바르지 않은 서비스 카탈로그 json입니다. "
 
 msgid "Invalid source_type field."
-msgstr "유효하지 않은 소스 타입 필드."
+msgstr "source_type 필드가 올바르지 않습니다."
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
@@ -2271,7 +2273,7 @@ msgid "Invalid volume: %(reason)s"
 msgstr "잘못된 볼륨: %(reason)s"
 
 msgid "Invalid volume_size."
-msgstr "유효하지 않은 볼륨 크기."
+msgstr "volume_size가 올바르지 않습니다."
 
 msgid "Ironic client unavailable, cannot access Ironic."
 msgstr "아이로닉 클라이언트를 사용할 수 없음, 아이로닉에 액세스할 수 없음"
@@ -2427,7 +2429,7 @@ msgid "Malformed scheduler_hints attribute"
 msgstr "형식이 틀린 scheduler_hints 속성"
 
 msgid "Mapping image to local is not supported."
-msgstr "이미지에 대한 로컬 매핑은 지원되지 않습니다."
+msgstr "로컬에 매핑된 이미지는 지원하지 않습니다."
 
 #, python-format
 msgid "Marker %(marker)s could not be found."
@@ -2524,7 +2526,7 @@ msgid "Missing column %(table)s.%(column)s in shadow table"
 msgstr "새도우 테이블에 %(table)s.%(column)s 열이 누락됨"
 
 msgid "Missing device UUID."
-msgstr "장치 UUID가 빠져있음."
+msgstr "장치 UUID가 빠져있습니다."
 
 msgid "Missing disabled reason field"
 msgstr "사용 안함 이유 필드가 누락됨"
@@ -2898,7 +2900,7 @@ msgid "Not authorized for image %(image_id)s."
 msgstr "%(image_id)s 이미지에 대한 권한이 없습니다. "
 
 msgid "Not authorized."
-msgstr "인증되지 않음."
+msgstr "인증되지 않았습니다."
 
 msgid "Not enough parameters to build a valid rule."
 msgstr "유효한 규칙을 빌드하기엔 매개변수가 부족합니다. "
@@ -3094,7 +3096,7 @@ msgstr "플러그인 버전 불일치(예상: %(exp)s, 결과: %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
-msgstr "정책이 %(action)s이(가) 수행되도록 허용하지 않습니다. "
+msgstr "%(action)s 정책이 실행하도록 허용되지 않았습니다."
 
 #, python-format
 msgid "Policy doesn't allow %s to be performed."
@@ -3505,7 +3507,7 @@ msgid "Shadow table with name %(name)s already exists."
 msgstr "이름이 %(name)s인 새도우 테이블이 이미 존재합니다. "
 
 msgid "Should we use a CA for each project?"
-msgstr "각 프로젝트에 대한 CA 사용 여부?"
+msgstr "각 프로젝트에서 CA 사용 하실껀가요?"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -3525,10 +3527,10 @@ msgid "Snapshot list encountered but no header found!"
 msgstr "스냅샷 목록이 있지만 헤더를 찾을 수 없습니다!"
 
 msgid "Some fields are invalid."
-msgstr "몇몇 필드가 유효하지 않습니다"
+msgstr "일부 필드가 올바르지 않습니다"
 
 msgid "Some required fields are missing"
-msgstr "몇몇 필수 필드가 빠져있음"
+msgstr "일부 필수 필드가 빠짐"
 
 msgid "Sort direction size exceeds sort key size"
 msgstr "정렬 방향 크기가 정렬 키 크기를 초과함"
@@ -3575,11 +3577,11 @@ msgstr "스토리지 정책 %s이(가) 데이터 저장소와 일치하지 않�
 
 #, python-format
 msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "프로젝트에 대한 인증서 제목, 프로젝트, 시간소인에 대한 %s"
+msgstr "프로젝트에 대한 인증서 제목, 프로젝트 %s, 시간"
 
 #, python-format
 msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr "사용자에 대한 인증서 제목, 프로젝트, 사용자, 시간소인에 대한 %s"
+msgstr "사용자에 대한 인증서 제목, 프로젝트 %s, 사용자, 시간"
 
 msgid "Success"
 msgstr "완료"
@@ -4160,7 +4162,7 @@ msgid "Unacceptable attach status:%s for ec2 API."
 msgstr "ec2 API에 허용 불가능한 접속 상태 %s "
 
 msgid "Unacceptable parameters."
-msgstr "허용할 수 없는 매개변수입니다. "
+msgstr "사용할 수 없는 매개변수입니다. "
 
 #, python-format
 msgid "Unavailable console type %(console_type)s."
@@ -4255,7 +4257,7 @@ msgid "Unknown type: %s"
 msgstr "알 수 없는 유형: %s"
 
 msgid "Unrecognized legacy format."
-msgstr "인식할 수 없는 레거시 포맷."
+msgstr "인식할 수 없는 레거시 포맷입니다."
 
 #, python-format
 msgid "Unrecognized read_deleted value '%s'"
@@ -4308,7 +4310,7 @@ msgstr ""
 "바이트를 초과하면 안 됩니다. 사용자 데이터는 %(length)d바이트입니다."
 
 msgid "User does not have admin privileges"
-msgstr "사용자에게 관리 권한이 없음"
+msgstr "사용자는 관리 권한이 없습니다"
 
 msgid "User is not authorized to use key manager."
 msgstr "사용자에게 키 관리자를 사용할 권한이 없습니다."
@@ -4399,10 +4401,10 @@ msgid "Virt driver does not implement uptime function."
 msgstr "가상 드라이버가 작동시간 기능을 구현하지 않습니다. "
 
 msgid "Virtual Interface creation failed"
-msgstr "가상 인터페이스 생성 실패"
+msgstr "가상 인터페이스 생성 실패하였습니다"
 
 msgid "Virtual interface plugin failed"
-msgstr "가상 인터페이스 플러그인 실패"
+msgstr "가상 인터페이스 연결 실패했습니다"
 
 #, python-format
 msgid "Virtual machine mode '%(vmmode)s' is not recognised"
@@ -4426,13 +4428,16 @@ msgstr "%(volume_id)s 볼륨을 찾을 수 없습니다. "
 
 #, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "%(volume_id)s 볼륨이 어디에도 첨부되지 않음"
+msgstr "%(volume_id)s 볼륨이 어디에도 연결되지 않았습니다"
 
 msgid "Volume does not belong to the requested instance."
 msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
 
 msgid "Volume must be attached in order to detach."
 msgstr "분리하려면 볼륨이 첨부되어야 합니다. "
+
+msgid "Volume resource quota exceeded"
+msgstr "볼륨 리소스 quota를 초과하였습니다"
 
 #, python-format
 msgid "Volume sets block size, but libvirt '%s' or later is required."
@@ -4653,7 +4658,7 @@ msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "X509 fingerprint를 생성하지 못했습니다. 에러 메시지: %s"
 
 msgid "failed to generate fingerprint"
-msgstr "Fingerprint를 생성하지 못함"
+msgstr "Fingerprint를 생성하지 못하였습니다"
 
 msgid "filename cannot be None"
 msgstr "파일 이름은 None일 수 없음"
@@ -4865,7 +4870,8 @@ msgstr "rbd python 라이브러리를 찾을 수 없음"
 #, python-format
 msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
-"read_deleted는 'no', 'yes' 또는 'only' 중 하나만 가능하며, %r은(는) 불가능함"
+"read_deleted는 'no', 'yes', 'only' 중 하나만 가능하며, %r은(는) 사용하지 못 "
+"합니다."
 
 msgid "resource_id and tag are required"
 msgstr "자원 ID 와 태그가 필요함"

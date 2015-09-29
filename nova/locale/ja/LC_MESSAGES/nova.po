@@ -9,23 +9,25 @@
 # Tom Fifield <tom@openstack.org>, 2013
 # Tomoyuki KATO <tomo@dream.daynight.jp>, 2013
 # Akihiro Motoki <amotoki@gmail.com>, 2015. #zanata
+# KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 # Yuko Katabami <yukokatabami@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev266\n"
+"Project-Id-Version: nova 13.0.0.dev302\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-23 14:54+0000\n"
-"PO-Revision-Date: 2015-09-23 06:48+0000\n"
-"Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
+"POT-Creation-Date: 2015-09-29 06:31+0000\n"
+"PO-Revision-Date: 2015-09-24 03:17+0000\n"
+"Last-Translator: KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>\n"
+"Language: ja\n"
 "Language-Team: Japanese (http://www.transifex.com/openstack/nova/language/"
 "ja/)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
+"Generated-By: Babel 2.1.1\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -460,7 +462,7 @@ msgstr ""
 
 #, fuzzy
 msgid "Boot index is invalid."
-msgstr "boot index が不正です。"
+msgstr "boot index が無効です。"
 
 #, fuzzy, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
@@ -986,7 +988,7 @@ msgstr ""
 "ポートされていません"
 
 msgid "Device name contains spaces."
-msgstr "デバイス名にスペースが含まれています。"
+msgstr "デバイス名に空白が含まれています。"
 
 msgid "Device name empty or too long."
 msgstr "デバイス名が空か、長すぎます"
@@ -1268,7 +1270,7 @@ msgstr "初期化ベクタの復号に失敗しました: %s"
 
 #, python-format
 msgid "Failed to decrypt private key: %s"
-msgstr "プライベートキーの復号に失敗しました: %s"
+msgstr "秘密鍵の復号に失敗しました: %s"
 
 #, fuzzy, python-format
 msgid "Failed to decrypt text: %(reason)s"
@@ -1415,7 +1417,7 @@ msgid "File path %s not valid"
 msgstr "ファイルパス %s は無効です"
 
 msgid "Filename of private key"
-msgstr "プライベートキーのファイル名"
+msgstr "秘密鍵のファイル名"
 
 msgid "Filename of root CA"
 msgstr "ルート CA のファイル名"
@@ -1514,11 +1516,11 @@ msgid ""
 "underscores and spaces."
 msgstr ""
 "フレーバー ID に使用できるのは、A-Z の英字 (大文字および小文字)、ピリオド、"
-"ダッシュ、アンダースコアー、およびスペースのみです。"
+"ダッシュ、アンダースコアー、および空白のみです。"
 
 msgid ""
 "Flavor names can only contain printable characters and horizontal spaces."
-msgstr "フレーバー名には印刷可能文字および水平スペースのみを使用できます。"
+msgstr "フレーバー名には印刷可能文字および水平空白のみを使用できます。"
 
 msgid "Flavor used by the instance could not be found."
 msgstr "インスタンスで使用されたフレーバーが見つかりませんでした"
@@ -2107,7 +2109,7 @@ msgstr "日時ストリングが無効です: %(reason)s"
 
 #, fuzzy
 msgid "Invalid device UUID."
-msgstr "デバイス UUID が不正です。"
+msgstr "デバイス UUID が無効です。"
 
 #, python-format
 msgid "Invalid entry: '%s'"
@@ -2281,7 +2283,7 @@ msgstr "無効なサービス・カタログ JSON。"
 
 #, fuzzy
 msgid "Invalid source_type field."
-msgstr "不正な source_type フィールドです。"
+msgstr "無効な source_type フィールドです。"
 
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "無効な開始時刻。開始時刻が終了時刻より後になることはできません。"
@@ -2355,7 +2357,7 @@ msgstr "無効なボリューム: %(reason)s"
 
 #, fuzzy
 msgid "Invalid volume_size."
-msgstr "不正な volume_size です。"
+msgstr "無効な volume_size です。"
 
 msgid "Ironic client unavailable, cannot access Ironic."
 msgstr "Ironic クライアントが使用できません。Ironic にアクセスできません。"
@@ -2404,7 +2406,7 @@ msgid ""
 "underscores, colons and spaces."
 msgstr ""
 "キー名に使用できるのは、英数字、ピリオド、ダッシュ、アンダースコアー、コロ"
-"ン、およびスペースのみです。"
+"ン、および空白のみです。"
 
 #, python-format
 msgid "Key manager error: %(reason)s"
@@ -3662,7 +3664,7 @@ msgstr "スナップショット・リストが検出されましたが、ヘッ
 
 #, fuzzy
 msgid "Some fields are invalid."
-msgstr "いくつかのフィールドが不正です。"
+msgstr "いくつかのフィールドが無効です。"
 
 msgid "Some required fields are missing"
 msgstr "いくつかの必須フィールドがありません。"
