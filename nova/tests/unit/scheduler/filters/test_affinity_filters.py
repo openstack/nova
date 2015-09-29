@@ -72,6 +72,14 @@ class TestSameHostFilter(test.NoDBTestCase):
             scheduler_hints=dict(same_host=['same']))
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
+    def test_affinity_same_filter_no_list_passes(self):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        host.instances = {}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(same_host=['same']))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
     def test_affinity_same_filter_fails(self):
         inst1 = objects.Instance(uuid='different')
         host = fakes.FakeHostState('host1', 'node1', {})
