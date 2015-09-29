@@ -1411,29 +1411,6 @@ class VMwareVMOps(object):
                                        step=6,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-    def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method, block_migration=False):
-        """Spawning live_migration operation for distributing high-load."""
-        vm_ref = vm_util.get_vm_ref(self._session, instance_ref)
-
-        host_ref = self._get_host_ref_from_name(dest)
-        if host_ref is None:
-            raise exception.HostNotFound(host=dest)
-
-        LOG.debug("Migrating VM to host %s", dest, instance=instance_ref)
-        try:
-            vm_migrate_task = self._session._call_method(
-                                    self._session.vim,
-                                    "MigrateVM_Task", vm_ref,
-                                    host=host_ref,
-                                    priority="defaultPriority")
-            self._session._wait_for_task(vm_migrate_task)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                recover_method(context, instance_ref, dest, block_migration)
-        post_method(context, instance_ref, dest, block_migration)
-        LOG.debug("Migrated VM to host %s", dest, instance=instance_ref)
-
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
         ctxt = nova_context.get_admin_context()

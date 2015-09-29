@@ -312,22 +312,6 @@ class VMwareVCDriver(driver.ComputeDriver):
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
 
-    def live_migration(self, context, instance, dest,
-                       post_method, recover_method, block_migration=False,
-                       migrate_data=None):
-        """Live migration of an instance to another host."""
-        self._vmops.live_migration(context, instance, dest,
-                                   post_method, recover_method,
-                                   block_migration)
-
-    def rollback_live_migration_at_destination(self, context, instance,
-                                               network_info,
-                                               block_device_info,
-                                               destroy_disks=True,
-                                               migrate_data=None):
-        """Clean up destination node after a failed live migration."""
-        self.destroy(context, instance, network_info, block_device_info)
-
     def get_instance_disk_info(self, instance, block_device_info=None):
         pass
 
