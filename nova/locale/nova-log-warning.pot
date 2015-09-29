@@ -6,16 +6,16 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev287\n"
+"Project-Id-Version: nova 13.0.0.dev28\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-23 14:55+0000\n"
+"POT-Creation-Date: 2015-09-29 06:31+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
+"Generated-By: Babel 2.1.1\n"
 
 #: nova/context.py:109
 #, python-format
@@ -949,19 +949,19 @@ msgid ""
 "which has numa topology"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:126
+#: nova/scheduler/host_manager.py:121
 #, python-format
 msgid "Selected host: %(host)s failed to consume from instance. Error: %(error)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:209
+#: nova/scheduler/host_manager.py:204
 #, python-format
 msgid ""
 "Host %(hostname)s has more disk space than database expected "
 "(%(physical)sgb > %(database)sgb)"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:545
+#: nova/scheduler/host_manager.py:540
 #, python-format
 msgid "No compute service record found for host %(host)s"
 msgstr ""
@@ -1021,6 +1021,14 @@ msgstr ""
 #: nova/scheduler/filters/ram_filter.py:90
 #, python-format
 msgid "Could not decode ram_allocation_ratio: '%s'"
+msgstr ""
+
+#: nova/scheduler/filters/trusted_filter.py:258
+msgid ""
+"The TrustedFilter is considered experimental by the OpenStack project "
+"because it receives much less testing than the rest of Nova. This may "
+"change in the future, but current deployers should be aware that the use "
+"of it in production right now may be risky."
 msgstr ""
 
 #: nova/servicegroup/api.py:58
@@ -1573,7 +1581,12 @@ msgstr ""
 msgid "datastore_regex is ignored when PBM is enabled"
 msgstr ""
 
-#: nova/virt/vmwareapi/driver.py:485
+#: nova/virt/vmwareapi/driver.py:453
+#, python-format
+msgid "The volume %s does not exist!"
+msgstr ""
+
+#: nova/virt/vmwareapi/driver.py:484
 msgid ""
 "Instance does not exists. Proceeding to delete instance properties on "
 "datastore"
@@ -1803,7 +1816,7 @@ msgid ""
 "6)."
 msgstr ""
 
-#: nova/volume/cinder.py:121
+#: nova/volume/cinder.py:131
 msgid ""
 "Cinder V1 API is deprecated as of the Juno release, and Nova is still "
 "configured to use it. Enable the V2 API in Cinder and set "

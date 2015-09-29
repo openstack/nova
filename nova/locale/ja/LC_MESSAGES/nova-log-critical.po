@@ -1,11 +1,11 @@
-# Akihiro Motoki <amotoki@gmail.com>, 2015. #zanata
+# KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 13.0.0.dev302\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:03+0000\n"
-"PO-Revision-Date: 2015-09-16 10:01+0000\n"
-"Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
+"POT-Creation-Date: 2015-09-29 06:31+0000\n"
+"PO-Revision-Date: 2015-09-24 03:07+0000\n"
+"Last-Translator: KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
@@ -16,4 +16,4 @@ msgstr ""
 
 #, python-format
 msgid "Missing core API extensions: %s"
-msgstr "必須の API 拡張がありません: %s"
+msgstr "コア API 拡張がありません: %s"
