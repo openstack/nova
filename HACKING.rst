@@ -51,6 +51,7 @@ Nova Specific Commandments
   assertIn/NotIn(A, B)
 - [N339] Check common raise_feature_not_supported() is used for v2.1 HTTPNotImplemented response.
 - [N340] Check nova.utils.spawn() is used instead of greenthread.spawn() and eventlet.spawn()
+- [N341] contextlib.nested is deprecated
 
 Creating Unit Tests
 -------------------

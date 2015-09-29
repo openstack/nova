@@ -535,6 +535,31 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(code, checks.check_http_not_implemented,
                                    filename=filename)
 
+    def test_check_contextlib_use(self):
+        code = """
+               with test.nested(
+                   mock.patch.object(network_model.NetworkInfo, 'hydrate'),
+                   mock.patch.object(objects.InstanceInfoCache, 'save'),
+               ) as (
+                   hydrate_mock, save_mock
+               )
+               """
+        filename = "nova/api/openstack/compute/v21/test.py"
+        self._assert_has_no_errors(code, checks.check_no_contextlib_nested,
+                                   filename=filename)
+        code = """
+               with contextlib.nested(
+                   mock.patch.object(network_model.NetworkInfo, 'hydrate'),
+                   mock.patch.object(objects.InstanceInfoCache, 'save'),
+               ) as (
+                   hydrate_mock, save_mock
+               )
+               """
+        filename = "nova/api/openstack/compute/legacy_v2/test.py"
+        errors = [(1, 0, 'N341')]
+        self._assert_has_errors(code, checks.check_no_contextlib_nested,
+                                expected_errors=errors, filename=filename)
+
     def test_check_greenthread_spawns(self):
         errors = [(1, 0, "N340")]
 
