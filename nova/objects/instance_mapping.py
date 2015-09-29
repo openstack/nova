@@ -43,15 +43,13 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
         return instance_mapping
 
     @staticmethod
+    @db_api.api_context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
-        session = db_api.get_api_session()
-
-        with session.begin():
-            db_mapping = session.query(
-                    api_models.InstanceMapping).filter_by(
-                            instance_uuid=instance_uuid).first()
-            if not db_mapping:
-                raise exception.InstanceMappingNotFound(uuid=instance_uuid)
+        db_mapping = context.session.query(
+                api_models.InstanceMapping).filter_by(
+                        instance_uuid=instance_uuid).first()
+        if not db_mapping:
+            raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
         return db_mapping
 
@@ -61,12 +59,11 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_mapping)
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
-        session = db_api.get_api_session()
-
         db_mapping = api_models.InstanceMapping()
         db_mapping.update(updates)
-        db_mapping.save(session)
+        db_mapping.save(context.session)
         return db_mapping
 
     @base.remotable
@@ -75,18 +72,16 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
         self._from_db_object(self._context, self, db_mapping)
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _save_in_db(context, instance_uuid, updates):
-        session = db_api.get_api_session()
+        db_mapping = context.session.query(
+                api_models.InstanceMapping).filter_by(
+                        instance_uuid=instance_uuid).first()
+        if not db_mapping:
+            raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
-        with session.begin():
-            db_mapping = session.query(
-                    api_models.InstanceMapping).filter_by(
-                            instance_uuid=instance_uuid).first()
-            if not db_mapping:
-                raise exception.InstanceMappingNotFound(uuid=instance_uuid)
-
-            db_mapping.update(updates)
-            session.add(db_mapping)
+        db_mapping.update(updates)
+        context.session.add(db_mapping)
         return db_mapping
 
     @base.remotable
@@ -98,14 +93,12 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
         self.obj_reset_changes()
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _destroy_in_db(context, instance_uuid):
-        session = db_api.get_api_session()
-
-        with session.begin():
-            result = session.query(api_models.InstanceMapping).filter_by(
-                    instance_uuid=instance_uuid).delete()
-            if not result:
-                raise exception.InstanceMappingNotFound(uuid=instance_uuid)
+        result = context.session.query(api_models.InstanceMapping).filter_by(
+                instance_uuid=instance_uuid).delete()
+        if not result:
+            raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
     @base.remotable
     def destroy(self):
@@ -122,14 +115,10 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
         }
 
     @staticmethod
+    @db_api.api_context_manager.reader
     def _get_by_project_id_from_db(context, project_id):
-        session = db_api.get_api_session()
-
-        with session.begin():
-            db_mappings = session.query(api_models.InstanceMapping).filter_by(
-                    project_id=project_id).all()
-
-        return db_mappings
+        return context.session.query(api_models.InstanceMapping).filter_by(
+            project_id=project_id).all()
 
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):
