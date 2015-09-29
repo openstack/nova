@@ -140,8 +140,12 @@ compute_opts = [
                     'environment.'),
     cfg.IntOpt('block_device_allocate_retries',
                default=60,
-               help='Number of times to retry block device'
-                    ' allocation on failures')
+               help='Number of times to retry block device '
+                    'allocation on failures.\n'
+                    'Starting with Liberty, Cinder can use image volume '
+                    'cache. This may help with block device allocation '
+                    'performance. Look at the cinder '
+                    'image_volume_cache_enabled configuration option.')
     ]
 
 interval_opts = [
