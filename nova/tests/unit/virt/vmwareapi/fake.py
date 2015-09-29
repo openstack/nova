@@ -76,6 +76,7 @@ def cleanup():
 
 def _create_object(table, table_obj):
     """Create an object in the db."""
+    _db_content.setdefault(table, {})
     _db_content[table][table_obj.obj] = table_obj
 
 
