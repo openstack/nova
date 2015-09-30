@@ -4478,33 +4478,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_get_guest_cpu_config_numa_topology(self, mock_has_min_version):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.vcpus = 2
-        instance_ref.numa_topology = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(
-                id=0,
-                cpuset=set([0, 1]),
-                memory=1024,
-                cpu_pinning={})])
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-
-        self.assertIsNone(instance_ref.numa_topology.cells[0].cpu_topology)
-
-        drvr._get_guest_config(instance_ref,
-                               _fake_network_info(self.stubs, 1),
-                               image_meta, disk_info)
-
-        topo = instance_ref.numa_topology.cells[0].cpu_topology
-        self.assertIsNotNone(topo)
-        self.assertEqual(topo.cores * topo.sockets * topo.threads,
-                         instance_ref.flavor.vcpus)
-
     def test_get_guest_cpu_topology(self):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor.vcpus = 8

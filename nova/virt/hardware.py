@@ -708,7 +708,6 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
                 pinning = zip(sorted(instance_cell.cpuset),
                               itertools.chain(*sliced_sibs))
 
-            # NOTE(sfinucan) - this may be overriden later on by the drivers
             topology = (instance_cell.cpu_topology or
                         objects.VirtCPUTopology(sockets=1,
                                                 cores=len(sliced_sibs),
