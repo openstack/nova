@@ -16,6 +16,8 @@ EXPERIMENTAL support script for running Nova EC2 API under Apache2 etc.
 
 """
 
+import eventlet
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from paste import deploy
@@ -36,6 +38,7 @@ utils.monkey_patch()
 objects.register_all()
 
 conf = config_files[0]
+eventlet.monkey_patch(os=False, thread=False)
 name = "ec2"
 
 options = deploy.appconfig('config:%s' % conf, name=name)
