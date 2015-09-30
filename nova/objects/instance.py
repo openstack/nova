@@ -15,6 +15,7 @@
 import copy
 
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -817,6 +818,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 except AttributeError:
                     LOG.exception(_LE('No save handler for %s'), field,
                                   instance=self)
+                except db_exc.DBReferenceError:
+                    # NOTE(melwitt): This will happen if we instance.save()
+                    # before an instance.create() and FK constraint fails.
+                    # In practice, this occurs in cells during a delete of
+                    # an unscheduled instance. Otherwise, it could happen
+                    # as a result of bug.
+                    raise exception.InstanceNotFound(instance_id=self.uuid)
             elif field in changes:
                 updates[field] = self[field]
 
