@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+import fractions
 import itertools
 
 from oslo_config import cfg
@@ -674,6 +675,16 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
     This method will calculate the pinning for the given instance and it's
     topology, making sure that hyperthreads of the instance match up with
     those of the host when the pinning takes effect.
+
+    Currently the strategy for packing is to prefer siblings and try use
+    cores evenly, by using emptier cores first. This is achieved by the way we
+    order cores in the can_pack structure, and the order in which we iterate
+    through it.
+
+    The main packing loop that iterates over the can_pack dictionary will not
+    currently try to look for a fit that maximizes number of siblings, but will
+    simply rely on the iteration ordering and picking the first viable
+    placement.
     """
 
     # We build up a data structure 'can_pack' that answers the question:
@@ -689,8 +700,44 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
 
         if threads_per_core * len(cores_list) < len(instance_cell):
             return False
-        else:
-            return len(instance_cell) % threads_per_core == 0
+        return True
+
+    def _orphans(instance_cell, threads_per_core):
+        """Number of instance CPUs which will not fill up a host core.
+
+        Best explained by an example: consider set of free host cores as such:
+            [(0, 1), (3, 5), (6, 7, 8)]
+        This would be a case of 2 threads_per_core AKA an entry for 2 in the
+        can_pack structure.
+
+        If we attempt to pack a 5 core instance on it - due to the fact that we
+        iterate the list in order, we will end up with a single core of the
+        instance pinned to a thread "alone" (with id 6), and we would have one
+        'orphan' vcpu.
+        """
+        return len(instance_cell) % threads_per_core
+
+    def _threads(instance_cell, threads_per_core):
+        """Threads to expose to the instance via the VirtCPUTopology.
+
+        This is calculated by taking the GCD of the number of threads we are
+        considering at the moment, and the number of orphans. An example for
+            instance_cell = 6
+            threads_per_core = 4
+
+        So we can fit the instance as such:
+            [(0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11)]
+              x  x  x  x    x  x
+
+        We can't expose 4 threads, as that will not be a valid topology (all
+        cores exposed to the guest have to have an equal number of threads),
+        and 1 would be too restrictive, but we want all threads that guest sees
+        to be on the same physical core, so we take GCD of 4 (max number of
+        threads) and 2 (number of 'orphan' CPUs) and get 2 as the number of
+        threads.
+        """
+        return fractions.gcd(threads_per_core, _orphans(instance_cell,
+                                                        threads_per_core))
 
     # We iterate over the can_pack dict in descending order of cores that
     # can be packed - an attempt to get even distribution over time
@@ -702,9 +749,11 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
             pinning = zip(sorted(instance_cell.cpuset),
                           itertools.chain(*sliced_sibs))
 
+            threads = _threads(instance_cell, cores_per_sib)
+            cores = len(instance_cell) / threads
             topology = objects.VirtCPUTopology(sockets=1,
-                                               cores=len(sliced_sibs),
-                                               threads=cores_per_sib)
+                                               cores=cores,
+                                               threads=threads)
             instance_cell.pin_vcpus(*pinning)
             instance_cell.cpu_topology = topology
             instance_cell.id = host_cell_id
@@ -729,17 +778,9 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
         return
 
     if host_cell.siblings:
-        # Try to pack the instance cell in one core
-        largest_free_sibling_set = sorted(
-            host_cell.free_siblings, key=len)[-1]
-        if len(instance_cell.cpuset) <= len(largest_free_sibling_set):
-            return _pack_instance_onto_cores(
-                [largest_free_sibling_set], instance_cell, host_cell.id)
-
-        # We can't to pack it onto one core so try with avail siblings
-        else:
-            return _pack_instance_onto_cores(
-                host_cell.free_siblings, instance_cell, host_cell.id)
+        # Try to pack the instance cell onto cores
+        return _pack_instance_onto_cores(
+            host_cell.free_siblings, instance_cell, host_cell.id)
     else:
         # Straightforward to pin to available cpus when there is no
         # hyperthreading on the host
