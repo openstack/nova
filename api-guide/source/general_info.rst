@@ -31,7 +31,7 @@ several key concepts:
    is also required.
 
    For more details, such as server actions and server metadata,
-   please see: :doc:`2.0_server_concepts`
+   please see: :doc:`server_concepts`
 
 -  **Flavor**
 

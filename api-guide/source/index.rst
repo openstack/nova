@@ -1,5 +1,5 @@
 ..
-      Copyright 2009-2014 OpenStack Foundation
+      Copyright 2009-2015 OpenStack Foundation
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
       not use this file except in compliance with the License. You may obtain
@@ -17,16 +17,16 @@
 Compute API
 ===========
 
-OpenStack Nova has a ReSTful HTTP service called the OpenStack Compute API.
-Through this API, Nova provides massively scalable, on demand, self service
-access to compute resources. Depending on the deployment those compute
-resources might be Virtual Machines, Physical Machines or Containers.
+The nova project has a ReSTful HTTP service called the OpenStack Compute API.
+Through this API, the service provides massively scalable, on demand,
+self-service access to compute resources. Depending on the deployment those
+compute resources might be Virtual Machines, Physical Machines or Containers.
 
 We welcome feedback, comments, and bug reports at
 `bugs.launchpad.net/nova <http://bugs.launchpad.net/nova>`__.
 
 
-Intended Audience
+Intended audience
 =================
 
 This guide assists software developers who want to develop applications
@@ -64,7 +64,7 @@ please read:
     microversions
 
 
-Key API Concepts
+Key API concepts
 ================
 
 The following documents go into more details about the key concepts of the
@@ -73,8 +73,8 @@ OpenStack Compute API:
 .. toctree::
     :maxdepth: 2
 
-    2.0_general_info
-    2.0_server_concepts
+    general_info
+    server_concepts
     authentication
     faults
     limits
@@ -84,11 +84,9 @@ OpenStack Compute API:
     request_and_response_formats
 
 
-Full Reference
+Full reference
 ==============
 
 For a full reference listing for the OpenStack Compute API, please see:
 
-* `*Compute API v2.1 extensions (CURRENT)* <http://developer.openstack.org/api-ref-compute-v2.1.html>`__.
-* `*Compute API v2 reference (SUPPORTED)* <http://developer.openstack.org/api-ref-compute-v2.html>`__.
-* `*Compute API v2 extensions (SUPPORTED)* <http://developer.openstack.org/api-ref-compute-v2-ext.html>`__.
+* `*Compute API reference (CURRENT)* <http://developer.openstack.org/api-ref-compute-v2.1.html>`__.

@@ -29,6 +29,7 @@ covhtml
 dist/*
 doc/source/api/*
 doc/build/*
+api-guide/build/*
 etc/nova/nova.conf.sample
 instances
 keeper
