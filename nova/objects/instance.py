@@ -26,7 +26,7 @@ from nova.cells import utils as cells_utils
 from nova.compute import flavors
 from nova import db
 from nova import exception
-from nova.i18n import _LE, _LW
+from nova.i18n import _LE
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -811,17 +811,15 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
         if self.migration_context:
             self.numa_topology = self.migration_context.new_numa_topology
         else:
-            LOG.warn(_LW("Trying to apply a migration context that does not "
-                         "seem to be set for this instance"),
-                         instance=self)
+            LOG.debug("Trying to apply a migration context that does not "
+                      "seem to be set for this instance", instance=self)
 
     def revert_migration_context(self):
         if self.migration_context:
             self.numa_topology = self.migration_context.old_numa_topology
         else:
-            LOG.warn(_LW("Trying to revert a migration context that does not "
-                         "seem to be set for this instance"),
-                         instance=self)
+            LOG.debug("Trying to revert a migration context that does not "
+                      "seem to be set for this instance", instance=self)
 
     @contextlib.contextmanager
     def mutated_migration_context(self):
