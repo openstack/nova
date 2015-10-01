@@ -46,8 +46,8 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
     def test_show(self):
         uuid = self._post_server()
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fakes.stub_bdm_get_all_by_instance)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance_uuids',
+                       fakes.stub_bdm_get_all_by_instance_uuids)
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -57,8 +57,8 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
     def test_detail(self):
         uuid = self._post_server()
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fakes.stub_bdm_get_all_by_instance)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance_uuids',
+                       fakes.stub_bdm_get_all_by_instance_uuids)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['id'] = uuid

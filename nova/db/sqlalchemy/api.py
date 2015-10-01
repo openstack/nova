@@ -3963,6 +3963,18 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
 
 
 @require_context
+def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids,
+                                                   use_slave=False):
+    if not instance_uuids:
+        return []
+    return _block_device_mapping_get_query(
+        context, use_slave=use_slave
+    ).filter(
+        models.BlockDeviceMapping.instance_uuid.in_(instance_uuids)
+    ).all()
+
+
+@require_context
 def block_device_mapping_get_all_by_instance(context, instance_uuid,
                                              use_slave=False):
     return _block_device_mapping_get_query(context, use_slave=use_slave).\

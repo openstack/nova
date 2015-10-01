@@ -8947,6 +8947,7 @@ class ComputeAPITestCase(BaseTestCase):
                                 {'source_type': 'volume',
                                  'device_name': '/dev/vda',
                                  'volume_id': 'fake_volume_id',
+                                 'instance_uuid': 'some_instance_uuid',
                                  'boot_index': 0,
                                  'destination_type': 'volume'})])
         self.assertTrue(
@@ -8958,11 +8959,13 @@ class ComputeAPITestCase(BaseTestCase):
                  'device_name': '/dev/vda',
                  'volume_id': 'fake_volume_id',
                  'destination_type': 'local',
+                 'instance_uuid': 'some_instance_uuid',
                  'boot_index': 0,
                  'snapshot_id': None}),
                 fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume',
                  'device_name': '/dev/vdb',
+                 'instance_uuid': 'some_instance_uuid',
                  'boot_index': 1,
                  'destination_type': 'volume',
                  'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
@@ -8975,6 +8978,7 @@ class ComputeAPITestCase(BaseTestCase):
                 {'source_type': 'volume',
                  'device_name': '/dev/vda',
                  'snapshot_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
+                 'instance_uuid': 'some_instance_uuid',
                  'destination_type': 'volume',
                  'boot_index': 0,
                  'volume_id': None})])

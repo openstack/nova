@@ -682,13 +682,21 @@ def stub_snapshot_get_all(self, context):
             stub_snapshot(102, project_id='superduperfake')]
 
 
-def stub_bdm_get_all_by_instance(context, instance_uuid, use_slave=False):
-    return [fake_block_device.FakeDbBlockDeviceDict(
-            {'id': 1, 'source_type': 'volume', 'destination_type': 'volume',
-            'volume_id': 'volume_id1', 'instance_uuid': instance_uuid}),
-            fake_block_device.FakeDbBlockDeviceDict(
-            {'id': 2, 'source_type': 'volume', 'destination_type': 'volume',
-            'volume_id': 'volume_id2', 'instance_uuid': instance_uuid})]
+def stub_bdm_get_all_by_instance_uuids(context, instance_uuids,
+                                       use_slave=False):
+    i = 1
+    result = []
+    for instance_uuid in instance_uuids:
+        for x in range(2):  # add two BDMs per instance
+            result.append(fake_block_device.FakeDbBlockDeviceDict({
+                'id': i,
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'volume_id': 'volume_id%d' % (i),
+                'instance_uuid': instance_uuid,
+            }))
+            i += 1
+    return result
 
 
 def fake_get_available_languages():
