@@ -109,9 +109,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         ORIG_COMPUTE_API = self.compute_api
         self.flags(enable=True, group='cells')
 
-        def _fake_cell_read_only(*args, **kwargs):
-            return False
-
         def _fake_validate_cell(*args, **kwargs):
             return
 
@@ -119,8 +116,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
             return instance
 
         self.compute_api = compute_cells_api.ComputeCellsAPI()
-        self.stubs.Set(self.compute_api, '_cell_read_only',
-                _fake_cell_read_only)
         self.stubs.Set(self.compute_api, '_validate_cell',
                 _fake_validate_cell)
 

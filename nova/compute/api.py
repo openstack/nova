@@ -310,11 +310,6 @@ class API(base.Base):
             self._cell_type = cells_opts.get_cell_type()
             return self._cell_type
 
-    def _cell_read_only(self, cell_name):
-        """Is the target cell in a read-only mode?"""
-        # FIXME(comstud): Add support for this.
-        return False
-
     def _validate_cell(self, instance, method):
         if self.cell_type != 'api':
             return
@@ -322,12 +317,6 @@ class API(base.Base):
         if not cell_name:
             raise exception.InstanceUnknownCell(
                     instance_uuid=instance.uuid)
-        if self._cell_read_only(cell_name):
-            raise exception.InstanceInvalidState(
-                    attr="vm_state",
-                    instance_uuid=instance.uuid,
-                    state="temporary_readonly",
-                    method=method)
 
     def _record_action_start(self, context, instance, action):
         objects.InstanceAction.action_start(context, instance.uuid,
