@@ -117,6 +117,12 @@ class CpuSetTestCase(test.NoDBTestCase):
         cpuset_ids = hw.parse_cpu_spec(" 1,1, ^1")
         self.assertEqual(set([]), cpuset_ids)
 
+        cpuset_ids = hw.parse_cpu_spec("^0-1")
+        self.assertEqual(set([]), cpuset_ids)
+
+        cpuset_ids = hw.parse_cpu_spec("0-3,^1-2")
+        self.assertEqual(set([0, 3]), cpuset_ids)
+
     def test_parse_cpu_spec_invalid_syntax_raises(self):
         self.assertRaises(exception.Invalid,
                           hw.parse_cpu_spec,
