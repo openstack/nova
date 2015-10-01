@@ -318,12 +318,6 @@ class ComputeAPI(object):
         serializer = objects_base.NovaObjectSerializer()
         self.client = self.get_client(target, version_cap, serializer)
 
-    def _compat_ver(self, current, legacy):
-        if self.client.can_send_version(current):
-            return current
-        else:
-            return legacy
-
     # Cells overrides this
     def get_client(self, target, version_cap, serializer):
         return rpc.get_client(target,
