@@ -106,6 +106,10 @@ class NetworkAPI(object):
 
         * 1.14 - Add mac parameter to release_fixed_ip().
         * 1.15 - Convert set_network_host() to use Network objects.
+
+        ... Liberty supports message version 1.15.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.15.
     '''
 
     VERSION_ALIASES = {
@@ -114,6 +118,7 @@ class NetworkAPI(object):
         'icehouse': '1.12',
         'juno': '1.13',
         'kilo': '1.13',
+        'liberty': '1.15',
     }
 
     def __init__(self, topic=None):

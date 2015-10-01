@@ -118,6 +118,10 @@ class CellsAPI(object):
                  and instance_info_cache_update_at_top use instance objects
         * 1.36 - Added 'delete_type' parameter to terminate_instance()
         * 1.37 - Add get_keypair_at_top to fetch keypair from api cell
+
+        ... Liberty supports message version 1.37.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.37.
     '''
 
     VERSION_ALIASES = {
@@ -126,6 +130,7 @@ class CellsAPI(object):
         'icehouse': '1.27',
         'juno': '1.29',
         'kilo': '1.34',
+        'liberty': '1.37',
     }
 
     def __init__(self):

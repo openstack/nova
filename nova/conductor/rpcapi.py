@@ -192,6 +192,9 @@ class ConductorAPI(object):
 
     * 3.0  - Drop backwards compatibility
 
+    ... Liberty supports message version 3.0.  So, any changes to
+    existing methods in 3.x after that point should be done such
+    that they can handle the version_cap being set to 3.0.
     """
 
     VERSION_ALIASES = {
@@ -200,6 +203,7 @@ class ConductorAPI(object):
         'icehouse': '2.0',
         'juno': '2.0',
         'kilo': '2.1',
+        'liberty': '3.0',
     }
 
     def __init__(self):
