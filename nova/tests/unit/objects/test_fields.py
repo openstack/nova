@@ -308,6 +308,58 @@ class TestCPUFeaturePolicy(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'disallow')
 
 
+class TestConfigDrivePolicy(TestField):
+    def setUp(self):
+        super(TestConfigDrivePolicy, self).setUp()
+        self.field = fields.ConfigDrivePolicyField()
+        self.coerce_good_values = [('optional', 'optional'),
+                                   ('mandatory', 'mandatory')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'optional'", self.field.stringify('optional'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestCPUAllocationPolicy(TestField):
+    def setUp(self):
+        super(TestCPUAllocationPolicy, self).setUp()
+        self.field = fields.CPUAllocationPolicyField()
+        self.coerce_good_values = [('dedicated', 'dedicated'),
+                                   ('shared', 'shared')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'shared'", self.field.stringify('shared'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestPciDeviceType(TestField):
+    def setUp(self):
+        super(TestPciDeviceType, self).setUp()
+        self.field = fields.PciDeviceTypeField()
+        self.coerce_good_values = [('type-PCI', 'type-PCI'),
+                                   ('type-PF', 'type-PF'),
+                                   ('type-VF', 'type-VF')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'type-VF'", self.field.stringify('type-VF'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestDiskBus(TestField):
     def setUp(self):
         super(TestDiskBus, self).setUp()
