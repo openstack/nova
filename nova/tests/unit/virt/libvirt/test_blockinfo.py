@@ -868,6 +868,26 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                 'virtio', 'ide', root_device_name='/dev/vda')
         mock_get_bus.assert_called_once_with('kvm', '/dev/vda')
 
+    @mock.patch('nova.virt.libvirt.blockinfo.find_disk_dev_for_disk_bus',
+                return_value='vda')
+    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_bus_for_disk_dev',
+                return_value='virtio')
+    def test_get_root_info_no_bdm_empty_image_meta(self, mock_get_bus,
+                                                   mock_find_dev):
+        # The evacuate operation passes image_ref=None to the compute node for
+        # rebuild which then defaults image_meta to {}, so we don't have any
+        # attributes in the ImageMeta object passed to get_root_info and we
+        # need to make sure we don't try lazy-loading anything.
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({})
+        blockinfo.get_root_info(instance, 'kvm', image_meta, None,
+                                'virtio', 'ide')
+        mock_find_dev.assert_called_once_with({}, 'virtio')
+
+        blockinfo.get_root_info(instance, 'kvm', image_meta, None,
+                                'virtio', 'ide', root_device_name='/dev/vda')
+        mock_get_bus.assert_called_once_with('kvm', '/dev/vda')
+
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_get_root_info_bdm(self, mock_get_info):
         instance = objects.Instance(**self.test_instance)
