@@ -82,7 +82,7 @@ changed. The user contract covers many kinds of information such as:
     Example: an API previously could return 200, 400, 403, 404 and the
     change would make the API now also be allowed to return 409.
 
-    See [#f2]_ for the 400 and 403 cases.
+    See [#f2]_ for the 400, 403 and 404 cases.
 
   - changing a status code on a particular response
 
@@ -171,10 +171,11 @@ we need a microversion".
   microversion is probably needed.
 
 .. [#f2] The exception to not needing a microversion when returning a
-  previously unspecified error code is the 400 and 403 cases. This is
+  previously unspecified error code is the 400, 403 and 404 cases. This is
   considered OK to return even if previously unspecified in the code since
   it's implied given keystone authentication can fail with a 403 and API
-  validation can fail with a 400 for invalid json request body.
+  validation can fail with a 400 for invalid json request body. Request to
+  url/resource that does not exist always fails with 404.
 
 
 In Code
