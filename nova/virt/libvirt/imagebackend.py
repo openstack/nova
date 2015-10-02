@@ -877,6 +877,9 @@ class Rbd(Image):
         if os.path.exists(local_file):
             os.unlink(local_file)
 
+    def export_image(self, image_url_parts, dst_path):
+        return self.driver.export_image(image_url_parts, dst_path)
+
 
 class Ploop(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
