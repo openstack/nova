@@ -39,3 +39,4 @@ nosetests.xml
 nova/tests/cover/*
 nova/vcsversion.py
 tools/conf/nova.conf*
+doc/source/_static/nova.conf.sample

@@ -34,7 +34,11 @@ extensions = ['sphinx.ext.autodoc',
               'oslosphinx',
               "ext.support_matrix",
               'sphinxcontrib.seqdiag',
+              'oslo_config.sphinxconfiggen',
               ]
+
+config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
+sample_config_basename = '_static/nova'
 
 todo_include_todos = True
 
