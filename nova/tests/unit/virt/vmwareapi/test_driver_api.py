@@ -2229,12 +2229,27 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # currently there are 2 data stores
         self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
+    def test_pre_live_migration(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.pre_live_migration, self.context,
+                          'fake_instance', 'fake_block_device_info',
+                          'fake_network_info', 'fake_disk_info')
+
+    def test_live_migration(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.live_migration, self.context,
+                          'fake_instance', 'fake_dest', 'fake_post_method',
+                          'fake_recover_method')
+
     def test_rollback_live_migration_at_destination(self):
-        with mock.patch.object(self.conn, "destroy") as mock_destroy:
-            self.conn.rollback_live_migration_at_destination(self.context,
-                    "instance", [], None)
-            mock_destroy.assert_called_once_with(self.context,
-                    "instance", [], None)
+        self.assertRaises(NotImplementedError,
+                          self.conn.rollback_live_migration_at_destination,
+                          self.context, 'fake_instance', 'fake_network_info',
+                          'fake_block_device_info')
+
+    def test_post_live_migration(self):
+        self.assertIsNone(self.conn.post_live_migration(self.context,
+            'fake_instance', 'fake_block_device_info'))
 
     def test_get_instance_disk_info_is_implemented(self):
         # Ensure that the method has been implemented in the driver
