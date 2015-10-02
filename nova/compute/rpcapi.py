@@ -341,7 +341,8 @@ class ComputeAPI(object):
                           'service history because I am too '
                           'old (minimum version is now %(version)i)'),
                       {'version': service_version})
-            raise exception.ServiceTooOld()
+            raise exception.ServiceTooOld(thisver=service_obj.SERVICE_VERSION,
+                                          minver=service_version)
         except KeyError:
             LOG.error(_LE('Failed to extract compute RPC version from '
                           'service history for version %(version)i'),

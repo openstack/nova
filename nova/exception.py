@@ -481,8 +481,9 @@ class DestinationHypervisorTooOld(Invalid):
 
 
 class ServiceTooOld(Invalid):
-    msg_fmt = _("This service is older than the minimum version "
-                "of the rest of the deployment. Unable to continue. ")
+    msg_fmt = _("This service is older (v%(thisver)i) than the minimum "
+                "(v%(minver)i) version of the rest of the deployment. "
+                "Unable to continue.")
 
 
 class DestinationDiskExists(Invalid):
