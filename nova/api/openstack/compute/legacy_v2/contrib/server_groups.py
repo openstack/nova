@@ -22,6 +22,7 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api.validation import parameter_types
 import nova.exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -109,7 +110,7 @@ class ServerGroupController(wsgi.Controller):
             if field == 'name':
                 utils.check_string_length(value, field,
                                           min_length=1, max_length=255)
-                if not common.VALID_NAME_REGEX.search(value):
+                if not parameter_types.valid_name_regex_obj.search(value):
                     msg = _("Invalid format for name: '%s'") % value
                     raise nova.exception.InvalidInput(reason=msg)
             elif field == 'policies':

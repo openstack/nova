@@ -100,6 +100,9 @@ valid_name_leading_trailing_spaces_regex = (
         'no_ws': re.escape(_get_printable_no_ws())})
 
 
+valid_name_regex_obj = re.compile(valid_name_regex, re.UNICODE)
+
+
 boolean = {
     'type': ['boolean', 'string'],
     'enum': [True, 'True', 'TRUE', 'true', '1', 'ON', 'On', 'on',
