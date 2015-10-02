@@ -49,9 +49,11 @@ class CertAPI(object):
 
         2.0 - Major API rev for Icehouse
 
-        ... Icehouse, Juno and Kilo support message version 2.0.  So, any
-        changes to existing methods in 2.x after that point should be done such
-        that they can handle the version_cap being set to 2.0.
+        ... Icehouse, Juno, Kilo, and Liberty support message version
+        2.0.  So, any changes to existing methods in 2.x after that
+        point should be done such that they can handle the version_cap
+        being set to 2.0.
+
     '''
 
     VERSION_ALIASES = {
@@ -60,6 +62,7 @@ class CertAPI(object):
         'icehouse': '2.0',
         'juno': '2.0',
         'kilo': '2.0',
+        'liberty': '2.0',
     }
 
     def __init__(self):
