@@ -2121,9 +2121,7 @@ class ComputeManager(manager.Manager):
                                       network_info=network_info,
                                       block_device_info=block_device_info)
 
-                    if (utils.ft_enabled(instance) and
-                            not utils.ft_secondary(instance)):
-                        self._colo_synchronize(context, instance)
+                    self._ft_initialize(context, instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -6264,19 +6262,26 @@ class ComputeManager(manager.Manager):
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
 
-    def _colo_synchronize(self, context, primary_instance):
-        relations = (objects.FaultToleranceRelationList.
-                     get_by_primary_instance_uuid(context,
-                                                  primary_instance.uuid))
+    def _ft_initialize(self, context, instance):
+        if utils.ft_secondary(instance):
+            relation = (objects.FaultToleranceRelation.
+                        get_by_secondary_instance_uuid(context, instance.uuid))
 
-        # NOTE(ORBIT): Currently supporting one secondary only.
-        relation = relations[0]
+            relational_instance = objects.Instance.get_by_uuid(
+                context, relation.secondary_instance_uuid)
+        else:
+            relations = (objects.FaultToleranceRelationList.
+                         get_by_primary_instance_uuid(context,
+                                                      primary_instance.uuid))
 
-        secondary_instance = objects.Instance.get_by_uuid(
-            context, relation.secondary_instance_uuid)
+            # NOTE(ORBIT): Currently supporting one secondary only.
+            relation = relations[0]
 
-        LOG.debug("Executing initial COLO synchronization of %s", relation)
-        self.driver.colo_synchronize(primary_instance, secondary_instance)
+            relational_instance = objects.Instance.get_by_uuid(
+                context, relation.secondary_instance_uuid)
+
+        LOG.debug("Executing FT initialization of %s", relation)
+        self.driver.ft_initialize(instance, relational_instance)
 
     def colo_cleanup(self, context, instance):
         network_info = compute_utils.get_nw_info_for_instance(instance)

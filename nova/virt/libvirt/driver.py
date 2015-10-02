@@ -256,7 +256,12 @@ libvirt_opts = [
                 default=[],
                 help='List of guid targets and ranges.'
                      'Syntax is guest-gid:host-gid:count'
-                     'Maximum of 5 allowed.')
+                     'Maximum of 5 allowed.'),
+    cfg.StrOpt('colo_migration_flag',
+               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE'
+                       #', VIR_MIGRATE_COLO'
+                       )
     ]
 
 CONF = cfg.CONF
@@ -3938,7 +3943,24 @@ class LibvirtDriver(driver.ComputeDriver):
                                                   rescue,
                                                   block_device_info,
                                                   flavor):
-            guest.add_device(config)
+            # TODO(ORBIT): Temp until quorum is supported
+            if utils.ft_enabled(instance) and config.source_device == "disk":
+                if utils.ft_secondary(instance):
+                    qemu_cmdline = ('-drive if=none' +
+                                    ',driver=' + config.driver_format +
+                                    ',file=' + config.source_path +
+                                    ',id=colo1,cache=none,aio=native')
+                else:
+                    qemu_cmdline = ('-drive if=virtio,id=disk1,driver=quorum' +
+                                    ',read-pattern=fifo,cache=none' +
+                                    ',aio=native,children.0.file.filename=' +
+                                    config.source_path +
+                                    ',children.0.driver=' +
+                                    config.driver_format)
+                guest.add_qemu_cmdline(
+                    vconfig.LibvirtConfigQEMUCommandline(qemu_cmdline))
+            else:
+                guest.add_device(config)
 
         for vif in network_info:
             config = self.vif_driver.get_config(
@@ -4142,12 +4164,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 balloon.model = 'none'
 
             guest.add_device(balloon)
-
-        if utils.ft_enabled(instance):
-            guest.add_qemu_cmdline(vconfig.LibvirtConfigQEMUCommandline(
-                # TODO(ORBIT): Add qemu commandline needed for COLO
-                ''
-            ))
 
         return guest
 
@@ -6402,18 +6418,53 @@ class LibvirtDriver(driver.ComputeDriver):
             flags = libvirt_qemu.VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP
 
         try:
-            return libvirt_qemu.qemuMonitorCommand(dom, cmd, flags)
+            LOG.debug("Executing QEMU monitor command: %s", cmd)
+            response = libvirt_qemu.qemuMonitorCommand(dom, cmd, flags)
+            LOG.debug("QEMU monitor command response: %s", response)
+            return response
         except libvirt.libvirtError as e:
             LOG.error("QEMU monitor command failed: %s", cmd)
 
-    def colo_synchronize(self, primary_instance, secondary_instance):
+    def ft_initialize(self, instance, relational_instance):
+        if utils.ft_secondary(instance):
+            self._colo_init_secondary(instance, relational_instance)
+        else:
+            self._colo_init_primary(instance, relational_instance)
+
+    def _colo_init_primary(self, primary_instance, secondary_instance):
         """Execute the initial synchronization of the primary and secondary VM.
         """
-        # TODO(ORBIT): Do we need to wait for both instances to be running
-        #              before starting sync or is libvirt taking care of it?
+        secondary_host = secondary_instance.hostname
+        if not libvirt_utils.is_valid_hostname(secondary_host):
+            raise exception.InvalidHostname(hostname=secondary_host)
 
-        # TODO(ORBIT): Currently just unpause the primary instance
-        self.unpause(primary_instance)
+        flaglist = CONF.libvirt.colo_migration_flag.split(',')
+        flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+        logical_sum = reduce(lambda x, y: x | y, flagvals)
+
+    def _colo_init_secondary(self, secondary_instance, primary_instance):
+        disk_id = "colo1b"
+        instance_path = libvirt_utils.get_instance_path(secondary_instance)
+        active_disk = instance_path + "/active_disk.img"
+        hidden_disk = instance_path + "/hidden_disk.img"
+
+        utils.execute('qemu-img', 'create', '-f', 'qcow2', active_disk, '10G')
+        utils.execute('qemu-img', 'create', '-f', 'qcow2', hidden_disk, '10G')
+
+        drive_add_cmd = ("drive_add 0 if=none,id=" + disk_id +
+                         ",driver=replication" +
+                         ",mode=secondary,throttling.bps-total-max=70000000" +
+                         ",file.file.filename=" + active_disk +
+                         ",file.driver=qcow2" +
+                         ",file.backing.file.filename=" + hidden_disk +
+                         ",file.backing.driver=qcow2" +
+                         ",file.backing.backing.backing_reference=colo1" +
+                         ",file.backing.allow-write-backing-file=on")
+        ret = self.exec_monitor_command(secondary_instance, drive_add_cmd)
+
+        device_add_cmd = ("device_add virtio-blk-pci,drive=" + disk_id +
+                          ",addr=9")
+        ret = self.exec_monitor_command(secondary_instance, device_add_cmd)
 
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
