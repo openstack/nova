@@ -429,7 +429,11 @@ def get_root_info(instance, virt_type, image_meta, root_bdm,
         root_bdm.get('source_type') == 'image' and
         root_bdm.get('destination_type') == 'local'))
     if no_root_bdm:
-        if image_meta.disk_format == 'iso':
+        # NOTE(mriedem): In case the image_meta object was constructed from
+        # an empty dict, like in the case of evacuate, we have to first check
+        # if disk_format is set on the ImageMeta object.
+        if (image_meta.obj_attr_is_set('disk_format') and
+                image_meta.disk_format == 'iso'):
             root_device_bus = cdrom_bus
             root_device_type = 'cdrom'
         else:
