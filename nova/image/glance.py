@@ -71,7 +71,7 @@ glance_opts = [
                 default=[],
                 help='A list of url scheme that can be downloaded directly '
                      'via the direct_url.  Currently supported schemes: '
-                     '[file].'),
+                     '[file, rbd].'),
     ]
 
 LOG = logging.getLogger(__name__)
