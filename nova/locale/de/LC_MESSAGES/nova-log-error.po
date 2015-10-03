@@ -3,433 +3,445 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015
+# Ettore Atalan <atalanttore@googlemail.com>, 2014
+# Carsten Duch <carsten.duch@posteo.de>, 2015. #zanata
+# Frank Kloeker <eumel@arcor.de>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
+# Reik Keutterling <spielkind@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2015-10-03 06:34+0000\n"
-"PO-Revision-Date: 2015-09-23 07:23+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
-"Language: cs\n"
+"PO-Revision-Date: 2015-10-01 06:49+0000\n"
+"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
+"Language-Team: German (http://www.transifex.com/openstack/nova/language/"
+"de/)\n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
-"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Zanata 3.7.1\n"
 
 msgid "\"Look for the VDIs failed"
-msgstr "\"Hledání VBD selhalo"
+msgstr "\"Nachschau der VDIs fehlgeschlagen"
 
 #, python-format
 msgid ""
 "%(base)s virtual size %(base_size)s larger than flavor root disk size "
 "%(size)s"
 msgstr ""
-"%(base)s virtuální velikost %(base_size)s větší než velikost kořenového "
-"disku konfigurace %(size)s "
+"%(base)s virtuelle Festplatte %(base_size)s größer als die Größe der "
+"Varianten Root Festplatte %(size)s"
 
 #, python-format
 msgid ""
 "%(base)s virtual size %(disk_size)s larger than flavor root disk size "
 "%(size)s"
 msgstr ""
-"%(base)s virtuální velikost %(disk_size)s větší než velikost kořenového "
-"disku konfigurace %(size)s"
+"%(base)s virtuelle Festplatte %(disk_size)s größer als die Größe der "
+"Varianten Root Festplatte %(size)s"
 
 #, python-format
 msgid ""
 "%(scheme)s is registered as a module twice. %(module_name)s is not being "
 "used."
 msgstr ""
-"%(scheme)s je jako modul registrováno dvakrát. %(module_name)s se nebude "
-"používat."
+"%(scheme)s ist schon registriert als Modul. %(module_name)s ist nicht in "
+"Benutzung."
 
 #, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: unrecoverable state during operation on %(host)s"
 msgstr ""
-"Agregát %(aggregate_id)s: neobnovitelný stav během provádění operace na "
-"%(host)s"
+"Aggregat %(aggregate_id)s: nicht zu behebender Status während der Operation "
+"an %(host)s"
 
 msgid "An error occurred while refreshing the network cache."
-msgstr "Při obnově mezipaměti sítě došlo k chybě."
+msgstr ""
+"Ein Fehler ist während des Aktualisierens des Netzwerk Caches aufgetreten."
 
 #, python-format
 msgid "Attach volume failed: %s"
-msgstr "Připojení svazku selhalo: %s"
+msgstr "Anhängen Datenträger fehlgeschlagen: %s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
-msgstr "Připojování zařízení PCI %(dev)s do %(dom)s selhalo."
+msgstr "Anhängen PCI Gerät %(dev)s an %(dom)s fehlgeschlagen."
 
 #, python-format
 msgid "Attaching network adapter failed. Exception:  %s"
-msgstr "Připojování síťového adaptéru selhalo. Výjimka: %s"
+msgstr "Anhängen des Netzwerkadapters fehlgeschlagen. Ausnahme:  %s"
 
 #, python-format
 msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "Nelze blokově přesunout instanci %s s namapovanými svazky"
+msgstr ""
+"Kann keine Bliock-Migration durchführen an Instanz %s mit abgebildeten "
+"Datenträger"
 
 msgid "Cannot cleanup migration files"
-msgstr "Nelze vyčistit soubory přesunu"
+msgstr "Konnte Migrationsdateien nicht aufräumen"
 
 #, python-format
 msgid "Cannot reboot instance: %s"
-msgstr "Nelze restartovat instanci: %s"
+msgstr "Instanz kann nicht neu gestartet werden: %s"
 
 #, python-format
 msgid "Caught error: %s"
-msgstr "Zachycena chyba: %s"
+msgstr "Fehler abgefangen: %s"
 
 msgid "Compute driver option required, but not specified"
-msgstr "Je vyžadována volba ovladače výpočtu, která ale není zadána"
+msgstr "Compute Treiber Option erforderlich, aber nicht spezifiziert"
 
 #, python-format
 msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::vložit_info_sítě %s"
+msgstr "Compute.api::inject_network_info %s"
 
 #, python-format
 msgid "Compute.api::lock %s"
-msgstr "Compute.api::uzamčení %s"
+msgstr "Compute.api::lock %s"
 
 #, python-format
 msgid "Compute.api::pause %s"
-msgstr "Compute.api::pauza %s"
+msgstr "Compute.api::pause %s"
 
 #, python-format
 msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetování stavu %s"
+msgstr "Compute.api::resetState %s"
 
 #, python-format
 msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_sítě %s"
+msgstr "Compute.api::reset_network %s"
 
 #, python-format
 msgid "Compute.api::unlock %s"
-msgstr "Compute.api::odemčení %s"
+msgstr "Compute.api::unlock %s"
 
 #, python-format
 msgid "Compute.api::unpause %s"
-msgstr "Compute.api::zrušení pozastaevní %s"
+msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
-msgstr "Připojení k libvirt selhalo: %s"
+msgstr "Verbindung zu libvirt fehlgeschlagen: %s"
 
 #, python-format
 msgid "Could not bind to %(host)s:%(port)s"
-msgstr "Nelze svázat %(host)s:%(port)s"
+msgstr "Keine Bindung an %(host)s:%(port)s möglich"
 
 msgid "Could not decode scheduler options"
-msgstr "Nelze rozšifrovat volby plánovače"
+msgstr "Konnte Optionen für den Scheduler nicht entschlüsseln"
 
 #, python-format
 msgid ""
 "Could not disconnect encrypted volume %(volume)s. If dm-crypt device is "
 "still active it will have to be destroyed manually for cleanup to succeed."
 msgstr ""
-"Nelze odpojit zašifrovaný svazek %(volume)s. Pokud je zařízení dm-crypt "
-"stále aktivní, bude muset být odstraněno ručně, aby mohlo být vyčištění "
-"úspěšně dokončeno."
+"Konnte verschlüsselte Festplatte %(volume)s nicht trennen. Wenn dm-crypt auf "
+"dem Gerät weiter aktiv ist, muß die Trennung manuell erfolgen."
 
 #, python-format
 msgid "Could not remove tmpdir: %s"
-msgstr "Nelze odstranit dočasný adresář: %s"
+msgstr "tmpdir konnte nicht entfernt werden: %s"
 
 #, python-format
 msgid "Could not start encryption for disk %(device)s: %(exception)s"
-msgstr "Nelze spustit šifrování na disku %(device)s: %(exception)s"
+msgstr ""
+"Konnte Verschlüsselung nicht starten für Festplatte %(device)s: %(exception)s"
 
 #, python-format
 msgid "Could not stat scheduler options file %(filename)s"
-msgstr "Nelze vyhodnotit soubor voleb plánovače %(filename)s"
+msgstr ""
+"Konnte den Status nicht feststellen der Scheduler-Optionsdatei  %(filename)s"
 
 msgid "Couldn't communicate with any cells"
-msgstr "Nelze komunikovat s žádnou buňkou"
+msgstr "Konnte nicht mit irgendeiner Zelle kommunizieren"
 
 #, python-format
 msgid "Couldn't communicate with cell '%s'"
-msgstr "Nelze komunikovat s buňkou '%s'"
+msgstr "Konnte nicht mit der Zelle kommunizieren '%s'"
 
 #, python-format
 msgid "Couldn't lookup app: %s"
-msgstr "Nelze vyhledat aplikaci: %s"
+msgstr "Konnte Applikation nicht auslesen: %s"
 
 #, python-format
 msgid "Couldn't unmount the GlusterFS share %s"
-msgstr "Nelze odpojit sdílení GlusterFS %s"
+msgstr "Die GlusterFS-Freigabe %s konnte nicht ausgehängt werden"
 
 #, python-format
 msgid "Couldn't unmount the NFS share %s"
-msgstr "Nelze odpojit sdílení NFS %s"
+msgstr "Die NFS-Freigabe %s konnte nicht ausgehängt werden"
 
 #, python-format
 msgid "Couldn't unmount the Quobyte Volume at %s"
-msgstr "Nelze odpojit svazek Quobyte na %s"
+msgstr "Konnte das Quobyte Volume nicht abhängen von %s"
 
 #, python-format
 msgid "Couldn't unmount the share %s"
-msgstr "Nelze odpojit sdílení %s"
+msgstr "Konnte die Freigabe %s nicht aushängen"
 
 #, python-format
 msgid "Creating config drive failed with error: %s"
-msgstr "Vytváření konfigurační jednotky selhalo s chybou: %s"
+msgstr "Erstellung Konfigurationsfestplatte fehlgeschlagen: %s"
 
 msgid "DB error"
-msgstr "Chyba DB"
+msgstr "Datenbankfehler"
 
 msgid "Destroy VM failed"
-msgstr "Zničení VM selhalo"
+msgstr "Zerstören der VM fehlgeschlagen"
 
 msgid "Destroy instance failed"
-msgstr "Zničení instance selhalo"
+msgstr "Zerstören der Instanz fehlgeschlagen"
 
 #, python-format
 msgid "Detaching network adapter failed. Exception: %s"
-msgstr "Odpojování síťového adaptéru selhalo. Výjimka: %s"
+msgstr "Abhängen des Netzwerkadapters fehlgeschlagen. Ausnahme:  %s"
 
 #, python-format
 msgid ""
 "Download handler '%(handler)s' raised an exception, falling back to default "
 "handler '%(default_handler)s'"
 msgstr ""
-"Obslužná rutina stažení '%(handler)s' zahlásila výjimku, bude použit výchozí "
-"obslužná rutina '%(default_handler)s'"
+"Download Handler '%(handler)s' erreichte eine Ausnahme, falle zurück auf die "
+"Standardsteuerung '%(default_handler)s'"
 
 msgid "Download image error"
-msgstr "Chyba stažení obrazu"
+msgstr "Download Abbild Fehler"
 
 #, python-format
 msgid "Driver failed to attach volume %(volume_id)s at %(mountpoint)s"
-msgstr "Ovladač nemohl připojit svazek %(volume_id)s k %(mountpoint)s"
+msgstr ""
+"Treiber fehlgeschlagen zum  Anhängen des Datenträgers %(volume_id)s an "
+"%(mountpoint)s"
 
 msgid "Environment variable 'NETWORK_ID' must be set."
-msgstr "Proměnná prostředí 'NETWORK_ID' musí být nastavena."
+msgstr "Umgebungsvariable 'NETWORK_ID' muss gesetzt sein."
 
 #, python-format
 msgid "Environment: %s"
-msgstr "Prostředí: %s"
+msgstr "Umgebung: %s"
 
 #, python-format
 msgid ""
 "Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
 "%(extra)s."
 msgstr ""
-"Chyba při kontaktování serveru glance '%(host)s:%(port)s' pro '%(method)s', "
-"%(extra)s."
+"Fehler beim Verbinden zum Glance Server '%(host)s:%(port)s' für "
+"'%(method)s', %(extra)s."
 
 #, python-format
 msgid "Error copying key: %s"
-msgstr "Chyba při kopírování klíče: %s"
+msgstr "Fehler beim Kopieren des Schlüssels: %s"
 
 #, python-format
 msgid "Error creating Barbican client: %s"
-msgstr "Chyba při vytváření klienta Barbican: %s"
+msgstr "Fehler beim Erstellen des Barbican Client: %s"
 
 #, python-format
 msgid "Error creating key: %s"
-msgstr "Chyba při vytváření klíče: %s"
+msgstr "Fehler beim Erstellen des Schlüssels: %s"
 
 #, python-format
 msgid "Error defining a domain with XML: %s"
-msgstr "Chyba při určování domény pomocí XML: %s"
+msgstr "Fehler beim Definieren einer Domain mit XML: %s"
 
 #, python-format
 msgid "Error defining a secret with XML: %s"
-msgstr "Chyba při určení tajného klíče pomocí XML: %s"
+msgstr "Fehler beim Definieren eines Geheimnisses mit XML: %s"
 
 #, python-format
 msgid "Error deleting conntrack entries for %s"
-msgstr "Chyba při mazání položek conntrack pro %s"
+msgstr "Fehler beim Löschen der Einträge für %s"
 
 #, python-format
 msgid "Error deleting key: %s"
-msgstr "Chyba při mazání klíče: %s"
+msgstr "Fehler beim Löschen des Schlüssels: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Chyba při nasazování instance %(instance)s na uzlu bez operačního systému "
-"%(node)s "
+"Fehler bei der Erstellung der Instanz %(instance)s auf dem BareMetal-Knoten "
+"%(node)s."
 
 #, python-format
 msgid "Error enabling hairpin mode with XML: %s"
-msgstr "Chyba při povolení režimu spony pomocí XML: %s"
+msgstr "Fehler beim Aktivieren des Hairpin-Mode mit XML: %s"
 
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
-msgstr ""
-"Chyba od posledního hostitele: %(last_host)s (uzel %(last_node)s): %(exc)s"
+msgstr "Fehler vom letzten Host: %(last_host)s (node %(last_node)s): %(exc)s"
 
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
-msgstr "Chyba od libvirt během ničení. Kód=%(errcode)s Chyba=%(e)s"
+msgstr "Fehler von  libvirt beim Löschen. Code=%(errcode)s Fehler=%(e)s"
 
 #, python-format
 msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
-msgstr "Chyba od libvirt během rušení určení. Kód=%(errcode)s Chyba=%(e)s"
+msgstr "Fehler von  libvirt beim Undefinieren. Code=%(errcode)s Fehler=%(e)s"
 
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
-msgstr "Chyba od libvirt během rušení filtru. Kód=%(errcode)s Chyba=%(e)s"
+msgstr "Fehler von  libvirt beim Unfiltrieren. Code=%(errcode)s Fehler=%(e)s"
 
 #, python-format
 msgid "Error getting key: %s"
-msgstr "Chyba při získávání klíče: %s"
+msgstr "Fehler beim Abruf des Schlüssels: %s"
 
 #, python-format
 msgid "Error getting secret data: %s"
-msgstr "Chyba při získávání tajných dat: %s"
+msgstr "Fehler beim Abruf der geheimen Daten: %s"
 
 #, python-format
 msgid "Error getting secret metadata: %s"
-msgstr "Chyba při získávání tajných popisných dat: %s"
+msgstr "Fehler beim Abruf der geheimen Metadaten: %s"
 
 msgid "Error in migrate"
-msgstr "Chyba při přesunu"
+msgstr "Fehler bei Migration"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
-msgstr "Chyba při vkládání dat do obrazu %(img_id)s (%(e)s)"
+msgstr "Fehler beim Einfügen von Daten in das Abbild %(img_id)s (%(e)s)"
 
 #, python-format
 msgid "Error instantiating %(provider)s: %(exception)s"
-msgstr "Chyba vytváření instance %(provider)s: %(exception)s"
+msgstr "Fehler beim instanziieren %(provider)s: %(exception)s"
 
 #, python-format
 msgid "Error launching a defined domain with XML: %s"
-msgstr "Chyba při spouštění určené domény pomocí XML: %s"
+msgstr "Fehler beim Starten einer definierten Domain mit XML: %s"
 
 msgid "Error locating next hop for message"
-msgstr "Chyba při nalezení dalšího skoku zprávy"
+msgstr "Fehler beim Lokalisieren der nächsten Adresse für die Nachricht"
 
 msgid "Error locating next hops for message"
-msgstr "Chyba při hledání dalších skoků pro zprávu"
+msgstr "Fehler beim Lokalisieren der nächsten Adressen für die Nachricht"
 
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
 msgstr ""
-"Během vytváření snímku svazku došlo k chybě, stav chyby odeslán na Cinder."
+"Ein Fehler ist aufgetreten bei volume_snapshot_create, sende Fehlerstatus zu "
+"Cinder."
 
 msgid ""
 "Error occurred during volume_snapshot_delete, sending error status to Cinder."
 msgstr ""
-"Během mazání snímku svazku došlo k chybě, stav chyby odeslán na Cinder."
+"Ein Fehler ist aufgetreten bei volume_snapshot_delete, sende Fehlerstatus zu "
+"Cinder."
 
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
-msgstr "Chyba v '%(path)s' při kontrole přímého vstupu/výstupu: '%(ex)s'"
+msgstr "Fehler an '%(path)s' bei der Überprüfung direct I/O: '%(ex)s'"
 
 #, python-format
 msgid ""
 "Error preparing deploy for instance %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Chyba při přípravě na nasazení instance %(instance)s na uzlu bez operačního "
-"systému %(node)s."
+"Fehler bei der Vorbereitung zur Erstellung der Instanz %(instance)s auf dem "
+"BareMetal-Knoten %(node)s."
 
 msgid "Error processing message locally"
-msgstr "Chyba při místním zpracování zpráv"
+msgstr "Fehler bei der lokalen Nachrichtenverarbeitung"
 
 #, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "Chyba při čtení souboru informací obrazu %(filename)s: %(error)s"
+msgstr "Fehler beim Lesen des Abbildes in die Datei %(filename)s: %(error)s"
 
 #, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr ""
-"Chyba při uvolňování DHCP pro IP adresu %(address)s s MAC %(mac_address)s"
+"Fehler bei der DHCP-Freigabe der IP %(address)s mit MAC %(mac_address)s"
 
 #, python-format
 msgid "Error scheduling instances %(instance_uuids)s"
-msgstr "Chyba při plánování instancí %(instance_uuids)s"
+msgstr "Fehler bei der Planung der Instanzen %(instance_uuids)s"
 
 msgid "Error sending message to next hops."
-msgstr "Chyba při odesílání zprávy do dalších skoků"
+msgstr "Fehler beim Senden der Nachricht zur nächsten Adresse."
 
 #, python-format
 msgid "Error starting xvp: %s"
-msgstr "Chyba při spouštění xvp: %s"
+msgstr "Fehler beim Starten von xvp: %s"
 
 #, python-format
 msgid "Error storing key: %s"
-msgstr "Chyba při ukládání klíče: %s"
+msgstr "Fehler beim Abspeichern des Schlüssels: %s"
 
 msgid "Error trying to Rescue Instance"
-msgstr "Chyba při pokusu o záchranu instance"
+msgstr "Fehler beim Versuch des Wiederherstellens der Instanz"
 
 msgid "Error trying to reschedule"
-msgstr "Chyba při pokusu o znovu naplánování"
+msgstr "Fehler beim Versuch der Neuplanung"
 
 #, python-format
 msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Chyba při aktualizaci zdrojů pro uzel %(node)s: %(e)s"
+msgstr "Fehler bei der Aktualisierung der Resourcen für Knoten %(node)s: %(e)s"
 
 msgid "Error waiting for responses from neighbor cells"
-msgstr "Chyba při čekání na odpověď od sousedních buněk"
+msgstr "Fehler beim Warten auf Antwort von den Nachbarzellen"
 
 #, python-format
 msgid "Error while trying to clean up image %s"
-msgstr "Chyba při pokusu o vyčištění obrazu %s"
+msgstr "Fehler beim Versuch das Abbild %s zu löschen"
 
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
-msgstr "Chyba při zápisu do %(path)s: %(exception)s"
+msgstr "Fehler beim Schreiben zu %(path)s: %(exception)s"
 
 #, python-format
 msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr "Chyba při zápisu záznamu konzole vm z roury sériové konzole. Chyba: %s"
+msgstr ""
+"Fehler beim Schreiben VM Konsole-Log von der seriellen Konsole-Leitung. "
+"Fehler: %s"
 
 #, python-format
 msgid "Error: %s"
-msgstr "Chyba: %s"
+msgstr "Fehler: %s"
 
 #, python-format
 msgid "Exception dispatching event %(event)s: %(ex)s"
-msgstr "Výjimka při vysílání události %(event)s: %(ex)s"
+msgstr "Ausnahme bei der Erledigung des Ereignisses %(event)s: %(ex)s"
 
 #, python-format
 msgid "Exception handling resource: %s"
-msgstr "Obsluhování výjimky zdroje: %s"
+msgstr "Ausnahmebehandlungsressource: %s"
 
 msgid "Exception in string format operation"
-msgstr "Výjimka při operaci s formátem řetězce"
+msgstr "Ausnahme bei Zeichenfolgeformatoperation"
 
 msgid "Exception loading extension"
-msgstr "Výjimka během načítání rozšíření"
+msgstr "Ausnahme beim Laden der Erweiterung"
 
 #, python-format
 msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Výjimka při spuštění %(name)s %(type)s-hák: %(obj)s"
+msgstr "Ausnahme beim Lauf %(name)s %(type)s-hook: %(obj)s"
 
 msgid "Exception while creating table."
-msgstr "Výjimka při vytváření tabulky."
+msgstr "Ausnahme beim Anlegen einer Tabelle."
 
 msgid "Exception while seeding instance_types table"
-msgstr "Výjimka při vyplňování tabulky typů instance"
+msgstr "Ausnahme beim Setzen der instance_types Tabelle"
 
 #, python-format
 msgid "Exception while waiting completion of volume snapshots: %s"
-msgstr "Vyskytla se výjimka během čekání na dokončení snímků svazku: %s"
+msgstr "Ausnahme beim Warten auf Fertigstellung des Datenträgerabbilds: %s"
 
 #, python-format
 msgid "Extending virtual disk failed with error: %s"
-msgstr "Rozšiřování virtuálního disku selhalo s chybou: %s"
+msgstr "Erweitern der virtuellen Festplatte fehlgeschlagen mit Fehler: %s"
 
 #, python-format
 msgid "Failed removing bridge device: '%s'"
-msgstr "Nelze odstranit zařízení mostu: '%s'"
+msgstr "Löschen des Brückengerätes fehlgeschlagen: '%s'"
 
 #, python-format
 msgid "Failed removing net device: '%s'"
-msgstr "Nelze odstranit síťové zařízení: '%s'"
+msgstr "Löschen des Netzgerätes fehlgeschlagen: '%s'"
 
 msgid "Failed storing info cache"
-msgstr "Ukládání mezipaměti informací selhalo"
+msgstr "Fehler beim Speichern in den Zwischenspeicher"
 
 msgid ""
 "Failed to allocate PCI devices for instance. Unassigning devices back to "
@@ -437,795 +449,834 @@ msgid ""
 "information, and allocation during claims is controlled via a hold on the "
 "compute node semaphore"
 msgstr ""
-"Nelze přidělit zařízení PCI k instanci. Zařízení jsou navrácena do zásob- "
-"Toto by se nemělo dít, protože plánovač by měl mít přesné informace a "
-"přidělení během nárokování je ovládáno uzmutím semaforu výpočetního uzlu."
+"Zuweisung von PCI Geräten zur Instanz fehlgeschlagen. Nicht zugewiesene "
+"Geräte sind zurück im Pool. Das sollte nicht passieren, wenn der Scheduler "
+"genaue Informationen hat, und die Zuweisung der Aufgaben im ausgeschalteten "
+"Zustand des Computer-Knotens erfolgt"
 
 msgid "Failed to allocate network(s)"
-msgstr "Nelze přidělit síť(ě)"
+msgstr "Netz(e) konnte(n) nicht zugeordnet werden"
 
 #, python-format
 msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
-msgstr "Nelze připojit %(volume_id)s na %(mountpoint)s"
+msgstr "Anhängen fehlgeschlagen von %(volume_id)s an %(mountpoint)s"
 
 #, python-format
 msgid "Failed to attach volume at mountpoint: %s"
-msgstr "Nelze připojit svazek k bodu připojení: %s"
+msgstr "Einhängen des Datenträgers fehlgeschlagen am Einhängepunkt: %s"
 
 #, python-format
 msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
-msgstr "Nelze změnit stav vm v %(instance_name)s na %(req_state)s"
+msgstr ""
+"Fehler beim Wechseln des VM-Status von %(instance_name)s nach %(req_state)s"
 
 msgid "Failed to check if instance shared"
-msgstr "Nelze zkontrolovat sdílení instance"
+msgstr "Fehler bei der Überprüfung, ob die Instanz freigegeben ist"
 
 #, python-format
 msgid ""
 "Failed to clean up the parameters on node %(node)s when unprovisioning the "
 "instance %(instance)s"
 msgstr ""
-"Nelze vyčistit parametry na uzlu %(node)s při rušení poskytování instance "
-"%(instance)s"
+"Fehler beim Aufräumen der Parameter an Knoten %(node)s beim Löschen der "
+"Instanz %(instance)s"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
-msgstr "Nelze vyčistit adresář %(target)s: %(e)s"
+msgstr "Fehler beim Aufräumen des Verzeichnisses %(target)s: %(e)s"
 
 msgid "Failed to cleanup snapshot."
-msgstr "Nelze vyčistit snímek."
+msgstr "Fehler beim Aufräumen der Schattenkopie."
 
 #, python-format
 msgid "Failed to commit reservations %s"
-msgstr "Nelze odevzdat rezervaci %s"
+msgstr "Fehler beim Übergeben der Reservierung %s"
 
 msgid "Failed to complete a deletion"
-msgstr "Nelze dokončit smazání"
+msgstr "Fehler beim vollständigen Löschen"
 
 #, python-format
 msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
 msgstr ""
-"Nelze se připojit k svazku %(volume_id)s pomocí svazku na %(mountpoint)s"
+"Verbindung des Datenträgers fehlgeschlagen %(volume_id)s mit Datenträger an "
+"%(mountpoint)s"
 
 #, python-format
 msgid ""
 "Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
 msgstr ""
-"Nelze zkopírovat snímek v mezipaměti %(source)s do %(dest)s pro změnu "
-"velikosti: %(error)s"
+"Fehler beim Kopieren des zwischengespeicherten Abbildes %(source)s zu "
+"%(dest)s für Größenänderung: %(error)s"
 
 msgid "Failed to deallocate network for instance."
-msgstr "Nelze zrušit přidělení sítě instance."
+msgstr "Fehler beim Freigeben des Netzwerks für die Instanz."
 
 msgid "Failed to deallocate networks"
-msgstr "Nelze zrušit přidělení sítí"
+msgstr "Fehler beim Freigeben des Netzwerks"
 
 #, python-format
 msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "Nelze dešifrovat %(image_location)s do %(image_path)s"
+msgstr "Entschlüsseln von %(image_location)s zu %(image_path)s fehlgeschlagen"
 
 #, python-format
 msgid "Failed to destroy instance: %s"
-msgstr "Nelze zničit instanci: %s"
+msgstr "Fehler bei der Zerstörung der Instanz: %s"
 
 #, python-format
 msgid "Failed to detach %(device_name)s. Exception: %(exc)s"
-msgstr "Nelze odpojit %(device_name)s. Výjimka: %(exc)s"
+msgstr "Abhängen fehlgeschlagen %(device_name)s. Ausnahme: %(exc)s"
 
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "Nelze odpojit svazek %(volume_id)s z %(mp)s"
+msgstr "Abhängen fehlgeschlagen von %(volume_id)s von %(mp)s"
 
 #, python-format
 msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "Nelze stáhnout %(image_location)s do %(image_path)s"
+msgstr "Download %(image_location)s zu %(image_path)s fehlgeschlagen"
 
 msgid "Failed to fetch glance image"
-msgstr "Nelze získat obraz glance"
+msgstr "Abruf des Glance Abbildes fehlgeschlagen"
 
 #, python-format
 msgid "Failed to find an SR for volume %s"
-msgstr "Nelze najít SR pro svazek %s"
+msgstr "Konnte kein SR finden für Datenträger %s"
 
 #, python-format
 msgid "Failed to forget the SR for volume %s"
-msgstr "Nelze zapomenout SR svazku %s"
+msgstr "Fehler beim Vergessen des SR für Datenträger %s"
 
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
-msgstr "Nelze vytvořit kontrolu využití pro instanci na hostiteli %s"
+msgstr ""
+"Fehler bei der Generierung des Verwendungsreports für Instanz an Host %s"
 
 #, python-format
 msgid "Failed to get compute_info for %s"
-msgstr "Nelze získat informace o výpočtu pro %s"
+msgstr "Fehler beim Beziehen compute_info von %s"
 
 msgid "Failed to get default networks"
-msgstr "Nelze získat výchozí sítě"
+msgstr "Fehler beim Abruf der Standardnetzwerke"
 
 #, python-format
 msgid ""
 "Failed to get instance id for metadata request, provider %(provider)s "
 "networks %(networks)s requester %(requester)s. Error: %(error)s"
 msgstr ""
-"Nelze získat id instance pro žádost o popisná data, poskytovatel "
-"%(provider)s, sítě %(networks)s, žadatel %(requester)s. Chyba: %(error)s"
+"Fehler beim Abruf der Instanz-ID , Provider %(provider)s Netzwerke "
+"%(networks)s Anforderer %(requester)s. Fehler: %(error)s"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
-msgstr "Nelze získat popisná data pro id instance: %s"
+msgstr "Fehler beim Abruf der Metadaten für Instanz-ID: %s"
 
 #, python-format
 msgid "Failed to get metadata for ip: %s"
-msgstr "Nelze získat popisná data pro ip: %s"
+msgstr "Fehler beim Auslesen der Metatdaten für IP: %s"
 
 msgid "Failed to get nw_info"
-msgstr "Nelze získat informace o síti"
+msgstr "Fehler beim Abruf von nw_info"
 
 #, python-format
 msgid "Failed to instantiate the download handler for %(scheme)s"
-msgstr "Nelze zavést obslužnou rutinu stažení pro %(scheme)s"
+msgstr "Instanziieren der Download-Steuerung fehlgeschlagen für %(scheme)s"
 
 #, python-format
 msgid ""
 "Failed to kill process %(pid)s due to %(reason)s, while deleting the "
 "instance."
-msgstr "Nelze ukončit proces %(pid)s kvůli %(reason)s, při mazání instance"
+msgstr ""
+"Fehler beim Töten des Prozesses %(pid)s durch %(reason)s, beim Löschen der "
+"Instanz."
 
 #, python-format
 msgid "Failed to load %(cfgfile)s: %(ex)s"
-msgstr "Nelze načíst %(cfgfile)s: %(ex)s"
+msgstr "Fehler beim Laden von %(cfgfile)s: %(ex)s"
 
 #, python-format
 msgid "Failed to load %s"
-msgstr "Nelze načíst %s"
+msgstr "Fehler beim Laden von %s"
 
 #, python-format
 msgid "Failed to load %s-api"
-msgstr "Nelze načíst %s-api"
+msgstr "Fehler beim Laden %s-Api"
 
 #, python-format
 msgid ""
 "Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
 msgstr ""
-"Nelze připojit souborový systém kontejneru '%(image)s' v '%(target)s': "
-"%(errors)s"
+"Fehler beim Einhängen des Container-Dateisystems '%(image)s' an "
+"'%(target)s': %(errors)s"
 
 msgid "Failed to notify cells of BDM destroy."
-msgstr "Nelze oznámit buňkám zničení BDM."
+msgstr "Fehler bei der Benachrichtigung der Zellen von BDM über Zerstörung."
 
 msgid "Failed to notify cells of BDM update/create."
-msgstr "Nelze oznámit buňkám aktualizaci/vytvoření BDM."
+msgstr ""
+"Fehler bei der Benachrichtigung der Zellen von BDM über Aktualisierung/"
+"Erstellung."
 
 msgid "Failed to notify cells of bw_usage update"
-msgstr "Nelze buňkám oznámit aktualizaci využití šířky pásma"
+msgstr "Fehler bei der Notifizierung der Zelle von bw_usage"
 
 msgid "Failed to notify cells of instance fault"
-msgstr "Nelze buňkám oznámit chybu instance"
+msgstr "Notifizierung der Zellen über Instanzfehler fehlgeschlagen"
 
 msgid "Failed to notify cells of instance info cache update"
-msgstr "Nelze buňkám oznámit aktualizaci mezipaměti informací instance"
+msgstr ""
+"Notifizierung der Zellen über Aktualisisierung der "
+"Instanzinformationsspeicher fehlgeschlagen"
 
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
-msgstr "Nelze odstranit %(base_file)s, chyba byla %(error)s"
+msgstr "Fehler beim Löschen %(base_file)s, Fehler war %(error)s"
 
 #, python-format
 msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
-msgstr "Nelze zažádat Ironic o poskytnutí instance %(inst)s: %(reason)s"
+msgstr ""
+"Ironic-Anfrage fehlgeschlagen bei der Erstellung der Instanz %(inst)s: "
+"%(reason)s"
 
 #, python-format
 msgid ""
 "Failed to retrieve encryption metadata for volume %(volume_id)s: "
 "%(exception)s"
 msgstr ""
-"Nelze získat popisná data šifrování svazku %(volume_id)s: %(exception)s"
+"Fehler beim Empfangen der verschlüsselten Metadaten für Datenträger "
+"%(volume_id)s: %(exception)s"
 
 msgid "Failed to retrieve ephemeral encryption key"
-msgstr "Nelze získat efemerní šifrovací klíč"
+msgstr "Bezug des flüchtigen Verschlüsselungsschlüssel fehlgeschlagen"
 
 msgid "Failed to revert crashed migration"
-msgstr "Nelze vrátit nezdařené přesunutí"
+msgstr "Fehler beim Zurücknehmen der abgestürzten Migration"
 
 #, python-format
 msgid "Failed to roll back reservations %s"
-msgstr "Nelze vrátit zpět rezervaci %s"
+msgstr "Fehler beim Rücksetzen der Reservierung %s"
 
 msgid "Failed to rollback quota for failed finish_resize"
-msgstr "Nelze vrátit zpět kvótu pro neúspěšné dokončení změny velikosti"
+msgstr "Quota zurückrollen fehlgeschlagen für fehlgeschlagenes finish_resize"
 
 #, python-format
 msgid "Failed to send message to cell: %(next_hop)s"
-msgstr "Nelze odeslat zprávu buňce: %(next_hop)s"
+msgstr "Fehler beim Senden der Nachricht zur Zelle: %(next_hop)s"
 
 msgid "Failed to send state update notification"
-msgstr "Nelze odeslat oznámení o aktualizaci stavu"
+msgstr "Fehler beim Senden der Notifizierung zur Statusänderung"
 
 msgid "Failed to send updated snapshot status to volume service."
-msgstr "Nelze odeslat aktualizovaný stav snímku do služby svazku."
+msgstr ""
+"Fehler beim Senden des Aktualisierungsstatus der Schattenkopie an den "
+"Datenträgerdienst."
 
 msgid "Failed to set instance name using multi_instance_display_name_template."
-msgstr ""
-"Nelze nastavit název instance pomocí multi_instance_display_name_template."
+msgstr "Fehler beim Setzen des Instanz-Namens instance_display_name_template."
 
 #, python-format
 msgid "Failed to start %(name)s on %(host)s:%(port)s with SSL support"
-msgstr "Nelze spustit %(name)s na %(host)s:%(port)s s podporou SSL"
+msgstr ""
+"Fehler beim Starten %(name)s auf %(host)s:%(port)s mit SSL-Unterstützung"
 
 msgid "Failed to start instance"
-msgstr "Nelze spustit instanci"
+msgstr "Fehler beim Starten der Instanz"
 
 msgid "Failed to stop instance"
-msgstr "Nelze zastavit instance"
+msgstr "Anhalten der Instanz fehlgeschlagen"
 
 #, python-format
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
-msgstr "Nelze vyměnit svazek %(old_volume_id)s za %(new_volume_id)s"
+msgstr ""
+"Tausch des Datenträgers fehlgeschlagen von %(old_volume_id)s nach "
+"%(new_volume_id)s"
 
 msgid "Failed to teardown container filesystem"
-msgstr "Nelze strhnout souborový systém kontejneru"
+msgstr "Fehler beim Einreissen des Container-Dateisystems"
 
 msgid "Failed to umount container filesystem"
-msgstr "Nelze odpojit souborový systém kontejneru"
+msgstr "Fehler beim Aushängen des Container-Dateisystems"
 
 #, python-format
 msgid "Failed to understand rule %s"
-msgstr "Nelze pochopit pravidlo %s"
+msgstr "Regel %s konnte nicht verstanden werden"
 
 msgid "Failed to unpause instance"
-msgstr "Nelze zrušit pozastavení iínstance"
+msgstr "Aufheben des Pausierens fehlgeschlagen."
 
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "Nelze rozbalit %(image_location)s do %(image_path)s"
+msgstr "Auspacken von %(image_location)s zu %(image_path)s fehlgeschlagen"
 
 msgid "Failed to update usages bulk deallocating floating IP"
-msgstr ""
-"Nelze aktualizovat využití při hromadném rušení přidělení plovoucích IP"
+msgstr "Fehler bei der Aktualisierung der Verbrauchsmenge von Floating-IP"
 
 msgid "Failed to update usages deallocating fixed IP"
-msgstr "Nelze aktualizovat využití při rušení přidělení pevných IP adres"
+msgstr ""
+"Aktualisierungsfehler der Verwendungen der freigegebenen festen IP-Adressen"
 
 msgid "Failed to update usages deallocating floating IP"
-msgstr "Nelze aktualizovat využití při rušení přidělení plovoucí IP adresy"
+msgstr "Aktualisierungsfehler der Verwendungen der freigegebenen Floating IPs"
 
 msgid "Failed to update usages deallocating network."
-msgstr "Nelze aktualizovat využití při rušení přidělení sítě."
+msgstr ""
+"Fehler bei der Aktualisierung der Verwendung der freigegebenen Netzwerke"
 
 msgid "Failed to update usages deallocating security group"
-msgstr "Nelze aktualizovat využití při rušení přidělení bezpečnostní skupiny"
+msgstr ""
+"Fehler bei der Aktualisierung der Verwendung der freigegebenen "
+"Sicherheitsgruppen"
 
 msgid "Failed to update usages deallocating server group"
-msgstr "Nelze aktualizovat využití při rušení přidělení skupiny serveru"
+msgstr ""
+"Fehler bei der Aktualisierung der Verwendung der freigegebenen Servergruppen"
 
 #, python-format
 msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "Nelze nahrát %(image_location)s do %(image_path)s"
+msgstr "Hochladen von  %(image_location)s zu %(image_path)s fehlgeschlagen"
 
 msgid "Failed to write configuration file"
-msgstr "Nelze zapsat soubor s nastavením"
+msgstr "Fehler beim Schreiben der Konfigurationsdatei"
 
 msgid "Failed to write inbound.csr"
-msgstr "Nelze zapisovat do inbound.csr"
+msgstr "Schreiben der inbound.csr ist fehlgeschlagen"
 
 msgid "Failed while plugging ib hostdev vif"
-msgstr "Zapojování ib hostdev virtuálního rozhraní selhalo"
+msgstr "Fehler beim Anschliessen von ib hostdev vif"
 
 msgid "Failed while plugging vif"
-msgstr "Zapojování virtuálního rozhraní selhalo"
+msgstr "Fehler beim Anschliessen von vif"
 
 msgid "Failed while unplugging ib hostdev vif"
-msgstr "Odpojování ib hostdev virtuálního rozhraní selhalo"
+msgstr "Fehler beim Trennen von ib hostdev vif"
 
 msgid "Failed while unplugging vif"
-msgstr "Odpojení virtuálního rozhraní selhalo"
+msgstr "Fehler beim Trennen von vif"
 
 msgid "Failure prepping block device"
-msgstr "Chyba při přípravě blokového zařízení"
+msgstr "Fehler bei der Vorbereitung des Blockgerätes"
 
 msgid "Failure while cleaning up attached VDIs"
-msgstr "Čištění připojených VDI selhalo"
+msgstr "Fehler beim Aufräumen der angehangenen VDIs"
 
 #, python-format
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Závažná výjimka při spuštění %(name)s %(type)s-hák: %(obj)s"
+msgstr "Schwere Ausnahme beim Lauf %(name)s %(type)s-hook: %(obj)s"
 
 msgid "FaultWrapper error"
-msgstr "Chyba ve FaultWrapper"
+msgstr "Fehler FaultWrapper"
 
 msgid "Get version 2 connection error"
-msgstr "Chyba připojení Get verze 2"
+msgstr "Bekomme Version-2-Verbindungsfehler"
 
 msgid "Guest does not have a console available"
-msgstr "Host nemá konzoli k dispozici"
+msgstr "Gast hat keine Konsole verfügbar"
 
 msgid "Host is member of a pool, but DB says otherwise"
-msgstr "Hostitel je členem zásoby, ale databáze sděluje něco jiného"
+msgstr "Host ist Mitglied eines Pools, aber die Datenbank sagt etwas anderes"
 
 #, python-format
 msgid ""
 "Hostname has changed from %(old)s to %(new)s. A restart is required to take "
 "effect."
 msgstr ""
-"Název hostitele změněn z %(old)s na %(new)s. Aby změny nabyly účinku, je "
-"třeba restartovat."
+"Hostname hat sich geändert von %(old)s zu %(new)s. Ein Neustart ist "
+"erforderlich."
 
 #, python-format
 msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
 msgstr ""
-"Velikost obrazu %(size)d překročila množství %(allowed_size)d povolené "
-"konfigurací"
+"Abbildgröße %(size)d überschritt die erlaubte Variantengröße %(allowed_size)d"
 
 #, python-format
 msgid ""
 "Instance compute service state on %s expected to be down, but it was up."
 msgstr ""
-"Stav výpočetní služby instance na %s byl považován za \"Vypnuto\", ale místo "
-"toho bylo \"Zapnuto\"."
+"Instanz  Compute Dienstestatus an %s erwartet als ausser Betrieb, ist aber "
+"in Betrieb."
 
 msgid "Instance failed block device setup"
-msgstr "Instance selhala nastavit blokového zařízení"
+msgstr "Instanz fehlgeschlagen bei der Einrichtung des Blockgerätes"
 
 #, python-format
 msgid "Instance failed network setup after %(attempts)d attempt(s)"
-msgstr "Instance nemohla nastavit síť po %(attempts)d pokusech"
+msgstr ""
+"Netzwerkeinrichtung der Instanz fehlgeschlagen nach %(attempts)d Versuche(n)"
 
 msgid "Instance failed to spawn"
-msgstr "Instance nemohla být spuštěna"
+msgstr "Erzeugen der Instanz fehlgeschlagen"
 
 #, python-format
 msgid "Instance type %s not found for deletion"
-msgstr "Vymazávaná Instance typu %s nebyla nalezena"
+msgstr "Instanz-Typ %s nicht gefunden zum Löschen"
 
 #, python-format
 msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
-msgstr ""
-"V '%(key)s' na %(instance_uuid)s se uskutečnil pokus o aktualizaci instance"
+msgstr "Instanzaktualisierung versucht für '%(key)s' an %(instance_uuid)s"
 
 #, python-format
 msgid "Interface %s not found"
-msgstr "Rozhraní %s nenalezeno"
+msgstr "Schnittstelle %s nicht gefunden"
 
 #, python-format
 msgid "Invalid server_string: %s"
-msgstr "Neplatný řetězec serveru: %s"
+msgstr "Ungültiger server_string: %s"
 
 #, python-format
 msgid "Keystone failure: %s"
-msgstr "Selhání Keystone: %s"
+msgstr "Fehler Keystone: %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
-msgstr "Selhání přesunu za běhu: %s"
+msgstr "Live-Migration fehlgeschlagen: %s"
 
 msgid "Live migration failed."
-msgstr "Přesun za provozu selhal."
+msgstr "Live-Migration fehlgeschlagen."
 
 msgid "Migrate Receive failed"
-msgstr "Přijetí přesunu selhalo"
+msgstr "Migration enthielt Fehler"
 
 msgid "Migrate Send failed"
-msgstr "Odeslání přesunu selhalo"
+msgstr "Migration sendet Fehler"
 
 #, python-format
 msgid "Migration %s is not found during confirmation"
-msgstr "Přesun %s nebyl během potvrzování nalezen"
+msgstr "Migration %s nicht gefunden bei der Rückmeldung"
 
 #, python-format
 msgid ""
 "Migration of instance %(instance_id)s to host %(dest)s unexpectedly failed."
 msgstr ""
-"Přesun instance %(instance_id)s na hostitele %(dest)s neočekávaně selhal."
+"Migration von Instanz %(instance_id)s zu Host %(dest)s unerwartet "
+"fehlgeschlagen."
 
 msgid "Migration operation has aborted"
-msgstr "Operace přesunu byla ukončena"
+msgstr "Migration Operation abgebrochen"
 
 #, python-format
 msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
-msgstr "Chyba NBD . předchozí odpojení nevyčistilo /var/lock/qemu-nbd-%s."
+msgstr ""
+"NBD Fehler - vorheriges Aushängen hat /var/lock/qemu-nbd-%s nicht gelöscht."
 
 #, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. args="
 "%(args)r"
 msgstr ""
-"NEZAVEDENO: Volání %(method)s není agentem podporováno. argumenty=%(args)r"
+"NOT IMPLEMENTED: Der Aufruf %(method)s wird vom Agenten nicht unterstützt. "
+"args=%(args)r"
 
 msgid "Network driver option required, but not specified"
-msgstr "Vyžadována volba ovladače sítě, ale žádná nebyla zadána"
+msgstr "Netzwerktreiber-Option ist erforderlich, aber nicht angegeben"
 
 #, python-format
 msgid "Neutron Error adding rules to security group %s"
-msgstr "Chyba Neutron při přidávání pravidel do bezpečnostní skupiny %s"
+msgstr "Neutron Fehler beim Hinzufügen von Regeln zur Sicherheitsgruppe %s"
 
 #, python-format
 msgid "Neutron Error creating security group %s"
-msgstr "Chyba Neutron při vytváření bezpečnostní skupiny %s"
+msgstr "Neutron Fehler bei der Erstellung der Sicherheitsgruppe %s"
 
 #, python-format
 msgid "Neutron Error getting security group %s"
-msgstr "Chyba Neutron při získávání bezpečnostní skupiny %s"
+msgstr "Neutron Fehler beim Abruf der Sicherheitsgruppe %s"
 
 msgid "Neutron Error getting security groups"
-msgstr "Chyba Neutron při získávání bezpečnostních skupin"
+msgstr "Neutron Fehler beim Abruf der Sicherheitsgruppen"
 
 #, python-format
 msgid "Neutron Error unable to delete %s"
-msgstr "Chyba Neutron: nelze smazat %s"
+msgstr "Neutron Fehler beim Löschen %s"
 
 #, python-format
 msgid "Neutron Error updating security group %s"
-msgstr "Chyba Neutron při aktualizaci bezpečnostní skupiny %s"
+msgstr "Neutron Fehler bei der Aktualisierung der Sicherheitsgruppe %s"
 
 msgid "Neutron Error:"
-msgstr "Chyba Neutron:"
+msgstr "Neutron-Fehler:"
 
 #, python-format
 msgid "Neutron Error: %s"
-msgstr "Chyba Neutron: %s"
+msgstr "Neutron-Fehler: %s"
 
 #, python-format
 msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
-msgstr "Neutron nahlásil chybu události %(event)s v instanci %(uuid)s"
+msgstr "Neutron berichtet Fehler an Ereignis %(event)s für Instanz %(uuid)s"
 
 #, python-format
 msgid "Neutron error creating port on network %s"
-msgstr "Chyba Neutron při vytváření portu na síti %s"
+msgstr "Neutron Fehler bei der Porterstellung für Netzwerk %s"
 
 #, python-format
 msgid "No compute node record for host %s"
-msgstr "nenalezen žádný záznam výpočetního uzle pro hostitele %s"
+msgstr "Kein Compute-Knoteneintrag für Host %s"
 
 #, python-format
 msgid "No db access allowed in nova-compute: %s"
-msgstr "Nova-compute nemá povolen přístup k db: %s"
+msgstr "Kein Datenbankzugriff erlaubt  in nova-compute: %s"
 
 #, python-format
 msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Nova-dhcpbridge nemá povolen přístup k db: %s"
+msgstr "Kein Datenbankzugriff erlaubt  in nova-dhcpbridge: %s"
 
 #, python-format
 msgid "No db access allowed in nova-network: %s"
-msgstr "Nova-network nemá povolen přístup k db: %s"
+msgstr "Kein Datenbankzugriff erlaubt  in nova-network: %s"
 
 #, python-format
 msgid "No handler for matches of kind %s"
-msgstr "Žádná obslužná rutina pro shody druhu %s"
+msgstr "Kein Handler für Übereinstimmungen des Typs %s"
 
 #, python-format
 msgid "No save handler for %s"
-msgstr "Žádná obslužná rutina pro uložení %s"
+msgstr "Keine sichere Steuerung für %s"
 
 msgid "Not all properties needed are implemented in the compute driver"
-msgstr "Ne všechny potřebné vlastnosti jsou ovladačem výpočtu zavedeny"
+msgstr ""
+"Nicht alle Eigenschaften brauchen in den Compute Treiber implementiert werden"
 
 #, python-format
 msgid "PCI device %s not found"
-msgstr "PCI zařízení %s nenalezeno"
+msgstr "PCI-Gerät %s nicht gefunden"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
 msgstr ""
-"Periodický úkol synchronizace stavu napájení narazil na chybu při zpracování "
-"instance."
+" Regelmässiger Auftrag sync_power_state hat Fehler bei der Verarbeitung der "
+"Instanz."
 
 msgid "Periodic task failed to offload instance."
-msgstr "Pravidelný úkol nemohl převést zátěž instance."
+msgstr "Regelmässiger Auftrag zum Ausladen der Instanz fehlgeschlagen."
 
 msgid "Plugin config_file get_val failed"
-msgstr "Získání hodnoty z konfiguračního souboru zásuvného modulu selhalo"
+msgstr "Plugin config_file get_val Fehler"
 
 #, python-format
 msgid "Pool-Join failed: %s"
-msgstr "Připojení zásoby selhalo: %s"
+msgstr "Pool-Vereinigung fehlgeschlagen: %s"
 
 #, python-format
 msgid "Pool-eject failed: %s"
-msgstr "Odpojení zásoby selhalo: %s"
+msgstr "Pool-Trennung fehlgeschlagen: %s"
 
 #, python-format
 msgid "Pool-set_name_label failed: %s"
-msgstr "Nastavení štítku názvu zásoby selhalo: %s"
+msgstr "Pool-set_name_label Fehler: %s"
 
 #, python-format
 msgid "Pre live migration failed at %s"
-msgstr "Příprava přesunu za provozu selhala v %s"
+msgstr "Vor-Live-Migration fehlgeschlagen an %s"
 
 msgid "Read/Write data failed"
-msgstr "Zápis/Čtení dat selhalo"
+msgstr "Lesen/Schreiben von Daten fehlgeschlagen"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on  this OS."
-msgstr "Požadované vytvoření VM %s není v tomto OS podporováno."
+msgstr ""
+"Angefragte VM Generation %s wird von diesem Betriebssystem nicht unterstützt."
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
-msgstr "Požadováno vytvoření VM %s ale je zadáno VHD místo VHDX."
+msgstr "Angefragte VM Generation %s, aber zur Verfügung steht VHD statt VHDX."
 
 #, python-format
 msgid "Returning exception %s to caller"
-msgstr "Volajícímu je vrácena výjimka: %s"
+msgstr "Ausnahme %s wird an Aufrufenden zurückgegeben"
 
 msgid "Service error occurred during cleanup_host"
-msgstr "Během čištění hostitele došlo k chybě služby"
+msgstr "Dienstefehler aufgetreten beim cleanup_host"
 
 msgid "Setting instance vm_state to ERROR"
-msgstr "Nastavování stavu vm instance na CHYBA"
+msgstr "Setze Instanz vm_state auf FEHLER"
 
 msgid "Shutting down VM (cleanly) failed."
-msgstr "(Čisté) Vypnutí VM selhalo."
+msgstr "Herunterfahren der VM (sauber) fehlgeschlagen."
 
 msgid "Shutting down VM (hard) failed"
-msgstr "(Tvrdé) Vypnutí VM selhalo"
+msgstr "Herunterfahren der VM (hart) fehlgeschlagen."
 
 msgid ""
 "Something wrong happened when trying to delete snapshot from shelved "
 "instance."
-msgstr "Při mazání snímku z uskladněné instance se něco zvrtlo."
+msgstr ""
+"Beim Löschen der Schattenkopie der eingestellten Instanz hat etwas nicht "
+"geklappt."
 
 #, python-format
 msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
-msgstr "ČASOVÝ LIMIT: Vypršel čas volání %(method)s. argumenty=%(args)r"
+msgstr ""
+"ZEITÜBERSCHREITUNG: Der Aufruf nach %(method)s hat die Zeit überschritten. "
+"args=%(args)r"
 
 #, python-format
 msgid "Temporary directory is invalid: %s"
-msgstr "Dočasný adresář je neplatný: %s"
+msgstr "Temporäres Verzeichnis ist ungültig: %s"
 
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
-msgstr "Svazek Quobyte na %s se stále používá."
+msgstr "Das Quobyte Abbild auf %s ist weiter in Benutzung."
 
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr "Volání agenta %(method)s vrátilo chybu: %(ret)r. argumenty=%(args)r"
+msgstr ""
+"Der Agentenaufruf %(method)s gab einen Fehler zurück: %(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an invalid response: %(ret)r. args="
 "%(args)r"
 msgstr ""
-"Volání agenta %(method)s vrátilo neplatnou odpověď: %(ret)r. argumenty="
-"%(args)r"
+"Der Agentenaufruf %(method)s gab eine ungültige Antwort zurück: %(ret)r. "
+"args=%(args)r"
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s."
-msgstr "Volání %(method)s vrátilo chybu: %(e)s."
+msgstr "Der Aufruf zu %(method)s gab einen Fehler zurück: %(e)s."
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
-msgstr "Volání %(method)s vrátilo chybu: %(e)s. argumenty=%(args)r"
+msgstr "Der Aufruf zu %(method)s gab einen Fehler zurück: %(e)s. args=%(args)r"
 
 msgid "Transfer data failed"
-msgstr "Přenos dat selhal"
+msgstr "Datenübertragung fehlgeschlagen"
 
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
-msgstr "Nelze získat přístup k plovoucím IP %(fixed_ip)s na portu %(port_id)s"
+msgstr ""
+"Zugriff nicht möglich auf Floating-IP %(fixed_ip)s für Port %(port_id)s"
 
 #, python-format
 msgid "Unable to access floating IP %s"
-msgstr "Nelze získat přístup k plovoucím IP %s"
+msgstr "Zugriff nicht möglich auf Floating-IP %s"
 
 msgid "Unable to access the rescue disk"
-msgstr "Nelze získat přístup k záchrannému disku"
+msgstr "Kein Zugriff auf die Rettungsplatte"
 
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "Nelze připojit svazek k instanci %s"
+msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
 
 #, python-format
 msgid "Unable to clear device ID for port '%s'"
-msgstr "Nelze vyčistit ID zařízení pro port '%s'"
+msgstr "Aufräumen nicht möglich der Geräte-ID für Port '%s'"
 
 msgid "Unable to create VM snapshot, failing volume_snapshot operation."
 msgstr ""
-"Nelze vytvořit snímek VM, přechází se zpět na operaci se snímkem svazku"
+"Erstellen der VM Schattenkopie nicht möglich, volume_snapshot Operation "
+"fehlgeschlagen."
 
 msgid ""
 "Unable to create quiesced VM snapshot, attempting again with quiescing "
 "disabled."
 msgstr ""
-"Nelze vytvořit ztišený snímek VM, bude uskutečně další pokus, kde ztišení "
-"bude zakázáno."
+"Erstellen der stillgelegten VM Schattenkopie nicht möglich, versuche "
+"stattdessen mit deaktivierter Stillegung."
 
 msgid "Unable to destroy VBD"
-msgstr "Nelze zničit VBD"
+msgstr "Zerstören VBD fehlgeschlagen"
 
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
-msgstr "Nelze spustit %(cmd)s. Výjimka: %(exception)s"
+msgstr "Ausführen von %(cmd)s nicht möglich. Ausnahme: %(exception)s"
 
 msgid "Unable to find SR from VBD"
-msgstr "Nelze najít SR z VBD"
+msgstr "Konnte kein SR finden für VBD"
 
 msgid "Unable to find SR from VDI"
-msgstr "Nelze najít SR z VDI"
+msgstr "Konnte kein SR finden für VDI"
 
 #, python-format
 msgid "Unable to find address %r"
-msgstr "Nelze najít adresu %r"
+msgstr "Konnte Adresse nicht finden %r"
 
 msgid "Unable to get record of VDI"
-msgstr "Nelze získat záznam VDI"
+msgstr "Konnte keinen EIntrag für VDI beziehen"
 
 msgid "Unable to get updated status"
-msgstr "Nelze získat aktualizovaný stav"
+msgstr "Aktualisierter Status konnte nicht abgeholt werden"
 
 msgid "Unable to introduce VDI for SR"
-msgstr "Nelze zavést VDI pro SR"
+msgstr "Bekanntmachung VDI an SR nicht möglich"
 
 msgid "Unable to introduce VDI on SR"
-msgstr "Nelze zavést VDI na SR"
+msgstr "Bekanntmachung VDI an SR nicht möglich"
 
 msgid ""
 "Unable to join. It is possible that either another node exists with the same "
 "name, or this node just restarted. We will try again in a short while to "
 "make sure."
 msgstr ""
-"Nelze se připojit. Pravděpodobně existuje jiný uzel se stejným názvem,, nebo "
-"byl tento uzel právě restartován. Pro ujištění bude za chvíli proveden další "
-"pokus."
+"Beitritt nicht möglich. Wahrscheinlich existiert ein Knoten mit gleichem "
+"Namen, oder der Knoten wurde gerade neu gestartet. Um sicher zu gehen, "
+"versuchen wir es gleich nochmal."
 
 msgid "Unable to load the virtualization driver"
-msgstr "Nelze načíst ovladač virtualiazce"
+msgstr "Virtualisierungstreiber konnte nicht geladen werden"
 
 #, python-format
 msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
-msgstr "Nelze přesunout VM %(vm_ref)s z %(host)s"
+msgstr "Migration der VM %(vm_ref)s von %(host)s nicht möglich"
 
 #, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: %(server)s."
 msgstr ""
-"Nelze získat RRD XML pro VM %(vm_uuid)s mající podrobnosti serveru: "
+"Konnte kein RRD XML erhalten für VM %(vm_uuid)s mit Serverdetails: "
 "%(server)s."
 
 #, python-format
 msgid "Unable to parse rrd of %s"
-msgstr "Nelze zpracovat rrd z %s"
+msgstr "Zerlegen des RRD von %s fehlgeschlagen"
 
 #, python-format
 msgid "Unable to preallocate image at path: %(path)s"
-msgstr "Nelze předpřidělit obraz na cestě: %(path)s"
+msgstr "Vorbelegen eines Abbildes auf Pfad: %(path)s nicht möglich"
 
 #, python-format
 msgid "Unable to retrieve storage policy with name %s"
-msgstr "Nelze získat zásady úložiště s názvem %s"
+msgstr "Konnte Speicherregeln mit Namen %s nicht beziehen"
 
 #, python-format
 msgid "Unable to set up pool: %s."
-msgstr "Nelze vytvořit zásobu: %s"
+msgstr "Pool-Einrichtung nicht möglich: %s."
 
 msgid "Unable to unplug VBD"
-msgstr "Nelze odpojit VBD"
+msgstr "Entfernen VBD fehlgeschlagen"
 
 #, python-format
 msgid "Unable to update host of port %s"
-msgstr "Nelze aktualizovat hostitele na portu %s"
+msgstr "Hostaktualisierung nicht möglich für Port %s"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
-msgstr "Nelze aktualizovat index VNIC instance pro port %s."
+msgstr "Instanzaktualisierung VNIC Index nicht möglich für Port %s."
 
 #, python-format
 msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "Zjištěno neočekávané %(ex_name)s: %(ex_str)s"
+msgstr "Unerwarteter %(ex_name)s hat %(ex_str)s ausgelöst"
 
 msgid "Unexpected build failure, not rescheduling build."
-msgstr "Neočekávané selhání sestavení, nebude znovu naplánováno."
+msgstr "Unerwarteter Fehler beim Aufbau, wird nicht neu geplant."
 
 #, python-format
 msgid "Unexpected error while checking process %(pid)s."
-msgstr "Neočekávaná chyba při kontrole procesu %(pid)s."
+msgstr "Unerwarteter Fehler bei der Überprüfung des Prozesses %(pid)s."
 
 msgid "Unexpected exception in API method"
-msgstr "Neočekávaná výjimka v metodě API"
+msgstr "Unerwartete Ausnahme in API-Methode"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
-msgstr "Neznámá buňka '%(cell_name)s' při pokusu o aktualizaci schopností"
+msgstr ""
+"Unbekannte Zelle '%(cell_name)s' beim Versuch die Resourcen zu aktualisieren"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
-msgstr "Neznámá buňka '%(cell_name)s' při pokusu o aktualizaci kapacit"
+msgstr ""
+"Unbekannte Zelle '%(cell_name)s' beim Versuch die Resourcen zu aktualisieren"
 
 #, python-format
 msgid "Unknown content in connection_info/access_mode: %s"
-msgstr "Neznámý obsah v informacích o připojení/režimu přístupu: %s"
+msgstr "Unbekannter Inhalt in connection_info/access_mode: %s"
 
 msgid "Unshelve attempted but an error has occurred"
-msgstr "Pokus o vyskladnění skončil objevem chyby"
+msgstr "Versuch zurückgestellt, aber ein Fehler ist aufgetreten"
 
 msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
 msgstr ""
-"Pokus o vyskladnění ale stav vm není USKLADNĚN nebo USKLADNĚN S PŘEVEDENOU "
-"ZÁTĚŽÍ"
+"Versuch zurückgestellt aber vm_state ist nicht SHELVED oder SHELVED_OFFLOADED"
 
 msgid "Vifs plug failed"
-msgstr "Zapojení virtuálního rozhraní selhalo"
+msgstr "Vifs plug fehlgeschlagen"
 
 #, python-format
 msgid "Volume %s is associated with the instance but no SR was found for it"
 msgstr ""
-"Svazek %s je přidružen k instanci, ale nebylo pro něj nalezeno žádné SR"
+"Datenträger %s ist verbunden mit der Instanz aber kein SR wurde dafür "
+"gefunden."
 
 #, python-format
 msgid "Volume is not writable. Please broaden the file permissions. Mount: %s"
 msgstr ""
-"Nelze zapisovat na svazek. Prosím rozšiřte oprávnění souboru. Připojení: %s"
+"Datenträger nicht schreibbar. Bitte Dateirechte erweitern. Einhängepunkt: %s"
 
 #, python-format
 msgid ""
 "When loading the module %(module_str)s the following error occurred: %(ex)s"
 msgstr ""
-"Při načítání modulu %(module_str)s se objevila následující chyba: %(ex)s "
+"Beim Laden des Moduls %(module_str)s ist folgender Fehler aufgetreten: %(ex)s"
 
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances on. "
 "Please check your configuration (e.g. set a default SR for the pool) and/or "
 "configure the flag 'sr_matching_filter'."
 msgstr ""
-"XenAPI nemohlo najít repozitář úložišť na které instalovat hosty. Prosím "
-"zkontrolujte své nastavení (např. nastavte výchozí SR pro zásobu) a/nebo "
-"nastavte příznak 'sr_matching_filter'."
+"XenAPI konnte kein Speicherverzeichnis zur Installation der Gastinstanz "
+"finden. Bitte überprüfen Sie die Konfiguration (z.B. Standard SR für den "
+"Pool) und/oder konfigurieren Sie das Flag 'sr_matching_filter'."
 
 msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
-msgstr "Přesunutí a zmenšení disku selhalo. Obnovování původní vm"
+msgstr ""
+"_migrate_disk_resizing_down fehlgeschlagen. Stelle Original VM wieder her"
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed. Restoring orig vm due_to: %s."
-msgstr "Přesunutí a zvětšení disku selhalo. Obnovování původní vm kvůli: %s"
+msgstr ""
+"_migrate_disk_resizing_up fehlgeschlagen. Stelle Original-VM wieder her "
+"due_to: %s."
 
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
-msgstr "přidělení portu pro instanci vrátilo %(ports)s portů"
+msgstr "allocate_port_for_instance gab zurück %(ports)s Ports"
 
 msgid "attaching network adapter failed."
-msgstr "připojování síťového adaptéru selhalo."
+msgstr "Einhängen des Netzwerkadapters fehlgeschlagen."
 
 #, python-format
 msgid "compute.api::resume %s"
-msgstr "compute.api::pokračování %s"
+msgstr "compute.api::resume %s"
 
 #, python-format
 msgid "compute.api::suspend %s"
-msgstr "compute.api::přerušení %s"
+msgstr "compute.api::suspend %s"
 
 msgid "detaching network adapter failed."
-msgstr "odpojování síťového adaptéru selhalo."
+msgstr "Aushängen des Netzwerkadapters fehlgeschlagen."
 
 msgid "error during stop() in sync_power_state."
-msgstr "chyba během stop() v synchronizaci stavu napájení."
+msgstr "Fehler während stop() in sync_power_state."
 
 #, python-format
 msgid "error opening rbd image %s"
-msgstr "chyba při otevírání obrazu rbd %s"
+msgstr "Fehler beim Öffnen des RBD Abbildes %s"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "obraz %(id)s v (%(base_file)s): ověření obrazu selhalo"
+msgstr "Abbild %(id)s auf (%(base_file)s): Abbildverifizierung fehlgeschlagen"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"
-msgstr "obraz %(volume)s v zásobě %(pool)s má snímky, nelze odstranit"
+msgstr ""
+"Abbild %(volume)s in Pool %(pool)s hat Schattenkopien, kann nicht gelöscht "
+"werden"
 
 #, python-format
 msgid "kill -HUP dnsmasq threw %s"
-msgstr "kill -HUP dnsmasq vypsal %s"
+msgstr "kill -HUP dnsmasq warf %s"
 
 #, python-format
 msgid "killing radvd threw %s"
-msgstr "ukončení radvd vrhlo %s"
+msgstr "killing radvd warf %s"
 
 msgid "nbd module not loaded"
-msgstr "modul nbd nenačten"
+msgstr "nbd-Modul nicht geladen"
 
 msgid "set_admin_password failed"
-msgstr "nastavení hesla správce selhalo"
+msgstr "set_admin_password fehlgeschlagen"
 
 #, python-format
 msgid ""
 "status is UNKNOWN from vm_state=%(vm_state)s task_state=%(task_state)s. Bad "
 "upgrade or db corrupted?"
 msgstr ""
-"stav je NEZNÁMÝ, stav vm=%(vm_state)s, stav úkolu=%(task_state)s. Špatná "
-"aktualizace nebo poškozená db?"
+"Status ist UNBEKANNT von vm_state=%(vm_state)s task_state=%(task_state)s. "
+"Fehler in der Aktualisierung oder Datenbank korrupt?"

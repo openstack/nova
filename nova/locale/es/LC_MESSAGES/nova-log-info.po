@@ -6,13 +6,14 @@
 # Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
 # Pablo Sanchez <furybeat@gmail.com>, 2015
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
-"PO-Revision-Date: 2015-08-30 12:40+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-10-03 06:33+0000\n"
+"PO-Revision-Date: 2015-09-29 04:27+0000\n"
+"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
 "Language: es\n"
@@ -398,6 +399,12 @@ msgid "Error in handshake: %s"
 msgstr "Error en reconocimiento: %s"
 
 #, python-format
+msgid ""
+"Executing RootwrapDaemonHelper.execute cmd=[%(cmd)r] kwargs=[%(kwargs)r]"
+msgstr ""
+"Ejecutando RootwrapDaemonHelper.execute cmd=[%(cmd)r] kwargs=[%(kwargs)r]"
+
+#, python-format
 msgid "Failed to get image info from path %(path)s; error: %(error)s"
 msgstr ""
 "No se ha podido obtener la imagen de la ruta %(path)s; error: %(error)s"
@@ -422,6 +429,15 @@ msgstr "Error emitido: %s"
 #, python-format
 msgid "Filter %s returned 0 hosts"
 msgstr "El filtro %s ha arrojado 0 anfitriones"
+
+#, python-format
+msgid ""
+"Filtering removed all hosts for the request with reservation ID '%(res_id)s' "
+"and instance ID '%(inst_uuid)s'. Filter results: %(str_results)s"
+msgstr ""
+"El proceso de filtrado suprimió todos los anfitriones de la soliticud con el "
+"ID de reservación '%(res_id)s' y ID de instancia %(inst_uuid)s'. Los "
+"resultados del proceso de filtrado: %(str_results)s "
 
 #, python-format
 msgid ""

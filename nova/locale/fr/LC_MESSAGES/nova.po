@@ -22,22 +22,24 @@
 # Vincent JOBARD <vinzjobard@gmail.com>, 2013
 # Benjamin Godard <ben@hacktopie.net>, 2013
 # Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-22 07:45+0000\n"
-"PO-Revision-Date: 2015-09-12 08:58+0000\n"
-"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
+"POT-Creation-Date: 2015-10-03 06:33+0000\n"
+"PO-Revision-Date: 2015-09-30 01:42+0000\n"
+"Last-Translator: Olivier Buisson <olivier@openkumo.fr>\n"
+"Language: fr\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
+"Generated-By: Babel 2.1.1\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -765,6 +767,9 @@ msgstr ""
 
 msgid "Cell name cannot be empty"
 msgstr "Le nom de cellule ne peut pas être vide"
+
+msgid "Cell name cannot contain '!', '.' or '@'"
+msgstr "Le nom de la cellule ne doit pas contenir '!', '.' ou '@'"
 
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "Le type de cellule doit être 'parent' ou 'enfant'"
@@ -4835,11 +4840,17 @@ msgstr ""
 "Type de point d'ancrage non valide. Seuls les types 'pre' et 'post' sont "
 "autorisés"
 
+msgid "X-Forwarded-For is missing from request."
+msgstr "X-Forwarded-For est manquant dans la requête"
+
 msgid "X-Instance-ID header is missing from request."
 msgstr "L'en-tête X-Instance-ID est manquant dans la demande."
 
 msgid "X-Instance-ID-Signature header is missing from request."
 msgstr "L'en-tête X-Instance-ID-Signature est absent de la demande."
+
+msgid "X-Metadata-Provider is missing from request."
+msgstr "X-Metadata-Provider est manquant dans la requête"
 
 msgid "X-Tenant-ID header is missing from request."
 msgstr "L'entête X-Tenant-ID est manquante dans la requête."
@@ -4934,6 +4945,9 @@ msgstr "Impossible de stocker des clés arbitraires"
 
 msgid "cannot understand JSON"
 msgstr "impossible de comprendre JSON"
+
+msgid "cell_uuid must be set"
+msgstr "cell_uuid doit être défini"
 
 msgid "clone() is not implemented"
 msgstr "clone() n'est pas implémenté"

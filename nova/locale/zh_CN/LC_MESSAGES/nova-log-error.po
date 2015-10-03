@@ -10,10 +10,10 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-22 07:46+0000\n"
-"PO-Revision-Date: 2015-09-18 12:54+0000\n"
+"POT-Creation-Date: 2015-10-03 06:34+0000\n"
+"PO-Revision-Date: 2015-09-27 06:27+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
@@ -68,7 +68,7 @@ msgstr "绑定网络适配器失败。异常：%s"
 
 #, python-format
 msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "不能迁移带有映射卷的实例"
+msgstr "不能迁移带有映射卷的实例%s "
 
 msgid "Cannot cleanup migration files"
 msgstr "无法清除迁移文件"
@@ -762,6 +762,9 @@ msgstr "Keystone 发生故障：%s"
 msgid "Live Migration failure: %s"
 msgstr "在线迁移失败：%s"
 
+msgid "Live migration failed."
+msgstr "在线迁移失败。"
+
 msgid "Migrate Receive failed"
 msgstr "Migrate Receive 失败"
 
@@ -956,7 +959,7 @@ msgstr "传输数据失败"
 
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
-msgstr "无法访问浮动IP %(floating_ip)s 的端口 %(port_id)s"
+msgstr "无法访问浮动IP %(fixed_ip)s 的端口 %(port_id)s"
 
 #, python-format
 msgid "Unable to access floating IP %s"

@@ -11,17 +11,18 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev260\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-22 07:45+0000\n"
-"PO-Revision-Date: 2015-09-21 08:43+0000\n"
+"POT-Creation-Date: 2015-10-03 06:33+0000\n"
+"PO-Revision-Date: 2015-09-25 11:15+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"Language: cs\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
+"Generated-By: Babel 2.1.1\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -4821,7 +4822,7 @@ msgstr "VlanID"
 
 #, python-format
 msgid "Volume %(volume_id)s could not be found."
-msgstr "Svazek %(volume_id)s nemohl být nastaven."
+msgstr "Svazek %(volume_id)s nemohl být nalezen."
 
 #, python-format
 msgid ""

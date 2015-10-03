@@ -9,13 +9,15 @@
 # Pablo Sanchez <furybeat@gmail.com>, 2015
 # Rafael Rivero <rafael@cloudscaling.com>, 2014
 # Sergio Cuellar Valdes <scuellarv@kionetworks.com>, 2015
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-08 06:24+0000\n"
-"PO-Revision-Date: 2015-08-30 00:41+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-10-03 06:34+0000\n"
+"PO-Revision-Date: 2015-09-29 07:04+0000\n"
+"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
 "Language: es\n"
@@ -24,6 +26,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Zanata 3.7.1\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Ha fallado la búsqueda de las VDIs"
@@ -138,6 +141,11 @@ msgid "Could not remove tmpdir: %s"
 msgstr "No se ha podido remover directorio temporal: %s"
 
 #, python-format
+msgid "Could not start encryption for disk %(device)s: %(exception)s"
+msgstr ""
+"No pudo comenzar la encriptación para el disco %(device)s: %(exception)s"
+
+#, python-format
 msgid "Could not stat scheduler options file %(filename)s"
 msgstr ""
 "No se ha podido crear estadísticas de archivo de opciones de planificador "
@@ -152,7 +160,7 @@ msgstr "No se puede comunicar con la celda '%s'"
 
 #, python-format
 msgid "Couldn't lookup app: %s"
-msgstr "No se pudo hayar aplicación: %s"
+msgstr "No se pudo hallar aplicación: %s"
 
 #, python-format
 msgid "Couldn't unmount the GlusterFS share %s"
@@ -399,14 +407,14 @@ msgid "Exception handling resource: %s"
 msgstr "Excepción manejando recurso: %s"
 
 msgid "Exception in string format operation"
-msgstr "Excepción en operacion de formateo de cadena"
+msgstr "Excepción en operación de formateo de cadena"
 
 msgid "Exception loading extension"
 msgstr "Excepción cargando extensión"
 
 #, python-format
 msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Excepción ejecutándo %(name)s %(type)s-enlace: %(obj)s"
+msgstr "Excepción ejecutando %(name)s %(type)s-enlace: %(obj)s"
 
 msgid "Exception while creating table."
 msgstr "Excepción al crear la tabla."
@@ -720,7 +728,7 @@ msgstr "Error al limpiar VDI conectados "
 
 #, python-format
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Excepción fatal ejecutándo %(name)s %(type)s-enlace: %(obj)s"
+msgstr "Excepción fatal ejecutando %(name)s %(type)s-enlace: %(obj)s"
 
 msgid "FaultWrapper error"
 msgstr "Error de FaultWrapper"
@@ -792,6 +800,9 @@ msgstr "Falla de keystone: %s"
 #, python-format
 msgid "Live Migration failure: %s"
 msgstr "Fallo en migración en vivo: %s"
+
+msgid "Live migration failed."
+msgstr "Falló la migración en vivo."
 
 msgid "Migrate Receive failed"
 msgstr "Ha fallado la recepción de migración"
@@ -1113,11 +1124,19 @@ msgid "Unable to update host of port %s"
 msgstr "Incapaz de actualizar el anfitrión del puerto %s"
 
 #, python-format
+msgid "Unable to update instance VNIC index for port %s."
+msgstr "No pudo actualizar el índice VNIC de la instancia para el puerto %s."
+
+#, python-format
 msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
 msgstr "Inesperado %(ex_name)s: %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Fallo de compilación inesperado, no se reprogramará la compilación."
+
+#, python-format
+msgid "Unexpected error while checking process %(pid)s."
+msgstr "Un error inesperado al revisar el proceso %(pid)s."
 
 msgid "Unexpected exception in API method"
 msgstr "Excepción inesperada en método API."
