@@ -1217,6 +1217,21 @@ class _TestInstanceObject(object):
             update_extra.assert_called_once_with(self.context, inst.uuid,
                                                  {"migration_context": None})
 
+    def test_mutated_migration_context(self):
+        numa_topology = (test_instance_numa_topology.
+                            fake_obj_numa_topology.obj_clone())
+        numa_topology.cells[0].memory = 1024
+        numa_topology.cells[1].memory = 1024
+
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid', numa_topology=numa_topology)
+        inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
+            self.context)
+        with inst.mutated_migration_context():
+            self.assertIs(inst.numa_topology,
+                          inst.migration_context.new_numa_topology)
+        self.assertIs(numa_topology, inst.numa_topology)
+
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_load_generic(self, mock_get):
         inst2 = instance.Instance(metadata={'foo': 'bar'})

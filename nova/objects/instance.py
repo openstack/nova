@@ -823,6 +823,21 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                          "seem to be set for this instance"),
                          instance=self)
 
+    @contextlib.contextmanager
+    def mutated_migration_context(self):
+        """Context manager to temporarily apply the migration context.
+
+        Calling .save() from within the context manager means that the mutated
+        context will be saved which can cause incorrect resource tracking, and
+        should be avoided.
+        """
+        current_numa_topo = self.numa_topology
+        self.apply_migration_context()
+        try:
+            yield
+        finally:
+            self.numa_topology = current_numa_topo
+
     @base.remotable
     def drop_migration_context(self):
         if self.migration_context:
