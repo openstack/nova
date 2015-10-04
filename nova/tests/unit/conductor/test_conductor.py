@@ -53,7 +53,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_server_actions
-from nova.tests.unit import fake_utils
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 
@@ -84,7 +83,7 @@ class _BaseTestCase(object):
         self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
                        fake_deserialize_context)
 
-        fake_utils.stub_out_utils_spawn_n(self.stubs)
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):

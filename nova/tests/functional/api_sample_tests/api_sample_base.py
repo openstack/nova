@@ -18,10 +18,10 @@ import testscenarios
 
 import nova.conf
 from nova import test
+from nova.tests import fixtures
 from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import api_samples_test_base
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_utils
 
 CONF = nova.conf.CONF
 
@@ -93,7 +93,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
 
         self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)
-        fake_utils.stub_out_utils_spawn_n(self.stubs)
-
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
         # this is used to generate sample docs
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
