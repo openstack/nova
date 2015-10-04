@@ -35,6 +35,7 @@ from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
@@ -71,16 +72,16 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.fake_hosts += [host_manager.HostState('fake_multihost',
                 'fake-node%s' % x) for x in range(1, 5)]
 
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
     def test_load_filters(self):
         filters = self.host_manager._load_filters()
         self.assertEqual(filters, ['FakeFilterClass1'])
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
     @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
-    @mock.patch('nova.utils.spawn_n')
-    def test_init_instance_info_batches(self, mock_spawn, mock_get_all,
+    def test_init_instance_info_batches(self, mock_get_all,
                                         mock_get_by_filters):
-        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         cn_list = objects.ComputeNodeList()
         for num in range(22):
             host_name = 'host_%s' % num
@@ -91,10 +92,8 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
     @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
-    @mock.patch('nova.utils.spawn_n')
-    def test_init_instance_info(self, mock_spawn, mock_get_all,
+    def test_init_instance_info(self, mock_get_all,
                                 mock_get_by_filters):
-        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         cn1 = objects.ComputeNode(host='host1')
         cn2 = objects.ComputeNode(host='host2')
         inst1 = objects.Instance(host='host1', uuid='uuid1')
