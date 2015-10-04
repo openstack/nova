@@ -82,6 +82,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import instance as obj_instance
 from nova import paths
 from nova import rpc
 from nova import safe_utils
@@ -1768,7 +1769,7 @@ class ComputeManager(manager.Manager):
         """
         if not self.send_instance_updates:
             return
-        if isinstance(instance, objects.Instance):
+        if isinstance(instance, obj_instance._BaseInstance):
             instance = objects.InstanceList(objects=[instance])
         context = context.elevated()
         self.scheduler_client.update_instance_info(context, self.host,
