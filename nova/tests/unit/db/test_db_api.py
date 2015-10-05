@@ -3167,6 +3167,20 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(service1, real_service1,
                                  ignored_keys=['compute_node'])
 
+    def test_service_get_minimum_version(self):
+        self._create_service({'version': 1,
+                              'host': 'host3',
+                              'binary': 'compute',
+                              'forced_down': True})
+        self._create_service({'version': 2,
+                              'host': 'host1',
+                              'binary': 'compute'})
+        self._create_service({'version': 3,
+                              'host': 'host2',
+                              'binary': 'compute'})
+        self.assertEqual(2, db.service_get_minimum_version(self.ctxt,
+                                                           'compute'))
+
     def test_service_get_not_found_exception(self):
         self.assertRaises(exception.ServiceNotFound,
                           db.service_get, self.ctxt, 100500)

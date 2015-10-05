@@ -49,7 +49,7 @@ SERVICE_VERSION = 2
 # in the cluster are at the same level.
 SERVICE_VERSION_HISTORY = (
     # Version 0: Pre-history
-    None,
+    {'compute_rpc': '4.0'},
 
     # Version 1: Introduction of SERVICE_VERSION
     {'compute_rpc': '4.4'},
@@ -81,7 +81,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.16: Added version
     # Version 1.17: ComputeNode version 1.13
     # Version 1.18: ComputeNode version 1.14
-    VERSION = '1.18'
+    # Version 1.19: Added get_minimum_version()
+    VERSION = '1.19'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -254,6 +255,16 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def destroy(self):
         db.service_destroy(self._context, self.id)
 
+    @base.remotable_classmethod
+    def get_minimum_version(cls, context, binary, use_slave=False):
+        version = db.service_get_minimum_version(context, binary,
+                                                 use_slave=use_slave)
+        if version is None:
+            return 0
+        # NOTE(danms): Since our return value is not controlled by object
+        # schema, be explicit here.
+        return int(version)
+
 
 @base.NovaObjectRegistry.register
 class ServiceList(base.ObjectListBase, base.NovaObject):
@@ -275,7 +286,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.14: Service version 1.16
     # Version 1.15: Service version 1.17
     # Version 1.16: Service version 1.18
-    VERSION = '1.16'
+    # Version 1.17: Service version 1.19
+    VERSION = '1.17'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -287,7 +299,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
                     ('1.6', '1.8'), ('1.7', '1.9'), ('1.8', '1.10'),
                     ('1.9', '1.11'), ('1.10', '1.12'), ('1.11', '1.13'),
                     ('1.12', '1.14'), ('1.13', '1.15'), ('1.14', '1.16'),
-                    ('1.15', '1.17'), ('1.16', '1.18')],
+                    ('1.15', '1.17'), ('1.16', '1.18'), ('1.17', '1.19')],
     }
 
     @base.remotable_classmethod
