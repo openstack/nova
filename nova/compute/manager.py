@@ -371,7 +371,7 @@ def wrap_instance_fault(function):
             # we will get a KeyError exception which will cover up the real
             # exception. So, we update kwargs with the values from args first.
             # then, we can get 'instance' from kwargs easily.
-            kwargs.update(dict(zip(function.func_code.co_varnames[2:], args)))
+            kwargs.update(dict(zip(function.__code__.co_varnames[2:], args)))
 
             with excutils.save_and_reraise_exception():
                 compute_utils.add_instance_fault_from_exc(context,
@@ -395,7 +395,7 @@ def wrap_instance_event(function):
                                        **kwargs)
         instance_uuid = keyed_args['instance']['uuid']
 
-        event_name = 'compute_{0}'.format(function.func_name)
+        event_name = 'compute_{0}'.format(function.__name__)
         with compute_utils.EventReporter(context, event_name, instance_uuid):
             return function(self, context, *args, **kwargs)
 
@@ -1500,7 +1500,7 @@ class ComputeManager(manager.Manager):
             return
 
         LOG.debug("Re-scheduling %(method)s: attempt %(num)d",
-                  {'method': reschedule_method.func_name,
+                  {'method': reschedule_method.__name__,
                    'num': retry['num_attempts']}, instance_uuid=instance_uuid)
 
         # reset the task state:
