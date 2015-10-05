@@ -2959,7 +2959,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 config_drive_image.import_file(
                     instance, configdrive_path, 'disk.config' + suffix)
             finally:
-                config_drive_image.import_file_cleanup(configdrive_path)
+                # NOTE(mikal): if the config drive was imported into RBD, then
+                # we no longer need the local copy
+                if CONF.libvirt.images_type == 'rbd':
+                    os.unlink(configdrive_path)
 
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
