@@ -84,9 +84,6 @@ class MonitorMetricList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('MonitorMetric'),
     }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
-    }
 
     @classmethod
     def from_json(cls, metrics):

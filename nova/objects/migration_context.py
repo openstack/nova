@@ -44,11 +44,6 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
                                                 nullable=True),
     }
 
-    obj_relationships = {
-        'new_numa_topology': [('1.0', '1.2')],
-        'old_numa_topology': [('1.0', '1.2')],
-    }
-
     @classmethod
     def obj_from_db_obj(cls, db_obj):
         primitive = jsonutils.loads(db_obj)

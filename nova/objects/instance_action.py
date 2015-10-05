@@ -102,10 +102,6 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceAction'),
         }
-    # NOTE(danms): InstanceAction was at 1.1 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.1')]
-        }
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
@@ -212,9 +208,6 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
-        }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
 
     @base.remotable_classmethod

@@ -259,9 +259,6 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Flavor'),
         }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
-        }
 
     @base.remotable_classmethod
     def get_all(cls, context, inactive=False, filters=None,

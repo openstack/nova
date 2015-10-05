@@ -52,10 +52,6 @@ class NUMACell(base.NovaObject):
         'mempages': fields.ListOfObjectsField('NUMAPagesTopology'),
         }
 
-    obj_relationships = {
-        'mempages': [('1.2', '1.0')]
-    }
-
     def __eq__(self, other):
         return all_things_equal(self, other)
 
@@ -175,10 +171,6 @@ class NUMATopology(base.NovaObject,
     fields = {
         'cells': fields.ListOfObjectsField('NUMACell'),
         }
-
-    obj_relationships = {
-        'cells': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')]
-    }
 
     @classmethod
     def obj_from_primitive(cls, primitive, context=None):

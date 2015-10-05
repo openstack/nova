@@ -39,11 +39,6 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
         'grantee_group': fields.ObjectField('SecurityGroup', nullable=True),
         }
 
-    obj_relationships = {
-        'parent_group': [('1.0', '1.1'), ('1.1', '1.1')],
-        'grantee_group': [('1.0', '1.1'), ('1.1', '1.1')],
-    }
-
     @staticmethod
     def _from_db_subgroup(context, db_group):
         if db_group is None:
@@ -91,9 +86,6 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
     VERSION = '1.1'
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
-        }
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, secgroup_id):

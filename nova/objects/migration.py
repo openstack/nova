@@ -132,10 +132,6 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
         }
-    # NOTE(danms): Migration was at 1.1 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.1'), ('1.1', '1.1'), ('1.2', '1.2')],
-        }
 
     @base.remotable_classmethod
     def get_unconfirmed_by_dest_compute(cls, context, confirm_window,

@@ -58,9 +58,6 @@ class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
         'objects': fields.ListOfObjectsField('NetworkRequest'),
         }
 
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
-        }
     VERSION = '1.1'
 
     def as_tuples(self):
