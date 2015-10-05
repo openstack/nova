@@ -1873,8 +1873,8 @@ class ComputeManager(manager.Manager):
             node=None, limits=None):
 
         try:
-            LOG.info(_LI('Starting instance...'), context=context,
-                  instance=instance)
+            LOG.debug('Starting instance...', context=context,
+                      instance=instance)
             instance.vm_state = vm_states.BUILDING
             instance.task_state = None
             instance.save(expected_task_state=
@@ -1899,10 +1899,13 @@ class ComputeManager(manager.Manager):
                       instance=instance)
 
         try:
-            self._build_and_run_instance(context, instance, image,
-                    decoded_files, admin_password, requested_networks,
-                    security_groups, block_device_mapping, node, limits,
-                    filter_properties)
+            with timeutils.StopWatch() as timer:
+                self._build_and_run_instance(context, instance, image,
+                        decoded_files, admin_password, requested_networks,
+                        security_groups, block_device_mapping, node, limits,
+                        filter_properties)
+            LOG.info(_LI('Took %0.2f seconds to build instance.'),
+                     timer.elapsed(), instance=instance)
             return build_results.ACTIVE
         except exception.RescheduledException as e:
             retry = filter_properties.get('retry')
@@ -2003,10 +2006,16 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
-                    self.driver.spawn(context, instance, image,
-                                      injected_files, admin_password,
-                                      network_info=network_info,
-                                      block_device_info=block_device_info)
+                    LOG.debug('Start spawning the instance on the hypervisor.',
+                              instance=instance)
+                    with timeutils.StopWatch() as timer:
+                        self.driver.spawn(context, instance, image,
+                                          injected_files, admin_password,
+                                          network_info=network_info,
+                                          block_device_info=block_device_info)
+                    LOG.info(_LI('Took %0.2f seconds to spawn the instance on '
+                                 'the hypervisor.'), timer.elapsed(),
+                             instance=instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -2096,6 +2105,8 @@ class ComputeManager(manager.Manager):
         resources = {}
         network_info = None
         try:
+            LOG.debug('Start building networks asynchronously for instance.',
+                      instance=instance)
             network_info = self._build_networks_for_instance(context, instance,
                     requested_networks, security_groups)
             resources['network_info'] = network_info
@@ -2120,6 +2131,8 @@ class ComputeManager(manager.Manager):
             self._default_block_device_names(context, instance, image,
                     block_device_mapping)
 
+            LOG.debug('Start building block device mappings for instance.',
+                      instance=instance)
             instance.vm_state = vm_states.BUILDING
             instance.task_state = task_states.BLOCK_DEVICE_MAPPING
             instance.save()
