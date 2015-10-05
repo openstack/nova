@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 750 629" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+  edge_length = 250;
+  span_height = 40;
+  node_width=200;
+  default_note_color = lightblue;
+
+  // Use note (put note on rightside)
+  api [label="Compute.api"];
+  manager [label="Compute.manager"];
+  api -&gt; manager [label = "create_db_entry_for_new_instance",
+                  note = "VM: Building
+                         Task: Scheduling
+                         Power: No State"];
+  manager -&gt; manager [label="_start_building",
+                      note ="VM: Building
+                            Task: None"];
+  manager -&gt; manager [label="_allocate_network",
+                      note ="VM: Building
+                            Task: Networking"];
+  manager -&gt; manager [label="_prep_block_device",
+                      note ="VM: Building
+                            Task: Block_Device_Mapping"];
+  manager -&gt; manager [label="_spawn",
+                      note ="VM: Building
+                            Task: Spawning"];
+  api &lt;-- manager [note ="VM: Active
+                         Task: None"];
+}
+
+</desc>
+  <rect fill="rgb(0,0,0)" height="461" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="8" x="163" y="146" />
+  <rect fill="rgb(0,0,0)" height="385" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="8" x="413" y="146" />
+  <polygon fill="rgb(0,0,0)" points="433,126 545,126 553,134 553,167 433,167 433,126" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="557,208 645,208 653,216 653,236 557,236 557,208" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="557,289 669,289 677,297 677,317 557,317 557,289" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="557,370 729,370 737,378 737,398 557,398 557,370" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="557,451 657,451 665,459 665,479 557,479 557,451" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="433,517 509,517 517,525 517,545 433,545 433,517" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="200" x="67" y="46" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="200" x="317" y="46" />
+  <path d="M 164 80 L 164 617" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="moccasin" height="461" stroke="rgb(0,0,0)" width="8" x="160" y="140" />
+  <path d="M 414 80 L 414 617" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="moccasin" height="385" stroke="rgb(0,0,0)" width="8" x="410" y="140" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="200" x="64" y="40" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="164" y="66">Compute.api</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="200" x="314" y="40" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="90" x="414" y="66">Compute.manager</text>
+  <path d="M 172 140 L 406 140" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="398,136 406,140 398,144" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="430,120 542,120 550,128 550,161 430,161 430,120" stroke="rgb(0,0,0)" />
+  <path d="M 542 120 L 542 128" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 542 128 L 550 128" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="474" y="133">VM: Building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="96" x="486" y="146">Task: Scheduling</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="90" x="483" y="159">Power: No State</text>
+  <path d="M 422 216 L 538 216" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 216 L 538 232" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 232 L 422 232" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="430,228 422,232 430,236" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="554,202 642,202 650,210 650,230 554,230 554,202" stroke="rgb(0,0,0)" />
+  <path d="M 642 202 L 642 210" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 642 210 L 650 210" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="598" y="215">VM: Building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="60" x="592" y="228">Task: None</text>
+  <path d="M 422 297 L 538 297" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 297 L 538 313" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 313 L 422 313" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="430,309 422,313 430,317" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="554,283 666,283 674,291 674,311 554,311 554,283" stroke="rgb(0,0,0)" />
+  <path d="M 666 283 L 666 291" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 666 291 L 674 291" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="598" y="296">VM: Building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="96" x="610" y="309">Task: Networking</text>
+  <path d="M 422 378 L 538 378" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 378 L 538 394" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 394 L 422 394" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="430,390 422,394 430,398" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="554,364 726,364 734,372 734,392 554,392 554,364" stroke="rgb(0,0,0)" />
+  <path d="M 726 364 L 726 372" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 726 372 L 734 372" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="598" y="377">VM: Building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="156" x="640" y="390">Task: Block_Device_Mapping</text>
+  <path d="M 422 459 L 538 459" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 459 L 538 475" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 538 475 L 422 475" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="430,471 422,475 430,479" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="554,445 654,445 662,453 662,473 554,473 554,445" stroke="rgb(0,0,0)" />
+  <path d="M 654 445 L 654 453" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 654 453 L 662 453" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="598" y="458">VM: Building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="84" x="604" y="471">Task: Spawning</text>
+  <path d="M 172 525 L 406 525" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="180,521 172,525 180,529" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(173,216,230)" points="430,511 506,511 514,519 514,539 430,539 430,511" stroke="rgb(0,0,0)" />
+  <path d="M 506 511 L 506 519" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 506 519 L 514 519" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="60" x="468" y="524">VM: Active</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="60" x="468" y="537">Task: None</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="192" x="272" y="138">create_db_entry_for_new_instance</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="90" x="467" y="214">_start_building</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="102" x="473" y="295">_allocate_network</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="108" x="476" y="376">_prep_block_device</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="440" y="457">_spawn</text>
+</svg>

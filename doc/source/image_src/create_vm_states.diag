@@ -1,0 +1,28 @@
+seqdiag {
+  edge_length = 250;
+  span_height = 40;
+  node_width=200;
+  default_note_color = lightblue;
+
+  // Use note (put note on rightside)
+  api [label="Compute.api"];
+  manager [label="Compute.manager"];
+  api -> manager [label = "create_db_entry_for_new_instance",
+                  note = "VM: Building
+                         Task: Scheduling
+                         Power: No State"];
+  manager -> manager [label="_start_building",
+                      note ="VM: Building
+                            Task: None"];
+  manager -> manager [label="_allocate_network",
+                      note ="VM: Building
+                            Task: Networking"];
+  manager -> manager [label="_prep_block_device",
+                      note ="VM: Building
+                            Task: Block_Device_Mapping"];
+  manager -> manager [label="_spawn",
+                      note ="VM: Building
+                            Task: Spawning"];
+  api <-- manager [note ="VM: Active
+                         Task: None"];
+}
