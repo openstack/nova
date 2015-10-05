@@ -2963,6 +2963,27 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidBDMEphemeralSize)
+    def test_create_instance_raise_invalid_bdm_ephsize(self, mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidBDMFormat(details=''))
+    def test_create_instance_raise_invalid_bdm_format(self, mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidBDMSwapSize)
+    def test_create_instance_raise_invalid_bdm_swapsize(self, mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_invalid_personality(self, mock_create):
         codec = 'utf8'
