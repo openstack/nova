@@ -23,6 +23,7 @@ from nova import exception
 from nova import i18n
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import matchers
 from nova.tests.unit import utils
 from oslo_serialization import jsonutils
 
@@ -32,13 +33,13 @@ class RequestTest(test.NoDBTestCase):
 
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
-        request.body = "<body />"
+        request.body = b"<body />"
         self.assertIsNone(request.get_content_type())
 
     def test_content_type_unsupported(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
         request.headers["Content-Type"] = "text/html"
-        request.body = "asdf<br />"
+        request.body = b"asdf<br />"
         self.assertRaises(exception.InvalidContentType,
                           request.get_content_type)
 
@@ -250,7 +251,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
         self.assertEqual(deserializer.deserialize(data), as_dict)
 
     def test_json_valid_utf8(self):
-        data = """{"server": {"min_count": 1, "flavorRef": "1",
+        data = b"""{"server": {"min_count": 1, "flavorRef": "1",
                 "name": "\xe6\xa6\x82\xe5\xbf\xb5",
                 "imageRef": "10bab10c-1304-47d",
                 "max_count": 1}} """
@@ -269,7 +270,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
 
     def test_json_invalid_utf8(self):
         """Send invalid utf-8 to JSONDeserializer."""
-        data = """{"server": {"min_count": 1, "flavorRef": "1",
+        data = b"""{"server": {"min_count": 1, "flavorRef": "1",
                 "name": "\xf0\x28\x8c\x28",
                 "imageRef": "10bab10c-1304-47d",
                 "max_count": 1}} """
@@ -301,7 +302,7 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
@@ -320,7 +321,7 @@ class ResourceTest(test.NoDBTestCase):
         req = webob.Request.blank('/tests')
         req.headers = {self.header_name: version}
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
 
     def test_resource_receives_api_version_request_invalid(self):
@@ -345,15 +346,15 @@ class ResourceTest(test.NoDBTestCase):
         # the default method is GET
         req = webob.Request.blank('/tests')
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
-        req.body = '{"body": {"key": "value"}}'
+        req.body = b'{"body": {"key": "value"}}'
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
         req.content_type = 'application/json'
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
 
     def test_resource_call_with_method_post(self):
@@ -368,20 +369,20 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         req = webob.Request.blank('/tests', method="POST",
                                   content_type='application/json')
-        req.body = '{"body": {"key": "value"}}'
+        req.body = b'{"body": {"key": "value"}}'
         expected_body = {'body': {
             "key": "value"
             }
         }
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         # verify without body
         expected_body = None
         req.body = None
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         # the body is validated in the controller
         expected_body = {'body': None}
         response = req.get_response(app)
@@ -402,13 +403,13 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         req = webob.Request.blank('/tests/test_id', method="PUT",
                                   content_type='application/json')
-        req.body = '{"body": {"key": "value"}}'
+        req.body = b'{"body": {"key": "value"}}'
         expected_body = {'body': {
             "key": "value"
             }
         }
         response = req.get_response(app)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
         req.body = None
         expected_body = None
@@ -416,7 +417,7 @@ class ResourceTest(test.NoDBTestCase):
         self.assertEqual(response.status_int, 200)
         # verify no content_type is contained in the request
         req.content_type = None
-        req.body = '{"body": {"key": "value"}}'
+        req.body = b'{"body": {"key": "value"}}'
         response = req.get_response(app)
         expected_unsupported_type_body = {'badRequest':
             {'message': 'Unsupported Content-Type', 'code': 400}}
@@ -434,12 +435,12 @@ class ResourceTest(test.NoDBTestCase):
         req = webob.Request.blank('/tests/test_id', method="DELETE")
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
         # ignore the body
-        req.body = '{"body": {"key": "value"}}'
+        req.body = b'{"body": {"key": "value"}}'
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, 'success')
+        self.assertEqual(b'success', response.body)
 
     def test_resource_not_authorized(self):
         class Controller(object):
@@ -552,11 +553,11 @@ class ResourceTest(test.NoDBTestCase):
 
         request = wsgi.Request.blank('/', method='POST')
         request.headers['Content-Type'] = 'application/none'
-        request.body = 'foo'
+        request.body = b'foo'
 
         content_type, body = resource.get_body(request)
         self.assertIsNone(content_type)
-        self.assertEqual(body, '')
+        self.assertEqual(b'', body)
 
     def test_get_body_no_content_type(self):
         class Controller(object):
@@ -567,11 +568,11 @@ class ResourceTest(test.NoDBTestCase):
         resource = wsgi.Resource(controller)
 
         request = wsgi.Request.blank('/', method='POST')
-        request.body = 'foo'
+        request.body = b'foo'
 
         content_type, body = resource.get_body(request)
         self.assertIsNone(content_type)
-        self.assertEqual(body, 'foo')
+        self.assertEqual(b'foo', body)
 
     def test_get_body_no_content_body(self):
         class Controller(object):
@@ -583,11 +584,11 @@ class ResourceTest(test.NoDBTestCase):
 
         request = wsgi.Request.blank('/', method='POST')
         request.headers['Content-Type'] = 'application/json'
-        request.body = ''
+        request.body = b''
 
         content_type, body = resource.get_body(request)
         self.assertEqual('application/json', content_type)
-        self.assertEqual(body, '')
+        self.assertEqual(b'', body)
 
     def test_get_body(self):
         class Controller(object):
@@ -599,11 +600,11 @@ class ResourceTest(test.NoDBTestCase):
 
         request = wsgi.Request.blank('/', method='POST')
         request.headers['Content-Type'] = 'application/json'
-        request.body = 'foo'
+        request.body = b'foo'
 
         content_type, body = resource.get_body(request)
         self.assertEqual(content_type, 'application/json')
-        self.assertEqual(body, 'foo')
+        self.assertEqual(b'foo', body)
 
     def test_get_request_id_with_dict_response_body(self):
         class Controller(wsgi.Controller):
@@ -614,7 +615,7 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
         self.assertIn('nova.context', req.environ)
-        self.assertEqual(response.body, '{"foo": "bar"}')
+        self.assertEqual(b'{"foo": "bar"}', response.body)
         self.assertEqual(response.status_int, 200)
 
     def test_no_request_id_with_str_response_body(self):
@@ -630,7 +631,7 @@ class ResourceTest(test.NoDBTestCase):
         # our wsgi setup, ideally it would be there.
         expected_header = self.get_req_id_header_name(req)
         self.assertFalse(hasattr(response.headers, expected_header))
-        self.assertEqual(response.body, 'foo')
+        self.assertEqual(b'foo', response.body)
         self.assertEqual(response.status_int, 200)
 
     def test_get_request_id_no_response_body(self):
@@ -642,7 +643,7 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
         self.assertIn('nova.context', req.environ)
-        self.assertEqual(response.body, '')
+        self.assertEqual(b'', response.body)
         self.assertEqual(response.status_int, 200)
 
     def test_deserialize_badtype(self):
@@ -1006,14 +1007,12 @@ class ResourceTest(test.NoDBTestCase):
         req = webob.Request.blank('/tests')
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
-
-        for hdr, val in six.iteritems(response.headers):
+        for val in six.itervalues(response.headers):
             # All headers must be utf8
-            self.assertIsInstance(hdr, str)
-            self.assertIsInstance(val, str)
-        self.assertEqual(response.headers['x-header1'], '1')
-        self.assertEqual(response.headers['x-header2'], 'header2')
-        self.assertEqual(response.headers['x-header3'], 'header3')
+            self.assertThat(val, matchers.EncodedByUTF8())
+        self.assertEqual(b'1', response.headers['x-header1'])
+        self.assertEqual(b'header2', response.headers['x-header2'])
+        self.assertEqual(b'header3', response.headers['x-header3'])
 
     def test_resource_valid_utf8_body(self):
         class Controller(object):
@@ -1021,8 +1020,8 @@ class ResourceTest(test.NoDBTestCase):
                 return body
 
         req = webob.Request.blank('/tests/test_id', method="PUT")
-        body = """ {"name": "\xe6\xa6\x82\xe5\xbf\xb5" } """
-        expected_body = '{"name": "\\u6982\\u5ff5"}'
+        body = b""" {"name": "\xe6\xa6\x82\xe5\xbf\xb5" } """
+        expected_body = b'{"name": "\\u6982\\u5ff5"}'
         req.body = body
         req.headers['Content-Type'] = 'application/json'
         app = fakes.TestRouter(Controller())
@@ -1036,7 +1035,7 @@ class ResourceTest(test.NoDBTestCase):
                 return body
 
         req = webob.Request.blank('/tests/test_id', method="PUT")
-        body = """ {"name": "\xf0\x28\x8c\x28" } """
+        body = b""" {"name": "\xf0\x28\x8c\x28" } """
         req.body = body
         req.headers['Content-Type'] = 'application/json'
         app = fakes.TestRouter(Controller())
@@ -1130,17 +1129,16 @@ class ResponseObjectTest(test.NoDBTestCase):
         for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
             request = wsgi.Request.blank('/tests/123')
             response = robj.serialize(request, content_type)
-
-            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(content_type.encode("utf-8"),
+                             response.headers['Content-Type'])
             for hdr, val in six.iteritems(response.headers):
                 # All headers must be utf8
-                self.assertIsInstance(hdr, str)
-                self.assertIsInstance(val, str)
-            self.assertEqual(response.headers['X-header1'], 'header1')
-            self.assertEqual(response.headers['X-header2'], 'header2')
-            self.assertEqual(response.headers['X-header3'], '3')
+                self.assertThat(val, matchers.EncodedByUTF8())
+            self.assertEqual(b'header1', response.headers['X-header1'])
+            self.assertEqual(b'header2', response.headers['X-header2'])
+            self.assertEqual(b'3', response.headers['X-header3'])
             self.assertEqual(response.status_int, 202)
-            self.assertEqual(response.body, mtype)
+            self.assertEqual(mtype.encode("utf-8"), response.body)
 
 
 class ValidBodyTest(test.NoDBTestCase):

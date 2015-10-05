@@ -21,6 +21,7 @@ import pprint
 from lxml import etree
 import six
 from testtools import content
+import testtools.matchers
 
 
 class DictKeysMismatch(object):
@@ -528,3 +529,23 @@ class XMLMatches(object):
                                               actual_child_idx)
         # The nodes match
         return True
+
+
+class EncodedByUTF8(object):
+    def match(self, obj):
+        if isinstance(obj, six.binary_type):
+            if hasattr(obj, "decode"):
+                try:
+                    obj.decode("utf-8")
+                except UnicodeDecodeError:
+                    return testtools.matchers.Mismatch(
+                        "%s is not encoded in UTF-8." % obj)
+        else:
+            reason = ("Type of '%(obj)s' is '%(obj_type)s', "
+                      "should be '%(correct_type)s'."
+                      % {
+                          "obj": obj,
+                          "obj_type": type(obj).__name__,
+                          "correct_type": six.binary_type.__name__
+                      })
+            return testtools.matchers.Mismatch(reason)
