@@ -2180,7 +2180,8 @@ class ComputeManager(manager.Manager):
         instance.launched_at = timeutils.utcnow()
 
         # TODO(ORBIT): Temp
-        instance.vm_state = vm_states.PAUSED
+        if utils.ft_enabled(instance):
+            instance.vm_state = vm_states.PAUSED
 
         try:
             instance.save(expected_task_state=task_states.SPAWNING)
