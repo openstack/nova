@@ -17,6 +17,7 @@ import mock
 import netaddr
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 
 from nova import db
@@ -429,13 +430,17 @@ class _TestComputeNodeObject(object):
 
     def test_compat_numa_topology(self):
         compute = compute_node.ComputeNode()
-        primitive = compute.obj_to_primitive(target_version='1.4')
+        versions = ovo_base.obj_tree_get_versions('ComputeNode')
+        primitive = compute.obj_to_primitive(target_version='1.4',
+                                             version_manifest=versions)
         self.assertNotIn('numa_topology', primitive)
 
     def test_compat_supported_hv_specs(self):
         compute = compute_node.ComputeNode()
         compute.supported_hv_specs = fake_supported_hv_specs
-        primitive = compute.obj_to_primitive(target_version='1.5')
+        versions = ovo_base.obj_tree_get_versions('ComputeNode')
+        primitive = compute.obj_to_primitive(target_version='1.5',
+                                             version_manifest=versions)
         self.assertNotIn('supported_hv_specs', primitive)
 
     def test_compat_host(self):
@@ -446,7 +451,9 @@ class _TestComputeNodeObject(object):
     def test_compat_pci_device_pools(self):
         compute = compute_node.ComputeNode()
         compute.pci_device_pools = fake_pci_device_pools.fake_pool_list
-        primitive = compute.obj_to_primitive(target_version='1.8')
+        versions = ovo_base.obj_tree_get_versions('ComputeNode')
+        primitive = compute.obj_to_primitive(target_version='1.8',
+                                             version_manifest=versions)
         self.assertNotIn('pci_device_pools', primitive)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')

@@ -18,6 +18,7 @@ import iso8601
 import mock
 import netaddr
 from oslo_utils import timeutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
 from nova.objects import fixed_ip
@@ -349,7 +350,11 @@ class _TestFixedIPObject(object):
             self.context, {'id': 0}, host='fake-host')
         primitive = fixed_ips[0].obj_to_primitive()
         self.assertIn('default_route', primitive['nova_object.data'])
-        fixed_ips[0].obj_make_compatible(primitive['nova_object.data'], '1.1')
+        versions = ovo_base.obj_tree_get_versions('FixedIP')
+        fixed_ips[0].obj_make_compatible_from_manifest(
+            primitive['nova_object.data'],
+            target_version='1.1',
+            version_manifest=versions)
         self.assertNotIn('default_route', primitive['nova_object.data'])
 
 
