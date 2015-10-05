@@ -175,7 +175,7 @@ class ZooKeeperDriver(base.Driver):
                 # if all_members, weren't populated
                 LOG.warning(_LW('Problem with acquiring the list of '
                                 'children of %(path)r within a given '
-                                'timeout=%(timeout)rs'),
+                                'timeout=%(timeout)d seconds'),
                             path, timeout)
         else:
             all_members = monitor.get_all()

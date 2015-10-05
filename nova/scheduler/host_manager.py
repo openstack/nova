@@ -203,7 +203,7 @@ class HostState(object):
                 # can occur when an instance in database is not on host
                 LOG.warning(_LW("Host %(hostname)s has more disk space than "
                                 "database expected "
-                                "(%(physical)sgb > %(database)sgb)"),
+                                "(%(physical)s GB > %(database)s GB)"),
                             {'physical': least_gb, 'database': free_gb,
                              'hostname': compute.hypervisor_hostname})
             free_gb = min(least_gb, free_gb)
