@@ -88,7 +88,6 @@ class ExtendedVolumesTestV21(test.TestCase):
     def _setUp(self):
         self.Controller = extended_volumes_v21.ExtendedVolumesController()
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
-        self.action_url = "/%s/action" % UUID1
 
     def _make_request(self, url, body=None):
         req = webob.Request.blank('/v2/fake/servers' + url)
