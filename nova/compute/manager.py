@@ -2180,8 +2180,7 @@ class ComputeManager(manager.Manager):
         instance.launched_at = timeutils.utcnow()
 
         # TODO(ORBIT): Temp
-        if utils.ft_secondary(instance):
-            instance.vm_state = vm_states.PAUSED
+        instance.vm_state = vm_states.PAUSED
 
         try:
             instance.save(expected_task_state=task_states.SPAWNING)
@@ -6272,7 +6271,7 @@ class ComputeManager(manager.Manager):
         else:
             relations = (objects.FaultToleranceRelationList.
                          get_by_primary_instance_uuid(context,
-                                                      primary_instance.uuid))
+                                                      instance.uuid))
 
             # NOTE(ORBIT): Currently supporting one secondary only.
             relation = relations[0]
