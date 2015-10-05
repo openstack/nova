@@ -126,6 +126,7 @@ CONF = cfg.CONF
 CONF.register_opts(db_opts)
 CONF.register_opts(oslo_db_options.database_opts, 'database')
 CONF.register_opts(api_db_opts, group='api_database')
+CONF.import_opt('until_refresh', 'nova.quota')
 
 LOG = logging.getLogger(__name__)
 
@@ -4198,7 +4199,7 @@ def _security_group_ensure_default(context, session=None):
                                     context.user_id,
                                     'security_groups',
                                     1, 0,
-                                    None,
+                                    CONF.until_refresh,
                                     session=session)
             else:
                 usage.update({'in_use': int(usage.first().in_use) + 1})
