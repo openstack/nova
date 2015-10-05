@@ -6218,10 +6218,10 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug('Connecting volumes before live migration.',
                       instance=instance)
 
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
+        for bdm in block_device_mapping:
+            connection_info = bdm['connection_info']
             disk_info = blockinfo.get_info_from_bdm(
-                instance, CONF.libvirt.virt_type, image_meta, vol)
+                instance, CONF.libvirt.virt_type, image_meta, bdm)
             self._connect_volume(connection_info, disk_info)
 
         # We call plug_vifs before the compute manager calls

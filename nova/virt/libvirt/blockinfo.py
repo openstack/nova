@@ -586,12 +586,12 @@ def get_disk_mapping(virt_type, instance,
     block_device_mapping = driver.block_device_info_get_mapping(
         block_device_info)
 
-    for vol in block_device_mapping:
+    for bdm in block_device_mapping:
         vol_info = get_info_from_bdm(
-            instance, virt_type, image_meta, vol, mapping,
+            instance, virt_type, image_meta, bdm, mapping,
             assigned_devices=pre_assigned_device_names)
         mapping[block_device.prepend_dev(vol_info['dev'])] = vol_info
-        update_bdm(vol, vol_info)
+        update_bdm(bdm, vol_info)
 
     if configdrive.required_by(instance):
         device_type = get_config_drive_type()
