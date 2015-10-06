@@ -146,7 +146,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1'}
         gen = validators._soft_validate_additional_properties(
             validator, False, instance, self.schema)
-        self.assertRaises(StopIteration, gen.next)
+        self.assertRaises(StopIteration, next, gen)
         self.assertEqual({'foo': '1'}, instance)
 
     def test_strip_extra_properties_out_with_extra_props(self):
@@ -154,7 +154,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1', 'extra_foo': 'extra'}
         gen = validators._soft_validate_additional_properties(
             validator, False, instance, self.schema)
-        self.assertRaises(StopIteration, gen.next)
+        self.assertRaises(StopIteration, next, gen)
         self.assertEqual({'foo': '1'}, instance)
 
     def test_not_strip_extra_properties_out_with_allow_extra_props(self):
@@ -162,7 +162,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1', 'extra_foo': 'extra'}
         gen = validators._soft_validate_additional_properties(
             validator, True, instance, self.schema_allow)
-        self.assertRaises(StopIteration, gen.next)
+        self.assertRaises(StopIteration, next, gen)
         self.assertEqual({'foo': '1', 'extra_foo': 'extra'}, instance)
 
     def test_pattern_properties_with_invalid_property_and_allow_extra_props(
@@ -172,7 +172,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1', 'b' * 300: 'extra'}
         gen = validators._soft_validate_additional_properties(
             validator, True, instance, self.schema_with_pattern)
-        self.assertRaises(StopIteration, gen.next)
+        self.assertRaises(StopIteration, next, gen)
 
     def test_pattern_properties(self):
         validator = validators._SchemaValidator(
@@ -180,7 +180,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1'}
         gen = validators._soft_validate_additional_properties(
             validator, False, instance, self.schema_with_pattern)
-        self.assertRaises(StopIteration, gen.next)
+        self.assertRaises(StopIteration, next, gen)
 
     def test_pattern_properties_with_invalid_property(self):
         validator = validators._SchemaValidator(
@@ -188,7 +188,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1', 'b' * 300: 'extra'}
         gen = validators._soft_validate_additional_properties(
             validator, False, instance, self.schema_with_pattern)
-        exc = gen.next()
+        exc = next(gen)
         self.assertIsInstance(exc,
                               jsonschema_exc.ValidationError)
         self.assertIn('was', exc.message)
@@ -199,7 +199,7 @@ class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
         instance = {'foo': '1', 'b' * 300: 'extra', 'c' * 300: 'extra'}
         gen = validators._soft_validate_additional_properties(
             validator, False, instance, self.schema_with_pattern)
-        exc = gen.next()
+        exc = next(gen)
         self.assertIsInstance(exc,
                               jsonschema_exc.ValidationError)
         self.assertIn('were', exc.message)
