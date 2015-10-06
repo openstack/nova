@@ -13,10 +13,10 @@
 # Mie Yamamoto <myamamot@redhat.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev13\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-03 06:33+0000\n"
-"PO-Revision-Date: 2015-09-30 03:11+0000\n"
+"POT-Creation-Date: 2015-10-06 06:38+0000\n"
+"PO-Revision-Date: 2015-10-06 04:52+0000\n"
 "Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
 "Language: ja\n"
 "Language-Team: Japanese (http://www.transifex.com/openstack/nova/language/"
@@ -4257,12 +4257,12 @@ msgstr ""
 "%(instance_uuid)s をマイグレーションできません: インスタンスのディスクが大き"
 "すぎます (宛先ホスト上の使用可能量:%(available)s < 必要量:%(necessary)s)"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Unable to migrate instance (%(instance_id)s) to current host (%(host)s)."
 msgstr ""
-"インスタンス (%(instance_id)s) を現在のホスト (%(host)s) にマイグレーションす"
-"ることはできません。"
+"インスタンス (%(instance_id)s) を現在と同じホスト (%(host)s) にマイグレーショ"
+"ンすることはできません。"
 
 #, python-format
 msgid "Unable to mount SMBFS share: %(smbfs_share)s WMI exception: %(wmi_exc)s"
@@ -4533,13 +4533,13 @@ msgstr ""
 msgid "Value required for 'scality_sofs_config'"
 msgstr "'scality_sofs_config' の値が必要です"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
 "maximum is %(max_ver)s."
 msgstr ""
-"バージョン %(req_ver)s は API ではサポートされていません。最小は%(min_ver)s、"
-"最大は %(max_ver)s です。"
+"バージョン %(req_ver)s はこの API ではサポートされていません。最小"
+"は%(min_ver)s、最大は %(max_ver)s です。"
 
 msgid "Virt driver does not implement host disabled status."
 msgstr "virt ドライバーがホスト無効化時のステータスを実装していません。"

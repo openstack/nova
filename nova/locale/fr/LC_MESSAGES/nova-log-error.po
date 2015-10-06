@@ -7,14 +7,15 @@
 # Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
 # Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# Kevin Tibi <kodokuu@gmail.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev13\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
-"PO-Revision-Date: 2015-09-12 08:50+0000\n"
-"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
+"POT-Creation-Date: 2015-10-06 06:38+0000\n"
+"PO-Revision-Date: 2015-10-05 02:58+0000\n"
+"Last-Translator: Kevin Tibi <kodokuu@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
 "Language: fr\n"
@@ -73,6 +74,11 @@ msgstr "La fixation des périphériques PCI %(dev)s à %(dom)s a echoué."
 #, python-format
 msgid "Attaching network adapter failed. Exception:  %s"
 msgstr "La fixation de l'adaptateur réseau a échoué. Exception : %s"
+
+#, python-format
+msgid "Cannot block migrate instance %s with mapped volumes"
+msgstr ""
+"Impossible de bloquer l'instance de migration %s avec des volumes mappés"
 
 msgid "Cannot cleanup migration files"
 msgstr "Impossible de nettoyer les fichiers de migration"
@@ -639,6 +645,9 @@ msgstr "Echec de rétablissement de la migration interrompue"
 msgid "Failed to roll back reservations %s"
 msgstr "Échec à restaurer les réservations %s"
 
+msgid "Failed to rollback quota for failed finish_resize"
+msgstr "Échec du retour en arrière des quotas pour échoué finish_resize"
+
 #, python-format
 msgid "Failed to send message to cell: %(next_hop)s"
 msgstr "Echec de l'envoi du message à la cellule: %(next_hop)s"
@@ -686,6 +695,11 @@ msgstr "Echec de la reprise de l'instance"
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
 msgstr "Echec de la décompression de %(image_location)s dans %(image_path)s"
+
+msgid "Failed to update usages bulk deallocating floating IP"
+msgstr ""
+"Echec de la mise à jour de l'utilisation de désallocation des l'adresses IP "
+"flottante"
 
 msgid "Failed to update usages deallocating fixed IP"
 msgstr ""
@@ -808,6 +822,9 @@ msgstr "Défaillance de Keystone : %s"
 #, python-format
 msgid "Live Migration failure: %s"
 msgstr "Migration Directe a échoué : %s"
+
+msgid "Live migration failed."
+msgstr "Échec de la migration à chaud."
 
 msgid "Migrate Receive failed"
 msgstr "Echec de réception de la migration"
@@ -1120,6 +1137,11 @@ msgstr "Impossible de deconnecter le VBD"
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr "Incapable de mettre à jour l'hôte du port %s"
+
+#, python-format
+msgid "Unable to update instance VNIC index for port %s."
+msgstr ""
+"Impossible de mettre à jour les index des VNIC des instances pour le port %s."
 
 #, python-format
 msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
