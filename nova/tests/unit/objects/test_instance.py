@@ -1404,6 +1404,19 @@ class TestInstanceV1RemoteObject(test_objects._RemoteTest,
         self.assertIsInstance(list1[0], instance.InstanceV1)
         self.assertEqual(list2[0].uuid, list1[0].uuid)
 
+    def test_backport_v2_to_v1_uses_context(self):
+        inst2 = instance.InstanceV2(context=self.context)
+        with mock.patch.object(instance.InstanceV1, 'obj_from_primitive') as m:
+            inst2.obj_make_compatible({}, '1.0')
+            m.assert_called_once_with(mock.ANY, context=self.context)
+
+    def test_backport_list_v2_to_v1_uses_context(self):
+        list2 = instance.InstanceListV2(context=self.context)
+        with mock.patch.object(instance.InstanceListV1,
+                               'obj_from_primitive') as m:
+            list2.obj_make_compatible({}, '1.0')
+            m.assert_called_once_with(mock.ANY, context=self.context)
+
 
 class _TestInstanceListObject(object):
     def fake_instance(self, id, updates=None):
