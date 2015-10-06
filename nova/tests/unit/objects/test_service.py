@@ -147,7 +147,8 @@ class _TestServiceObject(object):
     @mock.patch.object(db, 'service_create',
                        return_value=fake_service)
     def test_set_id_failure(self, db_mock):
-        service_obj = service.Service(context=self.context)
+        service_obj = service.Service(context=self.context,
+                                      binary='compute')
         service_obj.create()
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           service_obj, 'id', 124)
@@ -296,6 +297,27 @@ class _TestServiceObject(object):
                                                              'compute'))
         mock_get.assert_called_once_with(self.context, 'compute',
                                          use_slave=False)
+
+    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    def test_create_above_minimum(self, mock_get):
+        with mock.patch('nova.objects.service.SERVICE_VERSION',
+                        new=3):
+            objects.Service(context=self.context, binary='compute').create()
+
+    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    def test_create_equal_to_minimum(self, mock_get):
+        with mock.patch('nova.objects.service.SERVICE_VERSION',
+                        new=2):
+            objects.Service(context=self.context, binary='compute').create()
+
+    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    def test_create_below_minimum(self, mock_get):
+        with mock.patch('nova.objects.service.SERVICE_VERSION',
+                        new=1):
+            self.assertRaises(exception.ServiceTooOld,
+                              objects.Service(context=self.context,
+                                              binary='compute',
+                                              ).create)
 
 
 class TestServiceObject(test_objects._LocalTest,

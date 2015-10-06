@@ -230,11 +230,35 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db_service = db.service_get_by_host_and_binary(context, host, binary)
         return cls._from_db_object(context, cls(), db_service)
 
+    def _check_minimum_version(self):
+        """Enforce that we are not older that the minimum version.
+
+        This is a loose check to avoid creating or updating our service
+        record if we would do so with a version that is older that the current
+        minimum of all services. This could happen if we were started with
+        older code by accident, either due to a rollback or an old and
+        un-updated node suddenly coming back onto the network.
+
+        There is technically a race here between the check and the update,
+        but since the minimum version should always roll forward and never
+        backwards, we don't need to worry about doing it atomically. Further,
+        the consequence for getting this wrong is minor, in that we'll just
+        fail to send messages that other services understand.
+        """
+        if not self.obj_attr_is_set('version'):
+            return
+        if not self.obj_attr_is_set('binary'):
+            return
+        minver = self.get_minimum_version(self._context, self.binary)
+        if minver > self.version:
+            raise exception.ServiceTooOld()
+
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+        self._check_minimum_version()
         updates = self.obj_get_changes()
         db_service = db.service_create(self._context, updates)
         self._from_db_object(self._context, self, db_service)
@@ -248,6 +272,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             # do a save if that's all that has changed. This keeps the
             # "save is a no-op if nothing has changed" behavior.
             return
+        self._check_minimum_version()
         db_service = db.service_update(self._context, self.id, updates)
         self._from_db_object(self._context, self, db_service)
 
