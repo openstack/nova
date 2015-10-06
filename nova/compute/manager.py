@@ -1806,8 +1806,12 @@ class ComputeManager(manager.Manager):
     def _deallocate_network(self, context, instance,
                             requested_networks=None):
         LOG.debug('Deallocating network for instance', instance=instance)
-        self.network_api.deallocate_for_instance(
-            context, instance, requested_networks=requested_networks)
+        with timeutils.StopWatch() as timer:
+            self.network_api.deallocate_for_instance(
+                context, instance, requested_networks=requested_networks)
+        # nova-network does an rpc call so we're OK tracking time spent here
+        LOG.info(_LI('Took %0.2f seconds to deallocate network for instance.'),
+                 timer.elapsed(), instance=instance)
 
     def _get_instance_block_device_info(self, context, instance,
                                         refresh_conn_info=False,
@@ -2273,9 +2277,15 @@ class ComputeManager(manager.Manager):
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
+        timer = timeutils.StopWatch()
         try:
+            LOG.debug('Start destroying the instance on the hypervisor.',
+                      instance=instance)
+            timer.start()
             self.driver.destroy(context, instance, network_info,
                     block_device_info)
+            LOG.info(_LI('Took %0.2f seconds to destroy the instance on the '
+                         'hypervisor.'), timer.elapsed(), instance=instance)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
             with excutils.save_and_reraise_exception():
@@ -2291,6 +2301,7 @@ class ComputeManager(manager.Manager):
         if try_deallocate_networks:
             self._try_deallocate_network(context, instance, requested_networks)
 
+        timer.restart()
         for bdm in vol_bdms:
             try:
                 # NOTE(vish): actual driver detach done in driver.destroy, so
@@ -2313,6 +2324,12 @@ class ComputeManager(manager.Manager):
             except cinder_exception.ClientException as exc:
                 LOG.warning(_LW('Ignoring Unknown cinder exception: %s'), exc,
                             instance=instance)
+
+        if vol_bdms:
+            LOG.info(_LI('Took %(time).2f seconds to detach %(num)s volumes '
+                         'for instance.'),
+                     {'time': timer.elapsed(), 'num': len(vol_bdms)},
+                     instance=instance)
 
         if notify:
             self._notify_about_instance_usage(context, instance,
