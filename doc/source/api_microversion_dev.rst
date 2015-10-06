@@ -234,25 +234,6 @@ them will need ``# noqa`` to avoid failing flake8's ``F811`` rule. The
 two methods may be different in any kind of semantics (schema
 validation, return values, response codes, etc)
 
-A method with only small changes between versions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A method may have only small changes between microversions, in which
-case you can decorate a private method::
-
-    @api_version("2.1", "2.4")
-    def _version_specific_func(self, req, arg1):
-        pass
-
-    @api_version(min_version="2.5")  # noqa
-    def _version_specific_func(self, req, arg1):
-        pass
-
-    def show(self, req, id):
-        .... common stuff ....
-        self._version_specific_func(req, "foo")
-        .... common stuff ....
-
 A change in schema only
 ~~~~~~~~~~~~~~~~~~~~~~~
 
