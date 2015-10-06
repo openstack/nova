@@ -2121,7 +2121,8 @@ class ComputeManager(manager.Manager):
                                       network_info=network_info,
                                       block_device_info=block_device_info)
 
-                    self._ft_initialize(context, instance)
+                    if utils.ft_enabled(instance):
+                        self._ft_initialize(context, instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
