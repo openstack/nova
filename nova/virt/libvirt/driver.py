@@ -6431,12 +6431,23 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             self._colo_init_primary(instance, relational_instance)
 
+    def _colo_wait_for_nbd(self, host, port):
+        try:
+            utils.execute('nc', '-z', host, str(port))
+        except processutils.ProcessExecutionError as e:
+            LOG.debug("Waiting for NBD server on secondary instance...")
+            return True
+
     def _colo_init_primary(self, primary_instance, secondary_instance):
         """Execute the initial synchronization of the primary and secondary VM.
         """
-        secondary_host = secondary_instance.hostname
+        secondary_host = secondary_instance.host
         if not libvirt_utils.is_valid_hostname(secondary_host):
             raise exception.InvalidHostname(hostname=secondary_host)
+
+        nbd_port = 8889
+        while self._colo_wait_for_nbd(secondary_host, nbd_port):
+            time.sleep(0.5)
 
         flaglist = CONF.libvirt.colo_migration_flag.split(',')
         flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
