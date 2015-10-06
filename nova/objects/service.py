@@ -124,8 +124,10 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         super(Service, self).__init__(*args, **kwargs)
         self.version = SERVICE_VERSION
 
-    def obj_make_compatible(self, primitive, target_version):
-        super(Service, self).obj_make_compatible(primitive, target_version)
+    def obj_make_compatible_from_manifest(self, primitive, target_version,
+                                          version_manifest):
+        super(Service, self).obj_make_compatible_from_manifest(
+            primitive, target_version, version_manifest)
         _target_version = utils.convert_version_to_tuple(target_version)
         if _target_version < (1, 16) and 'version' in primitive:
             del primitive['version']
@@ -134,15 +136,14 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         if _target_version < (1, 13) and 'last_seen_up' in primitive:
             del primitive['last_seen_up']
         if _target_version < (1, 10):
-            target_compute_version = self.obj_calculate_child_version(
-                target_version, 'compute_node')
             # service.compute_node was not lazy-loaded, we need to provide it
             # when called
             self._do_compute_node(self._context, primitive,
-                                  target_compute_version)
+                                  version_manifest)
 
-    def _do_compute_node(self, context, primitive, target_version):
+    def _do_compute_node(self, context, primitive, version_manifest):
         try:
+            target_version = version_manifest['ComputeNode']
             # NOTE(sbauza): Some drivers (VMware, Ironic) can have multiple
             # nodes for the same service, but for keeping same behaviour,
             # returning only the first elem of the list
@@ -151,7 +152,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         except Exception:
             return
         primitive['compute_node'] = compute.obj_to_primitive(
-            target_version=target_version)
+            target_version=target_version,
+            version_manifest=version_manifest)
 
     @staticmethod
     def _from_db_object(context, service, db_service):
