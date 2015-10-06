@@ -297,7 +297,7 @@ class TestCachedFile(test.NoDBTestCase):
         self.assertNotIn(filename, utils._FILE_CACHE)
 
 
-class RootwrapDaemonTesetCase(test.TestCase):
+class RootwrapDaemonTesetCase(test.NoDBTestCase):
     @mock.patch('oslo_rootwrap.client.Client')
     def test_get_client(self, mock_client):
         mock_conf = mock.MagicMock()
