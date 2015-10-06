@@ -6445,13 +6445,23 @@ class LibvirtDriver(driver.ComputeDriver):
         if not libvirt_utils.is_valid_hostname(secondary_host):
             raise exception.InvalidHostname(hostname=secondary_host)
 
+        disk_id = "colo1"
         nbd_port = 8889
+
         while self._colo_wait_for_nbd(secondary_host, nbd_port):
             time.sleep(0.5)
 
         flaglist = CONF.libvirt.colo_migration_flag.split(',')
         flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
         logical_sum = reduce(lambda x, y: x | y, flagvals)
+
+        child_add_cmd = ("child_add disk1 child.driver=replication"
+                         ",child.mode=primary"
+                         ",child.file.host=" + secondary_host +
+                         ",child.file.port=" + str(nbd_port) +
+                         ",child.file.export=" + disk_id +
+                         ",child.file.driver=nbd,child.ignore-errors=on")
+        ret = self.exec_monitor_command(primary_instance, child_add_cmd)
 
     def _colo_init_secondary(self, secondary_instance, primary_instance):
         disk_id = "colo1b"
