@@ -480,6 +480,11 @@ class DestinationHypervisorTooOld(Invalid):
                 "has been provided.")
 
 
+class ServiceTooOld(Invalid):
+    msg_fmt = _("This service is older than the minimum version "
+                "of the rest of the deployment. Unable to continue. ")
+
+
 class DestinationDiskExists(Invalid):
     msg_fmt = _("The supplied disk path (%(path)s) already exists, "
                 "it is expected not to exist.")
