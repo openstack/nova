@@ -18,25 +18,28 @@ Tests for Consoleauth Code.
 
 """
 
+import mock
 from mox3 import mox
 from oslo_utils import timeutils
 
 from nova.consoleauth import manager
 from nova import context
-from nova import db
 from nova import test
 
 
-class ConsoleauthTestCase(test.TestCase):
+class ConsoleauthTestCase(test.NoDBTestCase):
     """Test Case for consoleauth."""
 
     def setUp(self):
         super(ConsoleauthTestCase, self).setUp()
         self.manager_api = self.manager = manager.ConsoleAuthManager()
         self.context = context.get_admin_context()
-        self.instance = db.instance_create(self.context, {})
+        self.instance_uuid = '00000000-0000-0000-0000-000000000000'
 
-    def test_tokens_expire(self):
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_tokens_expire(self, mock_get):
+        mock_get.return_value = None
+
         # Test that tokens expire correctly.
         self.useFixture(test.TimeOverride())
         token = u'mytok'
@@ -46,7 +49,7 @@ class ConsoleauthTestCase(test.TestCase):
 
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
-                                         self.instance['uuid'])
+                                         self.instance_uuid)
         self.assertTrue(self.manager_api.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager_api.check_token(self.context, token))
@@ -59,7 +62,10 @@ class ConsoleauthTestCase(test.TestCase):
                        'validate_console_port',
                        fake_validate_console_port)
 
-    def test_multiple_tokens_for_instance(self):
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_multiple_tokens_for_instance(self, mock_get):
+        mock_get.return_value = None
+
         tokens = [u"token" + str(i) for i in range(10)]
 
         self._stub_validate_console_port(True)
@@ -67,7 +73,7 @@ class ConsoleauthTestCase(test.TestCase):
         for token in tokens:
             self.manager_api.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
-                                          self.instance['uuid'])
+                                          self.instance_uuid)
 
         for token in tokens:
             self.assertTrue(self.manager_api.check_token(self.context, token))
@@ -77,25 +83,28 @@ class ConsoleauthTestCase(test.TestCase):
         for token in tokens:
             self.manager_api.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
-                                          self.instance['uuid'])
+                                          self.instance_uuid)
         self.manager_api.delete_tokens_for_instance(self.context,
-                self.instance['uuid'])
+                self.instance_uuid)
         stored_tokens = self.manager._get_tokens_for_instance(
-                self.instance['uuid'])
+                self.instance_uuid)
 
         self.assertEqual(len(stored_tokens), 0)
 
         for token in tokens:
             self.assertFalse(self.manager_api.check_token(self.context, token))
 
-    def test_wrong_token_has_port(self):
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_wrong_token_has_port(self, mock_get):
+        mock_get.return_value = None
+
         token = u'mytok'
 
         self._stub_validate_console_port(False)
 
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                         '127.0.0.1', '8080', 'host',
-                                        instance_uuid=self.instance['uuid'])
+                                        instance_uuid=self.instance_uuid)
         self.assertFalse(self.manager_api.check_token(self.context, token))
 
     def test_delete_expired_tokens(self):
@@ -107,16 +116,16 @@ class ConsoleauthTestCase(test.TestCase):
 
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
-                                         self.instance['uuid'])
+                                         self.instance_uuid)
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager_api.check_token(self.context, token))
 
         token1 = u'mytok2'
         self.manager_api.authorize_console(self.context, token1, 'novnc',
                                        '127.0.0.1', '8080', 'host',
-                                       self.instance['uuid'])
+                                       self.instance_uuid)
         stored_tokens = self.manager._get_tokens_for_instance(
-                self.instance['uuid'])
+                self.instance_uuid)
         # when trying to store token1, expired token is removed fist.
         self.assertEqual(len(stored_tokens), 1)
         self.assertEqual(stored_tokens[0], token1)
