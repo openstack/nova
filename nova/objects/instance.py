@@ -615,7 +615,9 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                 except AttributeError:
                     LOG.exception(_LE('No save handler for %s'), field,
                                   instance=self)
-                except db_exc.DBReferenceError:
+                except db_exc.DBReferenceError as exp:
+                    if exp.key != 'instance_uuid':
+                        raise
                     # NOTE(melwitt): This will happen if we instance.save()
                     # before an instance.create() and FK constraint fails.
                     # In practice, this occurs in cells during a delete of

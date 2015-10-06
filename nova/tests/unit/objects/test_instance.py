@@ -1277,12 +1277,13 @@ class _TestInstanceObject(object):
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
-    def test_save_objectfield_missing_instance_row(self):
+    def _test_save_objectfield_fk_constraint_fails(self, foreign_key,
+                                                   expected_exception):
         # NOTE(danms): Do this here and not in the remote test because
         # we're mocking out obj_attr_is_set() without the thing actually
         # being set, which confuses the heck out of the serialization
         # stuff.
-        error = db_exc.DBReferenceError('table', 'constraint', 'key',
+        error = db_exc.DBReferenceError('table', 'constraint', foreign_key,
                                         'key_table')
         # Prevent lazy-loading any fields, results in InstanceNotFound
         attrs = objects.instance.INSTANCE_OPTIONAL_ATTRS
@@ -1298,10 +1299,17 @@ class TestInstanceObject(test_objects._LocalTest,
                 mock_save_field.side_effect = error
                 instance.obj_reset_changes(fields=[field])
                 instance._changed_fields.add(field)
-                self.assertRaises(exception.InstanceNotFound,
-                                  instance.save)
+                self.assertRaises(expected_exception, instance.save)
                 instance.obj_reset_changes(fields=[field])
             _test()
+
+    def test_save_objectfield_missing_instance_row(self):
+        self._test_save_objectfield_fk_constraint_fails(
+                'instance_uuid', exception.InstanceNotFound)
+
+    def test_save_objectfield_reraises_if_not_instance_related(self):
+        self._test_save_objectfield_fk_constraint_fails(
+                'other_foreign_key', db_exc.DBReferenceError)
 
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
