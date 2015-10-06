@@ -6479,9 +6479,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           ",addr=9")
         ret = self.exec_monitor_command(secondary_instance, device_add_cmd)
 
-        host = secondary_instance.host
         port = 8889
-        nbd_start_cmd = "nbd_server_start " + host + ":" + str(port)
+        nbd_start_cmd = "nbd_server_start " + CONF.my_ip + ":" + str(port)
         nbd_add_cmd = "nbd_server_add -w " + reference_id
         ret = self.exec_monitor_command(secondary_instance, nbd_start_cmd)
         ret = self.exec_monitor_command(secondary_instance, nbd_add_cmd)
