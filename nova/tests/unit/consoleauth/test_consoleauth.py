@@ -122,7 +122,7 @@ class ConsoleauthTestCase(test.TestCase):
         self.assertEqual(stored_tokens[0], token1)
 
 
-class ControlauthMemcacheEncodingTestCase(test.TestCase):
+class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ControlauthMemcacheEncodingTestCase, self).setUp()
         self.manager = manager.ConsoleAuthManager()
