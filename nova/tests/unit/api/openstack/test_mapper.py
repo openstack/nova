@@ -30,7 +30,7 @@ class MapperTest(test.NoDBTestCase):
                                openstack_api.ProjectMapper())
         req = webob.Request.blank('/1234/tests')
         resp = req.get_response(app)
-        self.assertEqual(resp.body, 'foo')
+        self.assertEqual(b'foo', resp.body)
         self.assertEqual(resp.status_int, 200)
 
     def test_resource_no_project_prefix(self):
@@ -42,5 +42,5 @@ class MapperTest(test.NoDBTestCase):
                                openstack_api.PlainMapper())
         req = webob.Request.blank('/tests')
         resp = req.get_response(app)
-        self.assertEqual(resp.body, 'foo')
+        self.assertEqual(b'foo', resp.body)
         self.assertEqual(resp.status_int, 200)
