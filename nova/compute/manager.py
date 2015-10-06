@@ -3283,6 +3283,7 @@ class ComputeManager(manager.Manager):
         except Exception as e:
             LOG.exception(_LE("Error trying to Rescue Instance"),
                           instance=instance)
+            self._set_instance_obj_error_state(context, instance)
             raise exception.InstanceNotRescuable(
                 instance_id=instance.uuid,
                 reason=_("Driver Error: %s") % e)

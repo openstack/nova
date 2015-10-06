@@ -2208,7 +2208,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rescue_handle_err(self):
-        # If the driver fails to rescue, instance state should remain the same
+        # If the driver fails to rescue, instance state should got to ERROR
         # and the exception should be converted to InstanceNotRescuable
         inst_obj = self._create_fake_instance_obj()
         self.mox.StubOutWithMock(self.compute, '_get_rescue_image')
@@ -2224,7 +2224,6 @@ class ComputeTestCase(BaseTestCase):
 
         expected_message = ('Instance %s cannot be rescued: '
                             'Driver Error: Try again later' % inst_obj.uuid)
-        inst_obj.vm_state = 'some_random_state'
 
         with testtools.ExpectedException(
                 exception.InstanceNotRescuable, expected_message):
@@ -2233,7 +2232,7 @@ class ComputeTestCase(BaseTestCase):
                     rescue_password='password', rescue_image_ref=None,
                     clean_shutdown=True)
 
-        self.assertEqual('some_random_state', inst_obj.vm_state)
+        self.assertEqual(vm_states.ERROR, inst_obj.vm_state)
 
     @mock.patch.object(image_api.API, "get")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
