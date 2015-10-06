@@ -3946,13 +3946,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # TODO(ORBIT): Temp until quorum is supported
             if utils.ft_enabled(instance) and config.source_device == "disk":
                 if utils.ft_secondary(instance):
-                    qemu_cmdline = ('-drive if=none' +
+                    qemu_cmdline = ('-drive if=none'
                                     ',driver=' + config.driver_format +
                                     ',file=' + config.source_path +
                                     ',id=colo1,cache=none,aio=native')
                 else:
-                    qemu_cmdline = ('-drive if=virtio,id=disk1,driver=quorum' +
-                                    ',read-pattern=fifo,cache=none' +
+                    qemu_cmdline = ('-drive if=virtio,id=disk1,driver=quorum'
+                                    ',read-pattern=fifo,cache=none,addr=9'
                                     ',aio=native,children.0.file.filename=' +
                                     config.source_path +
                                     ',children.0.driver=' +
@@ -6465,11 +6465,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         drive_add_cmd = ("drive_add 0 if=none,id=" + disk_id +
                          ",driver=replication" +
-                         ",mode=secondary,throttling.bps-total-max=70000000" +
+                         ",mode=secondary,throttling.bps-total-max=70000000"
                          ",file.file.filename=" + active_disk +
-                         ",file.driver=qcow2" +
+                         ",file.driver=qcow2"
                          ",file.backing.file.filename=" + hidden_disk +
-                         ",file.backing.driver=qcow2" +
+                         ",file.backing.driver=qcow2"
                          ",file.backing.backing.backing_reference=" +
                          reference_id +
                          ",file.backing.allow-write-backing-file=on")
