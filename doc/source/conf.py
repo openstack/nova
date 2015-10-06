@@ -33,7 +33,6 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.graphviz',
               'oslosphinx',
               "ext.support_matrix",
-              'sphinxcontrib.seqdiag',
               'oslo_config.sphinxconfiggen',
               ]
 
