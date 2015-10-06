@@ -241,6 +241,38 @@ class FindVBDTestCase(stubs.XenAPITestBaseNoDB):
         session.VBD.get_userdevice.assert_called_once_with("a")
 
 
+class IntroduceSRTestCase(stubs.XenAPITestBaseNoDB):
+    @mock.patch.object(volume_utils, '_create_pbd')
+    def test_backend_kind(self, create_pbd):
+        session = mock.Mock()
+        session.product_version = (6, 5, 0)
+        session.call_xenapi.return_value = 'sr_ref'
+        params = {'sr_type': 'iscsi'}
+        sr_uuid = 'sr_uuid'
+        label = 'label'
+        expected_params = {'backend-kind': 'vbd'}
+
+        volume_utils.introduce_sr(session, sr_uuid, label, params)
+        session.call_xenapi.assert_any_call('SR.introduce', sr_uuid,
+                                            label, '', 'iscsi',
+                                            '', False, expected_params)
+
+    @mock.patch.object(volume_utils, '_create_pbd')
+    def test_backend_kind_upstream_fix(self, create_pbd):
+        session = mock.Mock()
+        session.product_version = (7, 0, 0)
+        session.call_xenapi.return_value = 'sr_ref'
+        params = {'sr_type': 'iscsi'}
+        sr_uuid = 'sr_uuid'
+        label = 'label'
+        expected_params = {}
+
+        volume_utils.introduce_sr(session, sr_uuid, label, params)
+        session.call_xenapi.assert_any_call('SR.introduce', sr_uuid,
+                                            label, '', 'iscsi',
+                                            '', False, expected_params)
+
+
 class BootedFromVolumeTestCase(stubs.XenAPITestBaseNoDB):
     def test_booted_from_volume(self):
         session = mock.Mock()
