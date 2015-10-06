@@ -6444,6 +6444,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _colo_init_secondary(self, secondary_instance, primary_instance):
         disk_id = "colo1b"
+        reference_id = "colo1"
         instance_path = libvirt_utils.get_instance_path(secondary_instance)
         active_disk = instance_path + "/active_disk.img"
         hidden_disk = instance_path + "/hidden_disk.img"
@@ -6458,13 +6459,21 @@ class LibvirtDriver(driver.ComputeDriver):
                          ",file.driver=qcow2" +
                          ",file.backing.file.filename=" + hidden_disk +
                          ",file.backing.driver=qcow2" +
-                         ",file.backing.backing.backing_reference=colo1" +
+                         ",file.backing.backing.backing_reference=" +
+                         reference_id +
                          ",file.backing.allow-write-backing-file=on")
         ret = self.exec_monitor_command(secondary_instance, drive_add_cmd)
 
         device_add_cmd = ("device_add virtio-blk-pci,drive=" + disk_id +
                           ",addr=9")
         ret = self.exec_monitor_command(secondary_instance, device_add_cmd)
+
+        host = secondary_instance.host
+        port = 8889
+        nbd_start_cmd = "nbd_server_start " + host + ":" + str(port)
+        nbd_add_cmd = "nbd_server_add -w " + reference_id
+        ret = self.exec_monitor_command(secondary_instance, nbd_start_cmd)
+        ret = self.exec_monitor_command(secondary_instance, nbd_add_cmd)
 
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
