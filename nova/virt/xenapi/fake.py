@@ -121,7 +121,7 @@ def create_network(name_label, bridge):
 def create_vm(name_label, status, **kwargs):
     if status == 'Running':
         domid = random.randrange(1, 1 << 16)
-        resident_on = _db_content['host'].keys()[0]
+        resident_on = list(_db_content['host'])[0]
     else:
         domid = -1
         resident_on = ''
@@ -343,7 +343,7 @@ def _create_sr(table, obj):
     # Forces fake to support iscsi only
     if sr_type != 'iscsi' and sr_type != 'nfs':
         raise Failure(['SR_UNKNOWN_DRIVER', sr_type])
-    host_ref = _db_content['host'].keys()[0]
+    host_ref = list(_db_content['host'])[0]
     sr_ref = _create_object(table, obj[2])
     if sr_type == 'iscsi':
         vdi_ref = create_vdi('', sr_ref)
@@ -854,7 +854,7 @@ class SessionBase(object):
     def _login(self, method, params):
         self._session = str(uuid.uuid4())
         _session_info = {'uuid': str(uuid.uuid4()),
-                         'this_host': _db_content['host'].keys()[0]}
+                         'this_host': list(_db_content['host'])[0]}
         _db_content['session'][self._session] = _session_info
 
     def _logout(self):
