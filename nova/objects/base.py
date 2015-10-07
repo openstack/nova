@@ -249,42 +249,6 @@ class ObjectListBase(ovoo_base.ObjectListBase):
         else:
             return primitive.get(key, default)
 
-    # NOTE(rlrossit): This can get removed after ovo uses both child_versions
-    # and obj_relationships when making the internal objects compatible
-    def obj_make_compatible(self, primitive, target_version):
-        primitives = primitive['objects']
-        target_version = utils.convert_version_to_tuple(target_version)
-        if self.child_versions:
-            child_target_version = self.child_versions.get(target_version,
-                                                           '1.0')
-        else:
-            child_target_version = '1.0'
-            rel_versions = self.obj_relationships['objects']
-            for index, versions in enumerate(rel_versions):
-                my_version, child_version = versions
-                my_version = utils.convert_version_to_tuple(my_version)
-                if target_version < my_version:
-                    if index == 0:
-                        # if the target is before we existed, delete objects
-                        # from the primitive
-                        # (we should never get here, because lists should
-                        # always have an 'objects' field)
-                        del primitive['objects']
-                    else:
-                        # We still don't match, but we'll grab the latest
-                        # child version up to this point
-                        child_target_version = rel_versions[index - 1][1]
-                elif target_version == my_version:
-                    child_target_version = child_version
-                    break
-
-        for index, item in enumerate(self.objects):
-            self.objects[index].obj_make_compatible(
-                self._obj_primitive_field(primitives[index], 'data'),
-                child_target_version)
-            verkey = self._obj_primitive_key('version')
-            primitives[index][verkey] = child_target_version
-
 
 class NovaObjectSerializer(messaging.NoOpSerializer):
     """A NovaObject-aware Serializer.
