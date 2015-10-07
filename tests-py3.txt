@@ -157,16 +157,10 @@ nova.tests.unit.cells.test_cells_state_manager.TestCellsGetCapacity
 nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManager
 nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManagerNToOne
 nova.tests.unit.cmd.test_baseproxy.BaseProxyTestCase
-nova.tests.unit.compute.test_compute.ComputeAPIAggrCallsSchedulerTestCase
 nova.tests.unit.compute.test_compute.ComputeAPITestCase
 nova.tests.unit.compute.test_compute.ComputeInjectedFilesTestCase
-nova.tests.unit.compute.test_compute.ComputePolicyTestCase
-nova.tests.unit.compute.test_compute.ComputeRescheduleResizeOrReraiseTestCase
-nova.tests.unit.compute.test_compute.ComputeReschedulingTestCase
-nova.tests.unit.compute.test_compute.ComputeTestCase
+nova.tests.unit.compute.test_compute.ComputeTestCase.test_finish_resize_with_volumes
 nova.tests.unit.compute.test_compute.ComputeVolumeTestCase
-nova.tests.unit.compute.test_compute.DisabledInstanceTypesTestCase
-nova.tests.unit.compute.test_compute.EvacuateHostTestCase
 nova.tests.unit.compute.test_compute_api.ComputeAPIAPICellUnitTestCase
 nova.tests.unit.compute.test_compute_api.ComputeAPIComputeCellUnitTestCase
 nova.tests.unit.compute.test_compute_api.ComputeAPIUnitTestCase
