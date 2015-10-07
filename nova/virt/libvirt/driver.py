@@ -354,20 +354,33 @@ def patch_tpool_proxy():
 
 patch_tpool_proxy()
 
-# This is effectively the min version for i686/x86_64 + KVM/QEMU
+# For information about when MIN_LIBVIRT_VERSION and
+# NEXT_MIN_LIBVIRT_VERSION can be changed, consult
+#
+#   https://wiki.openstack.org/wiki/LibvirtDistroSupportMatrix
+#
+# Currently this is effectively the min version for i686/x86_64
+# + KVM/QEMU, as other architectures/hypervisors require newer
+# versions. Over time, this will become a common min version
+# for all architectures/hypervisors, as this value rises to
+# meet them.
+#
 # TODO(berrange) find out what min version ppc64 needs as it
 # almost certainly wants something newer than this....
-MIN_LIBVIRT_VERSION = (0, 9, 11)
+MIN_LIBVIRT_VERSION = (0, 10, 2)
+# TODO(berrange): Re-evaluate this at start of each release cycle
+# to decide if we want to plan a future min version bump.
+# MIN_LIBVIRT_VERSION can be updated to match this after
+# NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
+# one cycle
+NEXT_MIN_LIBVIRT_VERSION = (1, 2, 1)
+
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
-# TODO(mriedem): Change MIN_LIB_VERSION to this in the 13.0.0 'M' release.
-NEXT_MIN_LIBVIRT_VERSION = (0, 10, 2)
 # Live snapshot requirements
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
-# block size tuning requirements
-MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit & rebase (feature is detected,
@@ -592,14 +605,13 @@ class LibvirtDriver(driver.ComputeDriver):
                   'libvirt version %s') %
                 self._version_to_string(MIN_LIBVIRT_PARALLELS_VERSION))
 
-        # TODO(mriedem): We plan to move to a minimum required version of
-        # libvirt 0.10.2 in the 13.0.0 'M' release so if we're running with
-        # less than that now, log a warning.
+        # Give the cloud admin a heads up if we are intending to
+        # change the MIN_LIBVIRT_VERSION in the next release.
         if not self._host.has_min_version(NEXT_MIN_LIBVIRT_VERSION):
             LOG.warning(_LW('Running Nova with a libvirt version less than '
                             '%(version)s is deprecated. The required minimum '
                             'version of libvirt will be raised to %(version)s '
-                            'in the 13.0.0 release.'),
+                            'in the next release.'),
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
 
@@ -1108,12 +1120,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         "libvirt hypervisor '%s' does not support custom "
                         "block size") % CONF.libvirt.virt_type
                 raise exception.InvalidHypervisorType(msg)
-
-            if not self._host.has_min_version(MIN_LIBVIRT_BLOCKIO_VERSION):
-                ver = ".".join([str(x) for x in MIN_LIBVIRT_BLOCKIO_VERSION])
-                msg = _("Volume sets block size, but libvirt '%s' or later is "
-                        "required.") % ver
-                raise exception.Invalid(msg)
 
         disk_info = blockinfo.get_info_from_bdm(
             instance, CONF.libvirt.virt_type, image_meta, bdm)
