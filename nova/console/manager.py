@@ -24,6 +24,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _LI
 from nova import manager
+from nova import objects
 from nova import utils
 
 
@@ -58,20 +59,20 @@ class ConsoleProxyManager(manager.Manager):
         self.driver.init_host()
 
     def add_console(self, context, instance_id):
-        instance = self.db.instance_get(context, instance_id)
-        host = instance['host']
-        name = instance['name']
+        instance = objects.Instance.get_by_id(context, instance_id)
+        host = instance.host
+        name = instance.name
         pool = self._get_pool_for_instance_host(context, host)
         try:
             console = self.db.console_get_by_pool_instance(context,
                                                            pool['id'],
-                                                           instance['uuid'])
+                                                           instance.uuid)
         except exception.NotFound:
             LOG.debug('Adding console', instance=instance)
             password = utils.generate_password(8)
             port = self.driver.get_port(context)
             console_data = {'instance_name': name,
-                            'instance_uuid': instance['uuid'],
+                            'instance_uuid': instance.uuid,
                             'password': password,
                             'pool_id': pool['id']}
             if port:
