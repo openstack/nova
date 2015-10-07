@@ -6017,12 +6017,13 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         with conn.begin():
             conn.execute(insert)
             result_delete = conn.execute(delete_statement)
-    except db_exc.DBReferenceError:
+    except db_exc.DBReferenceError as ex:
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.
-        msg = _("IntegrityError detected when archiving table %s") % tablename
-        LOG.warn(msg)
+        LOG.warn(_LW("IntegrityError detected when archiving table "
+                     "%(tablename)s: %(error)s"),
+                 {'tablename': tablename, 'error': six.text_type(ex)})
         return rows_archived
 
     rows_archived = result_delete.rowcount
