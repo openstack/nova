@@ -1256,8 +1256,8 @@ class ComputeMonitorTestCase(BaseTestCase):
             def get_metric_names(self):
                 return set(["cpu.frequency"])
 
-            def get_metric(self, name):
-                return 100, self.NOW_TS
+            def get_metrics(self):
+                return [("cpu.frequency", 100, self.NOW_TS)]
 
         self.tracker.monitors = [FakeCPUMonitor(None)]
         mock_notifier = mock.Mock()
