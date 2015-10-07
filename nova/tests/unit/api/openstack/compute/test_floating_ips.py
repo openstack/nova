@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import uuid
 
 import mock
@@ -122,7 +121,7 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
     def test_floatingip_delete(self):
         req = fakes.HTTPRequest.blank('')
         fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.controller.network_api,
                               'disassociate_floating_ip'),
             mock.patch.object(self.controller.network_api,
@@ -146,11 +145,8 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
     def _test_floatingip_delete_not_found(self, ex,
                                           expect_ex=webob.exc.HTTPNotFound):
         req = fakes.HTTPRequest.blank('')
-        with contextlib.nested(
-            mock.patch.object(self.controller.network_api,
-                              'get_floating_ip',
-                              side_effect=ex)
-            ):
+        with mock.patch.object(self.controller.network_api,
+                               'get_floating_ip', side_effect=ex):
             self.assertRaises(expect_ex,
                               self.controller.delete, req, 1)
 
@@ -239,7 +235,7 @@ class FloatingIpTestV21(test.TestCase):
 
     def test_floatingip_delete(self):
         fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.controller.network_api,
                               'disassociate_floating_ip'),
             mock.patch.object(self.controller.network_api,
@@ -257,11 +253,8 @@ class FloatingIpTestV21(test.TestCase):
 
     def _test_floatingip_delete_not_found(self, ex,
                                           expect_ex=webob.exc.HTTPNotFound):
-        with contextlib.nested(
-            mock.patch.object(self.controller.network_api,
-                              'get_floating_ip',
-                              side_effect=ex)
-            ):
+        with mock.patch.object(self.controller.network_api,
+                               'get_floating_ip', side_effect=ex):
             self.assertRaises(expect_ex,
                               self.controller.delete, self.fake_req, 1)
 

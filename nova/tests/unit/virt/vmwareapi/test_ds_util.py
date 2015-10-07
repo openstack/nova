@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import re
 
 import mock
@@ -46,7 +45,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             self.assertEqual('fake-dc-ref', datacenter)
             return 'fake_delete_task'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
@@ -70,7 +69,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             self.assertEqual('fake-dst-dc-ref', dst_dc_ref)
             return 'fake_copy_task'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
@@ -96,7 +95,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             self.assertEqual('fake-dc-ref', destinationDatacenter)
             return 'fake_move_task'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
@@ -121,7 +120,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             self.assertEqual('fake-dc-ref', dest_datacenter)
             return 'fake_move_task'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
@@ -132,7 +131,7 @@ class DsUtilTestCase(test.NoDBTestCase):
                    mock.call('fake_move_task')])
 
     def test_disk_copy(self):
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               return_value=mock.sentinel.cm)
@@ -148,7 +147,7 @@ class DsUtilTestCase(test.NoDBTestCase):
                     destName='sentinel.dest_ds')
 
     def test_disk_delete(self):
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.session, '_wait_for_task'),
             mock.patch.object(self.session, '_call_method',
                               return_value=mock.sentinel.cm)
@@ -204,7 +203,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             # Should never get here
             self.fail()
 
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.session, '_call_method',
                                   fake_call_method),
                 mock.patch.object(self.session, '_wait_for_task',
@@ -229,7 +228,7 @@ class DsUtilTestCase(test.NoDBTestCase):
             # Should never get here
             self.fail()
 
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.session, '_call_method',
                                   fake_call_method),
                 mock.patch.object(self.session, '_wait_for_task',

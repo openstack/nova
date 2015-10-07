@@ -18,7 +18,6 @@
 """Tests for compute service."""
 
 import base64
-import contextlib
 import datetime
 import operator
 import sys
@@ -407,7 +406,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         def fake_attach(*args, **kwargs):
             raise test.TestingException
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(driver_block_device.DriverVolumeBlockDevice,
                               'attach'),
             mock.patch.object(cinder.API, 'unreserve_volume'),
@@ -425,7 +424,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance_obj()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_driver_detach_volume'),
             mock.patch.object(self.compute.volume_api, 'detach'),
             mock.patch.object(objects.BlockDeviceMapping,
@@ -5118,7 +5117,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.BlockDeviceMappingList,
                 'get_by_instance_uuid', return_value='fake_bdms'),
             mock.patch.object(
@@ -5742,7 +5741,7 @@ class ComputeTestCase(BaseTestCase):
         migrate_data = {'migration': mock.MagicMock()}
 
         # creating mocks
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'post_live_migration'),
             mock.patch.object(self.compute.driver, 'unfilter_instance'),
             mock.patch.object(self.compute.network_api,
@@ -5804,7 +5803,7 @@ class ComputeTestCase(BaseTestCase):
                     'volume_id': 'fake-volume-id'}),
                  ])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.network_api,
                               'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
@@ -6562,7 +6561,7 @@ class ComputeTestCase(BaseTestCase):
         instances.append(fake_instance.fake_db_instance(**new_instance))
 
         # creating mocks
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.db.sqlalchemy.api,
                               'instance_get_all_by_filters',
                               return_value=instances),
@@ -7262,7 +7261,7 @@ class ComputeTestCase(BaseTestCase):
             self.context, [root_volume, blank_volume1, blank_volume2,
                            ephemeral, swap])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_default_root_device_name',
                               return_value='/dev/vda'),
             mock.patch.object(objects.BlockDeviceMapping, 'save'),
@@ -9273,7 +9272,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         rpcapi = compute_rpcapi.ComputeAPI
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(rpcapi, 'get_serial_console',
                               return_value=fake_connect_info),
             mock.patch.object(self.compute_api.consoleauth_rpcapi,
@@ -9310,7 +9309,7 @@ class ComputeAPITestCase(BaseTestCase):
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_access_url'}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute_api.compute_rpcapi,
                               'get_mks_console',
                               return_value=fake_connect_info),
@@ -9389,7 +9388,7 @@ class ComputeAPITestCase(BaseTestCase):
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'attach_interface'),
             mock.patch.object(self.compute.network_api,
                               'allocate_port_for_instance'),
@@ -9429,7 +9428,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'detach_interface',
                 side_effect=exception.NovaException('detach_failed')),
             mock.patch.object(self.compute.network_api,
@@ -9456,7 +9455,7 @@ class ComputeAPITestCase(BaseTestCase):
         # to make sure we catch those in the compute manager and not just
         # NovaExceptions.
         error = neutron_exceptions.PortNotFoundClient()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'detach_interface'),
             mock.patch.object(self.compute.network_api,
                               'deallocate_port_for_instance',
@@ -9482,7 +9481,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         fake_volume = {'id': 'fake-volume-id'}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(cinder.API, 'get', return_value=fake_volume),
             mock.patch.object(cinder.API, 'check_attach'),
             mock.patch.object(cinder.API, 'reserve_volume'),
@@ -9672,7 +9671,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'connection_info': '{"test": "test"}'})
         bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'detach_volume',
                               side_effect=exception.DiskNotFound('sdb')),
             mock.patch.object(objects.BlockDeviceMapping,
@@ -10687,7 +10686,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
         agg.add_host = mock.Mock()
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(objects.Service, 'get_by_compute_host'),
                 mock.patch.object(objects.Aggregate, 'get_by_id',
                                   return_value=agg)):
@@ -10699,7 +10698,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
         agg.delete_host = mock.Mock()
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(objects.Service, 'get_by_compute_host'),
                 mock.patch.object(objects.Aggregate, 'get_by_id',
                                   return_value=agg)):

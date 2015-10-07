@@ -156,7 +156,6 @@ nova.tests.unit.cells.test_cells_scheduler.CellsSchedulerTestCase
 nova.tests.unit.cells.test_cells_state_manager.TestCellsGetCapacity
 nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManager
 nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManagerNToOne
-nova.tests.unit.cert.test_rpcapi.CertRpcAPITestCase
 nova.tests.unit.cmd.test_baseproxy.BaseProxyTestCase
 nova.tests.unit.compute.test_compute.ComputeAPIAggrCallsSchedulerTestCase
 nova.tests.unit.compute.test_compute.ComputeAPITestCase
@@ -180,9 +179,7 @@ nova.tests.unit.compute.test_compute_mgr.ComputeManagerUnitTestCase
 nova.tests.unit.compute.test_compute_utils.UsageInfoTestCase
 nova.tests.unit.compute.test_compute_xen.ComputeXenTestCase
 nova.tests.unit.compute.test_host_api.ComputeHostAPICellsTestCase
-nova.tests.unit.compute.test_host_api.ComputeHostAPITestCase
 nova.tests.unit.compute.test_resources.BaseTestCase
-nova.tests.unit.compute.test_rpcapi.ComputeRpcAPITestCase
 nova.tests.unit.compute.test_shelve.ShelveComputeManagerTestCase
 nova.tests.unit.compute.test_tracker.TestInitComputeNode
 nova.tests.unit.compute.test_tracker.TestInstanceClaim
@@ -194,10 +191,8 @@ nova.tests.unit.conductor.test_conductor.ConductorTaskAPITestCase
 nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase
 nova.tests.unit.conductor.test_conductor.ConductorTaskTestCase
 nova.tests.unit.conductor.test_conductor.ConductorTestCase
-nova.tests.unit.console.test_rpcapi.ConsoleRpcAPITestCase
 nova.tests.unit.console.test_websocketproxy.NovaProxyRequestHandlerBaseTestCase
 nova.tests.unit.consoleauth.test_consoleauth.ControlauthMemcacheEncodingTestCase
-nova.tests.unit.consoleauth.test_rpcapi.ConsoleAuthRpcAPITestCase
 nova.tests.unit.db.test_migrations.TestNovaMigrationsMySQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsPostgreSQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsSQLite
@@ -219,7 +214,6 @@ nova.tests.unit.network.test_manager.FloatingIPTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.network.test_manager.VlanNetworkTestCase
 nova.tests.unit.network.test_neutronv2.TestNeutronv2WithMock
-nova.tests.unit.network.test_rpcapi.NetworkRpcAPITestCase
 nova.tests.unit.pci.test_manager.PciDevTrackerTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsWithTagsTestCase
@@ -346,7 +340,6 @@ nova.tests.unit.virt.vmwareapi.test_imagecache.ImageCacheManagerTestCase
 nova.tests.unit.virt.vmwareapi.test_images.VMwareImagesTestCase
 nova.tests.unit.virt.vmwareapi.test_network_util.GetNetworkWithTheNameTestCase
 nova.tests.unit.virt.vmwareapi.test_read_write_util.ReadWriteUtilTestCase
-nova.tests.unit.virt.vmwareapi.test_vif.VMwareVifTestCase
 nova.tests.unit.virt.vmwareapi.test_vim_util.VMwareVIMUtilTestCase
 nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilGetHostRefTestCase
 nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilTestCase

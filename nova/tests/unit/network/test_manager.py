@@ -15,8 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import contextlib
-
 import fixtures
 import mock
 from mox3 import mox
@@ -712,7 +710,7 @@ class FlatNetworkTestCase(test.TestCase):
         mock_vif_get.return_value = vif_obj.VirtualInterface(
             instance_uuid='fake-uuid', id=1)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.network, '_setup_network_on_host'),
             mock.patch.object(self.network, 'instance_dns_manager'),
             mock.patch.object(self.network,
@@ -764,7 +762,7 @@ class FlatNetworkTestCase(test.TestCase):
         mock_instance_get.return_value = instance
         mock_vif_get.return_value = None
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.network, '_setup_network_on_host'),
             mock.patch.object(self.network, 'instance_dns_manager'),
             mock.patch.object(self.network,
@@ -1726,7 +1724,7 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return vifs[0]
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(db, 'virtual_interface_get', vif_get),
             mock.patch.object(
                 utils, 'execute',

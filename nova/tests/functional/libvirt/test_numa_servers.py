@@ -13,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import mock
 
 import fixtures
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from nova import test
 from nova.tests.functional.test_servers import ServersTestBase
 from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
@@ -137,7 +137,7 @@ class NUMAServersTest(ServersTestBase):
         extra_spec = {'hw:numa_nodes': '2'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         host_pass_mock = self._get_topology_filter_spy()
-        with contextlib.nested(
+        with test.nested(
             mock.patch('nova.virt.libvirt.host.Host.get_connection',
                        return_value=fake_connection),
             mock.patch('nova.scheduler.filters'
@@ -160,7 +160,7 @@ class NUMAServersTest(ServersTestBase):
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         host_pass_mock = self._get_topology_filter_spy()
-        with contextlib.nested(
+        with test.nested(
             mock.patch('nova.virt.libvirt.host.Host.get_connection',
                        return_value=fake_connection),
             mock.patch('nova.scheduler.filters'

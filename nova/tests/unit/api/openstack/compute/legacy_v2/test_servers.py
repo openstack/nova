@@ -17,7 +17,6 @@
 
 import base64
 import collections
-import contextlib
 import datetime
 import urllib
 import uuid
@@ -1751,7 +1750,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True, status='active')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(fake._FakeImageService, 'show',
                               side_effect=fake_get_image),
             mock.patch.object(self.controller.compute_api, 'rebuild',

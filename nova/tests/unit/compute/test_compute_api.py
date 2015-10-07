@@ -13,7 +13,6 @@
 
 """Unit tests for compute API."""
 
-import contextlib
 import copy
 import datetime
 
@@ -434,7 +433,7 @@ class _ComputeAPIUnitTestMixIn(object):
         params = dict(task_state=None, vm_state=vm_state,
                       display_name='fake-name')
         instance = self._create_instance_obj(params=params)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute_api, 'is_volume_backed_instance',
                               return_value=boot_from_volume),
             mock.patch.object(self.compute_api, '_create_image',
@@ -509,7 +508,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_shelve_offload(self, clean_shutdown=True):
         params = dict(task_state=None, vm_state=vm_states.SHELVED)
         instance = self._create_instance_obj(params=params)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api.compute_rpcapi,
                               'shelve_offload_instance')
@@ -1063,7 +1062,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_local_delete_without_info_cache(self):
         inst = self._create_instance_obj()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(inst, 'destroy'),
             mock.patch.object(self.context, 'elevated'),
             mock.patch.object(self.compute_api.network_api,
@@ -2321,7 +2320,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_volume = {"volume_image_metadata":
                        {"min_ram": 256, "min_disk": 128, "foo": "bar"}}
         fake_snapshot = {"volume_id": "1"}
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute_api.volume_api, 'get',
                     return_value=fake_volume),
                 mock.patch.object(self.compute_api.volume_api, 'get_snapshot',
@@ -2761,7 +2760,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      rescue_image=None, clean_shutdown=True):
         instance = self._create_instance_obj(params={'vm_state': vm_state})
         bdms = []
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid', return_value=bdms),
             mock.patch.object(self.compute_api, 'is_volume_backed_instance',
@@ -2815,7 +2814,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_unrescue(self):
         instance = self._create_instance_obj(
             params={'vm_state': vm_states.RESCUED})
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_rpcapi,

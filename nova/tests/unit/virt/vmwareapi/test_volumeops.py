@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import mock
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
@@ -71,7 +69,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 self.assertFalse(hasattr(virtual_device_config,
                                  'fileOperation'))
             return 'fake_configure_task'
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self._session, '_wait_for_task'),
             mock.patch.object(self._session, '_call_method',
                               fake_call_method)
@@ -127,7 +125,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         vmdk_info = vm_util.VmdkInfo('fake-path', constants.ADAPTER_TYPE_IDE,
                                      constants.DISK_TYPE_PREALLOCATED, 1024,
                                      'fake-device')
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref'),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(vm_util, 'get_vmdk_info',
@@ -164,7 +162,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
         vmdk_info = vm_util.VmdkInfo('fake-path', 'lsiLogic', 'thin',
                                      1024, 'fake-device')
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref',
@@ -218,7 +216,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         vmdk_info = vm_util.VmdkInfo('fake-path', constants.ADAPTER_TYPE_IDE,
                                      constants.DISK_TYPE_PREALLOCATED, 1024,
                                      'fake-device')
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
@@ -258,7 +256,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                      device)
         adapter_type = adapter_type or default_adapter_type
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(vm_util, 'get_vmdk_info',
@@ -290,7 +288,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         default_adapter_type = constants.DEFAULT_ADAPTER_TYPE
         adapter_type = adapter_type or default_adapter_type
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_iscsi_discover_target',
                               return_value=(mock.sentinel.device_name,
@@ -448,7 +446,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         hba = vmwareapi_fake.HostInternetScsiHba(iqn)
         hbas = mock.MagicMock(HostHostBusAdapter=[hba])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_host_ref_for_vm',
                               return_value=host_mor),
             mock.patch.object(self._volumeops._session, '_call_method',
@@ -471,7 +469,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         hba = vmwareapi_fake.HostInternetScsiHba(iqn)
         hbas = mock.MagicMock(HostHostBusAdapter=[hba])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_host_ref_for_vm',
                               side_effect=exception.InstanceNotFound('fake')),
             mock.patch.object(vm_util, 'get_host_ref',
@@ -501,7 +499,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         url = 'test_url'
         self.flags(host_ip=url, group='vmware')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_iscsi_get_host_iqn',
                               return_value=iqn)

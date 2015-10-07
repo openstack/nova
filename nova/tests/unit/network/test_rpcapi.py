@@ -17,7 +17,6 @@ Unit Tests for nova.network.rpcapi
 """
 
 import collections
-import contextlib
 
 import mock
 from mox3 import mox
@@ -217,7 +216,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         rpcapi = network_rpcapi.NetworkAPI()
         cast_mock = mock.Mock()
         cctxt_mock = mock.Mock(cast=cast_mock)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(rpcapi.client, 'can_send_version',
                               return_value=False),
             mock.patch.object(rpcapi.client, 'prepare',
@@ -246,7 +245,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         rpcapi = network_rpcapi.NetworkAPI()
         call_mock = mock.Mock()
         cctxt_mock = mock.Mock(call=call_mock)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(rpcapi.client, 'can_send_version',
                               return_value=False),
             mock.patch.object(rpcapi.client, 'prepare',

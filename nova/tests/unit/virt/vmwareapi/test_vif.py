@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import mock
 from oslo_config import cfg
 from oslo_vmware import exceptions as vexc
@@ -279,7 +277,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
             if method == 'AddPortGroup':
                 raise vexc.AlreadyExistsException()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
             mock.patch.object(vm_util, 'get_host_ref'),
             mock.patch.object(self.session, '_call_method',
@@ -294,7 +292,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
             if method == 'AddPortGroup':
                 raise vexc.VMwareDriverException()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
             mock.patch.object(vm_util, 'get_host_ref'),
             mock.patch.object(self.session, '_call_method',
@@ -311,7 +309,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
             if method == 'get_object_property':
                 raise vexc.InvalidPropertyException()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_host_ref'),
             mock.patch.object(self.session, '_call_method',
                               fake_call_method),
