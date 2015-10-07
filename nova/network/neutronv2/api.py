@@ -729,7 +729,8 @@ class API(base_api.NetworkAPI):
             context, instance, networks=nets_in_requested_order,
             port_ids=ports_in_requested_order,
             admin_client=admin_client,
-            preexisting_port_ids=preexisting_port_ids)
+            preexisting_port_ids=preexisting_port_ids,
+            update_cells=True)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
