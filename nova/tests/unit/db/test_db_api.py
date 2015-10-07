@@ -1847,6 +1847,17 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                    self.ctxt.user_id)
         self.assertEqual(1, usage.in_use)
 
+    def test_security_group_ensure_default_until_refresh(self):
+        self.flags(until_refresh=2)
+        self.ctxt.project_id = 'fake'
+        self.ctxt.user_id = 'fake'
+        db.security_group_ensure_default(self.ctxt)
+        usage = db.quota_usage_get(self.ctxt,
+                                   self.ctxt.project_id,
+                                   'security_groups',
+                                   self.ctxt.user_id)
+        self.assertEqual(2, usage.until_refresh)
+
     @mock.patch.object(db.sqlalchemy.api, '_security_group_get_by_names')
     def test_security_group_ensure_default_called_concurrently(self, sg_mock):
         # make sure NotFound is always raised here to trick Nova to insert the
