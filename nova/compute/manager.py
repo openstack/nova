@@ -259,12 +259,18 @@ def errors_out_migration(function):
     def decorated_function(self, context, *args, **kwargs):
         try:
             return function(self, context, *args, **kwargs)
-        except Exception:
+        except Exception as ex:
             with excutils.save_and_reraise_exception():
                 migration = kwargs['migration']
-                status = migration.status
-                if status not in ['migrating', 'post-migrating']:
-                    return
+
+                # NOTE(rajesht): If InstanceNotFound error is thrown from
+                # decorated function, migration status should be set to
+                # 'error', without checking current migration status.
+                if not isinstance(ex, exception.InstanceNotFound):
+                    status = migration.status
+                    if status not in ['migrating', 'post-migrating']:
+                        return
+
                 migration.status = 'error'
                 try:
                     migration.save(context.elevated())
@@ -3534,6 +3540,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
+    @errors_out_migration
     @wrap_instance_fault
     def revert_resize(self, context, instance, migration, reservations):
         """Destroys the new instance on the destination machine.
@@ -3590,6 +3597,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
+    @errors_out_migration
     @wrap_instance_fault
     def finish_revert_resize(self, context, instance, reservations, migration):
         """Finishes the second half of reverting a resize.
@@ -6351,3 +6359,47 @@ class ComputeManager(manager.Manager):
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
+
+    @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
+    def _cleanup_incomplete_migrations(self, context):
+        """Delete instance files on failed resize/revert-resize operation
+
+        During resize/revert-resize operation, if that instance gets deleted
+        in-between then instance files might remain either on source or
+        destination compute node because of race condition.
+        """
+        LOG.debug('Cleaning up deleted instances with incomplete migration ')
+        migration_filters = {'host': CONF.host,
+                             'status': 'error'}
+        migrations = objects.MigrationList.get_by_filters(context,
+                                                          migration_filters)
+
+        if not migrations:
+            return
+
+        inst_uuid_from_migrations = set([migration.instance_uuid for migration
+                                         in migrations])
+
+        inst_filters = {'deleted': True, 'soft_deleted': False,
+                        'uuid': inst_uuid_from_migrations}
+        attrs = ['info_cache', 'security_groups', 'system_metadata']
+        with utils.temporary_mutation(context, read_deleted='yes'):
+            instances = objects.InstanceList.get_by_filters(
+                context, inst_filters, expected_attrs=attrs, use_slave=True)
+
+        for instance in instances:
+            if instance.host != CONF.host:
+                for migration in migrations:
+                    if instance.uuid == migration.instance_uuid:
+                        # Delete instance files if not cleanup properly either
+                        # from the source or destination compute nodes when
+                        # the instance is deleted during resizing.
+                        self.driver.delete_instance_files(instance)
+                        try:
+                            migration.status = 'failed'
+                            migration.save(context.elevated())
+                        except exception.MigrationNotFound:
+                            LOG.warning(_LW("Migration %s is not found."),
+                                        migration.id, context=context,
+                                        instance=instance)
+                        break
