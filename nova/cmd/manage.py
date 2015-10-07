@@ -949,8 +949,7 @@ class DbCommands(object):
             if max_rows < 0:
                 print(_("Must supply a positive value for max_rows"))
                 return(1)
-        admin_context = context.get_admin_context()
-        db.archive_deleted_rows(admin_context, max_rows)
+        db.archive_deleted_rows(max_rows)
 
     @args('--delete', action='store_true', dest='delete',
           help='If specified, automatically delete any records found where '

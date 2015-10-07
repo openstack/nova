@@ -5964,9 +5964,9 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
             raise exception.TaskNotRunning(task_name=task_name, host=host)
 
 
-def archive_deleted_rows_for_table(context, tablename, max_rows):
+def archive_deleted_rows_for_table(tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
-    shadow table. The context argument is only used for the decorator.
+    shadow table.
 
     :returns: number of rows archived
     """
@@ -6032,20 +6032,19 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     return rows_archived
 
 
-def archive_deleted_rows(context, max_rows=None):
+def archive_deleted_rows(max_rows=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
     :returns: Number of rows archived.
     """
-    # The context argument is only used for the decorator.
     tablenames = []
     for model_class in six.itervalues(models.__dict__):
         if hasattr(model_class, "__tablename__"):
             tablenames.append(model_class.__tablename__)
     rows_archived = 0
     for tablename in tablenames:
-        rows_archived += archive_deleted_rows_for_table(context, tablename,
+        rows_archived += archive_deleted_rows_for_table(tablename,
                                          max_rows=max_rows - rows_archived)
         if rows_archived >= max_rows:
             break
