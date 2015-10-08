@@ -50,9 +50,11 @@ Nova Db
 
     Sync the main database up to the most recent version. This is the standard way to create the db as well.
 
-``nova-manage db archive_deleted_rows [--max_rows <number>]``
+``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose]``
 
-    Move deleted rows from production tables to shadow tables.
+    Move deleted rows from production tables to shadow tables. Specifying
+    --verbose will print the results of the archive operation for any tables
+    that were changed.
 
 ``nova-manage db null_instance_uuid_scan [--delete]``
 

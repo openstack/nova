@@ -6035,19 +6035,34 @@ def archive_deleted_rows(max_rows=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
-    :returns: Number of rows archived.
+    :returns: dict that maps table name to number of rows archived from that
+              table, for example:
+
+    ::
+
+        {
+            'instances': 5,
+            'block_device_mapping': 5,
+            'pci_devices': 2,
+        }
+
     """
+    table_to_rows_archived = {}
     tablenames = []
     for model_class in six.itervalues(models.__dict__):
         if hasattr(model_class, "__tablename__"):
             tablenames.append(model_class.__tablename__)
-    rows_archived = 0
+    total_rows_archived = 0
     for tablename in tablenames:
-        rows_archived += _archive_deleted_rows_for_table(tablename,
-                                         max_rows=max_rows - rows_archived)
-        if rows_archived >= max_rows:
+        rows_archived = _archive_deleted_rows_for_table(
+            tablename, max_rows=max_rows - total_rows_archived)
+        total_rows_archived += rows_archived
+        # Only report results for tables that had updates.
+        if rows_archived:
+            table_to_rows_archived[tablename] = rows_archived
+        if total_rows_archived >= max_rows:
             break
-    return rows_archived
+    return table_to_rows_archived
 
 
 ####################

@@ -8022,7 +8022,7 @@ class Ec2TestCase(test.TestCase):
                           self.ctxt, 100500)
 
 
-class ArchiveTestCase(test.TestCase):
+class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
@@ -8107,7 +8107,9 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        db.archive_deleted_rows(max_rows=2)
+        results = db.archive_deleted_rows(max_rows=2)
+        expected = dict(instance_id_mappings=2)
+        self._assertEqualObjects(expected, results)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 4 left in main
         self.assertEqual(len(rows), 4)
@@ -8115,7 +8117,9 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 2 in shadow
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        db.archive_deleted_rows(max_rows=2)
+        results = db.archive_deleted_rows(max_rows=2)
+        expected = dict(instance_id_mappings=2)
+        self._assertEqualObjects(expected, results)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 2 left in main
         self.assertEqual(len(rows), 2)
@@ -8123,7 +8127,9 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 4 in shadow
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        db.archive_deleted_rows(max_rows=2)
+        results = db.archive_deleted_rows(max_rows=2)
+        expected = dict()
+        self._assertEqualObjects(expected, results)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we still have 2 left in main
         self.assertEqual(len(rows), 2)
