@@ -65,7 +65,7 @@ class InstanceEventHandler(object):
         self._vmutils = utilsfactory.get_vmutils()
         self._listener = self._vmutils.get_vm_power_state_change_listener(
             timeframe=CONF.hyperv.power_state_check_timeframe,
-            filtered_states=self._TRANSITION_MAP.keys())
+            filtered_states=list(self._TRANSITION_MAP.keys()))
 
         self._polling_interval = CONF.hyperv.power_state_event_polling_interval
         self._state_change_callback = state_change_callback

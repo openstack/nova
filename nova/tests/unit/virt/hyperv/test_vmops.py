@@ -20,6 +20,7 @@ from os_win import exceptions as os_win_exc
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import units
+import six
 import unittest2
 
 from nova import exception
@@ -1003,7 +1004,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                               mock.call(mock.sentinel.FAKE_PATH)]
             fake_path_exists.assert_has_calls(expected_calls, any_order=False)
 
-    @mock.patch("__builtin__.open")
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch("os.path.exists")
     def test_get_console_output_exception(self, fake_path_exists, fake_open):
         fake_vm = mock.MagicMock()

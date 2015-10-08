@@ -62,7 +62,7 @@ class HostOps(object):
         topology = dict()
         topology['sockets'] = len(processors)
         topology['cores'] = processors[0]['NumberOfCores']
-        topology['threads'] = (processors[0]['NumberOfLogicalProcessors'] /
+        topology['threads'] = (processors[0]['NumberOfLogicalProcessors'] //
                                processors[0]['NumberOfCores'])
         cpu_info['topology'] = topology
 
@@ -76,16 +76,16 @@ class HostOps(object):
 
     def _get_memory_info(self):
         (total_mem_kb, free_mem_kb) = self._hostutils.get_memory_info()
-        total_mem_mb = total_mem_kb / 1024
-        free_mem_mb = free_mem_kb / 1024
+        total_mem_mb = total_mem_kb // 1024
+        free_mem_mb = free_mem_kb // 1024
         return (total_mem_mb, free_mem_mb, total_mem_mb - free_mem_mb)
 
     def _get_local_hdd_info_gb(self):
         drive = os.path.splitdrive(self._pathutils.get_instances_dir())[0]
         (size, free_space) = self._hostutils.get_volume_info(drive)
 
-        total_gb = size / units.Gi
-        free_gb = free_space / units.Gi
+        total_gb = size // units.Gi
+        free_gb = free_space // units.Gi
         used_gb = total_gb - free_gb
         return (total_gb, free_gb, used_gb)
 
@@ -184,4 +184,4 @@ class HostOps(object):
         # value is same as in libvirt
         return "%s up %s,  0 users,  load average: 0, 0, 0" % (
                    str(time.strftime("%H:%M:%S")),
-                   str(datetime.timedelta(milliseconds=long(tick_count64))))
+                   str(datetime.timedelta(milliseconds=int(tick_count64))))
