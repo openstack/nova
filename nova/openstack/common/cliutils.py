@@ -186,16 +186,17 @@ def print_list(objs, fields, formatters=None, sortby_index=0,
         print(encodeutils.safe_encode(pt.get_string(**kwargs)))
 
 
-def print_dict(dct, dict_property="Property", wrap=0):
+def print_dict(dct, dict_property="Property", wrap=0, dict_value='Value'):
     """Print a `dict` as a table of two columns.
 
     :param dct: `dict` to print
     :param dict_property: name of the first column
     :param wrap: wrapping for the second column
+    :param dict_value: header label for the value (second) column
     """
-    pt = prettytable.PrettyTable([dict_property, 'Value'])
+    pt = prettytable.PrettyTable([dict_property, dict_value])
     pt.align = 'l'
-    for k, v in six.iteritems(dct):
+    for k, v in sorted(dct.items()):
         # convert dict to str to check length
         if isinstance(v, dict):
             v = six.text_type(v)
