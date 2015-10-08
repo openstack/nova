@@ -262,8 +262,16 @@ creation of the new server for the user. The only exception for this rule is
 directly. Variable naming, such as the ``$free_ram_mb`` example above, should
 be based on those attributes.
 
-The |RetryFilter| filters hosts that have already been attempted for scheduling.
-It only passes hosts that have not been previously attempted.
+The |RetryFilter| filters hosts that have already been attempted for
+scheduling. It only passes hosts that have not been previously attempted. If a
+compute node is raising an exception when spawning an instance, then the
+compute manager will reschedule it by adding the failing host to a retry
+dictionary so that the RetryFilter will not accept it as a possible
+destination. That means that if all of your compute nodes are failing, then the
+RetryFilter will return 0 hosts and the scheduler will raise a NoValidHost
+exception even if the problem is related to 1:N compute nodes. If you see that
+case in the scheduler logs, then your problem is most likely related to a
+compute problem and you should check the compute logs.
 
 The |TrustedFilter| filters hosts based on their trust.  Only passes hosts
 that match the trust requested in the ``extra_specs`` for the flavor. The key
