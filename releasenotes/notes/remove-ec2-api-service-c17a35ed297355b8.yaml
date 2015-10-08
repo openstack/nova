@@ -1,0 +1,7 @@
+---
+other:
+  - Nova's EC2 API support which was deprecated in Kilo
+    (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) is
+    removed from Mitaka. This has been replaced by the new ec2-api project
+    (http://git.openstack.org/cgit/openstack/ec2-api/).
+
