@@ -8026,7 +8026,6 @@ class ArchiveTestCase(test.TestCase):
 
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
-        self.context = context.get_admin_context()
         self.engine = get_engine()
         self.conn = self.engine.connect()
         self.instance_id_mappings = models.InstanceIdMapping.__table__
@@ -8108,7 +8107,7 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        db.archive_deleted_rows(self.context, max_rows=2)
+        db.archive_deleted_rows(max_rows=2)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 4 left in main
         self.assertEqual(len(rows), 4)
@@ -8116,7 +8115,7 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 2 in shadow
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        db.archive_deleted_rows(self.context, max_rows=2)
+        db.archive_deleted_rows(max_rows=2)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 2 left in main
         self.assertEqual(len(rows), 2)
@@ -8124,7 +8123,7 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 4 in shadow
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        db.archive_deleted_rows(self.context, max_rows=2)
+        db.archive_deleted_rows(max_rows=2)
         rows = self.conn.execute(qiim).fetchall()
         # Verify we still have 2 left in main
         self.assertEqual(len(rows), 2)
@@ -8178,7 +8177,7 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
+        db.archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 4)
@@ -8186,7 +8185,7 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
+        db.archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -8194,7 +8193,7 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
+        db.archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -8219,7 +8218,7 @@ class ArchiveTestCase(test.TestCase):
                         self.shadow_dns_domains.c.domain == uuidstr0)
         rows = self.conn.execute(qsdd).fetchall()
         self.assertEqual(len(rows), 0)
-        db.archive_deleted_rows(self.context, max_rows=1)
+        db.archive_deleted_rows(max_rows=1)
         rows = self.conn.execute(qdd).fetchall()
         self.assertEqual(len(rows), 0)
         rows = self.conn.execute(qsdd).fetchall()
@@ -8251,13 +8250,13 @@ class ArchiveTestCase(test.TestCase):
         result = self.conn.execute(ins_stmt)
         result.inserted_primary_key[0]
         # The first try to archive console_pools should fail, due to FK.
-        num = db.archive_deleted_rows_for_table(self.context, "console_pools")
+        num = db.archive_deleted_rows_for_table("console_pools")
         self.assertEqual(num, 0)
         # Then archiving consoles should work.
-        num = db.archive_deleted_rows_for_table(self.context, "consoles")
+        num = db.archive_deleted_rows_for_table("consoles")
         self.assertEqual(num, 1)
         # Then archiving console_pools should work.
-        num = db.archive_deleted_rows_for_table(self.context, "console_pools")
+        num = db.archive_deleted_rows_for_table("console_pools")
         self.assertEqual(num, 1)
         self._assert_shadow_tables_empty_except(
             'shadow_console_pools',
@@ -8300,7 +8299,7 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(rows), 0)
         # Archive 7 rows, which should be 4 in one table and 3 in the other.
-        db.archive_deleted_rows(self.context, max_rows=7)
+        db.archive_deleted_rows(max_rows=7)
         # Verify we have 5 left in the two main tables combined
         iim_rows = self.conn.execute(qiim).fetchall()
         i_rows = self.conn.execute(qi).fetchall()
@@ -8310,7 +8309,7 @@ class ArchiveTestCase(test.TestCase):
         si_rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(siim_rows) + len(si_rows), 7)
         # Archive the remaining deleted rows.
-        db.archive_deleted_rows(self.context, max_rows=1)
+        db.archive_deleted_rows(max_rows=1)
         # Verify we have 4 total left in both main tables.
         iim_rows = self.conn.execute(qiim).fetchall()
         i_rows = self.conn.execute(qi).fetchall()
@@ -8320,7 +8319,7 @@ class ArchiveTestCase(test.TestCase):
         si_rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(siim_rows) + len(si_rows), 8)
         # Try to archive more, but there are no deleted rows left.
-        db.archive_deleted_rows(self.context, max_rows=500)
+        db.archive_deleted_rows(max_rows=500)
         # Verify we have 4 total left in both main tables.
         iim_rows = self.conn.execute(qiim).fetchall()
         i_rows = self.conn.execute(qi).fetchall()
