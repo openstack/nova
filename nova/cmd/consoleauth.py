@@ -28,6 +28,8 @@ from nova import version
 
 CONF = cfg.CONF
 
+CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
+
 
 def main():
     config.parse_args(sys.argv)
