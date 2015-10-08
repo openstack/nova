@@ -6017,9 +6017,7 @@ def archive_deleted_rows_for_table(tablename, max_rows):
         with conn.begin():
             conn.execute(insert)
             result_delete = conn.execute(delete_statement)
-    except db_exc.DBError:
-        # TODO(ekudryashova): replace by DBReferenceError when db layer
-        # raise it.
+    except db_exc.DBReferenceError:
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.
