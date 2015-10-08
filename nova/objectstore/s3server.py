@@ -184,11 +184,11 @@ class BaseRequestHandler(object):
     def render_xml(self, value):
         assert isinstance(value, dict) and len(value) == 1
         self.set_header("Content-Type", "application/xml; charset=UTF-8")
-        name = value.keys()[0]
+        name = list(value.keys())[0]
         parts = []
         parts.append('<' + utils.utf8(name) +
                      ' xmlns="http://doc.s3.amazonaws.com/2006-03-01">')
-        self._render_parts(value.values()[0], parts)
+        self._render_parts(list(value.values())[0], parts)
         parts.append('</' + utils.utf8(name) + '>')
         self.finish('<?xml version="1.0" encoding="UTF-8"?>\n' +
                     ''.join(parts))

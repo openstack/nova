@@ -43,7 +43,7 @@ def find_network_with_bridge(session, bridge):
             (bridge, bridge))
     networks = session.network.get_all_records_where(expr)
     if len(networks) == 1:
-        return networks.keys()[0]
+        return list(networks.keys())[0]
     elif len(networks) > 1:
         raise exception.NovaException(
                 _('Found non-unique network for bridge %s') % bridge)

@@ -3204,7 +3204,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     def test_remove_host_from_aggregate_error(self):
         # Ensure we can remove a host from an aggregate even if in error.
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
+        fake_zone = list(values.keys())[0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         # let's mock the fact that the aggregate is ready!

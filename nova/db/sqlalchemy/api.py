@@ -2202,7 +2202,7 @@ def _exact_instance_filter(query, filters, legal_keys):
             column_attr = getattr(model, key)
             if isinstance(value, list):
                 for item in value:
-                    for k, v in item.iteritems():
+                    for k, v in item.items():
                         query = query.filter(column_attr.any(key=k))
                         query = query.filter(column_attr.any(value=v))
 

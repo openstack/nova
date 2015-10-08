@@ -262,7 +262,7 @@ class SimpleTenantUsageController(object):
                                                tenant_id=tenant_id,
                                                detailed=True)
         if len(usage):
-            usage = usage[0]
+            usage = list(usage)[0]
         else:
             usage = {}
         return {'tenant_usage': usage}

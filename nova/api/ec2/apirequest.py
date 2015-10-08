@@ -72,7 +72,7 @@ class APIRequest(object):
         for key in args.keys():
             # NOTE(vish): Turn numeric dict keys into lists
             if isinstance(args[key], dict):
-                if args[key] != {} and args[key].keys()[0].isdigit():
+                if args[key] != {} and list(args[key].keys())[0].isdigit():
                     s = args[key].items()
                     s.sort()
                     args[key] = [v for k, v in s]

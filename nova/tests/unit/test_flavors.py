@@ -188,7 +188,7 @@ class InstanceTypeToolsTest(test.TestCase):
         _instance_type_p = obj_base.obj_to_primitive(_instance_type)
 
         props = flavors.system_metadata_flavor_props.keys()
-        for key in instance_type_p.keys():
+        for key in list(instance_type_p.keys()):
             if key not in props:
                 del instance_type_p[key]
 
