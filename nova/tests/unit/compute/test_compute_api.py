@@ -740,7 +740,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 test.TestingException("Unexpected error"))
 
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
-        inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
             self.compute_api.notifier, self.context, inst,
             '%s.start' % delete_type)
@@ -792,7 +791,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(inst.info_cache, 'delete')
         self.mox.StubOutWithMock(self.compute_api.network_api,
                                  'deallocate_for_instance')
         self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
@@ -1029,7 +1027,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(inst, 'destroy')
         self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(inst.info_cache, 'delete')
         self.mox.StubOutWithMock(self.compute_api.network_api,
                                  'deallocate_for_instance')
         self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
@@ -1039,7 +1036,6 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'terminate_connection')
         self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'destroy')
 
-        inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
                     inst, 'delete.start')

@@ -1801,14 +1801,6 @@ class API(base.Base):
         else:
             LOG.warning(_LW("instance's host %s is down, deleting from "
                             "database"), instance.host, instance=instance)
-        if instance.info_cache is not None:
-            instance.info_cache.delete()
-        else:
-            # NOTE(yoshimatsu): Avoid AttributeError if instance.info_cache
-            # is None. When the root cause that instance.info_cache becomes
-            # None is fixed, the log level should be reconsidered.
-            LOG.warning(_LW("Info cache for instance could not be found. "
-                            "Ignore."), instance=instance)
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.start" % delete_type)
 
