@@ -623,6 +623,7 @@ class API(base.Base):
             'name': instance.display_name,
             'count': index + 1,
         }
+        original_name = instance.display_name
         try:
             new_name = (CONF.multi_instance_display_name_template %
                         params)
@@ -632,7 +633,10 @@ class API(base.Base):
             new_name = instance.display_name
         instance.display_name = new_name
         if not instance.get('hostname', None):
-            instance.hostname = utils.sanitize_hostname(new_name)
+            if utils.sanitize_hostname(original_name) == "":
+                instance.hostname = self._default_host_name(instance.uuid)
+            else:
+                instance.hostname = utils.sanitize_hostname(new_name)
         instance.save()
         return instance
 
@@ -1361,10 +1365,15 @@ class API(base.Base):
             # Otherwise, it will be built after the template based
             # display_name.
             hostname = display_name
-            instance.hostname = utils.sanitize_hostname(hostname)
+            default_hostname = self._default_host_name(instance.uuid)
+            instance.hostname = utils.sanitize_hostname(hostname,
+                                                        default_hostname)
 
     def _default_display_name(self, instance_uuid):
         return "Server %s" % instance_uuid
+
+    def _default_host_name(self, instance_uuid):
+        return "Server-%s" % instance_uuid
 
     def _populate_instance_for_create(self, context, instance, image,
                                       index, security_groups, instance_type):

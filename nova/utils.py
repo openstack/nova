@@ -570,8 +570,28 @@ def make_dev_path(dev, partition=None, base='/dev'):
     return path
 
 
-def sanitize_hostname(hostname):
-    """Return a hostname which conforms to RFC-952 and RFC-1123 specs."""
+def sanitize_hostname(hostname, default_name=None):
+    """Return a hostname which conforms to RFC-952 and RFC-1123 specs except
+       the length of hostname.
+
+       Window, Linux, and Dnsmasq has different limitation:
+
+       Windows: 255 (net_bios limits to 15, but window will truncate it)
+       Linux: 64
+       Dnsmasq: 63
+
+       Due to nova-network will leverage dnsmasq to set hostname, so we chose
+       63.
+
+       """
+
+    def truncate_hostname(name):
+        if len(name) > 63:
+            LOG.warning(_LW("Hostname %(hostname)s is longer than 63, "
+                            "truncate it to %(truncated_name)s"),
+                            {'hostname': name, 'truncated_name': name[:63]})
+        return name[:63]
+
     if isinstance(hostname, unicode):
         hostname = hostname.encode('latin-1', 'ignore')
 
@@ -579,8 +599,12 @@ def sanitize_hostname(hostname):
     hostname = re.sub('[^\w.-]+', '', hostname)
     hostname = hostname.lower()
     hostname = hostname.strip('.-')
+    # NOTE(eliqiao): set hostname to default_display_name to avoid
+    # empty hostname
+    if hostname == "" and default_name is not None:
+        return truncate_hostname(default_name)
 
-    return hostname
+    return truncate_hostname(hostname)
 
 
 def read_cached_file(filename, cache_info, reload_func=None):
