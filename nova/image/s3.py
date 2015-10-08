@@ -24,7 +24,6 @@ import tarfile
 import tempfile
 
 import boto.s3.connection
-import eventlet
 from lxml import etree
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -387,7 +386,7 @@ class S3ImageService(object):
                 LOG.info(_LI("Image %s was deleted underneath us"), image_uuid)
                 return
 
-        eventlet.spawn_n(delayed_create)
+        utils.spawn_n(delayed_create)
 
         return image
 
