@@ -444,17 +444,27 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_diagnostics(self, instance):
-        """Return data about VM diagnostics.
+        """Return diagnostics data about the given instance.
 
-        :param instance: nova.objects.instance.Instance
+        :param nova.objects.instance.Instance instance:
+            The instance to which the diagnostic data should be returned.
+
+        :return: Has a big overlap to the return value of the newer interface
+            :func:`get_instance_diagnostics`
+        :rtype: dict
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_instance_diagnostics(self, instance):
-        """Return data about VM diagnostics.
+        """Return diagnostics data about the given instance.
 
-        :param instance: nova.objects.instance.Instance
+        :param nova.objects.instance.Instance instance:
+            The instance to which the diagnostic data should be returned.
+
+        :return: Has a big overlap to the return value of the older interface
+            :func:`get_diagnostics`
+        :rtype: nova.virt.diagnostics.Diagnostics
         """
         raise NotImplementedError()
 
@@ -490,26 +500,58 @@ class ComputeDriver(object):
 
     def swap_volume(self, old_connection_info, new_connection_info,
                     instance, mountpoint, resize_to):
-        """Replace the disk attached to the instance.
+        """Replace the volume attached to the given `instance`.
 
-        :param instance: nova.objects.instance.Instance
-        :param resize_to: This parameter is used to indicate the new volume
-                          size when the new volume lager than old volume.
-                          And the units is Gigabyte.
+        :param dict old_connection_info:
+            The volume for this connection gets detached from the given
+            `instance`.
+        :param dict new_connection_info:
+            The volume for this connection gets attached to the given
+            'instance'.
+        :param nova.objects.instance.Instance instance:
+            The instance whose volume gets replaced by another one.
+        :param str mountpoint:
+            The mountpoint in the instance where the volume for
+            `old_connection_info` is attached to.
+        :param int resize_to:
+            If the new volume is larger than the old volume, it gets resized
+            to the given size (in Gigabyte) of `resize_to`.
+
+        :return: None
         """
         raise NotImplementedError()
 
     def attach_interface(self, instance, image_meta, vif):
-        """Attach an interface to the instance.
+        """Use hotplug to add a network interface to a running instance.
 
-        :param instance: nova.objects.instance.Instance
+        The counter action to this is :func:`detach_interface`.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which will get an additional network interface.
+        :param dict image_meta:
+            A dictionary which describes metadata of the image of the instance.
+        :param nova.network.model.NetworkInfo vif:
+            The object which has the information about the interface to attach.
+
+        :raise nova.exception.NovaException: If the attach fails.
+
+        :return: None
         """
         raise NotImplementedError()
 
     def detach_interface(self, instance, vif):
-        """Detach an interface from the instance.
+        """Use hotunplug to remove a network interface from a running instance.
 
-        :param instance: nova.objects.instance.Instance
+        The counter action to this is :func:`attach_interface`.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which gets a network interface removed.
+        :param nova.network.model.NetworkInfo vif:
+            The object which has the information about the interface to detach.
+
+        :raise nova.exception.NovaException: If the detach fails.
+
+        :return: None
         """
         raise NotImplementedError()
 
@@ -520,10 +562,23 @@ class ComputeDriver(object):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
 
-        :param instance: nova.objects.instance.Instance
-        :param timeout: time to wait for GuestOS to shutdown
-        :param retry_interval: How often to signal guest while
-                               waiting for it to shutdown
+        :param nova.objects.instance.Instance instance:
+            The instance whose disk should be migrated.
+        :param str dest:
+            The IP address of the destination host.
+        :param nova.objects.flavor.Flavor flavor:
+            The flavor of the instance whose disk get migrated.
+        :param nova.network.model.NetworkInfo network_info:
+            The network information of the given `instance`.
+        :param dict block_device_info:
+            Information about the block devices.
+        :param int timeout:
+            The time in seconds to wait for the guest OS to shutdown.
+        :param int retry_interval:
+            How often to signal guest while waiting for it to shutdown.
+
+        :return: A list of disk information dicts in JSON format.
+        :rtype: str
         """
         raise NotImplementedError()
 
@@ -548,7 +603,7 @@ class ComputeDriver(object):
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
-        """Completes a resize.
+        """Completes a resize/migration.
 
         :param context: the context for the migration/resize
         :param migration: the migrate/resize information
@@ -568,7 +623,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def confirm_migration(self, migration, instance, network_info):
-        """Confirms a resize, destroying the source VM.
+        """Confirms a resize/migration, destroying the source VM.
 
         :param instance: nova.objects.instance.Instance
         """
@@ -577,7 +632,7 @@ class ComputeDriver(object):
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
-        """Finish reverting a resize.
+        """Finish reverting a resize/migration.
 
         :param context: the context for the finish_revert_migration
         :param instance: nova.objects.instance.Instance being migrated/resized
@@ -590,37 +645,73 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def pause(self, instance):
-        """Pause the specified instance.
+        """Pause the given instance.
 
-        :param instance: nova.objects.instance.Instance
+        A paused instance doesn't use CPU cycles of the host anymore. The
+        state of the VM could be stored in the memory or storage space of the
+        host, depending on the underlying hypervisor technology.
+        A "stronger" version of `pause` is :func:'suspend'.
+        The counter action for `pause` is :func:`unpause`.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which should be paused.
+
+        :return: None
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def unpause(self, instance):
-        """Unpause paused VM instance.
+        """Unpause the given paused instance.
 
-        :param instance: nova.objects.instance.Instance
+        The paused instance gets unpaused and will use CPU cycles of the
+        host again. The counter action for 'unpause' is :func:`pause`.
+        Depending on the underlying hypervisor technology, the guest has the
+        same state as before the 'pause'.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which should be unpaused.
+
+        :return: None
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def suspend(self, context, instance):
-        """suspend the specified instance.
+        """Suspend the specified instance.
 
-        :param context: the context for the suspend
-        :param instance: nova.objects.instance.Instance
+        A suspended instance doesn't use CPU cycles or memory of the host
+        anymore. The state of the instance could be persisted on the host
+        and allocate storage space this way. A "softer" way of `suspend`
+        is :func:`pause`. The counter action for `suspend` is :func:`resume`.
+
+        :param nova.context.RequestContext context:
+            The context for the suspend.
+        :param nova.objects.instance.Instance instance:
+            The instance to suspend.
+
+        :return: None
         """
         raise NotImplementedError()
 
     def resume(self, context, instance, network_info, block_device_info=None):
-        """resume the specified instance.
+        """resume the specified suspended instance.
 
-        :param context: the context for the resume
-        :param instance: nova.objects.instance.Instance being resumed
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
-        :param block_device_info: instance volume block device info
+        The suspended instance gets resumed and will use CPU cycles and memory
+        of the host again. The counter action for 'resume' is :func:`suspend`.
+        Depending on the underlying hypervisor technology, the guest has the
+        same state as before the 'suspend'.
+
+        :param nova.context.RequestContext context:
+            The context for the resume.
+        :param nova.objects.instance.Instance instance:
+            The suspended instance to resume.
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the resume.
+        :param dict block_device_info:
+            Instance volume block device info.
+
+        :return: None
         """
         raise NotImplementedError()
 
@@ -674,23 +765,43 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def inject_nmi(self, instance):
-        """Inject an NMI to the specified instance.
+        """Inject an non-maskable interruption (NMI) into the given instance.
 
-        :param instance: nova objects.instance.Instance
+        Stalling instances can be triggered to dump the crash data. How the
+        guest OS reacts in details, depends on the configuration of it.
+
+        :param nova.objects.instance.Instance instance:
+            The instance where the NMI should be injected to.
+
+        :return: None
         """
         raise NotImplementedError()
 
     def soft_delete(self, instance):
         """Soft delete the specified instance.
 
-        :param instance: nova.objects.instance.Instance
+        A soft-deleted instance doesn't allocate any resources anymore, but is
+        still available as a database entry. The counter action :func:`restore`
+        uses the database entry to create a new instance based on that.
+
+        :param nova.objects.instance.Instance instance:
+            The instance to soft-delete.
+
+        :return: None
         """
         raise NotImplementedError()
 
     def restore(self, instance):
-        """Restore the specified instance.
+        """Restore the specified soft-deleted instance.
 
-        :param instance: nova.objects.instance.Instance
+        The restored instance will be automatically booted. The counter action
+        for `restore` is :func:`soft_delete`.
+
+        :param nova.objects.instance.Instance instance:
+            The soft-deleted instance which should be restored from the
+            soft-deleted data.
+
+        :return: None
         """
         raise NotImplementedError()
 
@@ -1047,48 +1158,111 @@ class ComputeDriver(object):
         pass
 
     def poll_rebooting_instances(self, timeout, instances):
-        """Poll for rebooting instances
+        """Perform a reboot on all given 'instances'.
 
-        :param timeout: the currently configured timeout for considering
-                        rebooting instances to be stuck
-        :param instances: instances that have been in rebooting state
-                          longer than the configured timeout
+        Reboots the given `instances` which are longer in the rebooting state
+        than `timeout` seconds.
+
+        :param int timeout:
+            The timeout (in seconds) for considering rebooting instances
+            to be stuck.
+        :param list instances:
+            A list of nova.objects.instance.Instance objects that have been
+            in rebooting state longer than the configured timeout.
+
+        :return: None
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def host_power_action(self, action):
-        """Reboots, shuts down or powers up the host."""
+        """Reboots, shuts down or powers up the host.
+
+        :param str action:
+            The action the host should perform. The valid actions are:
+            ""startup", "shutdown" and "reboot".
+
+        :return: The result of the power action
+        :rtype: : str
+        """
+
         raise NotImplementedError()
 
     def host_maintenance_mode(self, host, mode):
-        """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation.
+        """Start/Stop host maintenance window.
+
+        On start, it triggers the migration of all instances to other hosts.
+        Consider the combination with :func:`set_host_enabled`.
+
+        :param str host:
+            The name of the host whose maintenance mode should be changed.
+        :param bool mode:
+            If `True`, go into maintenance mode. If `False`, leave the
+            maintenance mode.
+
+        :return: "on_maintenance" if switched to maintenance mode or
+                 "off_maintenance" if maintenance mode got left.
+        :rtype: str
         """
+
         raise NotImplementedError()
 
     def set_host_enabled(self, enabled):
-        """Sets the specified host's ability to accept new instances."""
+        """Sets the ability of this host to accept new instances.
+
+        :param bool enabled:
+            If this is `True`, the host will accept new instances. If it is
+            `False`, the host won't accept new instances.
+
+        :return: If the host can accept further instances, return "enabled",
+                 if further instances shouldn't be scheduled to this host,
+                 return "disabled".
+        :rtype: str
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_host_uptime(self):
-        """Returns the result of calling "uptime" on the target host."""
+        """Returns the result of calling the Linux command `uptime` on this
+        host.
+
+        :return: A text which contains the uptime of this host since the
+                 last boot.
+        :rtype: str
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks.
+        """Plug virtual interfaces (VIFs) into the given `instance` at
+        instance boot time.
 
-        :param instance: nova.objects.instance.Instance
+        The counter action is :func:`unplug_vifs`.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which gets VIFs plugged.
+        :param nova.network.model.NetworkInfo network_info:
+            The object which contains information about the VIFs to plug.
+
+        :return: None
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks.
+        # NOTE(markus_z): 2015-08-18
+        # The compute manager doesn't use this interface, which seems odd
+        # since the manager should be the controlling thing here.
+        """Unplug virtual interfaces (VIFs) from networks.
 
-        :param instance: nova.objects.instance.Instance
+        The counter action is :func:`plug_vifs`.
+
+        :param nova.objects.instance.Instance instance:
+            The instance which gets VIFs unplugged.
+        :param nova.network.model.NetworkInfo network_info:
+            The object which contains information about the VIFs to unplug.
+
+        :return: None
         """
         raise NotImplementedError()
 
@@ -1205,12 +1379,40 @@ class ComputeDriver(object):
         pass
 
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
-        """Add a compute host to an aggregate."""
+        """Add a compute host to an aggregate.
+
+        The counter action to this is :func:`remove_from_aggregate`
+
+        :param nova.context.RequestContext context:
+            The security context.
+        :param nova.objects.aggregate.Aggregate aggregate:
+            The aggregate which should add the given `host`
+        :param str host:
+            The name of the host to add to the the given `aggregate`.
+        :param dict kwargs:
+            A free-form thingy...
+
+        :return: None
+        """
         # NOTE(jogo) Currently only used for XenAPI-Pool
         raise NotImplementedError()
 
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
-        """Remove a compute host from an aggregate."""
+        """Remove a compute host from an aggregate.
+
+        The counter action to this is :func:`add_to_aggregate`
+
+        :param nova.context.RequestContext context:
+            The security context.
+        :param nova.objects.aggregate.Aggregate aggregate:
+            The aggregate which should remove the given `host`
+        :param str host:
+            The name of the host to remove from the the given `aggregate`.
+        :param dict kwargs:
+            A free-form thingy...
+
+        :return: None
+        """
         raise NotImplementedError()
 
     def undo_aggregate_operation(self, context, op, aggregate,
@@ -1327,10 +1529,14 @@ class ComputeDriver(object):
                                create_info):
         """Snapshots volumes attached to a specified instance.
 
-        :param context: request context
-        :param instance: nova.objects.instance.Instance that has the volume
-               attached
-        :param volume_id: Volume to be snapshotted
+        The counter action to this is :func:`volume_snapshot_delete`
+
+        :param nova.context.RequestContext context:
+            The security context.
+        :param nova.objects.instance.Instance  instance:
+            The instance that has the volume attached
+        :param uuid volume_id:
+            Volume to be snapshotted
         :param create_info: The data needed for nova to be able to attach
                to the volume.  This is the same data format returned by
                Cinder's initialize_connection() API call.  In the case of
@@ -1343,17 +1549,25 @@ class ComputeDriver(object):
 
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
-        """Snapshots volumes attached to a specified instance.
+        """Deletes a snapshot of a volume attached to a specified instance.
 
-        :param context: request context
-        :param instance: nova.objects.instance.Instance that has the volume
-               attached
-        :param volume_id: Attached volume associated with the snapshot
-        :param snapshot_id: The snapshot to delete.
-        :param delete_info: Volume backend technology specific data needed to
-               be able to complete the snapshot.  For example, in the case of
-               qcow2 backed snapshots, this would include the file being
-               merged, and the file being merged into (if appropriate).
+        The counter action to this is :func:`volume_snapshot_create`
+
+        :param nova.context.RequestContext context:
+            The security context.
+        :param nova.objects.instance.Instance instance:
+            The instance that has the volume attached.
+        :param uuid volume_id:
+            Attached volume associated with the snapshot
+        :param uuid snapshot_id:
+            The snapshot to delete.
+        :param dict delete_info:
+            Volume backend technology specific data needed to be able to
+            complete the snapshot.  For example, in the case of qcow2 backed
+            snapshots, this would include the file being merged, and the file
+            being merged into (if appropriate).
+
+        :return: None
         """
         raise NotImplementedError()
 
