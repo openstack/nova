@@ -8177,7 +8177,7 @@ class ArchiveTestCase(test.TestCase):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        db.archive_deleted_rows_for_table(tablename, max_rows=2)
+        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 4)
@@ -8185,7 +8185,7 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        db.archive_deleted_rows_for_table(tablename, max_rows=2)
+        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -8193,7 +8193,7 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        db.archive_deleted_rows_for_table(tablename, max_rows=2)
+        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2)
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -8250,13 +8250,16 @@ class ArchiveTestCase(test.TestCase):
         result = self.conn.execute(ins_stmt)
         result.inserted_primary_key[0]
         # The first try to archive console_pools should fail, due to FK.
-        num = db.archive_deleted_rows_for_table("console_pools")
+        num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
+                                                             max_rows=None)
         self.assertEqual(num, 0)
         # Then archiving consoles should work.
-        num = db.archive_deleted_rows_for_table("consoles")
+        num = sqlalchemy_api._archive_deleted_rows_for_table("consoles",
+                                                             max_rows=None)
         self.assertEqual(num, 1)
         # Then archiving console_pools should work.
-        num = db.archive_deleted_rows_for_table("console_pools")
+        num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
+                                                             max_rows=None)
         self.assertEqual(num, 1)
         self._assert_shadow_tables_empty_except(
             'shadow_console_pools',
