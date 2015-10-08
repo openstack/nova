@@ -107,10 +107,8 @@ networks = [network_fields]
 
 def fake_floating_ip_allocate_address(context, project_id, pool,
                                       auto_assigned=False):
-    ips = filter(lambda i: i['fixed_ip_id'] is None and
-                           i['project_id'] is None and
-                           i['pool'] == pool,
-                 floating_ips)
+    ips = [i for i in floating_ips if i['fixed_ip_id'] is None and
+           i['project_id'] is None and i['pool'] == pool]
     if not ips:
         raise exception.NoMoreFloatingIps()
     ips[0]['project_id'] = project_id
@@ -119,16 +117,14 @@ def fake_floating_ip_allocate_address(context, project_id, pool,
 
 
 def fake_floating_ip_deallocate(context, address):
-    ips = filter(lambda i: i['address'] == address,
-                 floating_ips)
+    ips = [i for i in floating_ips if i['address'] == address]
     if ips:
         ips[0]['project_id'] = None
         ips[0]['auto_assigned'] = False
 
 
 def fake_floating_ip_disassociate(context, address):
-    ips = filter(lambda i: i['address'] == address,
-                 floating_ips)
+    ips = [i for i in floating_ips if i['address'] == address]
     if ips:
         fixed_ip_address = None
         if ips[0]['fixed_ip']:
@@ -140,10 +136,8 @@ def fake_floating_ip_disassociate(context, address):
 
 def fake_floating_ip_fixed_ip_associate(context, floating_address,
                                         fixed_address, host):
-    float = filter(lambda i: i['address'] == floating_address,
-                   floating_ips)
-    fixed = filter(lambda i: i['address'] == fixed_address,
-                   fixed_ips)
+    float = [i for i in floating_ips if i['address'] == floating_address]
+    fixed = [i for i in fixed_ips if i['address'] == fixed_address]
     if float and fixed:
         float[0]['fixed_ip'] = fixed[0]
         float[0]['fixed_ip_id'] = fixed[0]['id']
@@ -161,16 +155,14 @@ def fake_floating_ip_get_by_address(context, address):
     if isinstance(address, FakeModel):
         # NOTE(tr3buchet): yo dawg, i heard you like addresses
         address = address['address']
-    ips = filter(lambda i: i['address'] == address,
-                 floating_ips)
+    ips = [i for i in floating_ips if i['address'] == address]
     if not ips:
         raise exception.FloatingIpNotFoundForAddress(address=address)
     return FakeModel(ips[0])
 
 
 def fake_fixed_ip_associate(context, address, instance_id):
-    ips = filter(lambda i: i['address'] == address,
-                 fixed_ips)
+    ips = [i for i in fixed_ips if i['address'] == address]
     if not ips:
         raise exception.NoMoreFixedIps(net='fake_net')
     ips[0]['instance'] = True
@@ -178,9 +170,8 @@ def fake_fixed_ip_associate(context, address, instance_id):
 
 
 def fake_fixed_ip_associate_pool(context, network_id, instance_id):
-    ips = filter(lambda i: (i['network_id'] == network_id or
-                            i['network_id'] is None) and not i['instance'],
-                 fixed_ips)
+    ips = [i for i in fixed_ips if not i['instance'] and
+           (i['network_id'] == network_id or i['network_id'] is None)]
     if not ips:
         raise exception.NoMoreFixedIps(net=network_id)
     ips[0]['instance'] = True
@@ -197,8 +188,7 @@ def fake_fixed_ip_create(context, values):
 
 
 def fake_fixed_ip_disassociate(context, address):
-    ips = filter(lambda i: i['address'] == address,
-                 fixed_ips)
+    ips = [i for i in fixed_ips if i['address'] == address]
     if ips:
         ips[0]['instance_id'] = None
         ips[0]['instance'] = None
@@ -215,28 +205,25 @@ def fake_fixed_ip_get_all(context):
 
 
 def fake_fixed_ip_get_by_instance(context, instance_uuid):
-    ips = filter(lambda i: i['instance_uuid'] == instance_uuid,
-                 fixed_ips)
+    ips = [i for i in fixed_ips if i['instance_uuid'] == instance_uuid]
     return [FakeModel(i) for i in ips]
 
 
 def fake_fixed_ip_get_by_address(context, address):
-    ips = filter(lambda i: i['address'] == address,
-                 fixed_ips)
+    ips = [i for i in fixed_ips if i['address'] == address]
     if ips:
         return FakeModel(ips[0])
 
 
 def fake_fixed_ip_update(context, address, values):
-    ips = filter(lambda i: i['address'] == address,
-                 fixed_ips)
+    ips = [i for i in fixed_ips if i['address'] == address]
     fif = copy.deepcopy(fixed_ip_fields)
     if ips:
         for key in values:
             ips[0][key] = values[key]
             if key == 'virtual_interface_id':
-                vif = filter(lambda x: x['id'] == values[key],
-                             virtual_interfacees)
+                vif = [v for v in virtual_interfacees
+                       if v['id'] == values[key]]
                 if not vif:
                     continue
                 fif['virtual_interface'] = FakeModel(vif[0])
@@ -274,9 +261,8 @@ def fake_virtual_interface_get_by_instance(context, instance_id):
 def fake_virtual_interface_get_by_instance_and_network(context,
                                                        instance_id,
                                                        network_id):
-    vif = filter(lambda m: m['instance_id'] == instance_id and
-                           m['network_id'] == network_id,
-                 virtual_interfacees)
+    vif = [v for v in virtual_interfacees if v['instance_id'] == instance_id
+           and v['network_id'] == network_id]
     if not vif:
         return None
     return FakeModel(vif[0])
@@ -291,7 +277,7 @@ def fake_network_create_safe(context, values):
 
 
 def fake_network_get(context, network_id):
-    net = filter(lambda n: n['id'] == network_id, networks)
+    net = [n for n in networks if n['id'] == network_id]
     if not net:
         return None
     return FakeModel(net[0])
@@ -302,19 +288,19 @@ def fake_network_get_all(context):
 
 
 def fake_network_get_all_by_host(context, host):
-    nets = filter(lambda n: n['host'] == host, networks)
+    nets = [n for n in networks if n['host'] == host]
     return [FakeModel(n) for n in nets]
 
 
 def fake_network_set_host(context, network_id, host_id):
-    nets = filter(lambda n: n['id'] == network_id, networks)
+    nets = [n for n in networks if n['id'] == network_id]
     for net in nets:
         net['host'] = host_id
     return host_id
 
 
 def fake_network_update(context, network_id, values):
-    nets = filter(lambda n: n['id'] == network_id, networks)
+    nets = [n for n in networks if n['id'] == network_id]
     for net in nets:
         for key in values:
             net[key] = values[key]

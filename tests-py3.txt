@@ -197,7 +197,8 @@ nova.tests.unit.keymgr.test_key.SymmetricKeyTestCase
 nova.tests.unit.keymgr.test_mock_key_mgr.MockKeyManagerTestCase
 nova.tests.unit.keymgr.test_single_key_mgr.SingleKeyManagerTestCase
 nova.tests.unit.network.test_api.ApiTestCase
-nova.tests.unit.network.test_linux_net.LinuxNetworkTestCase
+nova.tests.unit.network.test_linux_net.LinuxNetworkTestCase.test_get_dhcp_leases_for_nw00
+nova.tests.unit.network.test_linux_net.LinuxNetworkTestCase.test_get_dhcp_leases_for_nw01
 nova.tests.unit.network.test_manager.AllocateTestCase
 nova.tests.unit.network.test_manager.CommonNetworkTestCase
 nova.tests.unit.network.test_manager.FlatDHCPNetworkTestCase
@@ -229,7 +230,6 @@ nova.tests.unit.test_metadata.MetadataPasswordTestCase
 nova.tests.unit.test_metadata.MetadataTestCase
 nova.tests.unit.test_metadata.OpenStackMetadataTestCase
 nova.tests.unit.test_nova_manage.CellCommandsTestCase
-nova.tests.unit.test_nova_manage.FixedIpCommandsTestCase
 nova.tests.unit.test_objectstore.S3APITestCase
 nova.tests.unit.test_pipelib.PipelibTest
 nova.tests.unit.test_policy.AdminRolePolicyTestCase

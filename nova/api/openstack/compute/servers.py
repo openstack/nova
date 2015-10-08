@@ -92,8 +92,7 @@ class ServersController(wsgi.Controller):
         if 'server' not in robj.obj:
             return robj
 
-        link = filter(lambda l: l['rel'] == 'self',
-                      robj.obj['server']['links'])
+        link = [l for l in robj.obj['server']['links'] if l['rel'] == 'self']
         if link:
             robj['Location'] = utils.utf8(link[0]['href'])
 

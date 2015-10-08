@@ -251,8 +251,8 @@ class IptablesTable(object):
             self.remove_chains.add(name)
         chain_set.remove(name)
         if not wrap:
-            self.remove_rules += filter(lambda r: r.chain == name, self.rules)
-        self.rules = filter(lambda r: r.chain != name, self.rules)
+            self.remove_rules += [r for r in self.rules if r.chain == name]
+        self.rules = [r for r in self.rules if r.chain != name]
 
         if wrap:
             jump_snippet = '-j %s-%s' % (binary_name, name)
@@ -260,9 +260,9 @@ class IptablesTable(object):
             jump_snippet = '-j %s' % (name,)
 
         if not wrap:
-            self.remove_rules += filter(lambda r: jump_snippet in r.rule,
-                                        self.rules)
-        self.rules = filter(lambda r: jump_snippet not in r.rule, self.rules)
+            self.remove_rules += [r for r in self.rules
+                                  if jump_snippet in r.rule]
+        self.rules = [r for r in self.rules if jump_snippet not in r.rule]
 
     def add_rule(self, chain, rule, wrap=True, top=False):
         """Add a rule to the table.
@@ -319,7 +319,7 @@ class IptablesTable(object):
         if isinstance(regex, six.string_types):
             regex = re.compile(regex)
         num_rules = len(self.rules)
-        self.rules = filter(lambda r: not regex.match(str(r)), self.rules)
+        self.rules = [r for r in self.rules if not regex.match(str(r))]
         removed = num_rules - len(self.rules)
         if removed > 0:
             self.dirty = True
@@ -500,26 +500,26 @@ class IptablesManager(object):
             current_lines = fake_table
 
         # Remove any trace of our rules
-        new_filter = filter(lambda line: binary_name not in line,
-                            current_lines)
+        new_filter = [line for line in current_lines
+                      if binary_name not in line]
 
         top_rules = []
         bottom_rules = []
 
         if CONF.iptables_top_regex:
             regex = re.compile(CONF.iptables_top_regex)
-            temp_filter = filter(lambda line: regex.search(line), new_filter)
+            temp_filter = [line for line in new_filter if regex.search(line)]
             for rule_str in temp_filter:
-                new_filter = filter(lambda s: s.strip() != rule_str.strip(),
-                                    new_filter)
+                new_filter = [s for s in new_filter
+                              if s.strip() != rule_str.strip()]
             top_rules = temp_filter
 
         if CONF.iptables_bottom_regex:
             regex = re.compile(CONF.iptables_bottom_regex)
-            temp_filter = filter(lambda line: regex.search(line), new_filter)
+            temp_filter = [line for line in new_filter if regex.search(line)]
             for rule_str in temp_filter:
-                new_filter = filter(lambda s: s.strip() != rule_str.strip(),
-                    new_filter)
+                new_filter = [s for s in new_filter
+                              if s.strip() != rule_str.strip()]
             bottom_rules = temp_filter
 
         seen_chains = False
@@ -552,12 +552,11 @@ class IptablesManager(object):
                 # ignore [packet:byte] counts at beginning of line
                 if rule_str.startswith('['):
                     rule_str = rule_str.split(']', 1)[1]
-                dup_filter = filter(lambda s: rule_str.strip() in s.strip(),
-                                    new_filter)
+                dup_filter = [s for s in new_filter
+                              if rule_str.strip() in s.strip()]
 
-                new_filter = filter(lambda s:
-                                    rule_str.strip() not in s.strip(),
-                                    new_filter)
+                new_filter = [s for s in new_filter
+                              if rule_str.strip() not in s.strip()]
                 # if no duplicates, use original rule
                 if dup_filter:
                     # grab the last entry, if there is one
@@ -629,9 +628,11 @@ class IptablesManager(object):
         # We filter duplicates, letting the *last* occurrence take
         # precedence.  We also filter out anything in the "remove"
         # lists.
+        new_filter = list(new_filter)
         new_filter.reverse()
         new_filter = filter(_weed_out_duplicates, new_filter)
         new_filter = filter(_weed_out_removes, new_filter)
+        new_filter = list(new_filter)
         new_filter.reverse()
 
         # flush lists, just in case we didn't find something
