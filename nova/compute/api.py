@@ -47,6 +47,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import conductor
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
@@ -285,22 +286,13 @@ class API(base.Base):
                 skip_policy_check=skip_policy_check))
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self._compute_task_api = None
+        self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('compute', CONF.host)
         if CONF.ephemeral_storage_encryption.enabled:
             self.key_manager = keymgr.API()
 
         super(API, self).__init__(**kwargs)
-
-    @property
-    def compute_task_api(self):
-        if self._compute_task_api is None:
-            # TODO(alaski): Remove calls into here from conductor manager so
-            # that this isn't necessary. #1180540
-            from nova import conductor
-            self._compute_task_api = conductor.ComputeTaskAPI()
-        return self._compute_task_api
 
     @property
     def cell_type(self):
