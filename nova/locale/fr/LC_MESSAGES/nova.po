@@ -27,11 +27,11 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
+"Project-Id-Version: nova 12.0.0.0rc2.dev16\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-03 06:33+0000\n"
-"PO-Revision-Date: 2015-09-30 01:42+0000\n"
-"Last-Translator: Olivier Buisson <olivier@openkumo.fr>\n"
+"POT-Creation-Date: 2015-10-08 06:39+0000\n"
+"PO-Revision-Date: 2015-10-07 09:07+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language: fr\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
 "fr/)\n"
@@ -81,6 +81,10 @@ msgstr ""
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid "%(field)s should not be part of the updates."
+msgstr "%(field)s ne devrait pas faire partie des mises à jour."
 
 #, python-format
 msgid "%(fieldname)s missing field type"
@@ -190,6 +194,10 @@ msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr "%s doit être 'MANUAL' ou 'AUTO'."
 
 #, python-format
+msgid "'%(other)s' should be an instance of '%(cls)s'"
+msgstr "'%(other)s' devrait être une instance de '%(cls)s'"
+
+#, python-format
 msgid "'%s' is either missing or empty."
 msgstr "'%s' est soit manquant ou vide."
 
@@ -282,6 +290,9 @@ msgstr "Impossible de convertir l'adresse."
 
 msgid "Address not specified"
 msgstr "Adresse non spécifiée"
+
+msgid "Affinity instance group policy was violated."
+msgstr "La stratégie de groupe d'instances anti-affinité a été violée."
 
 #, python-format
 msgid "Agent does not support the call: %(method)s"
@@ -444,6 +455,14 @@ msgstr ""
 msgid "Binary"
 msgstr "binaire"
 
+#, python-format
+msgid ""
+"Binding failed for port %(port_id)s, please check neutron logs for more "
+"information."
+msgstr ""
+"Échec de l'attachement du port %(port_id)s, voir les logs neutron pour plus "
+"d'information."
+
 msgid "Blank components"
 msgstr "Composants vides"
 
@@ -543,6 +562,9 @@ msgstr "Le nombre de CPU %(cpunum)d est plus grand que le maximum %(cpumax)d"
 #, python-format
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "Le numéro de CPU %(cpuset)s n'est assigné à aucun node"
+
+msgid "Can not add access to a public flavor."
+msgstr "Impossible d'ajouter l'accès à un gabarit public."
 
 msgid "Can not find requested image"
 msgstr "Impossible de trouver l'image demandée"
@@ -841,6 +863,22 @@ msgid ""
 msgstr ""
 "La config a demandé un modèle d'UC explicite, mais l'hyperviseur libvirt "
 "'%s' actuel ne prend pas en charge la sélection des modèles d'UC"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s, but we were unable to "
+"determine the cause"
+msgstr ""
+"Conflit lors de la mise à jour de l'instance %(instance_uuid)s, cause "
+"inconnue"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s. Expected: %(expected)s. "
+"Actual: %(actual)s"
+msgstr ""
+"Conflit lors de la mise à jour de l'instance %(instance_uuid)s. Attendu: "
+"%(expected)s. Actuel: %(actual)s"
 
 msgid "Conflicting policies configured!"
 msgstr "Politiques contradictoires configurées!"
@@ -1622,6 +1660,16 @@ msgstr "Le type d'instance avec le nom %(name)s existe déjà."
 
 #, python-format
 msgid ""
+"Flavor's disk is smaller than the minimum size specified in image metadata. "
+"Flavor disk is %(flavor_size)i bytes, minimum size is %(image_min_disk)i "
+"bytes."
+msgstr ""
+"Le disque du gabarit est plus petit que la taille minimum spécifiée dans les "
+"métadonnées de l'image. La taille du disque est %(flavor_size)i octets, la "
+"taille minimum est %(image_min_disk)i octets."
+
+#, python-format
+msgid ""
 "Flavor's disk is too small for requested image. Flavor disk is "
 "%(flavor_size)i bytes, image is %(image_size)i bytes."
 msgstr ""
@@ -1756,6 +1804,10 @@ msgstr ""
 "L'hôte %(server)s fonctionne avec une ancienne version de Nova, les "
 "migrations live effectuée avec cette version peuvent causer des pertes de "
 "données. Mettez à jour Nova sur %(server)s et essayez à nouveau."
+
+#, python-format
+msgid "Host '%(name)s' is not mapped to any cell"
+msgstr "Le host '%(name)s' n'est pas mappé à une cellule"
 
 msgid "Host PowerOn is not supported by the Hyper-V driver"
 msgstr ""
@@ -2033,6 +2085,10 @@ msgstr "L'instance %s n'est pas connectée."
 msgid "Instance %s not found"
 msgstr "Instance %s non trouvé"
 
+#, python-format
+msgid "Instance %s provisioning was aborted"
+msgstr "Le provisionnement de l'instance %s a été interrompu"
+
 msgid "Instance could not be found"
 msgstr "Instance introuvable."
 
@@ -2222,6 +2278,10 @@ msgstr "Entrée non valide : '%s' ; dictionnaire attendu"
 #, python-format
 msgid "Invalid entry: '%s'; Expecting list or dict"
 msgstr "Entrée non valide : '%s'; liste ou dictionnaire attendu"
+
+#, python-format
+msgid "Invalid event name %s"
+msgstr "Nom d'événement invalide %s"
 
 #, python-format
 msgid "Invalid event status `%s'"
@@ -3049,6 +3109,10 @@ msgstr "Plus d'adresses IP flottantes disponibles."
 msgid "No more floating ips in pool %s."
 msgstr "Plus d'adresses IP flottantes dans le pool %s."
 
+#, python-format
+msgid "No mount points found in %(root)s of %(image)s"
+msgstr "Aucun point de montage trouvé dans %(root)s de l'image %(image)s"
+
 msgid "No networks defined."
 msgstr "Aucun réseau défini."
 
@@ -3160,6 +3224,12 @@ msgstr "L'action de l'objet %(action)s a échoué car : %(reason)s"
 
 msgid "Old volume is attached to a different instance."
 msgstr "L'ancien volume est attaché à une instance différente."
+
+#, python-format
+msgid "One or more hosts already in availability zone(s) %s"
+msgstr ""
+"Un ou plusieurs hôte(s) sont déjà présents dans la(les) zone(s) de "
+"disponibilité(s) %s"
 
 #, python-format
 msgid ""
@@ -3371,6 +3441,10 @@ msgstr "L'action de garde fourni (%(action)s) n'est pas supportée"
 
 msgid "QEMU guest agent is not enabled"
 msgstr "L'agent invité QEMU n'est pas activé"
+
+#, fuzzy, python-format
+msgid "Quiescing is not supported in instance %(instance_id)s"
+msgstr "Mise en veille non supportée par l'instance %(instance_id)s"
 
 msgid "Quota"
 msgstr "Quota"
@@ -3761,6 +3835,9 @@ msgstr "Le service avec l'hôte %(host)s et le binaire %(binary)s existe."
 msgid "Service with host %(host)s topic %(topic)s exists."
 msgstr "Service avec l'hôte %(host)s et le topic %(topic)s existe."
 
+msgid "Set admin password is not supported"
+msgstr "La définition du mot de passe admin n'est pas supportée"
+
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
 msgstr "La table fantôme avec le nom %(name)s existe déjà."
@@ -3911,6 +3988,10 @@ msgstr "Le fichier JSON qui définit les stratégies."
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "L'adresse PCI %(address)s a un format incorrect."
 
+msgid "The SMB WMI namespace is not available on this OS version."
+msgstr ""
+"L'espace de nommage SMB WMI n'est pas disponible avec cette version d'OS."
+
 msgid ""
 "The Windows account running nova-compute on this Hyper-V host doesn't have "
 "the required permissions to create or operate the virtual machine."
@@ -3927,6 +4008,9 @@ msgstr ""
 "créée.\n"
 "Assurez-vous que la base de données est créée à l'aide de la commande 'nova-"
 "manage db sync' avant d'exécuter cette commande."
+
+msgid "The backlog must be more than 0"
+msgstr "Le backlog doit être supérieur à 0"
 
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
@@ -3948,6 +4032,9 @@ msgstr "Echec de la copie du fichier depuis %(src)s vers %(dest)s"
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr "Le filtre de pare-feu de %s n'existe pas"
+
+msgid "The floating IP request failed with a BadRequest"
+msgstr "La demande d'IP flottante a échouée avec l'erreur Mauvaise Requête"
 
 msgid "The input is not a string or unicode"
 msgstr "L'entrée n'est pas une chaine de caractère ou au format unicode"
@@ -4177,6 +4264,12 @@ msgstr "Dépassement du délai d'attente pour l'unité %s à créer"
 msgid "Timeout waiting for response from cell"
 msgstr "Dépassement du délai d'attente pour la réponse de la cellule"
 
+#, python-format
+msgid "Timeout while checking if we can live migrate to host: %s"
+msgstr ""
+"Timeout lors de la vérification de la possibilité de migrer à chaud vers "
+"l'hôte: %s"
+
 msgid "Timestamp failed validation."
 msgstr "Echec de validation de l'horodatage."
 
@@ -4206,6 +4299,14 @@ msgstr "UUID est demandée pour supprimer les réseaux Neutron"
 
 msgid "Unable to associate IP Address, no fixed_ips."
 msgstr "Impossible d'associer l'adresse IP, pas de fixed_ips."
+
+#, python-format
+msgid ""
+"Unable to associate floating ip %(address)s to any fixed IPs for instance "
+"%(id)s. Instance has no fixed IPv4 addresses to associate."
+msgstr ""
+"Impossible d'assigner l'IP flottante %(address)s à une IP fixe de l'instance "
+"%(id)s. L'instance n'a pas d'IPv4 fixe."
 
 #, python-format
 msgid ""
@@ -4501,6 +4602,10 @@ msgstr "Action inconnu"
 msgid "Unknown action %s"
 msgstr "Action inconnue %s"
 
+#, python-format
+msgid "Unknown alembic cmd %s"
+msgstr "Cmd alembic inconnue %s"
+
 msgid "Unknown argument : port"
 msgstr "Argument inconnu : port"
 
@@ -4680,6 +4785,10 @@ msgstr ""
 "La valeur (%(value)s) pour le groupe de paramètre %(property)s est invalide. "
 "Le contenu est limité à '%(allowed)s'."
 
+#, python-format
+msgid "Value must be >= 0 for field %s"
+msgstr "La valeur doit être >= 0 pour le champ %s"
+
 msgid "Value required for 'scality_sofs_config'"
 msgstr "Valeur requise pour 'scality_sofs_config'"
 
@@ -4755,6 +4864,15 @@ msgid ""
 msgstr ""
 "L'encryptage de volume n'est pas supporté pour le volume %(volume_id)s de "
 "type %(volume_type)s"
+
+#, python-format
+msgid ""
+"Volume is smaller than the minimum size specified in image metadata. Volume "
+"size is %(volume_size)i bytes, minimum size is %(image_min_disk)i bytes."
+msgstr ""
+"Le volume est plus petit que la taille minimum spécifiée dans les "
+"métadonnées de l'image. La taille du volume est %(volume_size)i octets, la "
+"taille minimum est %(image_min_disk)i octets."
 
 msgid "Volume must be attached in order to detach."
 msgstr "Le volume doit être connecté pour pouvoir être déconnecté."
@@ -5173,6 +5291,16 @@ msgstr "noeud"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "impossible d'exécuter la commande ssh : %s"
+
+msgid ""
+"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
+"for use with linux user namespaces.  This tool can only be used with linux "
+"lxc containers.  See the man page for details."
+msgstr ""
+"nova-idmapshift is est un utilitaire qui définit correctement la propriété "
+"d'un système de fichier pour être utilisé avec les espaces de nommage "
+"utilisateur linux. Il peut uniquement être utilisé avec les conteneurs linux "
+"lxc. Voir la page de manuel pour plus d'information."
 
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage doit etre spécifié"
