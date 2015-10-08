@@ -1125,6 +1125,7 @@ class TestInstanceClaim(BaseTestCase):
 
     def setUp(self):
         super(TestInstanceClaim, self).setUp()
+        self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
 
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -1228,6 +1229,32 @@ class TestInstanceClaim(BaseTestCase):
             update_mock.assert_called_once_with(self.elevated)
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_claim_abort_context_manager(self, migr_mock, pci_mock):
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        self.assertEqual(0, self.rt.compute_node.local_gb_used)
+        self.assertEqual(0, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(0, self.rt.compute_node.running_vms)
+
+        @mock.patch.object(self.instance, 'save')
+        def _doit(mock_save):
+            with self.rt.instance_claim(self.ctx, self.instance, None):
+                # Raise an exception. Just make sure below that the abort()
+                # method of the claim object was called (and the resulting
+                # resources reset to the pre-claimed amounts)
+                raise test.TestingException()
+
+        self.assertRaises(test.TestingException, _doit)
+
+        # Assert that the resources claimed by the Claim() constructor
+        # are returned to the resource tracker due to the claim's abort()
+        # method being called when triggered by the exception raised above.
+        self.assertEqual(0, self.rt.compute_node.local_gb_used)
+        self.assertEqual(0, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(0, self.rt.compute_node.running_vms)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -1394,6 +1421,39 @@ class TestMoveClaim(BaseTestCase):
         inst_save_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  self.rt.compute_node))
+
+    def test_claim_abort(self, pci_mock, inst_list_mock,
+            inst_by_uuid, migr_mock, inst_save_mock):
+        # Resize self.instance and check that the expected quantities of each
+        # resource have been consumed. The abort the resize claim and check
+        # that the resources have been set back to their original values.
+        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
+                            inst_save_mock)
+        self.driver_mock.get_host_ip_addr.return_value = "fake-host"
+        migr_obj = _MIGRATION_FIXTURES['dest-only']
+        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
+        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
+        self.instance.migration_context = mig_context_obj
+        self.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        with mock.patch.object(self.rt, '_create_migration') as migr_mock:
+            migr_mock.return_value = migr_obj
+            claim = self.rt.resize_claim(
+                self.ctx, self.instance, self.flavor, None)
+
+        self.assertIsInstance(claim, claims.MoveClaim)
+        self.assertEqual(5, self.rt.compute_node.local_gb_used)
+        self.assertEqual(256, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(1, len(self.rt.tracked_migrations))
+
+        with mock.patch('nova.objects.Instance.'
+                        'drop_migration_context') as drop_migr_mock:
+            claim.abort()
+            drop_migr_mock.assert_called_once_with()
+
+        self.assertEqual(0, self.rt.compute_node.local_gb_used)
+        self.assertEqual(0, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(0, len(self.rt.tracked_migrations))
 
     def test_same_host(self, pci_mock, inst_list_mock, inst_by_uuid,
             migr_mock, inst_save_mock):
