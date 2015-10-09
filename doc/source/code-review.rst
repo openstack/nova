@@ -85,3 +85,29 @@ Database Schema
   layer so that an object can load from either the old or new
   location, and save to the new one.
 
+Config Options
+==============
+
+A config option should be checked for:
+
+* A short description which explains what it does. If it is a unit
+  (e.g. timeouts or so) describe the unit which is used (seconds, megabyte,
+  mebibyte, ...).
+
+* A long description which shows the impact and scope. The operators should
+  know the expected change in the behavior of Nova if they tweak this.
+
+* Hints which services will consume this config option. Operators/Deployers
+  should not be forced to read the code to know which one of the services will
+  change its behavior nor should they set this in every ``nova.conf`` file to
+  be sure.
+
+* Descriptions for the possible values.
+
+    * If this is an option with numeric values (int, float), describe the
+      edge cases (like the min value, max value, 0, -1).
+    * If this is a DictOpt, describe the allowed keys.
+    * If this is a StrOpt, lookout for regex validations.
+
+* Interdependencies to other options. If other config options have to be
+  considered when this config option gets changed, is this described?
