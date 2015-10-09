@@ -1004,7 +1004,7 @@ class _TestInstanceObject(object):
         inst.destroy()
         mock_destroy_at_top.assert_called_once_with(self.context, mock.ANY)
         actual_inst = mock_destroy_at_top.call_args[0][1]
-        self.assertIsInstance(actual_inst, objects.Instance)
+        self.assertIsInstance(actual_inst, instance._BaseInstance)
 
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
     @mock.patch.object(db, 'instance_destroy')
@@ -1452,7 +1452,7 @@ class _TestInstanceListObject(object):
             expected_attrs=['metadata'], use_slave=False)
 
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     def test_get_all_by_filters_sorted(self):
@@ -1470,7 +1470,7 @@ class _TestInstanceListObject(object):
             use_slave=False, sort_keys=['uuid'], sort_dirs=['asc'])
 
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     @mock.patch.object(db, 'instance_get_all_by_filters_sort')
@@ -1523,7 +1523,7 @@ class _TestInstanceListObject(object):
             expected_attrs=['metadata'], use_slave=False)
 
         self.assertEqual(1, len(inst_list))
-        self.assertIsInstance(inst_list.objects[0], objects.Instance)
+        self.assertIsInstance(inst_list.objects[0], instance._BaseInstance)
         self.assertEqual(fakes[1]['uuid'], inst_list.objects[0].uuid)
 
     def test_get_by_host(self):
@@ -1536,7 +1536,7 @@ class _TestInstanceListObject(object):
         self.mox.ReplayAll()
         inst_list = objects.InstanceList.get_by_host(self.context, 'foo')
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
             self.assertEqual(self.context, inst_list.objects[i]._context)
         self.assertEqual(set(), inst_list.obj_what_changed())
@@ -1552,7 +1552,7 @@ class _TestInstanceListObject(object):
         inst_list = objects.InstanceList.get_by_host_and_node(self.context,
                                                               'foo', 'bar')
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     def test_get_by_host_and_not_type(self):
@@ -1566,7 +1566,7 @@ class _TestInstanceListObject(object):
         inst_list = objects.InstanceList.get_by_host_and_not_type(
             self.context, 'foo', 'bar')
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     @mock.patch('nova.objects.instance._expected_cols')
@@ -1580,7 +1580,7 @@ class _TestInstanceListObject(object):
         mock_get_all.assert_called_once_with(
                 self.context, columns_to_join=mock.sentinel.exp_att)
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     def test_get_hung_in_rebooting(self):
@@ -1594,7 +1594,7 @@ class _TestInstanceListObject(object):
         inst_list = objects.InstanceList.get_hung_in_rebooting(self.context,
                                                                dt)
         for i in range(0, len(fakes)):
-            self.assertIsInstance(inst_list.objects[i], objects.Instance)
+            self.assertIsInstance(inst_list.objects[i], instance._BaseInstance)
             self.assertEqual(fakes[i]['uuid'], inst_list.objects[i].uuid)
 
     def test_get_active_by_window_joined(self):
@@ -1619,7 +1619,7 @@ class _TestInstanceListObject(object):
                             self.context, dt, expected_attrs=['metadata'])
 
         for fake, obj in zip(fakes, inst_list.objects):
-            self.assertIsInstance(obj, objects.Instance)
+            self.assertIsInstance(obj, instance._BaseInstance)
             self.assertEqual(fake['uuid'], obj.uuid)
 
     def test_with_fault(self):
@@ -1683,7 +1683,8 @@ class _TestInstanceListObject(object):
         for inst in inst_list:
             self.assertEqual(set(), inst.obj_what_changed())
 
-    def test_get_by_security_group(self):
+    @mock.patch('nova.objects.instance.InstanceV1.obj_make_compatible')
+    def test_get_by_security_group(self, mock_compat):
         fake_secgroup = dict(test_security_group.fake_secgroup)
         fake_secgroup['instances'] = [
             fake_instance.fake_db_instance(id=1,
@@ -1695,7 +1696,7 @@ class _TestInstanceListObject(object):
             sgg.return_value = fake_secgroup
             secgroup = security_group.SecurityGroup()
             secgroup.id = fake_secgroup['id']
-            instances = objects.InstanceList.get_by_security_group(
+            instances = instance.InstanceListV2.get_by_security_group(
                 self.context, secgroup)
 
         self.assertEqual(2, len(instances))
