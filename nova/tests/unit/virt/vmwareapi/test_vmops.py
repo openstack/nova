@@ -853,11 +853,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                  for i in range(4)]
         fake_progress.assert_has_calls(calls)
 
+    @mock.patch.object(vutil, 'get_inventory_path', return_value='fake_path')
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
     @mock.patch.object(vmops.VMwareVMOps, '_create_config_drive')
     def test_configure_config_drive(self,
                                     mock_create_config_drive,
-                                    mock_attach_cdrom_to_vm):
+                                    mock_attach_cdrom_to_vm,
+                                    mock_get_inventory_path):
         injected_files = mock.Mock()
         admin_password = mock.Mock()
         network_info = mock.Mock()
@@ -868,9 +870,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 injected_files, admin_password, network_info)
 
         upload_iso_path = self._ds.build_path("fake_iso_path")
+        mock_get_inventory_path.assert_called_once_with(self._session.vim,
+                                                        self._dc_info.ref)
         mock_create_config_drive.assert_called_once_with(self._instance,
                 injected_files, admin_password, network_info, self._ds.name,
-                self._dc_info.name, self._instance.uuid, "Fake-CookieJar")
+                'fake_path', self._instance.uuid, "Fake-CookieJar")
         mock_attach_cdrom_to_vm.assert_called_once_with(
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
