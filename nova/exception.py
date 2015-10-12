@@ -46,7 +46,7 @@ CONF.register_opts(exc_log_opts)
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):
-    def __init__(self, code=0, title="", explanation=""):
+    def __init__(self, code=500, title="", explanation=""):
         self.code = code
         self.title = title
         self.explanation = explanation
