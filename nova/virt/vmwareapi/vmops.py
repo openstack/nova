@@ -231,13 +231,13 @@ class VMwareVMOps(object):
                                 injected_files, admin_password, network_info):
         session_vim = self._session.vim
         cookies = session_vim.client.options.transport.cookiejar
-
+        dc_path = vutil.get_inventory_path(session_vim, dc_info.ref)
         uploaded_iso_path = self._create_config_drive(instance,
                                                       injected_files,
                                                       admin_password,
                                                       network_info,
                                                       datastore.name,
-                                                      dc_info.name,
+                                                      dc_path,
                                                       instance.uuid,
                                                       cookies)
         uploaded_iso_path = datastore.build_path(uploaded_iso_path)
