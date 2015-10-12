@@ -235,7 +235,7 @@ Nova has three main axises of scale: Number of API requests, number of compute
 nodes and number of active instances.
 In many cases the number of compute nodes and active instances are so closely
 related, you rarely need to consider those separately.
-There are other items, such at the number of tenants, and the number of
+There are other items, such as the number of tenants, and the number of
 instances per tenant. But, again, these are very rarely the key scale issue.
 Its possible to have a small cloud with lots of requests for very short
 lived VMs, or a large cloud with lots of longer lived VMs.
