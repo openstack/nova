@@ -14,6 +14,8 @@
 
 import datetime
 import mock
+from oslo_db import exception as db_exception
+import oslo_messaging as messaging
 
 from nova import objects
 from nova import servicegroup
@@ -84,3 +86,26 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         fn(service)
         upd_mock.assert_called_once_with()
         self.assertEqual(11, service_ref.report_count)
+
+    @mock.patch.object(objects.Service, 'save')
+    def _test_report_state_error(self, exc_cls, upd_mock):
+        upd_mock.side_effect = exc_cls("service save failed")
+        service_ref = objects.Service(host='fake-host', topic='compute',
+                                      report_count=10)
+        service = mock.MagicMock(model_disconnected=False,
+                                 service_ref=service_ref)
+        fn = self.servicegroup_api._driver._report_state
+        fn(service)  # fail if exception not caught
+
+    def test_report_state_remote_error_handling(self):
+        # test error handling using remote conductor
+        self.flags(use_local=False, group='conductor')
+        self._test_report_state_error(messaging.MessagingTimeout)
+
+    def test_report_state_local_error_handling(self):
+        # if using local conductor, the db driver must handle DB errors
+        self.flags(use_local=True, group='conductor')
+
+        # mock an oslo.db DBError as it's an exception base class for
+        # oslo.db DB errors (eg DBConnectionError)
+        self._test_report_state_error(db_exception.DBError)
