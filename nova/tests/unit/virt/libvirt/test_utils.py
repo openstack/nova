@@ -15,12 +15,14 @@
 
 import functools
 import os
+import resource
 import tempfile
 
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import fileutils
+from oslo_utils import units
 import six
 
 from nova.compute import arch
@@ -53,7 +55,8 @@ blah BLAH: bb
         mock_execute.return_value = (example_output, '')
         disk_type = libvirt_utils.get_disk_type(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('raw', disk_type)
 
@@ -106,7 +109,8 @@ disk size: 96K
                 d_type = libvirt_utils.get_disk_type(path)
                 mock_execute.assert_called_once_with(
                     'env', 'LC_ALL=C', 'LANG=C',
-                    'qemu-img', 'info', path)
+                    'qemu-img', 'info', path,
+                    preexec_fn=images._qemu_resources)
                 self.assertEqual(f, d_type)
 
     @mock.patch('os.path.exists', return_value=True)
@@ -125,7 +129,8 @@ disk size: 96K
         mock_execute.return_value = (output, '')
         d_backing = libvirt_utils.get_disk_backing_file(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertIsNone(d_backing)
 
@@ -133,7 +138,15 @@ disk size: 96K
         d_size = libvirt_utils.get_disk_size(path)
         self.assertEqual(expected_size, d_size)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
+
+    def test_qemu_resources(self):
+        calls = [mock.call(resource.RLIMIT_CPU, (2, 2)),
+                 mock.call(resource.RLIMIT_AS, (1 * units.Gi, 1 * units.Gi))]
+        with mock.patch('resource.setrlimit') as mock_prlimit:
+            images._qemu_resources()
+            mock_prlimit.assert_has_calls(calls)
 
     @mock.patch('os.path.exists', return_value=True)
     def test_disk_size(self, mock_exists):
@@ -179,7 +192,8 @@ blah BLAH: bb
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -201,7 +215,8 @@ backing file: /var/lib/nova/a328c7998805951a_2
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('qcow2', image_info.file_format)
@@ -229,7 +244,8 @@ backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -257,7 +273,8 @@ junk stuff: bbb
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -281,7 +298,8 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
@@ -317,7 +335,8 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         mock_execute.return_value = ('stdout', None)
         libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
         expected_args = [(('env', 'LC_ALL=C', 'LANG=C',
-                           'qemu-img', 'info', '/some/path'),),
+                           'qemu-img', 'info', '/some/path'),
+                           {'preexec_fn': images._qemu_resources}),
                          (('qemu-img', 'create', '-f', 'qcow2',
                            '-o', 'backing_file=/some/path',
                            '/the/new/cow'),)]
@@ -403,7 +422,8 @@ disk size: 4.4M
         mock_execute.return_value = (example_output, '')
         self.assertEqual(4592640, disk.get_disk_size('/some/path'))
         mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
+                                             'qemu-img', 'info', path,
+                                             preexec_fn=images._qemu_resources)
         mock_exists.assert_called_once_with(path)
 
     def test_copy_image(self):

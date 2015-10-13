@@ -20,10 +20,12 @@ Handling of VM disk images.
 """
 
 import os
+import resource
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
+from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _, _LE
@@ -44,6 +46,11 @@ CONF.register_opts(image_opts)
 IMAGE_API = image.API()
 
 
+def _qemu_resources():
+    resource.setrlimit(resource.RLIMIT_CPU, (2, 2))
+    resource.setrlimit(resource.RLIMIT_AS, (1 * units.Gi, 1 * units.Gi))
+
+
 def qemu_img_info(path):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
@@ -57,7 +64,8 @@ def qemu_img_info(path):
         raise exception.InvalidDiskInfo(reason=msg)
 
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                             'qemu-img', 'info', path)
+                             'qemu-img', 'info', path,
+                             preexec_fn=_qemu_resources)
     if not out:
         msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
                {'path': path, 'error': err})
