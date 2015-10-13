@@ -127,6 +127,11 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver.list_instances()
         self.driver._vmops.list_instances.assert_called_once_with()
 
+    def test_estimate_instance_overhead(self):
+        self.driver.estimate_instance_overhead(mock.sentinel.instance)
+        self.driver._vmops.estimate_instance_overhead.assert_called_once_with(
+            mock.sentinel.instance)
+
     def test_spawn(self):
         self.driver.spawn(
             mock.sentinel.context, mock.sentinel.instance,

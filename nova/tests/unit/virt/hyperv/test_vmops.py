@@ -100,6 +100,16 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vmutils.list_instances.assert_called_once_with()
         self.assertEqual(response, [mock_instance])
 
+    def test_estimate_instance_overhead(self):
+        instance_info = {'memory_mb': 512}
+        overhead = self._vmops.estimate_instance_overhead(instance_info)
+        self.assertEqual(0, overhead['memory_mb'])
+        self.assertEqual(1, overhead['disk_gb'])
+
+        instance_info = {'memory_mb': 500}
+        overhead = self._vmops.estimate_instance_overhead(instance_info)
+        self.assertEqual(0, overhead['disk_gb'])
+
     def _test_get_info(self, vm_exists):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_info = mock.MagicMock(spec_set=dict)
