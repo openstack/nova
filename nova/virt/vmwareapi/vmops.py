@@ -1338,8 +1338,7 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # 2. Reconfigure the VM properties
-        image_meta = objects.ImageMeta.from_instance(instance)
-        self._resize_vm(context, instance, vm_ref, flavor, image_meta)
+        self._resize_vm(context, instance, vm_ref, flavor, instance.image_meta)
 
         self._update_instance_progress(context, instance,
                                        step=2,
@@ -1383,8 +1382,8 @@ class VMwareVMOps(object):
         vm_util.power_off_instance(self._session, instance, vm_ref)
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
-        image_meta = objects.ImageMeta.from_instance(instance)
-        extra_specs = self._get_extra_specs(instance.flavor, image_meta)
+        extra_specs = self._get_extra_specs(instance.flavor,
+                                            instance.image_meta)
         metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(instance.vcpus),
