@@ -87,7 +87,7 @@ class ConfigDriveBuilder(object):
         dirname = os.path.dirname(filepath)
         fileutils.ensure_tree(dirname)
         with open(filepath, 'wb') as f:
-            f.write(data.encode('utf-8'))
+            f.write(data)
 
     def add_instance_metadata(self, instance_md):
         for (path, data) in instance_md.metadata_for_config_drive():
