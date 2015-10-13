@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import mock
 from oslo_serialization import jsonutils
 import six
@@ -682,7 +680,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **{'uuid': 'fake-uuid'})
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.volume_api, 'get_snapshot',
                               return_value=snapshot),
             mock.patch.object(self.volume_api, 'create', return_value=volume),
@@ -788,7 +786,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **{'uuid': 'fake-uuid'})
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
             mock.patch.object(self.volume_api, 'delete'),
         ) as (vol_create, vol_delete):
@@ -841,7 +839,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         volume = {'id': 'fake-volume-id-2',
                   'display_name': 'fake-uuid-blank-vol'}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
             mock.patch.object(self.volume_api, 'delete'),
         ) as (vol_create, vol_delete):
@@ -874,7 +872,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         volume = {'id': 'fake-volume-id-2',
                   'display_name': 'fake-uuid-blank-vol'}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
             mock.patch.object(volume_class, 'attach')
         ) as (vol_create, vol_attach):

@@ -16,8 +16,6 @@
 Unit Tests for nova.cert.rpcapi
 """
 
-import contextlib
-
 import mock
 from oslo_config import cfg
 
@@ -38,7 +36,7 @@ class CertRpcAPITestCase(test.NoDBTestCase):
 
         orig_prepare = rpcapi.client.prepare
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(rpcapi.client, 'call'),
             mock.patch.object(rpcapi.client, 'prepare'),
             mock.patch.object(rpcapi.client, 'can_send_version'),

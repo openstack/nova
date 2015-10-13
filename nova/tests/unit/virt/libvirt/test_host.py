@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import uuid
 
 import eventlet
@@ -772,7 +771,7 @@ Cached:          8362404 kB
 SwapCached:            0 kB
 Active:          8381604 kB
 """)
-        with contextlib.nested(
+        with test.nested(
                 mock.patch("__builtin__.open", m, create=True),
                 mock.patch.object(host.Host,
                                   "get_connection"),
@@ -813,7 +812,7 @@ SwapCached:            0 kB
 Active:          8381604 kB
 """)
 
-        with contextlib.nested(
+        with test.nested(
                 mock.patch("__builtin__.open", m, create=True),
                 mock.patch.object(host.Host,
                                   "list_instance_domains"),

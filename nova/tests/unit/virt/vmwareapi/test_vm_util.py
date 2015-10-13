@@ -15,7 +15,6 @@
 #    under the License.
 
 import collections
-import contextlib
 
 import mock
 from oslo_utils import uuidutils
@@ -824,7 +823,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         fake_call_mock = mock.Mock(side_effect=fake_call_method)
         fake_wait_mock = mock.Mock(side_effect=fake_wait_for_task)
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(session, '_wait_for_task',
                                   fake_wait_mock),
                 mock.patch.object(session, '_call_method',
@@ -889,7 +888,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_power_on_instance_with_vm_ref(self):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
             mock.patch.object(session, "_wait_for_task"),
@@ -903,7 +902,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_power_on_instance_without_vm_ref(self):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, "get_vm_ref",
                               return_value='fake-vm-ref'),
             mock.patch.object(session, "_call_method",
@@ -919,7 +918,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_power_on_instance_with_exception(self):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
             mock.patch.object(session, "_wait_for_task",
@@ -936,7 +935,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_power_on_instance_with_power_state_exception(self):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
             mock.patch.object(
@@ -953,7 +952,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_create_virtual_disk(self):
         session = fake.FakeSession()
         dm = session.vim.service_content.virtualDiskManager
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, "get_vmdk_create_spec",
                               return_value='fake-spec'),
             mock.patch.object(session, "_call_method",
@@ -979,7 +978,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_copy_virtual_disk(self):
         session = fake.FakeSession()
         dm = session.vim.service_content.virtualDiskManager
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
             mock.patch.object(session, "_wait_for_task"),
@@ -1002,7 +1001,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_reconfigure_vm(self):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, '_call_method',
                               return_value='fake_reconfigure_task'),
             mock.patch.object(session, '_wait_for_task')
@@ -1127,7 +1126,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, "get_vm_ref")
     def test_power_off_instance(self, fake_get_ref):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, '_call_method',
                               return_value='fake-task'),
             mock.patch.object(session, '_wait_for_task')
@@ -1142,7 +1141,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, "get_vm_ref", return_value="fake-vm-ref")
     def test_power_off_instance_no_vm_ref(self, fake_get_ref):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, '_call_method',
                               return_value='fake-task'),
             mock.patch.object(session, '_wait_for_task')
@@ -1157,7 +1156,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, "get_vm_ref")
     def test_power_off_instance_with_exception(self, fake_get_ref):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, '_call_method',
                               return_value='fake-task'),
             mock.patch.object(session, '_wait_for_task',
@@ -1175,7 +1174,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, "get_vm_ref")
     def test_power_off_instance_power_state_exception(self, fake_get_ref):
         session = fake.FakeSession()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(session, '_call_method',
                               return_value='fake-task'),
             mock.patch.object(

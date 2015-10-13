@@ -14,7 +14,6 @@
 # under the License.
 
 import calendar
-import contextlib
 import datetime
 import os
 import time
@@ -1149,7 +1148,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           'global'),
                 ]
             }
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(linux_net, 'device_exists', return_value=True),
             mock.patch.object(linux_net, '_execute', return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
@@ -1168,7 +1167,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             else:
                 return ('', '')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(linux_net, 'device_exists', return_value=True),
             mock.patch.object(linux_net, '_execute', fake_execute)
         ) as (device_exists, _):
@@ -1185,7 +1184,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             else:
                 return ('', '')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(linux_net, 'device_exists', return_value=False),
             mock.patch.object(linux_net, '_execute', fake_execute)
         ) as (device_exists, _):

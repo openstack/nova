@@ -16,8 +16,6 @@
 Unit Tests for nova.compute.rpcapi
 """
 
-import contextlib
-
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -112,7 +110,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         if method == 'rebuild_instance' and 'node' in expected_kwargs:
             expected_kwargs['scheduled_node'] = expected_kwargs.pop('node')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(rpcapi.client, rpc_method),
             mock.patch.object(rpcapi.client, 'prepare'),
             mock.patch.object(rpcapi.client, 'can_send_version'),

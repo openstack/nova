@@ -15,7 +15,6 @@
 #
 
 import collections
-import contextlib
 import copy
 import uuid
 
@@ -2872,7 +2871,7 @@ class TestNeutronv2WithMock(test.TestCase):
                     return return_value
             self.fail('Unexpected call to list_ports %s' % search_opts)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(client.Client, 'list_ports',
                               side_effect=_fake_list_ports),
             mock.patch.object(client.Client, 'list_networks',
@@ -2914,7 +2913,7 @@ class TestNeutronv2WithMock(test.TestCase):
                 if args == search_opts:
                     return return_value
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.api, '_get_available_networks',
                               return_value=nets),
             mock.patch.object(client.Client, 'list_ports',
@@ -3007,7 +3006,7 @@ class TestNeutronv2WithMock(test.TestCase):
         # Verify that the correct exception is thrown when quota exceed
         pool_name = 'dummy'
         api = neutronapi.API()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(client.Client, 'create_floatingip'),
             mock.patch.object(api,
                 '_get_floating_ip_pool_id_by_name_or_id')) as (
@@ -3023,7 +3022,7 @@ class TestNeutronv2WithMock(test.TestCase):
         net_id = uuid.uuid4()
         error_msg = ('Bad floatingip request: Network %s does not contain '
                      'any IPv4 subnet' % net_id)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(client.Client, 'create_floatingip'),
             mock.patch.object(api,
                 '_get_floating_ip_pool_id_by_name_or_id')) as (
@@ -3159,7 +3158,7 @@ class TestNeutronv2WithMock(test.TestCase):
         # setup mocks
         mock_client = mock.Mock()
         mock_client.list_ports.return_value = port_data
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(neutronapi, 'get_client',
                               return_value=mock_client),
             mock.patch.object(api, '_delete_ports')
@@ -3203,7 +3202,7 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_preexisting.return_value = []
         mock_client = mock.Mock()
         api = neutronapi.API()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(neutronapi, 'get_client',
                               return_value=mock_client),
             mock.patch.object(api, '_delete_ports',

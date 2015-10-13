@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import copy
 
 import mock
@@ -398,7 +397,7 @@ def setup_rt(hostname, nodename, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     vd.get_available_resource.return_value = virt_resources
     vd.estimate_instance_overhead.side_effect = estimate_overhead
 
-    with contextlib.nested(
+    with test.nested(
             mock.patch('nova.scheduler.client.SchedulerClient',
                        return_value=sched_client_mock),
             mock.patch('nova.rpc.get_notifier', return_value=notifier_mock)):
@@ -1345,7 +1344,7 @@ class TestMoveClaim(BaseTestCase):
 
         # Initialise extensible resource trackers
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        with contextlib.nested(
+        with test.nested(
             mock.patch('nova.objects.InstanceList.get_by_host_and_node'),
             mock.patch('nova.objects.MigrationList.'
                        'get_in_progress_by_host_and_node')

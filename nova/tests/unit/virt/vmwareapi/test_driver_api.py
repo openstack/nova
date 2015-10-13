@@ -20,7 +20,6 @@ Test suite for VMwareAPI.
 """
 
 import collections
-import contextlib
 import datetime
 
 from eventlet import greenthread
@@ -135,7 +134,7 @@ class VMwareSessionTestCase(test.NoDBTestCase):
     @mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
                        return_value=False)
     def test_call_method(self, mock_is_vim):
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(driver.VMwareAPISession, '_create_session',
                                   _fake_create_session),
                 mock.patch.object(driver.VMwareAPISession, 'invoke_api'),
@@ -149,7 +148,7 @@ class VMwareSessionTestCase(test.NoDBTestCase):
     @mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
                        return_value=True)
     def test_call_method_vim(self, mock_is_vim):
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(driver.VMwareAPISession, '_create_session',
                                   _fake_create_session),
                 mock.patch.object(driver.VMwareAPISession, 'invoke_api'),
@@ -836,7 +835,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         mock_from_image.return_value = img_props
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._vmops, '_extend_virtual_disk'),
             mock.patch.object(self.conn._vmops, 'get_datacenter_ref_and_name'),
         ) as (mock_extend, mock_get_dc):
@@ -872,7 +871,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
             return self.call_method(module, method, *args, **kwargs)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_call_method',
                               new=fake_call_method),
             mock.patch.object(self.conn._session, '_wait_for_task',
@@ -908,7 +907,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.task_ref = task_ref
             return task_ref
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_call_method',
                               new=fake_call_method),
             mock.patch.object(self.conn._session, '_wait_for_task',
@@ -952,7 +951,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.task_ref = task_ref
             return task_ref
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_wait_for_task',
                               new=fake_wait_for_task),
             mock.patch.object(self.conn._session, '_call_method',
@@ -1008,7 +1007,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.task_ref = task_ref
             return task_ref
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_wait_for_task',
                               fake_wait_for_task),
             mock.patch.object(self.conn._session, '_call_method',
@@ -1038,7 +1037,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.task_ref = task_ref
             return task_ref
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_wait_for_task',
                               fake_wait_for_task),
             mock.patch.object(self.conn._session, '_call_method',
@@ -1069,7 +1068,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.task_ref = task_ref
             return task_ref
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_wait_for_task',
                               fake_wait_for_task),
             mock.patch.object(self.conn._session, '_call_method',
@@ -1285,7 +1284,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                value="Snapshot-123",
                                name="VirtualMachineSnapshot")
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conn._session, '_wait_for_task',
                               side_effect=exception),
             mock.patch.object(vmops, '_time_sleep_wrapper')
@@ -1447,7 +1446,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_resume_state_on_host_boot_no_reboot(self):
         self._create_instance()
         for state in ['poweredOn', 'suspended']:
-            with contextlib.nested(
+            with test.nested(
                 mock.patch.object(driver.VMwareVCDriver, 'reboot'),
                 mock.patch.object(vm_util, 'get_vm_state',
                                   return_value=state)
@@ -1510,7 +1509,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             return 'fake-ref'
 
         self._create_instance()
-        with contextlib.nested(
+        with test.nested(
              mock.patch.object(vm_util, 'get_vm_ref_from_name',
                                fake_vm_ref_from_name),
              mock.patch.object(self.conn._session,
@@ -1709,7 +1708,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         device = mock.Mock(backing=backing)
         vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64,
                                      device)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
             mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_ref'),

@@ -14,13 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
 import os
 
 import mock
 from oslo_config import cfg
 
 from nova import exception
+from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import pathutils
@@ -87,7 +87,7 @@ class VolumeOpsTestCase(test_base.HyperVBaseTestCase):
         fake_vol_conn_info = (
             block_device_info['block_device_mapping'][0]['connection_info'])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self._volumeops,
                               '_get_volume_driver'),
             mock.patch.object(self._volumeops,
@@ -308,7 +308,7 @@ class ISCSIVolumeDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.fake_iqn)
 
     def test_get_mounted_disk_from_lun(self):
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self._volume_driver._volutils,
                               'get_device_number_for_target'),
             mock.patch.object(self._volume_driver._vmutils,

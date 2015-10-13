@@ -17,7 +17,6 @@
 Tests For Cells Messaging module
 """
 
-import contextlib
 import uuid
 
 import mock
@@ -1089,7 +1088,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         instance.uuid = uuidutils.generate_uuid()
         error = exception.InstanceInfoCacheNotFound(
                                             instance_uuid=instance.uuid)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(instance, 'refresh',
                               side_effect=error),
             mock.patch.object(self.tgt_compute_api, 'delete')) as (inst,

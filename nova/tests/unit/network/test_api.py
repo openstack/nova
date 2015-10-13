@@ -15,7 +15,6 @@
 
 """Tests for network API."""
 
-import contextlib
 import itertools
 import uuid
 
@@ -448,7 +447,7 @@ class ApiTestCase(test.TestCase):
     def _test_refresh_cache(self, method, *args, **kwargs):
         # This test verifies that no call to get_instance_nw_info() is made
         # from the @refresh_cache decorator for the tested method.
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.network_api.network_rpcapi, method),
             mock.patch.object(self.network_api.network_rpcapi,
                               'get_instance_nw_info'),

@@ -15,7 +15,6 @@
 
 """Tests for the conductor service."""
 
-import contextlib
 import copy
 import uuid
 
@@ -624,7 +623,7 @@ class _BaseTaskTestCase(object):
         # 'shelved_image_id' is None for volumebacked instance
         instance.system_metadata['shelved_image_id'] = None
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager,
                               '_schedule_instances'),
             mock.patch.object(self.conductor_manager.compute_rpcapi,
@@ -680,7 +679,7 @@ class _BaseTaskTestCase(object):
                                     *instances):
             raise exc.NoValidHost(reason='')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager.image_api, 'get',
                               return_value='fake_image'),
             mock.patch.object(self.conductor_manager, '_schedule_instances',
@@ -754,7 +753,7 @@ class _BaseTaskTestCase(object):
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': inst_obj.host})
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(self.conductor_manager.scheduler_client,
@@ -779,7 +778,7 @@ class _BaseTaskTestCase(object):
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
@@ -812,7 +811,7 @@ class _BaseTaskTestCase(object):
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
@@ -886,7 +885,7 @@ class _BaseTaskTestCase(object):
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': inst_obj.host, 'migration': migration})
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(self.conductor_manager.scheduler_client,
@@ -1150,7 +1149,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(utils, 'get_image_from_system_metadata',
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
@@ -1289,7 +1288,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(utils, 'get_image_from_system_metadata',
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
@@ -1374,7 +1373,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
         build_request_spec.return_value = spec
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(instances[0], 'refresh',
                     side_effect=exc.InstanceInfoCacheNotFound(
                         instance_uuid=instances[0].uuid)),

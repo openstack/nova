@@ -15,7 +15,6 @@
 Test suite for images.
 """
 
-import contextlib
 import os
 import tarfile
 
@@ -63,7 +62,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                               file_path, file_size):
             return write_file_handle
 
-        with contextlib.nested(
+        with test.nested(
              mock.patch.object(rw_handles, 'ImageReadHandle',
                                side_effect=fake_read_handle),
              mock.patch.object(rw_handles, 'FileWriteHandle',
@@ -114,7 +113,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         with open(ovf_path) as f:
             ovf_descriptor = f.read()
 
-        with contextlib.nested(
+        with test.nested(
              mock.patch.object(images.IMAGE_API, 'get'),
              mock.patch.object(images.IMAGE_API, 'download'),
              mock.patch.object(images, 'start_transfer'),
@@ -182,7 +181,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         """Test fetching streamOptimized disk image."""
         session = mock.MagicMock()
 
-        with contextlib.nested(
+        with test.nested(
              mock.patch.object(images.IMAGE_API, 'get'),
              mock.patch.object(images.IMAGE_API, 'download'),
              mock.patch.object(images, 'start_transfer'),

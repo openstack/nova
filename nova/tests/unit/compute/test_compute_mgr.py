@@ -12,7 +12,6 @@
 
 """Unit tests for ComputeManager()."""
 
-import contextlib
 import time
 import uuid
 
@@ -220,7 +219,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 expected_attrs=['system_metadata'])
         quotas = mock.create_autospec(objects.Quotas, spec_set=True)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute, '_shutdown_instance'),
             mock.patch.object(instance, 'obj_load_attr'),
@@ -544,7 +543,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 host=self.compute.host,
                 expected_attrs=['info_cache'])
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(context, 'get_admin_context',
                 return_value=self.context),
             mock.patch.object(compute_utils, 'get_nw_info_for_instance',
@@ -838,7 +837,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ACTIVE,
                 host=self.compute.host,
                 task_state=task_states.MIGRATING)
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(instance, 'save'),
             mock.patch('nova.compute.utils.get_nw_info_for_instance',
                        return_value=network_model.NetworkInfo())
@@ -1058,7 +1057,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 task_state=task_states.RESIZE_PREP,
                 power_state=power_state.RUNNING)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
                               return_value=power_state.RUNNING),
             mock.patch.object(compute_utils, 'get_nw_info_for_instance'),
@@ -1107,7 +1106,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):
         instance.host = self.compute.host
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=return_power_state),
             mock.patch.object(self.compute, 'reboot_instance'),
@@ -1177,7 +1176,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def _test_init_instance_cleans_reboot_state(self, instance):
         instance.host = self.compute.host
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=power_state.RUNNING),
             mock.patch.object(instance, 'save', autospec=True),
@@ -2217,7 +2216,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, vm_state=vm_states.ACTIVE)
         fake_nw_info = network_model.NetworkInfo()
         rescue_image_meta = {'id': 'fake', 'name': 'fake'}
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
             mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
@@ -2285,7 +2284,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.RESCUED)
         fake_nw_info = network_model.NetworkInfo()
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
             mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
@@ -2458,7 +2457,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Only instance 2 has a migration record
         migration = objects.Migration(instance_uuid=instance_2.uuid)
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_get_instances_on_driver',
                                return_value=[instance_1,
                                              instance_2]),
@@ -2665,7 +2664,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(block_device_info['block_device_mapping'],
                              'shared_block_storage')
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver, 'destroy',
                               return_value=None),
             mock.patch.object(self.compute.driver, 'spawn',
@@ -3345,7 +3344,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._instance_action_events()
         self.mox.ReplayAll()
 
-        with contextlib.nested(
+        with test.nested(
             mock.patch('nova.utils.spawn_n'),
             mock.patch('nova.hooks._HOOKS')
         ) as (
@@ -3487,7 +3486,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                         reason=""))
 
     def _test_build_and_run_spawn_exceptions(self, exc):
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',
                     side_effect=exc),
                 mock.patch.object(self.instance, 'save',
@@ -3625,7 +3624,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertIsInstance(e, exception.BuildAbortException)
 
     def test_failed_bdm_prep_from_delete_raises_unexpected(self):
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
                     return_value=self.network_info),
@@ -3876,7 +3875,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups)
 
     def test_cleanup_allocated_networks_instance_not_found(self):
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute, '_deallocate_network'),
                 mock.patch.object(self.instance, 'save',
                     side_effect=exception.InstanceNotFound(instance_id=''))
@@ -3897,7 +3896,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 # Check that launched_at is set on the instance
                 self.assertIsNotNone(args[1].launched_at)
 
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute,
                     '_update_scheduler_instance_info'),
                 mock.patch.object(self.compute.driver, 'spawn'),
@@ -3964,7 +3963,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         exc = exception.InstanceNotFound(instance_id='')
 
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn'),
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance', return_value=[]),
@@ -4027,7 +4026,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         mock_obj_as_admin.assert_called_once_with()
 
     def test_finish_resize_failure(self):
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute, '_finish_resize',
                               side_effect=exception.ResizeError(reason='')),
             mock.patch.object(db, 'instance_fault_create'),
@@ -4052,7 +4051,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     def test_resize_instance_failure(self):
         self.migration.dest_host = None
-        with contextlib.nested(
+        with test.nested(
             mock.patch.object(self.compute.driver,
                               'migrate_disk_and_power_off',
                               side_effect=exception.ResizeError(reason='')),

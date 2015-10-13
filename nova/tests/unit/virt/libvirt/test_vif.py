@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 from lxml import etree
 import mock
 from oslo_concurrency import processutils
@@ -684,7 +682,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                               'ca:fe:de:ad:be:ef',
                                               'instance-uuid')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
@@ -709,7 +707,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   'qbrvif-xxx-yyy', run_as_root=True)],
             'delete_ovs_vif_port': [mock.call('br0', 'qvovif-xxx-yyy')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=True),
                 mock.patch.object(utils, 'execute'),
@@ -767,7 +765,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'device_exists': [mock.call('qbrvif-xxx-yyy')],
             'delete_ovs_vif_port': [mock.call('br0', 'qvovif-xxx-yyy')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(linux_net, 'delete_ovs_vif_port')
@@ -801,7 +799,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                               'ca:fe:de:ad:be:ef',
                                               'instance-uuid')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
@@ -825,7 +823,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   'qbrvif-xxx-yyy', run_as_root=True)],
             'delete_ivs_vif_port': [mock.call('qvovif-xxx-yyy')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, 'delete_ivs_vif_port')
         ) as (execute, delete_ivs_vif_port):
@@ -1295,7 +1293,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                                   'instance-uuid')],
                  'ovs_set_vhostuser_port_type': [mock.call('usv-xxx-yyy-zzz')]
         }
-        with contextlib.nested(
+        with test.nested(
                 mock.patch.object(linux_net, 'create_ovs_vif_port'),
                 mock.patch.object(linux_net, 'ovs_set_vhostuser_port_type')
         ) as (create_ovs_vif_port, ovs_set_vhostuser_port_type):
