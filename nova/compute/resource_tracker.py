@@ -122,11 +122,14 @@ class ResourceTracker(object):
                             "until resources have been claimed."),
                         instance=instance_ref)
 
-        # get memory overhead required to build this instance:
+        # get the overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance_ref)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
                   "MB", {'flavor': instance_ref.memory_mb,
                           'overhead': overhead['memory_mb']})
+        LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
+                  "GB", {'flavor': instance_ref.root_gb,
+                         'overhead': overhead.get('disk_gb', 0)})
 
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
             context, instance_ref.uuid)
@@ -210,6 +213,9 @@ class ResourceTracker(object):
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
                   "MB", {'flavor': new_instance_type.memory_mb,
                           'overhead': overhead['memory_mb']})
+        LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
+                  "GB", {'flavor': instance.root_gb,
+                         'overhead': overhead.get('disk_gb', 0)})
 
         pci_requests = objects.InstancePCIRequests.\
                        get_by_instance_uuid_and_newness(
@@ -646,12 +652,14 @@ class ResourceTracker(object):
 
     def _update_usage(self, usage, sign=1):
         mem_usage = usage['memory_mb']
+        disk_usage = usage.get('root_gb', 0)
 
         overhead = self.driver.estimate_instance_overhead(usage)
         mem_usage += overhead['memory_mb']
+        disk_usage += overhead.get('disk_gb', 0)
 
         self.compute_node.memory_mb_used += sign * mem_usage
-        self.compute_node.local_gb_used += sign * usage.get('root_gb', 0)
+        self.compute_node.local_gb_used += sign * disk_usage
         self.compute_node.local_gb_used += sign * usage.get('ephemeral_gb', 0)
         self.compute_node.vcpus_used += sign * usage.get('vcpus', 0)
 

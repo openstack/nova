@@ -85,7 +85,8 @@ class Claim(NopClaim):
         self._pci_requests = pci_requests
 
         if not overhead:
-            overhead = {'memory_mb': 0}
+            overhead = {'memory_mb': 0,
+                        'disk_gb': 0}
 
         self.overhead = overhead
         self.context = context
@@ -96,7 +97,8 @@ class Claim(NopClaim):
 
     @property
     def disk_gb(self):
-        return self.instance.root_gb + self.instance.ephemeral_gb
+        return (self.instance.root_gb + self.instance.ephemeral_gb +
+                self.overhead.get('disk_gb', 0))
 
     @property
     def memory_mb(self):
@@ -274,7 +276,8 @@ class MoveClaim(Claim):
     @property
     def disk_gb(self):
         return (self.instance_type.root_gb +
-                self.instance_type.ephemeral_gb)
+                self.instance_type.ephemeral_gb +
+                self.overhead.get('disk_gb', 0))
 
     @property
     def memory_mb(self):

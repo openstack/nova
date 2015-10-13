@@ -211,7 +211,8 @@ class ComputeDriver(object):
         :param instance_info: Instance/flavor to calculate overhead for.
         :returns: Dict of estimated overhead values.
         """
-        return {'memory_mb': 0}
+        return {'memory_mb': 0,
+                'disk_gb': 0}
 
     def list_instances(self):
         """Return the names of all the instances known to the virtualization
