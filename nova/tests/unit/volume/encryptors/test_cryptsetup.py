@@ -78,7 +78,7 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
 
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'remove', self.dev_name,
-                      run_as_root=True, check_exit_code=True),
+                      run_as_root=True, check_exit_code=[0, 4]),
         ])
         self.assertEqual(1, mock_execute.call_count)
 
@@ -88,7 +88,7 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
 
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'remove', self.dev_name,
-                      run_as_root=True, check_exit_code=True),
+                      run_as_root=True, check_exit_code=[0, 4]),
         ])
         self.assertEqual(1, mock_execute.call_count)
 
