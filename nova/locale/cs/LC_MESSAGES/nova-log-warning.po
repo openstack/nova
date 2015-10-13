@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev266\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-23 14:55+0000\n"
-"PO-Revision-Date: 2015-09-23 07:25+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"PO-Revision-Date: 2015-09-24 08:43+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
 "Language: cs\n"
@@ -523,20 +523,19 @@ msgstr ""
 msgid "Get esx cookies failed: %s"
 msgstr "Získání souborů cookies esx selhalo: %s"
 
-#, python-format
-msgid ""
-"Host %(hostname)s has more disk space than database expected (%(physical)sgb "
-"> %(database)sgb)"
-msgstr ""
-"Hostitel %(hostname)s má větší kapacitu disku, než databáze očekávala "
-"(%(physical)sgb > %(database)sgb)"
-
 msgid ""
 "Host field should not be set on the instance until resources have been "
 "claimed."
 msgstr ""
 "Pole hostitele by nemělo být nastaveno pro instanci, dokud nebudou získány "
 "zdroje."
+
+#, python-format
+msgid ""
+"Hostname %(hostname)s is longer than 63, truncate it to %(truncated_name)s"
+msgstr ""
+"Název hostitele %(hostname)s je delší než 63 znaků, zkrácen na "
+"%(truncated_name)s"
 
 msgid "Hypervisor driver does not support firewall rules"
 msgstr "Ovladač hypervizoru nepodporuje pravidla brány firewall"
@@ -1049,14 +1048,6 @@ msgid "Power state %s not found."
 msgstr "Stav napájení %s nebyl nalezen."
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)rs"
-msgstr ""
-"Problém při získávání seznamu potomků %(path)r v rámci daného časového "
-"limitu=%(timeout)rs"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Překročena kvóta pro %s, pokus o přidělení plovoucí IP adresy"
 
@@ -1478,16 +1469,6 @@ msgstr "Virtuální disk: %s nenalezeno v záloze svazku ."
 msgid "Volume %s should be encrypted but there is no encryption metadata."
 msgstr ""
 "Svazek %s by měl být zašifrován, ale neexistují žádná popisná data šifrování."
-
-#, python-format
-msgid ""
-"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
-"volume size is %(size)db, but free space on volume group is only "
-"%(free_space)db."
-msgstr ""
-"Skupina svazku %(vg)s nebude moci pojmout řídký svazek %(lv)s. Velikost "
-"virtuálního svazku je %(size)db, ale volná kapacita ve skupině svazku je "
-"pouze %(free_space)db."
 
 #, python-format
 msgid ""

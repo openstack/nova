@@ -14,9 +14,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev302\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-29 06:31+0000\n"
+"POT-Creation-Date: 2015-10-13 06:03+0000\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language: ru\n"
@@ -1987,24 +1987,12 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "Снимки копии в настоящий момент недопустимы."
 
 #, python-format
-msgid ""
-"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
-"but %(size)db required by volume %(lv)s."
-msgstr ""
-"Недостаточное пространство в группе томов %(vg)s. Доступно только "
-"%(free_space)db, но %(size)db запрошено томом %(lv)s."
-
-#, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Недостаточно вычислительных ресурсов: %(reason)s."
 
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr "Недостаточно памяти на узле сети compute для запуска %(uuid)s."
-
-#, python-format
-msgid "IntegrityError detected when archiving table %s"
-msgstr "Обнаружена ошибка IntegrityError при архивировании таблицы %s"
 
 #, python-format
 msgid "Interface %(interface)s not found."

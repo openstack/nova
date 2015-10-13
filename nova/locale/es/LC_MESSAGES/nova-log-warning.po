@@ -6,15 +6,15 @@
 # Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
 # Jorge Guerrero <lavidadigital@gmail.com>, 2014
 # Pablo Sanchez <furybeat@gmail.com>, 2015
-# Elizabeth K. Joseph <lyz@princessleia.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:26+0000\n"
-"PO-Revision-Date: 2015-09-09 10:48+0000\n"
-"Last-Translator: Elizabeth K. Joseph <lyz@princessleia.com>\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
+"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
 "es/)\n"
 "Language: es\n"
@@ -39,6 +39,14 @@ msgstr "%(cmd)s ha fallado. Hibernando %(time)s segundos antes del re-ingreso."
 #, python-format
 msgid "%(host_state)s has not been heard from in a while"
 msgstr "%(host_state)s no ha sido recibido durante un tiempo"
+
+#, python-format
+msgid "%(logprefix)s failed to load json"
+msgstr "%(logprefix)s falló en cargar json"
+
+#, python-format
+msgid "%(logprefix)s file does not exist"
+msgstr "El archivo %(logprefix)s no existe"
 
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
@@ -472,20 +480,19 @@ msgstr ""
 "Se han encontrado varias coincidencias para el dominio %(domain)s.\n"
 "%(entry)s"
 
-#, python-format
-msgid ""
-"Host %(hostname)s has more disk space than database expected (%(physical)sgb "
-"> %(database)sgb)"
-msgstr ""
-"Host %(hostname)s tiene más espacio de disco que lo estimado por la base de "
-"datos (%(physical)sgb > %(database)sgb)"
-
 msgid ""
 "Host field should not be set on the instance until resources have been "
 "claimed."
 msgstr ""
 "El campo de host no se debe establecer en la instancia hasta que los "
 "recursos se hayan reclamado."
+
+#, python-format
+msgid ""
+"Hostname %(hostname)s is longer than 63, truncate it to %(truncated_name)s"
+msgstr ""
+"La longitud del nombre de host %(hostname)s es más de 63, se trunca a "
+"%(truncated_name)s"
 
 msgid "Hypervisor driver does not support firewall rules"
 msgstr "El controlador de hipervisor no soporta reglas de cortafuegos "
@@ -953,14 +960,6 @@ msgid "Power state %s not found."
 msgstr "No se ha encontrado estado de energía %s."
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)rs"
-msgstr ""
-"Ha ocurrido un problema al adquirir la lista de niños de %(path)r dentro de "
-"un tiempo de espera dado=%(timeout)rs"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Cuota excedida para %s, intentando asignar dirección IP flotante"
 
@@ -1322,16 +1321,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
-"volume size is %(size)db, but free space on volume group is only "
-"%(free_space)db."
-msgstr ""
-"El grupo de volumen %(vg)s no podrá retener el volumen disperso %(lv)s. El "
-"tamaño del volumen virtual es %(size)db, pero el espacio libre en el grupo "
-"de volúmenes es solo %(free_space)db."
-
-#, python-format
-msgid ""
 "Volume id: %(vol_id)s finished being created but its status is "
 "%(vol_status)s."
 msgstr ""
@@ -1377,6 +1366,16 @@ msgid ""
 msgstr ""
 "X-Instance-ID presente en cabecera requerida. Se debe habilitar la opción "
 "'service_metadata_proxy' para procesar esta cabecera"
+
+#, python-format
+msgid ""
+"X-Instance-ID-Signature: %(signature)s does not match the expected value: "
+"%(expected_signature)s for id: %(requestor_id)s. Request From: "
+"%(requestor_address)s"
+msgstr ""
+"X-Instance-ID-Signature: %(signature)s no coincide con el valor esperado: "
+"%(expected_signature)s para id: %(requestor_id)s. Solicitud de: "
+"%(requestor_address)s"
 
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "

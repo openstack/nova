@@ -3,341 +3,345 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015
+# Ettore Atalan <atalanttore@googlemail.com>, 2014
+# Andreas Jaeger <jaegerandi@gmail.com>, 2015. #zanata
+# Frank Kloeker <eumel@arcor.de>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2015-10-13 06:04+0000\n"
-"PO-Revision-Date: 2015-09-21 08:44+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
-"Language: cs\n"
+"PO-Revision-Date: 2015-10-03 03:02+0000\n"
+"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
+"Language-Team: German (http://www.transifex.com/openstack/nova/language/"
+"de/)\n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.0\n"
-"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Zanata 3.7.1\n"
 
 #, python-format
 msgid "%(action_str)s instance"
-msgstr "%(action_str)s instance"
+msgstr "%(action_str)s Instanz"
 
 #, python-format
 msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): vytváření kontrolního součtu"
+msgstr "%(id)s (%(base_file)s): Prüfsumme wird erzeugt"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
-msgstr "%(name)s poslouchá na %(host)s:%(port)s"
+msgstr "%(name)s lauscht auf %(host)s:%(port)s"
 
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
-msgstr "%(num_values)d hodnot nalezeno, z nich bude použita minimální hodnota."
+msgstr ""
+"%(num_values)d Einträge gefunden,  von denen der Minimalwert verwendet wird."
 
 #, python-format
 msgid "%(type)s limit not specified, defaulting to unlimited"
-msgstr "Omezení %(type)s nezadáno, nastavena výchozí hodnota neomezeno"
+msgstr "%(type)s Limit nicht spezifiziert, voreingestellt ist unlimitiert"
 
 #, python-format
 msgid "%(type)s limit: %(limit).02f %(unit)s, free: %(free).02f %(unit)s"
-msgstr "%(type)s limit: %(limit).02f %(unit)s, volných: %(free).02f %(unit)s"
+msgstr "%(type)s Limit: %(limit).02f %(unit)s, frei: %(free).02f %(unit)s"
 
 #, python-format
 msgid "%(url)s returned with HTTP %(status)d"
-msgstr "%(url)s vrácena s HTTP %(status)d"
+msgstr "%(url)s mit HTTP %(status)d zurückgegeben"
 
 #, python-format
 msgid "%s is not a valid LUKS device; formatting device for first use"
-msgstr ""
-"%s není platné zařízení LUKS; probíhá formátování zařízení pro první použití"
+msgstr "%s ist kein gültiges LUKS Gerät; formatiere Gerät zur ersten Benutzung"
 
 #, python-format
 msgid "Active base files: %s"
-msgstr "Aktivní základní soubory: %s"
+msgstr "Aktive Basisdateien: %s"
 
 #, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
-msgstr ""
-"Přidávání bezpečnostní skupiny %(security_group_id)s k portu %(port_id)s"
+msgstr "Füge Sicherheitsgruppe %(security_group_id)s zu Port %(port_id)s"
 
 msgid "Allocate address"
-msgstr "Přidělit adresu"
+msgstr "Weise Adresse zu"
 
 #, python-format
 msgid "Allocated network: '%s' for instance"
-msgstr "Přidělena síť: '%s' pro instanci"
+msgstr "Netwerkzuweisung: '%s' für Instanz"
 
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Přidružit adresu %(public_ip)s k instanci %(instance_id)s"
+msgstr "Verbinde Adresse %(public_ip)s mit Instanz %(instance_id)s"
 
 msgid "Attach interface"
-msgstr "Připojit rozhraní"
+msgstr "Schnittstelle hinzufügen"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "Připojit svazek %(volume_id)s k instanci %(instance_id)s na %(device)s"
+msgstr "Hänge Volume %(volume_id)s an Instanz %(instance_id)s via %(device)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "Připojit svazek %(volume_id)s k instanci %(server_id)s na %(device)s"
+msgstr "Hänge Volume %(volume_id)s an Instanz %(server_id)s via %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
-msgstr "Připojování svazku %(volume_id)s do %(mountpoint)s"
+msgstr "Anhängen Datenträger %(volume_id)s an %(mountpoint)s"
 
 msgid "Attempted to unfilter instance which is not filtered"
-msgstr "Pokus o odfiltrování instance, která není filtrována"
+msgstr ""
+"Versuch den Filter von einer Instanz zu nehmen, die nicht gefiltert ist"
 
 #, python-format
 msgid "Auditing locally available compute resources for node %(node)s"
-msgstr "Kontrola místně dostupných výpočetních zdrojů pro uzel %(node)s"
+msgstr ""
+"Überprüfung der örtlich verfügbaren Compute-Resourcen für Knoten %(node)s"
 
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
-"Automatické potvrzení přesunu %(migration_id)s pro instanci %(instance_uuid)s"
+"Automatische Migrationsbestätigung %(migration_id)s für Instanz "
+"%(instance_uuid)s"
 
 msgid "Automatically hard rebooting"
-msgstr "Automatický tvrdý restart"
+msgstr "Automatischer harter Neustart"
 
 #, python-format
 msgid "Base or swap file too young to remove: %s"
-msgstr "Základní nebo odkládací soubor je příliš nový k odstranění: %s"
+msgstr "Basis- oder Swap-Datei zu neu zum Löschen: %s"
 
 msgid "Beginning cold snapshot process"
-msgstr "Zahajování procesu snímkování vypnuté instance"
+msgstr "Beginne kalte Schattenkopie zu erstellen"
 
 msgid "Beginning live snapshot process"
-msgstr "Zahajování procesu snímkování za provozu"
+msgstr "Beginne Live-Schattenkopie zu erstellen"
 
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "Zavádění pomocí svazku %(volume_id)s ve %(mountpoint)s"
+msgstr "Starte mit Datenträger %(volume_id)s an EInhängepunkt %(mountpoint)s"
 
 msgid "Called setup_basic_filtering in nwfilter"
-msgstr "Voláno základní nastavení filtrování v nwfilter"
+msgstr "Rufe setup_basic_filtering in Nwfilter"
 
 #, python-format
 msgid "Checking Token: %(token)s, %(token_valid)s"
-msgstr "Kontrola známky: %(token)s, %(token_valid)s"
+msgstr "Überprüfe Token: %(token)s, %(token_valid)s"
 
 msgid "Claim successful"
-msgstr "Získání bylo úspěšné"
+msgstr "Reklamation erfolgreich"
 
 #, python-format
 msgid "Compute node '%s' not found in update_available_resource."
-msgstr "Výpočetní uzel '%s' nenalezen v aktualizaci dostupných zdrojů."
+msgstr "Compute Knoten '%s' nicht gefunden in update_available_resource."
 
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
-msgstr "Záznam služby výpočtu vytvořen pro %(host)s:%(node)s"
+msgstr "Compute_service Datensatz erstellt für %(host)s:%(node)s"
 
 #, python-format
 msgid "Compute_service record updated for %(host)s:%(node)s"
-msgstr "Záznam služby výpočtu aktualizován položkou %(host)s:%(node)s"
+msgstr "Compute_service Eintrag aktualisiert für %(host)s:%(node)s"
 
 #, python-format
 msgid ""
 "Config drive for instance %(instance)s on baremetal node %(node)s created."
 msgstr ""
-"Konfigurační jednotka instance %(instance)s vytvořena na uzlu bez operačního "
-"systému %(node)s "
+"Konfigurationsfestplatte für Instanz %(instance)s an BareMetal-Knoten "
+"%(node)s erstellt."
 
 #, python-format
 msgid "Configured network %(network)s on host %(host)s"
-msgstr "Síť %(network)s nastavena pro hostitele %(host)s"
+msgstr "Konfiguriere Netzwerk %(network)s auf Host %(host)s"
 
 msgid "Configuring timezone for windows instance to localtime"
-msgstr "Nastavování časového pásma instance windows na místní čas"
+msgstr "Konfiguriere Zeitzone für Windowsinstanz auf lokale Zeit"
 
 #, python-format
 msgid "Connected volume (vdi_uuid): %s"
-msgstr "Svazek připojen (vdi_uuid): %s"
+msgstr "Verbundenes Volumen (vdi_uuid): %s"
 
 #, python-format
 msgid "Connection event '%(enabled)d' reason '%(reason)s'"
-msgstr "Událost připojení '%(enabled)d' důvod '%(reason)s'"
+msgstr "Verbindungsereignis '%(enabled)d' Grund: '%(reason)s'"
 
 #, python-format
 msgid "Copied %(source_file)s using %(module_str)s"
-msgstr "%(source_file)s zkopírováno pomocí %(module_str)s"
+msgstr "Kopierte %(source_file)s unter Benutzung von  %(module_str)s"
 
 #, python-format
 msgid "Copied virtual disk from %(src)s to %(dst)s."
-msgstr "Virtuální disk zkopírován z %(src)s do %(dst)s."
+msgstr "Virtuelle Festplatte kopiert von %(src)s nach %(dst)s."
 
 #, python-format
 msgid "Corrupt base files: %s"
-msgstr "Poškozené základní soubory: %s"
+msgstr "Fehlerhafte Basisdateien: %s"
 
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 msgstr ""
-"Nelze najít doménu v libvirt pro instanci %s. Nelze získat statistiky bloku "
-"zařízení"
+"Konnte Domain nicht finden in Libvirt für Instanz %s. Bekomme keinen "
+"Blockstatus für Gerät"
 
 #, python-format
 msgid "Create Security Group %s"
-msgstr "Vytvořit bezpečnostní skupinu %s"
+msgstr "Sicherheitsgruppe %s erstellen"
 
 #, python-format
 msgid "Create assisted snapshot from volume %s"
-msgstr "Vytvořit snímek s pomocí ze svazku %s"
+msgstr "Erstelle Schattenkopievorlage vom Datenträger %s"
 
 #, python-format
 msgid "Create key pair %s"
-msgstr "Vytvořit pár klíčů %s"
+msgstr "Schlüsselpaar %s erstellen"
 
 #, python-format
 msgid "Create snapshot from volume %s"
-msgstr "Vytvořit snímek ze svazku %s"
+msgstr "Momentaufnahme aus Datenträger %s erstellen"
 
 #, python-format
 msgid "Create snapshot of volume %s"
-msgstr "Vytvořit snímek svazku %s"
+msgstr "Erstelle Momentaufnahme aus Datenträger %s"
 
 #, python-format
 msgid "Create volume from snapshot %s"
-msgstr "Vytvořit svazek ze snímku %s"
+msgstr "Erzeuge Volume von der Schattenkopie %s"
 
 #, python-format
 msgid "Create volume of %s GB"
-msgstr "Vytvořit svazek o %s GB"
+msgstr "Datenträger mit %s GB erstellen"
 
 msgid "Created linked-clone VM from snapshot"
-msgstr "Propojený klon VM vytvořen ze snímku"
+msgstr "Link-Clone VM von Schattenkopie erstellt"
 
 #, python-format
 msgid "Creating config drive at %(path)s"
-msgstr "Vytváření konfigurační jednotky na %(path)s"
+msgstr "Konfigurationslaufwerk wird erstellt bei %(path)s"
 
 #, python-format
 msgid "Creating event %(name)s:%(tag)s for instance %(instance_uuid)s"
-msgstr "Vytváření události %(name)s:%(tag)s por instanci %(instance_uuid)s"
+msgstr "Erstelle Ereignis %(name)s:%(tag)s für Instanz %(instance_uuid)s"
 
 msgid "Creating image"
-msgstr "Vytváření obrazu"
+msgstr "Abbild wird erstellt"
 
 #, python-format
 msgid ""
 "Data remaining %(remaining)d bytes, low watermark %(watermark)d bytes "
 "%(last)d seconds ago"
 msgstr ""
-"Zbývající data %(remaining)d bajtů, nejnižší hladina %(watermark)d bajtů "
-"před %(last)d vteřinami"
+"Verbleibende Daten %(remaining)d Bytes, niedrige Wassermarke %(watermark)d "
+"Bytes  seit %(last)d Sekunden"
 
 #, python-format
 msgid "De-registering image %s"
-msgstr "Zrušení registrace obrazu %s"
+msgstr "Melde Abbild  %s ab"
 
 #, python-format
 msgid "Delete key pair %s"
-msgstr "Smazat pár klíčů %s"
+msgstr "Schlüsselpaar %s löschen"
 
 #, python-format
 msgid "Delete security group %s"
-msgstr "Smazat bezpečnostní skupinu %s"
+msgstr "Sicherheitsgruppe %s löschen"
 
 #, python-format
 msgid "Delete snapshot with id: %s"
-msgstr "Smazat snímek s id: %s"
+msgstr "Momentaufnahme mit folgender ID löschen: %s"
 
 #, python-format
 msgid "Delete volume with id: %s"
-msgstr "Smazat svazek s id: %s"
+msgstr "Datenträger mit folgender ID löschen: %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
-msgstr "%s snímků smazáno"
+msgstr "%s Schattenkopien gelöscht."
 
 #, python-format
 msgid "Deleted virtual disk %s."
-msgstr "Virtuální disk %s smazán."
+msgstr "Virtuelle Festplatte gelöscht %s."
 
 msgid "Deleting instance as it has been evacuated from this host"
-msgstr "Mazání instance protože byla z tohoto hostitele vyklizena"
+msgstr "Gelöschte Instanz wurde von diesem Host geräumt"
 
 #, python-format
 msgid "Deleting instance files %s"
-msgstr "Mazání souborů instance %s"
+msgstr "Instanzdateien werden gelöscht %s"
 
 #, python-format
 msgid "Deleting orphan compute node %s"
-msgstr "Mazání osiřelého výpočetního uzlu %s"
+msgstr "Lösche verwaisten Compute Knoten %s"
 
 #, python-format
 msgid "Deletion of %s complete"
-msgstr "Vymazání %s dokončeno"
+msgstr "Löschung von %s abgeschlossen"
 
 #, python-format
 msgid "Deletion of %s failed"
-msgstr "Vymazání %s selhalo"
+msgstr "Löschung von %s fehlgeschlagen"
 
 msgid "Destroyed the VM"
-msgstr "VM zničena"
+msgstr "VM wurde zerstört"
 
 msgid "Destroying VM"
-msgstr "Ničení VM"
+msgstr "VM wird zerstört"
 
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
-"Ničení instance se jmenovkou '%s', jenž je označená jako SMAZÁNA, ale stále "
-"přítomna na hostiteli."
+"Zerstören der Instanz mit Namensschild '%s' welche markiert ist als GELÖSCHT "
+"aber weiter auf dem Host existiert."
 
 #, python-format
 msgid "Detach interface %s"
-msgstr "Odpojit rozhraní %s"
+msgstr "Schnittstelle %s abtrennen"
 
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "Odpojování svazku %(volume_id)s z bodu připojení %(mp)s"
+msgstr "Abhängen des Datenträgers %(volume_id)s vom Einhängepunkt %(mp)s"
 
 #, python-format
 msgid "Detach volume %s"
-msgstr "Odpojit svazek %s"
+msgstr "Datenträger %s abtrennen"
 
 #, python-format
 msgid "Detaching from volume api: %s"
-msgstr "Odpojování od api svazku: %s"
+msgstr "Abhängen von Datenträger-API: %s"
 
 #, python-format
 msgid "Dev %(dev_number)s attached to instance %(instance_name)s"
-msgstr "Dev %(dev_number)s připojen k instanci %(instance_name)s"
+msgstr "Gerät %(dev_number)s angehangen an Instanz %(instance_name)s"
 
 msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr "Přidělení zařízení selhalo. Další pokus za 2 vteřiny."
+msgstr "Gerätezuordnung fehlgeschlagen. Versuche es erneut in 2 Sekunden."
 
 #, python-format
 msgid "Disabling host %s."
-msgstr "Zakazování hostitele %s."
+msgstr "Host %s wird deaktiviert."
 
 #, python-format
 msgid "Disassociate address %s"
-msgstr "Odloučit adresu %s"
+msgstr "Trenne Adresse %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "Odpojování starého VDI %s z výpočetního domU"
+msgstr "Trenne schlechte VDI %s von Compute domU"
 
 #, python-format
 msgid "Downloaded OVA image file %(image_ref)s"
-msgstr "Stažen soubor obrazu OVA %(image_ref)s"
+msgstr "Heruntergeladene OVA -Abbilddatei %(image_ref)s"
 
 #, python-format
 msgid "Downloaded image file data %(image_ref)s"
-msgstr "Stažena data souboru obrazu %(image_ref)s"
+msgstr "Heruntergeladene Abbilddatei %(image_ref)s"
 
 #, python-format
 msgid ""
@@ -345,95 +349,99 @@ msgid ""
 "does not match the vm_power_state from the hypervisor (%(vm_power_state)s). "
 "Updating power_state in the DB to match the hypervisor."
 msgstr ""
-"Během synchronizace stavu napájení instance zjištěno, že stav napájení v "
-"databázi (%(db_power_state)s) neodpovídá stavu napájení vm z hypervizoru "
-"(%(vm_power_state)s). Probíhá aktualizace stavu napájení v databázi aby "
-"odpovídalo hypervizoru."
+"During _sync_instance_power_state der Datenbank power_state "
+"(%(db_power_state)s) stimmt nicht mit  vm_power_state vom Hypervisor "
+"(%(vm_power_state)s) überein. Aktualisieren SIe power_state in der "
+"Datenbank, damit er mit dem Hypervisor übereinstimmt."
 
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
-"Během synchronizace stavu napájení bylo zjištěno, že instance má nevyřízený "
-"úkol  (%(task)s). Přeskočeno."
+"Bei sync_power_state hat die Instanz noch anstehende Aufgaben (%(task)s). "
+"Überspringe."
 
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to "
 "host %(dst)s"
 msgstr ""
-"Během procesu synchronizace napájení byl změněn hostitel instance z %(src)s "
-"na %(dst)s"
+"Beim the sync_power Prozess wurde die Instanz verschoben von Host %(src)s zu "
+"Host %(dst)s"
 
 msgid "During wait destroy, instance disappeared."
-msgstr "Instance zmizela během čekání na zničení."
+msgstr "Beim Warten zerstört, Instanz verschwunden."
 
 #, python-format
 msgid "Enabling host %s."
-msgstr "Povolování hostitele %s."
+msgstr "Host %s wird aktiviert."
 
 msgid "Ensuring static filters"
-msgstr "Zajišťování statických filtrů"
+msgstr "Sorge für statische Filter"
 
 #, python-format
 msgid "Error %(ex)s, migration failed"
-msgstr "Chyba %(ex)s, přesunutí selhalo"
+msgstr "Fehler %(ex)s, Migration fehlgeschlagen"
 
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
-"Chyba při automatickém potvrzení změny velikosti: %s. Další pokus bude "
-"proveden později."
+"Fehler bei Auto-Bestätigung zur Größenänderung: %s. Werde es später nochmal "
+"probieren."
 
 #, python-format
 msgid "Error in handshake format: %s"
-msgstr "Chyba ve formátu zahájení komunikace: %s"
+msgstr "Fehler im Handshake-Format: %s"
 
 #, python-format
 msgid "Error in handshake: %s"
-msgstr "Chyba při zahájení komunikace: %s"
+msgstr "Fehler im Handshake: %s"
 
 #, python-format
 msgid ""
 "Executing RootwrapDaemonHelper.execute cmd=[%(cmd)r] kwargs=[%(kwargs)r]"
 msgstr ""
-"Spouštění  RootwrapDaemonHelper.execute příkaz=[%(cmd)r] argumenty klíčových "
-"slov=[%(kwargs)r]"
+"Ausführen RootwrapDaemonHelper.execute cmd=[%(cmd)r] kwargs=[%(kwargs)r]"
 
 #, python-format
 msgid "Failed to get image info from path %(path)s; error: %(error)s"
-msgstr "Nelze získat informace o obrazu z cesty %(path)s; chyba: %(error)s"
+msgstr ""
+"Abruf Abbild-Information fehlgeschlagen vom Pfad %(path)s; Fehler: %(error)s"
 
 #, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr ""
-"Nelze připojit souborový systém (očekáváno u nelinuxových instancí): %s"
+"Einhängen Dateisystem fehlgeschlagen (es wurde eine Nicht-Linux-Instanz "
+"erwartet): %s"
 
 #, python-format
 msgid "Failed to process external instance event %(event)s due to: %(error)s"
-msgstr "Nelze zpracovat událost vnější instance %(event)s kvůli: %(error)s"
+msgstr ""
+"Verarbeitung des externen Instanz-Ereignis  %(event)s fehlgeschlagen wegen: "
+"%(error)s"
 
 #, python-format
 msgid ""
 "Failed to undefine network filter %(name)s. Try %(cnt)d of %(max_retry)d."
 msgstr ""
-"Nelze zrušit určení síťového filtru %(name)s. Pokus %(cnt)d z %(max_retry)d."
+"Zurücksetzen des Netzwerkfilters %(name)s fehlgeschlagen. Versuch %(cnt)d "
+"von %(max_retry)d."
 
 #, python-format
 msgid "Fault thrown: %s"
-msgstr "Vyvolána chyba: %s"
+msgstr "Ausgelöster Fehler: %s"
 
 #, python-format
 msgid "Filter %s returned 0 hosts"
-msgstr "Filtr %s vrátil 0 hostitelů"
+msgstr "Filter %s hat 0 Hosts gefunden"
 
 #, python-format
 msgid ""
 "Filtering removed all hosts for the request with reservation ID '%(res_id)s' "
 "and instance ID '%(inst_uuid)s'. Filter results: %(str_results)s"
 msgstr ""
-"Filtrování odstranilo všechny hostitele z žádosti mající ID rezervace "
-"'%(res_id)s' a ID instance '%(inst_uuid)s'. Výsledky filtrování: "
+"Filtern gelöscht an allen Hosts für die Anfrage mit Reservierungs-ID "
+"'%(res_id)s' und Instance-ID '%(inst_uuid)s'. Filterergebnisse: "
 "%(str_results)s"
 
 #, python-format
@@ -442,94 +450,94 @@ msgid ""
 "%(used_ram)sMB phys_disk=%(phys_disk)sGB used_disk=%(used_disk)sGB "
 "total_vcpus=%(total_vcpus)s used_vcpus=%(used_vcpus)s pci_stats=%(pci_stats)s"
 msgstr ""
-"Konečné zobrazení zdrojů: název=%(node)s fyzická ram=%(phys_ram)sMB využitá "
-"ram=%(used_ram)sMB fyzický disk=%(phys_disk)sGB využitá kapacita="
-"%(used_disk)sGB celkem vcpu=%(total_vcpus)s vcpu využito=%(used_vcpus)s "
-"statistiky pci=%(pci_stats)s"
+"Finale Verbrauchsansicht: name=%(node)s phys_ram=%(phys_ram)sMB used_ram="
+"%(used_ram)sMB phys_disk=%(phys_disk)sGB used_disk=%(used_disk)sGB "
+"total_vcpus=%(total_vcpus)s used_vcpus=%(used_vcpus)s pci_stats=%(pci_stats)s"
 
 #, python-format
 msgid "Finishing migration network for instance %s"
-msgstr "Dokončování přesunutí sítě instance %s"
+msgstr "Beende Netzwerkmigration für Instanz %s"
 
 #, python-format
 msgid "Fixing previous mount %s which was not unmounted correctly."
-msgstr "oprava předchozího připojení %s, které nebylo správně odpojeno."
+msgstr ""
+"Repariere vorherigen Einhängepunkt %s, welcher nicht korrekt eingehangen war."
 
 #, python-format
 msgid "Floating IP %s is not associated. Ignore."
-msgstr "Plovoucí IP %s není přidružena. Je ignorována."
+msgstr "Floating IP %s ist nicht verbunden. Wird ignoriert."
 
 #, python-format
 msgid ""
 "Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
 "%(since_str)s"
 msgstr ""
-"Vynucování synchronizace instancí, id projektu =%(projid_str)s, poslední "
-"aktualizace=%(since_str)s"
+"Erzwinge Synchronisierung der Instanzen, project_id=%(projid_str)s, "
+"updated_since=%(since_str)s"
 
 #, python-format
 msgid ""
 "Forcing direct route to %(cell_name)s because of 'target_cell' scheduler hint"
 msgstr ""
-"Vynucování přímé cesty k %(cell_name)s z důvodu naznačení cílové buňky od "
-"plánovače"
+"Erzwinge direkte Route zu %(cell_name)s wegen einem Scheduler-Hinweis zu "
+"'target_cell'"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr ""
-"Nalezeno %(instance_count)d zaseknutých restartování starších než "
-"%(timeout)d vteřin"
+"%(instance_count)d hängende Neustarts gefunden älter als %(timeout)d Sekunden"
 
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
-"Nalezeno %(migration_count)d nepotvrzených přesunů starších než "
-"%(confirm_window)d vteřin"
+"Fand %(migration_count)d unbestätigte Migrationen älter als "
+"%(confirm_window)d Sekunden"
 
 #, python-format
 msgid ""
 "Found an unconfirmed migration during delete, id: %(id)s, status: %(status)s"
 msgstr ""
-"Nalezeno nepotvrzené přesunutí během mazání, id: %(id)s, stav: %(status)s"
+"Beim Löschen eine unbestätigte Migration gefunden, ID: %(id)s, Status: "
+"%(status)s"
 
 msgid "Get console output"
-msgstr "Získat výstup konzole"
+msgstr "Konsolenausgabe holen"
 
 #, python-format
 msgid "Get console output for instance %s"
-msgstr "Získat výstup konzole pro instanci %s"
+msgstr "Konsolenausgabe holen für Instanz %s"
 
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
-"Získání statistik bloku selhalo, zařízení mohlo být odpojeno. Instance="
-"%(instance_name)s Disk=%(disk)s Kód=%(errcode)s Chyba=%(e)s"
+"Erhalte Blockstatus-Fehler, Gerät ist möglicherweise abgetrennt. Instanz="
+"%(instance_name)s Festplatte=%(disk)s Code=%(errcode)s Fehler=%(e)s"
 
 msgid "Going to destroy instance again."
-msgstr "Instance bude znovu zničena."
+msgstr "Beginne erneut Instanz zu zerstören."
 
 msgid "Got request to destroy instance"
-msgstr "Obdržena žádost o zničení instance"
+msgstr "Erhielt Anfrage zum Zerstören der Instanz"
 
 #, python-format
 msgid "HTTP exception thrown: %s"
-msgstr "Vyvolána výjimka HTTP: %s"
+msgstr "Ausgelöste HTTP-Ausnahme: %s"
 
 #, python-format
 msgid "Host filter forcing available hosts to %s"
-msgstr "Filtr hostitelů si vynutil dostupnost hostitelů na %s"
+msgstr "Host-Filter erzwingt verfügbare Hosts zu %s"
 
 #, python-format
 msgid "Host filter forcing available nodes to %s"
-msgstr "Filtr hostitelů vynucuje dostupnost uzlů na %s"
+msgstr "Host-Filter erzwingt verfügbare Hosts zu %s"
 
 #, python-format
 msgid "Host filter ignoring hosts: %s"
-msgstr "Filtr hostitelů ignoruje hostitele: %s"
+msgstr "Host-Filter ignoriert Hosts: %s"
 
 #, python-format
 msgid ""
@@ -537,174 +545,175 @@ msgid ""
 "is now associated with a new instance that is in the process of allocating "
 "it's network."
 msgstr ""
-"Ignorování žádosti o uvolnění pevné IP adresy %(address)s s MAC %(mac)s, "
-"protože je v současnosti přidělena k nové instanci, u které probíhá proces "
-"přidělování její sítě."
+"Ignoriere Anfrage zur Freigabe der festen  IP-Adresse %(address)s mit MAC "
+"%(mac)s seit sie an eine neue Instanz gebunden ist während der Erstellung "
+"eines Netzwerkes-"
 
 #, python-format
 msgid "Image %s is no longer used by this node. Pending deletion!"
-msgstr "Uzel již nepoužívá obraz %s. Zařazen ke smazání!"
+msgstr ""
+"Abbild %s wird nicht länger in diesem Knoten verwendet. Löschung ausstehend!"
 
 #, python-format
 msgid "Image %s is no longer used. Deleting!"
-msgstr "Obraz %s se již nepoužívá. Probíhá mazání!"
+msgstr "Abbild %s ist nicht länger in Benutzung. Wird gelöscht!"
 
 #, python-format
 msgid "Image %s was deleted underneath us"
-msgstr "Obraz %s nebyl nalezen"
+msgstr "Abbild %s wurde unter uns gelöscht"
 
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
 "duration: %(duration).2f secs for image %(image_id)s"
 msgstr ""
-"Data vytvoření obrazu, uložitelné v mezipaměti: %(cache)s, stáhnuto: "
-"%(downloaded)s trvání: %(duration).2f vteřin pro obraz %(image_id)s"
+"Abbild erstellt Daten, zum Zwischenspeicher: %(cache)s, zum Download: "
+"%(downloaded)s Dauer: %(duration).2f Sekunden für Abbild %(image_id)s"
 
 #, python-format
 msgid "Import key %s"
-msgstr "Importovat klíč %s"
+msgstr "Schlüssel %s importieren"
 
 #, python-format
 msgid ""
 "Instance %(name)s running on %(host)s could not be found in the database: "
 "assuming it is a worker VM and skip ping migration to a new host"
 msgstr ""
-"Instance %(name)s běžící na %(host)s nemohla být nalezena v databázi: "
-"předpokládá se, že je to pracovní VM a bude přeskočeno měření odezvy při "
-"přesunu"
+"Instanz %(name)s die auf Host %(host)s läuft, konnte in der Datenbank nicht "
+"gefunden werden: vermutlich ist es eine Arbeits-VM und überspringe Ping-"
+"Migration zu einem neuen Host"
 
 msgid "Instance already shutdown."
-msgstr "Instance již je vypbnuta."
+msgstr "Instanz bereits heruntergefahren."
 
 msgid "Instance destroyed successfully."
-msgstr "Instance úspěšně zničena."
+msgstr "Instanz erfolgreich zerstört."
 
 msgid "Instance disappeared during terminate"
-msgstr "Instance během ukončování zmizela"
+msgstr "Instanz beim Beenden verschwunden"
 
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
-msgstr "Instance nemohla být vypnuta během %d vteřin."
+msgstr "Fehlerhaftes Herunterfahren der Instanz nach %d Sekunden."
 
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr ""
-"Během spuštění byla nalezena instance ve stavu přesunutí. Resetování stavu "
-"úkolu."
+"Instanz gefunden im Migrations-Status während der Startphase. Setze den "
+"Status task_state zurück"
 
 msgid ""
 "Instance has been marked deleted already, removing it from the hypervisor."
-msgstr ""
-"Instance již byla označena jako smazaná, probíhá její odstranění z "
-"hypervizoru."
+msgstr "Instanz ist schon zum Löschen markiert, entferne sie vom Hypervisor."
 
 msgid "Instance is already in deleting state, ignoring this request"
-msgstr "Instance již je ve stavu mazání, tato žádost je ignorována"
+msgstr "Instanz ist schon im Löschstatus, Anfrage ignoriert"
 
 msgid "Instance is already powered off in the hypervisor when stop is called."
-msgstr "Instance byla již vypnuta v hypervizoru, když bylo zastavení zavoláno."
+msgstr ""
+"Instance ist schon ausgeschaltet im Hypervisor wenn Stopp aufgerufen ist."
 
 msgid ""
 "Instance is configured with a file console, but the backing file is not "
 "(yet?) present"
 msgstr ""
-"Instance je nastavována pomocí souborové konzole, ale záložní soubor není "
-"(zatím?) přítomen"
+"Instanz ist konfiguriert mit einer Dateikonsole, aber die Datei ist bis "
+"jetzt nicht vorhanden"
 
 msgid "Instance is not found during confirmation"
-msgstr "Instance nebyla během potvrzování nalezena"
+msgstr "Instanz beim Bestätigen nicht gefunden"
 
 #, python-format
 msgid "Instance launched has CPU info: %s"
-msgstr "Spuštěná instance má info o CPU: %s"
+msgstr "Gestartete Instanz hat CPU Info: %s"
 
 msgid ""
 "Instance lifecycle events from the compute driver have been disabled. Note "
 "that lifecycle changes to an instance outside of the compute service will "
 "only be synchronized by the _sync_power_states periodic task."
 msgstr ""
-"události životního cyklu instance z ovladače výpočtu byly zakázány. "
-"Nezapomeňte, že změny životního cyklu instance mimo službu výpočtu budou "
-"synchronizovány pouze pomocí pravidelného úkolu _sync_power_states."
+"Ereignis im Lebenszyklus der Instanz vom Compute-Treiber wurde deaktiviert. "
+"Beachten Sie, dass Änderungen im Lebenszyklus zu einer Instanz ausserhalb "
+"des Compute-Dienstes nur synchronisiert wird von _sync_power_states periodic "
+"task"
 
 msgid "Instance may be started again."
-msgstr "Instance může být znovu spuštěna."
+msgstr "Instanz startet möglicherweise neu."
 
 msgid "Instance may have been confirmed during delete"
-msgstr "Instance byla možná potvrzena během mazání"
+msgstr "Instanz könnte beim Löschen bestätigt sein"
 
 msgid "Instance may have been rebooted during soft reboot, so return now."
-msgstr "Instance mohla být restartována během měkkého restartu, nyní se vrací."
+msgstr "Instanz wurde beim sanften Neustart neu gestartet, beginne von vorn."
 
 msgid "Instance rebooted successfully."
-msgstr "Instance úspěšně restartována."
+msgstr "Instanz erfolgreich neu gestartet."
 
 msgid "Instance running successfully."
-msgstr "Instance úspěšně běží."
+msgstr "Instanz läuft erfolgreich."
 
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
-msgstr "Instance úspěšně vypnuta po %d vteřinách."
+msgstr "Herunterfahren der Instanz erfolgreich nach %d Sekunden."
 
 msgid "Instance shutdown successfully."
-msgstr "Instance úspěšně vypnuta."
+msgstr "Instanz erfolgreich heruntergefahren."
 
 msgid "Instance soft rebooted successfully."
-msgstr "Instance úspěšně měkce restartována."
+msgstr "Sanfter Neustart der Instanz erfolgreich."
 
 msgid "Instance spawned successfully."
-msgstr "Instance úspěšně vytvořena."
+msgstr "Starten der Instanz erfolgreich."
 
 msgid "Instance was successfully rebuilt"
-msgstr "Instance byla úspěšně znovu sestavena"
+msgstr "Instanz erfolgreich neu gebaut"
 
 #, python-format
 msgid "Invalid request: %s"
-msgstr "Neplatný požadavek: %s"
+msgstr "Ungültige Anfrage: %s"
 
 msgid "It's not supported to backup volume backed instance."
-msgstr "Zálohovat instance zálohované použitím svazku není podporováno."
+msgstr "Backup Datenträger zurück zur Instance wird nicht unterstützt."
 
 #, python-format
 msgid "Libvirt host capabilities %s"
-msgstr "Schopnosti hostitele libvirt: %s"
+msgstr "Libvirt Host-Resourcen %s"
 
 #, python-format
 msgid "Loaded extensions: %s"
-msgstr "Načtena rozšíření: %s"
+msgstr "Geladene Erweiterungen: %s"
 
 #, python-format
 msgid "Loading compute driver '%s'"
-msgstr "Načítání ovladače výpočtu '%s'"
+msgstr "Lade Computer-Treiber '%s'"
 
 #, python-format
 msgid "Loading network driver '%s'"
-msgstr "Načítání ovladače sítě '%s'"
+msgstr "Netzwerktreiber \"%s\" wird geladen"
 
 #, python-format
 msgid "Loop mount error: %s"
-msgstr "Chyba ve smyčkovém připojení: %s"
+msgstr "Fehlerschleife beim EInhängen: %s"
 
 msgid "Manipulating interface files directly"
-msgstr "Přímé zacházení se soubory rozhraní"
+msgstr "Bearbeite Schnittstellendatei direkt"
 
 msgid "Migrating"
-msgstr "Přesunování"
+msgstr "Migrieren"
 
 #, python-format
 msgid "Migrating instance to %s finished successfully."
-msgstr "Přesunování instance do %s úspěšně dokončeno."
+msgstr "Migrieren Instanz zu %s erfolgreich abgeschlossen."
 
 #, python-format
 msgid "Migration %s is already confirmed"
-msgstr "Přesun %s již je potvrzen"
+msgstr "Migration %s ist schon bestätigt"
 
 #, python-format
 msgid "Migration %s may have been confirmed during delete"
-msgstr "Přesun %s byl možná potvrzen během mazání"
+msgstr "Migration %s könnte beim Löschen bestätigt sein"
 
 msgid "Migration operation has completed"
-msgstr "Operace přesunutí byla dokončena"
+msgstr "Migration volständig"
 
 #, python-format
 msgid ""
@@ -712,527 +721,531 @@ msgid ""
 "(bytes processed=%(processed_memory)d, remaining=%(remaining_memory)d, total="
 "%(total_memory)d)"
 msgstr ""
-"Přesunutí běží %(secs)d vteřin, zbývá %(remaining)d%% paměti; (bajtů "
-"zpracováno=%(processed_memory)d, zbývá=%(remaining_memory)d, celkem="
-"%(total_memory)d)"
+"Migration läuft für %(secs)d Sekunden, Speicher %(remaining)d%% verbleiben; "
+"(Bytes verarbeitet=%(processed_memory)d, verbleibt=%(remaining_memory)d, "
+"Summe=%(total_memory)d)"
 
 #, python-format
 msgid "Mounted volume: %s"
-msgstr "Připojen svazek: %s"
+msgstr "Eingehangener Datenträger: %s"
 
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "Bod připojení %(mountpoint)s odpojen od instance %(instance_name)s"
+msgstr "Einhängepunkt %(mountpoint)s abgehangen von Instanz %(instance_name)s"
 
 #, python-format
 msgid "Moved virtual disk from %(src)s to %(dst)s."
-msgstr "Virtuální disk přesunut z %(src)s do %(dst)s."
+msgstr "Virtuelle Festplatte verschoben von %(src)s nach %(dst)s."
 
 #, python-format
 msgid "NBD mount error: %s"
-msgstr "Chyba připojení NBD: %s"
+msgstr "NBD-Einhängefehler: %s"
 
 #, python-format
 msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Přidělení sítě zrušeno pro instanci (pevné ip adresy: '%s')"
+msgstr "Netwerk freigegeben für Instanz (feste IPs: '%s')"
 
 #, python-format
 msgid ""
 "Neutron deleted interface %(intf)s; detaching it from the instance and "
 "deleting it from the info cache"
 msgstr ""
-"Neutron smazal rozhraní %(intf)s; bylo odpojeno z instance a smazáno z "
-"mezipaměti informací"
+"Neutron löschte die Schnittstelle %(intf)s; hänge sie von der Instanz ab und "
+"lösche sie vom Info-Zwischenspeicher"
 
 #, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr ""
-"Žádné dostupné buňky při plánování. Další pokus za %(sleep_time)s vteřin"
+"Keine Zellen zur Verfügung bei der Planung.  Neuer Versuch in  "
+"%(sleep_time)s second(s)"
 
 #, python-format
 msgid "No hosts matched due to not matching 'force_hosts' value of '%s'"
-msgstr ""
-"Žádní hostitelé neodpovídají, protože nebyla nalezena shoda s hodnotou '%s' "
-"ve 'force_hosts'"
+msgstr "Kein Host stimmt mit  'force_hosts' und einem Wert von  '%s' überein"
 
 #, python-format
 msgid "No nodes matched due to not matching 'force_nodes' value of '%s'"
-msgstr ""
-"Žádné uzly neodpovídají, protože nebyla nalezena shoda s hodnotou '%s' ve "
-"'force_hosts'"
+msgstr "Kein Host stimmt mit  'force_hosts' und einem Wert von  '%s' überein"
 
 msgid "Pausing"
-msgstr "Pozastavování"
+msgstr "Pausieren"
 
 #, python-format
 msgid ""
 "Port %s from network info_cache is no longer associated with instance in "
 "Neutron. Removing from network info_cache."
 msgstr ""
-"Port %s z mezipaměti informací o síti již není přidružen k instanci v "
-"Neutron. Odstraňování z mezipaměti informací o síti."
+"Port %s von Netzwerk info_cache ist nicht länger mit einer Instanz verbunden "
+"in Neutron. Lösche Netzwerk von info_cache."
 
 msgid "Post operation of migration started"
-msgstr "Zahájena operace po přesunutí"
+msgstr "Post Operation der Migration gestartet"
 
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
-"Vypínání instance se jmenovkou '%s', jenž je označená jako SMAZÁNA, ale "
-"stále přítomna na hostiteli."
+"Ausschalten der Instanz mit Namensschild '%s' welche markiert ist als "
+"GELÖSCHT aber weiter auf dem Host existiert."
 
 #, python-format
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "Přepínání hostitele %(host_name)s do režimu údržby %(mode)s."
+msgstr "Setze Host %(host_name)s in Wartungsmodus %(mode)s."
 
 #, python-format
 msgid "Reboot instance %r"
-msgstr "Restartovat instanci %r"
+msgstr "Instanz %r neu starten"
 
 msgid "Rebooting instance"
-msgstr "Restartování instance"
+msgstr "Instanz wird neu gestartet"
 
 msgid "Rebooting instance after nova-compute restart."
-msgstr "Restartování instance po restartu nova-compute."
+msgstr "Neustart der Instanz nach dem Nova-Compute Neustart."
 
 msgid "Rebuilding instance"
-msgstr "Znovu sestavování instance"
+msgstr "Neubau der Instanz"
 
 #, python-format
 msgid "Received Token: %(token)s, %(token_dict)s"
-msgstr "Obdržen známky: %(token)s, %(token_dict)s"
+msgstr "Erhaltenes Token: %(token)s, %(token_dict)s"
 
 #, python-format
 msgid ""
 "Received a delete update from an unknown host '%s'. Re-created its "
 "InstanceList."
 msgstr ""
-"Obdržena aktualizace smazání od neznámého hostitele '%s'. Jeho seznam "
-"instancí byl znovu vytvořen."
+"Erhalte eine Lösch-Aktualisierung von einem unbekannten Host '%s'. Erstelle "
+"neue InstanceList."
 
 #, python-format
 msgid ""
 "Received a sync request from an unknown host '%s'. Re-created its "
 "InstanceList."
 msgstr ""
-"Obdržena žádost o synchronizaci od neznámého hostitele '%s'. Jeho seznam "
-"instancí byl znovu vytvořen."
+"Erhalte eine Synchronisierungsanfrage von einem unbekannten Host '%s'. "
+"Erstelle neue InstanceList."
 
 #, python-format
 msgid ""
 "Received an update from an unknown host '%s'. Re-created its InstanceList."
 msgstr ""
-"Obdržena aktualizace od neznámého hostitele '%s'. Jeho seznam instancí byl "
-"znovu vytvořen."
+"Erhalte eine Aktualisierung von einem unbekannten Host '%s'. Erstelle neue "
+"InstanceList."
 
 msgid "Reclaiming deleted instance"
-msgstr "Znovu získávání smazané instance"
+msgstr "Zurücknahme der gelöschten Instanz"
 
 msgid "Recovered connection to memcache server for reporting service status."
 msgstr ""
-"Připojení k serveru memcache obnoveno a stav služby může být znovu "
-"kontrolován."
+"Wiederhergestellte Verbindung zu Memcache-Server für Bericht zum "
+"Dienstestatus."
 
 msgid "Recovered connection to nova-conductor for reporting service status."
 msgstr ""
-"Připojení k nová-conductor obnoveno a stav služby může být znovu kontrolován."
+"Wiederhergestellte Verbindung zu Nova-Conductor für Bericht zum "
+"Dienstestatus."
 
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Obraz %(image_location)s registrován s id %(image_id)s"
+msgstr "Angemeldetes Abbild %(image_location)s mit ID %(image_id)s"
 
 #, python-format
 msgid "Release address %s"
-msgstr "Uvolnit adresu %s"
+msgstr "Adresse %s freigeben"
 
 #, python-format
 msgid "Removable base files: %s"
-msgstr "Odstranitelné základní soubory: %s"
+msgstr "Entfernbare Basisdateien: %s"
 
 #, python-format
 msgid "Removing base or swap file: %s"
-msgstr "Odstraňování základního nebo odkládacího souboru: %s"
+msgstr "Lösche Basis- oder Swap-Datei: %s"
 
 #, python-format
 msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr "Odstraňování mrtvého výpočetního %(host)s:%(node)s z plánovače"
+msgstr "Lösche leere Compute-Knoten %(host)s:%(node)s vom Scheduler"
 
 #, python-format
 msgid "Request made with invalid token: %s"
-msgstr "Proveden požadavek s neplatnou známkou: %s"
+msgstr "Anfrage gestellt mit ungültigem Token: %s"
 
 #, python-format
 msgid "Request made with missing token: %s"
-msgstr "Proveden požadavek s chybějící známkou: %s"
+msgstr "Anfrage gestellt ohne Token: %s"
 
 #, python-format
 msgid "Request: %s"
-msgstr "Požadavek: %s"
+msgstr "Anforderung: %s"
 
 msgid "Rescuing"
-msgstr "Zachraňování"
+msgstr "Rettungsmodus"
 
 msgid "Resuming"
-msgstr "Obnovování"
+msgstr "Wird fortgesetzt"
 
 msgid "Retrieving diagnostics"
-msgstr "Získávání diagnostik"
+msgstr "Empfange Diagnose"
 
 msgid "Root password set"
-msgstr "Heslo pro root nastaveno"
+msgstr "Root-Passwort festgelegt"
 
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
-"Auditování využití instance spuštěno pro hostitele %(host)s od "
-"%(begin_time)s do %(end_time)s. %(number_instances)s instancí."
+"Führe Instanz-Verwendungsstatistik aus für Host %(host)s von %(begin_time)s "
+"bis %(end_time)s. %(number_instances)s Instanzen."
 
 msgid ""
 "Service started deleting the instance during the previous run, but did not "
 "finish. Restarting the deletion now."
 msgstr ""
-"Služba začala mazat instanci během předchozího spuštění, ale operace nebyla "
-"dokončena. Probíhá restart jejího mazání."
+"Dienst startete Löschen der Instanz während des letzten Laufs, aber dieser "
+"wurde nicht abgeschlossen. Starte das Löschen neu."
 
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
-msgstr "Nastavování instance zpět na %(state)s po: %(error)s"
+msgstr "Setze Instanz zurück auf %(state)s nach: %(error)s"
 
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
-msgstr "Nastavování instance zpět na AKTIVNÍ po: %s"
+msgstr "Setze Instanz zurück auf AKTIV nach: %s"
 
 #, python-format
 msgid "Skipped adding %s because an equivalent index already exists."
-msgstr "Přidání %s přeskočeno protože stejný index již existuje."
+msgstr ""
+"Überspringe hinzufügen von  %s weil ein gleichnamiger Index bereits "
+"existiert."
 
 msgid ""
 "Skipped adding instances_project_id_deleted_idx because an equivalent index "
 "already exists."
 msgstr ""
-"Přidávání indexu smazaných id projektů v instancích, protože takový index "
-"již existuje."
+"Überspringe hinzufügen von  instances_project_id_deleted_idx weil ein "
+"gleichnamiger Index bereits existiert."
 
 msgid ""
 "Skipped adding reservations_deleted_expire_idx because an equivalent index "
 "already exists."
 msgstr ""
-"Přidávání indexu smazaní vypršených rezervací, protože takový index již "
-"existuje."
+"Überspringe hinzufügen von reservations_deleted_expire_idx weil ein "
+"gleichnamiger Index bereits existiert."
 
 #, python-format
 msgid "Skipping quiescing instance: %(reason)s."
-msgstr "Přeskakování ztišení instance: %(reason)s."
+msgstr "Überspringe stillegen der Instanz: %(reason)s."
 
 msgid "Snapshot extracted, beginning image upload"
-msgstr "Snímek extrahován, zahajování nahrávání obrazu"
+msgstr "Schattenkopie extrahiert, beginne Abbild hochzuladen"
 
 msgid "Snapshot image upload complete"
-msgstr "Nahrávání snímku obrazu dokončeno."
+msgstr "Hochladen Schattenkopie-Abbild fertig"
 
 msgid "Soft shutdown succeeded."
-msgstr "Měkké vypnutí úspěšně provedeno."
+msgstr "Sanftes Herunterfahren war erfolgreich."
 
 msgid "Spawning new instance"
-msgstr "Vytváření nové instance"
+msgstr "Starte neue Instanz"
 
 #, python-format
 msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "Spouštění uzlu %(topic)s (verze %(version)s)"
+msgstr "%(topic)s-Knoten wird gestartet  (Version %(version)s)"
 
 msgid "Starting halted instance found during reboot"
-msgstr "Spouštění zastavené instance nalezené během restartování"
+msgstr "Starte Instanz, die während des Neustarts angehalten wurde"
 
 #, python-format
 msgid "Starting migration network for instance %s"
-msgstr "Zahajování přesunutí sítě instance %s"
+msgstr "Starte Netzwerkmigration für Instanz %s"
 
 #, python-format
 msgid "Starting nova-xvpvncproxy node (version %s)"
-msgstr "Spouštění uzlu nova-xvpvncproxy (verze %s)"
+msgstr "Starte Nova-xvpvncproxy Knoten (Version %s)"
 
 msgid "Stopping WSGI server."
-msgstr "Zastavování serveru WSGI."
+msgstr "WSGI-Server wird gestoppt."
 
 #, python-format
 msgid "Successfully powered off Ironic node %s"
-msgstr "Uzel Ironic %s úspěšně vypnut"
+msgstr "Ironic Knoten %s erfolgreich ausgeschaltet"
 
 #, python-format
 msgid "Successfully powered on Ironic node %s"
-msgstr "Uzel Ironic %s úspěšně zapnut"
+msgstr "Ironic Knoten %s erfolgreich eingeschaltet"
 
 #, python-format
 msgid "Successfully provisioned Ironic node %s"
-msgstr "Uzel Ironic %s byl úspěšně poskytnut"
+msgstr "Ironic Knoten %s erfolgreich provisioniert"
 
 #, python-format
 msgid "Successfully rebooted Ironic node %s"
-msgstr "Uzel Ironic %s úspěšně restartován "
+msgstr "Ironic Knoten %s erfolgreich neu gestartet"
 
 #, python-format
 msgid "Successfully synced instances from host '%s'."
-msgstr "Synchronizace instancí z hostitele '%s' úspěšně provedena."
+msgstr "Erfolreich Instanzen synchronisiert von Host '%s'."
 
 #, python-format
 msgid "Successfully transferred using %s"
-msgstr "Úspěšně přeneseno pomoci %s"
+msgstr "Erfolgreiche Übertragung von %s"
 
 #, python-format
 msgid "Successfully unprovisioned Ironic node %s"
-msgstr "Poskytnutí uzlu Ironic %s bylo úspěšně zrušeno"
+msgstr "Ironic Knoten %s erfolgreich deinstalliert"
 
 #, python-format
 msgid "Swapping volume %(old_volume)s for %(new_volume)s"
-msgstr "Vyměňování svazku %(old_volume)s za %(new_volume)s"
+msgstr "Tausche Datenträger %(old_volume)s für %(new_volume)s"
 
 #, python-format
 msgid "Task possibly preempted: %s"
-msgstr "Úkol možná prošel preempcí: %s"
+msgstr "Aufgabe möglicherweise beendet: %s"
 
 msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "Název iniciátoru ISCSI nelze nalézt. Zvolen výchozí."
+msgstr ""
+"Der ISCSI Initiatorname kann nicht gefunden werden. Benutze den Standardnamen"
 
 msgid "The imported VM was unregistered"
-msgstr "Importovaná VM nebyla registrována"
+msgstr "Die importierte VM war nicht registriert"
 
 #, python-format
 msgid ""
 "The instance sync for host '%s' did not match. Re-created its InstanceList."
 msgstr ""
-"Synchronizace instance na hostiteli '%s' neodpovídá. Seznam instancí byl "
-"znovu vytvořen."
+"Die Instanz-Synchronisierung für Host '%s' stimmt nicht überein. Erstelle "
+"neue InstanceList."
 
 #, python-format
 msgid ""
 "The volume's backing has been relocated to %s. Need to consolidate backing "
 "disk file."
 msgstr ""
-"Záloha svazku byla přemístěna do %s. Je třeba konsolidovat soubor zálohy "
-"disku."
+"Das Datenträger-Backup wurde verlegt nach %s. Wird benötigt zur "
+"Konsilidierung der Backupdatei."
 
 msgid "Timestamp is invalid."
-msgstr "Časové razítko je neplatné."
+msgstr "Zeitstempel ist ungültig."
 
 #, python-format
 msgid "Total %(type)s: %(total)d %(unit)s, used: %(used).02f %(unit)s"
-msgstr "Celkem %(type)s: %(total)d %(unit)s, využito: %(used).02f %(unit)s"
+msgstr "Gesamt %(type)s: %(total)d %(unit)s, Belegt: %(used).02f %(unit)s"
 
 #, python-format
 msgid "Total usable vcpus: %(tcpu)s, total allocated vcpus: %(ucpu)s"
-msgstr "Celkem použitelných vcpu: %(tcpu)s, celkem přidělených vcpu: %(ucpu)s"
+msgstr "Gesamter Verbrauch vcpus: %(tcpu)s, gesamt benutzte vcpus: %(ucpu)s"
 
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
-msgstr "Navrácen zkrácený záznam konzole, %d bajtů ignorováno"
+msgstr "Kürzen des Konsole-Log abgeschlossen, %d Bytes ignoriert"
 
 #, python-format
 msgid "Trying to disconnected unmounted volume at %s"
-msgstr "Pokus o odpojení nepřipojených svazků na %s"
+msgstr "Versuche den ausgehängten Datenträger zu trennen auf  %s"
 
 msgid "Unable to import guestfs, falling back to VFSLocalFS"
-msgstr "Nelze importovat guestfs, přechází se zpět na VFSLocalFS"
+msgstr "Konnte guestfs nicht importieren, falle zurück auf VFSLocalFS"
 
 #, python-format
 msgid "Unable to release %s because vif doesn't exist"
-msgstr "Nelze uvolnit %s protože vif neexistuje"
+msgstr "Konnte %s nicht freigeben, weil VIF nicht existiert"
 
 #, python-format
 msgid "Unable to release %s because vif object doesn't exist"
-msgstr "Nelze uvolnit %s protože objekt vif neexistuje"
+msgstr "Konnte %s nicht freigeben, weil VIF-Objekt nicht existiert"
 
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
-"Nelze použít API seznamu hromadné domény, přechází se na pomalou cestu kódu: "
-"%(ex)s"
+"Konnte die Massen-Domain-List-API nicht verwenden, falle zurück auf "
+"langsamen Code-Pfad: %(ex)s"
 
 #, python-format
 msgid ""
 "Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "Neoprávněný požadavek pro ovladač=%(controller)s a činnost=%(action)s"
+msgstr ""
+"Unberechtigte Anfrage für Controller=%(controller)s und Aktion=%(action)s"
 
 #, python-format
 msgid "Unexpected error: %s"
-msgstr "Neočekávaná chyba: %s"
+msgstr "Unerwarteter Fehler: %s"
 
 msgid "Unpausing"
-msgstr "Rušení pozastavení"
+msgstr "Pausieren beenden"
 
 msgid "Unrescuing"
-msgstr "Rušení záchrany"
+msgstr "Rettungsmodus beenden"
 
 msgid "Updating bandwidth usage cache"
-msgstr "Aktualizace mezipaměti využití šířky pásma"
+msgstr "Aktualisiere Zwischenspeicher für Bandbreitennutzung"
 
 #, python-format
 msgid "Updating from migration %s"
-msgstr "Aktualizování z přesunu %s"
+msgstr "Aktualisiere von Migration %s"
 
 #, python-format
 msgid "Updating image %s publicity"
-msgstr "Aktualizace zveřejnění obrazu %s"
+msgstr "Aktualisiere Abbild %s öffentlich"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"
-msgstr "Aktualizování instance do původního stavu: '%s'"
+msgstr "Aktualisiere Instanz in den Original-Status '%s'"
 
 msgid "Using config drive"
-msgstr "Používání konfigurační jednotky"
+msgstr "Konfigurationslaufwerk wird verwendet"
 
 msgid "Using config drive for instance"
-msgstr "Konfigurační jednotka je použita pro instnaci"
+msgstr "Konfigurationslaufwerk wird für Instanz verwendet"
 
 msgid "V2.1 API has been disabled by configuration"
-msgstr "V2.1 API bylo zakázáno v nastavení"
+msgstr "V2.1 API wurde deaktiviert bei der Konfiguration"
 
 #, python-format
 msgid ""
 "VBD %(vbd_ref)s uplug failed with \"%(err)s\", attempt %(num_attempt)d/"
 "%(max_attempts)d"
 msgstr ""
-"Odpojení VBD %(vbd_ref)s selhalo s chybou \"%(err)s\", pokus %(num_attempt)d/"
-"%(max_attempts)d"
+"VBD %(vbd_ref)s entfernen fehlgeschlagen mit \"%(err)s\", versuche "
+"%(num_attempt)d/%(max_attempts)d"
 
 #, python-format
 msgid "VBD %s already detached"
-msgstr "VBD %s již odpojeno"
+msgstr "VBD %s bereits getrennt"
 
 #, python-format
 msgid "VM %(state)s (Lifecycle Event)"
-msgstr "VM %(state)s (Událost životního cyklu)"
+msgstr "VM %(state)s (Ereignis im Lebenszyklus)"
 
 #, python-format
 msgid "VMware vCenter version: %s"
-msgstr "Verze VMware vCenter: %s"
+msgstr "VMware vCenter Version: %s"
 
 msgid ""
 "Virt driver does not support 'get_available_resource'. Compute tracking is "
 "disabled."
 msgstr ""
-"Ovladač Virt nepodporuje získání dostupných zdrojů. Sledování výpočtu je "
-"zakázáno."
+"Virt Treiber unterstützt kein 'get_available_resource'. Compute Tracking ist "
+"deaktiviert"
 
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
 "been rebooted or crashed. Updating totals."
 msgstr ""
-"Svazek (%s) má nižší statistiky, než ty co jsou v databázi. Instance musela "
-"být restartována, nebo spadla. Probíhá aktualizace souhrnů."
+"Volume(%s) hat einen niedrigeren Status als in der Datenbank. Instanz ist "
+"neu gestartet oder abgestürzt. Aktualisiere alles."
 
 msgid "WSGI server has stopped."
-msgstr "Server WSGI byl zastaven."
+msgstr "WSGI-Server wurde gestoppt."
 
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
-msgstr "Mazání snímku %s z uskladněné instance..."
+msgstr "Arbeite am Löschen der Schattenkopie %s der eingestellten Instanz...."
 
 #, python-format
 msgid "Writing stored info to %s"
-msgstr "Zapisování uložených informací do %s"
+msgstr "Schreibe Speicherinformationen zu %s"
 
 msgid "XenServer tools are not installed in this image"
-msgstr "Nástroje XenServer nejsou v tomto obrazu nainstalovány"
+msgstr "XenServer-Werkzeuge sind in diesem Abbild nicht installiert"
 
 msgid ""
 "XenServer tools are present in this image but are not capable of network "
 "injection"
 msgstr ""
-"Nástroje XenServer jsou v tomto obrazu přítomny, ale nejsou schopny vložit "
-"síť"
+"XenServer Tools sind in diesem Abbild installiert, befähigen aber nicht zur "
+"Netzwerkeinfügung."
 
 msgid ""
 "XenServer tools installed in this image are capable of network injection.  "
 "Networking files will not bemanipulated"
 msgstr ""
-"Nástroje XenServer instalované v tomto obrazu jsou schopné vložit sítě. "
-"Síťové soubory nebudou změněny"
+"XenServer Tools, die in diesem Abbild installiert sind, befähigen zur "
+"Netzwerkeinfügung. Netzwerkdatein werden nicht  manipuliert"
 
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 msgstr ""
-"Můžete vidět tuto chybu \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" Tuto chybu můžete bezpečně ignorovat."
+"Möglicherweise sehen Sie den Fehler \"libvirt: QEMU error: Domain not found: "
+"no domain with matching name.\" Dieser Fehler kann ignoriert werden."
 
 msgid "_post_live_migration() is started.."
-msgstr "Přesunutí po spuštění je zahájeno."
+msgstr "_post_live_migration() ist gestartet.."
 
 #, python-format
 msgid "bringing vm to original state: '%s'"
-msgstr "vm je uváděno do původního stavu: '%s'"
+msgstr "Bringe VM in den Original-Status: '%s'"
 
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr "data: %(data)r, fpath: %(fpath)r"
+msgstr "Daten: %(data)r, fpath: %(fpath)r"
 
 #, python-format
 msgid "deleted %s"
-msgstr "%s smazáno"
+msgstr "%s gelöscht"
 
 #, python-format
 msgid "disk not on shared storage, rebuilding from: '%s'"
-msgstr "disk není na sdíleném úložišti, znovu sestavování z: '%s'"
+msgstr "Festplatte nicht am verteilten Speicher, baue neu von: '%s'"
 
 msgid "disk on shared storage, recreating using existing disk"
-msgstr "disk na sdíleném úložišti, znovu vytváření pomocí existujícího disku"
+msgstr ""
+"Festplatte am verteilten Speicher, baue neu unter Benutzung der "
+"existierenden Platte"
 
 msgid "findmnt tool is not installed"
-msgstr "nástroj findmnt nenainstalován"
+msgstr "findmnt-Werkzeug ist nicht installiert"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
-msgstr "obraz %(id)s v (%(base_file)s): probíhá kontrola"
+msgstr "Abbild %(id)s auf (%(base_file)s): wird überprüft"
 
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
 msgstr ""
-"obraz %(id)s v (%(base_file)s): ověření obrazu přeskočeno, žádný kontrolní "
-"součet uložen"
+"Abbild %(id)s at (%(base_file)s): Abbildverifizierung übersprungen, kein "
+"Hash gespeichert"
 
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
-"Obraz %(id)s na (%(base_file)s): používá se: na tomto místním uzlu "
-"%(local)d, %(remote)d na ostatních uzlech sdílející úložiště této instance"
+"Abbild %(id)s auf (%(base_file)s): in Benutzung: auf diesem Knoten %(local)d "
+"lokal, %(remote)d auf anderem Knoten geteilt in diesem Instanzspeicher"
 
 #, python-format
 msgid "injecting file to %s"
-msgstr "vkládání souboru do %s"
+msgstr "Datei einfügen von %s"
 
 #, python-format
 msgid "instance chain %s disappeared during refresh, skipping"
-msgstr "Řetěz instance %s zmizel během obnovení, přeskočeno"
+msgstr "Instanzreihe %s bei der Aktualisierung verschwunden, wird übersprungen"
 
 msgid ""
 "instance is in SHELVED_OFFLOADED state, cleanup the instance's info from "
 "database."
 msgstr ""
-"Instance je ve stavu Uskladněn s převedenou zátěží, vyčistěte  informace o "
-"instanci z databáze."
+"Iinstanz ist in SHELVED_OFFLOADED Status, aufräumen der Instanz-Infos in der "
+"Datenbank."
 
 msgid "instance snapshotting"
-msgstr "snímkování instance"
+msgstr "Schattenkopie von Instanz wird erstellt"
 
 msgid "instance termination disabled"
-msgstr "ukončení instance zakázáno"
+msgstr "Beendigung der Instanz deaktiviert"
 
 msgid "nova-conductor connection established successfully"
-msgstr "připojení k nova-conductor úspěšně navázáno"
+msgstr "nova-conductor erfolgreich verbunden"
 
 #, python-format
 msgid "preserve multipath_id %s"
-msgstr "zachovat id mnohačetné cesty %s"
+msgstr "Erhalte multipath_id %s"
 
 #, python-format
 msgid ""
@@ -1240,19 +1253,18 @@ msgid ""
 "%(user_id)s, resource: %(res)s, tracked usage: %(tracked_use)s, actual "
 "usage: %(in_use)s"
 msgstr ""
-"využití kvót není synchronizováno, aktualizace projektu s id: "
-"%(project_id)s, id uživatele %(user_id)s, zdroj: %(res)s, zaznamenané "
-"využití: %(tracked_use)s, skutečné využití: %(in_use)s"
+"quota_usages ist nicht sychron, wird aktualisiert. project_id: "
+"%(project_id)s, user_id: %(user_id)s, resource: %(res)s, tracked usage: "
+"%(tracked_use)s, actual usage: %(in_use)s"
 
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr ""
-"Znovu přidělit plovoucí IP adresu %(address)s z instance %(instance_id)s"
+msgstr "Weise Floating IP %(address)s der Instanz %(instance_id)s wieder zu"
 
 #, python-format
 msgid "tap-ctl check: %s"
-msgstr "kontrola tap-ctl: %s"
+msgstr "tap-ctl überprüft %s"
 
 #, python-format
 msgid "vol=%s"
-msgstr "svazek=%s"
+msgstr "vol=%s"

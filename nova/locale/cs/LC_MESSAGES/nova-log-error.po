@@ -8,9 +8,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev266\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-23 14:55+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
 "PO-Revision-Date: 2015-09-23 07:23+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
@@ -774,11 +774,6 @@ msgstr "Instance nemohla být spuštěna"
 #, python-format
 msgid "Instance type %s not found for deletion"
 msgstr "Vymazávaná Instance typu %s nebyla nalezena"
-
-#, python-format
-msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
-msgstr ""
-"V '%(key)s' na %(instance_uuid)s se uskutečnil pokus o aktualizaci instance"
 
 #, python-format
 msgid "Interface %s not found"
