@@ -5964,7 +5964,7 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
             raise exception.TaskNotRunning(task_name=task_name, host=host)
 
 
-def archive_deleted_rows_for_table(tablename, max_rows):
+def _archive_deleted_rows_for_table(tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
@@ -6043,7 +6043,7 @@ def archive_deleted_rows(max_rows=None):
             tablenames.append(model_class.__tablename__)
     rows_archived = 0
     for tablename in tablenames:
-        rows_archived += archive_deleted_rows_for_table(tablename,
+        rows_archived += _archive_deleted_rows_for_table(tablename,
                                          max_rows=max_rows - rows_archived)
         if rows_archived >= max_rows:
             break

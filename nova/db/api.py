@@ -1904,16 +1904,6 @@ def archive_deleted_rows(max_rows=None):
     return IMPL.archive_deleted_rows(max_rows=max_rows)
 
 
-def archive_deleted_rows_for_table(tablename, max_rows=None):
-    """Move up to max_rows rows from tablename to corresponding shadow
-    table.
-
-    :returns: number of rows archived.
-    """
-    return IMPL.archive_deleted_rows_for_table(tablename,
-                                               max_rows=max_rows)
-
-
 ####################
 
 
