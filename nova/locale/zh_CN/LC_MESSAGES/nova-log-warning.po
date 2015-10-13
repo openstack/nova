@@ -10,11 +10,11 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev302\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-29 06:31+0000\n"
-"PO-Revision-Date: 2015-09-26 10:34+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"PO-Revision-Date: 2015-10-07 05:40+0000\n"
+"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
 "Language: zh-CN\n"
@@ -163,7 +163,7 @@ msgstr "在主机\"%s\"上，不能更新服务状态，因为它没有注册。
 
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %s"
-msgstr "对于下列资源：%s，更改将导致使用量小于0：%s"
+msgstr "对于下列资源：%s，更改将导致使用量小于0"
 
 msgid ""
 "Cinder V1 API is deprecated as of the Juno release, and Nova is still "
@@ -350,7 +350,7 @@ msgstr "扩展%(ext_name)s：无法扩展资源 %(collection)s：没有那种资
 
 #, python-format
 msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "白名单和黑名单中包括扩展：%"
+msgstr "白名单和黑名单中包括扩展： %s"
 
 #, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
@@ -431,7 +431,7 @@ msgstr "未能恢复实例"
 
 #, python-format
 msgid "Failed to revert task state for instance. Error: %s"
-msgstr "转换实例的任务状态失败。错误：%s"
+msgstr "还原实例的任务状态失败。错误：%s"
 
 #, python-format
 msgid "Failed to rollback quota for deallocate fixed ip: %s"
@@ -489,14 +489,6 @@ msgstr ""
 #, python-format
 msgid "Get esx cookies failed: %s"
 msgstr "获取esx cookies失败：%s"
-
-#, python-format
-msgid ""
-"Host %(hostname)s has more disk space than database expected (%(physical)sgb "
-"> %(database)sgb)"
-msgstr ""
-"主机 %(hostname)s 有比数据库中期望的更多的磁盘空间 (%(physical)sgb > "
-"%(database)sgb)"
 
 msgid ""
 "Host field should not be set on the instance until resources have been "
@@ -983,13 +975,6 @@ msgid "Power state %s not found."
 msgstr "没有找到电源状态 %s 。"
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)rs"
-msgstr ""
-"在给定超时时间timeout=%(timeout)rs 里，获取路径 %(path)r 的儿子的列表出现问题"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "超过%s 的配额，尝试分配浮动IP"
 
@@ -1031,10 +1016,9 @@ msgid ""
 "<service_down_time: %(service_down_time)s, report_interval: "
 "%(report_interval)s>. Setting service_down_time to: %(new_service_down_time)s"
 msgstr ""
-"报告间隔必须小于服务宕机时间service_down_time。当前配置：<服务宕机时间"
-"service_down_time: %(service_down_time)s, 报告间隔report_interval: "
-"%(report_interval)s>。设置服务宕机时间service_down_time为： "
-"%(new_service_down_time)s"
+"报告间隔必须小于服务宕机时间service_down_time。当前配置：<service_down_time: "
+"%(service_down_time)s, report_interval: %(report_interval)s>. Setting "
+"service_down_time to: %(new_service_down_time)s"
 
 #, python-format
 msgid "Retry SR scan due to error: %s"
@@ -1065,8 +1049,8 @@ msgid ""
 "required minimum version of libvirt will be raised to %(version)s in the "
 "13.0.0 release."
 msgstr ""
-"用低于%(version)s 版本的libvirt运行Nova将被废弃。在13.0.0 发布版本中，最小的"
-"libvirt版本为 %(version)s 。"
+"Nova不再支持低于%(version)s 的libvirt。在13.0.0发布版本中，最小VCenter版本"
+"是%(version)s。"
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1214,7 +1198,7 @@ msgstr "太多id映射，只能包含前5个。"
 #, python-format
 msgid ""
 "Treating negative config value (%(retries)s) for 'block_device_retries' as 0."
-msgstr " 把'block_device_retries' 负数的配置值 (%(retries)s) 当做零。"
+msgstr " 把'block_device_retries' 负数的配置值 (%(retries)s) 当做0。"
 
 #, python-format
 msgid ""
@@ -1227,7 +1211,7 @@ msgid ""
 "as 0."
 msgstr ""
 "把网络分配重试次数'network_allocate_retries' 负数的配置值 (%(retries)s) 当做"
-"零。"
+"0。"
 
 #, python-format
 msgid ""
@@ -1244,7 +1228,7 @@ msgid ""
 "Trying to remove device with %(status)s ownership %(instance_uuid)s because "
 "of %(pci_exception)s"
 msgstr ""
-"由于(pci_exception)s，尝试移除%(status)s 的设备，设备所有者"
+"由于%(pci_exception)s，尝试移除%(status)s 的设备，设备所有者"
 "是%(instance_uuid)s"
 
 msgid ""
@@ -1366,15 +1350,6 @@ msgstr "卷 %s 应该被加密，但是没有加密元数据。"
 
 #, python-format
 msgid ""
-"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
-"volume size is %(size)db, but free space on volume group is only "
-"%(free_space)db."
-msgstr ""
-"卷组 %(vg)s 将无法保存稀疏卷 %(lv)s。虚拟卷大小为 %(size)db，但是卷组上的可用"
-"空间仅为 %(free_space)db。"
-
-#, python-format
-msgid ""
 "Volume id: %(vol_id)s finished being created but its status is "
 "%(vol_status)s."
 msgstr "卷id：%(vol_id)s 完成了创建，但是它的状态是%(vol_status)s。"
@@ -1403,7 +1378,7 @@ msgid ""
 "hypervisor."
 msgstr ""
 "当同步实例电源状态时，发现数据中实例数 %(num_db_instances)s 和监测器上的实例"
-"数"
+"数%(num_vm_instances)s"
 
 msgid ""
 "X-Instance-ID present in request headers. The 'service_metadata_proxy' "
@@ -1552,7 +1527,7 @@ msgstr "plug_vifs() 失败 %(cnt)d。重试到%(max_retry)d。"
 
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
-msgstr "rbd 移除池 %(pool)s 的卷  %(pool)s 失败"
+msgstr "rbd 移除池 %(pool)s 的卷   %(volume)s 失败"
 
 #, python-format
 msgid ""

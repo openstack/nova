@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev203\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-16 19:02+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
 "PO-Revision-Date: 2015-09-14 10:47+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
@@ -652,9 +652,6 @@ msgstr "Démarrage du noeud %(topic)s (version %(version)s)"
 
 msgid "Starting halted instance found during reboot"
 msgstr "Démarrage de l'instance interrompue détectée durant le redémarrage"
-
-msgid "Starting instance..."
-msgstr "Démarrage de l'instance..."
 
 #, python-format
 msgid "Starting migration network for instance %s"

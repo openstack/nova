@@ -6,9 +6,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:26+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
 "PO-Revision-Date: 2015-09-08 05:38+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
@@ -457,14 +457,6 @@ msgstr ""
 "%(domain) alanı için birden fazla eşleşme bulundu.\n"
 "%(entry)s"
 
-#, python-format
-msgid ""
-"Host %(hostname)s has more disk space than database expected (%(physical)sgb "
-"> %(database)sgb)"
-msgstr ""
-"%(hostname) istemcisi veri tabanının beklediğinden çok diske sahip "
-"(%(physical)sgb > %(database)sgb)"
-
 msgid ""
 "Host field should not be set on the instance until resources have been "
 "claimed."
@@ -910,14 +902,6 @@ msgid "Power state %s not found."
 msgstr "Güç durumu %s bulunamadı."
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)rs"
-msgstr ""
-"%(path)r'in çocuklarının listesinin verilen zaman aşımı=%(timeout)rs içinde "
-"alınmasında problem"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Kota %s için aşıldı, değişken IP ayrılmaya çalışıldı"
 
@@ -1265,16 +1249,6 @@ msgstr ""
 #, python-format
 msgid "Volume %s should be encrypted but there is no encryption metadata."
 msgstr "Mantıksal sürücü %s şifrelenmeli ama şifreleme metadata'sı yok."
-
-#, python-format
-msgid ""
-"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
-"volume size is %(size)db, but free space on volume group is only "
-"%(free_space)db."
-msgstr ""
-"Mantıksal sürücü grubu %(vg)s aralıklı mantıksal sürücü %(lv)s i "
-"tutamayacak. Sanal mantıksal sürücü boyutu %(size)db, ama mantıksal sürücü "
-"grubundaki boş alan yalnızca %(free_space)db."
 
 #, python-format
 msgid ""

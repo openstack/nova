@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev234\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-18 06:26+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
 "PO-Revision-Date: 2015-09-13 01:37+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French (http://www.transifex.com/openstack/nova/language/"
@@ -412,14 +412,6 @@ msgid ""
 msgstr ""
 "Plusieurs correspondances trouvées pour le domaine %(domain)s\n"
 "%(entry)s"
-
-#, python-format
-msgid ""
-"Host %(hostname)s has more disk space than database expected (%(physical)sgb "
-"> %(database)sgb)"
-msgstr ""
-"L'hôte %(hostname)s a plus d'espace disque que ce qui est attendue par la "
-"base de donnée (%(physical)sgo > %(database)sgo)"
 
 msgid ""
 "Host field should not be set on the instance until resources have been "
@@ -988,16 +980,6 @@ msgid "VM is not present, skipping soft delete..."
 msgstr ""
 "La machine virtuelle n'est pas présente et la suppression logicielle est "
 "ignorée..."
-
-#, python-format
-msgid ""
-"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
-"volume size is %(size)db, but free space on volume group is only "
-"%(free_space)db."
-msgstr ""
-"Le groupe de volumes %(vg)s ne pourra pas contenir le volume incomplet "
-"%(lv)s. La taille du volume virtuel est de %(size)db, mais l'espace libre "
-"sur le groupe de volumes est de seulement %(free_space)db."
 
 #, python-format
 msgid ""

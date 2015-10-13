@@ -11,10 +11,10 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0b4.dev266\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-23 14:55+0000\n"
-"PO-Revision-Date: 2015-09-22 09:08+0000\n"
+"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
 "language/zh_CN/)\n"
@@ -147,7 +147,7 @@ msgstr "已为 %(host)s:%(node)s 更新 Compute_service 记录"
 #, python-format
 msgid ""
 "Config drive for instance %(instance)s on baremetal node %(node)s created."
-msgstr "在裸节点%(node)s，创建实例的配置驱动。"
+msgstr "在裸节点%(node)s，创建实例%(instance)s的配置驱动。"
 
 #, python-format
 msgid "Configured network %(network)s on host %(host)s"
@@ -478,7 +478,7 @@ msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
-"获取块统计失败，设备可能已经解绑绑定。实例=(instance_name)s 磁盘=%(disk)s 代"
+"获取块统计失败，设备可能已经解绑绑定。实例=%(instance_name)s 磁盘=%(disk)s 代"
 "码=%(errcode)s 错误=%(e)s"
 
 msgid "Going to destroy instance again."
@@ -522,7 +522,7 @@ msgstr "镜像%s 不再使用。删除！"
 
 #, python-format
 msgid "Image %s was deleted underneath us"
-msgstr "在我们的控制之下，镜像被删除"
+msgstr "在我们的控制之下，镜像%s被删除"
 
 #, python-format
 msgid ""
@@ -535,11 +535,6 @@ msgstr ""
 #, python-format
 msgid "Import key %s"
 msgstr "导入密钥 %s"
-
-#, python-format
-msgid ""
-"Increasing downtime to %(downtime)dms after %(waittime)d sec elapsed time"
-msgstr "在过去的%(waittime)d 秒时间里， 减少宕机时间到%(downtime)dms"
 
 #, python-format
 msgid ""
@@ -560,7 +555,7 @@ msgstr "实例在结束(terminate)过程中消失。"
 
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
-msgstr "在%s秒以内，实例关闭失败。"
+msgstr "在%d 秒以内，实例关闭失败。"
 
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr "在启动期间，找到处于正在迁移状态的实例。正在重置 task_state"
@@ -635,7 +630,7 @@ msgstr "不支持备份卷后台的实例"
 
 #, python-format
 msgid "Libvirt host capabilities %s"
-msgstr "Libvirt主机容量 %s"
+msgstr "Libvirt主机能力 %s"
 
 #, python-format
 msgid "Loaded extensions: %s"
@@ -892,9 +887,6 @@ msgstr "正在启动 %(topic)s 节点 (V%(version)s)"
 
 msgid "Starting halted instance found during reboot"
 msgstr "正在启动在重新引导期间找到的已停止实例"
-
-msgid "Starting instance..."
-msgstr "正在启动虚拟机"
 
 #, python-format
 msgid "Starting migration network for instance %s"

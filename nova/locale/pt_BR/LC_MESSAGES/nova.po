@@ -18,9 +18,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev302\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-29 06:31+0000\n"
+"POT-Creation-Date: 2015-10-13 06:03+0000\n"
 "PO-Revision-Date: 2015-09-11 06:59+0000\n"
 "Last-Translator: Fernando Pimenta <fernando.c.pimenta@gmail.com>\n"
 "Language: pt_BR\n"
@@ -1993,14 +1993,6 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "Capturas instantâneas da instância não são permitidas nesse momento."
 
 #, python-format
-msgid ""
-"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
-"but %(size)db required by volume %(lv)s."
-msgstr ""
-"Espaço Insuficiente no Grupo de Volumes %(vg)s. Apenas %(free_space)db "
-"disponíveis, mas %(size)db requeridos pelo volume %(lv)s."
-
-#, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Recursos de cálculo insuficientes: %(reason)s."
 
@@ -2008,10 +2000,6 @@ msgstr "Recursos de cálculo insuficientes: %(reason)s."
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr ""
 "Memória livre insuficiente no nodo de computação para iniciar %(uuid)s."
-
-#, python-format
-msgid "IntegrityError detected when archiving table %s"
-msgstr "IntegrityError detectado ao arquivar tabela %s"
 
 #, python-format
 msgid "Interface %(interface)s not found."

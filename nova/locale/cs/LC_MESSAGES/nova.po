@@ -11,10 +11,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev302\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-29 06:31+0000\n"
-"PO-Revision-Date: 2015-09-21 08:43+0000\n"
+"POT-Creation-Date: 2015-10-13 06:03+0000\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language: cs\n"
 "Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
@@ -2124,24 +2124,12 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "Snímky instance nejsou v současnosti povoleny."
 
 #, python-format
-msgid ""
-"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
-"but %(size)db required by volume %(lv)s."
-msgstr ""
-"Nedostatečné místo ve skupině svazku %(vg)s. Dostupné pouze %(free_space)db, "
-"ale svazkem %(lv)s je vyžadováno %(size)db."
-
-#, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Nedostatečné výpočetní zdroje: %(reason)s."
 
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr "Pro spuštění %(uuid)s je ve výpočetním uzlu nedostatek volné paměti."
-
-#, python-format
-msgid "IntegrityError detected when archiving table %s"
-msgstr "Při archivaci tabulky %s zjištěna chyba celistvosti "
 
 #, python-format
 msgid "Interface %(interface)s not found."
@@ -4822,7 +4810,7 @@ msgstr "VlanID"
 
 #, python-format
 msgid "Volume %(volume_id)s could not be found."
-msgstr "Svazek %(volume_id)s nemohl být nastaven."
+msgstr "Svazek %(volume_id)s nemohl být nalezen."
 
 #, python-format
 msgid ""

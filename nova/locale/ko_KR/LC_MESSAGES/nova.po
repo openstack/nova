@@ -11,10 +11,10 @@
 # Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev302\n"
+"Project-Id-Version: nova 13.0.0.dev147\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-29 06:31+0000\n"
-"PO-Revision-Date: 2015-09-23 06:23+0000\n"
+"POT-Creation-Date: 2015-10-13 06:03+0000\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
 "Language: ko_KR\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/openstack/nova/"
@@ -195,12 +195,12 @@ msgid ""
 "API Version String %(version)s is of invalid format. Must be of format "
 "MajorNum.MinorNum."
 msgstr ""
-"API 버전 문자열 %(version)s의 형식이 올바르지 않습니다. 형식은 MajorNum."
-"MinorNum이어야 합니다."
+"API 버전 문자열 %(version)s 형식이 올바르지 않습니다. 형식은 MajorNum."
+"MinorNum 이어야 합니다."
 
 #, python-format
 msgid "API version %(version)s is not supported on this method."
-msgstr "API 버전 %(version)s이(가) 이 메소드에서 지원되지 않습니다."
+msgstr "API 버전 %(version)s에서는 이 메소드를 지원하지 않습니다.."
 
 msgid "Access key not provided"
 msgstr "액세스 키가 제공되지 않음"
@@ -225,7 +225,8 @@ msgstr "조치: '%(action)s', 호출 메소드: %(meth)s, 본문: %(body)s"
 
 #, python-format
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
-msgstr "%(retries)s 재시도 후 %(id)s 집계에 대한 메타데이터 추가가 실패함 "
+msgstr ""
+"%(retries)s 재시도 후 %(id)s 집합에 대한 메타데이터 추가를 실패했습니다"
 
 msgid "Address could not be converted."
 msgstr "주소를 변환할 수 없습니다. "
@@ -247,38 +248,38 @@ msgstr ""
 
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
-msgstr "%(aggregate_id)s 집계에 이미 %(host)s 호스트가 있습니다. "
+msgstr "%(aggregate_id)s 집합에 이미 %(host)s 호스트가 있습니다. "
 
 #, python-format
 msgid "Aggregate %(aggregate_id)s could not be found."
-msgstr "%(aggregate_id)s 집계를 찾을 수 없습니다. "
+msgstr "%(aggregate_id)s 집합을 찾을 수 없습니다. "
 
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no host %(host)s."
-msgstr "%(aggregate_id)s 집계에 %(host)s 호스트가 없습니다. "
+msgstr "%(aggregate_id)s 집합에 %(host)s 호스트가 없습니다. "
 
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
 msgstr ""
-"%(aggregate_id)s 집계에 %(metadata_key)s 키를 갖는 메타데이터가 없습니다. "
+"%(aggregate_id)s 집합에 %(metadata_key)s 키를 갖는 메타데이터가 없습니다. "
 
 #, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: action '%(action)s' caused an error: %(reason)s."
 msgstr ""
-"집계 %(aggregate_id)s: ''%(action)s' 조치로 다음 오류가 발생함: %(reason)s."
+"%(aggregate_id)s 집합: '%(action)s' 조치로 다음 오류가 발생함: %(reason)s."
 
 #, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
-msgstr "%(aggregate_name)s 집계가 이미 존재합니다. "
+msgstr "%(aggregate_name)s 집합이 이미 존재합니다. "
 
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
-msgstr "%(host)s 호스트에 대한 집계를 찾을 수 없습니다. "
+msgstr "%(host)s 호스트에 대한 집합을 찾을 수 없습니다. "
 
 #, python-format
 msgid "Aggregates does not have %s action"
-msgstr "집계가 %s 조치를 갖지 않음"
+msgstr "집합에서 %s 작업을 할 수 없습니다"
 
 #, python-format
 msgid "An error has occurred when calling the iscsi initiator: %s"
@@ -525,15 +526,15 @@ msgstr "'scality_sofs_config'에 액세스할 수 없음: %s"
 
 #, python-format
 msgid "Cannot add host %(host)s in aggregate %(id)s: host exists"
-msgstr "집계 %(id)s에 호스트 %(host)s을(를) 추가할 수 없음: 호스트가 있음"
+msgstr "%(id)s 집합에 호스트 %(host)s을(를) 추가할 수 없습니다: 호스트가 있음"
 
 #, python-format
 msgid "Cannot add host %(host)s in aggregate %(id)s: not found"
-msgstr "집계 %(id)s에 호스트 %(host)s을(를) 추가할 수 없음: 찾을 수 없음"
+msgstr "%(id)s 집합에 호스트 %(host)s을(를) 추가할 수 없습니다: 찾지 못함"
 
 #, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
-msgstr "호스트를 집계 %(aggregate_id)s에 추가할 수 없음. 이유: %(reason)s."
+msgstr "호스트를 집합 %(aggregate_id)s에 추가할 수 없습니다. 이유: %(reason)s."
 
 msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "복수 인스턴스에 하나 이상의 볼륨을 첨부할 수 없음"
@@ -588,20 +589,21 @@ msgstr ""
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
-msgstr "%(id)s 집계에서 %(host)s 호스트를 제거할 수 없음"
+msgstr "%(id)s 집합에서 %(host)s 호스트를 제거할 수 없습니다"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s: invalid"
-msgstr "집계 %(id)s에서 호스트 %(host)s을(를) 제거할 수 없음: 올바르지 않음"
+msgstr ""
+"%(id)s 집합에서 호스트 %(host)s을(를) 제거할 수 없습니다: 올바르지 않음"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s: not found"
-msgstr "집계 %(id)s에서 호스트 %(host)s을(를) 제거할 수 없음: 찾을 수 없음"
+msgstr "%(id)s 집합에서 호스트 %(host)s을(를) 제거할 수 없습니다: 찾지 못함"
 
 #, python-format
 msgid "Cannot remove host from aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
-"집계 %(aggregate_id)s에서 호스트를 제거할 수 없습니다. 이유: %(reason)s."
+"%(aggregate_id)s 집합에서 호스트를 제거할 수 없습니다. 이유: %(reason)s."
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "volume-backed 인스턴스를 구조할 수 없음"
@@ -638,11 +640,11 @@ msgstr "이 유형의 인스턴스를 추가로 실행할 수 없습니다. "
 
 #, python-format
 msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
-msgstr "%(id)s 집계에 %(metadata)s 메타데이터를 설정할 수 없음"
+msgstr "%(id)s 집합에 %(metadata)s 메타데이터를 설정할 수 없습니다"
 
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
-msgstr "집계 %(aggregate_id)s을(를) 업데이트할 수 없습니다. 이유: %(reason)s."
+msgstr "%(aggregate_id)s 집합을 업데이트할 수 없습니다. 이유: %(reason)s."
 
 msgid "Cannot update cells configuration file."
 msgstr "셀 구성 파일을 업데이트할 수 없습니다. "
@@ -651,8 +653,7 @@ msgstr "셀 구성 파일을 업데이트할 수 없습니다. "
 msgid ""
 "Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
-"집계 %(aggregate_id)s의 메타데이터를 업데이트할 수 없습니다. 이유: "
-"%(reason)s."
+"%(aggregate_id)s 집합 메타데이터를 업데이트할 수 없습니다. 이유: %(reason)s."
 
 #, python-format
 msgid "Cell %(cell_name)s doesn't exist."
@@ -725,11 +726,11 @@ msgstr "계산 호스트 %s을(를) 찾을 수 없음."
 
 #, python-format
 msgid "Compute service of %(host)s is still in use."
-msgstr "%(host)s의 계산 서비스가 아직 사용 중입니다."
+msgstr "%(host)s Compute 서비스를 사용하고 있습니다."
 
 #, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
-msgstr "%(host)s의 계산 서비스가 지금 사용 불가능합니다. "
+msgstr "%(host)s Compute 서비스를 지금 사용할 수 없습니다."
 
 #, python-format
 msgid "Config drive is required by instance: %s, but it does not exist."
@@ -763,7 +764,7 @@ msgstr "libvirt 연결 유실: %s"
 
 #, python-format
 msgid "Connection to the hypervisor is broken on host: %(host)s"
-msgstr "하이퍼바이저에 대한 연결이 %(host)s 호스트에서 끊겼습니다."
+msgstr "하이퍼바이저 연결이 호스트에서 끊겼습니다: %(host)s"
 
 #, python-format
 msgid "Console %(console_id)s could not be found."
@@ -931,7 +932,7 @@ msgstr "원하는 상태가 지정되어야 합니다. 유효한 상태: %s"
 
 #, python-format
 msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr "대상 호스트:%s은(는) 소스 서버와 동일한 집계에 있어야 함"
+msgstr "대상 호스트:%s은(는) 소스 서버와 동일한 집합에 있어야 합니다"
 
 #, python-format
 msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
@@ -1258,11 +1259,11 @@ msgstr "패스스루용 pci 디바이스에 대한 정책을 구문 분석하지
 
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
-msgstr "인스턴스 전원 차단 실패: %(reason)s"
+msgstr "인스턴스 전원 끔 실패: %(reason)s"
 
 #, python-format
 msgid "Failed to power on instance: %(reason)s"
-msgstr "인스턴스 전원 공급 실패: %(reason)s"
+msgstr "인스턴스 전원 꼄 실패: %(reason)s"
 
 #, python-format
 msgid ""
@@ -1360,7 +1361,7 @@ msgid "Filename of private key"
 msgstr "개인키 파일 이름"
 
 msgid "Filename of root CA"
-msgstr "루트 CA 파일 이름"
+msgstr "Root CA 파일 이름"
 
 msgid "Filename of root Certificate Revocation List"
 msgstr "Root 인증서 해지 목록 파일 이름"
@@ -1599,7 +1600,7 @@ msgid "Host PowerOn is not supported by the Hyper-V driver"
 msgstr "Hyper-V 드라이버에서 호스트 PowerOn을 지원하지 않습니다."
 
 msgid "Host aggregate is not empty"
-msgstr "호스트 집계가 비어 있지 않음"
+msgstr "호스트 집합이 비어 있지 않습니다"
 
 msgid "Host does not support guests with NUMA topology set"
 msgstr "호스트에서 NUMA 토폴로지 세트가 있는 게스트를 지원하지 않음"
@@ -1796,11 +1797,11 @@ msgstr "인스턴스 %(instance_id)s에 '%(tag)s' 태그가 없음"
 
 #, python-format
 msgid "Instance %(instance_id)s is not in rescue mode"
-msgstr "%(instance_id)s 인스턴스가 구조 모드에 있지 않음"
+msgstr "%(instance_id)s 인스턴스가 구조 모드에 있지 않습니다"
 
 #, python-format
 msgid "Instance %(instance_id)s is not ready"
-msgstr "%(instance_id)s 인스턴스가 준비 상태가 아님"
+msgstr "%(instance_id)s 인스턴스가 준비 상태가 아닙니다"
 
 #, python-format
 msgid "Instance %(instance_id)s is not running."
@@ -1909,25 +1910,13 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "인스턴스 스냅샷은 지금 허용되지 않습니다. "
 
 #, python-format
-msgid ""
-"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
-"but %(size)db required by volume %(lv)s."
-msgstr ""
-"볼륨 그룹 %(vg)s의 공간이 충분하지 않습니다. %(free_space)db만 사용 가능하지"
-"만 %(lv)s 볼륨에 %(size)db이(가) 필요합니다."
-
-#, python-format
 msgid "Insufficient compute resources: %(reason)s."
-msgstr "충분하지 않은 계산 자원: %(reason)s."
+msgstr "Compute 리소스가 충분하지 않습니다: %(reason)s."
 
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr ""
 "%(uuid)s을(를) 시작하기에는 계산 노드의 사용 가능한 메모리가 부족합니다. "
-
-#, python-format
-msgid "IntegrityError detected when archiving table %s"
-msgstr "테이블 %s을(를) 아카이브할 때 IntegrityError 발견"
 
 #, python-format
 msgid "Interface %(interface)s not found."
@@ -2100,7 +2089,7 @@ msgstr ""
 
 #, python-format
 msgid "Invalid input received: %(reason)s"
-msgstr "잘못된 입력을 받음: %(reason)s"
+msgstr "올바르지 않은 입력을 받았습니다: %(reason)s"
 
 #, python-format
 msgid "Invalid input value \"%s\"."
@@ -2132,11 +2121,11 @@ msgstr "올바르지 않은 메타데이터 키"
 
 #, python-format
 msgid "Invalid metadata size: %(reason)s"
-msgstr "잘못된 메타데이터 크기: %(reason)s"
+msgstr "올바르지 않은 메타데이터 크기: %(reason)s"
 
 #, python-format
 msgid "Invalid metadata: %(reason)s"
-msgstr "잘못된 메타데이터: %(reason)s"
+msgstr "올바르지 않은 메타데이터: %(reason)s"
 
 #, python-format
 msgid "Invalid minDisk filter [%s]"
@@ -2263,14 +2252,14 @@ msgstr "요청에서 올바르지 않은 가상 인터페이스 주소 %s"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
-msgstr "올바르지 않은 볼륨 액세스 모드: %(access_mode)s"
+msgstr "올바르지 않은 볼륨 접근 모드: %(access_mode)s"
 
 msgid "Invalid volume source data"
 msgstr "올바르지 않은 볼륨 소스 데이터"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
-msgstr "잘못된 볼륨: %(reason)s"
+msgstr "올바르지 않은 볼륨: %(reason)s"
 
 msgid "Invalid volume_size."
 msgstr "volume_size가 올바르지 않습니다."
@@ -2332,7 +2321,7 @@ msgstr "%(user_id)s 사용자에 대한 키 쌍 %(name)s을(를) 찾을 수 없�
 
 #, python-format
 msgid "Keypair data is invalid: %(reason)s"
-msgstr "키 쌍 데이터가 올바르지 않음: %(reason)s"
+msgstr "키 쌍 데이터가 올바르지 않습니다: %(reason)s"
 
 msgid "Keypair name contains unsafe characters"
 msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
@@ -2526,7 +2515,7 @@ msgid "Missing column %(table)s.%(column)s in shadow table"
 msgstr "새도우 테이블에 %(table)s.%(column)s 열이 누락됨"
 
 msgid "Missing device UUID."
-msgstr "장치 UUID가 빠져있습니다."
+msgstr "장치 UUID가 비어 있습니다."
 
 msgid "Missing disabled reason field"
 msgstr "사용 안함 이유 필드가 누락됨"
@@ -2900,7 +2889,7 @@ msgid "Not authorized for image %(image_id)s."
 msgstr "%(image_id)s 이미지에 대한 권한이 없습니다. "
 
 msgid "Not authorized."
-msgstr "인증되지 않았습니다."
+msgstr "권한이 없습니다. "
 
 msgid "Not enough parameters to build a valid rule."
 msgstr "유효한 규칙을 빌드하기엔 매개변수가 부족합니다. "
@@ -3096,7 +3085,7 @@ msgstr "플러그인 버전 불일치(예상: %(exp)s, 결과: %(got)s)"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
-msgstr "%(action)s 정책이 실행하도록 허용되지 않았습니다."
+msgstr "%(action)s 정책이 수행되도록 허용되지 않았습니다."
 
 #, python-format
 msgid "Policy doesn't allow %s to be performed."
@@ -3492,7 +3481,7 @@ msgid "Service API method not found: %(detail)s"
 msgstr "서비스 API 메소드를 찾을 수 없음: %(detail)s"
 
 msgid "Service is unavailable at this time."
-msgstr "서비스가 지금 사용 불가능합니다. "
+msgstr "지금 서비스를 사용할 수 없습니다."
 
 #, python-format
 msgid "Service with host %(host)s binary %(binary)s exists."
@@ -3530,7 +3519,7 @@ msgid "Some fields are invalid."
 msgstr "일부 필드가 올바르지 않습니다"
 
 msgid "Some required fields are missing"
-msgstr "일부 필수 필드가 빠짐"
+msgstr "일부 필수 필드가 비어있습니다."
 
 msgid "Sort direction size exceeds sort key size"
 msgstr "정렬 방향 크기가 정렬 키 크기를 초과함"
@@ -3743,7 +3732,7 @@ msgid "The request body can't be empty"
 msgstr "요청 분문은 비어 있을 수 없음"
 
 msgid "The request is invalid."
-msgstr "그 요청은 맞지 않습니다."
+msgstr "요청이 올바르지 않습니다."
 
 #, python-format
 msgid ""
@@ -3796,8 +3785,7 @@ msgstr "제공된 디바이스 경로(%(path)s)가 올바르지 않습니다. "
 msgid ""
 "The supplied disk path (%(path)s) already exists, it is expected not to "
 "exist."
-msgstr ""
-"제공된 디스크 경로(%(path)s)가 이미 존재합니다. 존재하지 않아야 합니다."
+msgstr "제공된 디스크 경로(%(path)s)가 이미 존재합니다. 없어야합니다."
 
 msgid "The supplied hypervisor type of is invalid."
 msgstr "제공된 하이퍼바이저 유형이 올바르지 않습니다. "
@@ -4155,7 +4143,7 @@ msgstr "시스템 그룹 '%s'을(를) 업데이트할 수 없음"
 
 #, python-format
 msgid "Unacceptable CPU info: %(reason)s"
-msgstr "허용할 수 없는 CPU 정보: %(reason)s"
+msgstr "CPU 정보를 확인할 수 없습니다: %(reason)s"
 
 #, python-format
 msgid "Unacceptable attach status:%s for ec2 API."
@@ -4179,7 +4167,7 @@ msgstr ""
 
 #, python-format
 msgid "Unexpected aggregate action %s"
-msgstr "예상치 않은 집계 조치 %s"
+msgstr "예상치 않은 집합 %s 작업"
 
 msgid "Unexpected type adding stats"
 msgstr "통계를 추가하는 예기치 않은 유형이 있음"
@@ -4310,7 +4298,7 @@ msgstr ""
 "바이트를 초과하면 안 됩니다. 사용자 데이터는 %(length)d바이트입니다."
 
 msgid "User does not have admin privileges"
-msgstr "사용자는 관리 권한이 없습니다"
+msgstr "사용자에게 관리 권한이 없습니다"
 
 msgid "User is not authorized to use key manager."
 msgstr "사용자에게 키 관리자를 사용할 권한이 없습니다."
@@ -4385,8 +4373,8 @@ msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
 "maximum is %(max_ver)s."
 msgstr ""
-"API에서 버전 %(req_ver)s을(를) 지원하지 않습니다. 최소 버전은 %(min_ver)s 최"
-"대 버전은 %(max_ver)s입니다."
+"API에서 %(req_ver)s 버전을 지원하지 않습니다. 최소 %(min_ver)s 이상, 최대 "
+"%(max_ver)s 이하여야 합니다."
 
 msgid "Virt driver does not implement host disabled status."
 msgstr "가상 드라이버가 호스트 사용 안함 상태를 구현하지 않습니다. "
@@ -4427,11 +4415,25 @@ msgid "Volume %(volume_id)s could not be found."
 msgstr "%(volume_id)s 볼륨을 찾을 수 없습니다. "
 
 #, python-format
+msgid ""
+"Volume %(volume_id)s did not finish being created even after we waited "
+"%(seconds)s seconds or %(attempts)s attempts. And its status is "
+"%(volume_status)s."
+msgstr ""
+"%(seconds)s 초 동안 기다리거나 %(attempts)s 시도 하였으나 %(volume_id)s 볼륨"
+"이 생성되지 않았습니다. 지금 상태는 %(volume_status)s 입니다."
+
+#, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
 msgstr "%(volume_id)s 볼륨이 어디에도 연결되지 않았습니다"
 
 msgid "Volume does not belong to the requested instance."
 msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
+
+#, python-format
+msgid ""
+"Volume encryption is not supported for %(volume_type)s volume %(volume_id)s"
+msgstr "볼륨 암호화는 %(volume_type)s 볼륨 %(volume_id)s 를 지원하지 않습니다"
 
 msgid "Volume must be attached in order to detach."
 msgstr "분리하려면 볼륨이 첨부되어야 합니다. "
@@ -4500,7 +4502,7 @@ msgid "Where we keep our keys"
 msgstr "키를 보관하는 장소"
 
 msgid "Where we keep our root CA"
-msgstr "루트 CA를 보관하는 장소"
+msgstr "Root CA를 보관하는 장소"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
@@ -4575,10 +4577,10 @@ msgid "admin password can't be changed on existing disk"
 msgstr "관리 비밀번호는 기존 디스크에서 변경될 수 없음"
 
 msgid "aggregate deleted"
-msgstr "집계가 삭제됨"
+msgstr "집합이 삭제되었습니다"
 
 msgid "aggregate in error"
-msgstr "집계에 오류가 있음"
+msgstr "집합에 오류가 있습니다"
 
 #, python-format
 msgid "assert_can_migrate failed because: %s"
@@ -4658,7 +4660,7 @@ msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "X509 fingerprint를 생성하지 못했습니다. 에러 메시지: %s"
 
 msgid "failed to generate fingerprint"
-msgstr "Fingerprint를 생성하지 못하였습니다"
+msgstr "Fingerprint를 생성하지 못했습니다"
 
 msgid "filename cannot be None"
 msgstr "파일 이름은 None일 수 없음"
