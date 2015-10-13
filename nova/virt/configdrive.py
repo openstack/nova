@@ -23,7 +23,6 @@ from oslo_utils import fileutils
 from oslo_utils import units
 
 from nova import exception
-from nova import objects
 from nova.objects import fields
 from nova import utils
 from nova import version
@@ -167,9 +166,8 @@ class ConfigDriveBuilder(object):
 
 
 def required_by(instance):
-    image_meta = objects.ImageMeta.from_instance(instance)
 
-    image_prop = image_meta.properties.get(
+    image_prop = instance.image_meta.properties.get(
         "img_config_drive",
         fields.ConfigDrivePolicy.OPTIONAL)
 
