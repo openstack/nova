@@ -169,6 +169,7 @@ these are a great place to start reading up on the current plans.
    api_microversion_dev
    policy_enforcement
    stable_api
+   code-review
 
 Advanced testing and guides
 ----------------------------
