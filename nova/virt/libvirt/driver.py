@@ -3960,7 +3960,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.add_qemu_cmdline(
                     vconfig.LibvirtConfigQEMUCommandline(qemu_cmdline))
             else:
-                guest.add_device(config)
+                pass
+                # guest.add_device(config)
 
         for vif in network_info:
             config = self.vif_driver.get_config(
