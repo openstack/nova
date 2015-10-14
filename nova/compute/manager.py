@@ -667,7 +667,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.5')
+    target = messaging.Target(version='4.6')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -2570,6 +2570,25 @@ class ComputeManager(manager.Manager):
 
         instance.save(expected_task_state=task_states.POWERING_ON)
         self._notify_about_instance_usage(context, instance, "power_on.end")
+
+    @messaging.expected_exceptions(NotImplementedError,
+                                   exception.NMINotSupported,
+                                   exception.InstanceNotRunning)
+    @wrap_exception()
+    @wrap_instance_event
+    @wrap_instance_fault
+    def trigger_crash_dump(self, context, instance):
+        """Trigger crash dump in an instance by injecting NMI."""
+
+        self._notify_about_instance_usage(context, instance,
+                                          "trigger_crash_dump.start")
+
+        # This method does not change task_state and power_state because the
+        # effect of an NMI depends on user's configuration.
+        self.driver.inject_nmi(instance)
+
+        self._notify_about_instance_usage(context, instance,
+                                          "trigger_crash_dump.end")
 
     @wrap_exception()
     @reverts_task_state

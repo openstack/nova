@@ -311,6 +311,7 @@ class ComputeAPI(object):
         * 4.4  - Make refresh_instance_security_rules send an instance object
         * 4.5  - Add migration, scheduler_node and limits arguments to
                  rebuild_instance()
+        * 4.6  - Add trigger_crash_dump()
 
         ... Liberty supports messaging version 4.5. So, any changes to
         existing methods in 4.x after that point should be done so that they
@@ -984,3 +985,13 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'refresh_instance_security_rules',
                    instance=instance)
+
+    def trigger_crash_dump(self, ctxt, instance):
+        version = '4.6'
+
+        if not self.client.can_send_version(version):
+            raise exception.NMINotSupported()
+
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)

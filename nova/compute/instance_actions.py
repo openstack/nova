@@ -21,6 +21,10 @@ tend to maintain the casing sent to the API.
 
 Maintaining a list of actions here should protect against inconsistencies when
 they are used.
+
+The naming style of instance actions should be snake_case, as it will
+consistent with the API names. Do not modify the old ones because they have
+been exposed to users.
 """
 
 CREATE = 'create'
@@ -45,3 +49,4 @@ CHANGE_PASSWORD = 'changePassword'
 SHELVE = 'shelve'
 UNSHELVE = 'unshelve'
 LIVE_MIGRATION = 'live-migration'
+TRIGGER_CRASH_DUMP = 'trigger_crash_dump'
