@@ -13,7 +13,7 @@ lxml>=2.3
 Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7'
 Routes!=2.0,>=1.12.3;python_version!='2.7'
 cryptography>=1.0 # Apache-2.0
-WebOb<1.5.0,>=1.2.3
+WebOb>=1.2.3
 greenlet>=0.3.2
 PasteDeploy>=1.5.0
 Paste
