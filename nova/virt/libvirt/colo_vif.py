@@ -78,6 +78,10 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
         designer.set_vif_colo_config(conf, self.get_colo_forward(vif),
                                      self.get_colo_failover(vif))
 
+        # TODO(ORBIT): Temporary
+        if utils.ft_enabled(instance):
+            conf.colo_script = "/opt/qemu/scripts/colo-proxy-script.sh"
+
         return conf
 
     def get_config_ovs_bridge(self, instance, vif, image_meta, inst_type,

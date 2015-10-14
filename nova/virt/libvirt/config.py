@@ -1094,6 +1094,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vlan = None
         self.colo_forward = None
         self.colo_failover = None
+        self.colo_script = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -1183,6 +1184,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             if self.net_type == "bridge":
                 dev.append(etree.Element("colo_failover",
                                          bridge=self.colo_failover))
+
+        if self.colo_script is not None:
+            dev.append(etree.Element("colo_script",
+                                     path=self.colo_script))
 
         return dev
 
