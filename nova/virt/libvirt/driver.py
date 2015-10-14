@@ -4165,6 +4165,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
             guest.add_device(balloon)
 
+        if utils.ft_secondary(instance):
+            guest.add_qemu_cmdline(vconfig.LibvirtConfigQEMUCommandline(
+                '-incoming tcp:0:8888'))
+
         return guest
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
