@@ -6473,6 +6473,9 @@ class LibvirtDriver(driver.ComputeDriver):
                          ",child.file.driver=nbd,child.ignore-errors=on")
         ret = self.exec_monitor_command(primary_instance, child_add_cmd)
 
+        ret = self.exec_monitor_command(
+            primary_instance, "migrate_set_capability colo on")
+
     def _colo_init_secondary(self, secondary_instance, primary_instance):
         disk_id = "colo1b"
         reference_id = "colo1"
