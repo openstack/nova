@@ -6453,8 +6453,13 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_id = "colo1"
         nbd_port = 8889
 
+        i = 0
         while self._colo_wait_for_nbd(secondary_host, nbd_port):
+            if i > 5:
+                LOG.error("Unable to connect to NBD server.")
+                break
             time.sleep(0.5)
+            i += 1
 
         flaglist = CONF.libvirt.colo_migration_flag.split(',')
         flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
