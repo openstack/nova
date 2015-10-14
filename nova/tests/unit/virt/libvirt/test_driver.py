@@ -14140,6 +14140,59 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                               cpumodel.POLICY_FORBID]),
                          set([f.policy for f in cpu.features]))
 
+    def test_inject_nmi(self):
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.drvr.inject_nmi(instance)
+
+    def test_inject_nmi_not_running(self):
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'Requested operation is not valid: domain is not running',
+                error_code=fakelibvirt.VIR_ERR_OPERATION_INVALID)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.inject_nmi = mock.Mock(side_effect=ex)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.assertRaises(exception.InstanceNotRunning,
+                              self.drvr.inject_nmi, instance)
+
+    def test_inject_nmi_not_supported(self):
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                '',
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.inject_nmi = mock.Mock(side_effect=ex)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.assertRaises(exception.NMINotSupported,
+                              self.drvr.inject_nmi, instance)
+
+    def test_inject_nmi_unexpected_error(self):
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'UnexpectedError',
+                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.inject_nmi = mock.Mock(side_effect=ex)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        with mock.patch.object(self.drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.assertRaises(fakelibvirt.libvirtError,
+                              self.drvr.inject_nmi, instance)
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
