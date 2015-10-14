@@ -17,6 +17,7 @@ from oslo_log import log as logging
 from nova import availability_zones
 from nova import db
 from nova import exception
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -282,6 +283,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable_classmethod
     def get_minimum_version(cls, context, binary, use_slave=False):
+        if not binary.startswith('nova-'):
+            LOG.warning(_LW('get_minimum_version called with likely-incorrect '
+                            'binary `%s\''), binary)
+            raise exception.ObjectActionError(action='get_minimum_version',
+                                              reason='Invalid binary prefix')
         version = db.service_get_minimum_version(context, binary,
                                                  use_slave=use_slave)
         if version is None:
