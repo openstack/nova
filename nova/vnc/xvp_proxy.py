@@ -41,14 +41,16 @@ xvp_proxy_opts = [
                default=6081,
                min=1,
                max=65535,
-               help='Port that the XCP VNC proxy should bind to'),
+               help='Port that the XCP VNC proxy should bind to',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('xvpvncproxy_host',
                default='0.0.0.0',
-               help='Address that the XCP VNC proxy should bind to'),
+               help='Address that the XCP VNC proxy should bind to',
+               deprecated_group='DEFAULT'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(xvp_proxy_opts)
+CONF.register_opts(xvp_proxy_opts, group='vnc')
 
 
 class XCPVNCProxy(object):
