@@ -342,6 +342,24 @@ class TestCPUAllocationPolicy(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'acme')
 
 
+class TestCPUThreadAllocationPolicy(TestField):
+    def setUp(self):
+        super(TestCPUThreadAllocationPolicy, self).setUp()
+        self.field = fields.CPUThreadAllocationPolicyField()
+        self.coerce_good_values = [('prefer', 'prefer'),
+                                   ('isolate', 'isolate'),
+                                   ('require', 'require')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'prefer'", self.field.stringify('prefer'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestPciDeviceType(TestField):
     def setUp(self):
         super(TestPciDeviceType, self).setUp()
