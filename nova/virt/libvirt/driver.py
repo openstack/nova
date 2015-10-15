@@ -3967,6 +3967,11 @@ class LibvirtDriver(driver.ComputeDriver):
             config = self.vif_driver.get_config(
                 instance, vif, image_meta,
                 flavor, CONF.libvirt.virt_type)
+
+            # TODO(ORBIT): Temporary
+            if utils.ft_enabled(instance):
+                config.colo_script = os.path.join(inst_path, "colo-proxy-script.sh")
+
             guest.add_device(config)
 
         if ((CONF.libvirt.virt_type == "qemu" or
@@ -6430,11 +6435,13 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             LOG.error("QEMU monitor command failed: %s", cmd)
 
-    def ft_initialize(self, instance, relational_instance):
+    def ft_initialize(self, instance, relational_instance, network_info):
         if utils.ft_secondary(instance):
             self._colo_init_secondary(instance, relational_instance)
         else:
             self._colo_init_primary(instance, relational_instance)
+
+        self._colo_generate_proxy_script(instance, network_info)
 
     def _colo_wait_for_nbd(self, host, port):
         try:
@@ -6511,6 +6518,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
             self.vif_driver.cleanup_colo_plug(instance, vif)
+
+    # TODO(ORBIT): Temporary
+    def _colo_generate_proxy_script(self, instance, network_info):
+        vif = network_info[0]
+        inst_path = libvirt_utils.get_instance_path(instance)
+        path = os.path.join(inst_path, "colo-proxy-script.sh")
+        self.vif_driver.colo_generate_proxy_script(instance, vif, path)
 
 
 class HostState(object):

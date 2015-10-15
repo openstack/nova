@@ -78,10 +78,6 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
         designer.set_vif_colo_config(conf, self.get_colo_forward(vif),
                                      self.get_colo_failover(vif))
 
-        # TODO(ORBIT): Temporary
-        if utils.ft_enabled(instance):
-            conf.colo_script = "/opt/qemu/scripts/colo-proxy-script.sh"
-
         return conf
 
     def get_config_ovs_bridge(self, instance, vif, image_meta, inst_type,
@@ -242,7 +238,6 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
 
             linux_net.delete_ovs_vif_port(self.get_ext_bridge_name(),
                                           colo_v2_name)
-
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
@@ -324,3 +319,15 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
                 _("Unexpected vif_type=%s") % vif_type)
 
         func(instance, vif)
+
+    # TODO(ORBIT): Temporary
+    def colo_generate_proxy_script(self, instance, vif, path):
+        tapdev = self.get_vif_devname(vif)
+        with open("/opt/qemu/scripts/colo-proxy-script.sh") as f:
+            qemu_script = f.read()
+
+        qemu_script = qemu_script.replace("virt_if=$4",
+                                          "virt_if=\"" + tapdev + "\"", 1)
+
+        with open(path, "w+") as f:
+            f.write(qemu_script)
