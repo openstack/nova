@@ -251,7 +251,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             return
         minver = self.get_minimum_version(self._context, self.binary)
         if minver > self.version:
-            raise exception.ServiceTooOld()
+            raise exception.ServiceTooOld(thisver=self.version,
+                                          minver=minver)
 
     @base.remotable
     def create(self):
