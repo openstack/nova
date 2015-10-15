@@ -57,7 +57,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(compute='auto', group='upgrade_levels')
         rpcapi = compute_rpcapi.ComputeAPI()
         self.assertEqual('4.4', rpcapi.client.version_cap)
-        mock_get_min.assert_called_once_with(mock.ANY, 'compute')
+        mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
 
     @mock.patch('nova.objects.Service.get_minimum_version')
     def test_auto_pin_fails_if_too_old(self, mock_get_min):
@@ -72,7 +72,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(compute='auto', group='upgrade_levels')
         rpcapi = compute_rpcapi.ComputeAPI()
         self.assertEqual('4.0', rpcapi.client.version_cap)
-        mock_get_min.assert_called_once_with(mock.ANY, 'compute')
+        mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
 
     def _test_compute_api(self, method, rpc_method,
                           expected_args=None, **kwargs):

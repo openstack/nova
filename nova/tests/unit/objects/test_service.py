@@ -34,7 +34,7 @@ fake_service = {
     'deleted': False,
     'id': 123,
     'host': 'fake-host',
-    'binary': 'fake-service',
+    'binary': 'nova-fake',
     'topic': 'fake-service-topic',
     'report_count': 1,
     'forced_down': False,
@@ -148,7 +148,7 @@ class _TestServiceObject(object):
                        return_value=fake_service)
     def test_set_id_failure(self, db_mock):
         service_obj = service.Service(context=self.context,
-                                      binary='compute')
+                                      binary='nova-compute')
         service_obj.create()
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           service_obj, 'id', 124)
@@ -285,8 +285,8 @@ class _TestServiceObject(object):
         mock_get.return_value = None
         self.assertEqual(0,
                          objects.Service.get_minimum_version(self.context,
-                                                             'compute'))
-        mock_get.assert_called_once_with(self.context, 'compute',
+                                                             'nova-compute'))
+        mock_get.assert_called_once_with(self.context, 'nova-compute',
                                          use_slave=False)
 
     @mock.patch('nova.db.service_get_minimum_version')
@@ -294,21 +294,37 @@ class _TestServiceObject(object):
         mock_get.return_value = 123
         self.assertEqual(123,
                          objects.Service.get_minimum_version(self.context,
-                                                             'compute'))
-        mock_get.assert_called_once_with(self.context, 'compute',
+                                                             'nova-compute'))
+        mock_get.assert_called_once_with(self.context, 'nova-compute',
                                          use_slave=False)
+
+    @mock.patch('nova.db.service_get_minimum_version')
+    @mock.patch('nova.objects.service.LOG')
+    def test_get_minimum_version_checks_binary(self, mock_log, mock_get):
+        mock_get.return_value = None
+        self.assertEqual(0,
+                         objects.Service.get_minimum_version(self.context,
+                                                             'nova-compute'))
+        self.assertFalse(mock_log.warning.called)
+        self.assertRaises(exception.ObjectActionError,
+                         objects.Service.get_minimum_version,
+                          self.context,
+                          'compute')
+        self.assertTrue(mock_log.warning.called)
 
     @mock.patch('nova.db.service_get_minimum_version', return_value=2)
     def test_create_above_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=3):
-            objects.Service(context=self.context, binary='compute').create()
+            objects.Service(context=self.context,
+                            binary='nova-compute').create()
 
     @mock.patch('nova.db.service_get_minimum_version', return_value=2)
     def test_create_equal_to_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=2):
-            objects.Service(context=self.context, binary='compute').create()
+            objects.Service(context=self.context,
+                            binary='nova-compute').create()
 
     @mock.patch('nova.db.service_get_minimum_version', return_value=2)
     def test_create_below_minimum(self, mock_get):
@@ -316,7 +332,7 @@ class _TestServiceObject(object):
                         new=1):
             self.assertRaises(exception.ServiceTooOld,
                               objects.Service(context=self.context,
-                                              binary='compute',
+                                              binary='nova-compute',
                                               ).create)
 
 

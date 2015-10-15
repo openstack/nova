@@ -332,7 +332,7 @@ class ComputeAPI(object):
     def _determine_version_cap(self, target):
         # FIXME(danms): We should reload this on SIGHUP, or by timer
         service_version = objects.Service.get_minimum_version(
-            context.get_admin_context(), 'compute')
+            context.get_admin_context(), 'nova-compute')
         history = service_obj.SERVICE_VERSION_HISTORY
         try:
             version_cap = history[service_version]['compute_rpc']
