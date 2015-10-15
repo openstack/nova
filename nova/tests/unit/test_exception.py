@@ -17,6 +17,7 @@
 import inspect
 
 import six
+from webob.util import status_reasons
 
 from nova import context
 from nova import exception
@@ -146,10 +147,29 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         self.assertEqual("some message %(somearg)s", exc.format_message())
 
 
+class ConvertedExceptionTestCase(test.NoDBTestCase):
+    def test_instantiate(self):
+        exc = exception.ConvertedException(400, 'Bad Request', 'reason')
+        self.assertEqual(exc.code, 400)
+        self.assertEqual(exc.title, 'Bad Request')
+        self.assertEqual(exc.explanation, 'reason')
+
+    def test_instantiate_without_title_known_code(self):
+        exc = exception.ConvertedException(500)
+        self.assertEqual(exc.title, status_reasons[500])
+
+    def test_instantiate_without_title_unknown_code(self):
+        exc = exception.ConvertedException(499)
+        self.assertEqual(exc.title, 'Unknown Client Error')
+
+    def test_instantiate_bad_code(self):
+        self.assertRaises(KeyError, exception.ConvertedException, 10)
+
+
 class ExceptionTestCase(test.NoDBTestCase):
     @staticmethod
     def _raise_exc(exc):
-        raise exc()
+        raise exc(500)
 
     def test_exceptions_raise(self):
         # NOTE(dprince): disable format errors since we are not passing kwargs
