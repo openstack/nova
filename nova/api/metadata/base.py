@@ -35,6 +35,7 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import network
+from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import keypair as keypair_obj
 from nova import utils
@@ -127,8 +128,9 @@ class InstanceMetadata(object):
         self.availability_zone = az.get_instance_availability_zone(ctxt,
                                                                    instance)
 
-        self.security_groups = objects.SecurityGroupList.get_by_instance(
-            ctxt, instance)
+        secgroup_api = openstack_driver.get_openstack_security_group_driver()
+        self.security_groups = secgroup_api.get_instance_security_groups(
+            ctxt, instance.uuid)
 
         self.mappings = _format_instance_mapping(ctxt, instance)
 
