@@ -331,3 +331,6 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
 
         with open(path, "w+") as f:
             f.write(qemu_script)
+
+        import os
+        os.chmod(path, 0755)
