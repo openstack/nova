@@ -262,7 +262,7 @@ class ComputeTaskManager(base.Base):
 
         migration = objects.Migration(context=context.elevated())
         migration.dest_compute = destination
-        migration.status = 'pre-migrating'
+        migration.status = 'accepted'
         migration.instance_uuid = instance.uuid
         migration.source_compute = instance.host
         migration.migration_type = 'live-migration'

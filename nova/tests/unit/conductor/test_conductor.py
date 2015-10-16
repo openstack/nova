@@ -341,7 +341,7 @@ class _BaseTaskTestCase(object):
                 {'host': 'destination'}, True, False, None,
                  'block_migration', 'disk_over_commit')
 
-        self.assertEqual('pre-migrating', migration.status)
+        self.assertEqual('accepted', migration.status)
         self.assertEqual('destination', migration.dest_compute)
         self.assertEqual(inst_obj.host, migration.source_compute)
 
