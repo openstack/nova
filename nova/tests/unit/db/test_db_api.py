@@ -2432,7 +2432,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_tag_set(self.ctxt, inst3.uuid, [t3])
 
         result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tag-any': [t1, t2]})
+                                                {'tags-any': [t1, t2]})
         self._assertEqualListsOfObjects([inst1, inst2], result,
                 ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
                               'system_metadata', 'info_cache', 'pci_devices'])
@@ -2450,7 +2450,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
 
         result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tag-any': [t3, t4]})
+                                                {'tags-any': [t3, t4]})
         self.assertEqual([], result)
 
     def test_instance_get_all_by_filters_tag(self):
@@ -2467,7 +2467,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_tag_set(self.ctxt, inst3.uuid, [t1, t2, t3])
 
         result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tag': [t1, t2]})
+                                                {'tags': [t1, t2]})
         self._assertEqualListsOfObjects([inst2, inst3], result,
                 ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
                               'system_metadata', 'info_cache', 'pci_devices'])
@@ -2484,7 +2484,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
 
         result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tag': [t3]})
+                                                {'tags': [t3]})
         self.assertEqual([], result)
 
     def test_instance_get_all_by_filters_tag_any_and_tag(self):
@@ -2502,8 +2502,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_tag_set(self.ctxt, inst3.uuid, [t2, t3])
 
         result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tag': [t1, t2],
-                                                 'tag-any': [t3, t4]})
+                                                {'tags': [t1, t2],
+                                                 'tags-any': [t3, t4]})
         self._assertEqualListsOfObjects([inst2], result,
                 ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
                               'system_metadata', 'info_cache', 'pci_devices'])
