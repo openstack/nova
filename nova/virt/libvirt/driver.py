@@ -6486,12 +6486,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _colo_init_secondary(self, secondary_instance, primary_instance):
         disk_id = "colo1b"
         reference_id = "colo1"
-        instance_path = libvirt_utils.get_instance_path(secondary_instance)
-        active_disk = instance_path + "/active_disk.img"
-        hidden_disk = instance_path + "/hidden_disk.img"
+        inst_path = libvirt_utils.get_instance_path(secondary_instance)
+        active_disk = os.path.join(inst_path, "active_disk.img")
+        hidden_disk = os.path.join(inst_path, "hidden_disk.img")
+        size = str(secondary_instance['root_gb']) + 'G'
 
-        utils.execute('qemu-img', 'create', '-f', 'qcow2', active_disk, '10G')
-        utils.execute('qemu-img', 'create', '-f', 'qcow2', hidden_disk, '10G')
+        utils.execute('qemu-img', 'create', '-f', 'qcow2', active_disk, size)
+        utils.execute('qemu-img', 'create', '-f', 'qcow2', hidden_disk, size)
 
         drive_add_cmd = ("drive_add 0 if=none,id=" + disk_id +
                          ",driver=replication" +
