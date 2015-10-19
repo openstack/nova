@@ -5968,6 +5968,21 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                         'compute.instance.live_migration.rollback.dest.end')
 
+    @mock.patch('nova.network.api.API.setup_networks_on_host',
+                side_effect=test.TestingException)
+    @mock.patch('nova.virt.driver.ComputeDriver.'
+                'rollback_live_migration_at_destination')
+    def test_rollback_live_migration_at_destination_network_fails(
+            self, mock_rollback, net_mock):
+        c = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+        self.assertRaises(test.TestingException,
+                          self.compute.rollback_live_migration_at_destination,
+                          c, instance, destroy_disks=True, migrate_data={})
+        mock_rollback.assert_called_once_with(c, instance, mock.ANY, mock.ANY,
+                                              destroy_disks=True,
+                                              migrate_data={})
+
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.
         instance = self._create_fake_instance_obj()
