@@ -6527,6 +6527,13 @@ class LibvirtDriver(driver.ComputeDriver):
         path = os.path.join(inst_path, "colo-proxy-script.sh")
         self.vif_driver.colo_generate_proxy_script(instance, vif, path)
 
+    # TODO(ORBIT): Forcing MAC for now, might be changed later
+    def macs_for_instance(self, instance):
+        if utils.ft_enabled(instance):
+            flavor = flavors.extract_flavor(instance)
+            if flavor['extra_specs']['ft:mac']:
+                return set([flavor['extra_specs']['ft:mac']])
+
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
