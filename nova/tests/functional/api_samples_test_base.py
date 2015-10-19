@@ -314,8 +314,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         }
 
     def _get_response(self, url, method, body=None, strip_version=False,
-                      api_version=None):
-        headers = {}
+                      api_version=None, headers=None):
+        headers = headers or {}
         headers['Content-Type'] = 'application/' + self.ctype
         headers['Accept'] = 'application/' + self.ctype
         if api_version:
@@ -323,26 +323,39 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return self.api.api_request(url, body=body, method=method,
                 headers=headers, strip_version=strip_version)
 
-    def _do_get(self, url, strip_version=False, api_version=None):
+    def _do_options(self, url, strip_version=False, api_version=None,
+                    headers=None):
+        return self._get_response(url, 'OPTIONS', strip_version=strip_version,
+                                  api_version=(api_version or
+                                               self.request_api_version),
+                                  headers=headers)
+
+    def _do_get(self, url, strip_version=False, api_version=None,
+                headers=None):
         return self._get_response(url, 'GET', strip_version=strip_version,
                                   api_version=(api_version or
-                                               self.request_api_version))
+                                               self.request_api_version),
+                                  headers=headers)
 
-    def _do_post(self, url, name, subs, method='POST', api_version=None):
+    def _do_post(self, url, name, subs, method='POST', api_version=None,
+                 headers=None):
         body = self._read_template(name) % subs
         sample = self._get_sample(name, self.request_api_version)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
         return self._get_response(url, method, body,
                                   api_version=(api_version or
-                                               self.request_api_version))
+                                               self.request_api_version),
+                                  headers=headers)
 
-    def _do_put(self, url, name, subs, api_version=None):
+    def _do_put(self, url, name, subs, api_version=None, headers=None):
         return self._do_post(url, name, subs, method='PUT',
                              api_version=(api_version or
-                                          self.request_api_version))
+                                          self.request_api_version),
+                             headers=headers)
 
-    def _do_delete(self, url, api_version=None):
+    def _do_delete(self, url, api_version=None, headers=None):
         return self._get_response(url, 'DELETE',
                                   api_version=(api_version or
-                                               self.request_api_version))
+                                               self.request_api_version),
+                                  headers=headers)
