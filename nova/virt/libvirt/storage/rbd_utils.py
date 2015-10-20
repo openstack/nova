@@ -190,10 +190,10 @@ class RBDDriver(object):
             LOG.debug(reason)
             return False
 
-        if image_meta.disk_format != 'raw':
+        if image_meta.get('disk_format') != 'raw':
             reason = ("rbd image clone requires image format to be "
                       "'raw' but image {0} is '{1}'").format(
-                          url, image_meta.disk_format)
+                          url, image_meta.get('disk_format'))
             LOG.debug(reason)
             return False
 
