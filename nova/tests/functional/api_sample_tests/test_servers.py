@@ -138,6 +138,7 @@ class ServerSortKeysJsonTests(ServersSampleBase):
 
 class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
     all_extensions = True
+    sample_dir = None
 
 
 class ServersActionsJsonTest(ServersSampleBase):
@@ -215,6 +216,7 @@ class ServersActionsJsonTest(ServersSampleBase):
 
 class ServersActionsAllJsonTest(ServersActionsJsonTest):
     all_extensions = True
+    sample_dir = None
 
 
 class ServerStartStopJsonTest(ServersSampleBase):

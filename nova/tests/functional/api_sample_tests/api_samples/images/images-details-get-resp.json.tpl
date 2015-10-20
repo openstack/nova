@@ -1,6 +1,7 @@
 {
     "images": [
         {
+            "OS-DCF:diskConfig": "AUTO",
             "created": "2011-01-01T01:02:03Z",
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -27,6 +28,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage7",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
@@ -57,6 +59,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
@@ -86,11 +89,13 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-DCF:diskConfig": "MANUAL",
             "created": "2011-01-01T01:02:03Z",
             "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
             "links": [
@@ -117,6 +122,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage6",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
@@ -146,6 +152,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
@@ -175,6 +182,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
@@ -204,6 +212,7 @@
             "minDisk": 0,
             "minRam": 0,
             "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"

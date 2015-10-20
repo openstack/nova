@@ -56,6 +56,7 @@ class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
     all_extensions = True
+    sample_dir = None
 
     def _get_flags(self):
         f = super(FlavorsSampleJsonTest, self)._get_flags()
