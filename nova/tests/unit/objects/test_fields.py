@@ -603,3 +603,21 @@ class TestIDEAddress(TestField):
         ]
         self.to_primitive_values = self.coerce_good_values
         self.from_primitive_values = self.coerce_good_values
+
+
+class TestSecureBoot(TestField):
+    def setUp(self):
+        super(TestSecureBoot, self).setUp()
+        self.field = fields.SecureBoot()
+        self.coerce_good_values = [('required', 'required'),
+                                   ('disabled', 'disabled'),
+                                   ('optional', 'optional')]
+        self.coerce_bad_values = ['enabled']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'required'", self.field.stringify('required'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'enabled')

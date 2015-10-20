@@ -161,12 +161,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.10: added hw_cpu_realtime_mask field
     # Version 1.11: Added hw_firmware_type field
     # Version 1.12: Added properties for image signature verification
-    VERSION = '1.12'
+    # Version 1.13: added os_secure_boot field
+    VERSION = '1.13'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 13):
+            primitive.pop('os_secure_boot', None)
         if target_version < (1, 11):
             primitive.pop('hw_firmware_type', None)
         if target_version < (1, 10):
@@ -403,6 +406,13 @@ class ImageMetaProps(base.NovaObject):
         # boolean - if true, then guest must support disk quiesce
         # or snapshot operation will be denied
         'os_require_quiesce': fields.FlexibleBooleanField(),
+
+        # Secure Boot feature will be enabled by setting the "os_secure_boot"
+        # image property to "required". Other options can be: "disabled" or
+        # "optional".
+        # "os:secure_boot" flavor extra spec value overrides the image property
+        # value.
+        'os_secure_boot': fields.SecureBootField(),
 
         # boolean - if using agent don't inject files, assume someone else is
         # doing that (cloud-init)

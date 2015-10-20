@@ -378,6 +378,18 @@ class SCSIModel(Enum):
         return super(SCSIModel, self).coerce(obj, attr, value)
 
 
+class SecureBoot(Enum):
+
+    REQUIRED = "required"
+    DISABLED = "disabled"
+    OPTIONAL = "optional"
+
+    ALL = (REQUIRED, DISABLED, OPTIONAL)
+
+    def __init__(self):
+        super(SecureBoot, self).__init__(valid_values=SecureBoot.ALL)
+
+
 class VideoModel(Enum):
 
     CIRRUS = "cirrus"
@@ -786,6 +798,10 @@ class RNGModelField(BaseEnumField):
 
 class SCSIModelField(BaseEnumField):
     AUTO_TYPE = SCSIModel()
+
+
+class SecureBootField(BaseEnumField):
+    AUTO_TYPE = SecureBoot()
 
 
 class VideoModelField(BaseEnumField):
