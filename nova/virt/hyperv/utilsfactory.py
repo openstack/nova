@@ -16,27 +16,18 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from nova.i18n import _
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import hostutilsv2
 from nova.virt.hyperv import livemigrationutils
-from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
-from nova.virt.hyperv import rdpconsoleutils
 from nova.virt.hyperv import rdpconsoleutilsv2
-from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vhdutilsv2
-from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
 
 hyper_opts = [
-    cfg.BoolOpt('force_hyperv_utils_v1',
-                default=False,
-                deprecated_for_removal=True,
-                help='Force V1 WMI utility classes'),
     cfg.BoolOpt('force_volumeutils_v1',
                 default=False,
                 help='Force V1 volume utility class'),
@@ -50,7 +41,7 @@ LOG = logging.getLogger(__name__)
 utils = hostutils.HostUtils()
 
 
-def _get_class(v1_class, v2_class, force_v1_flag):
+def _get_class(v1_class, v2_class, force_v1_flag=False):
     # V2 classes are supported starting from Hyper-V Server 2012 and
     # Windows Server 2012 (kernel version 6.2)
     if not force_v1_flag and utils.check_min_windows_version(6, 2):
@@ -62,35 +53,20 @@ def _get_class(v1_class, v2_class, force_v1_flag):
     return cls
 
 
-def _get_virt_utils_class(v1_class, v2_class):
-    # The "root/virtualization" WMI namespace is no longer supported on
-    # Windows Server / Hyper-V Server 2012 R2 / Windows 8.1
-    # (kernel version 6.3) or above.
-    if (CONF.hyperv.force_hyperv_utils_v1 and
-            utils.check_min_windows_version(6, 3)):
-        raise vmutils.HyperVException(
-            _('The "force_hyperv_utils_v1" option cannot be set to "True" '
-              'on Windows Server / Hyper-V Server 2012 R2 or above as the WMI '
-              '"root/virtualization" namespace is no longer supported.'))
-    return _get_class(v1_class, v2_class, CONF.hyperv.force_hyperv_utils_v1)
-
-
 def get_vmutils(host='.'):
-    return _get_virt_utils_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2)(host)
+    return vmutilsv2.VMUtilsV2(host)
 
 
 def get_vhdutils():
-    return _get_virt_utils_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2)()
+    return vhdutilsv2.VHDUtilsV2()
 
 
 def get_networkutils():
-    return _get_virt_utils_class(networkutils.NetworkUtils,
-                           networkutilsv2.NetworkUtilsV2)()
+    return networkutilsv2.NetworkUtilsV2()
 
 
 def get_hostutils():
-    return _get_virt_utils_class(hostutils.HostUtils,
-                                 hostutilsv2.HostUtilsV2)()
+    return hostutilsv2.HostUtilsV2()
 
 
 def get_pathutils():
@@ -107,5 +83,4 @@ def get_livemigrationutils():
 
 
 def get_rdpconsoleutils():
-    return _get_virt_utils_class(rdpconsoleutils.RDPConsoleUtils,
-                      rdpconsoleutilsv2.RDPConsoleUtilsV2)()
+    return rdpconsoleutilsv2.RDPConsoleUtilsV2()
