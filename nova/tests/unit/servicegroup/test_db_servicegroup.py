@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
 import mock
 from oslo_db import exception as db_exception
 import oslo_messaging as messaging
+from oslo_utils import fixture as utils_fixture
+from oslo_utils import timeutils
 
 from nova import objects
 from nova import servicegroup
@@ -31,42 +32,36 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
                    servicegroup_driver='db')
         self.servicegroup_api = servicegroup.API()
 
-    @mock.patch('oslo_utils.timeutils.utcnow')
-    def test_is_up(self, now_mock):
-        service_ref = {
-            'host': 'fake-host',
-            'topic': 'compute',
-        }
-        fts_func = datetime.datetime.fromtimestamp
-        fake_now = 1000
+    def test_is_up(self):
+        now = timeutils.utcnow()
+        service = objects.Service(
+            host='fake-host',
+            topic='compute',
+            created_at=now,
+            updated_at=now,
+            last_seen_up=now,
+            forced_down=False,
+        )
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(now))
 
         # Up (equal)
-        now_mock.return_value = fts_func(fake_now)
-        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time)
-        service_ref['updated_at'] = fts_func(fake_now - self.down_time)
-        service_ref['created_at'] = fts_func(fake_now - self.down_time)
-
-        result = self.servicegroup_api.service_is_up(service_ref)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertTrue(result)
 
         # Up
-        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time + 1)
-        service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
-        service_ref['created_at'] = fts_func(fake_now - self.down_time + 1)
-        result = self.servicegroup_api.service_is_up(service_ref)
+        time_fixture.advance_time_seconds(self.down_time)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertTrue(result)
 
         # Down
-        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time - 3)
-        service_ref['updated_at'] = fts_func(fake_now - self.down_time - 3)
-        service_ref['created_at'] = fts_func(fake_now - self.down_time - 3)
-        result = self.servicegroup_api.service_is_up(service_ref)
+        time_fixture.advance_time_seconds(1)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertFalse(result)
 
         # "last_seen_up" says down, "updated_at" says up.
         # This can happen if we do a service disable/enable while it's down.
-        service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
-        result = self.servicegroup_api.service_is_up(service_ref)
+        service.updated_at = timeutils.utcnow()
+        result = self.servicegroup_api.service_is_up(service)
         self.assertFalse(result)
 
     def test_join(self):

@@ -13,6 +13,7 @@
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
 from nova.compute import claims
@@ -48,8 +49,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._create_fake_instance_obj(params={'host': host})
         image_id = 'fake_image_id'
         host = 'fake-mini'
-        cur_time = timeutils.utcnow()
-        timeutils.set_time_override(cur_time)
+        self.useFixture(utils_fixture.TimeFixture())
         instance.task_state = task_states.SHELVING
         instance.save()
 
@@ -141,8 +141,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
         instance.save()
-        cur_time = timeutils.utcnow()
-        timeutils.set_time_override(cur_time)
+        self.useFixture(utils_fixture.TimeFixture())
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'power_off')
@@ -353,8 +352,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_older.return_value = False
         self.flags(shelved_offload_time=1)
         shelved_time = timeutils.utcnow()
-        timeutils.set_time_override(shelved_time)
-        timeutils.advance_time_seconds(CONF.shelved_offload_time - 1)
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(shelved_time))
+        time_fixture.advance_time_seconds(CONF.shelved_offload_time - 1)
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED
         instance.task_state = None
@@ -371,8 +370,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelved_poll_timedout(self):
         self.flags(shelved_offload_time=1)
         shelved_time = timeutils.utcnow()
-        timeutils.set_time_override(shelved_time)
-        timeutils.advance_time_seconds(CONF.shelved_offload_time + 10)
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(shelved_time))
+        time_fixture.advance_time_seconds(CONF.shelved_offload_time + 1)
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED
         instance.task_state = None

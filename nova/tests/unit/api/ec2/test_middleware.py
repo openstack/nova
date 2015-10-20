@@ -17,7 +17,7 @@
 from lxml import etree
 import mock
 from oslo_config import cfg
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 import requests
 from six.moves import range
 import webob
@@ -45,12 +45,8 @@ class LockoutTestCase(test.NoDBTestCase):
     """Test case for the Lockout middleware."""
     def setUp(self):
         super(LockoutTestCase, self).setUp()
-        timeutils.set_time_override()
+        self.time_fixture = self.useFixture(utils_fixture.TimeFixture())
         self.lockout = ec2.Lockout(conditional_forbid)
-
-    def tearDown(self):
-        timeutils.clear_time_override()
-        super(LockoutTestCase, self).tearDown()
 
     def _send_bad_attempts(self, access_key, num_attempts=1):
         """Fail x."""
@@ -70,21 +66,21 @@ class LockoutTestCase(test.NoDBTestCase):
     def test_timeout(self):
         self._send_bad_attempts('test', CONF.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
-        timeutils.advance_time_seconds(CONF.lockout_minutes * 60)
+        self.time_fixture.advance_time_seconds(CONF.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test'))
 
     def test_multiple_keys(self):
         self._send_bad_attempts('test1', CONF.lockout_attempts)
         self.assertTrue(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
-        timeutils.advance_time_seconds(CONF.lockout_minutes * 60)
+        self.time_fixture.advance_time_seconds(CONF.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
 
     def test_window_timeout(self):
         self._send_bad_attempts('test', CONF.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
-        timeutils.advance_time_seconds(CONF.lockout_window * 60)
+        self.time_fixture.advance_time_seconds(CONF.lockout_window * 60)
         self._send_bad_attempts('test', CONF.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
 

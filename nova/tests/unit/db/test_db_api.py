@@ -32,6 +32,7 @@ from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
@@ -5547,7 +5548,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
     def test_vol_usage_update_no_totals_update(self):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
-        timeutils.set_time_override(now)
+        self.useFixture(utils_fixture.TimeFixture(now))
         start_time = now - datetime.timedelta(seconds=10)
 
         expected_vol_usages = {
@@ -5619,7 +5620,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         now2 = now + datetime.timedelta(minutes=2)
         now3 = now + datetime.timedelta(minutes=3)
 
-        timeutils.set_time_override(now)
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(now))
         db.vol_usage_update(ctxt, u'1', rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid',
@@ -5630,7 +5631,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 0)
         self.assertEqual(current_usage['curr_reads'], 100)
 
-        timeutils.set_time_override(now1)
+        time_fixture.advance_time_delta(now1 - now)
         db.vol_usage_update(ctxt, u'1', rd_req=200, rd_bytes=300,
                             wr_req=400, wr_bytes=500,
                             instance_id='fake-instance-uuid',
@@ -5642,7 +5643,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 0)
 
-        timeutils.set_time_override(now2)
+        time_fixture.advance_time_delta(now2 - now1)
         db.vol_usage_update(ctxt, u'1', rd_req=300, rd_bytes=400,
                             wr_req=500, wr_bytes=600,
                             instance_id='fake-instance-uuid',
@@ -5653,7 +5654,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 300)
 
-        timeutils.set_time_override(now3)
+        time_fixture.advance_time_delta(now3 - now2)
         db.vol_usage_update(ctxt, u'1', rd_req=400, rd_bytes=500,
                             wr_req=600, wr_bytes=700,
                             instance_id='fake-instance-uuid',

@@ -15,7 +15,7 @@
 
 import datetime
 
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 
 from nova.api.openstack.compute import instance_usage_audit_log as v21_ial
 from nova.api.openstack.compute.legacy_v2.contrib \
@@ -115,7 +115,8 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
     def setUp(self):
         super(InstanceUsageAuditLogTestV21, self).setUp()
         self.context = context.get_admin_context()
-        timeutils.set_time_override(datetime.datetime(2012, 7, 5, 10, 0, 0))
+        self.useFixture(
+            utils_fixture.TimeFixture(datetime.datetime(2012, 7, 5, 10, 0, 0)))
         self._set_up_controller()
         self.host_api = self.controller.host_api
 
@@ -134,10 +135,6 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
 
     def _set_up_controller(self):
         self.controller = v21_ial.InstanceUsageAuditLogController()
-
-    def tearDown(self):
-        super(InstanceUsageAuditLogTestV21, self).tearDown()
-        timeutils.clear_time_override()
 
     def test_index(self):
         result = self.controller.index(self.req)

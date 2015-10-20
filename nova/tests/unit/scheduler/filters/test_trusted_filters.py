@@ -13,6 +13,7 @@
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 import requests
 
@@ -187,13 +188,11 @@ class TestTrustedFilter(test.NoDBTestCase):
 
         req_mock.reset_mock()
 
-        timeutils.set_time_override(timeutils.utcnow())
-        timeutils.advance_time_seconds(
+        time_fixture = self.useFixture(utils_fixture.TimeFixture())
+        time_fixture.advance_time_seconds(
             CONF.trusted_computing.attestation_auth_timeout + 80)
         self.filt_cls.host_passes(host, spec_obj)
         self.assertTrue(req_mock.called)
-
-        timeutils.clear_time_override()
 
     def test_trusted_filter_update_cache_timezone(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node1",
@@ -207,9 +206,9 @@ class TestTrustedFilter(test.NoDBTestCase):
                                   extra_specs=extra_specs))
         host = fakes.FakeHostState('host1', 'node1', {})
 
-        timeutils.set_time_override(
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(
             timeutils.normalize_time(
-                timeutils.parse_isotime("2012-09-09T09:10:40Z")))
+                timeutils.parse_isotime("2012-09-09T09:10:40Z"))))
 
         self.filt_cls.host_passes(host, spec_obj)  # Fill the caches
 
@@ -218,12 +217,10 @@ class TestTrustedFilter(test.NoDBTestCase):
         self.assertFalse(req_mock.called)
 
         req_mock.reset_mock()
-        timeutils.advance_time_seconds(
+        time_fixture.advance_time_seconds(
             CONF.trusted_computing.attestation_auth_timeout - 10)
         self.filt_cls.host_passes(host, spec_obj)
         self.assertFalse(req_mock.called)
-
-        timeutils.clear_time_override()
 
     def test_trusted_filter_combine_hosts(self, req_mock):
         fake_compute_nodes = [

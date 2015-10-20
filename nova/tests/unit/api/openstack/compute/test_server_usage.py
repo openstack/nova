@@ -16,6 +16,7 @@
 import datetime
 
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
 from nova import compute
@@ -102,8 +103,7 @@ class ServerUsageTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        now = timeutils.utcnow()
-        timeutils.set_time_override(now)
+        self.useFixture(utils_fixture.TimeFixture())
         self.assertServerUsage(self._get_server(res.body),
                                launched_at=DATE1,
                                terminated_at=DATE2)
