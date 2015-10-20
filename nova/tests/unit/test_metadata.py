@@ -373,8 +373,8 @@ class MetadataTestCase(test.TestCase):
     @mock.patch.object(base64, 'b64encode', lambda data: FAKE_SEED)
     @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top')
     @mock.patch.object(objects.KeyPair, 'get_by_name')
-    @mock.patch.object(jsonutils, 'dumps')
-    def _test_as_json_with_options(self, mock_json_dumps,
+    @mock.patch.object(jsonutils, 'dump_as_bytes')
+    def _test_as_json_with_options(self, mock_json_dump_as_bytes,
                           mock_keypair, mock_cells_keypair,
                           is_cells=False, os_version=base.GRIZZLY):
         if is_cells:
@@ -422,7 +422,7 @@ class MetadataTestCase(test.TestCase):
             self.assertIsInstance(mock_keypair.call_args[0][0],
                                   context.RequestContext)
         self.assertEqual(md.md_mimetype, base.MIME_TYPE_APPLICATION_JSON)
-        mock_json_dumps.assert_called_once_with(expected_metadata)
+        mock_json_dump_as_bytes.assert_called_once_with(expected_metadata)
 
     def test_as_json(self):
         for os_version in base.OPENSTACK_VERSIONS:
