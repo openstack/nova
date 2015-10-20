@@ -342,7 +342,7 @@ class InstanceMetadata(object):
             metadata['project_id'] = self.instance.project_id
 
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-        return jsonutils.dumps(metadata)
+        return jsonutils.dump_as_bytes(metadata)
 
     def _handle_content(self, path_tokens):
         if len(path_tokens) == 1:
@@ -372,8 +372,8 @@ class InstanceMetadata(object):
 
     def _network_data(self, version, path):
         if self.network_metadata is None:
-            return jsonutils.dumps({})
-        return jsonutils.dumps(self.network_metadata)
+            return jsonutils.dump_as_bytes({})
+        return jsonutils.dump_as_bytes(self.network_metadata)
 
     def _password(self, version, path):
         if self._check_os_version(GRIZZLY, version):
@@ -383,7 +383,7 @@ class InstanceMetadata(object):
     def _vendor_data(self, version, path):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-            return jsonutils.dumps(self.vddriver.get())
+            return jsonutils.dump_as_bytes(self.vddriver.get())
         raise KeyError(path)
 
     def _check_version(self, required, requested, versions=VERSIONS):
@@ -462,7 +462,7 @@ class InstanceMetadata(object):
                 pass
 
             filepath = os.path.join('ec2', version, 'meta-data.json')
-            yield (filepath, jsonutils.dumps(data['meta-data']))
+            yield (filepath, jsonutils.dump_as_bytes(data['meta-data']))
 
         ALL_OPENSTACK_VERSIONS = OPENSTACK_VERSIONS + ["latest"]
         for version in ALL_OPENSTACK_VERSIONS:
