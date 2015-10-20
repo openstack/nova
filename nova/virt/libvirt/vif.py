@@ -125,6 +125,10 @@ class LibvirtGenericVIFDriver(object):
             virt_type == "qemu"):
             driver = "qemu"
 
+        # TODO(ORBIT): Temporary - Force disable vhost
+        if utils.ft_enabled(instance):
+            driver = "qemu"
+
         if not is_vif_model_valid_for_virt(virt_type,
                                            model):
             raise exception.UnsupportedHardware(model=model,
