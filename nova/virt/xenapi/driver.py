@@ -453,7 +453,7 @@ class XenAPIDriver(driver.ComputeDriver):
                'vcpus_used': host_stats['vcpus_used'],
                'memory_mb_used': total_ram_mb - free_ram_mb,
                'local_gb_used': used_disk_gb,
-               'hypervisor_type': 'xen',
+               'hypervisor_type': 'XenServer',
                'hypervisor_version': hyper_ver,
                'hypervisor_hostname': host_stats['host_hostname'],
                'cpu_info': jsonutils.dumps(host_stats['cpu_model']),
