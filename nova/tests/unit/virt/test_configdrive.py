@@ -12,36 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_utils import strutils
-
 from nova import objects
 from nova import test
 from nova.virt import configdrive
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):
-    def test_valid_string_values(self):
-        instance = objects.Instance(
-            config_drive=None,
-            system_metadata={}
-        )
-
-        for value in (strutils.TRUE_STRINGS + ('always',)):
-            self.flags(force_config_drive=value)
-            self.assertTrue(configdrive.required_by(instance))
-
-    def test_invalid_string_values(self):
-        instance = objects.Instance(
-            config_drive=None,
-            system_metadata={}
-        )
-
-        for value in (strutils.FALSE_STRINGS + ('foo',)):
-            self.flags(force_config_drive=value)
-            self.assertFalse(configdrive.required_by(instance))
-
     def test_instance_force(self):
-        self.flags(force_config_drive="no")
+        self.flags(force_config_drive=False)
 
         instance = objects.Instance(
             config_drive="yes",
@@ -53,7 +31,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.assertTrue(configdrive.required_by(instance))
 
     def test_image_meta_force(self):
-        self.flags(force_config_drive="no")
+        self.flags(force_config_drive=False)
 
         instance = objects.Instance(
             config_drive=None,
@@ -64,8 +42,20 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         self.assertTrue(configdrive.required_by(instance))
 
-    def test_image_meta_opt(self):
-        self.flags(force_config_drive="no")
+    def test_config_flag_force(self):
+        self.flags(force_config_drive=True)
+
+        instance = objects.Instance(
+            config_drive=None,
+            system_metadata={
+                "image_img_config_drive": "optional",
+            }
+        )
+
+        self.assertTrue(configdrive.required_by(instance))
+
+    def test_no_config_drive(self):
+        self.flags(force_config_drive=False)
 
         instance = objects.Instance(
             config_drive=None,
