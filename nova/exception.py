@@ -2107,6 +2107,10 @@ class UnsupportedHostCPUControlPolicy(Invalid):
     msg_fmt = _("Requested CPU control policy not supported by host")
 
 
+class LibguestfsCannotReadKernel(Invalid):
+    msg_fmt = _("Libguestfs does not have permission to read host kernel.")
+
+
 class RealtimePolicyNotSupported(Invalid):
     msg_fmt = _("Realtime policy not supported by hypervisor")
 
