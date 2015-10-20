@@ -1009,43 +1009,6 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def refresh_security_group_members(self, security_group_id):
-        """This method is called when a security group is added to an instance.
-
-        This message is sent to the virtualization drivers on hosts that are
-        running an instance that belongs to a security group that has a rule
-        that references the security group identified by `security_group_id`.
-        It is the responsibility of this method to make sure any rules
-        that authorize traffic flow with members of the security group are
-        updated and any new members can communicate, and any removed members
-        cannot.
-
-        Scenario:
-            * we are running on host 'H0' and we have an instance 'i-0'.
-            * instance 'i-0' is a member of security group 'speaks-b'
-            * group 'speaks-b' has an ingress rule that authorizes group 'b'
-            * another host 'H1' runs an instance 'i-1'
-            * instance 'i-1' is a member of security group 'b'
-
-            When 'i-1' launches or terminates we will receive the message
-            to update members of group 'b', at which time we will make
-            any changes needed to the rules for instance 'i-0' to allow
-            or deny traffic coming from 'i-1', depending on if it is being
-            added or removed from the group.
-
-        In this scenario, 'i-1' could just as easily have been running on our
-        host 'H0' and this method would still have been called.  The point was
-        that this method isn't called on the host where instances of that
-        group are running (as is the case with
-        :py:meth:`refresh_security_group_rules`) but is called where references
-        are made to authorizing those instances.
-
-        An error should be raised if the operation cannot complete.
-
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def refresh_provider_fw_rules(self):
         """This triggers a firewall update based on database changes.
 

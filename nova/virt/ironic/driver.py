@@ -1016,16 +1016,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
-    def refresh_security_group_members(self, security_group_id):
-        """Refresh security group members from data store.
-
-        Invoked when instances are added/removed to a security group.
-
-        :param security_group_id: The security group id.
-
-        """
-        self.firewall_driver.refresh_security_group_members(security_group_id)
-
     def refresh_provider_fw_rules(self):
         """Triggers a firewall update based on database changes."""
         self.firewall_driver.refresh_provider_fw_rules()

@@ -1487,13 +1487,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_rpfr.assert_called_once_with()
 
     @mock.patch.object(firewall.NoopFirewallDriver,
-                       'refresh_security_group_members', create=True)
-    def test_refresh_security_group_members(self, mock_rsgm):
-        fake_group = 'fake-security-group-members'
-        self.driver.refresh_security_group_members(fake_group)
-        mock_rsgm.assert_called_once_with(fake_group)
-
-    @mock.patch.object(firewall.NoopFirewallDriver,
                       'refresh_instance_security_rules', create=True)
     def test_refresh_security_group_rules(self, mock_risr):
         fake_group = 'fake-security-group-members'
