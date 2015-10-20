@@ -1347,6 +1347,8 @@ class ComputeManager(manager.Manager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
+    # NOTE(hanlind): This and the virt method it calls can be removed in
+    # version 5.0 of the RPC API
     @wrap_exception()
     def refresh_security_group_rules(self, context, security_group_id):
         """Tell the virtualization driver to refresh security group rules.
