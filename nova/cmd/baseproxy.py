@@ -39,7 +39,8 @@ CONF.import_opt('web', 'nova.cmd.novnc')
 
 
 def exit_with_error(msg, errno=-1):
-    print(msg) and sys.exit(errno)
+    sys.stderr.write(msg + '\n')
+    sys.exit(errno)
 
 
 def proxy(host, port):
