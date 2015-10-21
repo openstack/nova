@@ -93,8 +93,8 @@ class S3Application(wsgi.Router):
         versionutils.report_deprecated_feature(
             LOG,
             _LW('The in tree EC2 API is deprecated as of Kilo release and may '
-                'be removed in a future release. The stackforge ec2-api '
-                'project http://git.openstack.org/cgit/stackforge/ec2-api/ '
+                'be removed in a future release. The openstack ec2-api '
+                'project http://git.openstack.org/cgit/openstack/ec2-api/ '
                 'is the target replacement for this functionality.')
         )
         if mapper is None:
