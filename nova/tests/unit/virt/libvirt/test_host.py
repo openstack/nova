@@ -19,6 +19,7 @@ import uuid
 import eventlet
 from eventlet import greenthread
 import mock
+import six
 
 from nova.compute import arch
 from nova import exception
@@ -772,7 +773,7 @@ SwapCached:            0 kB
 Active:          8381604 kB
 """)
         with test.nested(
-                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(six.moves.builtins, "open", m, create=True),
                 mock.patch.object(host.Host,
                                   "get_connection"),
                 mock.patch('sys.platform', 'linux2'),
@@ -813,7 +814,7 @@ Active:          8381604 kB
 """)
 
         with test.nested(
-                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(six.moves.builtins, "open", m, create=True),
                 mock.patch.object(host.Host,
                                   "list_instance_domains"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,

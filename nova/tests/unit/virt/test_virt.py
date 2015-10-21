@@ -124,7 +124,7 @@ class TestDiskImage(test.NoDBTestCase):
         response = io.StringIO(six.text_type(PROC_MOUNTS_CONTENTS))
         mock_open.return_value = response
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     def test_mount(self, mock_open):
         self.mock_proc_mounts(mock_open)
         image = '/tmp/fake-image'
@@ -141,7 +141,7 @@ class TestDiskImage(test.NoDBTestCase):
         self.assertEqual(diskimage._mounter, fakemount)
         self.assertEqual(dev, '/dev/fake')
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     def test_umount(self, mock_open):
         self.mock_proc_mounts(mock_open)
 
@@ -161,7 +161,7 @@ class TestDiskImage(test.NoDBTestCase):
         diskimage.umount()
         self.assertIsNone(diskimage._mounter)
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     def test_teardown(self, mock_open):
         self.mock_proc_mounts(mock_open)
 

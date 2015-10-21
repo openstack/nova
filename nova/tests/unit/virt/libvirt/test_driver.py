@@ -3912,7 +3912,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(sysinfo_serial="os", group="libvirt")
         theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
         with test.nested(
-                mock.patch('__builtin__.open',
+                mock.patch.object(six.moves.builtins, "open",
                     mock.mock_open(read_data=theuuid)),
                 self.patch_exists(True)):
             self._test_get_guest_config_sysinfo_serial(theuuid)
@@ -3920,7 +3920,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_sysinfo_serial_os_empty_machine_id(self):
         self.flags(sysinfo_serial="os", group="libvirt")
         with test.nested(
-                mock.patch('__builtin__.open', mock.mock_open(read_data="")),
+                mock.patch.object(six.moves.builtins, "open",
+                                  mock.mock_open(read_data="")),
                 self.patch_exists(True)):
             self.assertRaises(exception.NovaException,
                     self._test_get_guest_config_sysinfo_serial,
