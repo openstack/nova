@@ -943,11 +943,11 @@ class Host(object):
                               int(m[idx2 + 1]) +
                               int(m[idx3 + 1])))
             # Convert it to MB
-            return used / units.Ki
+            return used // units.Ki
         else:
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
-            return self.get_memory_mb_total() - avail / units.Ki
+            return self.get_memory_mb_total() - avail // units.Ki
 
     def get_cpu_stats(self):
         """Returns the current CPU state of the host with frequency."""
