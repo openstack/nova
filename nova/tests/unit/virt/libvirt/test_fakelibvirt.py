@@ -15,6 +15,7 @@
 from nova import test
 
 from lxml import etree
+import six
 
 from nova.compute import arch
 import nova.tests.unit.virt.libvirt.fakelibvirt as libvirt
@@ -140,7 +141,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         blockstats = dom.blockStats('vda')
         self.assertEqual(len(blockstats), 5)
         for x in blockstats:
-            self.assertIn(type(x), [int, long])
+            self.assertIn(type(x), six.integer_types)
 
     def test_attach_detach(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
@@ -163,7 +164,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertEqual(info[1], 128000)
         self.assertTrue(info[2] <= 128000)
         self.assertEqual(info[3], 1)
-        self.assertIn(type(info[4]), [int, long])
+        self.assertIn(type(info[4]), six.integer_types)
 
     def test_createXML_runs_domain(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')

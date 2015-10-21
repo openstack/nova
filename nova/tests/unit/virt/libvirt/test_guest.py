@@ -135,13 +135,13 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.resume.assert_called_once_with()
 
     def test_get_vcpus_info(self):
-        self.domain.vcpus.return_value = ([(0, 1, long(10290000000), 2)],
+        self.domain.vcpus.return_value = ([(0, 1, int(10290000000), 2)],
                                      [(True, True)])
         vcpus = list(self.guest.get_vcpus_info())
         self.assertEqual(0, vcpus[0].id)
         self.assertEqual(2, vcpus[0].cpu)
         self.assertEqual(1, vcpus[0].state)
-        self.assertEqual(long(10290000000), vcpus[0].time)
+        self.assertEqual(int(10290000000), vcpus[0].time)
 
     def test_delete_configuration(self):
         self.guest.delete_configuration()

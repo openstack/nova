@@ -61,7 +61,8 @@ class FlavorExtraSpecsController(object):
 
                 # NOTE(dims): The following check was added for backwards
                 # compatibility.
-                if (isinstance(value, (int, long, float))):
+                if (isinstance(value, float) or
+                        type(value) in six.integer_types):
                     value = six.text_type(value)
                 utils.check_string_length(value, 'extra_specs value',
                                           max_length=255)

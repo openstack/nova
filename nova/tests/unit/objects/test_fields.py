@@ -109,7 +109,7 @@ class TestString(TestField):
         self.field = fields.StringField()
         self.coerce_good_values = [('foo', 'foo'), (1, '1'), (True, 'True')]
         if six.PY2:
-            self.coerce_good_values.append((long(1), '1'))
+            self.coerce_good_values.append((int(1), '1'))
         self.coerce_bad_values = [None]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
@@ -150,7 +150,7 @@ class TestEnum(TestField):
             valid_values=['foo', 'bar', 1, 1, True])
         self.coerce_good_values = [('foo', 'foo'), (1, '1'), (True, 'True')]
         if six.PY2:
-            self.coerce_good_values.append((long(1), '1'))
+            self.coerce_good_values.append((int(1), '1'))
         self.coerce_bad_values = ['boo', 2, False]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]

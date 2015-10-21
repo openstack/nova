@@ -35,7 +35,7 @@ class APIRequestTestCase(test.NoDBTestCase):
         self.resp = {
             'string': 'foo',
             'int': 1,
-            'long': long(1),
+            'long': int(1),
             'bool': False,
             'dict': {
                 'string': 'foo',
