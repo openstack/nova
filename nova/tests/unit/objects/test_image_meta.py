@@ -14,6 +14,7 @@
 
 import datetime
 
+from nova import exception
 from nova import objects
 from nova import test
 
@@ -274,3 +275,23 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertIsNone(virtprops.get("hw_numa_nodes"))
         self.assertEqual([set([0, 1, 2, 3])],
                          virtprops.hw_numa_cpus)
+
+    def test_obj_make_compatible(self):
+        props = {
+            'img_config_drive': 'mandatory',
+            'os_admin_user': 'root',
+            'hw_vif_multiqueue_enabled': True,
+            'img_hv_type': 'kvm',
+            'img_hv_requested_version': '>= 1.0',
+            'os_require_quiesce': True,
+        }
+
+        obj = objects.ImageMetaProps(**props)
+        primitive = obj.obj_to_primitive('1.0')
+        self.assertFalse(any([x in primitive['nova_object.data']
+                              for x in props]))
+
+        for bus in ('lxc', 'uml'):
+            obj.hw_disk_bus = bus
+            self.assertRaises(exception.ObjectActionError,
+                              obj.obj_to_primitive, '1.0')
