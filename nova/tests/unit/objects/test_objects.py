@@ -1382,79 +1382,6 @@ class TestObjectVersions(test.NoDBTestCase):
             return field._type._element_type._type._obj_name
         return None
 
-    def _get_obj_cls(self, name):
-        # NOTE(danms): We're moving to using manifest-based backports,
-        # which don't depend on relationships. Given that we only had
-        # one major version of each object before that change, we can
-        # make sure to pull the older version of objects that have
-        # a 2.0 version while calculating the old-style relationship
-        # mapping. Once we drop all the 1.x versions, we can drop this
-        # relationship test altogether.
-        new_objects = ['Instance', 'InstanceList']
-
-        versions = base.NovaObjectRegistry.obj_classes()[name]
-        if len(versions) > 1 and name in new_objects:
-            return versions[1]
-        else:
-            return versions[0]
-
-    def _build_tree(self, tree, obj_class, get_current_versions=True):
-        obj_name = obj_class.obj_name()
-        if obj_name in tree:
-            return
-
-        for name, field in obj_class.fields.items():
-            sub_obj_name = self._get_object_field_name(field)
-            if sub_obj_name:
-                sub_obj_class = self._get_obj_cls(sub_obj_name)
-                tree.setdefault(obj_name, {})
-                if get_current_versions:
-                    sub_obj_ver = sub_obj_class.VERSION
-                else:
-                    # get the most recent subobject version
-                    # from obj_relationships
-                    sub_obj_ver = obj_class.obj_relationships[name][-1][1]
-                tree[obj_name][sub_obj_name] = sub_obj_ver
-
-    def test_relationships(self):
-        # This test asserts that the obj_relationship map of all objects
-        # contain the current versions of any subobjects.
-        current_versions_tree = {}
-        obj_relationships_tree = {}
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes.keys():
-            obj_cls = self._get_obj_cls(obj_name)
-            self._build_tree(current_versions_tree, obj_cls)
-            self._build_tree(obj_relationships_tree, obj_cls,
-                             get_current_versions=False)
-
-        stored = set([(x, str(y))
-                      for x, y in obj_relationships_tree.items()])
-        computed = set([(x, str(y))
-                        for x, y in current_versions_tree.items()])
-        changed = stored.symmetric_difference(computed)
-        expected = {}
-        actual = {}
-        for name, deps in changed:
-            expected[name] = current_versions_tree.get(name)
-            actual[name] = obj_relationships_tree.get(name)
-
-        # If this assertion is failing, this means an object is holding a
-        # non-current version of another object.
-        # Example: if Instance is bumped from version 1.1 to 1.2,
-        # and InstanceList is still only has obj_relationships with 1.1,
-        # this assertion will fail. InstanceList will need to also be bumped
-        # a version, with the relationship to Instance 1.2 added.
-        self.assertEqual(expected, actual,
-                         'Some objects have changed dependencies. '
-                         'Please make sure to bump the versions of '
-                         'parent objects and provide a rule in their '
-                         'obj_make_compatible() routines to backlevel '
-                         'the child object. The expected dict is the '
-                         'current versions of all objects held by other '
-                         'objects, and the actual dict is what is held '
-                         'within obj_relationships on the given objects.')
-
     def test_obj_make_compatible(self):
         # Iterate all object classes and verify that we can run
         # obj_make_compatible with every older version than current.
@@ -1463,13 +1390,15 @@ class TestObjectVersions(test.NoDBTestCase):
         # expecting the wrong version format.
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in obj_classes:
+            versions = ovo_base.obj_tree_get_versions(obj_name)
             obj_class = obj_classes[obj_name][0]
             version = utils.convert_version_to_tuple(obj_class.VERSION)
             for n in range(version[1]):
                 test_version = '%d.%d' % (version[0], n)
                 LOG.info('testing obj: %s version: %s' %
                          (obj_name, test_version))
-                obj_class().obj_to_primitive(target_version=test_version)
+                obj_class().obj_to_primitive(target_version=test_version,
+                                             version_manifest=versions)
 
     def test_list_obj_make_compatible(self):
         @base.NovaObjectRegistry.register_if(False)
@@ -1526,190 +1455,6 @@ class TestObjectVersions(test.NoDBTestCase):
         self.assertNotIn('objects', primitive_data,
                          "List was backported to before 'objects' existed."
                          " 'objects' should not be in the primitive.")
-
-    def test_obj_bad_relationships(self):
-        # Make sure having an object with bad relationships is caught by
-        # _build_tree()
-        @base.NovaObjectRegistry.register
-        class TestObj(base.NovaObject):
-            VERSION = '1.1'
-            fields = {'foo': fields.IntegerField()}
-
-        @base.NovaObjectRegistry.register
-        class OtherTestObj(base.NovaObject):
-            VERSION = '1.2'
-            fields = {'test': fields.ObjectField('TestObj')}
-            obj_relationships = {'test': [('1.0', '1.0')]}
-
-        current_versions_tree = {}
-        obj_relationships_tree = {}
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        expected_current = {'OtherTestObj': {'TestObj': '1.1'}}
-        self._build_tree(current_versions_tree,
-                         obj_classes['OtherTestObj'][0])
-
-        expected_obj_relationships = {'OtherTestObj': {'TestObj': '1.0'}}
-        self._build_tree(obj_relationships_tree,
-                         obj_classes['OtherTestObj'][0],
-                         get_current_versions=False)
-
-        self.assertEqual(expected_current, current_versions_tree)
-        self.assertEqual(expected_obj_relationships, obj_relationships_tree)
-
-    def _get_obj_same_major(self, this_cls, obj_name):
-        this_major = this_cls.VERSION.split('.')[0]
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for cls_version in obj_classes[obj_name]:
-            major = cls_version.VERSION.split('.')[0]
-            if major == this_major:
-                return cls_version
-
-    def _get_obj_to_test(self, obj_class):
-        obj = obj_class()
-        for fname, ftype in obj.fields.items():
-            if isinstance(ftype, fields.ObjectField):
-                fobjname = ftype.AUTO_TYPE._obj_name
-                fobjcls = self._get_obj_same_major(obj_class, fobjname)
-                setattr(obj, fname, self._get_obj_to_test(fobjcls))
-            elif isinstance(ftype, fields.ListOfObjectsField):
-                # FIXME(danms): This will result in no tests for this
-                # field type...
-                setattr(obj, fname, [])
-        return obj
-
-    def _find_version_mapping(self, my_ver, versions):
-        closest = None
-        my_ver = utils.convert_version_to_tuple(my_ver)
-        for _my, _child in versions:
-            _my = utils.convert_version_to_tuple(_my)
-            _child = utils.convert_version_to_tuple(_child)
-            if _my == my_ver:
-                return '%s.%s' % _child
-            elif _my < my_ver:
-                closest = _child
-        if closest:
-            return '%s.%s' % closest
-        else:
-            return None
-
-    def _validate_object_fields(self, obj_class, primitive):
-        for fname, ftype in obj_class.fields.items():
-            if isinstance(ftype, fields.ObjectField):
-                exp_vers = obj_class.obj_relationships[fname]
-                exp_ver = self._find_version_mapping(
-                    primitive['nova_object.version'], exp_vers)
-                if exp_ver is None:
-                    self.assertNotIn(fname, primitive['nova_object.data'])
-                else:
-                    child_p = primitive['nova_object.data'][fname]
-                    self.assertEqual(exp_ver,
-                                     child_p['nova_object.version'])
-
-    def test_obj_make_compatible_with_data(self):
-        # Iterate all object classes and verify that we can run
-        # obj_make_compatible with every older version than current.
-        # This doesn't actually test the data conversions, but it at least
-        # makes sure the method doesn't blow up on something basic like
-        # expecting the wrong version format.
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            for obj_class in obj_classes[obj_name]:
-                if obj_class.VERSION.startswith('2'):
-                    # NOTE(danms): Objects with major versions >=2 will
-                    # use version_manifest for backports, which is a
-                    # different test than this one, so skip.
-                    continue
-                if 'tests.unit' in obj_class.__module__:
-                    # NOTE(danms): Skip test objects. When we move to
-                    # oslo.versionedobjects, we won't have to do this
-                    continue
-                version = utils.convert_version_to_tuple(obj_class.VERSION)
-                for n in range(version[1]):
-                    test_version = '%d.%d' % (version[0], n)
-                    LOG.info('testing obj: %s version: %s' %
-                             (obj_name, test_version))
-                    test_object = self._get_obj_to_test(obj_class)
-                    obj_p = test_object.obj_to_primitive(
-                        target_version=test_version)
-                    self._validate_object_fields(obj_class, obj_p)
-
-    def test_obj_relationships_in_order(self):
-        # Iterate all object classes and verify that we can run
-        # obj_make_compatible with every older version than current.
-        # This doesn't actually test the data conversions, but it at least
-        # makes sure the method doesn't blow up on something basic like
-        # expecting the wrong version format.
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            obj_class = obj_classes[obj_name][0]
-            for field, versions in obj_class.obj_relationships.items():
-                last_my_version = (0, 0)
-                last_child_version = (0, 0)
-                for my_version, child_version in versions:
-                    _my_version = utils.convert_version_to_tuple(my_version)
-                    _ch_version = utils.convert_version_to_tuple(child_version)
-                    self.assertTrue((last_my_version < _my_version
-                                     and last_child_version <= _ch_version),
-                                    'Object %s relationship '
-                                    '%s->%s for field %s is out of order' % (
-                                        obj_name, my_version, child_version,
-                                        field))
-                    last_my_version = _my_version
-                    last_child_version = _ch_version
-
-    def test_objects_use_obj_relationships(self):
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            obj_class = obj_classes[obj_name][0]
-            self.assertFalse((hasattr(obj_class, 'child_versions')
-                              and obj_class.child_versions),
-                              'Object %s should be using obj_relationships, '
-                              'not child_versions.' % obj_name)
-
-    def test_obj_relationships_not_past_current_parent_version(self):
-        # Iterate all object classes to verify that all versions of the parent
-        # held in obj_relationships are at or before the current version
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            obj_class = obj_classes[obj_name][0]
-            cur_version = utils.convert_version_to_tuple(obj_class.VERSION)
-            for field, versions in obj_class.obj_relationships.items():
-                for my_version, child_version in versions:
-                    tup_version = utils.convert_version_to_tuple(my_version)
-                    self.assertTrue(tup_version <= cur_version,
-                                    "Field '%(field)s' of %(obj)s contains a "
-                                    "relationship that is past the current "
-                                    "version. Relationship version is %(ov)s."
-                                    " Current version is %(cv)s." %
-                                    {'field': field, 'obj': obj_name,
-                                     'ov': my_version,
-                                     'cv': obj_class.VERSION})
-
-    def test_obj_relationships_not_past_current_child_version(self):
-        # Iterate all object classes to verify that all versions of subobjects
-        # held in obj_relationships are at or before the current version
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            obj_class = obj_classes[obj_name][0]
-            for field, versions in obj_class.obj_relationships.items():
-                obj_field = obj_class.fields[field]
-                child_name = self._get_object_field_name(obj_field)
-                child_class = obj_classes[child_name][0]
-                curr_child_ver = child_class.VERSION
-                tup_curr_child_ver = utils.convert_version_to_tuple(
-                                        curr_child_ver)
-
-                for parent_ver, child_ver in versions:
-                    tup_version = utils.convert_version_to_tuple(child_ver)
-                    self.assertTrue(tup_version <= tup_curr_child_ver,
-                                    "Field '%(field)s' of %(obj)s contains a "
-                                    "relationship that is past the current "
-                                    "version of %(child_obj)s. Relationship "
-                                    "version is %(ov)s. Current version is "
-                                    "%(cv)s." %
-                                    {'field': field, 'obj': obj_name,
-                                     'child_obj': child_name,
-                                     'ov': child_ver, 'cv': curr_child_ver})
 
 
 class TestObjEqualPrims(_BaseTestCase):

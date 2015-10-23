@@ -15,6 +15,8 @@
 import mock
 import netaddr
 
+from oslo_versionedobjects import base as ovo_base
+
 from nova import exception
 from nova import objects
 from nova.objects import floating_ip
@@ -245,7 +247,10 @@ class _TestFloatingIPObject(object):
         floating = objects.FloatingIP()
         fixed = objects.FixedIP()
         floating.fixed_ip = fixed
-        primitive = floating.obj_to_primitive(target_version='1.1')
+        versions = ovo_base.obj_tree_get_versions('FloatingIP')
+        versions['FixedIP'] = '1.1'
+        primitive = floating.obj_to_primitive(target_version='1.1',
+                                              version_manifest=versions)
         self.assertEqual('1.1',
             primitive['nova_object.data']['fixed_ip']['nova_object.version'])
 
