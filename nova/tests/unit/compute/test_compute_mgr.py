@@ -3208,8 +3208,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_hooks.setdefault().run_post.assert_called_once_with(
             'build_instance', result, mock.ANY, mock.ANY, f=None)
 
+    def test_build_and_run_instance_called_with_proper_args(self):
+        self._test_build_and_run_instance()
+
+    def test_build_and_run_instance_with_unlimited_max_concurrent_builds(self):
+        self.flags(max_concurrent_builds=0)
+        self.compute = importutils.import_object(CONF.compute_manager)
+        self._test_build_and_run_instance()
+
     @mock.patch('nova.hooks._HOOKS')
-    def test_build_and_run_instance_called_with_proper_args(self, mock_hooks):
+    def _test_build_and_run_instance(self, mock_hooks):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
