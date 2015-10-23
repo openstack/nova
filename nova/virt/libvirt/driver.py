@@ -3990,14 +3990,15 @@ class LibvirtDriver(driver.ComputeDriver):
                             console.listen_host))
                     guest.add_device(console)
             else:
+                pass
                 # The QEMU 'pty' driver throws away any data if no
                 # client app is connected. Thus we can't get away
                 # with a single type=pty console. Instead we have
                 # to configure two separate consoles.
-                consolelog = vconfig.LibvirtConfigGuestSerial()
-                consolelog.type = "file"
-                consolelog.source_path = self._get_console_log_path(instance)
-                guest.add_device(consolelog)
+                # consolelog = vconfig.LibvirtConfigGuestSerial()
+                # consolelog.type = "file"
+                # consolelog.source_path = self._get_console_log_path(instance)
+                # guest.add_device(consolelog)
 
             consolepty = vconfig.LibvirtConfigGuestSerial()
         else:
