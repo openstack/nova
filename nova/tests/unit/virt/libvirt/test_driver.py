@@ -15093,6 +15093,13 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
     def test_qcow2(self):
         self._test_snapshot(disk_format='qcow2')
 
+    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='ploop')
+    @mock.patch.object(libvirt_driver.imagebackend.images,
+                       'convert_image',
+                       side_effect=_fake_convert_image)
+    def test_ploop(self, mock_convert_image):
+        self._test_snapshot(disk_format='ploop')
+
     def test_no_image_architecture(self):
         self.instance_ref.image_ref = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         self._test_snapshot(disk_format='qcow2')

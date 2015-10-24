@@ -110,6 +110,15 @@ disk size: 96K
                 self.assertEqual(f, d_type)
 
     @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.path.isdir', return_value=True)
+    def test_disk_type_ploop(self, mock_isdir, mock_exists):
+        path = '/some/path'
+        d_type = libvirt_utils.get_disk_type(path)
+        mock_isdir.assert_called_once_with(path)
+        mock_exists.assert_called_once_with("%s/DiskDescriptor.xml" % path)
+        self.assertEqual('ploop', d_type)
+
+    @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
     def test_disk_backing(self, mock_execute, mock_exists):
         path = '/myhome/disk.config'
@@ -478,12 +487,12 @@ disk size: 4.4M
                         '/some/path')
         mock_execute.assert_called_once_with(*execute_args, run_as_root=True)
 
-    def _do_test_extract_snapshot(self, mock_execute,
+    def _do_test_extract_snapshot(self, mock_execute, src_format='qcow2',
                                   dest_format='raw', out_format='raw'):
-        libvirt_utils.extract_snapshot('/path/to/disk/image', 'qcow2',
+        libvirt_utils.extract_snapshot('/path/to/disk/image', src_format,
                                        '/extracted/snap', dest_format)
         mock_execute.assert_called_once_with(
-            'qemu-img', 'convert', '-f', 'qcow2', '-O', out_format,
+            'qemu-img', 'convert', '-f', src_format, '-O', out_format,
             '/path/to/disk/image', '/extracted/snap')
 
     @mock.patch.object(utils, 'execute')
@@ -498,6 +507,13 @@ disk size: 4.4M
     def test_extract_snapshot_qcow2(self, mock_execute):
         self._do_test_extract_snapshot(mock_execute,
                                        dest_format='qcow2', out_format='qcow2')
+
+    @mock.patch.object(utils, 'execute')
+    def test_extract_snapshot_parallels(self, mock_execute):
+        self._do_test_extract_snapshot(mock_execute,
+                                       src_format='raw',
+                                       dest_format='ploop',
+                                       out_format='parallels')
 
     def test_load_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
