@@ -1958,7 +1958,7 @@ class VMOps(object):
     def _read_from_xenstore(self, instance, path, ignore_missing_path=True,
                             vm_ref=None):
         """Reads the passed location from xenstore for the given vm.
-        Missing paths are ignored, unless explicitely stated not to
+        Missing paths are ignored, unless explicitly stated not to
         which will cause and exception to be raised by xenstore.
         A XenAPIPlugin.PluginError will be raised if any error is
         encountered in the read process.
