@@ -135,7 +135,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         # InstanceGroup.add_members() method is called, which adds the mapping
         # table entries.
         # So, since the only way to have hosts in the updates is to set that
-        # field explicitely, we prefer to raise an Exception so the developer
+        # field explicitly, we prefer to raise an Exception so the developer
         # knows he has to call obj_reset_changes(['hosts']) right after setting
         # the field.
         if 'hosts' in updates:
