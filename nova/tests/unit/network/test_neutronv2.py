@@ -2335,8 +2335,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_list_floating_ips_without_l3_support(self):
         api = neutronapi.API()
-        NeutronNotFound = exceptions.NeutronClientException(
-            status_code=404)
+        NeutronNotFound = exceptions.NotFound()
         self.moxed_client.list_floatingips(
             fixed_ip_address='1.1.1.1', port_id=1).AndRaise(NeutronNotFound)
         self.mox.ReplayAll()
@@ -3559,6 +3558,45 @@ class TestNeutronv2WithMock(test.TestCase):
                           self.api.allocate_for_instance,
                           mock.sentinel.ctx, mock_inst,
                           requested_networks=nw_req)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_floating_ip_by_address_not_found_neutron_not_found(self,
+                                                                mock_ntrn):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_nc.list_floatingips.side_effect = exceptions.NotFound()
+        address = '172.24.4.227'
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          self.api.get_floating_ip_by_address,
+                          self.context, address)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_floating_ip_by_address_not_found_neutron_raises_non404(self,
+                                                                mock_ntrn):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_nc.list_floatingips.side_effect = exceptions.InternalServerError()
+        address = '172.24.4.227'
+        self.assertRaises(exceptions.InternalServerError,
+                          self.api.get_floating_ip_by_address,
+                          self.context, address)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_floating_ips_by_project_not_found(self, mock_ntrn):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_nc.list_floatingips.side_effect = exceptions.NotFound()
+        fips = self.api.get_floating_ips_by_project(self.context)
+        self.assertEqual([], fips)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_floating_ips_by_project_raises_non404(self, mock_ntrn):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        mock_nc.list_floatingips.side_effect = exceptions.InternalServerError()
+        self.assertRaises(exceptions.InternalServerError,
+                          self.api.get_floating_ips_by_project,
+                          self.context)
 
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
