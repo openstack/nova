@@ -38,12 +38,18 @@ CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
 rpcapi_cap_opt = cfg.StrOpt('compute',
-        help='Set a version cap for messages sent to compute services. If you '
-             'plan to do a live upgrade from an old version to a newer '
-             'version, you should set this option to the old version before '
-             'beginning the live upgrade procedure. Only upgrading to the '
-             'next version is supported, so you cannot skip a release for '
-             'the live upgrade procedure.')
+        help='Set a version cap for messages sent to compute services. '
+             'Set this option to "auto" if you want to let the compute RPC '
+             'module automatically determine what version to use based on '
+             'the service versions in the deployment. '
+             'Otherwise, you can set this to a specific version to pin this '
+             'service to messages at a particular level. '
+             'All services of a single type (i.e. compute) should be '
+             'configured to use the same version, and it should be set '
+             'to the minimum commonly-supported version of all those '
+             'services in the deployment.')
+
+
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
