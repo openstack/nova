@@ -8,18 +8,18 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
-"PO-Revision-Date: 2015-09-23 07:23+0000\n"
+"POT-Creation-Date: 2015-10-27 06:30+0000\n"
+"PO-Revision-Date: 2015-10-20 07:52+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
+"Language-Team: Czech\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 msgid "\"Look for the VDIs failed"
@@ -55,6 +55,9 @@ msgid ""
 msgstr ""
 "Agregát %(aggregate_id)s: neobnovitelný stav během provádění operace na "
 "%(host)s"
+
+msgid "An error occurred while deallocating network."
+msgstr "Při rušení přidělení sítě nastala chyba."
 
 msgid "An error occurred while refreshing the network cache."
 msgstr "Při obnově mezipaměti sítě došlo k chybě."
@@ -116,6 +119,16 @@ msgstr "Compute.api::odemčení %s"
 #, python-format
 msgid "Compute.api::unpause %s"
 msgstr "Compute.api::zrušení pozastaevní %s"
+
+#, python-format
+msgid ""
+"Connection between volume %(vol)s and host %(host)s might have succeeded, "
+"but attempt to terminate connection has failed. Validate the connection and "
+"determine if manual cleanup is needed. Error: %(msg)s Code: %(code)s."
+msgstr ""
+"Připojení mezi svazkem %(vol)s a hostitelem %(host)s bylo možná navázáno, "
+"ale pokus o jeho ukončení selhalo. Ověřte připojení a zjistěte, zdali je "
+"třeba zakročit ručně. Chyba: %(msg)s, kóde: %(code)s."
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -519,6 +532,21 @@ msgstr "Nelze odpojit svazek %(volume_id)s z %(mp)s"
 msgid "Failed to download %(image_location)s to %(image_path)s"
 msgstr "Nelze stáhnout %(image_location)s do %(image_path)s"
 
+#, python-format
+msgid ""
+"Failed to extract compute RPC version from service history because I am too "
+"old (minimum version is now %(version)i)"
+msgstr ""
+"Nelze extrahovat verzi výpočetní RPC z historii služeb, protože je příliš "
+"stará. (Minimální verze je nyní %(version)i)"
+
+#, python-format
+msgid ""
+"Failed to extract compute RPC version from service history for version "
+"%(version)i"
+msgstr ""
+"Nelze extrahovat verzi výpočetní RPC z historii služeb, pro verzi %(version)i"
+
 msgid "Failed to fetch glance image"
 msgstr "Nelze získat obraz glance"
 
@@ -753,6 +781,18 @@ msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
 msgstr ""
 "Velikost obrazu %(size)d překročila množství %(allowed_size)d povolené "
 "konfigurací"
+
+#, python-format
+msgid "Improper or unknown HTTP status code used: %d"
+msgstr "Použit nesprávný nebo špatný kód stavu HTTP: %d"
+
+#, python-format
+msgid ""
+"Initialize connection failed for volume %(vol)s on host %(host)s. Error: "
+"%(msg)s Code: %(code)s. Attempting to terminate connection."
+msgstr ""
+"Zavedení připojení selhalo u svazku %(vol)s na hostiteli %(host)s. Chyba: "
+"%(msg)s, kód: %(code)s. Probíhá pokus o přerušení připojení."
 
 #, python-format
 msgid ""
@@ -991,10 +1031,6 @@ msgstr "Volání %(method)s vrátilo chybu: %(e)s. argumenty=%(args)r"
 
 msgid "Transfer data failed"
 msgstr "Přenos dat selhal"
-
-#, python-format
-msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
-msgstr "Nelze získat přístup k plovoucím IP %(fixed_ip)s na portu %(port_id)s"
 
 #, python-format
 msgid "Unable to access floating IP %s"

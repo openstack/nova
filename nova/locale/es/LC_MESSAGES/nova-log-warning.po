@@ -10,19 +10,18 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"POT-Creation-Date: 2015-10-27 06:29+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
-"Language-Team: Spanish (http://www.transifex.com/openstack/nova/language/"
-"es/)\n"
+"Language-Team: Spanish\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 #, python-format
@@ -115,9 +114,6 @@ msgstr "El intento de auto_configure_disk ha fallado por: %s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "Se ha intentado eliminar la cadena %s que no existe"
-
-msgid "Bandwidth usage not supported by hypervisor."
-msgstr "Uso de ancho de banda no soportado por el hipervisor."
 
 #, python-format
 msgid ""
@@ -494,14 +490,8 @@ msgstr ""
 "La longitud del nombre de host %(hostname)s es más de 63, se trunca a "
 "%(truncated_name)s"
 
-msgid "Hypervisor driver does not support firewall rules"
-msgstr "El controlador de hipervisor no soporta reglas de cortafuegos "
-
 msgid "Hypervisor driver does not support resume guests"
 msgstr "El controlador de hipervisor no soporta reanudar invitados "
-
-msgid "Hypervisor driver does not support security groups."
-msgstr "El controlador del hipervisor no soporta grupos de seguridad."
 
 #, python-format
 msgid "IP %s leased that is not associated"
@@ -1101,16 +1091,6 @@ msgstr ""
 "cambiar en el futuro, pero los implementadores actuales deben estar "
 "conscientes que su uso en producción puede ser riesgoso en este momento."
 
-msgid ""
-"The in tree EC2 API is deprecated as of Kilo release and may be removed in a "
-"future release. The stackforge ec2-api project http://git.openstack.org/cgit/"
-"stackforge/ec2-api/ is the target replacement for this functionality."
-msgstr ""
-"Se desaprueba el uso de EC2 API en forma de árbol como una versión de Kilo y "
-"puede ser eliminada en una próxima versión. El proyecto stackforge ec2-api "
-"http://git.openstack.org/cgit/stackforge/ec2-api/ es el reemplazo de destino "
-"para esta funcionalidad."
-
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -1515,9 +1495,6 @@ msgstr ""
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
 "esta instancia de invitado o controlador no implementa set_admin_password ."
-
-msgid "set_bootable is not implemented for the current driver"
-msgstr "set_bootable no está implementado en el controlador actual"
 
 #, python-format
 msgid ""

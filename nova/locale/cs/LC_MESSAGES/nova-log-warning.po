@@ -8,18 +8,18 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
-"PO-Revision-Date: 2015-09-24 08:43+0000\n"
+"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"PO-Revision-Date: 2015-10-22 07:20+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
+"Language-Team: Czech\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 #, python-format
@@ -112,9 +112,6 @@ msgstr "Pokus o automatické nastavení disku selhalo z důvodu: %s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "Pokus o odstranění řetězu %s, který neexistuje"
-
-msgid "Bandwidth usage not supported by hypervisor."
-msgstr "Využití šířky pásma není podporováno hypervizorem."
 
 msgid ""
 "Can't create a migration_context record without a migration object specified."
@@ -523,6 +520,14 @@ msgstr ""
 msgid "Get esx cookies failed: %s"
 msgstr "Získání souborů cookies esx selhalo: %s"
 
+#, python-format
+msgid ""
+"Host %(hostname)s has more disk space than database expected (%(physical)s "
+"GB > %(database)s GB)"
+msgstr ""
+"Hostitel %(hostname)s má větší kapacitu disku, než databáze očekávala "
+"(%(physical)s GB > %(database)s GB)"
+
 msgid ""
 "Host field should not be set on the instance until resources have been "
 "claimed."
@@ -537,14 +542,8 @@ msgstr ""
 "Název hostitele %(hostname)s je delší než 63 znaků, zkrácen na "
 "%(truncated_name)s"
 
-msgid "Hypervisor driver does not support firewall rules"
-msgstr "Ovladač hypervizoru nepodporuje pravidla brány firewall"
-
 msgid "Hypervisor driver does not support resume guests"
 msgstr "Ovladač hypervizoru nepodporuje obnovení hostů"
-
-msgid "Hypervisor driver does not support security groups."
-msgstr "Ovladač hypervizoru nepodporuje bezpečnostní skupiny."
 
 #, python-format
 msgid "IP %s leased that is not associated"
@@ -788,6 +787,11 @@ msgstr ""
 #, python-format
 msgid "Instance: %(instance_uuid)s failed to save into memcached"
 msgstr "Instance: %(instance_uuid)s nemohla být uložena do memcached."
+
+#, python-format
+msgid "IntegrityError detected when archiving table %(tablename)s: %(error)s"
+msgstr ""
+"Při archivaci tabulky %(tablename)s došlo k chybě celistvosti: %(error)s"
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr "Neplatná hodnota 'agent_present'. Vrací se zpět na výchozí."
@@ -1048,6 +1052,14 @@ msgid "Power state %s not found."
 msgstr "Stav napájení %s nebyl nalezen."
 
 #, python-format
+msgid ""
+"Problem with acquiring the list of children of %(path)r within a given "
+"timeout=%(timeout)d seconds"
+msgstr ""
+"Problém při získávání seznamu potomků %(path)r v rámci daného časového "
+"limitu=%(timeout)d vteřin"
+
+#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Překročena kvóta pro %s, pokus o přidělení plovoucí IP adresy"
 
@@ -1184,6 +1196,18 @@ msgstr ""
 "%(instance_id)s."
 
 msgid ""
+"The TrustedFilter is considered experimental by the OpenStack project "
+"because it receives much less testing than the rest of Nova. This may change "
+"in the future, but current deployers should be aware that the use of it in "
+"production right now may be risky."
+msgstr ""
+"Funkce důvěryhodného filtru v Nova je v projektu OpenStack považována za "
+"experimentální, protože prošla menším počtem zkoušek v porovnání s ostatní "
+"mi části Nova. Toto se v budoucnu může změnit, ale v současnosti by si "
+"správci měli být vědomi, že použití této funkce v ostrých provozech může být "
+"riskantní."
+
+msgid ""
 "The ZooKeeper service group driver in Nova is not tested by the OpenStack "
 "project and thus its quality can not be ensured. This may change in the "
 "future, but current deployers should be aware that the use of it in "
@@ -1219,13 +1243,12 @@ msgstr ""
 
 msgid ""
 "The in tree EC2 API is deprecated as of Kilo release and may be removed in a "
-"future release. The stackforge ec2-api project http://git.openstack.org/cgit/"
-"stackforge/ec2-api/ is the target replacement for this functionality."
+"future release. The openstack ec2-api project http://git.openstack.org/cgit/"
+"openstack/ec2-api/ is the target replacement for this functionality."
 msgstr ""
 "EC2 API ve stromě je od verze Kilo označeno jako zastaralé a v budoucích "
-"verzích mlže být odstraněno. Projekt ec2-api ve stackforge na adrese http://"
-"git.openstack.org/cgit/stackforge/ec2-api/ má za cíl nahradit tuto "
-"funkcionalitu."
+"verzích mlže být odstraněno. Projekt openstack ec2-api na adrese http://git."
+"openstack.org/cgit/openstack/ec2-api/ má za cíl nahradit tuto funkcionalitu."
 
 #, python-format
 msgid ""
@@ -1259,6 +1282,10 @@ msgid ""
 msgstr ""
 "Nastavení \"always\" bude od verze Liberty zastaralé. Místo toho prosím "
 "použijte \"True\"."
+
+#, python-format
+msgid "The volume %s does not exist!"
+msgstr "Svazek %s neexistuje!"
 
 msgid ""
 "This key manager is insecure and is not recommended for production "
@@ -1472,6 +1499,16 @@ msgstr ""
 
 #, python-format
 msgid ""
+"Volume group %(vg)s will not be able to hold sparse volume %(lv)s. Virtual "
+"volume size is %(size)d bytes, but free space on volume group is only "
+"%(free_space)db."
+msgstr ""
+"Skupina svazku %(vg)s nebude moci pojmout řídký svazek %(lv)s. Velikost "
+"virtuálního svazku je %(size)d bajtů, ale volná kapacita ve skupině svazku "
+"je pouze %(free_space)d bajtů."
+
+#, python-format
+msgid ""
 "Volume id: %(vol_id)s finished being created but its status is "
 "%(vol_status)s."
 msgstr ""
@@ -1597,6 +1634,12 @@ msgid "deallocate port %(port_id)s failed"
 msgstr "zrušení přidělení portu %(port_id)s selhalo"
 
 #, python-format
+msgid "get_minimum_version called with likely-incorrect binary `%s'"
+msgstr ""
+"Získání minimální verze zavoláno pomocí pravděpodobně nesprávného binárního "
+"souboru: `%s'"
+
+#, python-format
 msgid "hostname %s too long, truncating."
 msgstr "název hostitele %s je příliš dlouhý, bude zkrácen."
 
@@ -1681,9 +1724,6 @@ msgstr ""
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "set_admin_password není tímto ovladačem nebo hostem instance zavedeno."
-
-msgid "set_bootable is not implemented for the current driver"
-msgstr "get_diagnostics není zavedeno pro současný ovladač"
 
 #, python-format
 msgid ""

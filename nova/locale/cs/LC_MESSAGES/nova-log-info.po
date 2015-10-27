@@ -8,18 +8,18 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
-"PO-Revision-Date: 2015-09-21 08:44+0000\n"
+"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"PO-Revision-Date: 2015-10-16 09:43+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/openstack/nova/language/cs/)\n"
+"Language-Team: Czech\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 #, python-format
@@ -106,6 +106,17 @@ msgstr ""
 
 msgid "Automatically hard rebooting"
 msgstr "Automatický tvrdý restart"
+
+#, python-format
+msgid ""
+"Automatically selected compute RPC version %(rpc)s from minimum service "
+"version %(service)i"
+msgstr ""
+"Automaticky vybraná verze výpočtové RPC %(rpc)s z minimální verze služby "
+"%(service)i"
+
+msgid "Bandwidth usage not supported by hypervisor."
+msgstr "Využití šířky pásma není hypervizorem podporováno."
 
 #, python-format
 msgid "Base or swap file too young to remove: %s"
@@ -567,6 +578,11 @@ msgstr "Importovat klíč %s"
 
 #, python-format
 msgid ""
+"Increasing downtime to %(downtime)d ms after %(waittime)d sec elapsed time"
+msgstr "Snižování odstávky na %(downtime)d ms po uplynutí %(waittime)d vteřin"
+
+#, python-format
+msgid ""
 "Instance %(name)s running on %(host)s could not be found in the database: "
 "assuming it is a worker VM and skip ping migration to a new host"
 msgstr ""
@@ -1018,6 +1034,26 @@ msgstr ""
 
 msgid "Timestamp is invalid."
 msgstr "Časové razítko je neplatné."
+
+#, python-format
+msgid "Took %(time).2f seconds to detach %(num)s volumes for instance."
+msgstr "Odpojení %(num)s svazků z instance trvalo %(time).2f vteřin."
+
+#, python-format
+msgid "Took %0.2f seconds to build instance."
+msgstr "Sestavení instance trvalo %0.2f vteřin."
+
+#, python-format
+msgid "Took %0.2f seconds to deallocate network for instance."
+msgstr "Zrušení přidělení síti k instanci trvalo %0.2f vteřin."
+
+#, python-format
+msgid "Took %0.2f seconds to destroy the instance on the hypervisor."
+msgstr "Smazání instance na hypervizoru trvalo %0.2f vteřin."
+
+#, python-format
+msgid "Took %0.2f seconds to spawn the instance on the hypervisor."
+msgstr "Vytvoření instance na hypervizoru trvalo %0.2f vteřin."
 
 #, python-format
 msgid "Total %(type)s: %(total)d %(unit)s, used: %(used).02f %(unit)s"

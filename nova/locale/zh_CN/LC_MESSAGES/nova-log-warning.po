@@ -10,19 +10,18 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"POT-Creation-Date: 2015-10-27 06:29+0000\n"
 "PO-Revision-Date: 2015-10-07 05:40+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language-Team: Chinese (China) (http://www.transifex.com/openstack/nova/"
-"language/zh_CN/)\n"
+"Language-Team: Chinese (China)\n"
 "Language: zh-CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 #, python-format
@@ -109,9 +108,6 @@ msgstr "尝试自动配置磁盘auto_configure_disk 失败，原因是：%s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "试图移除不存在的链 %s。"
-
-msgid "Bandwidth usage not supported by hypervisor."
-msgstr "监测器不支持带宽利用率"
 
 msgid ""
 "Can't create a migration_context record without a migration object specified."
@@ -500,14 +496,8 @@ msgid ""
 "Hostname %(hostname)s is longer than 63, truncate it to %(truncated_name)s"
 msgstr "主机名 %(hostname)s 超过63个字符，缩减为以下字符 %(truncated_name)s"
 
-msgid "Hypervisor driver does not support firewall rules"
-msgstr "虚拟机管理程序驱动不支持防火墙规则"
-
 msgid "Hypervisor driver does not support resume guests"
 msgstr "管理程序驱动程序不支持恢复 guest"
-
-msgid "Hypervisor driver does not support security groups."
-msgstr "监测器驱动不支持安全组。"
 
 #, python-format
 msgid "IP %s leased that is not associated"
@@ -1122,14 +1112,6 @@ msgid ""
 "run all of the API."
 msgstr "废弃扩展配置选项。在不远的未来，您必须运行API的所有部分。"
 
-msgid ""
-"The in tree EC2 API is deprecated as of Kilo release and may be removed in a "
-"future release. The stackforge ec2-api project http://git.openstack.org/cgit/"
-"stackforge/ec2-api/ is the target replacement for this functionality."
-msgstr ""
-"Kilo版本发布时，源码树中EC2 API 废弃，将来版本中将会移除。stackforge 中ec2-"
-"api项目http://git.openstack.org/cgit/stackforge/ec2-api/将替代这个功能。"
-
 #, python-format
 msgid ""
 "The legacy v2 API module already moved into'nova.api.openstack.compute."
@@ -1539,9 +1521,6 @@ msgstr ""
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "此驱动程序或 guest 实例未实现 set_admin_password。"
-
-msgid "set_bootable is not implemented for the current driver"
-msgstr "当前驱动没有实现set_bootable"
 
 #, python-format
 msgid ""

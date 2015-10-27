@@ -6,19 +6,18 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev147\n"
+"Project-Id-Version: nova 13.0.0.dev41\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-13 06:04+0000\n"
+"POT-Creation-Date: 2015-10-27 06:30+0000\n"
 "PO-Revision-Date: 2015-08-30 12:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Turkish (Turkey) (http://www.transifex.com/openstack/nova/"
-"language/tr_TR/)\n"
+"Language-Team: Turkish (Turkey)\n"
 "Language: tr-TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.1\n"
 
 msgid "\"Look for the VDIs failed"
@@ -949,11 +948,6 @@ msgstr "%(method)s çağrısı bir hata döndürdü: %(e)s. args=%(args)r"
 
 msgid "Transfer data failed"
 msgstr "Veri aktarımı başarısız"
-
-#, python-format
-msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
-msgstr ""
-"%(port_id)s bağlantı noktası için değişken IP %(fixed_ip)s ye erişilemiyor"
 
 #, python-format
 msgid "Unable to access floating IP %s"
