@@ -2744,17 +2744,19 @@ def instance_extra_get_by_instance_uuid(context, instance_uuid,
 
 
 @require_context
+@main_context_manager.writer
 def key_pair_create(context, values):
     try:
         key_pair_ref = models.KeyPair()
         key_pair_ref.update(values)
-        key_pair_ref.save()
+        key_pair_ref.save(session=context.session)
         return key_pair_ref
     except db_exc.DBDuplicateEntry:
         raise exception.KeyPairExists(key_name=values['name'])
 
 
 @require_context
+@main_context_manager.writer
 def key_pair_destroy(context, user_id, name):
     result = model_query(context, models.KeyPair).\
                          filter_by(user_id=user_id).\
@@ -2765,6 +2767,7 @@ def key_pair_destroy(context, user_id, name):
 
 
 @require_context
+@main_context_manager.reader
 def key_pair_get(context, user_id, name):
     result = model_query(context, models.KeyPair).\
                      filter_by(user_id=user_id).\
@@ -2778,6 +2781,7 @@ def key_pair_get(context, user_id, name):
 
 
 @require_context
+@main_context_manager.reader
 def key_pair_get_all_by_user(context, user_id):
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
@@ -2785,6 +2789,7 @@ def key_pair_get_all_by_user(context, user_id):
 
 
 @require_context
+@main_context_manager.reader
 def key_pair_count_by_user(context, user_id):
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
@@ -4922,36 +4927,36 @@ def flavor_extra_specs_update_or_create(context, flavor_id, specs,
 ####################
 
 
+@main_context_manager.writer
 def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)
     try:
-        cell.save()
+        cell.save(session=context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.CellExists(name=values['name'])
     return cell
 
 
-def _cell_get_by_name_query(context, cell_name, session=None):
-    return model_query(context, models.Cell,
-                       session=session).filter_by(name=cell_name)
+def _cell_get_by_name_query(context, cell_name):
+    return model_query(context, models.Cell).filter_by(name=cell_name)
 
 
+@main_context_manager.writer
 def cell_update(context, cell_name, values):
-    session = get_session()
-    with session.begin():
-        cell_query = _cell_get_by_name_query(context, cell_name,
-                                             session=session)
-        if not cell_query.update(values):
-            raise exception.CellNotFound(cell_name=cell_name)
-        cell = cell_query.first()
+    cell_query = _cell_get_by_name_query(context, cell_name)
+    if not cell_query.update(values):
+        raise exception.CellNotFound(cell_name=cell_name)
+    cell = cell_query.first()
     return cell
 
 
+@main_context_manager.writer
 def cell_delete(context, cell_name):
     return _cell_get_by_name_query(context, cell_name).soft_delete()
 
 
+@main_context_manager.reader
 def cell_get(context, cell_name):
     result = _cell_get_by_name_query(context, cell_name).first()
     if not result:
@@ -4959,6 +4964,7 @@ def cell_get(context, cell_name):
     return result
 
 
+@main_context_manager.reader
 def cell_get_all(context):
     return model_query(context, models.Cell, read_deleted="no").all()
 
