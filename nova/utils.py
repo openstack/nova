@@ -1099,7 +1099,7 @@ class ExceptionHelper(object):
             try:
                 return func(*args, **kwargs)
             except messaging.ExpectedException as e:
-                raise (e.exc_info[1], None, e.exc_info[2])
+                six.reraise(*e.exc_info)
         return wrapper
 
 
@@ -1296,7 +1296,7 @@ def get_system_metadata_from_image(image_meta, flavor=None):
             if image_meta.get('disk_format') == 'vhd':
                 value = flavor['root_gb']
             else:
-                value = max(value, flavor['root_gb'])
+                value = max(value or 0, flavor['root_gb'])
 
         if value is None:
             continue

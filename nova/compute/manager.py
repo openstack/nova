@@ -1689,12 +1689,12 @@ class ComputeManager(manager.Manager):
         if update_root_bdm:
             root_bdm.save()
 
-        ephemerals = filter(block_device.new_format_is_ephemeral,
-                            block_devices)
-        swap = filter(block_device.new_format_is_swap,
-                      block_devices)
-        block_device_mapping = filter(
-              driver_block_device.is_block_device_mapping, block_devices)
+        ephemerals = list(filter(block_device.new_format_is_ephemeral,
+                            block_devices))
+        swap = list(filter(block_device.new_format_is_swap,
+                      block_devices))
+        block_device_mapping = list(filter(
+              driver_block_device.is_block_device_mapping, block_devices))
 
         self._default_device_names_for_instance(instance,
                                                 root_device_name,
@@ -4374,6 +4374,10 @@ class ComputeManager(manager.Manager):
                   instance=instance)
         output = self.driver.get_console_output(context, instance)
 
+        if type(output) is six.text_type:
+            # the console output will be bytes.
+            output = six.b(output)
+
         if tail_length is not None:
             output = self._tail_log(output, tail_length)
 
@@ -4386,9 +4390,9 @@ class ComputeManager(manager.Manager):
             length = 0
 
         if length == 0:
-            return ''
+            return b''
         else:
-            return '\n'.join(log.split('\n')[-int(length):])
+            return b'\n'.join(log.split(b'\n')[-int(length):])
 
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,

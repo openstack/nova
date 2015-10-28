@@ -2646,11 +2646,11 @@ class ComputeTestCase(BaseTestCase):
     def test_rebuild_with_injected_files(self):
         # Ensure instance can be rebuilt with injected files.
         injected_files = [
-            ('/a/b/c', base64.b64encode('foobarbaz')),
+            (b'/a/b/c', base64.b64encode(b'foobarbaz')),
         ]
 
         self.decoded_files = [
-            ('/a/b/c', 'foobarbaz'),
+            (b'/a/b/c', b'foobarbaz'),
         ]
 
         def _spawn(context, instance, image_meta, injected_files,
@@ -3235,8 +3235,21 @@ class ComputeTestCase(BaseTestCase):
 
         output = self.compute.get_console_output(self.context,
                 instance=instance, tail_length=None)
-        self.assertEqual(output, 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
+        self.assertEqual(output, b'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance, [], [])
+
+    def test_console_output_bytes(self):
+        # Make sure we can get console output from instance.
+        instance = self._create_fake_instance_obj()
+
+        with mock.patch.object(self.compute,
+                               'get_console_output') as mock_console_output:
+            mock_console_output.return_value = b'Hello.'
+
+            output = self.compute.get_console_output(self.context,
+                    instance=instance, tail_length=None)
+            self.assertEqual(output, b'Hello.')
+            self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_console_output_tail(self):
         # Make sure we can get console output from instance.
@@ -3246,7 +3259,7 @@ class ComputeTestCase(BaseTestCase):
 
         output = self.compute.get_console_output(self.context,
                 instance=instance, tail_length=2)
-        self.assertEqual(output, 'ANOTHER\nLAST LINE')
+        self.assertEqual(output, b'ANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_console_output_not_implemented(self):
@@ -6049,8 +6062,12 @@ class ComputeTestCase(BaseTestCase):
     def test_add_instance_fault_with_remote_error(self):
         instance = self._create_fake_instance_obj()
         exc_info = None
+        raised_exc = None
 
         def fake_db_fault_create(ctxt, values):
+            global exc_info
+            global raised_exc
+
             self.assertIn('raise messaging.RemoteError', values['details'])
             del values['details']
 
@@ -6066,13 +6083,14 @@ class ComputeTestCase(BaseTestCase):
         try:
             raise messaging.RemoteError('test', 'My Test Message')
         except messaging.RemoteError as exc:
+            raised_exc = exc
             exc_info = sys.exc_info()
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-            instance, exc, exc_info)
+            instance, raised_exc, exc_info)
 
     def test_add_instance_fault_user_error(self):
         instance = self._create_fake_instance_obj()
@@ -11408,8 +11426,8 @@ class EvacuateHostTestCase(BaseTestCase):
                           lambda: self._rebuild(on_shared_storage=True))
 
     def test_driver_does_not_support_recreate(self):
-        with utils.temporary_mutation(self.compute.driver.capabilities,
-                                      supports_recreate=False):
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_recreate=False):
             self.stubs.Set(self.compute.driver, 'instance_on_disk',
                            lambda x: True)
             self.assertRaises(exception.InstanceRecreateNotSupported,
