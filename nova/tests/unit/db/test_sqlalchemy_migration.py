@@ -97,14 +97,13 @@ class TestNullInstanceUuidScanDB(test.TestCase):
 
 @mock.patch.object(migration, 'db_version', return_value=2)
 @mock.patch.object(migration, '_find_migrate_repo', return_value='repo')
-@mock.patch.object(migration, '_db_sync_locked', return_value=False)
 @mock.patch.object(versioning_api, 'upgrade')
 @mock.patch.object(versioning_api, 'downgrade')
 @mock.patch.object(migration, 'get_engine', return_value='engine')
 class TestDbSync(test.NoDBTestCase):
 
     def test_version_none(self, mock_get_engine, mock_downgrade, mock_upgrade,
-            mock_sync_locked, mock_find_repo, mock_version):
+            mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(database=database)
         mock_version.assert_called_once_with(database)
@@ -114,7 +113,7 @@ class TestDbSync(test.NoDBTestCase):
         self.assertFalse(mock_downgrade.called)
 
     def test_downgrade(self, mock_get_engine, mock_downgrade, mock_upgrade,
-            mock_sync_locked, mock_find_repo, mock_version):
+            mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(1, database=database)
         mock_version.assert_called_once_with(database)

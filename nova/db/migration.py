@@ -26,21 +26,6 @@ def db_sync(version=None, database='main'):
     return IMPL.db_sync(version=version, database=database)
 
 
-def db_expand(dryrun=False, database='main'):
-    """Expand database schema."""
-    return IMPL.db_expand(dryrun=dryrun, database=database)
-
-
-def db_migrate(dryrun=False, database='main'):
-    """Migrate database schema."""
-    return IMPL.db_migrate(dryrun=dryrun, database=database)
-
-
-def db_contract(dryrun=False, database='main'):
-    """Contract database schema."""
-    return IMPL.db_contract(dryrun=dryrun, database=database)
-
-
 def db_version(database='main'):
     """Display the current database version."""
     return IMPL.db_version(database=database)

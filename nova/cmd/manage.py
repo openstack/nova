@@ -909,31 +909,6 @@ class DbCommands(object):
         """Sync the database up to the most recent version."""
         return migration.db_sync(version)
 
-    @args('--dry-run', action='store_true', dest='dry_run',
-          default=False, help='Print SQL statements instead of executing')
-    def expand(self, dry_run):
-        """Expand database schema."""
-        return migration.db_expand(dry_run)
-
-    @args('--dry-run', action='store_true', dest='dry_run',
-          default=False, help='Print SQL statements instead of executing')
-    def migrate(self, dry_run):
-        """Migrate database schema."""
-        return migration.db_migrate(dry_run)
-
-    @args('--dry-run', action='store_true', dest='dry_run',
-          default=False, help='Print SQL statements instead of executing')
-    @args('--force-experimental-contract', action='store_true',
-          dest='force_experimental_contract',
-          help="Force experimental contract operation to run *VOLATILE*")
-    def contract(self, dry_run, force_experimental_contract=False):
-        """Contract database schema."""
-        if force_experimental_contract:
-            return migration.db_contract(dry_run)
-        print('The "contract" command is experimental and potentially '
-              'dangerous. As such, it is disabled by default. Enable using '
-              '"--force-experimental".')
-
     def version(self):
         """Print the current database version."""
         print(migration.db_version())
