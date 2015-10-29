@@ -1925,16 +1925,6 @@ class _TestDomainObject(object):
             self.__setattr__(k, v)
 
 
-class FakeNetwork(object):
-    def __init__(self, **kwargs):
-        self.vlan = None
-        for k, v in six.iteritems(kwargs):
-            self.__setattr__(k, v)
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
-
 class CommonNetworkTestCase(test.TestCase):
 
     REQUIRES_LOCKING = True
