@@ -307,6 +307,8 @@ class _DiskImage(object):
             device = self._device_for_path(mount_dir)
             if device:
                 self._reset(device)
+            else:
+                LOG.debug('No device found for path: %s', mount_dir)
 
     @staticmethod
     def _device_for_path(path):
