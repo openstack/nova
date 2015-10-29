@@ -564,18 +564,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'free_ram_mb': 384,  # 512 - 128 used
             'memory_mb_used': 128,
             'pci_device_pools': objects.PciDevicePoolList(),
-            # NOTE(jaypipes): Due to the design of the ERT, which now is used
-            #                 track VCPUs, the actual used VCPUs isn't
-            #                 "written" to the resources dictionary that is
-            #                 passed to _update() like all the other
-            #                 resources are. Instead, _update()
-            #                 calls the ERT's write_resources() method, which
-            #                 then queries each resource handler plugin for the
-            #                 changes in its resource usage and the plugin
-            #                 writes changes to the supplied "values" dict. For
-            #                 this reason, all other resources except VCPUs
-            #                 are accurate here. :(
-            'vcpus_used': 0,
+            'vcpus_used': 1,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,
             'memory_mb': 512,
@@ -705,7 +694,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'free_ram_mb': 384,  # 512 total - 128 for possible revert of orig
             'memory_mb_used': 128,  # 128 possible revert amount
             'pci_device_pools': objects.PciDevicePoolList(),
-            'vcpus_used': 0,
+            'vcpus_used': 1,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,
             'memory_mb': 512,
@@ -765,7 +754,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
             'pci_device_pools': objects.PciDevicePoolList(),
-            'vcpus_used': 0,  # See NOTE(jaypipes) above about why this is 0
+            'vcpus_used': 2,
             'hypervisor_type': 'fake',
             'local_gb_used': 5,
             'memory_mb': 512,
@@ -822,7 +811,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
             'pci_device_pools': objects.PciDevicePoolList(),
-            'vcpus_used': 0,  # See NOTE(jaypipes) above about why this is 0
+            'vcpus_used': 2,
             'hypervisor_type': 'fake',
             'local_gb_used': 5,
             'memory_mb': 512,
@@ -890,9 +879,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'free_ram_mb': 0,
             'memory_mb_used': 512,  # 128 exist + 256 new flav + 128 old flav
             'pci_device_pools': objects.PciDevicePoolList(),
-            # See NOTE(jaypipes) above for reason why this isn't accurate until
-            # _update() is called.
-            'vcpus_used': 0,
+            'vcpus_used': 4,
             'hypervisor_type': 'fake',
             'local_gb_used': 7,  # 1G existing, 5G new flav + 1 old flav
             'memory_mb': 512,
@@ -1100,18 +1087,7 @@ class TestUpdateComputeNode(BaseTestCase):
             cpu_allocation_ratio=16.0,
             ram_allocation_ratio=1.5,
         )
-        expected_resources = copy.deepcopy(compute)
-        expected_resources.stats = {}
-        expected_resources.vcpus = 4
-        expected_resources.vcpus_used = 2
-
         self.rt.compute_node = compute
-        self.rt.ext_resources_handler.reset_resources(self.rt.compute_node,
-                                                      self.rt.driver)
-        # This emulates the behavior that occurs in the
-        # RT.update_available_resource() method, which updates resource
-        # information in the ERT differently than all other resources.
-        self.rt.ext_resources_handler.update_from_instance(dict(vcpus=2))
         self.rt._update(mock.sentinel.ctx)
 
         self.assertFalse(self.rt.disabled)
@@ -1190,9 +1166,7 @@ class TestInstanceClaim(BaseTestCase):
             'free_disk_gb': expected['local_gb'] - disk_used,
             "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
             'running_vms': 1,
-            # vcpus are claimed by the ERT in RT._update(), which is mocked
-            # out below...
-            'vcpus_used': 0,
+            'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1217,9 +1191,7 @@ class TestInstanceClaim(BaseTestCase):
             'free_disk_gb': expected['local_gb'] - disk_used,
             "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
             'running_vms': 1,
-            # vcpus are claimed by the ERT in RT._update(), which is mocked
-            # out below...
-            'vcpus_used': 0,
+            'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
