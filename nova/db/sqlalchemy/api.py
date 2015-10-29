@@ -2793,7 +2793,7 @@ def key_pair_count_by_user(context, user_id):
 
 ###################
 
-
+@main_context_manager.writer
 def network_associate(context, project_id, network_id=None, force=False):
     """Associate a project with a network.
 
@@ -2809,37 +2809,33 @@ def network_associate(context, project_id, network_id=None, force=False):
     force should only be used as a direct consequence of user request
     all automated requests should not use force
     """
-    session = get_session()
-    with session.begin():
+    def network_query(project_filter, id=None):
+        filter_kwargs = {'project_id': project_filter}
+        if id is not None:
+            filter_kwargs['id'] = id
+        return model_query(context, models.Network, read_deleted="no").\
+                       filter_by(**filter_kwargs).\
+                       with_lockmode('update').\
+                       first()
 
-        def network_query(project_filter, id=None):
-            filter_kwargs = {'project_id': project_filter}
-            if id is not None:
-                filter_kwargs['id'] = id
-            return model_query(context, models.Network, session=session,
-                              read_deleted="no").\
-                           filter_by(**filter_kwargs).\
-                           with_lockmode('update').\
-                           first()
+    if not force:
+        # find out if project has a network
+        network_ref = network_query(project_id)
 
-        if not force:
-            # find out if project has a network
-            network_ref = network_query(project_id)
+    if force or not network_ref:
+        # in force mode or project doesn't have a network so associate
+        # with a new network
 
-        if force or not network_ref:
-            # in force mode or project doesn't have a network so associate
-            # with a new network
+        # get new network
+        network_ref = network_query(None, network_id)
+        if not network_ref:
+            raise exception.NoMoreNetworks()
 
-            # get new network
-            network_ref = network_query(None, network_id)
-            if not network_ref:
-                raise exception.NoMoreNetworks()
-
-            # associate with network
-            # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-            #             then this has concurrency issues
-            network_ref['project_id'] = project_id
-            session.add(network_ref)
+        # associate with network
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        network_ref['project_id'] = project_id
+        context.session.add(network_ref)
     return network_ref
 
 
@@ -2848,45 +2844,44 @@ def _network_ips_query(context, network_id):
                    filter_by(network_id=network_id)
 
 
+@main_context_manager.reader
 def network_count_reserved_ips(context, network_id):
     return _network_ips_query(context, network_id).\
                     filter_by(reserved=True).\
                     count()
 
 
+@main_context_manager.writer
 def network_create_safe(context, values):
     network_ref = models.Network()
     network_ref['uuid'] = str(uuid.uuid4())
     network_ref.update(values)
 
     try:
-        network_ref.save()
+        network_ref.save(context.session)
         return network_ref
     except db_exc.DBDuplicateEntry:
         raise exception.DuplicateVlan(vlan=values['vlan'])
 
 
+@main_context_manager.writer
 def network_delete_safe(context, network_id):
-    session = get_session()
-    with session.begin():
-        result = model_query(context, models.FixedIp, session=session,
-                             read_deleted="no").\
-                         filter_by(network_id=network_id).\
-                         filter_by(allocated=True).\
-                         count()
-        if result != 0:
-            raise exception.NetworkInUse(network_id=network_id)
-        network_ref = _network_get(context, network_id=network_id,
-                                  session=session)
+    result = model_query(context, models.FixedIp, read_deleted="no").\
+                     filter_by(network_id=network_id).\
+                     filter_by(allocated=True).\
+                     count()
+    if result != 0:
+        raise exception.NetworkInUse(network_id=network_id)
+    network_ref = _network_get(context, network_id=network_id)
 
-        model_query(context, models.FixedIp, session=session,
-                    read_deleted="no").\
-                filter_by(network_id=network_id).\
-                soft_delete()
+    model_query(context, models.FixedIp, read_deleted="no").\
+            filter_by(network_id=network_id).\
+            soft_delete()
 
-        session.delete(network_ref)
+    context.session.delete(network_ref)
 
 
+@main_context_manager.writer
 def network_disassociate(context, network_id, disassociate_host,
                          disassociate_project):
     net_update = {}
@@ -2897,9 +2892,8 @@ def network_disassociate(context, network_id, disassociate_host,
     network_update(context, network_id, net_update)
 
 
-def _network_get(context, network_id, session=None, project_only='allow_none'):
-    result = model_query(context, models.Network, session=session,
-                         project_only=project_only).\
+def _network_get(context, network_id, project_only='allow_none'):
+    result = model_query(context, models.Network, project_only=project_only).\
                     filter_by(id=network_id).\
                     first()
 
@@ -2910,11 +2904,13 @@ def _network_get(context, network_id, session=None, project_only='allow_none'):
 
 
 @require_context
+@main_context_manager.reader
 def network_get(context, network_id, project_only='allow_none'):
     return _network_get(context, network_id, project_only=project_only)
 
 
 @require_context
+@main_context_manager.reader
 def network_get_all(context, project_only):
     result = model_query(context, models.Network, read_deleted="no",
                          project_only=project_only).all()
@@ -2926,6 +2922,7 @@ def network_get_all(context, project_only):
 
 
 @require_context
+@main_context_manager.reader
 def network_get_all_by_uuids(context, network_uuids, project_only):
     result = model_query(context, models.Network, read_deleted="no",
                          project_only=project_only).\
@@ -2950,7 +2947,7 @@ def network_get_all_by_uuids(context, network_uuids, project_only):
     return result
 
 
-def _get_associated_fixed_ips_query(network_id, host=None):
+def _get_associated_fixed_ips_query(context, network_id, host=None):
     # NOTE(vish): The ugly joins here are to solve a performance issue and
     #             should be removed once we can add and remove leases
     #             without regenerating the whole list
@@ -2959,42 +2956,44 @@ def _get_associated_fixed_ips_query(network_id, host=None):
                    models.VirtualInterface.deleted == 0)
     inst_and = and_(models.Instance.uuid == models.FixedIp.instance_uuid,
                     models.Instance.deleted == 0)
-    session = get_session()
     # NOTE(vish): This subquery left joins the minimum interface id for each
     #             instance. If the join succeeds (i.e. the 11th column is not
     #             null), then the fixed ip is on the first interface.
-    subq = session.query(func.min(models.VirtualInterface.id).label("id"),
-                         models.VirtualInterface.instance_uuid).\
-            group_by(models.VirtualInterface.instance_uuid).subquery()
+    subq = context.session.query(
+        func.min(models.VirtualInterface.id).label("id"),
+        models.VirtualInterface.instance_uuid).\
+        group_by(models.VirtualInterface.instance_uuid).subquery()
     subq_and = and_(subq.c.id == models.FixedIp.virtual_interface_id,
             subq.c.instance_uuid == models.VirtualInterface.instance_uuid)
-    query = session.query(models.FixedIp.address,
-                          models.FixedIp.instance_uuid,
-                          models.FixedIp.network_id,
-                          models.FixedIp.virtual_interface_id,
-                          models.VirtualInterface.address,
-                          models.Instance.hostname,
-                          models.Instance.updated_at,
-                          models.Instance.created_at,
-                          models.FixedIp.allocated,
-                          models.FixedIp.leased,
-                          subq.c.id).\
-                          filter(models.FixedIp.deleted == 0).\
-                          filter(models.FixedIp.network_id == network_id).\
-                          join((models.VirtualInterface, vif_and)).\
-                          join((models.Instance, inst_and)).\
-                          outerjoin((subq, subq_and)).\
-                          filter(models.FixedIp.instance_uuid != null()).\
-                          filter(models.FixedIp.virtual_interface_id != null())
+    query = context.session.query(
+        models.FixedIp.address,
+        models.FixedIp.instance_uuid,
+        models.FixedIp.network_id,
+        models.FixedIp.virtual_interface_id,
+        models.VirtualInterface.address,
+        models.Instance.hostname,
+        models.Instance.updated_at,
+        models.Instance.created_at,
+        models.FixedIp.allocated,
+        models.FixedIp.leased,
+        subq.c.id).\
+        filter(models.FixedIp.deleted == 0).\
+        filter(models.FixedIp.network_id == network_id).\
+        join((models.VirtualInterface, vif_and)).\
+        join((models.Instance, inst_and)).\
+        outerjoin((subq, subq_and)).\
+        filter(models.FixedIp.instance_uuid != null()).\
+        filter(models.FixedIp.virtual_interface_id != null())
     if host:
         query = query.filter(models.Instance.host == host)
     return query
 
 
+@main_context_manager.reader
 def network_get_associated_fixed_ips(context, network_id, host=None):
     # FIXME(sirp): since this returns fixed_ips, this would be better named
     # fixed_ip_get_all_by_network.
-    query = _get_associated_fixed_ips_query(network_id, host)
+    query = _get_associated_fixed_ips_query(context, network_id, host)
     result = query.all()
     data = []
     for datum in result:
@@ -3016,16 +3015,17 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     return data
 
 
+@main_context_manager.reader
 def network_in_use_on_host(context, network_id, host):
-    query = _get_associated_fixed_ips_query(network_id, host)
+    query = _get_associated_fixed_ips_query(context, network_id, host)
     return query.count() > 0
 
 
-def _network_get_query(context, session=None):
-    return model_query(context, models.Network, session=session,
-                       read_deleted="no")
+def _network_get_query(context):
+    return model_query(context, models.Network, read_deleted="no")
 
 
+@main_context_manager.reader
 def network_get_by_uuid(context, uuid):
     result = _network_get_query(context).filter_by(uuid=uuid).first()
 
@@ -3035,6 +3035,7 @@ def network_get_by_uuid(context, uuid):
     return result
 
 
+@main_context_manager.reader
 def network_get_by_cidr(context, cidr):
     result = _network_get_query(context).\
                 filter(or_(models.Network.cidr == cidr,
@@ -3047,14 +3048,13 @@ def network_get_by_cidr(context, cidr):
     return result
 
 
+@main_context_manager.reader
 def network_get_all_by_host(context, host):
-    session = get_session()
     fixed_host_filter = or_(models.FixedIp.host == host,
             and_(models.FixedIp.instance_uuid != null(),
                  models.Instance.host == host))
     fixed_ip_query = model_query(context, models.FixedIp,
-                                 (models.FixedIp.network_id,),
-                                 session=session).\
+                                 (models.FixedIp.network_id,)).\
                      outerjoin((models.Instance,
                                 models.Instance.uuid ==
                                 models.FixedIp.instance_uuid)).\
@@ -3064,13 +3064,12 @@ def network_get_all_by_host(context, host):
     #             or that have an instance with host set
     host_filter = or_(models.Network.host == host,
                       models.Network.id.in_(fixed_ip_query.subquery()))
-    return _network_get_query(context, session=session).\
-                       filter(host_filter).\
-                       all()
+    return _network_get_query(context).filter(host_filter).all()
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
+@main_context_manager.writer
 def network_set_host(context, network_id, host_id):
     network_ref = _network_get_query(context).\
         filter_by(id=network_id).\
@@ -3095,16 +3094,15 @@ def network_set_host(context, network_id, host_id):
 
 
 @require_context
+@main_context_manager.writer
 def network_update(context, network_id, values):
-    session = get_session()
-    with session.begin():
-        network_ref = _network_get(context, network_id, session=session)
-        network_ref.update(values)
-        try:
-            network_ref.save(session=session)
-        except db_exc.DBDuplicateEntry:
-            raise exception.DuplicateVlan(vlan=values['vlan'])
-        return network_ref
+    network_ref = _network_get(context, network_id)
+    network_ref.update(values)
+    try:
+        network_ref.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        raise exception.DuplicateVlan(vlan=values['vlan'])
+    return network_ref
 
 
 ###################
@@ -4391,6 +4389,7 @@ def provider_fw_rule_destroy(context, rule_id):
 
 
 @require_context
+@main_context_manager.writer
 def project_get_networks(context, project_id, associate=True):
     # NOTE(tr3buchet): as before this function will associate
     # a project with a network if it doesn't have one and
