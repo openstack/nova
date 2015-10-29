@@ -679,26 +679,30 @@ def compute_node_statistics(context):
 ###################
 
 
+@main_context_manager.writer
 def certificate_create(context, values):
     certificate_ref = models.Certificate()
     for (key, value) in values.items():
         certificate_ref[key] = value
-    certificate_ref.save()
+    certificate_ref.save(context.session)
     return certificate_ref
 
 
+@main_context_manager.reader
 def certificate_get_all_by_project(context, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    all()
 
 
+@main_context_manager.reader
 def certificate_get_all_by_user(context, user_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
                    all()
 
 
+@main_context_manager.reader
 def certificate_get_all_by_user_and_project(context, user_id, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
@@ -6319,6 +6323,7 @@ def _instance_group_policies_add(context, id, policies, set_delete=False,
 ####################
 
 
+@main_context_manager.reader
 def pci_device_get_by_addr(context, node_id, dev_addr):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(compute_node_id=node_id).\
@@ -6329,6 +6334,7 @@ def pci_device_get_by_addr(context, node_id, dev_addr):
     return pci_dev_ref
 
 
+@main_context_manager.reader
 def pci_device_get_by_id(context, id):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(id=id).\
@@ -6338,6 +6344,7 @@ def pci_device_get_by_id(context, id):
     return pci_dev_ref
 
 
+@main_context_manager.reader
 def pci_device_get_all_by_node(context, node_id):
     return model_query(context, models.PciDevice).\
                        filter_by(compute_node_id=node_id).\
@@ -6345,6 +6352,7 @@ def pci_device_get_all_by_node(context, node_id):
 
 
 @require_context
+@main_context_manager.reader
 def pci_device_get_all_by_instance_uuid(context, instance_uuid):
     return model_query(context, models.PciDevice).\
                        filter_by(status='allocated').\
@@ -6352,12 +6360,14 @@ def pci_device_get_all_by_instance_uuid(context, instance_uuid):
                        all()
 
 
-def _instance_pcidevs_get_multi(context, instance_uuids, session=None):
-    return model_query(context, models.PciDevice, session=session).\
+@main_context_manager.reader
+def _instance_pcidevs_get_multi(context, instance_uuids):
+    return model_query(context, models.PciDevice).\
         filter_by(status='allocated').\
         filter(models.PciDevice.instance_uuid.in_(instance_uuids))
 
 
+@main_context_manager.writer
 def pci_device_destroy(context, node_id, address):
     result = model_query(context, models.PciDevice).\
                          filter_by(compute_node_id=node_id).\
@@ -6367,18 +6377,16 @@ def pci_device_destroy(context, node_id, address):
         raise exception.PciDeviceNotFound(node_id=node_id, address=address)
 
 
+@main_context_manager.writer
 def pci_device_update(context, node_id, address, values):
-    session = get_session()
-    with session.begin():
-        query = model_query(context, models.PciDevice, session=session,
-                            read_deleted="no").\
-                        filter_by(compute_node_id=node_id).\
-                        filter_by(address=address)
-        if query.update(values) == 0:
-            device = models.PciDevice()
-            device.update(values)
-            session.add(device)
-        return query.one()
+    query = model_query(context, models.PciDevice, read_deleted="no").\
+                    filter_by(compute_node_id=node_id).\
+                    filter_by(address=address)
+    if query.update(values) == 0:
+        device = models.PciDevice()
+        device.update(values)
+        context.session.add(device)
+    return query.one()
 
 
 ####################
