@@ -2181,12 +2181,14 @@ class ComputeManager(manager.Manager):
                     self._shutdown_instance(context, instance,
                             block_device_mapping, requested_networks,
                             try_deallocate_networks=deallocate_networks)
-                except Exception:
+                except Exception as exc2:
                     ctxt.reraise = False
-                    msg = _('Could not clean up failed build,'
-                            ' not rescheduling')
+                    LOG.warning(_LW('Could not clean up failed build,'
+                                    ' not rescheduling. Error: %s'),
+                                six.text_type(exc2))
                     raise exception.BuildAbortException(
-                            instance_uuid=instance.uuid, reason=msg)
+                            instance_uuid=instance.uuid,
+                            reason=six.text_type(exc))
 
     def _cleanup_allocated_networks(self, context, instance,
             requested_networks):
