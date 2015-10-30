@@ -68,17 +68,6 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         'floating_ips': fields.ObjectField('FloatingIPList'),
         }
 
-    obj_relationships = {
-        'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
-                     ('1.6', '1.16'), ('1.7', '1.17'), ('1.8', '1.18'),
-                     ('1.9', '1.19'), ('1.10', '1.20'), ('1.11', '1.21'),
-                     ('1.12', '1.22'), ('1.13', '1.23')],
-        'network': [('1.0', '1.2')],
-        'virtual_interface': [('1.1', '1.0')],
-        'floating_ips': [('1.5', '1.7'), ('1.11', '1.8'), ('1.12', '1.9'),
-                         ('1.13', '1.10'), ('1.14', '1.11')],
-    }
-
     def obj_make_compatible(self, primitive, target_version):
         super(FixedIP, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
@@ -233,13 +222,6 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
-        }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2'),
-                    ('1.3', '1.3'), ('1.4', '1.4'), ('1.5', '1.5'),
-                    ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
-                    ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
-                    ('1.12', '1.12'), ('1.13', '1.13'), ('1.14', '1.14')],
         }
 
     @obj_base.remotable_classmethod

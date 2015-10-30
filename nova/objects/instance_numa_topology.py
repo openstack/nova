@@ -40,10 +40,6 @@ class InstanceNUMACell(base.NovaObject,
         'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True)
         }
 
-    obj_relationships = {
-        'cpu_topology': [('1.2', '1.0')]
-    }
-
     cpu_pinning = obj_fields.DictProxyField('cpu_pinning_raw')
 
     def __init__(self, **kwargs):
@@ -125,10 +121,6 @@ class InstanceNUMATopology(base.NovaObject,
         'instance_uuid': obj_fields.UUIDField(),
         'cells': obj_fields.ListOfObjectsField('InstanceNUMACell'),
         }
-
-    obj_relationships = {
-        'cells': [('1.0', '1.0'), ('1.2', '1.2')],
-    }
 
     @classmethod
     def obj_from_primitive(cls, primitive, context=None):

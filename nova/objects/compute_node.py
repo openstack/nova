@@ -84,11 +84,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         'ram_allocation_ratio': fields.FloatField(),
         }
 
-    obj_relationships = {
-        'pci_device_pools': [('1.9', '1.0'), ('1.11', '1.1')],
-        'supported_hv_specs': [('1.6', '1.0'), ('1.12', '1.1')],
-    }
-
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
@@ -367,14 +362,6 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.14'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
-        }
-    # NOTE(danms): ComputeNode was at 1.2 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.2'), ('1.1', '1.3'), ('1.2', '1.3'),
-                    ('1.3', '1.4'), ('1.4', '1.5'), ('1.5', '1.5'),
-                    ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
-                    ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
-                    ('1.12', '1.12'), ('1.13', '1.13'), ('1.14', '1.14')],
         }
 
     @base.remotable_classmethod

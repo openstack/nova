@@ -120,9 +120,6 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceMapping'),
         }
-    obj_relationships = {
-        'objects': [('1.0', '1.0')],
-        }
 
     @staticmethod
     def _get_by_project_id_from_db(context, project_id):

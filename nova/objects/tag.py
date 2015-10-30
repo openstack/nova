@@ -58,9 +58,6 @@ class TagList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Tag'),
         }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
-        }
 
     @base.remotable_classmethod
     def get_by_resource_id(cls, context, resource_id):

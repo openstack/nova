@@ -65,10 +65,6 @@ class InstancePCIRequests(base.NovaObject,
         'requests': fields.ListOfObjectsField('InstancePCIRequest'),
     }
 
-    obj_relationships = {
-        'requests': [('1.0', '1.0'), ('1.1', '1.1')],
-    }
-
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'requests' in primitive:

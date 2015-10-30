@@ -39,10 +39,6 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         'cell_mapping': fields.ObjectField('CellMapping'),
         }
 
-    obj_relationships = {
-        'cell_mapping': [('1.0', '1.0')]
-        }
-
     def _get_cell_mapping(self):
         session = db_api.get_api_session()
         with session.begin():

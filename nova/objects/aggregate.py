@@ -163,11 +163,6 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Aggregate'),
         }
 
-    # NOTE(danms): Aggregate was at 1.1 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.1'), ('1.1', '1.1'), ('1.2', '1.1')],
-        }
-
     @classmethod
     def _filter_db_aggregates(cls, db_aggregates, hosts):
         if not isinstance(hosts, set):

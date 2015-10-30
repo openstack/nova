@@ -100,13 +100,6 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         'version': fields.IntegerField(),
     }
 
-    obj_relationships = {
-        'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
-                         ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10'),
-                         ('1.12', '1.11'), ('1.15', '1.12'), ('1.17', '1.13'),
-                         ('1.18', '1.14')],
-    }
-
     def __init__(self, *args, **kwargs):
         # NOTE(danms): We're going against the rules here and overriding
         # init. The reason is that we want to *ensure* that we're always
@@ -326,15 +319,6 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
         }
-    # NOTE(danms): Service was at 1.2 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.2'), ('1.1', '1.3'), ('1.2', '1.4'),
-                    ('1.3', '1.5'), ('1.4', '1.6'), ('1.5', '1.7'),
-                    ('1.6', '1.8'), ('1.7', '1.9'), ('1.8', '1.10'),
-                    ('1.9', '1.11'), ('1.10', '1.12'), ('1.11', '1.13'),
-                    ('1.12', '1.14'), ('1.13', '1.15'), ('1.14', '1.16'),
-                    ('1.15', '1.17'), ('1.16', '1.18'), ('1.17', '1.19')],
-    }
 
     @base.remotable_classmethod
     def get_by_topic(cls, context, topic):

@@ -49,13 +49,6 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         'fixed_ip': fields.ObjectField('FixedIP', nullable=True),
         }
 
-    obj_relationships = {
-        'fixed_ip': [('1.0', '1.1'), ('1.2', '1.2'), ('1.3', '1.3'),
-                     ('1.4', '1.4'), ('1.5', '1.5'), ('1.6', '1.6'),
-                     ('1.7', '1.11'), ('1.8', '1.12'), ('1.9', '1.13'),
-                     ('1.10', '1.14')],
-    }
-
     @staticmethod
     def _from_db_object(context, floatingip, db_floatingip,
                         expected_attrs=None):
@@ -182,12 +175,6 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.11: FloatingIP 1.10
     fields = {
         'objects': fields.ListOfObjectsField('FloatingIP'),
-        }
-    obj_relationships = {
-        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.1'),
-                    ('1.3', '1.2'), ('1.4', '1.3'), ('1.5', '1.4'),
-                    ('1.6', '1.5'), ('1.7', '1.6'), ('1.8', '1.7'),
-                    ('1.9', '1.8'), ('1.10', '1.9'), ('1.11', '1.10')],
         }
     VERSION = '1.11'
 

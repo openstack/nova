@@ -34,11 +34,6 @@ class VirtCPUModel(base.NovaObject):
         'match': fields.CPUMatchField(nullable=True),
     }
 
-    obj_relationships = {
-        'topology': [('1.0', '1.0')],
-        'features': [('1.0', '1.0')],
-    }
-
     def obj_load_attr(self, attrname):
         setattr(self, attrname, None)
 

@@ -90,10 +90,6 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('KeyPair'),
         }
-    # NOTE(danms): KeyPair was at 1.1 before we added this
-    obj_relationships = {
-        'objects': [('1.0', '1.1'), ('1.1', '1.2'), ('1.2', '1.3')],
-        }
 
     @base.remotable_classmethod
     def get_by_user(cls, context, user_id):

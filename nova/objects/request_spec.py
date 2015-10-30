@@ -53,17 +53,6 @@ class RequestSpec(base.NovaObject):
         'instance_uuid': fields.UUIDField(),
     }
 
-    obj_relationships = {
-        'image': [('1.0', '1.5'), ('1.1', '1.6'),
-                  ('1.4', '1.7')],
-        'numa_topology': [('1.0', '1.2')],
-        'flavor': [('1.0', '1.1')],
-        'pci_requests': [('1.0', '1.1')],
-        'retry': [('1.0', '1.0'), ('1.2', '1.1')],
-        'limits': [('1.0', '1.0')],
-        'instance_group': [('1.0', '1.9'), ('1.3', '1.10')],
-    }
-
     @property
     def vcpus(self):
         return self.flavor.vcpus
@@ -316,10 +305,6 @@ class SchedulerRetries(base.NovaObject):
         'hosts': fields.ObjectField('ComputeNodeList'),
     }
 
-    obj_relationships = {
-        'hosts': [('1.0', '1.13'), ('1.1', '1.14')],
-    }
-
     @classmethod
     def from_dict(cls, context, retry_dict):
         # NOTE(sbauza): We are not persisting the user context since it's only
@@ -355,10 +340,6 @@ class SchedulerLimits(base.NovaObject):
         'vcpu': fields.IntegerField(nullable=True, default=None),
         'disk_gb': fields.IntegerField(nullable=True, default=None),
         'memory_mb': fields.IntegerField(nullable=True, default=None),
-    }
-
-    obj_relationships = {
-        'numa_topology': [('1.0', '1.0')],
     }
 
     @classmethod
