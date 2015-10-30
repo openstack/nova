@@ -44,22 +44,6 @@ class FakeCinderClient(object):
         self.volume_snapshots = self.volumes
 
 
-class FakeVolume(object):
-    def __init__(self, dict=dict()):
-        self.id = dict.get('id') or '1234'
-        self.status = dict.get('status') or 'available'
-        self.size = dict.get('size') or 1
-        self.availability_zone = dict.get('availability_zone') or 'cinder'
-        self.created_at = dict.get('created_at')
-        self.attach_time = dict.get('attach_time')
-        self.mountpoint = dict.get('mountpoint')
-        self.display_name = dict.get('display_name') or 'volume-' + self.id
-        self.display_description = dict.get('display_description') or 'fake'
-        self.volume_type_id = dict.get('volume_type_id')
-        self.snapshot_id = dict.get('snapshot_id')
-        self.metadata = dict.get('volume_metadata') or {}
-
-
 class CinderApiTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CinderApiTestCase, self).setUp()

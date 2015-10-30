@@ -71,18 +71,6 @@ CONF.import_opt('remove_unused_original_minimum_age_seconds',
                 'nova.virt.imagecache')
 
 
-class fake_vm_ref(object):
-    def __init__(self):
-        self.value = 4
-        self._type = 'VirtualMachine'
-
-
-class fake_service_content(object):
-    def __init__(self):
-        self.ServiceContent = vmwareapi_fake.DataObject()
-        self.ServiceContent.fake = 'fake'
-
-
 def _fake_create_session(inst):
     session = vmwareapi_fake.DataObject()
     session.key = 'fake_key'

@@ -200,15 +200,6 @@ def _concurrency(signal, wait, done, target, is_block_dev=False):
     done.send()
 
 
-class FakeVirDomainSnapshot(object):
-
-    def __init__(self, dom=None):
-        self.dom = dom
-
-    def delete(self, flags):
-        pass
-
-
 class FakeVirtDomain(object):
 
     def __init__(self, fake_xml=None, uuidstr=None, id=None, name=None):

@@ -60,22 +60,6 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUIDS = {}
 
 
-class Context(object):
-    pass
-
-
-class FakeRouter(wsgi.Router):
-    def __init__(self, ext_mgr=None):
-        pass
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        res = webob.Response()
-        res.status = '200'
-        res.headers['X-Test-Success'] = 'True'
-        return res
-
-
 @webob.dec.wsgify
 def fake_wsgi(self, req):
     return self.application
@@ -331,15 +315,6 @@ class FakeAuthDatabase(object):
         if token and token.token_hash in FakeAuthDatabase.data:
             del FakeAuthDatabase.data[token.token_hash]
             del FakeAuthDatabase.data['id_%i' % token_id]
-
-
-class FakeRateLimiter(object):
-    def __init__(self, application):
-        self.application = application
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        return self.application
 
 
 def create_info_cache(nw_cache):
