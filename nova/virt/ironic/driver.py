@@ -833,7 +833,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                               "baremetal node %(node)s."),
                              {'instance': instance.uuid,
                               'node': node_uuid})
-                self.destroy(context, instance, network_info)
 
     def _unprovision(self, ironicclient, instance, node):
         """This method is called from destroy() to unprovision
