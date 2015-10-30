@@ -16,9 +16,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev61\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-10-30 06:16+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language: es\n"
@@ -737,9 +737,6 @@ msgstr ""
 "No se puede cambiar el tamaño del disco raíz a un menor tamaño. Tamaño "
 "actual: %(curr_root_gb)s GB. Tamaño solicitado: %(new_root_gb)s GB"
 
-msgid "Cannot run 'db sync' until 'db contract' is run"
-msgstr "No se puede ejecutar 'db sync' hasta que se ejecute 'db contract'"
-
 msgid "Cannot run any more instances of this type."
 msgstr "No se pueden ejecutar más instancias de este tipo. "
 
@@ -1046,10 +1043,6 @@ msgid "DNS2"
 msgstr "DNS2"
 
 #, python-format
-msgid "Database migration failed: %(reason)s"
-msgstr "Ha fallado la migración de base de datos: %(reason)s"
-
-#, python-format
 msgid "Datastore regex %s did not match any datastores"
 msgstr ""
 "El valor regex %s del almacén de datos no concuerda con algún almacén de "
@@ -1071,9 +1064,6 @@ msgstr "Se han eliminado %(records)d registros de la tabla '%(table_name)s'."
 
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "Eliminar por fixed_range no está soportado por el NeutronManager"
-
-msgid "Dependency loop exists in database migrations"
-msgstr "Existe una dependencia de bucle en migraciones de base de datos"
 
 #, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
@@ -4663,10 +4653,6 @@ msgstr "Acción desconocida"
 msgid "Unknown action %s"
 msgstr "Acción desconocida %s"
 
-#, python-format
-msgid "Unknown alembic cmd %s"
-msgstr "comando alambico %s desconocido"
-
 msgid "Unknown argument : port"
 msgstr "Argumento desconocido: puerto"
 
@@ -5192,9 +5178,6 @@ msgstr "La entidad de evento contiene objetos no soportados: %s"
 msgid "event entity requires key %(key)s"
 msgstr "La entidad de evento requiere clave %(key)s"
 
-msgid "expand phase still has operations that need to be executed"
-msgstr "La fase de expansión aún necesita ejecutar algunas operaciones"
-
 #, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "falló al generar huella digital X509. Mensaje de error: %s"
@@ -5334,9 +5317,6 @@ msgstr "memcached_servers sin definir"
 
 msgid "memory"
 msgstr "memoria"
-
-msgid "migrate phase still has operations that need to be executed"
-msgstr "La fase de migración aún necesita ejecutar algunas operaciones"
 
 msgid "min_count must be <= max_count"
 msgstr "min_count debe ser <= max_count "

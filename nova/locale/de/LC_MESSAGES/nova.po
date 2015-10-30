@@ -15,9 +15,9 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev61\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-10-30 06:16+0000\n"
 "PO-Revision-Date: 2015-09-29 12:26+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language: de\n"
@@ -761,9 +761,6 @@ msgstr ""
 "Rootdatenträger kann nicht verkleinert werden. Aktuelle Größe: "
 "%(curr_root_gb)s GB. Angeforderte Größe: %(new_root_gb)s GB"
 
-msgid "Cannot run 'db sync' until 'db contract' is run"
-msgstr "Kann 'db sync' unter 'db contract' nicht starten, da es bereits läuft"
-
 msgid "Cannot run any more instances of this type."
 msgstr "Es können keine Instanzen dieses Typs mehr ausgeführt werden."
 
@@ -1078,10 +1075,6 @@ msgid "DNS2"
 msgstr "DNS2"
 
 #, python-format
-msgid "Database migration failed: %(reason)s"
-msgstr "Datenbankmigration fehlgeschlagen: %(reason)s"
-
-#, python-format
 msgid "Datastore regex %s did not match any datastores"
 msgstr "Datenspeicher-regex %s stimmt mit keinem Datenspeicher überein"
 
@@ -1102,9 +1095,6 @@ msgstr "%(records)d Datensätze aus Tabelle '%(table_name)s' gelöscht."
 
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "Löschen über fixed_range wird von NeutronManager nicht unterstützt"
-
-msgid "Dependency loop exists in database migrations"
-msgstr "Es existiert eine Abhängigkeitsschleife in der Datenbankmigration"
 
 #, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
@@ -4764,10 +4754,6 @@ msgstr "Unbekannte Aktion"
 msgid "Unknown action %s"
 msgstr "Unbekannte Aktion %s"
 
-#, python-format
-msgid "Unknown alembic cmd %s"
-msgstr "Unbekanntes Alembic Kommando %s"
-
 msgid "Unknown argument : port"
 msgstr "Unbekanntes Argument : Port"
 
@@ -5306,9 +5292,6 @@ msgstr "Ereignisentität enthält nicht unterstützte Elemente: %s"
 msgid "event entity requires key %(key)s"
 msgstr "Ereignisentität erfordert Schlüssel %(key)s"
 
-msgid "expand phase still has operations that need to be executed"
-msgstr "Erweiterungsphase hat noch Aufgaben, die erledigt werden müssen"
-
 #, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "Generierung des X509 FIngerabdrucks fehlgeschlagen. Fehlermeldung: %s"
@@ -5452,9 +5435,6 @@ msgstr "'memcached_servers' nicht definiert"
 
 msgid "memory"
 msgstr "Speicher"
-
-msgid "migrate phase still has operations that need to be executed"
-msgstr "Migrationsphase hat noch Aufgaben, die erledigt werden müssen"
 
 msgid "min_count must be <= max_count"
 msgstr "'min_count' muss <= 'max_count' sein"

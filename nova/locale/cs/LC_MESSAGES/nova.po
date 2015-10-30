@@ -11,10 +11,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev61\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
-"PO-Revision-Date: 2015-10-16 09:25+0000\n"
+"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"PO-Revision-Date: 2015-10-29 11:17+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language: cs\n"
 "Language-Team: Czech\n"
@@ -717,9 +717,6 @@ msgstr ""
 "Nelze zmenšit velikost kořenového disku. Současná velikost: %(curr_root_gb)s "
 "GB. Požadovaná velikost: %(new_root_gb)s GB"
 
-msgid "Cannot run 'db sync' until 'db contract' is run"
-msgstr "Nelze spustit 'db sync' dokud nebude spuštěno 'db contract' "
-
 msgid "Cannot run any more instances of this type."
 msgstr "Již nelze spouštět další instance tohoto typu."
 
@@ -1014,10 +1011,6 @@ msgid "DNS2"
 msgstr "DNS2"
 
 #, python-format
-msgid "Database migration failed: %(reason)s"
-msgstr "Přesunutí databáze selhalo: %(reason)s"
-
-#, python-format
 msgid "Datastore regex %s did not match any datastores"
 msgstr ""
 "Regulární výraz datového úložiště %s neodpovídá žádným datovým úložištím"
@@ -1037,9 +1030,6 @@ msgstr "Smazáno %(records)d záznamů z tabulky '%(table_name)s'."
 
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "NeutronManager nepodporuje mazání pomocí rozsahu pevných ip adres"
-
-msgid "Dependency loop exists in database migrations"
-msgstr "Při přesunování databáze s vyskytla smyčka závislostí "
 
 #, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
@@ -3852,6 +3842,14 @@ msgstr "Některá pole jsou neplatná."
 msgid "Some required fields are missing"
 msgstr "Některá povinná pole chybí"
 
+#, python-format
+msgid ""
+"Something went wrong when deleting a volume snapshot: rebasing a "
+"%(protocol)s network disk using qemu-img has not been fully tested"
+msgstr ""
+"Při mazání snímku svazku se něco zvrtlo: Přeskládání síťového disku "
+"%(protocol)s pomocí qemu-img nebylo řádně ozkoušeno."
+
 msgid "Sort direction size exceeds sort key size"
 msgstr "Velikost směru řazení převyšuje velikost klíče řazení"
 
@@ -4588,10 +4586,6 @@ msgstr "Neznámá činnost"
 msgid "Unknown action %s"
 msgstr "Neznámá činnost %s"
 
-#, python-format
-msgid "Unknown alembic cmd %s"
-msgstr "Neznámý příkaz alembic %s"
-
 msgid "Unknown argument : port"
 msgstr "Neznámý argument : port"
 
@@ -5103,9 +5097,6 @@ msgstr "entita události obsahuje nepodporované položky: %s"
 msgid "event entity requires key %(key)s"
 msgstr "entita události vyžaduje klíč %(key)s"
 
-msgid "expand phase still has operations that need to be executed"
-msgstr "fáze rozšíření stále má nespuštěné operace"
-
 #, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "nelze vytvořit otisk X509. Chybová zpráva: %s"
@@ -5246,9 +5237,6 @@ msgstr "memcached_servers není zadáno"
 
 msgid "memory"
 msgstr "paměť"
-
-msgid "migrate phase still has operations that need to be executed"
-msgstr "fáze přesunutí stále má nespuštěné operace"
 
 msgid "min_count must be <= max_count"
 msgstr "min_count musí být <= max_count"

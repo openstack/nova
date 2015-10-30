@@ -26,9 +26,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev61\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-10-30 06:16+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language: zh_Hans_CN\n"
@@ -697,9 +697,6 @@ msgstr ""
 "不能调整根盘到更小的大小。当前大小：%(curr_root_gb)s GB。请求大小："
 "%(new_root_gb)s GB"
 
-msgid "Cannot run 'db sync' until 'db contract' is run"
-msgstr "在 'db contract'运行之前，不能运行 'db sync'"
-
 msgid "Cannot run any more instances of this type."
 msgstr "无法运行此类型的任何其他实例。"
 
@@ -980,10 +977,6 @@ msgid "DNS2"
 msgstr "DNS2"
 
 #, python-format
-msgid "Database migration failed: %(reason)s"
-msgstr "数据库迁移失败：%(reason)s"
-
-#, python-format
 msgid "Datastore regex %s did not match any datastores"
 msgstr "存储正则表达式%s没有匹配存储"
 
@@ -1002,9 +995,6 @@ msgstr "从表格 '%(table_name)s'删除%(records)d记录。"
 
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "不支持使用NeutronManager删除fixed_range"
-
-msgid "Dependency loop exists in database migrations"
-msgstr "在数据库迁移中，存在依赖循环"
 
 #, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
@@ -4378,10 +4368,6 @@ msgstr "未知操作"
 msgid "Unknown action %s"
 msgstr "操作 %s 未知"
 
-#, python-format
-msgid "Unknown alembic cmd %s"
-msgstr "未知命令cmd %s"
-
 msgid "Unknown argument : port"
 msgstr "未知参数：port"
 
@@ -4871,9 +4857,6 @@ msgstr "事件实体包含不支持的条目：%s"
 msgid "event entity requires key %(key)s"
 msgstr "事件实体需要关键字%(key)s"
 
-msgid "expand phase still has operations that need to be executed"
-msgstr "展开阶段仍然有需要执行的操作"
-
 #, python-format
 msgid "failed to generate X509 fingerprint. Error message: %s"
 msgstr "生成X509指纹失败。错误消息：%s"
@@ -5010,9 +4993,6 @@ msgstr "未定义 memcached_servers"
 
 msgid "memory"
 msgstr "内存"
-
-msgid "migrate phase still has operations that need to be executed"
-msgstr "迁移阶段仍然有需要执行的操作"
 
 msgid "min_count must be <= max_count"
 msgstr "min_count 必须小于或等于 max_count"

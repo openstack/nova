@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev61\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:30+0000\n"
-"PO-Revision-Date: 2015-10-20 07:52+0000\n"
+"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"PO-Revision-Date: 2015-10-29 11:18+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -1035,6 +1035,10 @@ msgstr "Přenos dat selhal"
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "Nelze získat přístup k plovoucím IP %s"
+
+#, python-format
+msgid "Unable to access floating IP for %s"
+msgstr "Nelze získat přístup k plovoucím IP pro %s"
 
 msgid "Unable to access the rescue disk"
 msgstr "Nelze získat přístup k záchrannému disku"
