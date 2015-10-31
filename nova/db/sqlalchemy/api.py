@@ -2048,6 +2048,8 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     # Filter the query
     query_prefix = _exact_instance_filter(query_prefix,
                                 filters, exact_match_filter_names)
+    if query_prefix is None:
+        return []
     query_prefix = _regex_instance_filter(query_prefix, filters)
     query_prefix = _tag_instance_filter(context, query_prefix, filters)
 
@@ -2212,6 +2214,8 @@ def _exact_instance_filter(query, filters, legal_keys):
                     query = query.filter(column_attr.any(key=k))
                     query = query.filter(column_attr.any(value=v))
         elif isinstance(value, (list, tuple, set, frozenset)):
+            if not value:
+                return None  # empty IN-predicate; short circuit
             # Looking for values in a list; apply to query directly
             column_attr = getattr(model, key)
             query = query.filter(column_attr.in_(value))
@@ -2393,6 +2397,8 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
 
 
 def instance_get_all_by_grantee_security_groups(context, group_ids):
+    if not group_ids:
+        return []
     return _instances_fill_metadata(context,
         _instance_get_all_query(context).
             join(models.Instance.security_groups).
@@ -5612,13 +5618,14 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                     query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
                         soft_delete(synchronize_session=False)
 
-                query = \
-                    query.filter(models.AggregateMetadata.key.in_(all_keys))
                 already_existing_keys = set()
-                for meta_ref in query.all():
-                    key = meta_ref.key
-                    meta_ref.update({"value": metadata[key]})
-                    already_existing_keys.add(key)
+                if all_keys:
+                    query = query.filter(
+                        models.AggregateMetadata.key.in_(all_keys))
+                    for meta_ref in query.all():
+                        key = meta_ref.key
+                        meta_ref.update({"value": metadata[key]})
+                        already_existing_keys.add(key)
 
                 new_entries = []
                 for key, value in metadata.items():
@@ -6397,6 +6404,8 @@ def pci_device_get_all_by_instance_uuid(context, instance_uuid):
 
 @main_context_manager.reader
 def _instance_pcidevs_get_multi(context, instance_uuids):
+    if not instance_uuids:
+        return []
     return model_query(context, models.PciDevice).\
         filter_by(status='allocated').\
         filter(models.PciDevice.instance_uuid.in_(instance_uuids))
