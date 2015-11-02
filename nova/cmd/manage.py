@@ -107,6 +107,17 @@ def args(*args, **kwargs):
     return _decorator
 
 
+def deprecate(msg):
+    """Decorator which print the deprecation message before the decorated
+    function is called
+    """
+    @decorator.decorator
+    def _deprecate(f, *args, **kwargs):
+        print(msg, file=sys.stderr)
+        return f(*args, **kwargs)
+    return _deprecate
+
+
 def param2id(object_id):
     """Helper function to convert various volume id types to internal id.
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
@@ -701,6 +712,12 @@ class VmCommands(object):
 class ServiceCommands(object):
     """Enable and disable running services."""
 
+    description = ('DEPRECATED: Use the nova service-* commands from '
+                   'python-novaclient instead or the os-services REST '
+                   'resource. The service subcommand will be '
+                   'removed in the 14.0 release.')
+
+    @deprecate(description)
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
     def list(self, host=None, service=None):
@@ -733,6 +750,7 @@ class ServiceCommands(object):
                                   svc['availability_zone'], active, art,
                                   svc['updated_at']))
 
+    @deprecate(description)
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
     def enable(self, host, service):
@@ -747,6 +765,7 @@ class ServiceCommands(object):
         print((_("Service %(service)s on host %(host)s enabled.") %
                {'service': service, 'host': host}))
 
+    @deprecate(description)
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
     def disable(self, host, service):
@@ -815,6 +834,7 @@ class ServiceCommands(object):
 
         return {'resource': resource, 'usage': usage}
 
+    @deprecate(description)
     @args('--host', metavar='<host>', help='Host')
     def describe_resource(self, host):
         """Describes cpu/memory/hdd info for host.
