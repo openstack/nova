@@ -23,7 +23,6 @@ from oslo_utils import timeutils
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
-from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova.i18n import _LE, _LW
@@ -83,8 +82,12 @@ _NO_DATA_SENTINEL = object()
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
-class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
-                    base.NovaObjectDictCompat):
+@base.NovaObjectRegistry.register
+class Instance(base.NovaPersistentObject, base.NovaObject,
+               base.NovaObjectDictCompat):
+    # Version 2.0: Initial version
+    VERSION = '2.0'
+
     fields = {
         'id': fields.IntegerField(),
 
@@ -185,7 +188,7 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
     obj_extra_fields = ['name']
 
     def __init__(self, *args, **kwargs):
-        super(_BaseInstance, self).__init__(*args, **kwargs)
+        super(Instance, self).__init__(*args, **kwargs)
         self._reset_metadata_tracking()
 
     def _reset_metadata_tracking(self, fields=None):
@@ -197,12 +200,12 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                                    'metadata' in self else {})
 
     def obj_reset_changes(self, fields=None, recursive=False):
-        super(_BaseInstance, self).obj_reset_changes(fields,
-                                                     recursive=recursive)
+        super(Instance, self).obj_reset_changes(fields,
+                                                recursive=recursive)
         self._reset_metadata_tracking(fields=fields)
 
     def obj_what_changed(self):
-        changes = super(_BaseInstance, self).obj_what_changed()
+        changes = super(Instance, self).obj_what_changed()
         if 'metadata' in self and self.metadata != self._orig_metadata:
             changes.add('metadata')
         if 'system_metadata' in self and (self.system_metadata !=
@@ -212,8 +215,8 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
 
     @classmethod
     def _obj_from_primitive(cls, context, objver, primitive):
-        self = super(_BaseInstance, cls)._obj_from_primitive(context, objver,
-                                                             primitive)
+        self = super(Instance, cls)._obj_from_primitive(context, objver,
+                                                        primitive)
         self._reset_metadata_tracking()
         return self
 
@@ -275,8 +278,6 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                 instance.deleted = db_inst['deleted'] == db_inst['id']
             elif field == 'cleaned':
                 instance.cleaned = db_inst['cleaned'] == 1
-            elif field == 'scheduled_at':
-                instance.scheduled_at = None
             else:
                 instance[field] = db_inst[field]
 
@@ -391,9 +392,6 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
         updates = self.obj_get_changes()
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
-        if 'scheduled_at' in updates:
-            # NOTE(sbiswas7): 'scheduled_at' is not present in models.
-            del updates['scheduled_at']
         if 'security_groups' in updates:
             updates['security_groups'] = [x.name for x in
                                           updates['security_groups']]
@@ -600,10 +598,6 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
 
         updates = {}
         changes = self.obj_what_changed()
-        if 'scheduled_at' in changes:
-            # NOTE(sbiswas7): Since 'scheduled_at' is removed from models,
-            # we need to discard it.
-            changes.remove('scheduled_at')
 
         for field in self.fields:
             # NOTE(danms): For object fields, we construct and call a
@@ -645,13 +639,6 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                 updates['cleaned'] = 0
 
         if expected_task_state is not None:
-            if (self.VERSION == '1.9' and
-                    expected_task_state == 'image_snapshot'):
-                # NOTE(danms): Icehouse introduced a pending state which
-                # Havana doesn't know about. If we're an old instance,
-                # tolerate the pending state as well
-                expected_task_state = [
-                    expected_task_state, 'image_snapshot_pending']
             updates['expected_task_state'] = expected_task_state
         if expected_vm_state is not None:
             updates['expected_vm_state'] = expected_vm_state
@@ -752,23 +739,9 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
                     self._context, self.uuid)
 
     def _load_flavor(self):
-        try:
-            instance = self.__class__.get_by_uuid(
-                self._context, uuid=self.uuid,
-                expected_attrs=['flavor', 'system_metadata'])
-        except exception.InstanceNotFound:
-            # NOTE(danms): Before we had instance types in system_metadata,
-            # we just looked up the instance_type_id. Since we could still
-            # have an instance in the database that doesn't have either
-            # newer setup, mirror the original behavior here if the instance
-            # is deleted
-            if not self.deleted:
-                raise
-            self.flavor = objects.Flavor.get_by_id(self._context,
-                                                   self.instance_type_id)
-            self.old_flavor = None
-            self.new_flavor = None
-            return
+        instance = self.__class__.get_by_uuid(
+            self._context, uuid=self.uuid,
+            expected_attrs=['flavor', 'system_metadata'])
 
         # NOTE(danms): Orphan the instance to make sure we don't lazy-load
         # anything below
@@ -973,118 +946,6 @@ class _BaseInstance(base.NovaPersistentObject, base.NovaObject,
         finally:
             self._normalize_cell_name()
 
-    @classmethod
-    def obj_name(cls):
-        return 'Instance'
-
-
-@base.NovaObjectRegistry.register
-class InstanceV1(_BaseInstance):
-    # Version 1.0: Initial version
-    # Version 1.1: Added info_cache
-    # Version 1.2: Added security_groups
-    # Version 1.3: Added expected_vm_state and admin_state_reset to
-    #              save()
-    # Version 1.4: Added locked_by and deprecated locked
-    # Version 1.5: Added cleaned
-    # Version 1.6: Added pci_devices
-    # Version 1.7: String attributes updated to support unicode
-    # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
-    # Version 1.9: Make uuid a non-None real string
-    # Version 1.10: Added use_slave to refresh and get_by_uuid
-    # Version 1.11: Update instance from database during destroy
-    # Version 1.12: Added ephemeral_key_uuid
-    # Version 1.13: Added delete_metadata_key()
-    # Version 1.14: Added numa_topology
-    # Version 1.15: PciDeviceList 1.1
-    # Version 1.16: Added pci_requests
-    # Version 1.17: Added tags
-    # Version 1.18: Added flavor, old_flavor, new_flavor, will use
-    #               PciDeviceList version 1.2
-    # Version 1.19: Added vcpu_model
-    # Version 1.20: Added ec2_ids
-    # Version 1.21: TagList 1.1
-    # Version 1.22: InstanceNUMATopology 1.2
-    # Version 1.23: Added migration_context
-    VERSION = '1.23'
-
-    fields = {
-        # NOTE(sbiswas7): this field is depcrecated,
-        # will be removed in instance v2.0
-        'scheduled_at': fields.DateTimeField(nullable=True),
-    }
-
-    obj_relationships = {
-        'fault': [('1.0', '1.0'), ('1.13', '1.2')],
-        'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
-        'security_groups': [('1.2', '1.0')],
-        'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
-        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1'), ('1.22', '1.2')],
-        'pci_requests': [('1.16', '1.1')],
-        'tags': [('1.17', '1.0'), ('1.21', '1.1')],
-        'flavor': [('1.18', '1.1')],
-        'old_flavor': [('1.18', '1.1')],
-        'new_flavor': [('1.18', '1.1')],
-        'vcpu_model': [('1.19', '1.0')],
-        'ec2_ids': [('1.20', '1.0')],
-        'migration_context': [('1.23', '1.0')],
-    }
-
-    def obj_make_compatible(self, primitive, target_version):
-        super(InstanceV1, self).obj_make_compatible(primitive, target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
-        unicode_attributes = ['user_id', 'project_id', 'image_ref',
-                              'kernel_id', 'ramdisk_id', 'hostname',
-                              'key_name', 'key_data', 'host', 'node',
-                              'user_data', 'availability_zone',
-                              'display_name', 'display_description',
-                              'launched_on', 'locked_by', 'os_type',
-                              'architecture', 'vm_mode', 'root_device_name',
-                              'default_ephemeral_device',
-                              'default_swap_device', 'config_drive',
-                              'cell_name']
-        if target_version < (1, 7):
-            # NOTE(danms): Before 1.7, we couldn't handle unicode in
-            # string fields, so squash it here
-            for field in [x for x in unicode_attributes if x in primitive
-                          and primitive[x] is not None]:
-                primitive[field] = primitive[field].encode('ascii', 'replace')
-        if target_version < (1, 18):
-            if 'system_metadata' in primitive:
-                for ftype in ('', 'old_', 'new_'):
-                    attrname = '%sflavor' % ftype
-                    primitive.pop(attrname, None)
-                    if self[attrname] is not None:
-                        flavors.save_flavor_info(
-                            primitive['system_metadata'],
-                            getattr(self, attrname), ftype)
-
-
-@base.NovaObjectRegistry.register
-class InstanceV2(_BaseInstance):
-    # Version 2.0: Initial version
-    VERSION = '2.0'
-
-    def obj_make_compatible(self, primitive, target_version):
-        if target_version.startswith('1.'):
-            # NOTE(danms): Special case to backport to 1.x. Serialize
-            # ourselves, change the version, deserialize that, and get
-            # that to continue the backport of this primitive to
-            # whatever 1.x version was actually requested.  We can get
-            # away with this because InstanceV2 is structurally a
-            # subset of V1.
-            # FIXME(danms): Remove this when we drop v1.x compatibility
-            my_prim = self.obj_to_primitive()
-            my_prim['nova_object.version'] = InstanceV1.VERSION
-            instv1 = InstanceV1.obj_from_primitive(my_prim,
-                                                   context=self._context)
-            return instv1.obj_make_compatible(primitive, target_version)
-        super(InstanceV2, self).obj_make_compatible(primitive, target_version)
-
-
-# NOTE(danms): For the unit tests...
-Instance = InstanceV2
-
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     get_fault = expected_attrs and 'fault' in expected_attrs
@@ -1099,7 +960,7 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
             if fault.instance_uuid not in inst_faults:
                 inst_faults[fault.instance_uuid] = fault
 
-    inst_cls = inst_list.NOVA_OBJ_INSTANCE_CLS
+    inst_cls = objects.Instance
 
     inst_list.objects = []
     for db_inst in db_inst_list:
@@ -1113,7 +974,11 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
-class _BaseInstanceList(base.ObjectListBase, base.NovaObject):
+@base.NovaObjectRegistry.register
+class InstanceList(base.ObjectListBase, base.NovaObject):
+    # Version 2.0: Initial Version
+    VERSION = '2.0'
+
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
     }
@@ -1260,71 +1125,3 @@ class _BaseInstanceList(base.ObjectListBase, base.NovaObject):
             instance.obj_reset_changes(['fault'])
 
         return faults_by_uuid.keys()
-
-    @classmethod
-    def obj_name(cls):
-        return 'InstanceList'
-
-
-@base.NovaObjectRegistry.register
-class InstanceListV1(_BaseInstanceList):
-    # Version 1.0: Initial version
-    # Version 1.1: Added use_slave to get_by_host
-    #              Instance <= version 1.9
-    # Version 1.2: Instance <= version 1.11
-    # Version 1.3: Added use_slave to get_by_filters
-    # Version 1.4: Instance <= version 1.12
-    # Version 1.5: Added method get_active_by_window_joined.
-    # Version 1.6: Instance <= version 1.13
-    # Version 1.7: Added use_slave to get_active_by_window_joined
-    # Version 1.8: Instance <= version 1.14
-    # Version 1.9: Instance <= version 1.15
-    # Version 1.10: Instance <= version 1.16
-    # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
-    # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
-    # Version 1.13: Instance <= version 1.17
-    # Version 1.14: Instance <= version 1.18
-    # Version 1.15: Instance <= version 1.19
-    # Version 1.16: Added get_all() method
-    # Version 1.17: Instance <= version 1.20
-    # Version 1.18: Instance <= version 1.21
-    # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
-    # Version 1.20: Instance <= version 1.22
-    # Version 1.21: New method get_by_grantee_security_group_ids()
-    # Version 1.22: Instance <= version 1.23
-    VERSION = '1.22'
-
-    NOVA_OBJ_INSTANCE_CLS = InstanceV1
-
-    # NOTE(danms): Instance was at 1.9 before we added this
-    obj_relationships = {
-        'objects': [('1.1', '1.9'), ('1.2', '1.11'), ('1.3', '1.11'),
-                    ('1.4', '1.12'), ('1.5', '1.12'), ('1.6', '1.13'),
-                    ('1.7', '1.13'), ('1.8', '1.14'), ('1.9', '1.15',),
-                    ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
-                    ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
-                    ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
-                    ('1.19', '1.21'), ('1.20', '1.22'), ('1.21', '1.22'),
-                    ('1.22', '1.23')],
-    }
-
-
-@base.NovaObjectRegistry.register
-class InstanceListV2(_BaseInstanceList):
-    # Version 2.0: Initial version
-    VERSION = '2.0'
-
-    NOVA_OBJ_INSTANCE_CLS = InstanceV2
-
-    def obj_make_compatible(self, primitive, target_version):
-        if target_version.startswith('1.'):
-            my_prim = self.obj_to_primitive()
-            my_prim['nova_object.version'] = InstanceListV1.VERSION
-            instv1 = InstanceListV1.obj_from_primitive(my_prim,
-                                                       context=self._context)
-            return instv1.obj_make_compatible(primitive, target_version)
-        super(InstanceListV2, self).obj_make_compatible(primitive,
-                                                        target_version)
-
-# NOTE(danms): For the unit tests...
-InstanceList = InstanceListV2
