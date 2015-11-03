@@ -134,18 +134,20 @@ class LimiterTest(test.NoDBTestCase):
 
     def test_limiter_custom_max_limit(self):
         # Test a max_limit other than 1000.
-        items = range(2000)
+        max_limit = 2000
+        self.flags(osapi_max_limit=max_limit)
+        items = range(max_limit)
         req = webob.Request.blank('/?offset=1&limit=3')
         self.assertEqual(
-            common.limited(items, req, max_limit=2000), items[1:4])
+            common.limited(items, req), items[1:4])
         req = webob.Request.blank('/?offset=3&limit=0')
         self.assertEqual(
-            common.limited(items, req, max_limit=2000), items[3:])
+            common.limited(items, req), items[3:])
         req = webob.Request.blank('/?offset=3&limit=2500')
         self.assertEqual(
-            common.limited(items, req, max_limit=2000), items[3:])
+            common.limited(items, req), items[3:])
         req = webob.Request.blank('/?offset=3000&limit=10')
-        self.assertEqual(0, len(common.limited(items, req, max_limit=2000)))
+        self.assertEqual(0, len(common.limited(items, req)))
 
     def test_limiter_negative_limit(self):
         # Test a negative limit.
