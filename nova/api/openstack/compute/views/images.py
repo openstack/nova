@@ -14,10 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_utils import timeutils
-
 from nova.api.openstack import common
 from nova.image import glance
+from nova import utils
 
 
 class ViewBuilder(common.ViewBuilder):
@@ -135,7 +134,7 @@ class ViewBuilder(common.ViewBuilder):
     def _format_date(dt):
         """Return standard format for a given datetime object."""
         if dt is not None:
-            return timeutils.isotime(dt)
+            return utils.isotime(dt)
 
     @staticmethod
     def _get_status(image):

@@ -20,6 +20,7 @@ from nova import objects
 from nova.scheduler.filters import trusted_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
+from nova import utils
 
 CONF = cfg.CONF
 
@@ -113,7 +114,7 @@ class TestTrustedFilter(test.NoDBTestCase):
     def test_trusted_filter_trusted_and_trusted_passes(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node1",
                                    "trust_lvl": "trusted",
-                                   "vtime": timeutils.isotime()}]}
+                                   "vtime": utils.isotime()}]}
         req_mock.return_value = requests.codes.OK, oat_data
 
         extra_specs = {'trust:trusted_host': 'trusted'}
@@ -127,7 +128,7 @@ class TestTrustedFilter(test.NoDBTestCase):
     def test_trusted_filter_trusted_and_untrusted_fails(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node1",
                                     "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
+                                    "vtime": utils.isotime()}]}
         req_mock.return_value = requests.codes.OK, oat_data
         extra_specs = {'trust:trusted_host': 'trusted'}
         filter_properties = {'context': mock.sentinel.ctx,
@@ -139,7 +140,7 @@ class TestTrustedFilter(test.NoDBTestCase):
     def test_trusted_filter_untrusted_and_trusted_fails(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node",
                                     "trust_lvl": "trusted",
-                                    "vtime": timeutils.isotime()}]}
+                                    "vtime": utils.isotime()}]}
         req_mock.return_value = requests.codes.OK, oat_data
         extra_specs = {'trust:trusted_host': 'untrusted'}
         filter_properties = {'context': mock.sentinel.ctx,
@@ -151,7 +152,7 @@ class TestTrustedFilter(test.NoDBTestCase):
     def test_trusted_filter_untrusted_and_untrusted_passes(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node1",
                                     "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
+                                    "vtime": utils.isotime()}]}
         req_mock.return_value = requests.codes.OK, oat_data
         extra_specs = {'trust:trusted_host': 'untrusted'}
         filter_properties = {'context': mock.sentinel.ctx,
@@ -163,7 +164,7 @@ class TestTrustedFilter(test.NoDBTestCase):
     def test_trusted_filter_update_cache(self, req_mock):
         oat_data = {"hosts": [{"host_name": "node1",
                                     "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
+                                    "vtime": utils.isotime()}]}
 
         req_mock.return_value = requests.codes.OK, oat_data
         extra_specs = {'trust:trusted_host': 'untrusted'}
@@ -247,10 +248,12 @@ class TestTrustedFilter(test.NoDBTestCase):
             req_mock):
         oat_data = {"hosts": [{"host_name": "host1",
                                     "trust_lvl": "trusted",
-                                    "vtime": timeutils.strtime(fmt="%c")},
+                                    "vtime": timeutils.utcnow().strftime(
+                                        "%c")},
                                    {"host_name": "host2",
                                     "trust_lvl": "trusted",
-                                    "vtime": timeutils.strtime(fmt="%D")},
+                                    "vtime": timeutils.utcnow().strftime(
+                                        "%D")},
                                     # This is just a broken date to ensure that
                                     # we're not just arbitrarily accepting any
                                     # date format.

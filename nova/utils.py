@@ -1539,3 +1539,21 @@ def delete_cached_file(filename):
 
     if filename in _FILE_CACHE:
         del _FILE_CACHE[filename]
+
+
+def isotime(at=None):
+    """Current time as ISO string,
+    as timeutils.isotime() is deprecated
+
+    :returns: Current time in ISO format
+    """
+    if not at:
+        at = timeutils.utcnow()
+    date_string = at.strftime("%Y-%m-%dT%H:%M:%S")
+    tz = at.tzinfo.tzname(None) if at.tzinfo else 'UTC'
+    date_string += ('Z' if tz == 'UTC' else tz)
+    return date_string
+
+
+def strtime(at):
+    return at.strftime("%Y-%m-%dT%H:%M:%S.%f")

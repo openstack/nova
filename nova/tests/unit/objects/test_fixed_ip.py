@@ -25,7 +25,7 @@ from nova.objects import fixed_ip
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_objects
-
+from nova import utils
 
 fake_fixed_ip = {
     'created_at': None,
@@ -210,7 +210,7 @@ class _TestFixedIPObject(object):
     def test_disassociate_all_by_timeout(self, disassociate):
         now = timeutils.utcnow()
         now_tz = timeutils.parse_isotime(
-            timeutils.isotime(now)).replace(
+            utils.isotime(now)).replace(
                 tzinfo=iso8601.iso8601.Utc())
         disassociate.return_value = 123
         result = fixed_ip.FixedIP.disassociate_all_by_timeout(self.context,

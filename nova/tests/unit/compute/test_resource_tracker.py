@@ -1194,8 +1194,7 @@ class ComputeMonitorTestCase(BaseTestCase):
 
         expected_metrics = [
             {
-                'timestamp': timeutils.strtime(
-                    FakeCPUMonitor.NOW_TS),
+                'timestamp': FakeCPUMonitor.NOW_TS.isoformat(),
                 'name': 'cpu.frequency',
                 'value': 100,
                 'source': 'FakeCPUMonitor'
