@@ -33,6 +33,7 @@ from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
+from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
 from nova.virt.xenapi.client import session as xenapi_session
@@ -320,10 +321,11 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops.firewall_driver,
                                  'apply_instance_filter')
         self.mox.StubOutWithMock(self.vmops, '_update_last_dom_id')
+        self.mox.StubOutWithMock(self.vmops._session, 'call_xenapi')
 
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
-                    attach_pci_dev=False):
+                    attach_pci_dev=False, neutron_exception=False):
         self._stub_out_common()
 
         instance = {"name": "dummy", "uuid": "fake_uuid"}
@@ -416,38 +418,55 @@ class SpawnTestCase(VMOpsTestBase):
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
-        self.vmops._create_vifs(instance, vm_ref, network_info)
-        self.vmops.firewall_driver.setup_basic_filtering(instance,
-                network_info).AndRaise(NotImplementedError)
-        self.vmops.firewall_driver.prepare_instance_filter(instance,
-                                                           network_info)
-        step += 1
-        self.vmops._update_instance_progress(context, instance, step, steps)
-
-        if rescue:
-            self.vmops._attach_orig_disks(instance, vm_ref)
+        if neutron_exception:
+            events = [('network-vif-plugged', 1)]
+            self.vmops._get_neutron_events(network_info,
+                                           True, True).AndReturn(events)
+            self.mox.StubOutWithMock(self.vmops, '_neutron_failed_callback')
+            self.mox.StubOutWithMock(self.vmops._virtapi,
+                                     'wait_for_instance_event')
+            self.vmops._virtapi.wait_for_instance_event(instance, events,
+                deadline=300,
+                error_callback=self.vmops._neutron_failed_callback).\
+                AndRaise(exception.VirtualInterfaceCreateException)
+        else:
+            self.vmops._create_vifs(instance, vm_ref, network_info)
+            self.vmops.firewall_driver.setup_basic_filtering(instance,
+                    network_info).AndRaise(NotImplementedError)
+            self.vmops.firewall_driver.prepare_instance_filter(instance,
+                                                               network_info)
             step += 1
-            self.vmops._update_instance_progress(context, instance, step,
-                                                 steps)
-        self.vmops._start(instance, vm_ref)
-        self.vmops._wait_for_instance_to_start(instance, vm_ref)
-        self.vmops._update_last_dom_id(vm_ref)
-        step += 1
-        self.vmops._update_instance_progress(context, instance, step, steps)
+            self.vmops._update_instance_progress(context, instance,
+                                                 step, steps)
 
-        self.vmops._configure_new_instance_with_agent(instance, vm_ref,
-                injected_files, admin_password)
-        self.vmops._remove_hostname(instance, vm_ref)
-        step += 1
-        self.vmops._update_instance_progress(context, instance, step, steps)
+            if rescue:
+                self.vmops._attach_orig_disks(instance, vm_ref)
+                step += 1
+                self.vmops._update_instance_progress(context, instance, step,
+                                                     steps)
+            start_pause = True
+            self.vmops._start(instance, vm_ref, start_pause=start_pause)
+            step += 1
+            self.vmops._update_instance_progress(context, instance,
+                                                 step, steps)
+            self.vmops.firewall_driver.apply_instance_filter(instance,
+                                                             network_info)
+            step += 1
+            self.vmops._update_instance_progress(context, instance,
+                                                step, steps)
+            self.vmops._session.call_xenapi('VM.unpause', vm_ref)
+            self.vmops._wait_for_instance_to_start(instance, vm_ref)
+            self.vmops._update_last_dom_id(vm_ref)
+            self.vmops._configure_new_instance_with_agent(instance, vm_ref,
+                    injected_files, admin_password)
+            self.vmops._remove_hostname(instance, vm_ref)
+            step += 1
+            last_call = self.vmops._update_instance_progress(context, instance,
+                                                 step, steps)
 
-        self.vmops.firewall_driver.apply_instance_filter(instance,
-                                                         network_info)
-        step += 1
-        last_call = self.vmops._update_instance_progress(context, instance,
-                                                         step, steps)
         if throw_exception:
             last_call.AndRaise(throw_exception)
+        if throw_exception or neutron_exception:
             self.vmops._destroy(instance, vm_ref, network_info=network_info)
             vm_utils.destroy_kernel_ramdisk(self.vmops._session, instance,
                                             kernel_file, ramdisk_file)
@@ -474,11 +493,25 @@ class SpawnTestCase(VMOpsTestBase):
         self.assertRaises(test.TestingException, self._test_spawn,
                           throw_exception=test.TestingException())
 
+    def test_spawn_with_neutron(self):
+        self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')
+        events = [('network-vif-plugged', 1)]
+        network_info = "net_info"
+        self.vmops._get_neutron_events(network_info,
+                                    True, True).AndReturn(events)
+        self.mox.StubOutWithMock(self.vmops,
+                                 '_neutron_failed_callback')
+        self._test_spawn()
+
+    def test_spawn_with_neutron_exception(self):
+        self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')
+        self.assertRaises(exception.VirtualInterfaceCreateException,
+                          self._test_spawn, neutron_exception=True)
+
     def _test_finish_migration(self, power_on=True, resize_instance=True,
                                throw_exception=None, booted_from_volume=False):
         self._stub_out_common()
         self.mox.StubOutWithMock(volumeops.VolumeOps, "connect_volume")
-        self.mox.StubOutWithMock(self.vmops._session, 'call_xenapi')
         self.mox.StubOutWithMock(vm_utils, "import_all_migrated_disks")
         self.mox.StubOutWithMock(self.vmops, "_attach_mapped_block_devices")
 
@@ -546,12 +579,14 @@ class SpawnTestCase(VMOpsTestBase):
                                                            network_info)
 
         if power_on:
-            self.vmops._start(instance, vm_ref)
-            self.vmops._wait_for_instance_to_start(instance, vm_ref)
-            self.vmops._update_last_dom_id(vm_ref)
+            self.vmops._start(instance, vm_ref, start_pause=True)
 
         self.vmops.firewall_driver.apply_instance_filter(instance,
                                                          network_info)
+        if power_on:
+            self.vmops._session.call_xenapi('VM.unpause', vm_ref)
+            self.vmops._wait_for_instance_to_start(instance, vm_ref)
+            self.vmops._update_last_dom_id(vm_ref)
 
         last_call = self.vmops._update_instance_progress(context, instance,
                                                         step=5, total_steps=5)
@@ -708,6 +743,57 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._configure_new_instance_with_agent(instance, vm_ref,
                 None, None)
+
+    @mock.patch.object(utils, 'is_neutron', return_value=True)
+    def test_get_neutron_event(self, mock_is_neutron):
+        network_info = [{"active": False, "id": 1},
+                        {"active": True, "id": 2},
+                        {"active": False, "id": 3},
+                        {"id": 4}]
+        power_on = True
+        first_boot = True
+        events = self.vmops._get_neutron_events(network_info,
+                                                power_on, first_boot)
+        self.assertEqual("network-vif-plugged", events[0][0])
+        self.assertEqual(1, events[0][1])
+        self.assertEqual("network-vif-plugged", events[1][0])
+        self.assertEqual(3, events[1][1])
+
+    @mock.patch.object(utils, 'is_neutron', return_value=False)
+    def test_get_neutron_event_not_neutron_network(self, mock_is_neutron):
+        network_info = [{"active": False, "id": 1},
+                        {"active": True, "id": 2},
+                        {"active": False, "id": 3},
+                        {"id": 4}]
+        power_on = True
+        first_boot = True
+        events = self.vmops._get_neutron_events(network_info,
+                                                power_on, first_boot)
+        self.assertEqual([], events)
+
+    @mock.patch.object(utils, 'is_neutron', return_value=True)
+    def test_get_neutron_event_power_off(self, mock_is_neutron):
+        network_info = [{"active": False, "id": 1},
+                        {"active": True, "id": 2},
+                        {"active": False, "id": 3},
+                        {"id": 4}]
+        power_on = False
+        first_boot = True
+        events = self.vmops._get_neutron_events(network_info,
+                                                power_on, first_boot)
+        self.assertEqual([], events)
+
+    @mock.patch.object(utils, 'is_neutron', return_value=True)
+    def test_get_neutron_event_not_first_boot(self, mock_is_neutron):
+        network_info = [{"active": False, "id": 1},
+                        {"active": True, "id": 2},
+                        {"active": False, "id": 3},
+                        {"id": 4}]
+        power_on = True
+        first_boot = False
+        events = self.vmops._get_neutron_events(network_info,
+                                                power_on, first_boot)
+        self.assertEqual([], events)
 
 
 class DestroyTestCase(VMOpsTestBase):

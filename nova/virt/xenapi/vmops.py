@@ -22,6 +22,7 @@ import functools
 import time
 import zlib
 
+import eventlet
 from eventlet import greenthread
 import netaddr
 from oslo_config import cfg
@@ -321,7 +322,8 @@ class VMOps(object):
                     rescue=False, power_on=power_on, resize=resize_instance,
                     completed_callback=completed_callback)
 
-    def _start(self, instance, vm_ref=None, bad_volumes_callback=None):
+    def _start(self, instance, vm_ref=None, bad_volumes_callback=None,
+               start_pause=False):
         """Power on a VM instance."""
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug("Starting instance", instance=instance)
@@ -339,7 +341,7 @@ class VMOps(object):
 
         self._session.call_xenapi('VM.start_on', vm_ref,
                                   self._session.host_ref,
-                                  False, False)
+                                  start_pause, False)
 
         # Allow higher-layers a chance to detach bad-volumes as well (in order
         # to cleanup BDM entries and detach in Cinder)
@@ -548,14 +550,13 @@ class VMOps(object):
             self._prepare_instance_filter(instance, network_info)
 
         @step
-        def boot_instance_step(undo_mgr, vm_ref):
+        def start_paused_step(undo_mgr, vm_ref):
             if power_on:
-                self._start(instance, vm_ref)
-                self._wait_for_instance_to_start(instance, vm_ref)
-                self._update_last_dom_id(vm_ref)
+                self._start(instance, vm_ref, start_pause=True)
 
         @step
-        def configure_booted_instance_step(undo_mgr, vm_ref):
+        def boot_and_configure_instance_step(undo_mgr, vm_ref):
+            self._unpause_and_wait(vm_ref, instance, power_on)
             if first_boot:
                 self._configure_new_instance_with_agent(instance, vm_ref,
                         injected_files, admin_password)
@@ -583,21 +584,66 @@ class VMOps(object):
             attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type)
 
             inject_instance_data_step(undo_mgr, vm_ref, vdis)
-            setup_network_step(undo_mgr, vm_ref)
 
-            if rescue:
-                attach_orig_disks_step(undo_mgr, vm_ref)
+            # if use neutron, prepare waiting event from neutron
+            # first_boot is True in new booted instance
+            # first_boot is False in migration and we don't waiting
+            # for neutron event regardless of whether or not it is
+            # migrated to another host, if unplug VIFs locally, the
+            # port status may not changed in neutron side and we
+            # cannot get the vif plug event from neturon
+            timeout = CONF.vif_plugging_timeout
+            events = self._get_neutron_events(network_info,
+                                              power_on, first_boot)
+            try:
+                with self._virtapi.wait_for_instance_event(
+                    instance, events, deadline=timeout,
+                    error_callback=self._neutron_failed_callback):
+                    LOG.debug("wait for instance event:%s", events)
+                    setup_network_step(undo_mgr, vm_ref)
+                    if rescue:
+                        attach_orig_disks_step(undo_mgr, vm_ref)
+                    start_paused_step(undo_mgr, vm_ref)
+            except eventlet.timeout.Timeout:
+                self._handle_neutron_event_timeout(instance, undo_mgr)
 
-            boot_instance_step(undo_mgr, vm_ref)
-
-            configure_booted_instance_step(undo_mgr, vm_ref)
             apply_security_group_filters_step(undo_mgr)
-
+            boot_and_configure_instance_step(undo_mgr, vm_ref)
             if completed_callback:
                 completed_callback()
         except Exception:
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
+
+    def _handle_neutron_event_timeout(self, instance, undo_mgr):
+        # We didn't get callback from Neutron within given time
+        LOG.warn(_LW('Timeout waiting for vif plugging callback'),
+                 instance=instance)
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfaceCreateException()
+
+    def _unpause_and_wait(self, vm_ref, instance, power_on):
+        if power_on:
+            LOG.debug("Update instance when power on", instance=instance)
+            self._session.VM.unpause(vm_ref)
+            self._wait_for_instance_to_start(instance, vm_ref)
+            self._update_last_dom_id(vm_ref)
+
+    def _neutron_failed_callback(self, event_name, instance):
+        LOG.warn(_LW('Neutron Reported failure on event %(event)s'),
+                {'event': event_name}, instance=instance)
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfaceCreateException()
+
+    def _get_neutron_events(self, network_info, power_on, first_boot):
+        # Only get network-vif-plugged events with VIF's status is not active.
+        # With VIF whose status is active, neutron may not notify such event.
+        timeout = CONF.vif_plugging_timeout
+        if (utils.is_neutron() and power_on and timeout and first_boot):
+            return [('network-vif-plugged', vif['id'])
+                for vif in network_info if vif.get('active', True) is False]
+        else:
+            return []
 
     def _attach_orig_disks(self, instance, vm_ref):
         orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
