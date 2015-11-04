@@ -675,6 +675,21 @@ class ComputeTaskManager(base.Base):
                 instance.system_metadata = system_metadata
                 instance.save()
 
+                self.compute_rpcapi.build_and_run_instance(context,
+                        instance=instance, host=host['host'], image=image,
+                        request_spec=request_spec,
+                        filter_properties=local_filter_props,
+                        admin_password=admin_password,
+                        injected_files=injected_files,
+                        requested_networks=requested_networks,
+                        security_groups=security_groups,
+                        block_device_mapping=bdms, node=host['nodename'],
+                        limits=host['limits'])
+
+                import time
+                time.sleep(10)
+                LOG.error("SLEEPING")
+
                 if 'ft_secondary_hosts' in host:
                     ft_tasks = fault_tolerance.FaultToleranceTasks()
                     for ft_secondary_host in host['ft_secondary_hosts']:
@@ -692,17 +707,6 @@ class ComputeTaskManager(base.Base):
                             security_groups=security_groups,
                             block_device_mapping=block_device_mapping,
                             legacy_bdm=legacy_bdm)
-
-            self.compute_rpcapi.build_and_run_instance(context,
-                    instance=instance, host=host['host'], image=image,
-                    request_spec=request_spec,
-                    filter_properties=local_filter_props,
-                    admin_password=admin_password,
-                    injected_files=injected_files,
-                    requested_networks=requested_networks,
-                    security_groups=security_groups,
-                    block_device_mapping=bdms, node=host['nodename'],
-                    limits=host['limits'])
 
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)

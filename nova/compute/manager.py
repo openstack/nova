@@ -1678,6 +1678,15 @@ class ComputeManager(manager.Manager):
     def _build_networks_for_instance(self, context, instance,
             requested_networks, security_groups):
 
+        # TODO(ORBIT): Watch out for race where primary instance has not yet
+        #              allocated network.
+        if utils.ft_secondary(instance):
+            relation = (objects.FaultToleranceRelation.
+                        get_by_secondary_instance_uuid(context, instance.uuid))
+            primary_instance = objects.Instance.get_by_uuid(
+                context, relation.primary_instance_uuid)
+            return self._get_instance_nw_info(context, primary_instance)
+
         # If we're here from a reschedule the network may already be allocated.
         if strutils.bool_from_string(
                 instance.system_metadata.get('network_allocated', 'False')):
@@ -6269,7 +6278,7 @@ class ComputeManager(manager.Manager):
                         get_by_secondary_instance_uuid(context, instance.uuid))
 
             relational_instance = objects.Instance.get_by_uuid(
-                context, relation.secondary_instance_uuid)
+                context, relation.primary_instance_uuid)
         else:
             relations = (objects.FaultToleranceRelationList.
                          get_by_primary_instance_uuid(context,
