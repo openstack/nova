@@ -1282,15 +1282,22 @@ class API(base.Base):
 
     def _validate_bdm(self, context, instance, instance_type, all_mappings):
         def _subsequent_list(l):
+            # Each device which is capable of being used as boot device should
+            # be given a unique boot index, starting from 0 in ascending order.
             return all(el + 1 == l[i + 1] for i, el in enumerate(l[:-1]))
 
-        # Make sure that the boot indexes make sense
+        # Make sure that the boot indexes make sense.
+        # Setting a negative value or None indicates that the device should not
+        # be used for booting.
         boot_indexes = sorted([bdm.boot_index
                                for bdm in all_mappings
                                if bdm.boot_index is not None
                                and bdm.boot_index >= 0])
 
         if 0 not in boot_indexes or not _subsequent_list(boot_indexes):
+            # Convert the BlockDeviceMappingList to a list for repr details.
+            LOG.debug('Invalid block device mapping boot sequence for '
+                      'instance: %s', list(all_mappings), instance=instance)
             raise exception.InvalidBDMBootSequence()
 
         for bdm in all_mappings:
