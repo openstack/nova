@@ -168,12 +168,7 @@ class FilterScheduler(driver.Scheduler):
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            # TODO(sbauza): Temporary use of the old legacy dict until we
-            # modify HostManager to use the RequestSpec object
-            spec_dict = spec_obj.to_legacy_request_spec_dict()
-            instance_properties = spec_dict['instance_properties']
-
-            chosen_host.obj.consume_from_instance(instance_properties)
+            chosen_host.obj.consume_from_request(spec_obj)
             if filter_properties.get('group_updated') is True:
                 filter_properties['group_hosts'].add(chosen_host.obj.host)
         return selected_hosts

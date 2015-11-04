@@ -105,23 +105,22 @@ class ReadOnlyDict(IterableUserDict):
         raise TypeError()
 
 
-@utils.expects_func_args('self', 'instance')
+@utils.expects_func_args('self', 'spec_obj')
 def set_update_time_on_success(function):
     """Set updated time of HostState when consuming succeed."""
 
     @functools.wraps(function)
-    def decorated_function(self, instance):
+    def decorated_function(self, spec_obj):
         return_value = None
         try:
-            return_value = function(self, instance)
+            return_value = function(self, spec_obj)
         except Exception as e:
-            # Ignores exception raised from consume_from_instance() so that
+            # Ignores exception raised from consume_from_request() so that
             # booting instance would fail in the resource claim of compute
             # node, other suitable node may be chosen during scheduling retry.
             LOG.warning(_LW("Selected host: %(host)s failed to consume from "
                             "instance. Error: %(error)s"),
-                        {'host': self.host, 'error': e},
-                        instance=instance)
+                        {'host': self.host, 'error': e})
         else:
             now = timeutils.utcnow()
             # NOTE(sbauza): Objects are UTC tz-aware by default
@@ -253,11 +252,12 @@ class HostState(object):
         self.ram_allocation_ratio = compute.ram_allocation_ratio
 
     @set_update_time_on_success
-    def consume_from_instance(self, instance):
-        """Incrementally update host state from an instance."""
-        disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
-        ram_mb = instance['memory_mb']
-        vcpus = instance['vcpus']
+    def consume_from_request(self, spec_obj):
+        """Incrementally update host state from an RequestSpec object."""
+        disk_mb = (spec_obj.root_gb +
+                   spec_obj.ephemeral_gb) * 1024
+        ram_mb = spec_obj.memory_mb
+        vcpus = spec_obj.vcpus
         self.free_ram_mb -= ram_mb
         self.free_disk_mb -= disk_mb
         self.vcpus_used += vcpus
@@ -265,7 +265,7 @@ class HostState(object):
         # Track number of instances on host
         self.num_instances += 1
 
-        pci_requests = instance.get('pci_requests')
+        pci_requests = spec_obj.pci_requests
         if pci_requests and self.pci_stats:
             pci_requests = pci_requests.requests
         else:
@@ -274,24 +274,33 @@ class HostState(object):
         # Calculate the numa usage
         host_numa_topology, _fmt = hardware.host_topology_and_format_from_host(
                                 self)
-        instance_numa_topology = hardware.instance_topology_from_instance(
-            instance)
+        instance_numa_topology = spec_obj.numa_topology
 
-        instance['numa_topology'] = hardware.numa_fit_instance_to_host(
+        spec_obj.numa_topology = hardware.numa_fit_instance_to_host(
             host_numa_topology, instance_numa_topology,
             limits=self.limits.get('numa_topology'),
             pci_requests=pci_requests, pci_stats=self.pci_stats)
         if pci_requests:
             instance_cells = None
-            if instance['numa_topology']:
-                instance_cells = instance['numa_topology'].cells
+            if spec_obj.numa_topology:
+                instance_cells = spec_obj.numa_topology.cells
             self.pci_stats.apply_requests(pci_requests, instance_cells)
+
+        # NOTE(sbauza): Yeah, that's crap. We should get rid of all of those
+        # NUMA helpers because now we're 100% sure that spec_obj.numa_topology
+        # is an InstanceNUMATopology object. Unfortunately, since
+        # HostState.host_numa_topology is still limbo between an NUMATopology
+        # object (when updated by consume_from_request), a ComputeNode object
+        # (when updated by update_from_compute_node), we need to keep the call
+        # to get_host_numa_usage_from_instance until it's fixed (and use a
+        # temporary orphaned Instance object as a proxy)
+        instance = objects.Instance(numa_topology=spec_obj.numa_topology)
 
         self.numa_topology = hardware.get_host_numa_usage_from_instance(
                 self, instance)
 
         # NOTE(sbauza): By considering all cases when the scheduler is called
-        # and when consume_from_instance() is run, we can safely say that there
+        # and when consume_from_request() is run, we can safely say that there
         # is always an IO operation because we want to move the instance
         self.num_io_ops += 1
 
