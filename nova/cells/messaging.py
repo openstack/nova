@@ -1165,11 +1165,15 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         for key in items_to_remove:
             bdm.pop(key, None)
         if create is None:
+            LOG.debug('Calling db.block_device_mapping_update_or_create from '
+                      'API cell with values: %s', bdm)
             self.db.block_device_mapping_update_or_create(message.ctxt,
                                                           bdm,
                                                           legacy=False)
             return
         elif create is True:
+            LOG.debug('Calling db.block_device_mapping_create from API '
+                      'cell with values: %s', bdm)
             self.db.block_device_mapping_create(message.ctxt, bdm,
                                                 legacy=False)
             return
@@ -1189,6 +1193,8 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             LOG.warning(_LW("No match when trying to update BDM: %(bdm)s"),
                         dict(bdm=bdm))
             return
+        LOG.debug('Calling db.block_device_mapping_update from API cell with '
+                  'bdm id %s and values: %s', instance_bdm['id'], bdm)
         self.db.block_device_mapping_update(message.ctxt,
                                             instance_bdm['id'], bdm,
                                             legacy=False)
