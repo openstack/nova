@@ -155,7 +155,9 @@ class TestTimeout(testtools.TestCase):
 
 
 class TestOSAPIFixture(testtools.TestCase):
-    def test_responds_to_version(self):
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    @mock.patch('nova.objects.Service.create')
+    def test_responds_to_version(self, mock_service_create, mock_get):
         """Ensure the OSAPI server responds to calls sensibly."""
         self.useFixture(fixtures.OutputStreamCapture())
         self.useFixture(fixtures.StandardLogging())
