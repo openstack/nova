@@ -2131,7 +2131,7 @@ class ComputeManager(manager.Manager):
                                       block_device_info=block_device_info)
 
                     if utils.ft_enabled(instance):
-                        self._ft_initialize(context, instance, network_info)
+                        self._ft_initialize(context, instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -6272,7 +6272,7 @@ class ComputeManager(manager.Manager):
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
 
-    def _ft_initialize(self, context, instance, network_info):
+    def _ft_initialize(self, context, instance):
         if utils.ft_secondary(instance):
             relation = (objects.FaultToleranceRelation.
                         get_by_secondary_instance_uuid(context, instance.uuid))
@@ -6291,7 +6291,7 @@ class ComputeManager(manager.Manager):
                 context, relation.secondary_instance_uuid)
 
         LOG.debug("Executing FT initialization of %s", relation)
-        self.driver.ft_initialize(instance, relational_instance, network_info)
+        self.driver.ft_initialize(instance, relational_instance)
 
     def colo_cleanup(self, context, instance):
         network_info = compute_utils.get_nw_info_for_instance(instance)

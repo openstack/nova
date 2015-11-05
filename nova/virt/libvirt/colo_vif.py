@@ -319,18 +319,3 @@ class LibvirtCOLOVIFDriver(libvirt_vif.LibvirtGenericVIFDriver):
                 _("Unexpected vif_type=%s") % vif_type)
 
         func(instance, vif)
-
-    # TODO(ORBIT): Temporary
-    def colo_generate_proxy_script(self, instance, vif, path):
-        tapdev = self.get_vif_devname(vif)
-        with open("/opt/qemu/scripts/colo-proxy-script.sh") as f:
-            qemu_script = f.read()
-
-        qemu_script = qemu_script.replace("virt_if=$4",
-                                          "virt_if=\"" + tapdev + "\"", 1)
-
-        with open(path, "w+") as f:
-            f.write(qemu_script)
-
-        import os
-        os.chmod(path, 0755)
