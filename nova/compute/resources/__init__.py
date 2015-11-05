@@ -53,6 +53,15 @@ class ResourceHandler(object):
             names=names,
             propagate_map_exceptions=propagate_map_exceptions,
             invoke_on_load=True)
+        if self._mgr.names():
+            LOG.warning(_LW(
+                'The Extensible Resource Tracker is deprecated and will '
+                'be removed in the 14.0.0 release. If you '
+                'use this functionality and have custom resources that '
+                'are managed by the Extensible Resource Tracker, please '
+                'contact the Nova development team by posting to the '
+                'openstack-dev mailing list. There is no future planned '
+                'support for the tracking of custom resources.'))
         self._log_missing_plugins(names)
 
     def reset_resources(self, resources, driver):

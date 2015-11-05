@@ -51,7 +51,15 @@ resource_tracker_opts = [
                help='Class that will manage stats for the local compute host'),
     cfg.ListOpt('compute_resources',
                 default=[],
-                help='The names of the extra resources to track.'),
+                help='DEPRECATED: The names of the extra resources to track. '
+                     'The Extensible Resource Tracker is deprecated and will '
+                     'be removed in the 14.0.0 release. If you '
+                     'use this functionality and have custom resources that '
+                     'are managed by the Extensible Resource Tracker, please '
+                     'contact the Nova development team by posting to the '
+                     'openstack-dev mailing list. There is no future planned '
+                     'support for the tracking of custom resources.',
+                deprecated_for_removal=True),
 ]
 
 allocation_ratio_opts = [
