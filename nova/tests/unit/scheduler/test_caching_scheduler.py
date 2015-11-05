@@ -138,6 +138,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host_state.free_ram_mb = 50000
         host_state.total_usable_ram_mb = 50000
         host_state.free_disk_mb = 4096
+        host_state.total_usable_disk_gb = 4
         host_state.service = {
             "disabled": False,
             "updated_at": timeutils.utcnow(),
