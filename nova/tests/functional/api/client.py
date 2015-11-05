@@ -116,14 +116,14 @@ class TestOpenStackClient(object):
 
     """
 
-    def __init__(self, auth_user, auth_key, auth_uri):
+    def __init__(self, auth_user, auth_key, auth_uri,
+                 project_id='openstack'):
         super(TestOpenStackClient, self).__init__()
         self.auth_result = None
         self.auth_user = auth_user
         self.auth_key = auth_key
         self.auth_uri = auth_uri
-        # default project_id
-        self.project_id = 'openstack'
+        self.project_id = project_id
 
     def request(self, url, method='GET', body=None, headers=None):
         _headers = {'Content-Type': 'application/json'}
@@ -335,8 +335,12 @@ class TestOpenStackClient(object):
         return self.api_post('/servers/%s/metadata' % server_id,
                              post_body).body['metadata']
 
-    def get_server_groups(self):
-        return self.api_get('/os-server-groups').body['server_groups']
+    def get_server_groups(self, all_projects=None):
+        if all_projects:
+            return self.api_get(
+                '/os-server-groups?all_projects').body['server_groups']
+        else:
+            return self.api_get('/os-server-groups').body['server_groups']
 
     def get_server_group(self, group_id):
         return self.api_get('/os-server-groups/%s' %

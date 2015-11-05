@@ -177,6 +177,37 @@ class ServerGroupTest(ServerGroupTestBase):
         self.assertIn('Invalid input', ex.response.text)
         self.assertIn('wrong-policy', ex.response.text)
 
+    def test_get_groups_all_projects(self):
+        # This test requires APIs using two projects.
+
+        # Create an API using project 'openstack1'.
+        # This is a non-admin API.
+        api_openstack1 = self.useFixture(nova_fixtures.OSAPIFixture(
+                                        project_id='openstack1')).api
+
+        # Create a server group in project 'openstack'
+        # Project 'openstack' is used by self.api
+        group1 = self.anti_affinity
+        openstack_group = self.api.post_server_groups(group1)
+
+        # Create a server group in project 'openstack1'
+        group2 = self.affinity
+        openstack1_group = api_openstack1.post_server_groups(group2)
+
+        # The admin should be able to get server groups in all projects.
+        all_projects_admin = self.admin_api.get_server_groups(
+            all_projects=True)
+        self.assertIn(openstack_group, all_projects_admin)
+        self.assertIn(openstack1_group, all_projects_admin)
+
+        # The non-admin should only be able to get server groups
+        # in his project.
+        # The all_projects parameter is ignored for non-admin clients.
+        all_projects_non_admin = api_openstack1.get_server_groups(
+            all_projects=True)
+        self.assertNotIn(openstack_group, all_projects_non_admin)
+        self.assertIn(openstack1_group, all_projects_non_admin)
+
     def _boot_servers_to_group(self, group, flavor=None):
         servers = []
         for _ in range(0, 2):

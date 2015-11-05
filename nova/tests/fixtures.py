@@ -315,16 +315,18 @@ class OSAPIFixture(fixtures.Fixture):
 
     """
 
-    def __init__(self, api_version='v2'):
+    def __init__(self, api_version='v2', project_id='openstack'):
         """Constructor
 
         :param api_version: the API version that we're interested in
         using. Currently this expects 'v2' or 'v2.1' as possible
         options.
+        :param project_id: the project id to use on the API.
 
         """
         super(OSAPIFixture, self).__init__()
         self.api_version = api_version
+        self.project_id = project_id
 
     def setUp(self):
         super(OSAPIFixture, self).setUp()
@@ -347,9 +349,10 @@ class OSAPIFixture(fixtures.Fixture):
         self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
             'host': self.osapi.host, 'port': self.osapi.port,
             'api_version': self.api_version})
-        self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
+        self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url,
+                                              self.project_id)
         self.admin_api = client.TestOpenStackClient(
-            'admin', 'admin', self.auth_url)
+            'admin', 'admin', self.auth_url, self.project_id)
 
 
 class PoisonFunctions(fixtures.Fixture):
