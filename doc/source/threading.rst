@@ -31,7 +31,9 @@ delays in the case that there is only a single green thread::
 	from eventlet import greenthread
 	...
 	greenthread.sleep(0)
-
+In current code, time.sleep(0）does the same thing as greenthread.sleep(0) if
+time module is patched through eventlet.monkey_patch(). To be explicit, we recommend
+contributors use ``greenthread.sleep()`` instead of ``time.sleep()``.
 
 MySQL access and eventlet
 -------------------------
