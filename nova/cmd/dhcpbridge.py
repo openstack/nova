@@ -34,7 +34,7 @@ from nova import config
 from nova import context
 import nova.db.api
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
@@ -126,6 +126,9 @@ def main():
         block_db_access()
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
+    else:
+        LOG.warning(_LW('Conductor local mode is deprecated and will '
+                        'be removed in a subsequent release'))
 
     if CONF.action.name in ['add', 'del', 'old']:
         LOG.debug("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'",
