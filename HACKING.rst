@@ -57,6 +57,7 @@ Nova Specific Commandments
 - [N344] Python 3: do not use dict.iteritems.
 - [N345] Python 3: do not use dict.iterkeys.
 - [N346] Python 3: do not use dict.itervalues.
+- [N347] Provide enough help text for config options
 
 Creating Unit Tests
 -------------------
