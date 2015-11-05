@@ -2639,10 +2639,12 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise loopingcall.LoopingCallDone()
 
-        # NOTE(ORBIT): Fault tolerant instances are not resumed because they
-        #              need to synchronize before they are started. Skipping
-        #              the wait.
         if utils.ft_enabled(instance):
+            if utils.ft_secondary(instance):
+                self._colo_init_secondary_instance(instance)
+            # NOTE(ORBIT): Fault tolerant instances are not resumed because
+            #              they need to synchronize before they are started.
+            #              Skipping the wait.
             return
 
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
@@ -6435,22 +6437,9 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             LOG.error("QEMU monitor command failed: %s", cmd)
 
-    def ft_initialize(self, instance, relational_instance):
-        if utils.ft_secondary(instance):
-            self._colo_init_secondary(instance, relational_instance)
-        else:
-            self._colo_init_primary(instance, relational_instance)
-
-    def _colo_wait_for_nbd(self, host, port):
-        try:
-            utils.execute('nc', '-z', host, str(port))
-        except processutils.ProcessExecutionError as e:
-            LOG.debug("Waiting for NBD server on secondary instance...")
-            return True
-
-    def _colo_init_primary(self, primary_instance, secondary_instance):
-        """Execute the initial synchronization of the primary and secondary VM.
-        """
+    def colo_migration(self, primary_instance, secondary_instance):
+        """Start synchronization of the primary and secondary VM."""
+        # TODO(ORBIT): Race if secondary havent got host yet
         secondary_host = secondary_instance.host
         if not libvirt_utils.is_valid_hostname(secondary_host):
             raise exception.InvalidHostname(hostname=secondary_host)
@@ -6458,17 +6447,9 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_id = "colo1"
         nbd_port = 8889
 
-        i = 0
-        while self._colo_wait_for_nbd(secondary_host, nbd_port):
-            if i > 5:
-                LOG.error("Unable to connect to NBD server.")
-                break
-            time.sleep(0.5)
-            i += 1
-
-        flaglist = CONF.libvirt.colo_migration_flag.split(',')
-        flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
-        logical_sum = reduce(lambda x, y: x | y, flagvals)
+        # flaglist = CONF.libvirt.colo_migration_flag.split(',')
+        # flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+        # logical_sum = reduce(lambda x, y: x | y, flagvals)
 
         child_add_cmd = ("child_add disk1 child.driver=replication"
                          ",child.mode=primary"
@@ -6481,13 +6462,16 @@ class LibvirtDriver(driver.ComputeDriver):
         ret = self.exec_monitor_command(
             primary_instance, "migrate_set_capability colo on")
 
-    def _colo_init_secondary(self, secondary_instance, primary_instance):
+        ret = self.exec_monitor_command(
+            primary_instance, "migrate -d tcp:" + secondary_host + ":8888")
+
+    def _colo_init_secondary_instance(self, instance):
         disk_id = "colo1b"
         reference_id = "colo1"
-        inst_path = libvirt_utils.get_instance_path(secondary_instance)
+        inst_path = libvirt_utils.get_instance_path(instance)
         active_disk = os.path.join(inst_path, "active_disk.img")
         hidden_disk = os.path.join(inst_path, "hidden_disk.img")
-        size = str(secondary_instance['root_gb']) + 'G'
+        size = str(instance['root_gb']) + 'G'
 
         utils.execute('qemu-img', 'create', '-f', 'qcow2', active_disk, size)
         utils.execute('qemu-img', 'create', '-f', 'qcow2', hidden_disk, size)
@@ -6502,17 +6486,17 @@ class LibvirtDriver(driver.ComputeDriver):
                          ",file.backing.backing.backing_reference=" +
                          reference_id +
                          ",file.backing.allow-write-backing-file=on")
-        ret = self.exec_monitor_command(secondary_instance, drive_add_cmd)
+        ret = self.exec_monitor_command(instance, drive_add_cmd)
 
         device_add_cmd = ("device_add virtio-blk-pci,drive=" + disk_id +
                           ",addr=9")
-        ret = self.exec_monitor_command(secondary_instance, device_add_cmd)
+        ret = self.exec_monitor_command(instance, device_add_cmd)
 
         port = 8889
         nbd_start_cmd = "nbd_server_start " + CONF.my_ip + ":" + str(port)
         nbd_add_cmd = "nbd_server_add -w " + reference_id
-        ret = self.exec_monitor_command(secondary_instance, nbd_start_cmd)
-        ret = self.exec_monitor_command(secondary_instance, nbd_add_cmd)
+        ret = self.exec_monitor_command(instance, nbd_start_cmd)
+        ret = self.exec_monitor_command(instance, nbd_add_cmd)
 
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:

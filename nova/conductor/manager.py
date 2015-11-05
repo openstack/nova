@@ -686,10 +686,6 @@ class ComputeTaskManager(base.Base):
                         block_device_mapping=bdms, node=host['nodename'],
                         limits=host['limits'])
 
-                import time
-                time.sleep(10)
-                LOG.error("SLEEPING")
-
                 if 'ft_secondary_hosts' in host:
                     ft_tasks = fault_tolerance.FaultToleranceTasks()
                     for ft_secondary_host in host['ft_secondary_hosts']:
