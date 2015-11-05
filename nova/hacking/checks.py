@@ -98,6 +98,7 @@ decorator_re = re.compile(r"@.*")
 http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")
 spawn_re = re.compile(
     r".*(eventlet|greenthread)\.(?P<spawn_part>spawn(_n)?)\(.*\)")
+contextlib_nested = re.compile(r"^with (contextlib\.)?nested\(")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -539,6 +540,16 @@ def check_greenthread_spawns(logical_line, physical_line, filename):
         yield (0, msg % {'spawn': match.group('spawn_part')})
 
 
+def check_no_contextlib_nested(logical_line, filename):
+    msg = ("N341: contextlib.nested is deprecated. With Python 2.7 and later "
+           "the with-statement supports multiple nested objects. See https://"
+           "docs.python.org/2/library/contextlib.html#contextlib.nested for "
+           "more information. nova.test.nested() is an alternative as well.")
+
+    if contextlib_nested.match(logical_line):
+        yield(0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -565,4 +576,5 @@ def factory(register):
     register(dict_constructor_with_list_copy)
     register(assert_equal_in)
     register(check_http_not_implemented)
+    register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
