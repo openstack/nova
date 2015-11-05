@@ -22,14 +22,13 @@ import copy
 import datetime
 import functools
 import sys
-import threading
 import uuid
 
 from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db import options as oslo_db_options
-from oslo_db.sqlalchemy import session as db_session
+from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
@@ -130,20 +129,16 @@ CONF.import_opt('until_refresh', 'nova.quota')
 
 LOG = logging.getLogger(__name__)
 
-_ENGINE_FACADE = {'main': None, 'api': None}
-_MAIN_FACADE = 'main'
-_API_FACADE = 'api'
-_LOCK = threading.Lock()
+main_context_manager = enginefacade.transaction_context()
+api_context_manager = enginefacade.transaction_context()
 
 
-def _create_facade(conf_group):
-
-    # NOTE(dheeraj): This fragment is copied from oslo.db
-    return db_session.EngineFacade(
-        sql_connection=conf_group.connection,
+def _get_db_conf(conf_group):
+    kw = dict(
+        connection=conf_group.connection,
         slave_connection=conf_group.slave_connection,
         sqlite_fk=False,
-        autocommit=True,
+        __autocommit=True,
         expire_on_commit=False,
         mysql_sql_mode=conf_group.mysql_sql_mode,
         idle_timeout=conf_group.idle_timeout,
@@ -155,39 +150,31 @@ def _create_facade(conf_group):
         connection_trace=conf_group.connection_trace,
         max_retries=conf_group.max_retries,
         retry_interval=conf_group.retry_interval)
+    return kw
 
 
-def _create_facade_lazily(facade, conf_group):
-    global _LOCK, _ENGINE_FACADE
-    if _ENGINE_FACADE[facade] is None:
-        with _LOCK:
-            if _ENGINE_FACADE[facade] is None:
-                _ENGINE_FACADE[facade] = _create_facade(conf_group)
-    return _ENGINE_FACADE[facade]
+def configure(conf):
+    main_context_manager.configure(**_get_db_conf(conf.database))
+    api_context_manager.configure(**_get_db_conf(conf.api_database))
 
 
 def get_engine(use_slave=False):
-    conf_group = CONF.database
-    facade = _create_facade_lazily(_MAIN_FACADE, conf_group)
-    return facade.get_engine(use_slave=use_slave)
+    return main_context_manager._factory.get_legacy_facade().get_engine(
+        use_slave=use_slave)
 
 
 def get_api_engine():
-    conf_group = CONF.api_database
-    facade = _create_facade_lazily(_API_FACADE, conf_group)
-    return facade.get_engine()
+    return api_context_manager._factory.get_legacy_facade().get_engine()
 
 
 def get_session(use_slave=False, **kwargs):
-    conf_group = CONF.database
-    facade = _create_facade_lazily(_MAIN_FACADE, conf_group)
-    return facade.get_session(use_slave=use_slave, **kwargs)
+    return main_context_manager._factory.get_legacy_facade().get_session(
+        use_slave=use_slave, **kwargs)
 
 
 def get_api_session(**kwargs):
-    conf_group = CONF.api_database
-    facade = _create_facade_lazily(_API_FACADE, conf_group)
-    return facade.get_session(**kwargs)
+    return api_context_manager._factory.get_legacy_facade().get_session(
+        **kwargs)
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
@@ -269,6 +256,9 @@ def model_query(context, model,
                         query to match the context's project_id. If set to
                         'allow_none', restriction includes project_id = None.
     """
+
+    if hasattr(context, 'session'):
+        session = context.session
 
     if session is None:
         if CONF.database.slave_connection == '':

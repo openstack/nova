@@ -501,6 +501,65 @@ class ModelQueryTestCase(DbTestCase):
                                    session=mock.MagicMock())
         self.assertFalse(mock_get_session.called)
 
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    @mock.patch.object(sqlalchemyutils, 'model_query')
+    def test_model_query_use_context_session(self, mock_model_query,
+                                             mock_get_session):
+        @sqlalchemy_api.main_context_manager.reader
+        def fake_method(context):
+            session = context.session
+            sqlalchemy_api.model_query(context, models.Instance)
+            return session
+
+        session = fake_method(self.context)
+        self.assertFalse(mock_get_session.called)
+        mock_model_query.assert_called_once_with(models.Instance, session,
+                                                 None, deleted=False)
+
+
+class EngineFacadeTestCase(DbTestCase):
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_use_single_context_session_writer(self, mock_get_session):
+        # Checks that session in context would not be overwritten by
+        # annotation @sqlalchemy_api.main_context_manager.writer if annotation
+        # is used twice.
+
+        @sqlalchemy_api.main_context_manager.writer
+        def fake_parent_method(context):
+            session = context.session
+            return fake_child_method(context), session
+
+        @sqlalchemy_api.main_context_manager.writer
+        def fake_child_method(context):
+            session = context.session
+            sqlalchemy_api.model_query(context, models.Instance)
+            return session
+
+        parent_session, child_session = fake_parent_method(self.context)
+        self.assertFalse(mock_get_session.called)
+        self.assertEqual(parent_session, child_session)
+
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_use_single_context_session_reader(self, mock_get_session):
+        # Checks that session in context would not be overwritten by
+        # annotation @sqlalchemy_api.main_context_manager.reader if annotation
+        # is used twice.
+
+        @sqlalchemy_api.main_context_manager.reader
+        def fake_parent_method(context):
+            session = context.session
+            return fake_child_method(context), session
+
+        @sqlalchemy_api.main_context_manager.reader
+        def fake_child_method(context):
+            session = context.session
+            sqlalchemy_api.model_query(context, models.Instance)
+            return session
+
+        parent_session, child_session = fake_parent_method(self.context)
+        self.assertFalse(mock_get_session.called)
+        self.assertEqual(parent_session, child_session)
+
 
 class AggregateDBApiTestCase(test.TestCase):
     def setUp(self):
@@ -968,44 +1027,44 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         op = sqlalchemy_api._get_regexp_op_for_connection('notdb:///')
         self.assertEqual('LIKE', op)
 
-    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    @mock.patch.object(sqlalchemy_api.main_context_manager._factory,
+                       'get_legacy_facade')
     def test_get_engine(self, mock_create_facade):
         mock_facade = mock.MagicMock()
         mock_create_facade.return_value = mock_facade
 
         sqlalchemy_api.get_engine()
-        mock_create_facade.assert_called_once_with(sqlalchemy_api._MAIN_FACADE,
-                CONF.database)
+        mock_create_facade.assert_called_once_with()
         mock_facade.get_engine.assert_called_once_with(use_slave=False)
 
-    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    @mock.patch.object(sqlalchemy_api.api_context_manager._factory,
+                       'get_legacy_facade')
     def test_get_api_engine(self, mock_create_facade):
         mock_facade = mock.MagicMock()
         mock_create_facade.return_value = mock_facade
 
         sqlalchemy_api.get_api_engine()
-        mock_create_facade.assert_called_once_with(sqlalchemy_api._API_FACADE,
-                CONF.api_database)
+        mock_create_facade.assert_called_once_with()
         mock_facade.get_engine.assert_called_once_with()
 
-    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    @mock.patch.object(sqlalchemy_api.main_context_manager._factory,
+                       'get_legacy_facade')
     def test_get_session(self, mock_create_facade):
         mock_facade = mock.MagicMock()
         mock_create_facade.return_value = mock_facade
 
         sqlalchemy_api.get_session()
-        mock_create_facade.assert_called_once_with(sqlalchemy_api._MAIN_FACADE,
-                CONF.database)
+        mock_create_facade.assert_called_once_with()
         mock_facade.get_session.assert_called_once_with(use_slave=False)
 
-    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    @mock.patch.object(sqlalchemy_api.api_context_manager._factory,
+                       'get_legacy_facade')
     def test_get_api_session(self, mock_create_facade):
         mock_facade = mock.MagicMock()
         mock_create_facade.return_value = mock_facade
 
         sqlalchemy_api.get_api_session()
-        mock_create_facade.assert_called_once_with(sqlalchemy_api._API_FACADE,
-                CONF.api_database)
+        mock_create_facade.assert_called_once_with()
         mock_facade.get_session.assert_called_once_with()
 
     @mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid')

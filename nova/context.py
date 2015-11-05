@@ -22,6 +22,7 @@ import copy
 from keystoneclient import auth
 from keystoneclient import service_catalog
 from oslo_context import context
+from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
@@ -60,6 +61,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
                                             region_name=region_name)
 
 
+@enginefacade.transaction_context_provider
 class RequestContext(context.RequestContext):
     """Security context and request information.
 
