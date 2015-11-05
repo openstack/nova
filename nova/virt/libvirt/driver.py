@@ -6518,13 +6518,6 @@ class LibvirtDriver(driver.ComputeDriver):
         for vif in network_info:
             self.vif_driver.cleanup_colo_plug(instance, vif)
 
-    # TODO(ORBIT): Forcing MAC for now, might be changed later
-    def macs_for_instance(self, instance):
-        if utils.ft_enabled(instance):
-            flavor = flavors.extract_flavor(instance)
-            if flavor['extra_specs']['ft:mac']:
-                return set([flavor['extra_specs']['ft:mac']])
-
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
