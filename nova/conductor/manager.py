@@ -654,6 +654,17 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
+            self.compute_rpcapi.build_and_run_instance(context,
+                    instance=instance, host=host['host'], image=image,
+                    request_spec=request_spec,
+                    filter_properties=local_filter_props,
+                    admin_password=admin_password,
+                    injected_files=injected_files,
+                    requested_networks=requested_networks,
+                    security_groups=security_groups,
+                    block_device_mapping=bdms, node=host['nodename'],
+                    limits=host['limits'])
+
             if utils.ft_enabled(instance):
                 colo_tasks = colo.COLOTasks()
 
@@ -674,17 +685,6 @@ class ComputeTaskManager(base.Base):
                 system_metadata['colo_vlan_id'] = vlan_id
                 instance.system_metadata = system_metadata
                 instance.save()
-
-                self.compute_rpcapi.build_and_run_instance(context,
-                        instance=instance, host=host['host'], image=image,
-                        request_spec=request_spec,
-                        filter_properties=local_filter_props,
-                        admin_password=admin_password,
-                        injected_files=injected_files,
-                        requested_networks=requested_networks,
-                        security_groups=security_groups,
-                        block_device_mapping=bdms, node=host['nodename'],
-                        limits=host['limits'])
 
                 if 'ft_secondary_hosts' in host:
                     ft_tasks = fault_tolerance.FaultToleranceTasks()
