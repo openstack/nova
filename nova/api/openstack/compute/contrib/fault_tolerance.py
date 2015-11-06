@@ -92,7 +92,12 @@ class FaultServerToleranceController(servers.Controller):
             #              instance remain undeleted.
             self.conductor_api.colo_deallocate_vlan(context, id)
         except exception.FaultToleranceRelationByPrimaryNotFound as e:
-            LOG.debug(e.format_message())
+            try:
+                relation = (objects.FaultToleranceRelation.
+                            get_by_secondary_instance_uuid(context, id))
+                relation.destroy()
+            except exception.FaultToleranceRelationBySecondaryNotFound as e:
+                pass
 
     def _add_ft_status(self, req, server, relations):
         db_instance = req.get_db_instance(server['id'])
