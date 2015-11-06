@@ -822,6 +822,10 @@ class PortBindingFailed(Invalid):
                 "logs for more information.")
 
 
+class PortUpdateFailed(Invalid):
+    msg_fmt = _("Port update failed for port %(port_id)s: %(reason)s")
+
+
 class FixedIpExists(NovaException):
     msg_fmt = _("Fixed IP %(address)s already exists.")
 

@@ -176,6 +176,18 @@ def _filter_hypervisor_macs(instance, ports, hypervisor_macs):
     return available_macs
 
 
+def get_pci_device_profile(pci_dev):
+    dev_spec = pci_whitelist.get_pci_device_devspec(pci_dev)
+    if dev_spec:
+        return {'pci_vendor_info': "%s:%s" %
+                    (pci_dev.vendor_id, pci_dev.product_id),
+                'pci_slot': pci_dev.address,
+                'physical_network':
+                    dev_spec.get_tags().get('physical_network')}
+    raise exception.PciDeviceNotFound(node_id=pci_dev.compute_node_id,
+                                      address=pci_dev.address)
+
+
 class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
 
@@ -888,13 +900,7 @@ class API(base_api.NetworkAPI):
         if pci_request_id:
             pci_dev = pci_manager.get_instance_pci_devs(
                 instance, pci_request_id).pop()
-            devspec = pci_whitelist.get_pci_device_devspec(pci_dev)
-            profile = {'pci_vendor_info': "%s:%s" % (pci_dev.vendor_id,
-                                                     pci_dev.product_id),
-                       'pci_slot': pci_dev.address,
-                       'physical_network':
-                           devspec.get_tags().get('physical_network')
-                      }
+            profile = get_pci_device_profile(pci_dev)
             port_req_body['port']['binding:profile'] = profile
 
     @staticmethod
@@ -2151,6 +2157,34 @@ class API(base_api.NetworkAPI):
         """Cleanup network for specified instance on host."""
         pass
 
+    def _get_pci_mapping_for_migration(self, context, instance):
+        """Get the mapping between the old PCI devices and the new PCI
+        devices that have been allocated during this migration.  The
+        correlation is based on PCI request ID which is unique per PCI
+        devices for SR-IOV ports.
+
+        :param context:  The request context.
+        :param instance: Get PCI mapping for this instance.
+        :Returns: dictionary of mapping {'<old pci address>': <New PciDevice>}
+        """
+        migration_context = instance.migration_context
+        if not migration_context:
+            return {}
+
+        old_pci_devices = migration_context.old_pci_devices
+        new_pci_devices = migration_context.new_pci_devices
+        if old_pci_devices and new_pci_devices:
+            LOG.debug("Determining PCI devices mapping using migration"
+                      "context: old_pci_devices: %(old)s, "
+                      "new_pci_devices: %(new)s" %
+                      {'old': [dev for dev in old_pci_devices],
+                      'new': [dev for dev in new_pci_devices]})
+            return {old.address: new
+                    for old in old_pci_devices
+                        for new in new_pci_devices
+                            if old.request_id == new.request_id}
+        return {}
+
     def _update_port_binding_for_instance(self, context, instance, host):
         if not self._has_port_binding_extension(context, refresh_cache=True):
             return
@@ -2158,18 +2192,49 @@ class API(base_api.NetworkAPI):
         search_opts = {'device_id': instance.uuid,
                        'tenant_id': instance.project_id}
         data = neutron.list_ports(**search_opts)
+        pci_mapping = self._get_pci_mapping_for_migration(context, instance)
+        port_updates = []
         ports = data['ports']
         for p in ports:
+            updates = {}
+
             # If the host hasn't changed, like in the case of resizing to the
             # same host, there is nothing to do.
             if p.get('binding:host_id') != host:
+                updates['binding:host_id'] = host
+
+            # Update port with newly allocated PCI devices.  Even if the
+            # resize is happening on the same host, a new PCI device can be
+            # allocated.
+            vnic_type = p.get('binding:vnic_type')
+            if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                binding_profile = p.get('binding:profile', {})
+                pci_slot = binding_profile.get('pci_slot')
+                new_dev = pci_mapping.get(pci_slot)
+                if new_dev:
+                    updates['binding:profile'] = \
+                        get_pci_device_profile(new_dev)
+                else:
+                    raise exception.PortUpdateFailed(port_id=p['id'],
+                        reason=_("Unable to correlate PCI slot %s") %
+                                 pci_slot)
+
+            port_updates.append((p['id'], updates))
+
+        # Avoid rolling back updates if we catch an error above.
+        # TODO(lbeliveau): Batch up the port updates in one neutron call.
+        for port_id, updates in port_updates:
+            if updates:
+                LOG.info(_LI("Updating port %(port)s with "
+                             "attributes %(attributes)s"),
+                         {"port": p['id'], "attributes": updates},
+                         instance=instance)
                 try:
-                    neutron.update_port(p['id'],
-                                        {'port': {'binding:host_id': host}})
+                    neutron.update_port(port_id, {'port': updates})
                 except Exception:
                     with excutils.save_and_reraise_exception():
                         LOG.exception(_LE("Unable to update host of port %s"),
-                                      p['id'], instance=instance)
+                                      port_id, instance=instance)
 
     def update_instance_vnic_index(self, context, instance, vif, index):
         """Update instance vnic index.

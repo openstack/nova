@@ -3557,6 +3557,133 @@ class TestNeutronv2WithMock(test.TestCase):
         update_port_mock.assert_called_once_with(
             'fake-port-2', {'port': {'binding:host_id': instance.host}})
 
+    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_pci(self,
+                                            get_client_mock,
+                                            get_pci_device_devspec_mock):
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        get_pci_device_devspec_mock.return_value = devspec
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = objects.MigrationContext()
+        instance.migration_context.old_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0a:00.1',
+                                       compute_node_id=1,
+                                       request_id='1234567890')])
+        instance.migration_context.new_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0b:00.1',
+                                       compute_node_id=2,
+                                       request_id='1234567890')])
+        instance.pci_devices = instance.migration_context.old_pci_devices
+
+        # Validate that non-direct port aren't updated (fake-port-2).
+        fake_ports = {'ports': [
+                        {'id': 'fake-port-1',
+                         'binding:vnic_type': 'direct',
+                         'binding:host_id': 'fake-host-old',
+                         'binding:profile':
+                            {'pci_slot': '0000:0a:00.1',
+                             'physical_network': 'old_phys_net',
+                             'pci_vendor_info': 'old_pci_vendor_info'}},
+                        {'id': 'fake-port-2',
+                         'binding:host_id': instance.host}]}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(self.context, instance,
+                                                   instance.host)
+        # Assert that update_port is called with the binding:profile
+        # corresponding to the PCI device specified.
+        update_port_mock.assert_called_once_with(
+            'fake-port-1',
+                {'port':
+                    {'binding:host_id': 'fake-host',
+                     'binding:profile': {'pci_slot': '0000:0b:00.1',
+                                         'physical_network': 'physnet1',
+                                         'pci_vendor_info': '1377:0047'}}})
+
+    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_pci_fail(self,
+                                            get_client_mock,
+                                            get_pci_device_devspec_mock):
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        get_pci_device_devspec_mock.return_value = devspec
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = objects.MigrationContext()
+        instance.migration_context.old_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0c:00.1',
+                                       compute_node_id=1,
+                                       request_id='1234567890')])
+        instance.migration_context.new_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0d:00.1',
+                                       compute_node_id=2,
+                                       request_id='1234567890')])
+        instance.pci_devices = instance.migration_context.old_pci_devices
+
+        fake_ports = {'ports': [
+                        {'id': 'fake-port-1',
+                         'binding:vnic_type': 'direct',
+                         'binding:host_id': 'fake-host-old',
+                         'binding:profile':
+                            {'pci_slot': '0000:0a:00.1',
+                             'physical_network': 'old_phys_net',
+                             'pci_vendor_info': 'old_pci_vendor_info'}}]}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        # Assert exception is raised if the mapping is wrong.
+        self.assertRaises(exception.PortUpdateFailed,
+                          self.api._update_port_binding_for_instance,
+                          self.context,
+                          instance,
+                          instance.host)
+
+    def test_get_pci_mapping_for_migration(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = objects.MigrationContext()
+        old_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0a:00.1',
+                                       compute_node_id=1,
+                                       request_id='1234567890')])
+
+        new_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0b:00.1',
+                                       compute_node_id=2,
+                                       request_id='1234567890')])
+
+        instance.migration_context.old_pci_devices = old_pci_devices
+        instance.migration_context.new_pci_devices = new_pci_devices
+        instance.pci_devices = instance.migration_context.old_pci_devices
+
+        pci_mapping = self.api._get_pci_mapping_for_migration(
+            self.context, instance)
+        self.assertEqual(
+            {old_pci_devices[0].address: new_pci_devices[0]}, pci_mapping)
+
     @mock.patch('nova.network.neutronv2.api.compute_utils')
     def test_get_preexisting_port_ids(self, mocked_comp_utils):
         mocked_comp_utils.get_nw_info_for_instance.return_value = [model.VIF(
@@ -4091,6 +4218,28 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
         self.assertEqual(profile, port_req_body['port']['binding:profile'])
 
+    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    def test_populate_neutron_extension_values_binding_sriov_fail(
+        self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
+        api = neutronapi.API()
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        port_req_body = {'port': {}}
+        pci_req_id = 'my_req_id'
+        pci_objs = [objects.PciDevice(vendor_id='1377',
+                                      product_id='0047',
+                                      address='0000:0a:00.1',
+                                      compute_node_id=1,
+                                      request_id='1234567890')]
+
+        mock_get_instance_pci_devs.return_value = pci_objs
+        mock_get_pci_device_devspec.return_value = None
+
+        self.assertRaises(
+            exception.PciDeviceNotFound, api._populate_neutron_binding_profile,
+            instance, pci_req_id, port_req_body)
+
     def _populate_pci_mac_address_fakes(self):
         instance = fake_instance.fake_instance_obj(self.context)
         pci_dev = {'vendor_id': '1377',
@@ -4214,8 +4363,9 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                           *args)
 
     def test_migrate_instance_finish_binding_false(self):
+        instance = fake_instance.fake_instance_obj(self.context)
         self._test_update_port_binding_false('migrate_instance_finish',
-                                             self.context, None,
+                                             self.context, instance,
                                              {'dest_compute': 'fake'})
 
     def test_migrate_instance_finish_binding_true(self):
@@ -4239,8 +4389,9 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                               migration)
 
     def test_setup_instance_network_on_host_false(self):
+        instance = fake_instance.fake_instance_obj(self.context)
         self._test_update_port_binding_false(
-            'setup_instance_network_on_host', self.context, None,
+            'setup_instance_network_on_host', self.context, instance,
             'fake_host')
 
     def test_setup_instance_network_on_host_true(self):
