@@ -1269,7 +1269,7 @@ class API(base.Base):
         This method makes a copy of the list in order to avoid using the same
         id field in case this is called for multiple instances.
         """
-        LOG.debug("block_device_mapping %s", block_device_mapping,
+        LOG.debug("block_device_mapping %s", list(block_device_mapping),
                   instance_uuid=instance_uuid)
         instance_block_device_mapping = copy.deepcopy(block_device_mapping)
         for bdm in instance_block_device_mapping:
