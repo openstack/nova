@@ -968,6 +968,15 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_373(self, engine, data):
         self.assertColumnExists(engine, 'migrations', 'uuid')
 
+    def _check_374(self, engine, data):
+        self.assertColumnExists(engine, 'block_device_mapping', 'uuid')
+        self.assertColumnExists(engine, 'shadow_block_device_mapping', 'uuid')
+
+        inspector = reflection.Inspector.from_engine(engine)
+        constraints = inspector.get_unique_constraints('block_device_mapping')
+        constraint_names = [constraint['name'] for constraint in constraints]
+        self.assertIn('uniq_block_device_mapping0uuid', constraint_names)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

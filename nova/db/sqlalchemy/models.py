@@ -583,10 +583,18 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               'instance_uuid', 'volume_id'),
         Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
+        schema.UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    # NOTE(mdbooth): The REST API for BDMs includes a UUID field. That uuid
+    # refers to an image, volume, or snapshot which will be used in the
+    # initialisation of the BDM. It is only relevant during the API call, and
+    # is not persisted directly. This is the UUID of the BDM itself.
+    # FIXME(danms): This should eventually be non-nullable, but we need a
+    # transition period first.
+    uuid = Column(String(36))
     instance = orm.relationship(Instance,
                             backref=orm.backref('block_device_mapping'),
                             foreign_keys=instance_uuid,
