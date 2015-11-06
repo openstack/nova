@@ -4449,19 +4449,20 @@ class LibvirtDriver(driver.ComputeDriver):
         timeout = CONF.vif_plugging_timeout
         if (self._conn_supports_start_paused and
             utils.is_neutron() and not
-            vifs_already_plugged and power_on and timeout):
+            vifs_already_plugged and power_on and timeout and
+            # NOTE(ORBIT): Neutron is not going to create any ports for
+            #              secondary instances since the netinfo is cloned
+            #              from the primary.
+            not utils.ft_secondary(instance)):
             events = self._get_neutron_events(network_info)
         else:
             events = []
 
-        launch_flags = events and libvirt.VIR_DOMAIN_START_PAUSED or 0
-
+        ft = utils.ft_enabled(instance)
         # NOTE(ORBIT): We always want to launch the fault tolerant instances
         #              paused so that it has time to do the initial
         #              synchronization.
-        ft = utils.ft_enabled(instance)
-        if ft:
-            launch_flags |= libvirt.VIR_DOMAIN_START_PAUSED
+        launch_flags = (events or ft) and libvirt.VIR_DOMAIN_START_PAUSED or 0
 
         domain = None
         try:
