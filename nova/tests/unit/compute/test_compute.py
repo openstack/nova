@@ -8899,19 +8899,24 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIsNone(
             self.compute_api._volume_size(inst_type, blank_bdm))
 
-    def test_is_volume_backed_instance(self):
+    def test_is_volume_backed_instance_no_image(self):
         ctxt = self.context
 
         instance = self._create_fake_instance_obj({'image_ref': ''})
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, None))
 
+    def test_is_volume_backed_instance_no_bdm(self):
+        ctxt = self.context
         instance = self._create_fake_instance_obj({'root_device_name': 'vda'})
         self.assertFalse(
             self.compute_api.is_volume_backed_instance(
                 ctxt, instance,
                 block_device_obj.block_device_make_list(ctxt, [])))
 
+    def test_is_volume_backed_instance_bdm_volume(self):
+        ctxt = self.context
+        instance = self._create_fake_instance_obj({'root_device_name': 'vda'})
         bdms = block_device_obj.block_device_make_list(ctxt,
                             [fake_block_device.FakeDbBlockDeviceDict(
                                 {'source_type': 'volume',
@@ -8922,6 +8927,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
+    def test_is_volume_backed_instance_bdm_local(self):
+        ctxt = self.context
+        instance = self._create_fake_instance_obj({'root_device_name': 'vda'})
         bdms = block_device_obj.block_device_make_list(ctxt,
                [fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume',
@@ -8940,6 +8948,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertFalse(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
+    def test_is_volume_backed_instance_bdm_snapshot(self):
+        ctxt = self.context
+        instance = self._create_fake_instance_obj({'root_device_name': 'vda'})
         bdms = block_device_obj.block_device_make_list(ctxt,
                [fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume',
