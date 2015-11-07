@@ -28,7 +28,12 @@ from nova import utils
 conductor_opts = [
     cfg.BoolOpt('use_local',
                 default=False,
-                help='Perform nova-conductor operations locally'),
+                help='DEPRECATED: Perform nova-conductor operations locally. '
+                     'This legacy mode was introduced to bridge a gap during '
+                     'the transition to the conductor service. It no longer '
+                     'represents a reasonable alternative for deployers. '
+                     'Removal may be as early as 14.0',
+                deprecated_for_removal=True),
     cfg.StrOpt('topic',
                default='conductor',
                help='The topic on which conductor nodes listen'),

@@ -27,7 +27,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
 import nova.db.api
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -37,6 +37,7 @@ from nova import version
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
+LOG = logging.getLogger('nova.compute')
 
 
 def block_db_access():
@@ -46,7 +47,6 @@ def block_db_access():
 
         def __call__(self, *args, **kwargs):
             stacktrace = "".join(traceback.format_stack())
-            LOG = logging.getLogger('nova.compute')
             LOG.error(_LE('No db access allowed in nova-compute: %s'),
                       stacktrace)
             raise exception.DBNotAllowed('nova-compute')
@@ -66,6 +66,9 @@ def main():
         block_db_access()
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
+    else:
+        LOG.warning(_LW('Conductor local mode is deprecated and will '
+                        'be removed in a subsequent release'))
 
     server = service.Service.create(binary='nova-compute',
                                     topic=CONF.compute_topic,
