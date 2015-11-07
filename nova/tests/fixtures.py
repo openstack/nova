@@ -39,6 +39,7 @@ _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
 CONF = cfg.CONF
 DB_SCHEMA = {'main': "", 'api': ""}
+SESSION_CONFIGURED = False
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -195,6 +196,12 @@ class Timeout(fixtures.Fixture):
 class Database(fixtures.Fixture):
     def __init__(self, database='main'):
         super(Database, self).__init__()
+        # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
+        # way as it is done for any other service that uses db
+        global SESSION_CONFIGURED
+        if not SESSION_CONFIGURED:
+            session.configure(CONF)
+            SESSION_CONFIGURED = True
         self.database = database
         if database == 'main':
             self.get_engine = session.get_engine

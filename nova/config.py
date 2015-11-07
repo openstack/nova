@@ -19,6 +19,7 @@ from oslo_config import cfg
 from oslo_db import options
 from oslo_log import log
 
+from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import debugger
 from nova import paths
 from nova import rpc
@@ -46,7 +47,7 @@ _DEFAULT_LOGGING_CONTEXT_FORMAT = ('%(asctime)s.%(msecs)03d %(process)d '
                                    '%(message)s')
 
 
-def parse_args(argv, default_config_files=None):
+def parse_args(argv, default_config_files=None, configure_db=True):
     log.set_defaults(_DEFAULT_LOGGING_CONTEXT_FORMAT, _DEFAULT_LOG_LEVELS)
     log.register_options(CONF)
     options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
@@ -58,3 +59,6 @@ def parse_args(argv, default_config_files=None):
          version=version.version_string(),
          default_config_files=default_config_files)
     rpc.init(CONF)
+
+    if configure_db:
+        sqlalchemy_api.configure(CONF)
