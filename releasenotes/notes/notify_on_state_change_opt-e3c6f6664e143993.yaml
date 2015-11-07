@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``notify_on_state_change`` configuration option was StrOpt, which would accept
+    any string or None in the previous release.  Starting in the Newton release,
+    it allows only three values: None, ``vm_state``, ``vm_and_task_state``. The default
+    value is None.

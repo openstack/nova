@@ -42,11 +42,13 @@ LOG = log.getLogger(__name__)
 
 notify_opts = [
     cfg.StrOpt('notify_on_state_change',
-        help='If set, send compute.instance.update notifications on instance '
-             'state changes.  Valid values are None for no notifications, '
-             '"vm_state" for notifications on VM state changes, or '
-             '"vm_and_task_state" for notifications on VM and task state '
-             'changes.'),
+               default=None,
+               choices=(None, 'vm_state', 'vm_and_task_state'),
+               help='If set, send compute.instance.update notifications on '
+                    'instance state changes.  Valid values are None for no '
+                    'notifications, "vm_state" for notifications on VM state '
+                    'changes, or "vm_and_task_state" for notifications on VM '
+                    'and task state changes.'),
     cfg.BoolOpt('notify_api_faults', default=False,
         help='If set, send api.fault notifications on caught exceptions '
              'in the API service.'),
@@ -133,7 +135,7 @@ def send_update(context, old_instance, new_instance, service="compute",
     if old_vm_state != new_vm_state:
         # yes, the vm state is changing:
         update_with_state_change = True
-    elif (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
+    elif (CONF.notify_on_state_change == "vm_and_task_state" and
           old_task_state != new_task_state):
         # yes, the task state is changing:
         update_with_state_change = True
@@ -184,7 +186,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
             fire_update = True
-        elif (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
+        elif (CONF.notify_on_state_change == "vm_and_task_state" and
               old_task_state != new_task_state):
             # yes, the task state is changing:
             fire_update = True
