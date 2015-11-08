@@ -53,6 +53,7 @@ def apply_session_helpers(session):
     session.VM = cli_objects.VM(session)
     session.SR = cli_objects.SR(session)
     session.VDI = cli_objects.VDI(session)
+    session.VIF = cli_objects.VIF(session)
     session.VBD = cli_objects.VBD(session)
     session.PBD = cli_objects.PBD(session)
     session.PIF = cli_objects.PIF(session)
@@ -69,7 +70,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.4'
+    PLUGIN_REQUIRED_VERSION = '1.5'
 
     def __init__(self, url, user, pw):
         version_string = version.version_string_with_package()

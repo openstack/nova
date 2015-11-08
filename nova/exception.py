@@ -181,6 +181,11 @@ class VirtualInterfacePlugException(NovaException):
     msg_fmt = _("Virtual interface plugin failed")
 
 
+class VirtualInterfaceUnplugException(NovaException):
+    msg_fmt = _("Virtual interface unplugin failed: "
+        "%(reason)s")
+
+
 class GlanceConnectionFailed(NovaException):
     msg_fmt = _("Connection to glance host %(server)s failed: "
         "%(reason)s")
