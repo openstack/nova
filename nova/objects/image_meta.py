@@ -389,7 +389,7 @@ class ImageMetaProps(base.NovaObject):
         vmware_adaptertype = image_props.get("vmware_adaptertype")
         if vmware_adaptertype == "ide":
             setattr(self, "hw_disk_bus", "ide")
-        elif vmware_adaptertype is not None:
+        elif vmware_adaptertype:
             setattr(self, "hw_disk_bus", "scsi")
             setattr(self, "hw_scsi_model", vmware_adaptertype)
 

@@ -185,7 +185,7 @@ class TestImageMetaProps(test.NoDBTestCase):
 
     def test_legacy_compat_vmware_adapter_types(self):
         legacy_types = ['lsiLogic', 'busLogic', 'ide', 'lsiLogicsas',
-                        'paraVirtual']
+                        'paraVirtual', None, '']
 
         for legacy_type in legacy_types:
             legacy_props = {
@@ -195,6 +195,9 @@ class TestImageMetaProps(test.NoDBTestCase):
             image_meta = objects.ImageMetaProps.from_dict(legacy_props)
             if legacy_type == 'ide':
                 self.assertEqual('ide', image_meta.hw_disk_bus)
+            elif not legacy_type:
+                self.assertFalse(image_meta.obj_attr_is_set('hw_disk_bus'))
+                self.assertFalse(image_meta.obj_attr_is_set('hw_scsi_model'))
             else:
                 self.assertEqual('scsi', image_meta.hw_disk_bus)
                 if legacy_type == 'lsiLogicsas':
