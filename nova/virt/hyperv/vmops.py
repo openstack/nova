@@ -351,7 +351,7 @@ class VMOps(object):
             'hw_machine_type', default_vm_gen)
         if image_prop_vm not in self._hostutils.get_supported_vm_types():
             LOG.error(_LE('Requested VM Generation %s is not supported on '
-                         ' this OS.'), image_prop_vm)
+                          'this OS.'), image_prop_vm)
             raise vmutils.HyperVException(
                 _('Requested VM Generation %s is not supported on this '
                   'OS.') % image_prop_vm)

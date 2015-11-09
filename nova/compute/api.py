@@ -2623,7 +2623,7 @@ class API(base.Base):
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']
         LOG.debug("Old instance type %(current_instance_type_name)s, "
-                  " new instance type %(new_instance_type_name)s",
+                  "new instance type %(new_instance_type_name)s",
                   {'current_instance_type_name': current_instance_type_name,
                    'new_instance_type_name': new_instance_type_name},
                   instance=instance)
