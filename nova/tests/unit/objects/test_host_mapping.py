@@ -57,7 +57,7 @@ class _TestHostMappingObject(object):
                              comparators={
                                  'cell_mapping': self._check_cell_map_value})
             # Check that lazy loading isn't happening
-            self.failIf(mock_load.called)
+            self.assertFalse(mock_load.called)
 
     def test_from_db_object_no_cell_map(self):
         """Test when db object does not have cell_mapping"""
