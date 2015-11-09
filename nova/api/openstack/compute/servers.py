@@ -319,7 +319,7 @@ class ServersController(wsgi.Controller):
         # If an admin hasn't specified a 'deleted' search option, we need
         # to filter out deleted instances by setting the filter ourselves.
         # ... Unless 'changes-since' is specified, because 'changes-since'
-        # should return recently deleted images according to the API spec.
+        # should return recently deleted instances according to the API spec.
 
         if 'deleted' not in search_opts:
             if 'changes-since' not in search_opts:
