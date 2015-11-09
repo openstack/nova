@@ -2,10 +2,60 @@
 Faults
 ======
 
-Synchronous faults
-~~~~~~~~~~~~~~~~~~
+This doc looks at how to understand what has happened to your API request.
 
-When an error occurs at request time, the system also returns additional
+Every HTTP request has a status code. 2xx codes signify the API was a success.
+However, that is often not the end of the story. That generally only means the
+request to start the operation has been accepted, it does not mean the action
+you requested has successfully completed.
+
+
+Tracking Errors by Request ID
+==============================
+
+Every request made has a unique Request ID.
+This is returned in a response header.
+Here is an example response header:
+
+X-Compute-Request-ID: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
+
+Server Actions
+--------------
+
+There is an API for end users to list the outcome of Server Actions,
+referencing the requested action by request id.
+
+For more details, please see:
+http://developer.openstack.org/api-ref-compute-v2.1.html#os-instance-actions-v2.1
+
+Logs
+----
+
+All logs on the system, by default, include the request-id when available.
+This allows an administrator to track the API request processing as it
+transitions between all the different nova services.
+
+Instance Faults
+---------------
+
+Nova often adds an instance fault DB entry for an exception that happens
+while processing an API request. This often includes more admin focused
+information, such as a stack trace.
+However, there is currently no API to retrieve this information.
+
+Notifications
+-------------
+
+In many cases there are also notifications emitted that describe the error.
+This is an administrator focused API, that works best when treated as
+structured logging.
+
+
+Synchronous Faults
+==================
+
+If an error occurs while processing our API request, you get a non 2xx
+API status code. The system also returns additional
 information about the fault in the body of the response.
 
 
@@ -32,84 +82,22 @@ The root element of the fault (such as, computeFault) might change
 depending on the type of error. The following is a list of possible
 elements along with their associated error codes.
 
-Fault elements and error codes
-------------------------------
-
--  ``computeFault``: 500, 400, other codes possible
-
-- ``notImplemented``: 501
-
--  ``serverCapacityUnavailable``: 503
-
-- ``serviceUnavailable``: 503
-
-- ``badRequest``: 400
-
-- ``unauthorized``: 401
-
-- ``forbidden``: 403
-
-- ``resizeNotAllowed``: 403
-
-- ``itemNotFound``: 404
-
-- ``badMethod``: 405
-
-- ``backupOrResizeInProgress``: 409
-
-- ``buildInProgress``: 409
-
-- ``conflictingRequest``: 409
-
-- ``overLimit``: 413
-
-- ``badMediaType``: 415
-
-**Example: Item Not Found fault: JSON response**
-
-.. code::
-
-    {
-       "itemNotFound":{
-          "code":404,
-          "message":"Not Found",
-          "details":"Error Details..."
-       }
-    }
-
-
-From an XML schema perspective, all API faults are extensions of the
-base ComputeAPIFault fault type. When working with a system that binds
-XML to actual classes (such as JAXB), you should use ComputeAPIFault as
-a catch-all if you do not want to distinguish between individual fault
-types.
-
-The OverLimit fault is generated when a rate limit threshold is
-exceeded. For convenience, the fault adds a retryAfter attribute that
-contains the content of the Retry-After header in XML Schema 1.0
-date/time format.
-
-
-**Example: Over Limit fault: JSON response**
-
-.. code::
-
-    {
-        "overLimit" : {
-            "code" : 413,
-            "message" : "OverLimit Retry...",
-            "details" : "Error Details...",
-            "retryAfter" : "2010-08-01T00:00:00Z"
-        }
-    }
-
+For more information on possible error code, please see:
+http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-codes
 
 Asynchronous faults
-~~~~~~~~~~~~~~~~~~~
+===================
 
 An error may occur in the background while a server or image is being
-built or while a server is executing an action. In these cases, the
-server or image is placed in an ``ERROR`` state and the fault is
+built or while a server is executing an action.
+
+In these cases, the server or image is usually placed in an ``ERROR`` state.
+For some operations, like resize, its possible that the operations fails but
+the instance gracefully returned to its original state before attempting the
+operation. In both of these cases, you should be able to find out more from
+the Server Actions API described above.
+
+When a server or image is placed into an ``ERROR`` state, a fault is
 embedded in the offending server or image. Note that these asynchronous
 faults follow the same format as the synchronous ones. The fault
 contains an error code, a human readable message, and optional details
@@ -188,3 +176,5 @@ created timestamp that specify when the fault occurred.
             ]
         }
     }
+
+
