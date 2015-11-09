@@ -1527,9 +1527,9 @@ def flavor_get_by_flavor_id(context, id, read_deleted=None):
     return IMPL.flavor_get_by_flavor_id(context, id, read_deleted)
 
 
-def flavor_destroy(context, name):
+def flavor_destroy(context, flavor_id):
     """Delete an instance type."""
-    return IMPL.flavor_destroy(context, name)
+    return IMPL.flavor_destroy(context, flavor_id)
 
 
 def flavor_access_get_by_flavor_id(context, flavor_id):

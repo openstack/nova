@@ -61,17 +61,6 @@ DEFAULT_FLAVOR_OBJS = [
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
-    def test_non_existent_inst_type_should_not_delete(self):
-        # Ensures that flavor creation fails with invalid args.
-        self.assertRaises(exception.FlavorNotFoundByName,
-                          flavors.destroy,
-                          'unknown_flavor')
-
-    def test_will_not_destroy_with_no_name(self):
-        # Ensure destroy said path of no name raises error.
-        self.assertRaises(exception.FlavorNotFoundByName,
-                          flavors.destroy, None)
-
     def test_will_not_get_bad_default_instance_type(self):
         # ensures error raised on bad default flavor.
         self.flags(default_flavor='unknown_flavor')
@@ -432,7 +421,7 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
-        flavors.destroy('flavor')
+        flavor.destroy()
         self.assertRaises(exception.FlavorNotFound,
                           objects.Flavor.get_by_name, ctxt, flavor.name)
 

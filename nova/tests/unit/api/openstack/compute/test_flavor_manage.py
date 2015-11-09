@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 from oslo_serialization import jsonutils
 import six
 import webob
@@ -52,20 +53,6 @@ def fake_db_flavor(**updates):
     return db_flavor
 
 
-def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
-    if flavorid == 'failtest':
-        raise exception.FlavorNotFound(flavor_id=flavorid)
-    elif not str(flavorid) == '1234':
-        raise Exception("This test expects flavorid 1234, not %s" % flavorid)
-    if read_deleted != 'no':
-        raise test.TestingException("Should not be reading deleted")
-    return fake_db_flavor(flavorid=flavorid)
-
-
-def fake_destroy(flavorname):
-    pass
-
-
 def fake_create(newflavor):
     newflavor['flavorid'] = 1234
     newflavor["name"] = 'test'
@@ -86,10 +73,6 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorManageTestV21, self).setUp()
-        self.stubs.Set(flavors,
-                       "get_flavor_by_flavor_id",
-                       fake_get_flavor_by_flavor_id)
-        self.stubs.Set(flavors, "destroy", fake_destroy)
         self.stub_out("nova.objects.Flavor.create", fake_create)
 
         self.request_body = {
@@ -117,7 +100,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
                                              'os-flavor-access', 'flavors',
                                              'os-flavor-extra-data'))
 
-    def test_delete(self):
+    @mock.patch('nova.objects.Flavor.destroy')
+    def test_delete(self, mock_destroy):
         res = self.controller._delete(self._get_http_request(), 1234)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
@@ -130,9 +114,10 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.assertEqual(202, status_int)
 
         # subsequent delete should fail
+        mock_destroy.side_effect = exception.FlavorNotFound(flavor_id=1234)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._delete, self._get_http_request(),
-                          "failtest")
+                          1234)
 
     def _test_create_missing_parameter(self, parameter):
         body = {
