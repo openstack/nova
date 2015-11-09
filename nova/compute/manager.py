@@ -2773,6 +2773,13 @@ class ComputeManager(manager.Manager):
                         'rebuild.error', fault=e)
                 raise exception.BuildAbortException(
                     instance_uuid=instance.uuid, reason=e.format_message())
+            except (exception.InstanceNotFound,
+                    exception.UnexpectedDeletingTaskStateError) as e:
+                LOG.debug('Instance was deleted while rebuilding',
+                          instance=instance)
+                self._set_migration_status(migration, 'failed')
+                self._notify_about_instance_usage(context, instance,
+                        'rebuild.error', fault=e)
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
                 self._notify_about_instance_usage(context, instance,

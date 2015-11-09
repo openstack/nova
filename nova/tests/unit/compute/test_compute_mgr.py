@@ -2662,6 +2662,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
+    def _test_rebuild_ex(self, instance, ex):
+        # Test that we do not raise on certain exceptions
+        with test.nested(
+            mock.patch.object(self.compute, '_get_compute_info'),
+            mock.patch.object(self.compute, '_do_rebuild_instance_with_claim',
+                              side_effect=ex),
+            mock.patch.object(self.compute, '_set_migration_status'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage')
+        ) as (mock_get, mock_rebuild, mock_set, mock_notify):
+            self.compute.rebuild_instance(self.context, instance, None, None,
+                                          None, None, None, None, None)
+            mock_set.assert_called_once_with(None, 'failed')
+            mock_notify.assert_called_once_with(mock.ANY, instance,
+                                                'rebuild.error', fault=ex)
+
+    def test_rebuild_deleting(self):
+        instance = objects.Instance(uuid='fake-uuid')
+        ex = exception.UnexpectedDeletingTaskStateError(
+            instance_uuid=instance.uuid, expected='expected', actual='actual')
+        self._test_rebuild_ex(instance, ex)
+
+    def test_rebuild_notfound(self):
+        instance = objects.Instance(uuid='fake-uuid')
+        ex = exception.InstanceNotFound(instance_id=instance.uuid)
+        self._test_rebuild_ex(instance, ex)
+
     def test_rebuild_default_impl(self):
         def _detach(context, bdms):
             # NOTE(rpodolyaka): check that instance has been powered off by
