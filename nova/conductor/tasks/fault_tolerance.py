@@ -151,3 +151,5 @@ class FaultToleranceTasks(object):
         relation.secondary_instance_uuid = instances[0].uuid
         LOG.debug("Creating primary/secondary instance relation: %s", relation)
         relation.create(context)
+
+        return instances[0]

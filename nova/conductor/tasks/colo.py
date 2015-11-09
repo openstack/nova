@@ -13,9 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
+
 from oslo.config import cfg
 
 import nova.context
+from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova import db
 from nova import exception
 from nova import objects
@@ -69,6 +73,7 @@ class COLOTasks(object):
         LOG.debug("Acquiring COLO VLAN ID for instance %s." % instance.uuid)
 
         if utils.ft_secondary(instance):
+            # TODO(ORBIT): Possible race if relation is created after this.
             relation = (objects.FaultToleranceRelation.
                         get_by_secondary_instance_uuid(context, instance.uuid))
             primary_instance_uuid = relation.primary_instance_uuid
@@ -82,3 +87,24 @@ class COLOTasks(object):
                                                             instance.uuid))
 
         return vlan_id
+
+    def _wait_for_instance_host(self, instance):
+        i = 0
+        while instance.power_state != power_state.PAUSED:
+            LOG.debug("Waiting for instance to launch: %s status - %s",
+                      instance.uuid,
+                      power_state.STATE_MAP[instance.power_state])
+            # TODO(ORBIT)
+            i += 1
+            if i > 100:
+                raise Exception("COLO MIGRATE TIMEOUT")
+            time.sleep(1)
+            instance.refresh()
+
+    def migrate(self, context, primary_instance, secondary_instance):
+        for instance in (primary_instance, secondary_instance):
+            instance.refresh()
+            self._wait_for_instance_host(instance)
+        LOG.debug("Starting COLO migration for %s.", primary_instance.uuid)
+        compute_rpcapi.ComputeAPI().colo_migration(context, primary_instance,
+                                                   secondary_instance)

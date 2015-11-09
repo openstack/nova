@@ -6269,17 +6269,7 @@ class ComputeManager(manager.Manager):
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
 
-    def colo_migration(self, context, primary_instance):
-        relations = (objects.FaultToleranceRelationList.
-                     get_by_primary_instance_uuid(context,
-                                                  instance.uuid))
-
-        # NOTE(ORBIT): Currently supporting one secondary only.
-        relation = relations[0]
-
-        secondary_instance = objects.Instance.get_by_uuid(
-            context, relation.secondary_instance_uuid)
-
+    def colo_migration(self, context, primary_instance, secondary_instance):
         self.driver.colo_migration(primary_instance, secondary_instance)
 
     def colo_cleanup(self, context, instance):

@@ -6440,7 +6440,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def colo_migration(self, primary_instance, secondary_instance):
         """Start synchronization of the primary and secondary VM."""
-        # TODO(ORBIT): Race if secondary havent got host yet
         secondary_host = secondary_instance.host
         if not libvirt_utils.is_valid_hostname(secondary_host):
             raise exception.InvalidHostname(hostname=secondary_host)

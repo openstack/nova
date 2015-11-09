@@ -654,17 +654,6 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
-            self.compute_rpcapi.build_and_run_instance(context,
-                    instance=instance, host=host['host'], image=image,
-                    request_spec=request_spec,
-                    filter_properties=local_filter_props,
-                    admin_password=admin_password,
-                    injected_files=injected_files,
-                    requested_networks=requested_networks,
-                    security_groups=security_groups,
-                    block_device_mapping=bdms, node=host['nodename'],
-                    limits=host['limits'])
-
             if utils.ft_enabled(instance):
                 colo_tasks = colo.COLOTasks()
 
@@ -686,10 +675,22 @@ class ComputeTaskManager(base.Base):
                 instance.system_metadata = system_metadata
                 instance.save()
 
+            self.compute_rpcapi.build_and_run_instance(context,
+                    instance=instance, host=host['host'], image=image,
+                    request_spec=request_spec,
+                    filter_properties=local_filter_props,
+                    admin_password=admin_password,
+                    injected_files=injected_files,
+                    requested_networks=requested_networks,
+                    security_groups=security_groups,
+                    block_device_mapping=bdms, node=host['nodename'],
+                    limits=host['limits'])
+
+            if utils.ft_enabled(instance):
                 if 'ft_secondary_hosts' in host:
                     ft_tasks = fault_tolerance.FaultToleranceTasks()
                     for ft_secondary_host in host['ft_secondary_hosts']:
-                        ft_tasks.deploy_secondary_instance(
+                        secondary_instance = ft_tasks.deploy_secondary_instance(
                             context, instance.uuid,
                             host=ft_secondary_host['host'],
                             node=ft_secondary_host['nodename'],
@@ -703,6 +704,9 @@ class ComputeTaskManager(base.Base):
                             security_groups=security_groups,
                             block_device_mapping=block_device_mapping,
                             legacy_bdm=legacy_bdm)
+
+                        colo_tasks.migrate(context, instance,
+                                           secondary_instance)
 
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)
