@@ -138,10 +138,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
 
         objects.Service.get_by_compute_host(
-            self.context, "host").AndRaise(exception.NotFound)
+            self.context, "host").AndRaise(
+            exception.ComputeHostNotFound(host='host'))
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.ComputeServiceUnavailable,
+        self.assertRaises(exception.ComputeHostNotFound,
             self.task._check_host_is_up, "host")
 
     def test_check_requested_destination(self):
@@ -187,10 +188,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
 
         objects.Service.get_by_compute_host(
-            self.context, self.destination).AndRaise(exception.NotFound)
+            self.context, self.destination).AndRaise(
+            exception.ComputeHostNotFound(host='host'))
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.ComputeServiceUnavailable,
+        self.assertRaises(exception.ComputeHostNotFound,
                           self.task._check_requested_destination)
 
     def test_check_requested_destination_fails_with_not_enough_memory(self):

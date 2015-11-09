@@ -77,16 +77,13 @@ class LiveMigrationTask(base.TaskBase):
         if self.instance.power_state not in (power_state.RUNNING,
                                              power_state.PAUSED):
             raise exception.InstanceInvalidState(
-                    instance_uuid = self.instance.uuid,
-                    attr = 'power_state',
-                    state = self.instance.power_state,
-                    method = 'live migrate')
+                    instance_uuid=self.instance.uuid,
+                    attr='power_state',
+                    state=self.instance.power_state,
+                    method='live migrate')
 
     def _check_host_is_up(self, host):
-        try:
-            service = objects.Service.get_by_compute_host(self.context, host)
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
+        service = objects.Service.get_by_compute_host(self.context, host)
 
         if not self.servicegroup_api.service_is_up(service):
             raise exception.ComputeServiceUnavailable(host=host)
