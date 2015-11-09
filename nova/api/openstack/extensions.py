@@ -391,7 +391,7 @@ def check_compute_policy(context, action, target, scope='compute'):
 
 
 # NOTE(alex_xu): The functions os_compute_authorizer and
-# os_compute_soft_authorizer are used to policy enforcement for Openstack
+# os_compute_soft_authorizer are used to policy enforcement for OpenStack
 # Compute API, now Nova V2.1 REST API will invoke it.
 #
 

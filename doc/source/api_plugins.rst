@@ -32,7 +32,7 @@ and the V2.1 plugins live in ``nova/api/openstack/compute``.
 Note that any change to the Nova API to be merged will first require a
 spec be approved first. See `here <https://github.com/openstack/nova-specs>`_
 for the appropriate repository. For guidance on the design of the API
-please refer to the `Openstack API WG
+please refer to the `OpenStack API WG
 <https://wiki.openstack.org/wiki/API_Working_Group>`_
 
 
