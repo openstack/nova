@@ -14,6 +14,7 @@
 
 import copy
 
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -134,6 +135,30 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.6: Added 'lxc' and 'uml' enum types to DiskBusField
     # Version 1.7: added img_config_drive field
     VERSION = ImageMeta.VERSION
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(ImageMetaProps, self).obj_make_compatible(primitive,
+                                                        target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 7):
+            primitive.pop('img_config_drive', None)
+        if target_version < (1, 5):
+            primitive.pop('os_admin_user', None)
+        if target_version < (1, 4):
+            primitive.pop('hw_vif_multiqueue_enabled', None)
+        if target_version < (1, 2):
+            primitive.pop('img_hv_type', None)
+            primitive.pop('img_hv_requested_version', None)
+        if target_version < (1, 1):
+            primitive.pop('os_require_quiesce', None)
+
+        if target_version < (1, 6):
+            bus = primitive.get('hw_disk_bus', None)
+            if bus in ('lxc', 'uml'):
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='hw_disk_bus=%s not supported in version %s' % (
+                        bus, target_version))
 
     # Maximum number of NUMA nodes permitted for the guest topology
     NUMA_NODES_MAX = 128
