@@ -18,14 +18,37 @@
 Nova System Architecture
 ========================
 
-Nova is built on a shared-nothing, messaging-based architecture. All of the major nova components can be run on multiple servers. This means that most component to component communication must go via message queue. In order to avoid blocking each component while waiting for a response, we use deferred objects, with a callback that gets triggered when a response is received.
+Nova is comprised of multiple server processes, each performing different
+functions. The user-facing interface is a REST API, while internally Nova
+components communicate via an RPC message passing mechanism.
 
-Nova recently moved to using a sql-based central database that is shared by all components in the system.  The amount and depth of the data fits into a sql database quite well.  For small deployments this seems like an optimal solution.  For larger deployments, and especially if security is a concern, nova will be moving towards multiple data stores with some kind of aggregation system.
+The API servers process REST requests, which typically involve database
+reads/writes, optionally sending RPC messages to other Nova services,
+and generating responses to the REST calls.
+RPC messaging is done via the **oslo.messaging** library,
+an abstraction on top of message queues.
+Most of the major nova components can be run on multiple servers, and have
+a `manager` that is listening for `RPC` messages.
+The one major exception is nova-compute, where a single process runs on the
+hypervisor it is managing (except when using the VMware or Ironic drivers).
+The manager also, optionally, has periodic tasks.
+For more details on our `RPC` system, please see: :doc:`rpc`
+
+Nova also uses a central database that is (logically) shared between all
+components. However, to aid upgrade, the DB is accessed through an object
+layer that ensures an upgraded control plane can still communicate with
+a nova-compute running the previous release.
+To make this possible nova-compute proxies DB requests over `RPC` to a
+central manager called `nova-conductor`
+
+To horizontally expand Nova deployments, we have a deployment sharding
+concept called cells. For more information please see: :doc:`cells`
 
 Components
 ----------
 
-Below you will find a helpful explanation of the different components.
+Below you will find a helpful explanation of the key components
+of a typical (non-cells v1) Nova deployment.
 
 .. image:: ./images/architecture.svg
    :width: 100%
