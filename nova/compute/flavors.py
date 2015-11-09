@@ -188,23 +188,6 @@ def destroy(name):
         raise exception.FlavorNotFoundByName(flavor_name=name)
 
 
-def get_all_flavors(ctxt=None, inactive=False, filters=None):
-    """Get all non-deleted flavors as a dict.
-
-    Pass inactive=True if you want deleted flavors returned also.
-    """
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    inst_types = objects.FlavorList.get_all(ctxt, inactive=inactive,
-                                            filters=filters)
-
-    inst_type_dict = {}
-    for inst_type in inst_types:
-        inst_type_dict[inst_type.id] = inst_type
-    return inst_type_dict
-
-
 def get_all_flavors_sorted_list(ctxt=None, filters=None, sort_key='flavorid',
                                 sort_dir='asc', limit=None, marker=None):
     """Get all non-deleted flavors as a sorted list.

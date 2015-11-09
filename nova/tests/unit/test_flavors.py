@@ -13,15 +13,9 @@
 """
 Unit Tests for flavors code
 """
-import time
-
-import six
-
 from nova.compute import flavors
 from nova import context
 from nova import db
-from nova.db.sqlalchemy import api as sql_session
-from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -67,36 +61,6 @@ DEFAULT_FLAVOR_OBJS = [
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
-    def _generate_name(self):
-        """return a name not in the DB."""
-        nonexistent_flavor = str(int(time.time()))
-        all_flavors = flavors.get_all_flavors()
-        while nonexistent_flavor in all_flavors:
-            nonexistent_flavor += "z"
-        else:
-            return nonexistent_flavor
-
-    def _generate_flavorid(self):
-        """return a flavorid not in the DB."""
-        nonexistent_flavor = 2700
-        flavor_ids = [value.id for key, value in
-                      six.iteritems(flavors.get_all_flavors())]
-        while nonexistent_flavor in flavor_ids:
-            nonexistent_flavor += 1
-        else:
-            return nonexistent_flavor
-
-    def _existing_flavor(self):
-        """return first flavor name."""
-        return flavors.get_all_flavors().keys()[0]
-
-    def test_get_all_instance_types(self):
-        # Ensures that all flavors can be retrieved.
-        session = sql_session.get_session()
-        total_instance_types = session.query(models.InstanceTypes).count()
-        inst_types = flavors.get_all_flavors()
-        self.assertEqual(total_instance_types, len(inst_types))
-
     def test_non_existent_inst_type_should_not_delete(self):
         # Ensures that flavor creation fails with invalid args.
         self.assertRaises(exception.FlavorNotFoundByName,
@@ -224,45 +188,6 @@ class InstanceTypeTestCase(test.TestCase):
             self.assertIsInstance(f, objects.Flavor)
             self.assertEqual(expected_results[i].flavorid,
                              f.flavorid)
-
-    def test_get_inactive_flavors(self):
-        flav1 = flavors.create('flavor1', 256, 1, 120)
-        flav2 = flavors.create('flavor2', 512, 4, 250)
-        flavors.destroy('flavor1')
-
-        returned_flavors_ids = flavors.get_all_flavors().keys()
-        self.assertNotIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
-
-        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
-        self.assertIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
-
-    def test_get_inactive_flavors_with_same_name(self):
-        flav1 = flavors.create('flavor', 256, 1, 120)
-        flavors.destroy('flavor')
-        flav2 = flavors.create('flavor', 512, 4, 250)
-
-        returned_flavors_ids = flavors.get_all_flavors().keys()
-        self.assertNotIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
-
-        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
-        self.assertIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
-
-    def test_get_inactive_flavors_with_same_flavorid(self):
-        flav1 = flavors.create('flavor', 256, 1, 120, 100, "flavid")
-        flavors.destroy('flavor')
-        flav2 = flavors.create('flavor', 512, 4, 250, 100, "flavid")
-
-        returned_flavors_ids = flavors.get_all_flavors().keys()
-        self.assertNotIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
-
-        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
-        self.assertIn(flav1.id, returned_flavors_ids)
-        self.assertIn(flav2.id, returned_flavors_ids)
 
 
 class InstanceTypeToolsTest(test.TestCase):
@@ -528,7 +453,8 @@ class CreateInstanceTypeTest(test.TestCase):
 
     def test_basic_create(self):
         # Ensure instance types can be created.
-        original_list = flavors.get_all_flavors()
+        ctxt = context.get_admin_context()
+        original_list = objects.FlavorList.get_all(ctxt)
 
         # Create new type and make sure values stick
         flavor = flavors.create('flavor', 64, 1, 120)
@@ -538,17 +464,18 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertEqual(flavor.root_gb, 120)
 
         # Ensure new type shows up in list
-        new_list = flavors.get_all_flavors()
+        new_list = objects.FlavorList.get_all(ctxt)
         self.assertNotEqual(len(original_list), len(new_list),
                             'flavor was not created')
 
     def test_create_then_delete(self):
-        original_list = flavors.get_all_flavors()
+        ctxt = context.get_admin_context()
+        original_list = objects.FlavorList.get_all(ctxt)
 
         flavor = flavors.create('flavor', 64, 1, 120)
 
         # Ensure new type shows up in list
-        new_list = flavors.get_all_flavors()
+        new_list = objects.FlavorList.get_all(ctxt)
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
@@ -557,12 +484,11 @@ class CreateInstanceTypeTest(test.TestCase):
                           flavors.get_flavor, flavor.id)
 
         # Deleted instance should not be in list anymore
-        new_list = flavors.get_all_flavors()
+        new_list = objects.FlavorList.get_all(ctxt)
         self.assertEqual(len(original_list), len(new_list))
-        for k in original_list.keys():
-            f = original_list[k]
+        for i, f in enumerate(original_list):
             self.assertIsInstance(f, objects.Flavor)
-            self.assertEqual(f.flavorid, new_list[k].flavorid)
+            self.assertEqual(f.flavorid, new_list[i].flavorid)
 
     def test_duplicate_names_fail(self):
         # Ensures that name duplicates raise FlavorCreateFailed.

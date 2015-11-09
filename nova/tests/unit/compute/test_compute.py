@@ -8233,8 +8233,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_get_all_by_flavor(self):
         # Test searching instances by image.
         c = context.get_admin_context()
-        flavor_dict = flavors.get_all_flavors(c)
-        flavor_dict = {f.flavorid: f for f in flavor_dict.values()}
+        flavor_dict = {f.flavorid: f for f in objects.FlavorList.get_all(c)}
         instance1 = self._create_fake_instance_obj(
             {'instance_type_id': flavor_dict['1'].id})
         instance2 = self._create_fake_instance_obj(
