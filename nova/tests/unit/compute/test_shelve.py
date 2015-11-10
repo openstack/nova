@@ -379,6 +379,58 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.stubs.Set(self.compute.driver, 'destroy', fake_destroy)
         self.compute._poll_shelved_instances(self.context)
 
+    @mock.patch('oslo_utils.timeutils.is_older_than')
+    @mock.patch('oslo_utils.timeutils.parse_strtime')
+    def test_shelved_poll_filters_task_state(self, mock_parse, mock_older):
+        self.flags(shelved_offload_time=1)
+        mock_older.return_value = True
+        instance1 = self._create_fake_instance_obj()
+        instance1.task_state = task_states.SPAWNING
+        instance1.vm_state = vm_states.SHELVED
+        instance1.host = self.compute.host
+        instance1.system_metadata = {'shelved_at': ''}
+        instance1.save()
+        instance2 = self._create_fake_instance_obj()
+        instance2.task_state = None
+        instance2.vm_state = vm_states.SHELVED
+        instance2.host = self.compute.host
+        instance2.system_metadata = {'shelved_at': ''}
+        instance2.save()
+
+        data = []
+
+        def fake_soi(context, instance, **kwargs):
+            data.append(instance.uuid)
+
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
+            soi.side_effect = fake_soi
+            self.compute._poll_shelved_instances(self.context)
+            self.assertTrue(soi.called)
+            self.assertEqual([instance2.uuid], data)
+
+    @mock.patch('oslo_utils.timeutils.is_older_than')
+    @mock.patch('oslo_utils.timeutils.parse_strtime')
+    def test_shelved_poll_checks_task_state_on_save(self, mock_parse,
+                                                    mock_older):
+        self.flags(shelved_offload_time=1)
+        mock_older.return_value = True
+        instance = self._create_fake_instance_obj()
+        instance.task_state = None
+        instance.vm_state = vm_states.SHELVED
+        instance.host = self.compute.host
+        instance.system_metadata = {'shelved_at': ''}
+        instance.save()
+
+        def fake_parse_hook(timestring):
+            instance.task_state = task_states.SPAWNING
+            instance.save()
+
+        mock_parse.side_effect = fake_parse_hook
+
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
+            self.compute._poll_shelved_instances(self.context)
+            self.assertFalse(soi.called)
+
 
 class ShelveComputeAPITestCase(test_compute.BaseTestCase):
     def test_shelve(self):
