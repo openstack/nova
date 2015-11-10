@@ -511,7 +511,7 @@ class VMwareVolumeOps(object):
         device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
                                                      disk_uuid)
         if not device:
-            raise exception.StorageError(reason=_("Unable to find volume"))
+            raise exception.DiskNotFound(message=_("Unable to find volume"))
         return device
 
     def _detach_volume_vmdk(self, connection_info, instance):
@@ -568,7 +568,7 @@ class VMwareVolumeOps(object):
                                                       "config.hardware.device")
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
-            raise exception.StorageError(reason=_("Unable to find volume"))
+            raise exception.DiskNotFound(message=_("Unable to find volume"))
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.debug("Detached ISCSI: %s", connection_info, instance=instance)
 
