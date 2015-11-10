@@ -257,7 +257,6 @@ def compare_obj(test, obj, db_obj, subs=None, allow_missing=None,
 class _BaseTestCase(test.TestCase):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
-        self.remote_object_calls = list()
         self.user_id = 'fake-user'
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
