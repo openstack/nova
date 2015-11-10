@@ -70,8 +70,15 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  server_req, req_subs)
-        subs = self._get_regexes()
-        self._verify_response(server_resp, subs, response, expected_resp_code)
+        if server_resp:
+            subs = self._get_regexes()
+            self._verify_response(server_resp, subs, response,
+                                  expected_resp_code)
+        else:
+            # NOTE(gibi): no server_resp means we expect empty body as
+            # a response
+            self.assertEqual(expected_resp_code, response.status_code)
+            self.assertEqual('', response.content)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate(self, rebuild_mock):
@@ -104,4 +111,40 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
+                host=None)
+
+
+class EvacuateJsonTestV214(EvacuateJsonTest):
+    microversion = '2.14'
+    scenarios = [('v2_14', {'api_major_version': 'v2.1'})]
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    def test_server_evacuate(self, rebuild_mock):
+        # Note (wingwj): The host can't be the same one
+        req_subs = {
+            'host': 'testHost',
+            "adminPass": "MySecretPass",
+        }
+        self._test_evacuate(req_subs, 'server-evacuate-req',
+                            server_resp=None, expected_resp_code=200)
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=None, preserve_ephemeral=mock.ANY,
+                host='testHost')
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    def test_server_evacuate_find_host(self, rebuild_mock):
+        req_subs = {
+            "adminPass": "MySecretPass",
+        }
+        self._test_evacuate(req_subs, 'server-evacuate-find-host-req',
+                            server_resp=None, expected_resp_code=200)
+
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=None, preserve_ephemeral=mock.ANY,
                 host=None)

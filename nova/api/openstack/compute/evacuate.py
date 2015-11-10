@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_utils import strutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import evacuate
 from nova.api.openstack import extensions
@@ -41,24 +42,14 @@ class EvacuateController(wsgi.Controller):
         self.compute_api = compute.API(skip_policy_check=True)
         self.host_api = compute.HostAPI()
 
-    # TODO(eliqiao): Should be responding here with 202 Accept
-    # because evacuate is an async call, but keep to 200 for
-    # backwards compatibility reasons.
-    @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('evacuate')
-    @validation.schema(evacuate.evacuate)
-    def _evacuate(self, req, id, body):
-        """Permit admins to evacuate a server from a failed host
-        to a new one.
-        """
-        context = req.environ["nova.context"]
-        authorize(context)
+    def _get_on_shared_storage(self, req, evacuate_body):
+        if (req.api_version_request <
+                api_version_request.APIVersionRequest("2.14")):
+            return strutils.bool_from_string(evacuate_body["onSharedStorage"])
+        else:
+            return None
 
-        evacuate_body = body["evacuate"]
-        host = evacuate_body.get("host")
-        on_shared_storage = strutils.bool_from_string(
-                                        evacuate_body["onSharedStorage"])
-
+    def _get_password(self, req, evacuate_body, on_shared_storage):
         password = None
         if 'adminPass' in evacuate_body:
             # check that if requested to evacuate server on shared storage
@@ -70,6 +61,42 @@ class EvacuateController(wsgi.Controller):
             password = evacuate_body['adminPass']
         elif not on_shared_storage:
             password = utils.generate_password()
+
+        return password
+
+    def _get_password_v214(self, req, evacuate_body):
+        if 'adminPass' in evacuate_body:
+            password = evacuate_body['adminPass']
+        else:
+            password = utils.generate_password()
+
+        return password
+
+    # TODO(eliqiao): Should be responding here with 202 Accept
+    # because evacuate is an async call, but keep to 200 for
+    # backwards compatibility reasons.
+    @extensions.expected_errors((400, 404, 409))
+    @wsgi.action('evacuate')
+    @validation.schema(evacuate.evacuate, "2.1", "2.12")
+    @validation.schema(evacuate.evacuate_v214, "2.14")
+    def _evacuate(self, req, id, body):
+        """Permit admins to evacuate a server from a failed host
+        to a new one.
+        """
+        context = req.environ["nova.context"]
+        authorize(context)
+
+        evacuate_body = body["evacuate"]
+        host = evacuate_body.get("host")
+
+        on_shared_storage = self._get_on_shared_storage(req, evacuate_body)
+
+        if (req.api_version_request <
+                api_version_request.APIVersionRequest("2.14")):
+            password = self._get_password(req, evacuate_body,
+                                          on_shared_storage)
+        else:
+            password = self._get_password_v214(req, evacuate_body)
 
         if host is not None:
             try:
@@ -94,10 +121,12 @@ class EvacuateController(wsgi.Controller):
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        if CONF.enable_instance_password:
+        if (req.api_version_request <
+                api_version_request.APIVersionRequest("2.14") and
+                CONF.enable_instance_password):
             return {'adminPass': password}
         else:
-            return {}
+            return None
 
 
 class Evacuate(extensions.V21APIExtensionBase):

@@ -16,6 +16,7 @@ import uuid
 
 import mock
 from oslo_config import cfg
+import unittest
 import webob
 
 from nova.api.openstack.compute import evacuate as evacuate_v21
@@ -293,3 +294,101 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class EvacuateTestV214(EvacuateTestV21):
+    def setUp(self):
+        super(EvacuateTestV214, self).setUp()
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                                 version='2.14')
+        self.req = fakes.HTTPRequest.blank('', version='2.14')
+
+    def _get_evacuate_response(self, json_load, uuid=None):
+        json_load.pop('onSharedStorage', None)
+        base_json_load = {'evacuate': json_load}
+        response = self.controller._evacuate(self.admin_req, uuid or self.UUID,
+                                             body=base_json_load)
+
+        return response
+
+    def _check_evacuate_failure(self, exception, body, uuid=None,
+                                controller=None):
+        controller = controller or self.controller
+        body.pop('onSharedStorage', None)
+        body = {'evacuate': body}
+        self.assertRaises(exception,
+                          controller._evacuate,
+                          self.admin_req, uuid or self.UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'evacuate')
+    def test_evacuate_instance(self, mock_evacuate):
+        self._get_evacuate_response({})
+        admin_pass = mock_evacuate.call_args_list[0][0][4]
+        on_shared_storage = mock_evacuate.call_args_list[0][0][3]
+        self.assertEqual(CONF.password_length, len(admin_pass))
+        self.assertIsNone(on_shared_storage)
+
+    def test_evacuate_with_valid_instance(self):
+        admin_pass = 'MyNewPass'
+        res = self._get_evacuate_response({'host': 'my-host',
+                                           'adminPass': admin_pass})
+
+        self.assertIsNone(res)
+
+    @unittest.skip('Password is not returned from Microversion 2.14')
+    def test_evacuate_disable_password_return(self):
+        pass
+
+    @unittest.skip('Password is not returned from Microversion 2.14')
+    def test_evacuate_enable_password_return(self):
+        pass
+
+    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    def test_evacuate_instance_with_invalid_on_shared_storage(self):
+        pass
+
+    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_not_shared_pass_generated(self, mock_save):
+        pass
+
+    @mock.patch.object(compute_api.API, 'evacuate')
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_pass_generated(self, mock_save, mock_evacuate):
+        self._get_evacuate_response({'host': 'my-host'})
+        self.assertEqual(CONF.password_length,
+                         len(mock_evacuate.call_args_list[0][0][4]))
+
+    def test_evacuate_instance_without_on_shared_storage(self):
+        self._get_evacuate_response({'host': 'my-host',
+                                     'adminPass': 'MyNewPass'})
+
+    def test_evacuate_instance_with_no_target(self):
+        admin_pass = 'MyNewPass'
+        with mock.patch.object(compute_api.API, 'evacuate') as mock_evacuate:
+            self._get_evacuate_response({'adminPass': admin_pass})
+            self.assertEqual(admin_pass,
+                             mock_evacuate.call_args_list[0][0][4])
+
+    def test_not_admin(self):
+        body = {'evacuate': {'host': 'my-host'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller._evacuate,
+                          self.req, self.UUID, body=body)
+
+    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_shared_and_pass(self, mock_save):
+        pass
+
+    @unittest.skip('from Microversion 2.14 it is covered with '
+                   'test_evacuate_pass_generated')
+    def test_evacuate_instance_with_target(self):
+        pass
+
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_instance_with_underscore_in_hostname(self, mock_save):
+        # NOTE: The hostname grammar in RFC952 does not allow for
+        # underscores in hostnames. However, we should test that it
+        # is supported because it sometimes occurs in real systems.
+        self._get_evacuate_response({'host': 'underscore_hostname'})

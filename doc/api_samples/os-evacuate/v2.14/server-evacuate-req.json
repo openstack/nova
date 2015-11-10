@@ -1,0 +1,6 @@
+{
+    "evacuate": {
+        "host": "testHost",
+        "adminPass": "MySecretPass"
+    }
+}
