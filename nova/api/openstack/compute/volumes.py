@@ -403,6 +403,8 @@ class VolumeAttachmentController(wsgi.Controller):
                     raise exc.HTTPBadRequest(explanation=e.format_message())
                 except exception.InstanceUnknownCell as e:
                     raise exc.HTTPNotFound(explanation=e.format_message())
+                except exception.InvalidInput as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
 
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
