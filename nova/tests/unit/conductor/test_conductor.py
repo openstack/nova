@@ -488,42 +488,52 @@ class _BaseTaskTestCase(object):
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
 
-    def test_build_instances_scheduler_failure(self):
+    @mock.patch.object(scheduler_utils, 'build_request_spec')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    @mock.patch.object(scheduler_client.SchedulerClient,
+                       'select_destinations')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_cleanup_allocated_networks')
+    def test_build_instances_scheduler_failure(
+            self, cleanup_mock, sd_mock, state_mock,
+            sig_mock, bs_mock):
         instances = [fake_instance.fake_instance_obj(self.context)
-                for i in range(2)]
+                     for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
         exception = exc.NoValidHost(reason='fake-reason')
-        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
-        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
-        self.mox.StubOutWithMock(scheduler_utils, 'set_vm_state_and_notify')
 
-        scheduler_utils.build_request_spec(self.context, image,
-                mox.IgnoreArg()).AndReturn(spec)
-        filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
-        self.conductor_manager._schedule_instances(self.context,
-                spec, filter_properties).AndRaise(exception)
+        bs_mock.return_value = spec
+        sd_mock.side_effect = exception
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
-        for instance in instances:
-            scheduler_utils.set_vm_state_and_notify(
-                self.context, instance.uuid, 'compute_task', 'build_instances',
-                updates, exception, spec, self.conductor_manager.db)
-        self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
-        self.conductor.build_instances(self.context,
-                instances=instances,
-                image=image,
-                filter_properties={},
-                admin_password='admin_password',
-                injected_files='injected_files',
-                requested_networks=None,
-                security_groups='security_groups',
-                block_device_mapping='block_device_mapping',
-                legacy_bdm=False)
+        self.conductor.build_instances(
+            self.context,
+            instances=instances,
+            image=image,
+            filter_properties={},
+            admin_password='admin_password',
+            injected_files='injected_files',
+            requested_networks=None,
+            security_groups='security_groups',
+            block_device_mapping='block_device_mapping',
+            legacy_bdm=False)
+
+        set_state_calls = []
+        cleanup_network_calls = []
+        for instance in instances:
+            set_state_calls.append(mock.call(
+                self.context, instance.uuid, 'compute_task', 'build_instances',
+                updates, exception, spec, self.conductor_manager.db))
+            cleanup_network_calls.append(mock.call(
+                self.context, mock.ANY, None))
+        state_mock.assert_has_calls(set_state_calls)
+        cleanup_mock.assert_has_calls(cleanup_network_calls)
 
     def test_build_instances_retry_exceeded(self):
         instances = [fake_instance.fake_instance_obj(self.context)]
@@ -531,9 +541,12 @@ class _BaseTaskTestCase(object):
         filter_properties = {'retry': {'num_attempts': 10, 'hosts': []}}
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
 
+        @mock.patch.object(conductor_manager.ComputeTaskManager,
+                           '_cleanup_allocated_networks')
         @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
         @mock.patch.object(scheduler_utils, 'populate_retry')
-        def _test(populate_retry, set_vm_state_and_notify):
+        def _test(populate_retry,
+                  set_vm_state_and_notify, cleanup_mock):
             # build_instances() is a cast, we need to wait for it to
             # complete
             self.useFixture(cast_as_call.CastAsCall(self.stubs))
@@ -559,6 +572,7 @@ class _BaseTaskTestCase(object):
                 self.context, instances[0].uuid, 'compute_task',
                 'build_instances', updates, mock.ANY, {},
                 self.conductor_manager.db)
+            cleanup_mock.assert_called_once_with(self.context, mock.ANY, None)
 
         _test()
 
@@ -566,8 +580,10 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
-    def test_build_instances_scheduler_group_failure(self, state_mock,
-                                                     sig_mock, bs_mock):
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_cleanup_allocated_networks')
+    def test_build_instances_scheduler_group_failure(
+            self, cleanup_mock, state_mock, sig_mock, bs_mock):
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
@@ -594,11 +610,16 @@ class _BaseTaskTestCase(object):
                           security_groups='security_groups',
                           block_device_mapping='block_device_mapping',
                           legacy_bdm=False)
-        calls = []
+        set_state_calls = []
+        cleanup_network_calls = []
         for instance in instances:
-            calls.append(mock.call(self.context, instance.uuid,
-                         'build_instances', updates, exception, spec))
-        state_mock.assert_has_calls(calls)
+            set_state_calls.append(mock.call(
+                self.context, instance.uuid, 'build_instances', updates,
+                exception, spec))
+            cleanup_network_calls.append(mock.call(
+                self.context, mock.ANY, None))
+        state_mock.assert_has_calls(set_state_calls)
+        cleanup_mock.assert_has_calls(cleanup_network_calls)
 
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
