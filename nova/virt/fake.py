@@ -262,7 +262,11 @@ class FakeDriver(driver.ComputeDriver):
                                            network_info,
                                            block_migration=False,
                                            block_device_info=None):
-        pass
+        # Called from the destination host after a successful live migration
+        # so spawn the instance on this host to track it properly.
+        image_meta = injected_files = admin_password = allocations = None
+        self.spawn(context, instance, image_meta, injected_files,
+                   admin_password, allocations)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         if instance.uuid in self.instances:
@@ -882,8 +886,11 @@ class FakeLiveMigrateDriver(FakeDriver):
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
-        if instance.uuid in self.instances:
-            del self.instances[instance.uuid]
+        # Runs on the source host, called from
+        # ComputeManager._post_live_migration so just delete the instance
+        # from being tracked on the source host.
+        self.destroy(context, instance, network_info=None,
+                     block_device_info=block_device_info)
 
 
 class FakeLiveMigrateDriverWithNestedCustomResources(
