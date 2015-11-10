@@ -4368,23 +4368,24 @@ def security_group_default_rule_list(context):
 ###################
 
 
+@main_context_manager.writer
 def provider_fw_rule_create(context, rule):
     fw_rule_ref = models.ProviderFirewallRule()
     fw_rule_ref.update(rule)
-    fw_rule_ref.save()
+    fw_rule_ref.save(context.session)
     return fw_rule_ref
 
 
+@main_context_manager.reader
 def provider_fw_rule_get_all(context):
     return model_query(context, models.ProviderFirewallRule).all()
 
 
+@main_context_manager.writer
 def provider_fw_rule_destroy(context, rule_id):
-    session = get_session()
-    with session.begin():
-        session.query(models.ProviderFirewallRule).\
-                filter_by(id=rule_id).\
-                soft_delete()
+    context.session.query(models.ProviderFirewallRule).\
+        filter_by(id=rule_id).\
+        soft_delete()
 
 
 ###################
@@ -4505,11 +4506,12 @@ def migration_get_all_by_filters(context, filters):
 ##################
 
 
+@main_context_manager.writer
 def console_pool_create(context, values):
     pool = models.ConsolePool()
     pool.update(values)
     try:
-        pool.save()
+        pool.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.ConsolePoolExists(
             host=values["host"],
@@ -4519,6 +4521,7 @@ def console_pool_create(context, values):
     return pool
 
 
+@main_context_manager.reader
 def console_pool_get_by_host_type(context, compute_host, host,
                                   console_type):
 
@@ -4537,6 +4540,7 @@ def console_pool_get_by_host_type(context, compute_host, host,
     return result
 
 
+@main_context_manager.reader
 def console_pool_get_all_by_host_type(context, host, console_type):
     return model_query(context, models.ConsolePool, read_deleted="no").\
                    filter_by(host=host).\
@@ -4545,22 +4549,26 @@ def console_pool_get_all_by_host_type(context, host, console_type):
                    all()
 
 
+##################
+
+
+@main_context_manager.writer
 def console_create(context, values):
     console = models.Console()
     console.update(values)
-    console.save()
+    console.save(context.session)
     return console
 
 
+@main_context_manager.writer
 def console_delete(context, console_id):
-    session = get_session()
-    with session.begin():
-        # NOTE(mdragon): consoles are meant to be transient.
-        session.query(models.Console).\
-                filter_by(id=console_id).\
-                delete()
+    # NOTE(mdragon): consoles are meant to be transient.
+    context.session.query(models.Console).\
+        filter_by(id=console_id).\
+        delete()
 
 
+@main_context_manager.reader
 def console_get_by_pool_instance(context, pool_id, instance_uuid):
     result = model_query(context, models.Console, read_deleted="yes").\
                    filter_by(pool_id=pool_id).\
@@ -4575,6 +4583,7 @@ def console_get_by_pool_instance(context, pool_id, instance_uuid):
     return result
 
 
+@main_context_manager.reader
 def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
     query = model_query(context, models.Console, read_deleted="yes").\
                 filter_by(instance_uuid=instance_uuid)
@@ -4584,6 +4593,7 @@ def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
     return query.all()
 
 
+@main_context_manager.reader
 def console_get(context, console_id, instance_uuid=None):
     query = model_query(context, models.Console, read_deleted="yes").\
                     filter_by(id=console_id).\
