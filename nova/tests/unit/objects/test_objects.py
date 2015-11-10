@@ -12,11 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from collections import OrderedDict
 import contextlib
 import copy
 import datetime
-import hashlib
 import inspect
 import os
 import pprint
@@ -1284,46 +1282,6 @@ class TestObjectVersions(test.NoDBTestCase):
                 [x.encode('utf-8') for x in
                  field._type._valid_values])
 
-    def _get_fingerprint(self, obj_class):
-        fields = list(obj_class.fields.items())
-        # NOTE(danms): We store valid_values in the enum as strings,
-        # but oslo is working to make these coerced to unicode (which
-        # is the right thing to do). The functionality will be
-        # unchanged, but the repr() result that we use for calculating
-        # the hashes will be different. This helper method coerces all
-        # Enum valid_values elements to UTF-8 string before we make the
-        # repr() call so that it is consistent before and after the
-        # unicode change, and on py2 and py3.
-        if six.PY2:
-            self._un_unicodify_enum_valid_values(fields)
-
-        fields.sort()
-        methods = []
-        for name in dir(obj_class):
-            thing = getattr(obj_class, name)
-            if self._is_method(thing) or isinstance(thing, classmethod):
-                method = self._find_remotable_method(obj_class, thing)
-                if method:
-                    methods.append((name, inspect.getargspec(method)))
-        methods.sort()
-        # NOTE(danms): Things that need a version bump are any fields
-        # and their types, or the signatures of any remotable methods.
-        # Of course, these are just the mechanical changes we can detect,
-        # but many other things may require a version bump (method behavior
-        # and return value changes, for example).
-        if hasattr(obj_class, 'child_versions'):
-            relevant_data = (fields, methods,
-                             OrderedDict(
-                                 sorted(obj_class.child_versions.items())))
-        else:
-            relevant_data = (fields, methods)
-        relevant_data = repr(relevant_data)
-        if six.PY3:
-            relevant_data = relevant_data.encode('utf-8')
-        fingerprint = '%s-%s' % (
-        obj_class.VERSION, hashlib.md5(relevant_data).hexdigest())
-        return fingerprint
-
     def test_find_remotable_method(self):
         class MyObject(object):
             @base.remotable
@@ -1334,18 +1292,9 @@ class TestObjectVersions(test.NoDBTestCase):
         self.assertIsNotNone(thing)
 
     def test_versions(self):
-        fingerprints = {}
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in sorted(obj_classes, key=lambda x: x[0]):
-            index = 0
-            for version_cls in obj_classes[obj_name]:
-                if len(obj_classes[obj_name]) > 1 and index != 0:
-                    name = '%s%s' % (obj_name,
-                                     version_cls.VERSION.split('.')[0])
-                else:
-                    name = obj_name
-                fingerprints[name] = self._get_fingerprint(version_cls)
-                index += 1
+        checker = fixture.ObjectVersionChecker(
+                        base.NovaObjectRegistry.obj_classes())
+        fingerprints = checker.get_hashes()
 
         if os.getenv('GENERATE_HASHES'):
             file('object_hashes.txt', 'w').write(
@@ -1353,26 +1302,11 @@ class TestObjectVersions(test.NoDBTestCase):
             raise test.TestingException(
                 'Generated hashes in object_hashes.txt')
 
-        stored = set(object_data.items())
-        computed = set(fingerprints.items())
-        changed = stored.symmetric_difference(computed)
-        expected = {}
-        actual = {}
-        for name, hash in changed:
-            expected[name] = object_data.get(name)
-            actual[name] = fingerprints.get(name)
-
+        expected, actual = checker.test_hashes(object_data)
         self.assertEqual(expected, actual,
                          'Some objects have changed; please make sure the '
                          'versions have been bumped, and then update their '
                          'hashes here.')
-
-    def _get_object_field_name(self, field):
-        if isinstance(field._type, fields.Object):
-            return field._type._obj_name
-        if isinstance(field, fields.ListOfObjectsField):
-            return field._type._element_type._type._obj_name
-        return None
 
     def test_obj_make_compatible(self):
         # Iterate all object classes and verify that we can run
