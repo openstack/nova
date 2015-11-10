@@ -55,7 +55,7 @@ class VirtCPUModel(base.NovaObject):
 
 @base.NovaObjectRegistry.register
 class VirtCPUFeature(base.NovaObject):
-    VERSION = VirtCPUModel.VERSION
+    VERSION = '1.0'
 
     fields = {
         'policy': fields.CPUFeaturePolicyField(nullable=True),
