@@ -4729,7 +4729,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if vcpus is not None:
                     total += len(list(vcpus))
             except libvirt.libvirtError as e:
-                LOG.warn(_LW("couldn't obtain the vpu count from domain id:"
+                LOG.warn(_LW("couldn't obtain the vcpu count from domain id:"
                              " %(uuid)s, exception: %(ex)s"),
                          {"uuid": dom.UUIDString(), "ex": e})
             # NOTE(gtt116): give other tasks a chance.
