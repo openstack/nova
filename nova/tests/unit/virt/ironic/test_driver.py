@@ -895,7 +895,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(
             exception.InstanceDeployFailure,
             self.driver.spawn, self.ctx, instance, None, [], None)
-        mock_destroy.assert_called_once_with(self.ctx, instance, None)
+        self.assertEqual(0, mock_destroy.call_count)
 
     @mock.patch.object(FAKE_CLIENT.node, 'update')
     def test__add_driver_fields_good(self, mock_update):
@@ -1128,8 +1128,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(ironic_exception.BadRequest,
                           self.driver.spawn, self.ctx, instance,
                           image_meta, [], None, fake_net_info)
-        mock_destroy.assert_called_once_with(self.ctx, instance,
-                                             fake_net_info)
+        self.assertEqual(0, mock_destroy.call_count)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
