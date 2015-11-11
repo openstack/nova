@@ -3797,7 +3797,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups)
         mock_info_wait.assert_called_once_with(do_raise=False)
 
-    def test_build_resources_aborts_on_cleanup_failure(self):
+    @mock.patch('nova.compute.manager.LOG')
+    def test_build_resources_aborts_on_cleanup_failure(self, mock_log):
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -3806,20 +3807,23 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._shutdown_instance(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False).AndRaise(
-                        test.TestingException())
+                        test.TestingException('Failed to shutdown'))
         self._build_resources_instance_update()
         self.mox.ReplayAll()
 
         def fake_spawn():
-            raise test.TestingException()
+            raise test.TestingException('Failed to spawn')
 
-        try:
+        with self.assertRaisesRegex(exception.BuildAbortException,
+                                    'Failed to spawn'):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping):
                 fake_spawn()
-        except Exception as e:
-            self.assertIsInstance(e, exception.BuildAbortException)
+
+        self.assertTrue(mock_log.warning.called)
+        msg = mock_log.warning.call_args_list[0]
+        self.assertIn('Failed to shutdown', msg[0][1])
 
     def test_build_networks_if_not_allocated(self):
         instance = fake_instance.fake_instance_obj(self.context,
