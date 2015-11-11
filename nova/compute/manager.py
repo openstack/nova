@@ -5720,6 +5720,7 @@ class ComputeManager(manager.Manager):
             return
 
         filters = {'vm_state': vm_states.SHELVED,
+                   'task_state': None,
                    'host': self.host}
         shelved_instances = objects.InstanceList.get_by_filters(
             context, filters=filters, expected_attrs=['system_metadata'],
@@ -5735,7 +5736,7 @@ class ComputeManager(manager.Manager):
         for instance in to_gc:
             try:
                 instance.task_state = task_states.SHELVING_OFFLOADING
-                instance.save()
+                instance.save(expected_task_state=(None,))
                 self.shelve_offload_instance(context, instance,
                                              clean_shutdown=False)
             except Exception:
