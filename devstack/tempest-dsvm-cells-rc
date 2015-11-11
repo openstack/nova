@@ -47,6 +47,12 @@ r="$r|(?:tempest\.api\.compute\.admin\.test_fixed_ips)"
 
 # skip floating-ip tests
 r="$r|(?:tempest\.api\.compute\.floating_ips)"
+# https://bugs.launchpad.net/tempest/+bug/1513983 - The follow scenario tests rely on Neutron but use floating IPs
+r="$r|(?:tempest\.scenario\.test_network_advanced_server_ops\.TestNetworkAdvancedServerOps\.test_server_connectivity_pause_unpause)"
+r="$r|(?:tempest\.scenario\.test_network_basic_ops\.TestNetworkBasicOps\.test_network_basic_ops)"
+r="$r|(?:tempest\.scenario\.test_network_basic_ops\.TestNetworkBasicOps\.test_update_router_admin_state)"
+r="$r|(?:tempest\.scenario\.test_network_v6\.TestGettingAddress\.test_slaac_from_os)"
+r="$r|(?:tempest\.scenario\.test_security_groups_basic_ops\.TestSecurityGroupsBasicOps\.test_cross_tenant_traffic)"
 
 # exclude the slow tag
 r="$r|(?:.*\[.*\bslow\b.*\])"
