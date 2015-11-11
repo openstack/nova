@@ -3163,36 +3163,32 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.instance_destroy, ctxt, instance['uuid'])
 
     def test_check_instance_exists(self):
-        session = get_session()
         instance = self.create_instance_with_args()
         self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-            self.ctxt, session, instance['uuid']))
+            self.ctxt, instance['uuid']))
 
     def test_check_instance_exists_non_existing_instance(self):
-        session = get_session()
         self.assertRaises(exception.InstanceNotFound,
                           sqlalchemy_api._check_instance_exists_in_project,
-                          self.ctxt, session, '123')
+                          self.ctxt, '123')
 
     def test_check_instance_exists_from_different_tenant(self):
         context1 = context.RequestContext('user1', 'project1')
         context2 = context.RequestContext('user2', 'project2')
-        session = get_session()
         instance = self.create_instance_with_args(context=context1)
         self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-            context1, session, instance['uuid']))
+            context1, instance['uuid']))
         self.assertRaises(exception.InstanceNotFound,
                           sqlalchemy_api._check_instance_exists_in_project,
-                          context2, session, instance['uuid'])
+                          context2, instance['uuid'])
 
     def test_check_instance_exists_admin_context(self):
-        session = get_session()
         some_context = context.RequestContext('some_user', 'some_project')
         instance = self.create_instance_with_args(context=some_context)
 
         # Check that method works correctly with admin context
         self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
-            self.ctxt, session, instance['uuid']))
+            self.ctxt, instance['uuid']))
 
 
 class InstanceMetadataTestCase(test.TestCase):

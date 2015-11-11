@@ -1598,9 +1598,9 @@ def _handle_objects_related_type_conversions(values):
     convert_objects_related_datetimes(values, *datetime_keys)
 
 
-def _check_instance_exists_in_project(context, session, instance_uuid):
-    if not model_query(context, models.Instance, session=session,
-                       read_deleted="no", project_only=True).filter_by(
+def _check_instance_exists_in_project(context, instance_uuid):
+    if not model_query(context, models.Instance, read_deleted="no",
+                       project_only=True).filter_by(
                        uuid=instance_uuid).first():
         raise exception.InstanceNotFound(instance_id=instance_uuid)
 
@@ -6442,17 +6442,16 @@ def pci_device_update(context, node_id, address, values):
 ####################
 
 
+@main_context_manager.writer
 def instance_tag_add(context, instance_uuid, tag):
-    session = get_session()
-
     tag_ref = models.Tag()
     tag_ref.resource_id = instance_uuid
     tag_ref.tag = tag
 
     try:
-        with session.begin(subtransactions=True):
-            _check_instance_exists_in_project(context, session, instance_uuid)
-            session.add(tag_ref)
+        _check_instance_exists_in_project(context, instance_uuid)
+        with main_context_manager.writer.savepoint.using(context):
+            context.session.add(tag_ref)
     except db_exc.DBDuplicateEntry:
         # NOTE(snikitin): We should ignore tags duplicates
         pass
@@ -6460,70 +6459,61 @@ def instance_tag_add(context, instance_uuid, tag):
     return tag_ref
 
 
+@main_context_manager.writer
 def instance_tag_set(context, instance_uuid, tags):
-    session = get_session()
+    _check_instance_exists_in_project(context, instance_uuid)
 
-    with session.begin(subtransactions=True):
-        _check_instance_exists_in_project(context, session, instance_uuid)
+    existing = context.session.query(models.Tag.tag).filter_by(
+        resource_id=instance_uuid).all()
 
-        existing = session.query(models.Tag.tag).filter_by(
-            resource_id=instance_uuid).all()
+    existing = set(row.tag for row in existing)
+    tags = set(tags)
+    to_delete = existing - tags
+    to_add = tags - existing
 
-        existing = set(row.tag for row in existing)
-        tags = set(tags)
-        to_delete = existing - tags
-        to_add = tags - existing
+    if to_delete:
+        context.session.query(models.Tag).filter_by(
+            resource_id=instance_uuid).filter(
+            models.Tag.tag.in_(to_delete)).delete(
+            synchronize_session=False)
 
-        if to_delete:
-            session.query(models.Tag).filter_by(
-                resource_id=instance_uuid).filter(
-                models.Tag.tag.in_(to_delete)).delete(
-                synchronize_session=False)
+    if to_add:
+        data = [
+            {'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
+        context.session.execute(models.Tag.__table__.insert(), data)
 
-        if to_add:
-            data = [
-                {'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
-            session.execute(models.Tag.__table__.insert(), data)
-
-        return session.query(models.Tag).filter_by(
-            resource_id=instance_uuid).all()
+    return context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid).all()
 
 
+@main_context_manager.reader
 def instance_tag_get_by_instance_uuid(context, instance_uuid):
-    session = get_session()
-
-    with session.begin(subtransactions=True):
-        _check_instance_exists_in_project(context, session, instance_uuid)
-        return session.query(models.Tag).filter_by(
-            resource_id=instance_uuid).all()
+    _check_instance_exists_in_project(context, instance_uuid)
+    return context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid).all()
 
 
+@main_context_manager.writer
 def instance_tag_delete(context, instance_uuid, tag):
-    session = get_session()
+    _check_instance_exists_in_project(context, instance_uuid)
+    result = context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid, tag=tag).delete()
 
-    with session.begin(subtransactions=True):
-        _check_instance_exists_in_project(context, session, instance_uuid)
-        result = session.query(models.Tag).filter_by(
-            resource_id=instance_uuid, tag=tag).delete()
-
-        if not result:
-            raise exception.InstanceTagNotFound(instance_id=instance_uuid,
-                                                tag=tag)
+    if not result:
+        raise exception.InstanceTagNotFound(instance_id=instance_uuid,
+                                            tag=tag)
 
 
+@main_context_manager.writer
 def instance_tag_delete_all(context, instance_uuid):
-    session = get_session()
-
-    with session.begin(subtransactions=True):
-        _check_instance_exists_in_project(context, session, instance_uuid)
-        session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()
+    _check_instance_exists_in_project(context, instance_uuid)
+    context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid).delete()
 
 
+@main_context_manager.reader
 def instance_tag_exists(context, instance_uuid, tag):
-    session = get_session()
-
-    with session.begin(subtransactions=True):
-        _check_instance_exists_in_project(context, session, instance_uuid)
-        q = session.query(models.Tag).filter_by(
-            resource_id=instance_uuid, tag=tag)
-        return session.query(q.exists()).scalar()
+    _check_instance_exists_in_project(context, instance_uuid)
+    q = context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid, tag=tag)
+    return context.session.query(q.exists()).scalar()
