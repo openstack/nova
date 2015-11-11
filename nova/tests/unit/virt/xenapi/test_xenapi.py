@@ -453,7 +453,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                               'write_requests': 0}],
             'memory_details': {'maximum': 8192, 'used': 0}}
 
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         actual = self.conn.get_instance_diagnostics(instance)
         self.assertEqual(expected, actual.serialize())
 

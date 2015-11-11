@@ -185,7 +185,7 @@ def required_by(instance):
         "img_config_drive",
         fields.ConfigDrivePolicy.OPTIONAL)
 
-    return (instance.get('config_drive') or
+    return (instance.config_drive or
             'always' == CONF.force_config_drive or
             strutils.bool_from_string(CONF.force_config_drive) or
             image_prop == fields.ConfigDrivePolicy.MANDATORY
