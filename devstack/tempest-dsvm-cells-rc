@@ -77,6 +77,8 @@ r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test
 r="$r|(?:tempest\.api\.compute.servers\.test_disk_config\.ServerDiskConfigTestJSON\.test_rebuild_server_with_manual_disk_config*)"
 # https://bugs.launchpad.net/nova/+bug/1445631
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\\.test_rebuild_server_in_stop_state*)"
+# https://bugs.launchpad.net/nova/+bug/1466696 - Cells: Race between instance 'unlock' and 'stop' can cause 'stop' to fail
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_lock_unlock_server)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
