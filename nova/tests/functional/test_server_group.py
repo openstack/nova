@@ -134,7 +134,6 @@ class ServerGroupTest(ServerGroupTestBase):
 
         # NOTE(gibi): start a second compute host to be able to test affinity
         self.compute2 = self.start_service('compute', host='host2')
-        self.addCleanup(self.compute2.kill)
         fake_network.set_stub_network_methods(self.stubs)
 
     def test_get_no_groups(self):
