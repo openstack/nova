@@ -1183,7 +1183,7 @@ class FlavorAccessNotFound(NotFound):
 
 
 class FlavorExtraSpecUpdateCreateFailed(NovaException):
-    msg_fmt = _("Flavor %(id)d extra spec cannot be updated or created "
+    msg_fmt = _("Flavor %(id)s extra spec cannot be updated or created "
                 "after %(retries)d retries.")
 
 
