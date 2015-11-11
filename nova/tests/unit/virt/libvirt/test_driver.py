@@ -430,7 +430,7 @@ class FakeVolumeDriver(object):
 
     def connect_volume(self, *args):
         """Connect the volume to a fake device."""
-        return self.get_config()
+        pass
 
 
 class FakeConfigGuestDisk(object):

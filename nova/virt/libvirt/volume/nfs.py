@@ -55,7 +55,7 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         return conf
 
     def connect_volume(self, connection_info, disk_info):
-        """Connect the volume. Returns xml for libvirt."""
+        """Connect the volume."""
         self._ensure_mounted(connection_info)
 
         connection_info['data']['device_path'] = \
