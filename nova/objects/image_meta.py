@@ -134,7 +134,7 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.5: added os_admin_user field
     # Version 1.6: Added 'lxc' and 'uml' enum types to DiskBusField
     # Version 1.7: added img_config_drive field
-    VERSION = ImageMeta.VERSION
+    VERSION = '1.7'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
