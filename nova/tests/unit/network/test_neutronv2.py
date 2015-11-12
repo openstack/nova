@@ -3585,6 +3585,16 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_get_floating_ips_by_project_not_found(self, mock_ntrn):
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
+        mock_nc.list_floatingips.side_effect = exceptions.NotFound()
+        fips = self.api.get_floating_ips_by_project(self.context)
+        self.assertEqual([], fips)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_floating_ips_by_project_not_found_legacy(self, mock_ntrn):
+        # FIXME(danms): Remove this test along with the code path it tests
+        # when bug 1513879 is fixed.
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
         # neutronclient doesn't raise NotFound in this scenario, it raises a
         # NeutronClientException with status_code=404
         notfound = exceptions.NeutronClientException(status_code=404)
