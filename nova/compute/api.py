@@ -2347,6 +2347,8 @@ class API(base.Base):
                 #                 Linux LVM snapshot creation completes in
                 #                 short time, it doesn't matter for now.
                 name = _('snapshot for %s') % image_meta['name']
+                LOG.debug('Creating snapshot from volume %s.', volume['id'],
+                          instance=instance)
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume['id'], name, volume['display_description'])
                 mapping_dict = block_device.snapshot_from_bdm(snapshot['id'],
