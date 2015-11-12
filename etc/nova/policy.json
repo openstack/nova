@@ -85,9 +85,6 @@
     "compute:security_groups:add_to_instance": "",
     "compute:security_groups:remove_from_instance": "",
 
-    "compute:delete": "",
-    "compute:soft_delete": "",
-    "compute:force_delete": "",
     "compute:restore": "",
 
     "compute:volume_snapshot_create": "",
