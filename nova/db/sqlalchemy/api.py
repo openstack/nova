@@ -2648,6 +2648,7 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
 
 
 @require_context
+@main_context_manager.reader
 def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
@@ -2659,6 +2660,7 @@ def instance_info_cache_get(context, instance_uuid):
 
 
 @require_context
+@main_context_manager.writer
 def instance_info_cache_update(context, instance_uuid, values):
     """Update an instance info cache record in the table.
 
@@ -2667,33 +2669,31 @@ def instance_info_cache_update(context, instance_uuid, values):
     """
     convert_objects_related_datetimes(values)
 
-    session = get_session()
-    with session.begin():
-        info_cache = model_query(context, models.InstanceInfoCache,
-                                 session=session).\
-                         filter_by(instance_uuid=instance_uuid).\
-                         first()
-        if info_cache and info_cache['deleted']:
-            raise exception.InstanceInfoCacheNotFound(
-                    instance_uuid=instance_uuid)
-        elif not info_cache:
-            # NOTE(tr3buchet): just in case someone blows away an instance's
-            #                  cache entry, re-create it.
-            info_cache = models.InstanceInfoCache()
-            values['instance_uuid'] = instance_uuid
+    info_cache = model_query(context, models.InstanceInfoCache).\
+                     filter_by(instance_uuid=instance_uuid).\
+                     first()
+    if info_cache and info_cache['deleted']:
+        raise exception.InstanceInfoCacheNotFound(
+                instance_uuid=instance_uuid)
+    elif not info_cache:
+        # NOTE(tr3buchet): just in case someone blows away an instance's
+        #                  cache entry, re-create it.
+        info_cache = models.InstanceInfoCache()
+        values['instance_uuid'] = instance_uuid
 
-        try:
-            info_cache.update(values)
-        except db_exc.DBDuplicateEntry:
-            # NOTE(sirp): Possible race if two greenthreads attempt to
-            # recreate the instance cache entry at the same time. First one
-            # wins.
-            pass
+    try:
+        info_cache.update(values)
+    except db_exc.DBDuplicateEntry:
+        # NOTE(sirp): Possible race if two greenthreads attempt to
+        # recreate the instance cache entry at the same time. First one
+        # wins.
+        pass
 
     return info_cache
 
 
 @require_context
+@main_context_manager.writer
 def instance_info_cache_delete(context, instance_uuid):
     """Deletes an existing instance_info_cache record
 
@@ -2710,10 +2710,11 @@ def instance_info_cache_delete(context, instance_uuid):
 def _instance_extra_create(context, values):
     inst_extra_ref = models.InstanceExtra()
     inst_extra_ref.update(values)
-    inst_extra_ref.save()
+    inst_extra_ref.save(context.session)
     return inst_extra_ref
 
 
+@main_context_manager.writer
 def instance_extra_update_by_uuid(context, instance_uuid, values):
     rows_updated = model_query(context, models.InstanceExtra).\
         filter_by(instance_uuid=instance_uuid).\
@@ -2727,6 +2728,7 @@ def instance_extra_update_by_uuid(context, instance_uuid, values):
     return rows_updated
 
 
+@main_context_manager.reader
 def instance_extra_get_by_instance_uuid(context, instance_uuid,
                                         columns=None):
     query = model_query(context, models.InstanceExtra).\
