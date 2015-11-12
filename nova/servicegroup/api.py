@@ -90,9 +90,3 @@ class API(object):
             return False
 
         return self._driver.is_up(member)
-
-    def get_all(self, group_id):
-        """Returns ALL members of the given group."""
-        LOG.debug('Returns ALL members of the [%s] '
-                  'ServiceGroup', group_id)
-        return self._driver.get_all(group_id)

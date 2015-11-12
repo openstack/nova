@@ -40,16 +40,6 @@ class ServiceGroupApiTestCase(test.NoDBTestCase):
         self.assertIsNone(result)
         self.driver.join.assert_called_with(member, group, None)
 
-    def test_get_all(self):
-        result = "fake response"
-        group_id = 1
-
-        self.driver.get_all = mock.MagicMock(return_value=result)
-
-        members = self.servicegroup_api.get_all(group_id)
-        self.assertEqual(members, result)
-        self.driver.get_all.assert_called_with(group_id)
-
     def test_service_is_up(self):
         """"""
         member = {"host": "fake-host",
