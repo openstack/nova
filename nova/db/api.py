@@ -1899,7 +1899,17 @@ def archive_deleted_rows(max_rows=None):
     """Move up to max_rows rows from production tables to corresponding shadow
     tables.
 
-    :returns: number of rows archived.
+    :returns: dict that maps table name to number of rows archived from that
+              table, for example:
+
+    ::
+
+        {
+            'instances': 5,
+            'block_device_mapping': 5,
+            'pci_devices': 2,
+        }
+
     """
     return IMPL.archive_deleted_rows(max_rows=max_rows)
 

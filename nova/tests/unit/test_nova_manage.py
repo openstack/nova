@@ -375,13 +375,49 @@ class VmCommandsTestCase(test.TestCase):
         self.assertIn('fake-host', result)
 
 
-class DBCommandsTestCase(test.TestCase):
+class DBCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DBCommandsTestCase, self).setUp()
         self.commands = manage.DbCommands()
 
     def test_archive_deleted_rows_negative(self):
         self.assertEqual(1, self.commands.archive_deleted_rows(-1))
+
+    @mock.patch.object(db, 'archive_deleted_rows',
+                       return_value=dict(instances=10, consoles=5))
+    def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
+        self.commands.archive_deleted_rows(20, verbose=verbose)
+        mock_db_archive.assert_called_once_with(20)
+        output = sys.stdout.getvalue()
+        if verbose:
+            expected = '''\
++-----------+-------------------------+
+| Table     | Number of Rows Archived |
++-----------+-------------------------+
+| consoles  | 5                       |
+| instances | 10                      |
++-----------+-------------------------+
+'''
+            self.assertEqual(expected, output)
+        else:
+            self.assertEqual(0, len(output))
+
+    def test_archive_deleted_rows(self):
+        # Tests that we don't show any table output (not verbose).
+        self._test_archive_deleted_rows()
+
+    def test_archive_deleted_rows_verbose(self):
+        # Tests that we get table output.
+        self._test_archive_deleted_rows(verbose=True)
+
+    @mock.patch.object(db, 'archive_deleted_rows', return_value={})
+    def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
+        self.commands.archive_deleted_rows(20, verbose=True)
+        mock_db_archive.assert_called_once_with(20)
+        output = sys.stdout.getvalue()
+        self.assertIn('Nothing was archived.', output)
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})
