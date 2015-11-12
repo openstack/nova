@@ -22,6 +22,7 @@ testresources>=0.2.4
 testtools>=1.4.0
 tempest-lib>=0.10.0
 bandit>=0.13.2
+openstackdocstheme>=1.0.3
 
 # vmwareapi driver specific dependencies
 oslo.vmware>=1.16.0 # Apache-2.0

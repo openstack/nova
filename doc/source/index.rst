@@ -58,17 +58,14 @@ Changes to the Compute API post v2.1 are made using microversions. You can see a
 
    api_microversion_history
 
-We also have a local copy of the v2 docs:
+We also publish end-user API docs as an API Guide.
 
-.. toctree::
-   :maxdepth: 1
-
-   v2/index
-
+* `Compute API Guide`_
 
 .. _`v2.1 (CURRENT)`: http://developer.openstack.org/api-ref-compute-v2.1.html
 .. _`v2 (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2.html
 .. _`v2 extensions (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2-ext.html
+.. _`Compute API Guide`: http://developer.openstack.org/api-guide/compute/
 
 There was a session on the v2.1 API at the Liberty summit which you can watch
 `here <https://www.openstack.org/summit/vancouver-2015/summit-videos/presentation/introduction-of-a-new-nova-rest-api-why-we-need-to-use-nova-v2-1-api>`_.
