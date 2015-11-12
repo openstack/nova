@@ -248,7 +248,7 @@ def check_policy(context, action, target, scope='compute'):
 
 def check_instance_cell(fn):
     def _wrapped(self, context, instance, *args, **kwargs):
-        self._validate_cell(instance, fn.__name__)
+        self._validate_cell(instance)
         return fn(self, context, instance, *args, **kwargs)
     _wrapped.__name__ = fn.__name__
     return _wrapped
@@ -302,7 +302,7 @@ class API(base.Base):
             self._cell_type = cells_opts.get_cell_type()
             return self._cell_type
 
-    def _validate_cell(self, instance, method):
+    def _validate_cell(self, instance):
         if self.cell_type != 'api':
             return
         cell_name = instance.cell_name
