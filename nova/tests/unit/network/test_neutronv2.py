@@ -3585,7 +3585,10 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_get_floating_ips_by_project_not_found(self, mock_ntrn):
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
-        mock_nc.list_floatingips.side_effect = exceptions.NotFound()
+        # neutronclient doesn't raise NotFound in this scenario, it raises a
+        # NeutronClientException with status_code=404
+        notfound = exceptions.NeutronClientException(status_code=404)
+        mock_nc.list_floatingips.side_effect = notfound
         fips = self.api.get_floating_ips_by_project(self.context)
         self.assertEqual([], fips)
 

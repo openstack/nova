@@ -1468,7 +1468,11 @@ class API(base_api.NetworkAPI):
         # list_floatingips will be raised.
         except neutron_client_exc.NotFound:
             return []
-        except neutron_client_exc.NeutronClientException:
+        except neutron_client_exc.NeutronClientException as e:
+            # bug/1513879 neutron client is currently using
+            # NeutronClientException when there is no L3 API
+            if e.status_code == 404:
+                return []
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Unable to access floating IP for %s'),
                         ', '.join(['%s %s' % (k, v)
