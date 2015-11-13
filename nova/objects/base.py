@@ -308,6 +308,28 @@ def obj_to_primitive(obj):
         return obj
 
 
+def obj_make_dict_of_lists(context, list_cls, obj_list, item_key):
+    """Construct a dictionary of object lists, keyed by item_key.
+
+    :param:context: Request context
+    :param:list_cls: The ObjectListBase class
+    :param:obj_list: The list of objects to place in the dictionary
+    :param:item_key: The object attribute name to use as a dictionary key
+    """
+
+    obj_lists = {}
+    for obj in obj_list:
+        key = getattr(obj, item_key)
+        if key not in obj_lists:
+            obj_lists[key] = list_cls()
+            obj_lists[key].objects = []
+        obj_lists[key].objects.append(obj)
+    for key in obj_lists:
+        obj_lists[key]._context = context
+        obj_lists[key].obj_reset_changes()
+    return obj_lists
+
+
 def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
     """Construct an object list from a list of primitives.
 
