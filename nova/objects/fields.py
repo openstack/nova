@@ -15,7 +15,6 @@
 from collections import OrderedDict
 
 import netaddr
-from oslo_utils import strutils
 from oslo_versionedobjects import fields
 import six
 
@@ -57,6 +56,7 @@ DictProxyField = fields.DictProxyField
 ObjectField = fields.ObjectField
 ListOfObjectsField = fields.ListOfObjectsField
 VersionPredicateField = fields.VersionPredicateField
+FlexibleBooleanField = fields.FlexibleBooleanField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -413,13 +413,6 @@ class PciDeviceType(Enum):
             valid_values=PciDeviceType.ALL)
 
 
-# NOTE(danms): Remove this on next release of oslo.versionedobjects
-class FlexibleBoolean(fields.Boolean):
-    @staticmethod
-    def coerce(obj, attr, value):
-        return strutils.bool_from_string(value)
-
-
 class IPAddress(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
@@ -660,16 +653,6 @@ class PciDeviceStatusField(BaseEnumField):
 
 class PciDeviceTypeField(BaseEnumField):
     AUTO_TYPE = PciDeviceType()
-
-
-# FIXME(danms): Remove this after oslo.versionedobjects gets it
-# This is a flexible interpretation of boolean
-# values using common user friendly semantics for
-# truth/falsehood. ie strings like 'yes', 'no',
-# 'on', 'off', 't', 'f' get mapped to values you
-# would expect.
-class FlexibleBooleanField(AutoTypedField):
-    AUTO_TYPE = FlexibleBoolean()
 
 
 class IPAddressField(AutoTypedField):
