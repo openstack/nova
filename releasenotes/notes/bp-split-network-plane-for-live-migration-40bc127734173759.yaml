@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new option "live_migration_inbound_addr" has been added
+    in the configuration file, set None as default value.
+    If this option is present in pre_migration_data, the ip
+    address/hostname provided will be used instead of
+    the migration target compute node's hostname as the
+    uri for live migration, if it's None, then the
+    mechanism remains as it is before.
