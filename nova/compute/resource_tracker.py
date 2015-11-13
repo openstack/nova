@@ -50,7 +50,7 @@ resource_tracker_opts = [
                default='nova.compute.stats.Stats',
                help='Class that will manage stats for the local compute host'),
     cfg.ListOpt('compute_resources',
-                default=['vcpu'],
+                default=[],
                 help='The names of the extra resources to track.'),
 ]
 
@@ -663,6 +663,7 @@ class ResourceTracker(object):
         self.compute_node.memory_mb_used += sign * mem_usage
         self.compute_node.local_gb_used += sign * usage.get('root_gb', 0)
         self.compute_node.local_gb_used += sign * usage.get('ephemeral_gb', 0)
+        self.compute_node.vcpus_used += sign * usage.get('vcpus', 0)
 
         # free ram and disk may be negative, depending on policy:
         self.compute_node.free_ram_mb = (self.compute_node.memory_mb -

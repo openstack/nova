@@ -22,11 +22,9 @@ from stevedore import named
 
 from nova.compute import resources
 from nova.compute.resources import base
-from nova.compute.resources import vcpu
 from nova import context
 from nova.objects import flavor as flavor_obj
 from nova import test
-from nova.tests.unit import fake_instance
 
 CONF = cfg.CONF
 
@@ -271,73 +269,3 @@ class BaseTestCase(test.NoDBTestCase):
         self.assertEqual(expected_extra_resources, extra_resources)
 
         empty_r_handler.report_free_resources()
-
-    def test_vcpu_resource_load(self):
-        # load the vcpu example
-        names = ['vcpu']
-        real_r_handler = resources.ResourceHandler(names)
-        ext_names = real_r_handler._mgr.names()
-        self.assertEqual(names, ext_names)
-
-        # check the extension loaded is the one we expect
-        # and an instance of the object has been created
-        ext = real_r_handler._mgr['vcpu']
-        self.assertIsInstance(ext.obj, vcpu.VCPU)
-
-
-class TestVCPU(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestVCPU, self).setUp()
-        self._vcpu = vcpu.VCPU()
-        self._vcpu._total = 10
-        self._vcpu._used = 0
-        self._flavor = fake_flavor_obj(vcpus=5)
-        self._big_flavor = fake_flavor_obj(vcpus=20)
-        self._instance = fake_instance.fake_instance_obj(None)
-
-    def test_reset(self):
-        # set vcpu values to something different to test reset
-        self._vcpu._total = 10
-        self._vcpu._used = 5
-
-        driver_resources = {'vcpus': 20}
-        self._vcpu.reset(driver_resources, None)
-        self.assertEqual(20, self._vcpu._total)
-        self.assertEqual(0, self._vcpu._used)
-
-    def test_add_and_remove_instance(self):
-        self._vcpu.add_instance(self._flavor)
-        self.assertEqual(10, self._vcpu._total)
-        self.assertEqual(5, self._vcpu._used)
-
-        self._vcpu.remove_instance(self._flavor)
-        self.assertEqual(10, self._vcpu._total)
-        self.assertEqual(0, self._vcpu._used)
-
-    def test_test_pass_limited(self):
-        result = self._vcpu.test(self._flavor, {'vcpu': 10})
-        self.assertIsNone(result, 'vcpu test failed when it should pass')
-
-    def test_test_pass_unlimited(self):
-        result = self._vcpu.test(self._big_flavor, {})
-        self.assertIsNone(result, 'vcpu test failed when it should pass')
-
-    def test_test_fail(self):
-        result = self._vcpu.test(self._flavor, {'vcpu': 2})
-        expected = 'Free CPUs 2.00 VCPUs < requested 5 VCPUs'
-        self.assertEqual(expected, result)
-
-    def test_write(self):
-        resources = {'stats': {}}
-        self._vcpu.write(resources)
-        expected = {
-            'vcpus': 10,
-            'vcpus_used': 0,
-            'stats': {
-                'num_vcpus': 10,
-                'num_vcpus_used': 0
-            }
-        }
-        self.assertEqual(sorted(expected),
-                         sorted(resources))

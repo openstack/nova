@@ -45,6 +45,10 @@ class NopClaim(object):
     def memory_mb(self):
         return 0
 
+    @property
+    def vcpus(self):
+        return 0
+
     def __enter__(self):
         return self
 
@@ -98,6 +102,10 @@ class Claim(NopClaim):
         return self.instance.memory_mb + self.overhead['memory_mb']
 
     @property
+    def vcpus(self):
+        return self.instance.vcpus
+
+    @property
     def numa_topology(self):
         if self._numa_topology_loaded:
             return self._numa_topology
@@ -129,15 +137,18 @@ class Claim(NopClaim):
         # unlimited:
         memory_mb_limit = limits.get('memory_mb')
         disk_gb_limit = limits.get('disk_gb')
+        vcpus_limit = limits.get('vcpu')
         numa_topology_limit = limits.get('numa_topology')
 
-        msg = _("Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d "
-                "GB")
-        params = {'memory_mb': self.memory_mb, 'disk_gb': self.disk_gb}
+        msg = _("Attempting claim: memory %(memory_mb)d MB, "
+                "disk %(disk_gb)d GB, vcpus %(vcpus)d CPU")
+        params = {'memory_mb': self.memory_mb, 'disk_gb': self.disk_gb,
+                  'vcpus': self.vcpus}
         LOG.info(msg % params, instance=self.instance)
 
         reasons = [self._test_memory(resources, memory_mb_limit),
                    self._test_disk(resources, disk_gb_limit),
+                   self._test_vcpus(resources, vcpus_limit),
                    self._test_numa_topology(resources, numa_topology_limit),
                    self._test_pci()]
         reasons = reasons + self._test_ext_resources(limits)
@@ -163,6 +174,15 @@ class Claim(NopClaim):
         total = resources['local_gb']
         used = resources['local_gb_used']
         requested = self.disk_gb
+
+        return self._test(type_, unit, total, used, requested, limit)
+
+    def _test_vcpus(self, resources, limit):
+        type_ = _("vcpu")
+        unit = "VCPU"
+        total = resources['vcpus']
+        used = resources['vcpus_used']
+        requested = self.vcpus
 
         return self._test(type_, unit, total, used, requested, limit)
 
@@ -264,6 +284,10 @@ class MoveClaim(Claim):
     @property
     def memory_mb(self):
         return self.instance_type.memory_mb + self.overhead['memory_mb']
+
+    @property
+    def vcpus(self):
+        return self.instance_type.vcpus
 
     @property
     def numa_topology(self):
