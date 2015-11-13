@@ -908,6 +908,7 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst1 = objects.Instance(context=self.context,
                                  reservation_id='a',
                                  image_ref=image_uuid,
@@ -918,7 +919,7 @@ class CloudTestCase(test.TestCase):
                                  system_metadata={
                                      'EC2_client_token': 'client-token-1',
                                  },
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst1.create()
         inst2 = objects.Instance(context=self.context,
                                  reservation_id='a',
@@ -930,7 +931,7 @@ class CloudTestCase(test.TestCase):
                                  system_metadata={
                                      'EC2_client_token': 'client-token-2',
                                  },
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst2.create()
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'topic': "compute"})
@@ -1021,7 +1022,7 @@ class CloudTestCase(test.TestCase):
                        fake_change_instance_metadata)
 
         utc = iso8601.iso8601.Utc()
-        flavor = flavors.get_flavor(1)
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         # Create some test images
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst1 = objects.Instance(context=self.context,
@@ -1243,13 +1244,14 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst_base = objects.Instance(context=self.context,
                                      reservation_id='a',
                                      image_ref=image_uuid,
                                      instance_type_id=1,
                                      vm_state='active',
                                      system_metadata={},
-                                     flavor=flavors.get_flavor(1))
+                                     flavor=flavor)
 
         utc = iso8601.iso8601.Utc()
 
@@ -1298,8 +1300,9 @@ class CloudTestCase(test.TestCase):
         def test_instance_state(expected_code, expected_name,
                                 power_state_, vm_state_, values=None):
             image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+            flavor = objects.Flavor.get_by_id(self.context, 1)
             inst = objects.Instance(context=self.context,
-                                    flavor=flavors.get_flavor(1),
+                                    flavor=flavor,
                                     image_ref=image_uuid,
                                     instance_type_id=1,
                                     power_state=power_state_,
@@ -1334,6 +1337,7 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst = objects.Instance(context=self.context,
                                 reservation_id='a',
                                 image_ref=image_uuid,
@@ -1341,7 +1345,7 @@ class CloudTestCase(test.TestCase):
                                 hostname='server-1234',
                                 vm_state='active',
                                 system_metadata={},
-                                flavor=flavors.get_flavor(1))
+                                flavor=flavor)
         inst.create()
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'topic': "compute"})
@@ -1361,6 +1365,7 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_deleted(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst1 = objects.Instance(context=self.context,
                                  reservation_id='a',
                                  image_ref=image_uuid,
@@ -1368,7 +1373,7 @@ class CloudTestCase(test.TestCase):
                                  host='host1',
                                  vm_state='active',
                                  system_metadata={},
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst1.create()
         inst2 = objects.Instance(context=self.context,
                                  reservation_id='b',
@@ -1377,7 +1382,7 @@ class CloudTestCase(test.TestCase):
                                  host='host2',
                                  vm_state='active',
                                  system_metadata={},
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst2.create()
         db.instance_destroy(self.context, inst1.uuid)
         result = self.cloud.describe_instances(self.context)
@@ -1388,6 +1393,7 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_with_image_deleted(self):
         image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst1 = objects.Instance(context=self.context,
                                  reservation_id='a',
                                  image_ref=image_uuid,
@@ -1395,7 +1401,7 @@ class CloudTestCase(test.TestCase):
                                  host='host1',
                                  vm_state='active',
                                  system_metadata={},
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst1.create()
         inst2 = objects.Instance(context=self.context,
                                  reservation_id='b',
@@ -1404,7 +1410,7 @@ class CloudTestCase(test.TestCase):
                                  host='host1',
                                  vm_state='active',
                                  system_metadata={},
-                                 flavor=flavors.get_flavor(1))
+                                 flavor=flavor)
         inst2.create()
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
@@ -1415,6 +1421,7 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get', get_floating=False)
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         inst = objects.Instance(context=self.context,
                                 reservation='a',
                                 image_ref=image_uuid,
@@ -1423,7 +1430,7 @@ class CloudTestCase(test.TestCase):
                                 hostname='server-1234',
                                 vm_state='active',
                                 system_metadata={},
-                                flavor=flavors.get_flavor(1))
+                                flavor=flavor)
         inst.create()
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
@@ -1439,7 +1446,7 @@ class CloudTestCase(test.TestCase):
         inst.vm_state = vm_states.ACTIVE
         inst.host = 'host1'
         inst.system_metadata = {}
-        inst.flavor = flavors.get_flavor(1)
+        inst.flavor = objects.Flavor.get_by_id(self.context, 1)
         inst.create()
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]

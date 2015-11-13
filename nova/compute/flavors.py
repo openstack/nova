@@ -206,20 +206,6 @@ def get_default_flavor():
     return get_flavor_by_name(name)
 
 
-def get_flavor(instance_type_id, ctxt=None, inactive=False):
-    """Retrieves single flavor by id."""
-    if instance_type_id is None:
-        return get_default_flavor()
-
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    if inactive:
-        ctxt = ctxt.elevated(read_deleted="yes")
-
-    return objects.Flavor.get_by_id(ctxt, instance_type_id)
-
-
 def get_flavor_by_name(name, ctxt=None):
     """Retrieves single flavor by name."""
     if name is None:

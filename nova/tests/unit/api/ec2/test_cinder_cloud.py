@@ -26,7 +26,6 @@ from oslo_serialization import jsonutils
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova.compute import manager as compute_manager
 from nova.compute import utils as compute_utils
 from nova import context
@@ -498,8 +497,9 @@ class CinderCloudTestCase(test.TestCase):
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        flavor = objects.Flavor.get_by_id(self.context, 1)
         flavorinfo = jsonutils.dumps({
-            'cur': flavors.get_flavor(1).obj_to_primitive(),
+            'cur': flavor.obj_to_primitive(),
             'old': None,
             'new': None,
         })

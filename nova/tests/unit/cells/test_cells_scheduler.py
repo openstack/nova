@@ -24,7 +24,6 @@ from oslo_utils import uuidutils
 from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
-from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -98,7 +97,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def test_create_instances_here(self):
         # Just grab the first instance type
-        inst_type = flavors.get_flavor(1)
+        inst_type = objects.Flavor.get_by_id(self.ctxt, 1)
         image = {'properties': {}}
         instance_uuids = self.instance_uuids
         instance_props = {'id': 'removed',
