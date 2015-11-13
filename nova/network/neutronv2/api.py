@@ -1040,7 +1040,7 @@ class API(base_api.NetworkAPI):
                                fields=['binding:vnic_type', 'network_id'])
         vnic_type = port.get('binding:vnic_type',
                              network_model.VNIC_TYPE_NORMAL)
-        if vnic_type != network_model.VNIC_TYPE_NORMAL:
+        if vnic_type in network_model.VNIC_TYPES_SRIOV:
             net_id = port['network_id']
             net = neutron.show_network(net_id,
                 fields='provider:physical_network').get('network')
@@ -1066,7 +1066,7 @@ class API(base_api.NetworkAPI):
                 vnic_type, phynet_name = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
             pci_request_id = None
-            if vnic_type != network_model.VNIC_TYPE_NORMAL:
+            if vnic_type in network_model.VNIC_TYPES_SRIOV:
                 request = objects.InstancePCIRequest(
                     count=1,
                     spec=[{pci_request.PCI_NET_TAG: phynet_name}],
