@@ -42,3 +42,6 @@ nova/tests/cover/*
 nova/vcsversion.py
 tools/conf/nova.conf*
 doc/source/_static/nova.conf.sample
+
+ # Files created by releasenotes build
+releasenotes/build
