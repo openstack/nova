@@ -13,7 +13,6 @@
 #    under the License.
 
 from collections import OrderedDict
-from distutils import versionpredicate
 
 import netaddr
 from oslo_utils import strutils
@@ -57,6 +56,7 @@ ListOfDictOfNullableStringsField = fields.ListOfDictOfNullableStringsField
 DictProxyField = fields.DictProxyField
 ObjectField = fields.ObjectField
 ListOfObjectsField = fields.ListOfObjectsField
+VersionPredicateField = fields.VersionPredicateField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -383,19 +383,6 @@ class MonitorMetricType(Enum):
             valid_values=MonitorMetricType.ALL)
 
 
-# NOTE(sbauza): Remove this on next release of oslo.versionedobjects
-class VersionPredicate(fields.String):
-    @staticmethod
-    def coerce(obj, attr, value):
-        try:
-            versionpredicate.VersionPredicate('check (%s)' % value)
-        except ValueError:
-            raise ValueError(_('Version %(val)s is not a valid predicate in '
-                               'field %(attr)s') %
-                             {'val': value, 'attr': attr})
-        return value
-
-
 class PciDeviceStatus(Enum):
 
     AVAILABLE = "available"
@@ -665,11 +652,6 @@ class WatchdogActionField(BaseEnumField):
 
 class MonitorMetricTypeField(BaseEnumField):
     AUTO_TYPE = MonitorMetricType()
-
-
-# FIXME(sbauza): Remove this after oslo.versionedobjects gets it
-class VersionPredicateField(AutoTypedField):
-    AUTO_TYPE = VersionPredicate()
 
 
 class PciDeviceStatusField(BaseEnumField):
