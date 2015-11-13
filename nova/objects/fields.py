@@ -57,6 +57,7 @@ ObjectField = fields.ObjectField
 ListOfObjectsField = fields.ListOfObjectsField
 VersionPredicateField = fields.VersionPredicateField
 FlexibleBooleanField = fields.FlexibleBooleanField
+DictOfListOfStringsField = fields.DictOfListOfStringsField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -685,11 +686,6 @@ class IPV6NetworkField(AutoTypedField):
 
 class ListOfIntegersField(AutoTypedField):
     AUTO_TYPE = List(fields.Integer())
-
-
-# FIXME(sbauza): Remove this after oslo.versionedobjects releases it
-class DictOfListOfStringsField(AutoTypedField):
-    AUTO_TYPE = Dict(List(fields.String()))
 
 
 class NonNegativeFloatField(AutoTypedField):
