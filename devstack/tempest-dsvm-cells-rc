@@ -87,6 +87,8 @@ r="$r|(?:tempest\.api\.compute.servers\.test_disk_config\.ServerDiskConfigTestJS
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_rebuild_server_in_stop_state)"
 # https://bugs.launchpad.net/nova/+bug/1466696 - Cells: Race between instance 'unlock' and 'stop' can cause 'stop' to fail
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_lock_unlock_server)"
+# scheduler hints apparently don't work in devstack cells
+r="$r|(?:tempest\.scenario\.test_server_multinode\.TestServerMultinode\.test_schedule_to_all_nodes)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
