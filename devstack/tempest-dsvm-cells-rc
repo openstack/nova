@@ -77,6 +77,8 @@ r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test
 r="$r|(?:tempest\.api\.compute.servers\.test_disk_config\.ServerDiskConfigTestJSON\.test_rebuild_server_with_manual_disk_config*)"
 # https://bugs.launchpad.net/nova/+bug/1445631
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\\.test_rebuild_server_in_stop_state*)"
+# scheduler hints apparently don't work in devstack cells
+r="$r|(?:tempest\.scenario\.test_server_multinode\.TestServerMultinode\.test_schedule_to_all_nodes)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
