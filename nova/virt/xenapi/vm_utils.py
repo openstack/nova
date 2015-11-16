@@ -306,7 +306,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         rec['HVM_boot_policy'] = 'BIOS order'
 
     if device_id:
-        rec['platform']['device_id'] = device_id
+        rec['platform']['device_id'] = str(device_id).zfill(4)
 
     vm_ref = session.VM.create(rec)
     LOG.debug('Created VM', instance=instance)

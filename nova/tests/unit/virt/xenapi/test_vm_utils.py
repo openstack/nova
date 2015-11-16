@@ -2194,7 +2194,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
                                               vcpus=1,
                                               vcpu_weight=2)
             vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
-                               device_id="0002")
+                               device_id=2)
 
         is_viridian_str = str(is_viridian).lower()
 
