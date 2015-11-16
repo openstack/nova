@@ -13,23 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
+import nova.conf
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
-opts = [
-    cfg.StrOpt('aggregate_image_properties_isolation_namespace',
-                help='Force the filter to consider only keys matching '
-                     'the given namespace.'),
-    cfg.StrOpt('aggregate_image_properties_isolation_separator',
-                default=".",
-                help='The separator used between the namespace and keys'),
-]
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 

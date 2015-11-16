@@ -18,13 +18,13 @@ import collections
 import functools
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
@@ -35,16 +35,7 @@ from nova import rpc
 
 LOG = logging.getLogger(__name__)
 
-scheduler_opts = [
-    cfg.IntOpt('scheduler_max_attempts',
-               default=3,
-               help='Maximum number of attempts to schedule an instance'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(scheduler_opts)
-
-CONF.import_opt('scheduler_default_filters', 'nova.scheduler.host_manager')
+CONF = nova.conf.CONF
 
 GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies'])
 

@@ -16,24 +16,13 @@
 Client side of the scheduler manager RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 
+import nova.conf
 from nova.objects import base as objects_base
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('scheduler_topic',
-               default='scheduler',
-               help='The topic scheduler nodes listen on'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('scheduler',
-        help='Set a version cap for messages sent to scheduler services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class SchedulerAPI(object):

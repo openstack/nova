@@ -19,8 +19,10 @@
 
 from oslo_config import cfg
 
+from nova.conf import scheduler
 from nova.conf import serial_console
 
 CONF = cfg.CONF
 
+scheduler.register_opts(CONF)
 serial_console.register_opts(CONF)

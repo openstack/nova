@@ -27,11 +27,11 @@ except ImportError:
 
 
 import iso8601
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
+import nova.conf
 from nova import context as context_module
 from nova import exception
 from nova.i18n import _LI, _LW
@@ -42,38 +42,8 @@ from nova.scheduler import weights
 from nova import utils
 from nova.virt import hardware
 
-host_manager_opts = [
-    cfg.MultiStrOpt('scheduler_available_filters',
-            default=['nova.scheduler.filters.all_filters'],
-            help='Filter classes available to the scheduler which may '
-                    'be specified more than once.  An entry of '
-                    '"nova.scheduler.filters.all_filters" '
-                    'maps to all filters included with nova.'),
-    cfg.ListOpt('scheduler_default_filters',
-                default=[
-                  'RetryFilter',
-                  'AvailabilityZoneFilter',
-                  'RamFilter',
-                  'DiskFilter',
-                  'ComputeFilter',
-                  'ComputeCapabilitiesFilter',
-                  'ImagePropertiesFilter',
-                  'ServerGroupAntiAffinityFilter',
-                  'ServerGroupAffinityFilter',
-                  ],
-                help='Which filter class names to use for filtering hosts '
-                      'when not specified in the request.'),
-    cfg.ListOpt('scheduler_weight_classes',
-                default=['nova.scheduler.weights.all_weighers'],
-                help='Which weight class names to use for weighing hosts'),
-    cfg.BoolOpt('scheduler_tracks_instance_changes',
-               default=True,
-               help='Determines if the Scheduler tracks changes to instances '
-                    'to help with its filtering decisions.'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(host_manager_opts)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 HOST_INSTANCE_SEMAPHORE = "host_instance"
