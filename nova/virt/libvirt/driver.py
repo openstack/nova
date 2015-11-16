@@ -3996,9 +3996,17 @@ class LibvirtDriver(driver.ComputeDriver):
                     wantsmempages = True
                     break
 
-        if not wantsmempages:
-            return
+        membacking = None
+        if wantsmempages:
+            pages = self._get_memory_backing_hugepages_support(
+                inst_topology, numatune)
+            if pages:
+                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
+                membacking.hugepages = pages
 
+        return membacking
+
+    def _get_memory_backing_hugepages_support(self, inst_topology, numatune):
         if not self._has_hugepage_support():
             # We should not get here, since we should have avoided
             # reporting NUMA topology from _get_host_numa_topology
@@ -4031,11 +4039,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         page.size_kb = inst_cell.pagesize
                         pages.append(page)
                         break  # Quit early...
-
-        if pages:
-            membacking = vconfig.LibvirtConfigGuestMemoryBacking()
-            membacking.hugepages = pages
-            return membacking
+        return pages
 
     def _get_flavor(self, ctxt, instance, flavor):
         if flavor is not None:
@@ -4192,7 +4196,8 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.numatune = guest_numa_config.numatune
 
         guest.membacking = self._get_guest_memory_backing_config(
-            instance.numa_topology, guest_numa_config.numatune)
+            instance.numa_topology,
+            guest_numa_config.numatune)
 
         guest.metadata.append(self._get_guest_config_meta(context,
                                                           instance))
