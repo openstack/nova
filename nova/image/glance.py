@@ -24,6 +24,7 @@ import sys
 import time
 
 import glanceclient
+from glanceclient.common import http
 import glanceclient.exc
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -79,6 +80,8 @@ CONF = cfg.CONF
 CONF.register_opts(glance_opts, 'glance')
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('my_ip', 'nova.netconf')
+
+supported_glance_versions = (1, 2)
 
 
 def generate_glance_url():
@@ -150,6 +153,25 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         host = '[%s]' % host
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
+
+
+def _determine_curr_major_version(endpoint):
+    """Determines the current major version of the glance API in use
+
+    :returns Integer version number or None if unable to determine version
+    """
+    http_client = http.HTTPClient(endpoint)
+    try:
+        response, content = http_client.get('/versions')
+        for version in content['versions']:
+            if version['status'] == 'CURRENT':
+                res = version['id']
+                # The 'id' value looks like "v2.2",
+                # so grab the major version number which is 2 in this case
+                res = int(res[1:res.find(".")])
+                return res if res in supported_glance_versions else None
+    except Exception:
+        LOG.error(_LE("Unable to determine the glance API version"))
 
 
 def get_api_servers():
