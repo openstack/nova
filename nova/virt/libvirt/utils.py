@@ -28,6 +28,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import arch
+from nova.compute import vm_mode
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import utils
@@ -275,6 +276,8 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     # NOTE(markmc): ISO is just raw to qemu-img
     if dest_fmt == 'iso':
         dest_fmt = 'raw'
+    if dest_fmt == 'ploop':
+        dest_fmt = 'parallels'
 
     qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O', dest_fmt)
 
@@ -334,11 +337,15 @@ def find_disk(virt_dom):
     """
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
+    os_type = domain.find('os/type').text
     if CONF.libvirt.virt_type == 'lxc':
         source = domain.find('devices/filesystem/source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
         disk_path = os.path.join(disk_path, 'disk')
+    elif CONF.libvirt.virt_type == 'parallels' and os_type == vm_mode.EXE:
+        source = domain.find('devices/filesystem/source')
+        disk_path = source.get('file')
     else:
         source = domain.find('devices/disk/source')
         disk_path = source.get('file') or source.get('dev')
@@ -355,11 +362,14 @@ def find_disk(virt_dom):
 
 
 def get_disk_type(path):
-    """Retrieve disk type (raw, qcow2, lvm) for given file."""
+    """Retrieve disk type (raw, qcow2, lvm, ploop) for given file."""
     if path.startswith('/dev'):
         return 'lvm'
     elif path.startswith('rbd:'):
         return 'rbd'
+    elif (os.path.isdir(path) and
+          os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
+        return 'ploop'
 
     return images.qemu_img_info(path).file_format
 

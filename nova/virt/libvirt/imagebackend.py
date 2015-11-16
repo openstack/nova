@@ -926,6 +926,13 @@ class Ploop(Image):
         utils.execute('ploop', 'grow', '-s', '%dK' % (size >> 10), dd_path,
                       run_as_root=True)
 
+    def snapshot_extract(self, target, out_format):
+        img_path = os.path.join(self.path, "root.hds")
+        libvirt_utils.extract_snapshot(img_path,
+                                       'parallels',
+                                       target,
+                                       out_format)
+
 
 class Backend(object):
     def __init__(self, use_cow):
