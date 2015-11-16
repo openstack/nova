@@ -8972,18 +8972,15 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
-    def test_is_volume_backed_instance_no_bdms(self):
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_is_volume_backed_instance_empty_bdm_by_uuid(self, mock_bdms):
         ctxt = self.context
         instance = self._create_fake_instance_obj()
-
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    ctxt, instance['uuid']).AndReturn(
-                            block_device_obj.block_device_make_list(ctxt, []))
-        self.mox.ReplayAll()
-
-        self.compute_api.is_volume_backed_instance(ctxt, instance, None)
+        mock_bdms.return_value = \
+            block_device_obj.block_device_make_list(ctxt, [])
+        self.assertFalse(
+            self.compute_api.is_volume_backed_instance(ctxt, instance, None))
+        mock_bdms.assert_called_with(ctxt, instance.uuid)
 
     def test_reservation_id_one_instance(self):
         """Verify building an instance has a reservation_id that
