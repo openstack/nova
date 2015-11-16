@@ -113,28 +113,6 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
             primitive['bar'] = 'old%s' % primitive['bar']
 
 
-class MyObjDiffVers(MyObj):
-    VERSION = '1.5'
-
-    @classmethod
-    def obj_name(cls):
-        return 'MyObj'
-
-
-class MyObj2(base.NovaObject):
-    fields = {
-        'bar': fields.StringField(),
-    }
-
-    @classmethod
-    def obj_name(cls):
-        return 'MyObj'
-
-    @base.remotable_classmethod
-    def query(cls, *args, **kwargs):
-        pass
-
-
 class RandomMixInWithNoFields(object):
     """Used to test object inheritance using a mixin that has no fields."""
     pass
@@ -264,7 +242,6 @@ class _BaseTestCase(test.TestCase):
         # NOTE(danms): register these here instead of at import time
         # so that they're not always present
         base.NovaObjectRegistry.register(MyObj)
-        base.NovaObjectRegistry.register(MyObjDiffVers)
         base.NovaObjectRegistry.register(MyOwnedObject)
 
     def compare_obj(self, obj, db_obj, subs=None, allow_missing=None,
@@ -501,28 +478,6 @@ class _TestObject(object):
         self.assertEqual(obj2.obj_what_changed(), set(['foo']))
         obj2.obj_reset_changes()
         self.assertEqual(obj2.obj_what_changed(), set())
-
-    def test_obj_class_from_name(self):
-        obj = base.NovaObject.obj_class_from_name('MyObj', '1.5')
-        self.assertEqual('1.5', obj.VERSION)
-
-    def test_obj_class_from_name_latest_compatible(self):
-        obj = base.NovaObject.obj_class_from_name('MyObj', '1.1')
-        self.assertEqual('1.6', obj.VERSION)
-
-    def test_unknown_objtype(self):
-        self.assertRaises(ovo_exc.UnsupportedObjectError,
-                          base.NovaObject.obj_class_from_name, 'foo', '1.0')
-
-    def test_obj_class_from_name_supported_version(self):
-        error = None
-        try:
-            base.NovaObject.obj_class_from_name('MyObj', '1.25')
-        except ovo_exc.IncompatibleObjectVersion as ex:
-            error = ex
-
-        self.assertIsNotNone(error)
-        self.assertEqual('1.6', error.kwargs['supported'])
 
     def test_orphaned_object(self):
         obj = MyObj.query(self.context)
@@ -915,7 +870,7 @@ class TestRemoteObject(_RemoteTest, _TestObject):
             'MyObj': '2.0',
         }
         self.assertRaises(ovo_exc.IncompatibleObjectVersion,
-                          MyObj2.query, self.context)
+                          MyObj.query, self.context)
 
     @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
     def test_minor_version_greater(self, mock_otgv):
@@ -923,11 +878,14 @@ class TestRemoteObject(_RemoteTest, _TestObject):
             'MyObj': '1.7',
         }
         self.assertRaises(ovo_exc.IncompatibleObjectVersion,
-                          MyObj2.query, self.context)
+                          MyObj.query, self.context)
 
-    def test_minor_version_less(self):
-        MyObj2.VERSION = '1.2'
-        obj = MyObj2.query(self.context)
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_minor_version_less(self, mock_otgv):
+        mock_otgv.return_value = {
+            'MyObj': '1.2',
+        }
+        obj = MyObj.query(self.context)
         self.assertEqual(obj.bar, 'bar')
 
     @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
@@ -935,12 +893,15 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         mock_otgv.return_value = {
             'MyObj': '1.1',
         }
-        obj = MyObj2.query(self.context)
+        obj = MyObj.query(self.context)
         self.assertEqual('oldbar', obj.bar)
 
-    def test_revision_ignored(self):
-        MyObj2.VERSION = '1.1.456'
-        obj = MyObj2.query(self.context)
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_revision_ignored(self, mock_otgv):
+        mock_otgv.return_value = {
+            'MyObj': '1.1.456',
+        }
+        obj = MyObj.query(self.context)
         self.assertEqual('bar', obj.bar)
 
 
