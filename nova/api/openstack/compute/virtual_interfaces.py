@@ -32,8 +32,7 @@ def _translate_vif_summary_view(req, vif):
     d = {}
     d['id'] = vif.uuid
     d['mac_address'] = vif.address
-    if (req.api_version_request >=
-        api_version_request.APIVersionRequest("2.12")):
+    if api_version_request.is_supported(req, min_version='2.12'):
         d['net_id'] = vif.net_uuid
     # NOTE(gmann): This is for v2.1 compatible mode where response should be
     # same as v2 one.

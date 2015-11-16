@@ -27,14 +27,13 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedServerAttributesController, self).__init__(*args,
                                                                  **kwargs)
-        self.api_version_2_3 = api_version_request.APIVersionRequest('2.3')
 
-    def _extend_server(self, context, server, instance, requested_version):
+    def _extend_server(self, context, server, instance, req):
         key = "OS-EXT-SRV-ATTR:hypervisor_hostname"
         server[key] = instance.node
 
         properties = ['host', 'name']
-        if requested_version >= self.api_version_2_3:
+        if api_version_request.is_supported(req, min_version='2.3'):
             properties += ['reservation_id', 'launch_index',
                            'hostname', 'kernel_id', 'ramdisk_id',
                            'root_device_name', 'user_data']
@@ -53,8 +52,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
             # the core API adding it in its 'show' method.
-            self._extend_server(context, server, db_instance,
-                                req.api_version_request)
+            self._extend_server(context, server, db_instance, req)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -65,8 +63,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
                 db_instance = req.get_db_instance(server['id'])
                 # server['id'] is guaranteed to be in the cache due to
                 # the core API adding it in its 'detail' method.
-                self._extend_server(context, server, db_instance,
-                                    req.api_version_request)
+                self._extend_server(context, server, db_instance, req)
 
 
 class ExtendedServerAttributes(extensions.V21APIExtensionBase):

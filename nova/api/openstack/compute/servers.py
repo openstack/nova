@@ -1109,8 +1109,7 @@ class ServersController(wsgi.Controller):
         """Return server search options allowed by non-admin."""
         opt_list = ('reservation_id', 'name', 'status', 'image', 'flavor',
                     'ip', 'changes-since', 'all_tenants')
-        req_ver = req.api_version_request
-        if req_ver > api_version_request.APIVersionRequest("2.4"):
+        if api_version_request.is_supported(req, min_version='2.5'):
             opt_list += ('ip6',)
         return opt_list
 
