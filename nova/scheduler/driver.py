@@ -19,11 +19,13 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
+import abc
+
 from oslo_config import cfg
 from oslo_utils import importutils
+import six
 
 from nova import db
-from nova.i18n import _
 from nova import servicegroup
 
 scheduler_driver_opts = [
@@ -36,6 +38,7 @@ CONF = cfg.CONF
 CONF.register_opts(scheduler_driver_opts)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
@@ -56,11 +59,11 @@ class Scheduler(object):
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
 
+    @abc.abstractmethod
     def select_destinations(self, context, request_spec, filter_properties):
         """Must override select_destinations method.
 
         :return: A list of dicts with 'host', 'nodename' and 'limits' as keys
             that satisfies the request_spec and filter_properties.
         """
-        msg = _("Driver must implement select_destinations")
-        raise NotImplementedError(msg)
+        return []

@@ -19,6 +19,7 @@ Fakes For Scheduler tests.
 import six
 
 from nova import objects
+from nova.scheduler import driver
 from nova.scheduler import host_manager
 
 NUMA_TOPOLOGY = objects.NUMATopology(
@@ -96,3 +97,9 @@ class FakeHostState(host_manager.HostState):
             self.instances = {}
         for (key, val) in six.iteritems(attribute_dict):
             setattr(self, key, val)
+
+
+class FakeScheduler(driver.Scheduler):
+
+    def select_destinations(self, context, request_spec, filter_properties):
+        return []
