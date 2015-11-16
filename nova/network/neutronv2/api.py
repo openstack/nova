@@ -936,9 +936,9 @@ class API(base_api.NetworkAPI):
 
         if ((networks is None and port_ids is not None) or
             (port_ids is None and networks is not None)):
-            message = ("This method needs to be called with either "
-                       "networks=None and port_ids=None or port_ids and "
-                       " networks as not none.")
+            message = _("This method needs to be called with either "
+                        "networks=None and port_ids=None or port_ids and "
+                        "networks as not none.")
             raise exception.NovaException(message=message)
 
         ifaces = compute_utils.get_nw_info_for_instance(instance)
