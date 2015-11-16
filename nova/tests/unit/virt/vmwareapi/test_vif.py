@@ -16,7 +16,7 @@
 import mock
 from oslo_config import cfg
 from oslo_vmware import exceptions as vexc
-from oslo_vmware import vim_util as vutil
+from oslo_vmware import vim_util
 
 from nova import exception
 from nova.network import model as network_model
@@ -24,6 +24,7 @@ from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vm_util
@@ -41,7 +42,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                         vlan=3,
                                         bridge_interface='eth0',
                                         injected=True)
-
+        self._network = network
         self.vif = network_model.NetworkInfo([
                 network_model.VIF(id=None,
                                   address='DE:AD:BE:EF:00:00',
@@ -132,12 +133,6 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                      create_vlan=False)
         self.assertThat(ref, matchers.DictMatches(network_ref))
 
-    def test_get_network_ref_neutron(self):
-        self.mox.StubOutWithMock(vif, 'get_neutron_network')
-        vif.get_neutron_network(self.session, 'fa0', self.cluster, self.vif)
-        self.mox.ReplayAll()
-        vif.get_network_ref(self.session, self.cluster, self.vif, True)
-
     def test_get_network_ref_flat_dhcp(self):
         self.mox.StubOutWithMock(vif, 'ensure_vlan_bridge')
         vif.ensure_vlan_bridge(self.session, self.vif, cluster=self.cluster,
@@ -167,110 +162,6 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                   rxtx_cap=3)
         ])[0]
         vif.get_network_ref(self.session, self.cluster, self.vif, False)
-
-    def test_get_network_ref_bridge_from_opaque(self):
-        opaque_networks = [{'opaqueNetworkId': 'bridge_id',
-                            'opaqueNetworkName': 'name',
-                            'opaqueNetworkType': 'OpaqueNetwork'}]
-        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
-                'integration_bridge', 'bridge_id')
-        self.assertEqual('bridge_id', network_ref['network-id'])
-
-    def test_get_network_ref_multiple_bridges_from_opaque(self):
-        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
-                            'opaqueNetworkName': 'name1',
-                            'opaqueNetworkType': 'OpaqueNetwork'},
-                           {'opaqueNetworkId': 'bridge_id2',
-                            'opaqueNetworkName': 'name2',
-                            'opaqueNetworkType': 'OpaqueNetwork'}]
-        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
-                'integration_bridge', 'bridge_id2')
-        self.assertEqual('bridge_id2', network_ref['network-id'])
-
-    def test_get_network_ref_integration(self):
-        opaque_networks = [{'opaqueNetworkId': 'integration_bridge',
-                            'opaqueNetworkName': 'name',
-                            'opaqueNetworkType': 'OpaqueNetwork'}]
-        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
-                'integration_bridge', 'bridge_id')
-        self.assertEqual('integration_bridge', network_ref['network-id'])
-
-    def test_get_network_ref_bridge_none(self):
-        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
-                            'opaqueNetworkName': 'name1',
-                            'opaqueNetworkType': 'OpaqueNetwork'},
-                           {'opaqueNetworkId': 'bridge_id2',
-                            'opaqueNetworkName': 'name2',
-                            'opaqueNetworkType': 'OpaqueNetwork'}]
-        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
-                'integration_bridge', 'bridge_id')
-        self.assertIsNone(network_ref)
-
-    def test_get_network_ref_integration_multiple(self):
-        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
-                            'opaqueNetworkName': 'name1',
-                            'opaqueNetworkType': 'OpaqueNetwork'},
-                           {'opaqueNetworkId': 'integration_bridge',
-                            'opaqueNetworkName': 'name2',
-                            'opaqueNetworkType': 'OpaqueNetwork'}]
-        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
-                'integration_bridge', 'bridge_id')
-        self.assertIsNone(network_ref)
-
-    def test_get_neutron_network(self):
-        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
-        self.mox.StubOutWithMock(self.session, '_call_method')
-        self.mox.StubOutWithMock(vif, '_get_network_ref_from_opaque')
-        vm_util.get_host_ref(self.session,
-                self.cluster).AndReturn('fake-host')
-        opaque = fake.DataObject()
-        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vutil, "get_object_property",
-                 'fake-host', 'config.network.opaqueNetwork').AndReturn(opaque)
-        vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
-                CONF.vmware.integration_bridge,
-                self.vif['network']['id']).AndReturn('fake-network-ref')
-        self.mox.ReplayAll()
-        network_ref = vif.get_neutron_network(self.session,
-                                              self.vif['network']['id'],
-                                              self.cluster,
-                                              self.vif)
-        self.assertEqual(network_ref, 'fake-network-ref')
-
-    def test_get_neutron_network_opaque_network_not_found(self):
-        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
-        self.mox.StubOutWithMock(self.session, '_call_method')
-        self.mox.StubOutWithMock(vif, '_get_network_ref_from_opaque')
-        vm_util.get_host_ref(self.session,
-                self.cluster).AndReturn('fake-host')
-        opaque = fake.DataObject()
-        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vutil, "get_object_property",
-                 'fake-host', 'config.network.opaqueNetwork').AndReturn(opaque)
-        vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
-                CONF.vmware.integration_bridge,
-                self.vif['network']['id']).AndReturn(None)
-        self.mox.ReplayAll()
-        self.assertRaises(exception.NetworkNotFoundForBridge,
-                          vif.get_neutron_network, self.session,
-                          self.vif['network']['id'], self.cluster, self.vif)
-
-    def test_get_neutron_network_bridge_network_not_found(self):
-        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
-        self.mox.StubOutWithMock(self.session, '_call_method')
-        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
-        vm_util.get_host_ref(self.session,
-                self.cluster).AndReturn('fake-host')
-        opaque = fake.DataObject()
-        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
-        self.session._call_method(vutil, "get_object_property",
-                 'fake-host', 'config.network.opaqueNetwork').AndReturn(None)
-        network_util.get_network_with_the_name(self.session, 0,
-            self.cluster).AndReturn(None)
-        self.mox.ReplayAll()
-        self.assertRaises(exception.NetworkNotFoundForBridge,
-                          vif.get_neutron_network, self.session,
-                          self.vif['network']['id'], self.cluster, self.vif)
 
     def test_create_port_group_already_exists(self):
         def fake_call_method(module, method, *args, **kwargs):
@@ -304,20 +195,6 @@ class VMwareVifTestCase(test.NoDBTestCase):
                               'vswitch_name', vlan_id=0,
                               cluster=None)
 
-    def test_get_neutron_network_invalid_property(self):
-        def fake_call_method(module, method, *args, **kwargs):
-            if method == 'get_object_property':
-                raise vexc.InvalidPropertyException()
-
-        with test.nested(
-            mock.patch.object(vm_util, 'get_host_ref'),
-            mock.patch.object(self.session, '_call_method',
-                              fake_call_method),
-            mock.patch.object(network_util, 'get_network_with_the_name')
-        ) as (_get_host, _call_method, _get_name):
-            vif.get_neutron_network(self.session, 'network_name',
-                                    'cluster', self.vif)
-
     def test_get_vif_info_none(self):
         vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
                                     'is_neutron', 'fake_model', None)
@@ -339,3 +216,97 @@ class VMwareVifTestCase(test.NoDBTestCase):
                      'network_ref': 'fake_ref',
                      'vif_model': 'fake_model'}]
         self.assertEqual(expected, vif_info)
+
+    @mock.patch.object(vif, '_check_ovs_supported_version')
+    def test_get_neutron_network_ovs_integration_bridge(self,
+                                                        mock_check):
+        self.flags(integration_bridge='fake-bridge-id', group='vmware')
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_OVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        expected_ref = {'type': 'OpaqueNetwork',
+                        'network-id': 'fake-bridge-id',
+                        'network-type': 'opaque',
+                        'use-external-id': False}
+        self.assertEqual(expected_ref, network_ref)
+        mock_check.assert_called_once_with('fake-session')
+
+    @mock.patch.object(vif, '_check_ovs_supported_version')
+    def test_get_neutron_network_ovs(self, mock_check):
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_OVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        expected_ref = {'type': 'OpaqueNetwork',
+                        'network-id': 0,
+                        'network-type': 'nsx.LogicalSwitch',
+                        'use-external-id': True}
+        self.assertEqual(expected_ref, network_ref)
+        mock_check.assert_called_once_with('fake-session')
+
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    def test_get_neutron_network_dvs(self, mock_network_name):
+        fake_network_obj = {'type': 'DistributedVirtualPortgroup',
+                            'dvpg': 'fake-key',
+                            'dvsw': 'fake-props'}
+        mock_network_name.return_value = fake_network_obj
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        mock_network_name.assert_called_once_with('fake-session',
+                                                  'fa0',
+                                                  'fake-cluster')
+        self.assertEqual(fake_network_obj, network_ref)
+
+    @mock.patch.object(network_util, 'get_network_with_the_name',
+                       return_value=None)
+    def test_get_neutron_network_dvs_no_match(self, mock_network_name):
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)]
+        )[0]
+        self.assertRaises(exception.NetworkNotFoundForBridge,
+                          vif._get_neutron_network,
+                          'fake-session',
+                          'fake-cluster',
+                          vif_info)
+
+    def test_get_neutron_network_invalid_type(self):
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(address='DE:AD:BE:EF:00:00',
+                                  network=self._network)]
+        )[0]
+        self.assertRaises(exception.InvalidInput,
+                          vif._get_neutron_network,
+                          'fake-session',
+                          'fake-cluster',
+                          vif_info)
+
+    @mock.patch.object(vif.LOG, 'warning')
+    @mock.patch.object(vim_util, 'get_vc_version',
+                       return_value='5.0.0')
+    def test_check_invalid_ovs_version(self, mock_version, mock_warning):
+        vif._check_ovs_supported_version('fake_session')
+        # assert that the min version is in a warning message
+        expected_arg = {'version': constants.MIN_VC_OVS_VERSION}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertTrue(version_arg_found)

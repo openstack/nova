@@ -17,12 +17,13 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_vmware import exceptions as vexc
-from oslo_vmware import vim_util as vutil
+from oslo_vmware import vim_util
 
 from nova import exception
-from nova.i18n import _LW
+from nova.i18n import _, _LW
 from nova.network import model
+from nova import utils
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vm_util
 
@@ -34,8 +35,11 @@ vmwareapi_vif_opts = [
                default='vmnic0',
                help='Physical ethernet adapter name for vlan networking'),
     cfg.StrOpt('integration_bridge',
-               default='br-int',
-               help='Name of Integration Bridge'),
+               help='This option should be configured only when using the '
+                    'NSX-MH Neutron plugin. This is the name of the '
+                    'integration bridge on the ESXi. This should not be set '
+                    'for any other Neutron plugin. Hence the default value '
+                    'is not set.'),
 ]
 
 CONF.register_opts(vmwareapi_vif_opts, 'vmware')
@@ -99,63 +103,49 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
     return network_ref
 
 
-def _is_valid_opaque_network_id(opaque_id, bridge_id, integration_bridge,
-                                num_networks):
-    return (opaque_id == bridge_id or
-            (num_networks == 1 and
-             opaque_id == integration_bridge))
+def _check_ovs_supported_version(session):
+    # The port type 'ovs' is only support by the VC version 5.5 onwards
+    min_version = utils.convert_version_to_int(
+        constants.MIN_VC_OVS_VERSION)
+    vc_version = utils.convert_version_to_int(
+        vim_util.get_vc_version(session))
+    if vc_version < min_version:
+        LOG.warning(_LW('VMware vCenter version less than %(version)s '
+                        'does not support the \'ovs\' port type.'),
+                    {'version': constants.MIN_VC_OVS_VERSION})
 
 
-def _get_network_ref_from_opaque(opaque_networks, integration_bridge, bridge):
-    num_networks = len(opaque_networks)
-    for network in opaque_networks:
-        if _is_valid_opaque_network_id(network['opaqueNetworkId'], bridge,
-                                       integration_bridge, num_networks):
-            return {'type': 'OpaqueNetwork',
-                    'network-id': network['opaqueNetworkId'],
-                    'network-name': network['opaqueNetworkName'],
-                    'network-type': network['opaqueNetworkType']}
-    LOG.warning(_LW("No valid network found in %(opaque)s, from %(bridge)s "
-                    "or %(integration_bridge)s"),
-                {'opaque': opaque_networks, 'bridge': bridge,
-                 'integration_bridge': integration_bridge})
-
-
-def _get_opaque_network(session, cluster):
-    host = vm_util.get_host_ref(session, cluster)
-    try:
-        opaque = session._call_method(vutil,
-                                      "get_object_property",
-                                      host,
-                                      "config.network.opaqueNetwork")
-    except vexc.InvalidPropertyException:
-        opaque = None
-    return opaque
-
-
-def get_neutron_network(session, network_name, cluster, vif):
-    opaque = None
-    if vif['type'] != model.VIF_TYPE_DVS:
-        opaque = _get_opaque_network(session, cluster)
-    if opaque:
-        bridge = vif['network']['id']
-        opaque_networks = opaque.HostOpaqueNetworkInfo
-        network_ref = _get_network_ref_from_opaque(opaque_networks,
-                CONF.vmware.integration_bridge, bridge)
-    else:
-        bridge = network_name
+def _get_neutron_network(session, cluster, vif):
+    if vif['type'] == model.VIF_TYPE_OVS:
+        _check_ovs_supported_version(session)
+        # Check if this is the NSX-MH plugin is used
+        if CONF.vmware.integration_bridge:
+            net_id = CONF.vmware.integration_bridge
+            use_external_id = False
+            network_type = 'opaque'
+        else:
+            net_id = vif['network']['id']
+            use_external_id = True
+            network_type = 'nsx.LogicalSwitch'
+        network_ref = {'type': 'OpaqueNetwork',
+                       'network-id': net_id,
+                       'network-type': network_type,
+                       'use-external-id': use_external_id}
+    elif vif['type'] == model.VIF_TYPE_DVS:
+        network_id = vif['network']['bridge']
         network_ref = network_util.get_network_with_the_name(
-                session, network_name, cluster)
-    if not network_ref:
-        raise exception.NetworkNotFoundForBridge(bridge=bridge)
+                session, network_id, cluster)
+        if not network_ref:
+            raise exception.NetworkNotFoundForBridge(bridge=network_id)
+    else:
+        reason = _('vif type %s not supported') % vif['type']
+        raise exception.InvalidInput(reason=reason)
     return network_ref
 
 
 def get_network_ref(session, cluster, vif, is_neutron):
     if is_neutron:
-        network_name = (vif['network']['bridge'] or
-                        CONF.vmware.integration_bridge)
-        network_ref = get_neutron_network(session, network_name, cluster, vif)
+        network_ref = _get_neutron_network(session, cluster, vif)
     else:
         create_vlan = vif['network'].get_meta('should_create_vlan', False)
         network_ref = ensure_vlan_bridge(session, vif, cluster=cluster,
