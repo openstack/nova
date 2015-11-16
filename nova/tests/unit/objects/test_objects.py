@@ -307,6 +307,9 @@ def things_temporarily_local():
     base.NovaObject.indirection_api = _api
 
 
+# FIXME(danms): We shouldn't be overriding any of this, but need to
+# for the moment because of the mocks in the base fixture that don't
+# hit our registry subclass.
 class FakeIndirectionHack(fixture.FakeIndirectionAPI):
     def object_action(self, context, objinst, objmethod, args, kwargs):
         objinst = self._ser.deserialize_entity(
@@ -342,6 +345,23 @@ class FakeIndirectionHack(fixture.FakeIndirectionAPI):
         return (base.NovaObject.obj_from_primitive(
             result.obj_to_primitive(target_version=objver,
                                     version_manifest=manifest),
+            context=context)
+            if isinstance(result, base.NovaObject) else result)
+
+    def object_class_action_versions(self, context, objname, objmethod,
+                                     object_versions, args, kwargs):
+        objname = six.text_type(objname)
+        objmethod = six.text_type(objmethod)
+        object_versions = {six.text_type(o): six.text_type(v)
+                           for o, v in object_versions.items()}
+        args, kwargs = self._canonicalize_args(context, args, kwargs)
+        objver = object_versions[objname]
+        cls = base.NovaObject.obj_class_from_name(objname, objver)
+        with mock.patch('nova.objects.base.NovaObject.'
+                        'indirection_api', new=None):
+            result = getattr(cls, objmethod)(context, *args, **kwargs)
+        return (base.NovaObject.obj_from_primitive(
+            result.obj_to_primitive(target_version=objver),
             context=context)
             if isinstance(result, base.NovaObject) else result)
 
@@ -889,13 +909,19 @@ class TestObject(_LocalTest, _TestObject):
 
 
 class TestRemoteObject(_RemoteTest, _TestObject):
-    def test_major_version_mismatch(self):
-        MyObj2.VERSION = '2.0'
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_major_version_mismatch(self, mock_otgv):
+        mock_otgv.return_value = {
+            'MyObj': '2.0',
+        }
         self.assertRaises(ovo_exc.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
-    def test_minor_version_greater(self):
-        MyObj2.VERSION = '1.7'
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_minor_version_greater(self, mock_otgv):
+        mock_otgv.return_value = {
+            'MyObj': '1.7',
+        }
         self.assertRaises(ovo_exc.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
@@ -904,8 +930,11 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         obj = MyObj2.query(self.context)
         self.assertEqual(obj.bar, 'bar')
 
-    def test_compat(self):
-        MyObj2.VERSION = '1.1'
+    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
+    def test_compat(self, mock_otgv):
+        mock_otgv.return_value = {
+            'MyObj': '1.1',
+        }
         obj = MyObj2.query(self.context)
         self.assertEqual('oldbar', obj.bar)
 
