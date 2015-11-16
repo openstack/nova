@@ -20,7 +20,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
-from nova.i18n import _, _LW
+from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -33,8 +33,9 @@ _default_driver = 'db'
 servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
                                      default=_default_driver,
                                      help='The driver for servicegroup '
-                                          'service (valid options are: '
-                                          'db, zk, mc)')
+                                          'service.',
+                                     choices=sorted(
+                                        _driver_name_class_mapping.keys()))
 
 CONF = cfg.CONF
 CONF.register_opt(servicegroup_driver_opt)
@@ -64,12 +65,8 @@ class API(object):
                          'report_interval': report_interval,
                          'new_service_down_time': new_service_down_time})
             CONF.set_override('service_down_time', new_service_down_time)
-        driver_name = CONF.servicegroup_driver
-        try:
-            driver_class = _driver_name_class_mapping[driver_name]
-        except KeyError:
-            raise TypeError(_("unknown ServiceGroup driver name: %s")
-                            % driver_name)
+
+        driver_class = _driver_name_class_mapping[CONF.servicegroup_driver]
         self._driver = importutils.import_object(driver_class,
                                                  *args, **kwargs)
 
