@@ -703,9 +703,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertFalse(mock_destroy.called)
 
     @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
-                       side_effect=exception.StorageError(reason='oh man'))
+                       side_effect=exception.DiskNotFound(message='oh man'))
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
-    def test_destroy_with_attached_volumes_with_storage_error(
+    def test_destroy_with_attached_volumes_with_disk_not_found(
         self, mock_destroy, mock_detach_volume):
         self._create_vm()
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
@@ -1445,6 +1445,37 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 mock_get_vm_state.assert_called_once_with(self.conn._session,
                                                           self.instance)
                 self.assertFalse(mock_reboot.called)
+
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.detach_volume')
+    def test_detach_instance_volumes(
+            self, detach_volume, block_device_info_get_mapping):
+        self._create_vm()
+
+        def _mock_bdm(connection_info, device_name):
+            return {'connection_info': connection_info,
+                    'device_name': device_name}
+
+        disk_1 = _mock_bdm(mock.sentinel.connection_info_1, 'dev1')
+        disk_2 = _mock_bdm(mock.sentinel.connection_info_2, 'dev2')
+        block_device_info_get_mapping.return_value = [disk_1, disk_2]
+
+        detach_volume.side_effect = [None, exception.DiskNotFound("Error")]
+
+        with mock.patch.object(self.conn, '_vmops') as vmops:
+            block_device_info = mock.sentinel.block_device_info
+            self.conn._detach_instance_volumes(self.instance,
+                                               block_device_info)
+
+            block_device_info_get_mapping.assert_called_once_with(
+                block_device_info)
+            vmops.power_off.assert_called_once_with(self.instance)
+            self.assertEqual(vm_states.STOPPED, self.instance.vm_state)
+            exp_detach_calls = [mock.call(mock.sentinel.connection_info_1,
+                                          self.instance, 'dev1'),
+                                mock.call(mock.sentinel.connection_info_2,
+                                          self.instance, 'dev2')]
+            self.assertEqual(exp_detach_calls, detach_volume.call_args_list)
 
     def test_destroy(self):
         self._create_vm()

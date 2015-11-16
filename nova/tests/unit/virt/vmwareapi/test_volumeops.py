@@ -158,6 +158,66 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                                    mock.sentinel.vm_ref,
                                                    mock.sentinel.extra_config)
 
+    def _fake_connection_info(self):
+        return {'driver_volume_type': 'vmdk',
+                'serial': 'volume-fake-id',
+                'data': {'volume': 'vm-10',
+                         'volume_id': 'volume-fake-id'}}
+
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_uuid')
+    @mock.patch.object(vm_util, 'get_vmdk_backed_disk_device')
+    def test_get_vmdk_backed_disk_device(self, get_vmdk_backed_disk_device,
+                                         get_volume_uuid):
+        session = mock.Mock()
+        self._volumeops._session = session
+        hardware_devices = mock.sentinel.hardware_devices
+        session._call_method.return_value = hardware_devices
+
+        disk_uuid = mock.sentinel.disk_uuid
+        get_volume_uuid.return_value = disk_uuid
+
+        device = mock.sentinel.device
+        get_vmdk_backed_disk_device.return_value = device
+
+        vm_ref = mock.sentinel.vm_ref
+        connection_info = self._fake_connection_info()
+        ret = self._volumeops._get_vmdk_backed_disk_device(
+            vm_ref, connection_info['data'])
+
+        self.assertEqual(device, ret)
+        session._call_method.assert_called_once_with(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        get_volume_uuid.assert_called_once_with(
+            vm_ref, connection_info['data']['volume_id'])
+        get_vmdk_backed_disk_device.assert_called_once_with(hardware_devices,
+                                                            disk_uuid)
+
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_uuid')
+    @mock.patch.object(vm_util, 'get_vmdk_backed_disk_device')
+    def test_get_vmdk_backed_disk_device_with_missing_disk_device(
+            self, get_vmdk_backed_disk_device, get_volume_uuid):
+        session = mock.Mock()
+        self._volumeops._session = session
+        hardware_devices = mock.sentinel.hardware_devices
+        session._call_method.return_value = hardware_devices
+
+        disk_uuid = mock.sentinel.disk_uuid
+        get_volume_uuid.return_value = disk_uuid
+
+        get_vmdk_backed_disk_device.return_value = None
+
+        vm_ref = mock.sentinel.vm_ref
+        connection_info = self._fake_connection_info()
+        self.assertRaises(exception.DiskNotFound,
+                          self._volumeops._get_vmdk_backed_disk_device,
+                          vm_ref, connection_info['data'])
+        session._call_method.assert_called_once_with(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        get_volume_uuid.assert_called_once_with(
+            vm_ref, connection_info['data']['volume_id'])
+        get_vmdk_backed_disk_device.assert_called_once_with(hardware_devices,
+                                                            disk_uuid)
+
     def test_detach_volume_vmdk(self):
 
         vmdk_info = vm_util.VmdkInfo('fake-path', 'lsiLogic', 'thin',
@@ -237,6 +297,90 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
+
+    @mock.patch.object(vm_util, 'get_vm_ref')
+    @mock.patch.object(vm_util, 'get_rdm_disk')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_iscsi_get_target')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_disk_from_vm')
+    def test_detach_volume_iscsi(self, detach_disk_from_vm, iscsi_get_target,
+                                 get_rdm_disk, get_vm_ref):
+        vm_ref = mock.sentinel.vm_ref
+        get_vm_ref.return_value = vm_ref
+
+        device_name = mock.sentinel.device_name
+        disk_uuid = mock.sentinel.disk_uuid
+        iscsi_get_target.return_value = (device_name, disk_uuid)
+
+        session = mock.Mock()
+        self._volumeops._session = session
+        hardware_devices = mock.sentinel.hardware_devices
+        session._call_method.return_value = hardware_devices
+
+        device = mock.sentinel.device
+        get_rdm_disk.return_value = device
+
+        connection_info = self._fake_connection_info()
+        instance = mock.sentinel.instance
+        self._volumeops._detach_volume_iscsi(connection_info, instance)
+
+        get_vm_ref.assert_called_once_with(session, instance)
+        iscsi_get_target.assert_called_once_with(connection_info['data'])
+        session._call_method.assert_called_once_with(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        get_rdm_disk.assert_called_once_with(hardware_devices, disk_uuid)
+        detach_disk_from_vm.assert_called_once_with(
+            vm_ref, instance, device, destroy_disk=True)
+
+    @mock.patch.object(vm_util, 'get_vm_ref')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_iscsi_get_target')
+    def test_detach_volume_iscsi_with_missing_iscsi_target(
+            self, iscsi_get_target, get_vm_ref):
+        vm_ref = mock.sentinel.vm_ref
+        get_vm_ref.return_value = vm_ref
+
+        iscsi_get_target.return_value = (None, None)
+
+        connection_info = self._fake_connection_info()
+        instance = mock.sentinel.instance
+        self.assertRaises(
+            exception.StorageError, self._volumeops._detach_volume_iscsi,
+            connection_info, instance)
+
+        get_vm_ref.assert_called_once_with(self._volumeops._session, instance)
+        iscsi_get_target.assert_called_once_with(connection_info['data'])
+
+    @mock.patch.object(vm_util, 'get_vm_ref')
+    @mock.patch.object(vm_util, 'get_rdm_disk')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_iscsi_get_target')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_disk_from_vm')
+    def test_detach_volume_iscsi_with_missing_disk_device(
+            self, detach_disk_from_vm, iscsi_get_target,
+            get_rdm_disk, get_vm_ref):
+        vm_ref = mock.sentinel.vm_ref
+        get_vm_ref.return_value = vm_ref
+
+        device_name = mock.sentinel.device_name
+        disk_uuid = mock.sentinel.disk_uuid
+        iscsi_get_target.return_value = (device_name, disk_uuid)
+
+        session = mock.Mock()
+        self._volumeops._session = session
+        hardware_devices = mock.sentinel.hardware_devices
+        session._call_method.return_value = hardware_devices
+
+        get_rdm_disk.return_value = None
+
+        connection_info = self._fake_connection_info()
+        instance = mock.sentinel.instance
+        self.assertRaises(
+            exception.DiskNotFound, self._volumeops._detach_volume_iscsi,
+            connection_info, instance)
+        get_vm_ref.assert_called_once_with(session, instance)
+        iscsi_get_target.assert_called_once_with(connection_info['data'])
+        session._call_method.assert_called_once_with(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        get_rdm_disk.assert_called_once_with(hardware_devices, disk_uuid)
+        self.assertFalse(detach_disk_from_vm.called)
 
     def _test_attach_volume_vmdk(self, adapter_type=None):
         connection_info = {'driver_volume_type': constants.DISK_FORMAT_VMDK,

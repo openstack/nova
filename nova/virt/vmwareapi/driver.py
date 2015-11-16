@@ -429,7 +429,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 try:
                     self.detach_volume(connection_info, instance,
                                        disk.get('device_name'))
-                except exception.StorageError:
+                except exception.DiskNotFound:
                     LOG.warning(_LW('The volume %s does not exist!'),
                                 disk.get('device_name'),
                                 instance=instance)
