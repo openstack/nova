@@ -2589,6 +2589,33 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
                               'system_metadata', 'info_cache', 'pci_devices'])
 
+    def test_instance_get_all_by_filters_tags_and_project_id(self):
+        context1 = context.RequestContext('user1', 'p1')
+        context2 = context.RequestContext('user2', 'p2')
+
+        inst1 = self.create_instance_with_args(context=context1,
+                                               project_id='p1')
+        inst2 = self.create_instance_with_args(context=context1,
+                                               project_id='p1')
+        inst3 = self.create_instance_with_args(context=context2,
+                                               project_id='p2')
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
+        t4 = u'tag4'
+
+        db.instance_tag_set(context1, inst1.uuid, [t1, t2])
+        db.instance_tag_set(context1, inst2.uuid, [t1, t2, t4])
+        db.instance_tag_set(context2, inst3.uuid, [t1, t2, t3, t4])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [t1, t2],
+                                                 'tags-any': [t3, t4],
+                                                 'project_id': 'p1'})
+        self._assertEqualListsOfObjects([inst2], result,
+                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
+                              'system_metadata', 'info_cache', 'pci_devices'])
+
     def test_instance_get_all_by_host_and_node_no_join(self):
         instance = self.create_instance_with_args()
         result = db.instance_get_all_by_host_and_node(self.ctxt, 'h1', 'n1')
