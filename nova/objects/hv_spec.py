@@ -23,7 +23,8 @@ from nova import utils
 class HVSpec(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added 'vz' hypervisor
-    VERSION = '1.1'
+    # Version 1.2: Added 'lxd' hypervisor
+    VERSION = '1.2'
 
     fields = {
         'arch': fields.ArchitectureField(),

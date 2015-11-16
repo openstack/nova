@@ -28,6 +28,9 @@ class HvTypeTest(test.NoDBTestCase):
     def test_valid_docker(self):
         self.assertTrue(hv_type.is_valid("docker"))
 
+    def test_valid_lxd(self):
+        self.assertTrue(hv_type.is_valid("lxd"))
+
     def test_valid_vz(self):
         self.assertTrue(hv_type.is_valid(hv_type.VIRTUOZZO))
 
