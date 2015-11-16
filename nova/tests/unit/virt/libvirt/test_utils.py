@@ -24,6 +24,7 @@ from oslo_utils import fileutils
 import six
 
 from nova.compute import arch
+from nova import context
 from nova import exception
 from nova import objects
 from nova import test
@@ -563,6 +564,22 @@ disk size: 4.4M
                                   user_id, project_id)
         mock_images.assert_called_once_with(
             context, image_id, target, user_id, project_id,
+            max_size=0)
+
+    @mock.patch('nova.virt.images.fetch')
+    def test_fetch_initrd_image(self, mock_images):
+        _context = context.RequestContext(project_id=123,
+                                          project_name="aubergine",
+                                          user_id=456,
+                                          user_name="pie")
+        target = '/tmp/targetfile'
+        image_id = '4'
+        user_id = 'fake'
+        project_id = 'fake'
+        libvirt_utils.fetch_raw_image(_context, target, image_id,
+                                      user_id, project_id)
+        mock_images.assert_called_once_with(
+            _context, image_id, target, user_id, project_id,
             max_size=0)
 
     def test_fetch_raw_image(self):
