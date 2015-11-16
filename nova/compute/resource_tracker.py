@@ -626,7 +626,8 @@ class ResourceTracker(object):
         else:
             tcpu = 0
             ucpu = 0
-        pci_stats = self.compute_node.pci_device_pools
+        pci_stats = (list(self.compute_node.pci_device_pools) if
+            self.compute_node.pci_device_pools else [])
         LOG.info(_LI("Final resource view: "
                      "name=%(node)s "
                      "phys_ram=%(phys_ram)sMB "
