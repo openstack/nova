@@ -115,6 +115,20 @@ very long. So here are some key points:
 Config Options
 ==============
 
+Location
+--------
+
+The central place where all config options should reside is the ``/nova/conf/``
+package. Options that are in named sections of ``nova.conf``, such as
+``[serial_console]``, should be in their own module. Options that are in the
+``[DEFAULT]`` section should be placed in modules that represent a natural
+grouping. For example, all of the options that affect the scheduler would be
+in the ``scheduler.py`` file, and all the networking options would be moved
+to ``network.py``.
+
+Implementation
+--------------
+
 A config option should be checked for:
 
 * A short description which explains what it does. If it is a unit
@@ -129,12 +143,13 @@ A config option should be checked for:
   change its behavior nor should they set this in every ``nova.conf`` file to
   be sure.
 
-* Descriptions for the possible values.
+* Descriptions/Validations for the possible values.
 
     * If this is an option with numeric values (int, float), describe the
       edge cases (like the min value, max value, 0, -1).
     * If this is a DictOpt, describe the allowed keys.
-    * If this is a StrOpt, lookout for regex validations.
+    * If this is a StrOpt, list any possible regex validations, or provide a
+      list of acceptable and/or prohibited values.
 
 * Interdependencies to other options. If other config options have to be
   considered when this config option gets changed, is this described?
