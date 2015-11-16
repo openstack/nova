@@ -89,8 +89,7 @@ class NotificationsTestCase(test.TestCase):
         inst._context = self.context
         if params:
             inst.update(params)
-        with mock.patch.object(inst, 'save'):
-            inst.set_flavor(instance_type)
+        inst.flavor = instance_type
         inst.create()
         return inst
 

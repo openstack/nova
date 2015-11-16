@@ -17,7 +17,6 @@ import platform
 import socket
 import sys
 
-import mock
 from oslo_config import cfg
 from six.moves import range
 
@@ -94,9 +93,7 @@ def get_test_instance(context=None, flavor=None, obj=False):
 
     if obj:
         instance = objects.Instance(context, **test_instance)
-        with mock.patch.object(instance, 'save'):
-            instance.set_flavor(objects.Flavor.get_by_id(context,
-                                                         flavor['id']))
+        instance.flavor = objects.Flavor.get_by_id(context, flavor['id'])
         instance.create()
     else:
         flavors.save_flavor_info(test_instance['system_metadata'], flavor, '')
