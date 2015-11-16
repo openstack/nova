@@ -324,12 +324,13 @@ class _TestInstanceObject(object):
         if cell_type == 'api':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
             cells_api_mock.instance_update_from_api(
-                    self.context, mox.IsA(objects.Instance),
+                    self.context, mox.IsA(instance._BaseInstance),
                     exp_vm_state, exp_task_state, admin_reset)
         elif cell_type == 'compute':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
             cells_api_mock.instance_update_at_top(self.context,
-                                                  mox.IsA(objects.Instance))
+                                                  mox.IsA(
+                                                      instance._BaseInstance))
         notifications.send_update(self.context, mox.IgnoreArg(),
                                   mox.IgnoreArg())
 
