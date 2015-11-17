@@ -159,22 +159,21 @@ def configure(conf):
 
 
 def get_engine(use_slave=False):
-    return main_context_manager._factory.get_legacy_facade().get_engine(
+    return main_context_manager.get_legacy_facade().get_engine(
         use_slave=use_slave)
 
 
 def get_api_engine():
-    return api_context_manager._factory.get_legacy_facade().get_engine()
+    return api_context_manager.get_legacy_facade().get_engine()
 
 
 def get_session(use_slave=False, **kwargs):
-    return main_context_manager._factory.get_legacy_facade().get_session(
+    return main_context_manager.get_legacy_facade().get_session(
         use_slave=use_slave, **kwargs)
 
 
 def get_api_session(**kwargs):
-    return api_context_manager._factory.get_legacy_facade().get_session(
-        **kwargs)
+    return api_context_manager.get_legacy_facade().get_session(**kwargs)
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
