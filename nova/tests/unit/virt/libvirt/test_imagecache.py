@@ -818,7 +818,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertTrue(os.path.exists(base_filename))
             self.assertTrue(os.path.exists(base_filename + '.info'))
 
-    def test_compute_manager(self):
+    def test_run_image_cache_manager_pass(self):
         was = {'called': False}
 
         def fake_get_all_by_filters(context, *args, **kwargs):
