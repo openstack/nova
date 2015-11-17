@@ -603,8 +603,7 @@ class ServersController(wsgi.Controller):
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
             raise exc.HTTPForbidden(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+                explanation=error.format_message())
         except exception.ImageNotFound:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -867,8 +866,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+                explanation=error.format_message())
         except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)
