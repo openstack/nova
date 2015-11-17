@@ -1,3 +1,4 @@
+# Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -12,28 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Websocket proxy that is compatible with OpenStack Nova
-Serial consoles. Leverages websockify.py by Joel Martin.
-Based on nova-novncproxy.
-"""
-import sys
+# This package got introduced during the Mitaka cycle in 2015 to
+# have a central place where the config options of Nova can be maintained.
+# For more background see the blueprint "centralize-config-options"
 
-from nova.cmd import baseproxy
-import nova.conf
-from nova.conf import serial_console as serial
-from nova import config
+from oslo_config import cfg
 
+from nova.conf import serial_console
 
-CONF = nova.conf.CONF
-serial.register_cli_opts(CONF)
+CONF = cfg.CONF
 
-
-def main():
-    # set default web flag option
-    CONF.set_default('web', None)
-    config.parse_args(sys.argv)
-
-    baseproxy.proxy(
-        host=CONF.serial_console.serialproxy_host,
-        port=CONF.serial_console.serialproxy_port)
+serial_console.register_opts(CONF)

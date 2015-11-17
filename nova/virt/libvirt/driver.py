@@ -290,9 +290,6 @@ CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('vcpu_pin_set', 'nova.virt.hardware')
 CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
 CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
-CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
-CONF.import_opt('proxyclient_address', 'nova.console.serial',
-                group='serial_console')
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
 CONF.import_group('workarounds', 'nova.utils')

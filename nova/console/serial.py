@@ -16,10 +16,10 @@
 
 import socket
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import six.moves
 
+import nova.conf
 from nova import exception
 from nova.i18n import _LW
 from nova import utils
@@ -28,31 +28,8 @@ LOG = logging.getLogger(__name__)
 
 ALLOCATED_PORTS = set()  # in-memory set of already allocated ports
 SERIAL_LOCK = 'serial-lock'
-DEFAULT_PORT_RANGE = '10000:20000'
 
-serial_opts = [
-    cfg.BoolOpt('enabled',
-                default=False,
-                help='Enable serial console related features'),
-    cfg.StrOpt('port_range',
-                default=DEFAULT_PORT_RANGE,
-                help='Range of TCP ports to use for serial ports '
-                     'on compute hosts'),
-    cfg.StrOpt('base_url',
-               default='ws://127.0.0.1:6083/',
-               help='Location of serial console proxy.'),
-    cfg.StrOpt('listen',
-               default='127.0.0.1',
-               help='IP address on which instance serial console '
-                    'should listen'),
-    cfg.StrOpt('proxyclient_address',
-               default='127.0.0.1',
-               help='The address to which proxy clients '
-                    '(like nova-serialproxy) should connect'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(serial_opts, group='serial_console')
+CONF = nova.conf.CONF
 
 # TODO(sahid): Add a method to initialize ALOCATED_PORTS with the
 # already binded TPC port(s). (cf from danpb: list all running guests and
@@ -95,12 +72,13 @@ def _get_port_range():
         if start >= stop:
             raise ValueError
     except ValueError:
+        default_port_range = nova.conf.serial_console.DEFAULT_PORT_RANGE
         LOG.warning(_LW("serial_console.port_range should be <num>:<num>. "
                         "Given value %(port_range)s could not be parsed. "
                         "Taking the default port range %(default)s."),
                     {'port_range': config_range,
-                     'default': DEFAULT_PORT_RANGE})
-        start, stop = map(int, DEFAULT_PORT_RANGE.split(':'))
+                     'default': default_port_range})
+        start, stop = map(int, default_port_range.split(':'))
     return start, stop
 
 
