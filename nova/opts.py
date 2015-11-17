@@ -47,7 +47,6 @@ import nova.quota
 import nova.rdp
 import nova.service
 import nova.servicegroup.api
-import nova.servicegroup.drivers.zk
 import nova.spice
 import nova.utils
 import nova.volume
@@ -110,5 +109,4 @@ def list_opts():
              [nova.consoleauth.rpcapi.rpcapi_cap_opt],
          )),
         ('workarounds', nova.utils.workarounds_opts),
-        ('zookeeper', nova.servicegroup.drivers.zk.zk_driver_opts)
     ]
