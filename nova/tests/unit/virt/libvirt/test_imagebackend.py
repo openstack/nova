@@ -1553,6 +1553,11 @@ class BackendTestCase(test.NoDBTestCase):
         raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
         self.assertFalse(raw.preallocate)
 
+    def test_image_raw_native_io(self):
+        self.flags(preallocate_images="space")
+        raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertEqual(raw.driver_io, "native")
+
     def test_image_qcow2(self):
         self._test_image('qcow2', imagebackend.Qcow2, imagebackend.Qcow2)
 
@@ -1567,6 +1572,20 @@ class BackendTestCase(test.NoDBTestCase):
         self.flags(preallocate_images='space1')
         qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
         self.assertFalse(qcow.preallocate)
+
+    def test_image_qcow2_native_io(self):
+        self.flags(preallocate_images="space")
+        qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertEqual(qcow.driver_io, "native")
+
+    def test_image_lvm_native_io(self):
+        def _test_native_io(is_sparse, driver_io):
+            self.flags(images_volume_group='FakeVG', group='libvirt')
+            self.flags(sparse_logical_volumes=is_sparse, group='libvirt')
+            lvm = imagebackend.Lvm(self.INSTANCE, 'fake_disk')
+            self.assertEqual(lvm.driver_io, driver_io)
+        _test_native_io(is_sparse=False, driver_io="native")
+        _test_native_io(is_sparse=True, driver_io=None)
 
     def test_image_lvm(self):
         self.flags(images_volume_group='FakeVG', group='libvirt')

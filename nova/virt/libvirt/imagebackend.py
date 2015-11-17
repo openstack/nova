@@ -108,6 +108,7 @@ class Image(object):
 
         self.source_type = source_type
         self.driver_format = driver_format
+        self.driver_io = None
         self.discard_mode = CONF.libvirt.hw_disk_discard
         self.is_block_dev = is_block_dev
         self.preallocate = False
@@ -169,6 +170,7 @@ class Image(object):
         info.target_dev = disk_dev
         info.driver_cache = cache_mode
         info.driver_discard = self.discard_mode
+        info.driver_io = self.driver_io
         info.driver_format = self.driver_format
         driver_name = libvirt_utils.pick_disk_driver_name(hypervisor_version,
                                                           self.is_block_dev)
@@ -432,6 +434,8 @@ class Raw(Image):
                                   disk_name))
         self.preallocate = (
             strutils.to_slug(CONF.preallocate_images) == 'space')
+        if self.preallocate:
+            self.driver_io = "native"
         self.disk_info_path = os.path.join(os.path.dirname(self.path),
                                            'disk.info')
         self.correct_format()
@@ -514,6 +518,8 @@ class Qcow2(Image):
                                   disk_name))
         self.preallocate = (
             strutils.to_slug(CONF.preallocate_images) == 'space')
+        if self.preallocate:
+            self.driver_io = "native"
         self.disk_info_path = os.path.join(os.path.dirname(self.path),
                                            'disk.info')
         self.resolve_driver_format()
@@ -625,6 +631,9 @@ class Lvm(Image):
         # for the more general preallocate_images
         self.sparse = CONF.libvirt.sparse_logical_volumes
         self.preallocate = not self.sparse
+
+        if not self.sparse:
+            self.driver_io = "native"
 
     def _supports_encryption(self):
         return True
