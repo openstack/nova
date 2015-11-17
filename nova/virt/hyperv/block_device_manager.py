@@ -58,8 +58,6 @@ class BlockDeviceInfoManager(object):
                 # reserve one slot for the config drive on the second
                 # controller in case of generation 1 virtual machines
                 free_slots_by_device_type[constants.CTRL_TYPE_IDE][1] -= 1
-            else:
-                free_slots_by_device_type[constants.CTRL_TYPE_SCSI][0] -= 1
         return free_slots_by_device_type
 
     def validate_and_update_bdi(self, instance, image_meta, vm_gen,
@@ -69,6 +67,14 @@ class BlockDeviceInfoManager(object):
                                            block_device_info, slot_map)
         self._check_and_update_ephemerals(vm_gen, block_device_info, slot_map)
         self._check_and_update_volumes(vm_gen, block_device_info, slot_map)
+
+        if vm_gen == constants.VM_GEN_2 and configdrive.required_by(instance):
+            # for Generation 2 VMs, the configdrive is attached to the SCSI
+            # controller. Check that there is still a slot available for it.
+            if slot_map[constants.CTRL_TYPE_SCSI][0] == 0:
+                msg = _("There are no more free slots on controller %s for "
+                        "configdrive.") % constants.CTRL_TYPE_SCSI
+                raise exception.InvalidBDMFormat(details=msg)
 
     def _check_and_update_root_device(self, vm_gen, image_meta,
                                       block_device_info, slot_map):

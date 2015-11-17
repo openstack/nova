@@ -42,6 +42,7 @@ from nova.i18n import _, _LI, _LE, _LW
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import hardware
+from nova.virt.hyperv import block_device_manager
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
@@ -107,6 +108,8 @@ class VMOps(object):
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
         self._serial_console_ops = serialconsoleops.SerialConsoleOps()
+        self._block_dev_man = (
+            block_device_manager.BlockDeviceInfoManager())
         self._vif_driver = None
         self._load_vif_driver_class()
 
@@ -156,6 +159,13 @@ class VMOps(object):
                                      mem_kb=info['MemoryUsage'],
                                      num_cpu=info['NumberOfProcessors'],
                                      cpu_time_ns=info['UpTime'])
+
+    def _create_root_device(self, context, instance, root_disk_info, vm_gen):
+        path = None
+        if root_disk_info['type'] == constants.DISK:
+            path = self._create_root_vhd(context, instance)
+            self.check_vm_image_type(instance.uuid, vm_gen, path)
+        root_disk_info['path'] = path
 
     def _create_root_vhd(self, context, instance, rescue_image_id=None):
         is_rescue_vhd = rescue_image_id is not None
@@ -223,15 +233,17 @@ class VMOps(object):
             return True
         return False
 
-    def create_ephemeral_vhd(self, instance):
-        eph_vhd_size = instance.get('ephemeral_gb', 0) * units.Gi
-        if eph_vhd_size:
-            vhd_format = self._vhdutils.get_best_supported_vhd_format()
+    def _create_ephemerals(self, instance, ephemerals):
+        for index, eph in enumerate(ephemerals):
+            eph['format'] = self._vhdutils.get_best_supported_vhd_format()
+            eph_name = "eph%s" % index
+            eph['path'] = self._pathutils.get_ephemeral_vhd_path(
+                instance.name, eph['format'], eph_name)
+            self.create_ephemeral_disk(instance.name, eph)
 
-            eph_vhd_path = self._pathutils.get_ephemeral_vhd_path(
-                instance.name, vhd_format)
-            self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size)
-            return eph_vhd_path
+    def create_ephemeral_disk(self, instance_name, eph_info):
+        self._vhdutils.create_dynamic_vhd(eph_info['path'],
+                                          eph_info['size'] * units.Gi)
 
     @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
@@ -246,19 +258,17 @@ class VMOps(object):
         # Make sure we're starting with a clean slate.
         self._delete_disk_files(instance_name)
 
-        if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            root_vhd_path = None
-        else:
-            root_vhd_path = self._create_root_vhd(context, instance)
+        vm_gen = self.get_image_vm_generation(instance.uuid, image_meta)
 
-        eph_vhd_path = self.create_ephemeral_vhd(instance)
-        vm_gen = self.get_image_vm_generation(
-            instance.uuid, root_vhd_path, image_meta)
+        self._block_dev_man.validate_and_update_bdi(
+            instance, image_meta, vm_gen, block_device_info)
+        root_device = block_device_info['root_disk']
+        self._create_root_device(context, instance, root_device, vm_gen)
+        self._create_ephemerals(instance, block_device_info['ephemerals'])
 
         try:
-            self.create_instance(instance, network_info, block_device_info,
-                                 root_vhd_path, eph_vhd_path,
-                                 vm_gen)
+            self.create_instance(instance, network_info, root_device,
+                                 block_device_info, vm_gen)
 
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
@@ -273,8 +283,8 @@ class VMOps(object):
             with excutils.save_and_reraise_exception():
                 self.destroy(instance)
 
-    def create_instance(self, instance, network_info, block_device_info,
-                        root_vhd_path, eph_vhd_path, vm_gen):
+    def create_instance(self, instance, network_info, root_device,
+                        block_device_info, vm_gen):
         instance_name = instance.name
         instance_path = os.path.join(CONF.instances_path, instance_name)
 
@@ -290,24 +300,10 @@ class VMOps(object):
         self._configure_remotefx(instance, vm_gen)
 
         self._vmutils.create_scsi_controller(instance_name)
-        controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
-
-        ctrl_disk_addr = 0
-        if root_vhd_path:
-            self._attach_drive(instance_name, root_vhd_path, 0, ctrl_disk_addr,
-                               controller_type)
-
-        ctrl_disk_addr = 1
-        if eph_vhd_path:
-            self._attach_drive(instance_name, eph_vhd_path, 0, ctrl_disk_addr,
-                               controller_type)
-
-        # If ebs_root is False, the first volume will be attached to SCSI
-        # controller. Generation 2 VMs only has a SCSI controller.
-        ebs_root = vm_gen is not constants.VM_GEN_2 and root_vhd_path is None
-        self._volumeops.attach_volumes(block_device_info,
-                                       instance_name,
-                                       ebs_root)
+        self._attach_root_device(instance_name, root_device)
+        self._attach_ephemerals(instance_name, block_device_info['ephemerals'])
+        self._volumeops.attach_volumes(
+            block_device_info['block_device_mapping'], instance_name)
 
         # For the moment, we use COM port 1 when getting the serial console
         # log as well as interactive sessions. In the future, the way in which
@@ -368,6 +364,29 @@ class VMOps(object):
             remotefx_max_resolution,
             vram_bytes)
 
+    def _attach_root_device(self, instance_name, root_dev_info):
+        if root_dev_info['type'] == constants.VOLUME:
+            self._volumeops.attach_volume(root_dev_info['connection_info'],
+                                          instance_name,
+                                          disk_bus=root_dev_info['disk_bus'])
+        else:
+            self._attach_drive(instance_name, root_dev_info['path'],
+                               root_dev_info['drive_addr'],
+                               root_dev_info['ctrl_disk_addr'],
+                               root_dev_info['disk_bus'],
+                               root_dev_info['type'])
+
+    def _attach_ephemerals(self, instance_name, ephemerals):
+        for eph in ephemerals:
+            # if an ephemeral doesn't have a path, it might have been removed
+            # during resize.
+            if eph.get('path'):
+                self._attach_drive(
+                    instance_name, eph['path'], eph['drive_addr'],
+                    eph['ctrl_disk_addr'], eph['disk_bus'],
+                    constants.BDI_DEVICE_TYPE_TO_DRIVE_TYPE[
+                        eph['device_type']])
+
     def _attach_drive(self, instance_name, path, drive_addr, ctrl_disk_addr,
                       controller_type, drive_type=constants.DISK):
         if controller_type == constants.CTRL_TYPE_SCSI:
@@ -376,18 +395,19 @@ class VMOps(object):
             self._vmutils.attach_ide_drive(instance_name, path, drive_addr,
                                            ctrl_disk_addr, drive_type)
 
-    def get_image_vm_generation(self, instance_id, root_vhd_path, image_meta):
+    def get_image_vm_generation(self, instance_id, image_meta):
         default_vm_gen = self._hostutils.get_default_vm_generation()
-        image_prop_vm = image_meta.properties.get(
-            'hw_machine_type', default_vm_gen)
+        image_prop_vm = image_meta.properties.get('hw_machine_type',
+                                                  default_vm_gen)
         if image_prop_vm not in self._hostutils.get_supported_vm_types():
             reason = _LE('Requested VM Generation %s is not supported on '
                          'this OS.') % image_prop_vm
             raise exception.InstanceUnacceptable(instance_id=instance_id,
                                                  reason=reason)
 
-        vm_gen = VM_GENERATIONS[image_prop_vm]
+        return VM_GENERATIONS[image_prop_vm]
 
+    def check_vm_image_type(self, instance_id, vm_gen, root_vhd_path):
         if (vm_gen != constants.VM_GEN_1 and root_vhd_path and
                 self._vhdutils.get_vhd_format(
                     root_vhd_path) == constants.DISK_FORMAT_VHD):
@@ -395,8 +415,6 @@ class VMOps(object):
                          'instead of VHDX.') % vm_gen
             raise exception.InstanceUnacceptable(instance_id=instance_id,
                                                  reason=reason)
-
-        return vm_gen
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              network_info, rescue=False):
@@ -748,7 +766,6 @@ class VMOps(object):
             context, instance, rescue_image_id=rescue_image_id)
 
         rescue_vm_gen = self.get_image_vm_generation(instance.uuid,
-                                                     rescue_vhd_path,
                                                      image_meta)
         vm_gen = self._vmutils.get_vm_generation(instance.name)
         if rescue_vm_gen != vm_gen:

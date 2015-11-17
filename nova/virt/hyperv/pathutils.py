@@ -106,9 +106,10 @@ class PathUtils(pathutils.PathUtils):
                 break
         return configdrive_path
 
-    def lookup_ephemeral_vhd_path(self, instance_name):
+    def lookup_ephemeral_vhd_path(self, instance_name, eph_name):
         return self._lookup_vhd_path(instance_name,
-                                     self.get_ephemeral_vhd_path)
+                                     self.get_ephemeral_vhd_path,
+                                     eph_name)
 
     def get_root_vhd_path(self, instance_name, format_ext, rescue=False):
         instance_path = self.get_instance_dir(instance_name)
@@ -127,9 +128,9 @@ class PathUtils(pathutils.PathUtils):
         return os.path.join(instance_path,
                             configdrive_image_name + '.' + format_ext.lower())
 
-    def get_ephemeral_vhd_path(self, instance_name, format_ext):
+    def get_ephemeral_vhd_path(self, instance_name, format_ext, eph_name):
         instance_path = self.get_instance_dir(instance_name)
-        return os.path.join(instance_path, 'ephemeral.' + format_ext.lower())
+        return os.path.join(instance_path, eph_name + '.' + format_ext.lower())
 
     def get_base_vhd_dir(self):
         return self._get_instances_sub_dir('_base')

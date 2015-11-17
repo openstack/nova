@@ -50,14 +50,7 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(slot_map[constants.CTRL_TYPE_IDE][1],
                          os_win_const.IDE_CONTROLLER_SLOTS_NUMBER - 1)
 
-    @mock.patch('nova.virt.configdrive.required_by')
-    def test_init_controller_slot_counter_gen2(self, mock_cfg_drive_req):
-        slot_map = self._bdman._initialize_controller_slot_counter(
-            mock.sentinel.FAKE_INSTANCE, constants.VM_GEN_2)
-
-        self.assertEqual(slot_map[constants.CTRL_TYPE_SCSI][0],
-                         os_win_const.SCSI_CONTROLLER_SLOTS_NUMBER - 1)
-
+    @mock.patch.object(block_device_manager.configdrive, 'required_by')
     @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
                        '_initialize_controller_slot_counter')
     @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
@@ -66,28 +59,44 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
                        '_check_and_update_ephemerals')
     @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
                        '_check_and_update_volumes')
-    def test_validate_and_update_bdi(self, mock_check_and_update_vol,
-                                     mock_check_and_update_eph,
-                                     mock_check_and_update_root,
-                                     mock_init_ctrl_cntr):
-        mock_init_ctrl_cntr.return_value = mock.sentinel.FAKE_SLOT_MAP
+    def _check_validate_and_update_bdi(self, mock_check_and_update_vol,
+                                       mock_check_and_update_eph,
+                                       mock_check_and_update_root,
+                                       mock_init_ctrl_cntr,
+                                       mock_required_by, available_slots=1):
+        mock_required_by.return_value = True
+        slot_map = {constants.CTRL_TYPE_SCSI: [available_slots]}
+        mock_init_ctrl_cntr.return_value = slot_map
 
-        self._bdman.validate_and_update_bdi(mock.sentinel.FAKE_INSTANCE,
-                                            mock.sentinel.IMAGE_META,
-                                            mock.sentinel.VM_GEN,
-                                            mock.sentinel.BLOCK_DEV_INFO)
+        if available_slots:
+            self._bdman.validate_and_update_bdi(mock.sentinel.FAKE_INSTANCE,
+                                                mock.sentinel.IMAGE_META,
+                                                constants.VM_GEN_2,
+                                                mock.sentinel.BLOCK_DEV_INFO)
+        else:
+            self.assertRaises(exception.InvalidBDMFormat,
+                              self._bdman.validate_and_update_bdi,
+                              mock.sentinel.FAKE_INSTANCE,
+                              mock.sentinel.IMAGE_META,
+                              constants.VM_GEN_2,
+                              mock.sentinel.BLOCK_DEV_INFO)
 
         mock_init_ctrl_cntr.assert_called_once_with(
-            mock.sentinel.FAKE_INSTANCE, mock.sentinel.VM_GEN)
+            mock.sentinel.FAKE_INSTANCE, constants.VM_GEN_2)
         mock_check_and_update_root.assert_called_once_with(
-            mock.sentinel.VM_GEN, mock.sentinel.IMAGE_META,
-            mock.sentinel.BLOCK_DEV_INFO, mock.sentinel.FAKE_SLOT_MAP)
+            constants.VM_GEN_2, mock.sentinel.IMAGE_META,
+            mock.sentinel.BLOCK_DEV_INFO, slot_map)
         mock_check_and_update_eph.assert_called_once_with(
-            mock.sentinel.VM_GEN, mock.sentinel.BLOCK_DEV_INFO,
-            mock.sentinel.FAKE_SLOT_MAP)
+            constants.VM_GEN_2, mock.sentinel.BLOCK_DEV_INFO, slot_map)
         mock_check_and_update_vol.assert_called_once_with(
-            mock.sentinel.VM_GEN, mock.sentinel.BLOCK_DEV_INFO,
-            mock.sentinel.FAKE_SLOT_MAP)
+            constants.VM_GEN_2, mock.sentinel.BLOCK_DEV_INFO, slot_map)
+        mock_required_by.assert_called_once_with(mock.sentinel.FAKE_INSTANCE)
+
+    def test_validate_and_update_bdi(self):
+        self._check_validate_and_update_bdi()
+
+    def test_validate_and_update_bdi_insufficient_slots(self):
+        self._check_validate_and_update_bdi(available_slots=0)
 
     @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
                        '_get_available_controller_slot')

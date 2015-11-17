@@ -34,6 +34,7 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self._livemigrops = livemigrationops.LiveMigrationOps()
         self._livemigrops._livemigrutils = mock.MagicMock()
         self._livemigrops._pathutils = mock.MagicMock()
+        self._livemigrops._block_dev_man = mock.MagicMock()
 
     @mock.patch.object(serialconsoleops.SerialConsoleOps,
                        'stop_console_handler')
@@ -78,22 +79,21 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self._test_live_migration(side_effect=os_win_exc.HyperVException)
 
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.get_disk_path_mapping')
-    @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
-                '.ebs_root_in_block_devices')
     @mock.patch('nova.virt.hyperv.imagecache.ImageCache.get_cached_image')
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.initialize_volumes_connection')
     def _test_pre_live_migration(self, mock_initialize_connection,
                                  mock_get_cached_image,
-                                 mock_ebs_root_in_block_devices,
                                  mock_get_disk_path_mapping,
                                  phys_disks_attached=True):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_instance.image_ref = "fake_image_ref"
-        mock_ebs_root_in_block_devices.return_value = None
         mock_get_disk_path_mapping.return_value = (
             mock.sentinel.disk_path_mapping if phys_disks_attached
             else None)
+        bdman = self._livemigrops._block_dev_man
+        mock_is_boot_from_vol = bdman.is_boot_from_volume
+        mock_is_boot_from_vol.return_value = None
         CONF.set_override('use_cow_images', True)
         self._livemigrops.pre_live_migration(
             self.context, mock_instance,
@@ -103,7 +103,7 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         check_config = (
             self._livemigrops._livemigrutils.check_live_migration_config)
         check_config.assert_called_once_with()
-        mock_ebs_root_in_block_devices.assert_called_once_with(
+        mock_is_boot_from_vol.assert_called_once_with(
             mock.sentinel.BLOCK_INFO)
         mock_get_cached_image.assert_called_once_with(self.context,
                                                       mock_instance)
