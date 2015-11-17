@@ -1711,13 +1711,17 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             delete_bridge_dev(bridge)
 
 
-# NOTE(cfb): This is a temporary fix to LP #1316621. We really want to call
-#            ebtables with --concurrent. In order to do that though we need
-#            libvirt to support this. Additionally since ebtables --concurrent
-#            will hang indefinitely waiting on the lock we need to teach
-#            oslo_concurrency.processutils how to timeout a long running
-#            process first. Once those are complete we can replace all of this
-#            with calls to ebtables --concurrent and a reasonable timeout.
+# NOTE(cfb): Fix for LP #1316621, #1501366.
+#            We call ebtables with --concurrent which causes ebtables to
+#            use a lock file to deal with concurrent calls. Since we can't
+#            be sure the libvirt also uses --concurrent we retry in a loop
+#            to be sure.
+#
+#            ebtables doesn't implement a timeout and doesn't gracefully
+#            handle cleaning up a lock file if someone sends a SIGKILL to
+#            ebtables while its holding a lock. As a result we want to add
+#            a timeout to the ebtables calls but we first need to teach
+#            oslo_concurrency how to do that.
 def _exec_ebtables(*cmd, **kwargs):
     check_exit_code = kwargs.pop('check_exit_code', True)
 
@@ -1768,16 +1772,16 @@ def _exec_ebtables(*cmd, **kwargs):
 @utils.synchronized('ebtables', external=True)
 def ensure_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '-t', table, '-D'] + rule.split()
+        cmd = ['ebtables', '--concurrent', '-t', table, '-D'] + rule.split()
         _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
-        cmd[3] = '-I'
+        cmd[4] = '-I'
         _exec_ebtables(*cmd, run_as_root=True)
 
 
 @utils.synchronized('ebtables', external=True)
 def remove_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '-t', table, '-D'] + rule.split()
+        cmd = ['ebtables', '--concurrent', '-t', table, '-D'] + rule.split()
         _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
 
 
