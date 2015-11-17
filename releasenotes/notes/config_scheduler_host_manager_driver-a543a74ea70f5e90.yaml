@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The option ``scheduler_host_manager`` is now changed to use entrypoint
+    instead of full class path. Set one of the entrypoints under the namespace
+    'nova.scheduler.host_manager' in 'setup.cfg'. Its default value is
+    'host_manager'. The full class path style is still supported in current
+    release. But it is not recommended because class path can be changed and
+    this support will be dropped in the next major release.

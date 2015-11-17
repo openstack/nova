@@ -245,12 +245,20 @@ configuration.
 """)
 
 sched_driver_host_mgr_opt = cfg.StrOpt("scheduler_host_manager",
-        default="nova.scheduler.host_manager.HostManager",
+        default="host_manager",
         help="""
-The scheduler host manager class to use. Aside from the default, the only other
-option as of the Mitaka release is
-'nova.scheduler.ironic_host_manager.IronicHostManager', which should be used if
-you're using Ironic to provision bare-metal instances.
+The scheduler host manager to use, which manages the in-memory picture of the
+hosts that the scheduler uses.
+
+The option value should be chosen from one of the entrypoints under the
+namespace 'nova.scheduler.host_manager' of file 'setup.cfg'. For example,
+'host_manager' is the default setting. Aside from the default, the only other
+option as of the Mitaka release is 'ironic_host_manager', which should be used
+if you're using Ironic to provision bare-metal instances.
+
+This option also supports a full class path style, for example
+"nova.scheduler.host_manager.HostManager", but note this support is deprecated
+and will be dropped in the N release.
 
 * Services that use this:
 
