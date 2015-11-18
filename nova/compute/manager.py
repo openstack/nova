@@ -1913,13 +1913,17 @@ class ComputeManager(manager.Manager):
                 self._cleanup_allocated_networks(context, instance,
                     requested_networks)
                 compute_utils.add_instance_fault_from_exc(context,
-                        instance, e, sys.exc_info())
+                        instance, e, sys.exc_info(),
+                        fault_message=e.kwargs['reason'])
                 self._nil_out_instance_obj_host_and_node(instance)
                 self._set_instance_obj_error_state(context, instance,
                                                    clean_task_state=True)
                 return build_results.FAILED
             LOG.debug(e.format_message(), instance=instance)
+            # This will be used for logging the exception
             retry['exc'] = traceback.format_exception(*sys.exc_info())
+            # This will be used for setting the instance fault message
+            retry['exc_reason'] = e.kwargs['reason']
             # NOTE(comstud): Deallocate networks if the driver wants
             # us to do so.
             if self.driver.deallocate_networks_on_reschedule(instance):

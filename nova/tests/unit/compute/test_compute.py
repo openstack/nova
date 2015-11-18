@@ -6165,6 +6165,37 @@ class ComputeTestCase(BaseTestCase):
                                                   instance,
                                                   NotImplementedError(message))
 
+    def test_add_instance_fault_with_message(self):
+        instance = self._create_fake_instance_obj()
+        exc_info = None
+
+        def fake_db_fault_create(ctxt, values):
+            self.assertIn('raise NotImplementedError', values['details'])
+            del values['details']
+
+            expected = {
+                'code': 500,
+                'message': 'hoge',
+                'instance_uuid': instance['uuid'],
+                'host': self.compute.host
+            }
+            self.assertEqual(expected, values)
+            return self._fill_fault(expected)
+
+        try:
+            raise NotImplementedError('test')
+        except NotImplementedError:
+            exc_info = sys.exc_info()
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                                                  instance,
+                                                  NotImplementedError('test'),
+                                                  exc_info,
+                                                  fault_message='hoge')
+
     def _test_cleanup_running(self, action):
         admin_context = context.get_admin_context()
         deleted_at = (timeutils.utcnow() -
@@ -7385,6 +7416,26 @@ class ComputeTestCase(BaseTestCase):
         mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id1')
         mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id2')
         self.assertEqual(4, mock_snapshot_get.call_count)
+
+    def test_instance_fault_message_no_rescheduled_details_without_retry(self):
+        """This test simulates a spawn failure with no retry data.
+
+        If driver spawn raises an exception and there is no retry data
+        available, the instance fault message should not contain any details
+        about rescheduling. The fault message field is limited in size and a
+        long message about rescheduling displaces the original error message.
+        """
+        class TestException(Exception):
+            pass
+
+        instance = self._create_fake_instance_obj()
+
+        with mock.patch.object(self.compute.driver, 'spawn') as mock_spawn:
+            mock_spawn.side_effect = TestException('Preserve this')
+            self.compute.build_and_run_instance(
+                    self.context, instance, {}, {}, {},
+                    block_device_mapping=[])
+        self.assertEqual('Preserve this', instance.fault.message)
 
 
 class ComputeAPITestCase(BaseTestCase):

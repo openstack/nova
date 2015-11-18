@@ -166,15 +166,15 @@ def populate_retry(filter_properties, instance_uuid):
     retry['num_attempts'] += 1
 
     _log_compute_error(instance_uuid, retry)
-    exc = retry.pop('exc', None)
+    exc_reason = retry.pop('exc_reason', None)
 
     if retry['num_attempts'] > max_attempts:
         msg = (_('Exceeded max scheduling attempts %(max_attempts)d '
                  'for instance %(instance_uuid)s. '
-                 'Last exception: %(exc)s')
+                 'Last exception: %(exc_reason)s')
                % {'max_attempts': max_attempts,
                   'instance_uuid': instance_uuid,
-                  'exc': exc})
+                  'exc_reason': exc_reason})
         raise exception.MaxRetriesExceeded(reason=msg)
 
 

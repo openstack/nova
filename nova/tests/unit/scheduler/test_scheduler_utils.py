@@ -192,7 +192,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         _max_attempts.return_value = 2
         msg = 'The exception text was preserved!'
         filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
-                                            exc=[msg]))
+                                            exc_reason=[msg]))
         nvh = self.assertRaises(exception.MaxRetriesExceeded,
                                 scheduler_utils.populate_retry,
                                 filter_properties, 'fake-uuid')
