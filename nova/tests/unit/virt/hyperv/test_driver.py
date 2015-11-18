@@ -25,11 +25,15 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import driver as base_driver
 from nova.virt.hyperv import driver
+from nova.virt.hyperv import vmutils
 
 
 class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
-    def setUp(self):
+    FAKE_WIN_2008R2_VERSION = '6.0.0'
+
+    @mock.patch.object(driver.HyperVDriver, '_check_minimum_windows_version')
+    def setUp(self, mock_check_minimum_windows_version):
         super(HyperVDriverTestCase, self).setUp()
 
         self.context = 'context'
@@ -41,6 +45,13 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._livemigrationops = mock.MagicMock()
         self.driver._migrationops = mock.MagicMock()
         self.driver._rdpconsoleops = mock.MagicMock()
+
+    @mock.patch.object(driver.hostutils.HostUtils, 'check_min_windows_version')
+    def test_check_minimum_windows_version(self, mock_check_min_win_version):
+        mock_check_min_win_version.return_value = False
+
+        self.assertRaises(vmutils.HyperVException,
+                          self.driver._check_minimum_windows_version)
 
     def test_public_api_signatures(self):
         self.assertPublicAPISignatures(base_driver.ComputeDriver(None),
