@@ -46,8 +46,6 @@ CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts, 'libvirt')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
-DEV_PREFIX_ETH = 'eth'
-
 # vhostuser queues support
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
 
@@ -388,18 +386,6 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
-    def get_config_mlnx_direct(self, instance, vif, image_meta,
-                               inst_type, virt_type, host):
-        conf = self.get_base_config(instance, vif, image_meta,
-                                    inst_type, virt_type)
-
-        devname = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
-        designer.set_vif_host_backend_direct_config(conf, devname)
-
-        designer.set_vif_bandwidth_config(conf, inst_type)
-
-        return conf
-
     def get_config_vhostuser(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -554,21 +540,6 @@ class LibvirtGenericVIFDriver(object):
             self.plug_ivs_hybrid(instance, vif)
         else:
             self.plug_ivs_ethernet(instance, vif)
-
-    def plug_mlnx_direct(self, instance, vif):
-        vnic_mac = vif['address']
-        device_id = instance.uuid
-        fabric = vif.get_physical_network()
-        if not fabric:
-            raise exception.NetworkMissingPhysicalNetwork(
-                network_uuid=vif['network']['id'])
-        dev_name = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
-        try:
-            utils.execute('ebrctl', 'add-port', vnic_mac, device_id, fabric,
-                          network_model.VIF_TYPE_MLNX_DIRECT, dev_name,
-                          run_as_root=True)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
     def plug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()
@@ -798,19 +769,6 @@ class LibvirtGenericVIFDriver(object):
             self.unplug_ivs_hybrid(instance, vif)
         else:
             self.unplug_ivs_ethernet(instance, vif)
-
-    def unplug_mlnx_direct(self, instance, vif):
-        vnic_mac = vif['address']
-        fabric = vif.get_physical_network()
-        if not fabric:
-            raise exception.NetworkMissingPhysicalNetwork(
-                network_uuid=vif['network']['id'])
-        try:
-            utils.execute('ebrctl', 'del-port', fabric,
-                          vnic_mac, run_as_root=True)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
 
     def unplug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()
