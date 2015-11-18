@@ -78,7 +78,7 @@ def main():
     for test in tests:
         test_list.append(string.replace(test[0:-3], '/', '.'))
 
-    if test_list == []:
+    if not test_list:
         test_works = False
         expect_failure = ""
     else:
