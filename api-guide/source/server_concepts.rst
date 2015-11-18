@@ -122,7 +122,18 @@ Server actions
    Use this function to remove all data on the server and replaces it
    with the specified image. Server ID and IP addresses remain the same.
 
--  **Resize**
+-  **Evacuate**
+
+   Should a compute node actually go offline, it can no longer report
+   status about any of the instances on it. This means they'll be
+   listed in an 'ACTIVE' state forever.
+
+   Evacuate is a work around for this that lets an administrator
+   forceably rebuild these zombie instances on another node. It makes
+   no guarantees that the instance was actually down, so fencing is
+   left as an exercise to the deployer.
+
+-  **Resize** (including **Confirm resize**, **Revert resize**)
 
    Use this function to convert an existing server to a different
    flavor, in essence, scaling the server up or down. The original
@@ -132,13 +143,27 @@ Server actions
    automatically confirmed after 24 hours if you do not confirm or
    revert them.
 
--  **Pause**
+   Confirm resize action will delete the old instance in the virt layer.
+   The spawned instance in the virt layer will be used from then on.
+   on the contrary, Revert resize action will delete the new instance
+   spawned in the virt layer and revert all changes, the original instance
+   will still be used from then on.
+
+   Also, there there is a periodic task configured by param
+   CONF.resize_confirm_window(in seconds), if this value is not 0, nova compute
+   will check whether the instance is in resized state longer than
+   CONF.resize_confirm_window, it will automatically confirm the resize
+   of the instance.
+
+-  **Pause**, **Unpause**
 
    You can pause a server by making a pause request. This request stores
    the state of the VM in RAM. A paused instance continues to run in a
    frozen state.
 
--  **Suspend**
+   Unpause returns a paused instance back to an active state.
+
+-  **Suspend**, **Resume**
 
    Administrative users might want to suspend an instance if it is
    infrequently used or to perform system maintenance. When you suspend
@@ -147,7 +172,85 @@ Server actions
    similar to placing a device in hibernation; memory and vCPUs become
    available to create other instances.
 
-TODO - need to add many more actions in here
+   Resume will resume a suspended instance to an active state.
+
+-  **Snapshot**
+
+   You can store the current state of the instance root disk to be saved
+   and uploaded back into the glance image repository.
+   Then the instance can later be booted again using this saved image.
+
+-  **Backup**
+
+   You can use backup method to store instance's current state in the glance
+   repository, in the mean time, old snapshots will be removed based on the
+   given 'daily' or 'weekly' type.
+
+-  **Start**
+
+   Power on an instance.
+
+-  **Stop**
+
+   Power off an instance.
+
+-  **Delete**, **Restore**
+
+   Power off the given instance first then detach all the resources associated
+   to the instance such as network and volumes, then delete the instance.
+
+   CONF.reclaim_instance_interval (in seconds) decides whether the instance to
+   be deleted will still be in the system. If this value is greater than 0,
+   the deleted instance will not be deleted immediately, instead it will be put
+   into a queue until it's too old(deleted time greater than the value of
+   CONF.reclaim_instance_interval). Admin is able to use Restore action to
+   recover the instance from the delete queue. If the deleted instance stays
+   more than the CONF.reclaim_instance_interval, it will be deleted by compute
+   service automatically.
+
+-  **Shelve**, **Unshelve**
+
+   Shut down an instance and free it up to be removed from the hypervisors.
+   In some case others want to use the resource on some host, user can decide
+   whether need to shelve the instance into glance repository by using similar
+   method like snapshot to free up cpus, memory and disk space to the compute
+   host.
+
+   Unshelve is the reverse operation of Shelve, build and boot the server again
+   with the shelved image in the glance repository on a new scheduled host.
+
+-  **Lock**, **Unlock**
+
+   Lock an instance so no further actions are allowed to the instance. This can
+   be done by either admin or the instance's owner.
+
+   Unlock will unlock an instance in locked state so additional
+   operations can be performed on the instance.
+
+-  **Rescue**, **Unrescue**
+
+   The rescue operation starts an instance in a special configuration whereby
+   it is booted from a special root disk image. This enables the tenant to try
+   and restore a broken vitrual machine.
+
+   Unrescue is the reverse action of Rescue, instance spawned from the special
+   root image will be deleted.
+
+-  **Set admin password**
+
+   Set the root/admin password for the given instance, it wil uses an
+   optional installed agent to inject the admin password.
+
+-  **Migrate**, **Live migrate**
+
+   Migrate is usually utilized by admin, it will move an instance to another
+   host; it utilize the 'resize' action but with same flavor, so during
+   migration, the instance will be power off and rebuilt on another host.
+
+   Live migrate also moves an instance from one host to another, but it won't
+   power of the instance in general so instance will not suffer a down time.
+   Administrators may use this to evacuate instances from a host that needs to
+   undergo maintenance tasks.
 
 Server passwords
 ~~~~~~~~~~~~~~~~
