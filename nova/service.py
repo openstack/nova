@@ -142,9 +142,10 @@ def _update_service_ref(this_service, context):
                                                      this_service.host,
                                                      this_service.binary)
     if not service:
-        LOG.error(_('Unable to find a service record to update for '
-                    '%(binary)s on %(host)s') % {'binary': this_service.binary,
-                                                 'host': this_service.host})
+        LOG.error(_LE('Unable to find a service record to update for '
+                      '%(binary)s on %(host)s') % {
+                          'binary': this_service.binary,
+                          'host': this_service.host})
         return
     if service.version != service_obj.SERVICE_VERSION:
         LOG.info(_LI('Updating service version for %(binary)s on '
