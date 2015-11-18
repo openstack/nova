@@ -1689,7 +1689,7 @@ class VMwareVMOps(object):
                                        attach_config_spec)
             except Exception as e:
                 LOG.error(_LE('Attaching network adapter failed. Exception: '
-                              ' %s'),
+                              '%s'),
                           e, instance=instance)
                 raise exception.InterfaceAttachFailed(
                         instance_uuid=instance.uuid)

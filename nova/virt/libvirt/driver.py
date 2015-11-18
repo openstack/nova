@@ -5600,7 +5600,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 (CONF.spice.enabled and not dest_local_spice)):
 
                 LOG.warn(_LW('Your libvirt version does not support the'
-                             ' VIR_DOMAIN_XML_MIGRATABLE flag, and the '
+                             ' VIR_DOMAIN_XML_MIGRATABLE flag, and the'
                              ' graphics (VNC and/or SPICE) listen'
                              ' addresses on the destination node do not'
                              ' match the addresses on the source node.'

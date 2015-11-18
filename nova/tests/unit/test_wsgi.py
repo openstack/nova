@@ -127,9 +127,9 @@ class TestWSGIServer(test.NoDBTestCase):
         server.stop()
         server.wait()
 
-    @testtools.skipIf(not utils.is_linux(), 'SO_REUSEADDR behaves differently'
-                                            ' on OSX and BSD, see bugs '
-                                            ' 1436895 and 1467145')
+    @testtools.skipIf(not utils.is_linux(), 'SO_REUSEADDR behaves differently '
+                                            'on OSX and BSD, see bugs '
+                                            '1436895 and 1467145')
     def test_socket_options_for_simple_server(self):
         # test normal socket options has set properly
         self.flags(tcp_keepidle=500)
@@ -291,9 +291,9 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         fake_ssl_server.stop()
         fake_ssl_server.wait()
 
-    @testtools.skipIf(not utils.is_linux(), 'SO_REUSEADDR behaves differently'
-                                            ' on OSX and BSD, see bugs '
-                                            ' 1436895 and 1467145')
+    @testtools.skipIf(not utils.is_linux(), 'SO_REUSEADDR behaves differently '
+                                            'on OSX and BSD, see bugs '
+                                            '1436895 and 1467145')
     def test_socket_options_for_ssl_server(self):
         # test normal socket options has set properly
         self.flags(tcp_keepidle=500)
