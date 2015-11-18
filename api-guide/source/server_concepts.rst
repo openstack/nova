@@ -208,16 +208,25 @@ Server actions
    more than the CONF.reclaim_instance_interval, it will be deleted by compute
    service automatically.
 
--  **Shelve**, **Unshelve**
+-  **Shelve**, **Shelve offload**, **Unshelve**
 
-   Shut down an instance and free it up to be removed from the hypervisors.
-   In some case others want to use the resource on some host, user can decide
-   whether need to shelve the instance into glance repository by using similar
-   method like snapshot to free up cpus, memory and disk space to the compute
-   host.
+   Shelving an instance indicates it will not be needed for some time and may be
+   temporarily removed from the hypervisors. This allows its resources to
+   be freed up for use by someone else.
 
-   Unshelve is the reverse operation of Shelve, build and boot the server again
-   with the shelved image in the glance repository on a new scheduled host.
+   Shelve will power off the given instance and take a snapshot if it is booted
+   from image. The instance can then be offloaded from the compute host and its
+   resources deallocated. Offloading is done immediately if booted from volume,
+   but if booted from image the offload can be delayed for some time or
+   indefinitely, leaving the image on disk and the resources still allocated.
+
+   Shelve offload is used to explicitly remove a shelved instance that has been
+   left on a host. This action can only be used on a shelved instance and is
+   usually performed by an admin.
+
+   Unshelve is the reverse operation of Shelve. It builds and boots the server
+   again, on a new scheduled host if it was offloaded, using the shelved image
+   in the glance repository if booted from image.
 
 -  **Lock**, **Unlock**
 
@@ -368,7 +377,7 @@ assigned at creation time.
    addresses may be updated after a server has been created.
 
 
-**Example: Create server with multiple access IPs: JSON request**
+**Example: Create server with multiple access IPs: JSON request**
 
 .. code::
 
