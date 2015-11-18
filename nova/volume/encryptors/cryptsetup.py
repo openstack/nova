@@ -53,6 +53,7 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
         self.dev_path = os.path.realpath(self.symlink_path)
 
     def _get_passphrase(self, key):
+        """Convert raw key to string."""
         return ''.join(hex(x).replace('0x', '') for x in key)
 
     def _open_volume(self, passphrase, **kwargs):
