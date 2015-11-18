@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import contextlib
 import copy
 import datetime
@@ -35,6 +36,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import notification
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
@@ -1124,6 +1126,7 @@ object_data = {
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
+    'EventType': '1.0-21dc35de314fc5fc0a7965211c0c00f7',
     'FixedIP': '1.14-53e1c10b539f1a82fe83b1af4720efae',
     'FixedIPList': '1.14-87a39361c8f08f059004d6b15103cdfd',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
@@ -1161,6 +1164,7 @@ object_data = {
     'MigrationList': '1.2-02c0ec0c50b75ca86a2a74c5e8c911cc',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
+    'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
     'NUMAPagesTopology': '1.0-c71d86317283266dc8364c149155e48e',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
@@ -1201,7 +1205,7 @@ object_data = {
 
 class TestObjectVersions(test.NoDBTestCase):
     def test_versions(self):
-        checker = fixture.ObjectVersionChecker(
+        checker = NotificationAwareObjectVersionChecker(
                         base.NovaObjectRegistry.obj_classes())
         fingerprints = checker.get_hashes()
 
@@ -1216,6 +1220,32 @@ class TestObjectVersions(test.NoDBTestCase):
                          'Some objects have changed; please make sure the '
                          'versions have been bumped, and then update their '
                          'hashes here.')
+
+    def test_notification_payload_version_depends_on_the_schema(self):
+        @base.NovaObjectRegistry.register_if(False)
+        class TestNotificationPayload(notification.NotificationPayloadBase):
+            VERSION = '1.0'
+
+            SCHEMA = {
+                'field_1': ('source_field', 'field_1'),
+                'field_2': ('source_field', 'field_2'),
+            }
+
+            fields = {
+                'extra_field': fields.StringField(),  # filled by ctor
+                'field_1': fields.StringField(),  # filled by the schema
+                'field_2': fields.IntegerField(),   # filled by the schema
+            }
+
+        checker = NotificationAwareObjectVersionChecker(
+            {'TestNotificationPayload': (TestNotificationPayload,)})
+
+        old_hash = checker._get_fingerprint('TestNotificationPayload')
+        TestNotificationPayload.SCHEMA['field_3'] = ('source_field',
+                                                     'field_3')
+        new_hash = checker._get_fingerprint('TestNotificationPayload')
+
+        self.assertNotEqual(old_hash, new_hash)
 
     def test_obj_make_compatible(self):
         # Iterate all object classes and verify that we can run
@@ -1332,3 +1362,20 @@ class TestObjMethodOverrides(test.NoDBTestCase):
             obj_class = obj_classes[obj_name][0]
             self.assertEqual(args,
                     inspect.getargspec(obj_class.obj_reset_changes))
+
+
+class NotificationAwareObjectVersionChecker(fixture.ObjectVersionChecker):
+    def _get_fingerprint(self, obj_name, extra_data_func=None):
+        obj_class = copy.deepcopy(self.obj_classes[obj_name][0])
+        if issubclass(obj_class, notification.NotificationPayloadBase):
+            # Note(gibi): to make NotificationPayload version dependent on the
+            # SCHEMA of the payload we inject the SCHEMA content to the hash
+            # calculation algorithm
+            extra_relevant_data = collections.OrderedDict(
+                sorted(obj_class.SCHEMA.items()))
+            fields = getattr(obj_class, 'fields', {})
+            fields['_schema_'] = extra_relevant_data
+            setattr(obj_class, 'fields', fields)
+
+        return super(NotificationAwareObjectVersionChecker,
+                     self)._get_fingerprint(obj_name)

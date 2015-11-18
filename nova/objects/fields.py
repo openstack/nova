@@ -483,6 +483,44 @@ class DiskFormat(Enum):
             valid_values=DiskFormat.ALL)
 
 
+class NotificationPriority(Enum):
+    AUDIT = 'audit'
+    CRITICAL = 'critical'
+    DEBUG = 'debug'
+    INFO = 'info'
+    ERROR = 'error'
+    SAMPLE = 'sample'
+    WARN = 'warn'
+
+    ALL = (AUDIT, CRITICAL, DEBUG, INFO, ERROR, SAMPLE, WARN)
+
+    def __init__(self):
+        super(NotificationPriority, self).__init__(
+            valid_values=NotificationPriority.ALL)
+
+
+class NotificationPhase(Enum):
+    START = 'start'
+    END = 'end'
+    ERROR = 'error'
+
+    ALL = (START, END, ERROR)
+
+    def __init__(self):
+        super(NotificationPhase, self).__init__(
+            valid_values=NotificationPhase.ALL)
+
+
+class NotificationAction(Enum):
+    UPDATE = 'update'
+
+    ALL = (UPDATE,)
+
+    def __init__(self):
+        super(NotificationAction, self).__init__(
+            valid_values=NotificationAction.ALL)
+
+
 class IPAddress(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
@@ -735,6 +773,18 @@ class PciDeviceTypeField(BaseEnumField):
 
 class DiskFormatField(BaseEnumField):
     AUTO_TYPE = DiskFormat()
+
+
+class NotificationPriorityField(BaseEnumField):
+    AUTO_TYPE = NotificationPriority()
+
+
+class NotificationPhaseField(BaseEnumField):
+    AUTO_TYPE = NotificationPhase()
+
+
+class NotificationActionField(BaseEnumField):
+    AUTO_TYPE = NotificationAction()
 
 
 class IPAddressField(AutoTypedField):
