@@ -265,6 +265,21 @@ class TestWSGIService(test.TestCase):
         super(TestWSGIService, self).setUp()
         self.stubs.Set(wsgi.Loader, "load_app", mox.MockAnything())
 
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    @mock.patch('nova.objects.Service.create')
+    def test_service_start_creates_record(self, mock_create, mock_get):
+        mock_get.return_value = None
+        test_service = service.WSGIService("test_service")
+        test_service.start()
+        self.assertTrue(mock_create.called)
+
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    @mock.patch('nova.objects.Service.create')
+    def test_service_start_does_not_create_record(self, mock_create, mock_get):
+        test_service = service.WSGIService("test_service")
+        test_service.start()
+        self.assertFalse(mock_create.called)
+
     def test_service_random_port(self):
         test_service = service.WSGIService("test_service")
         test_service.start()

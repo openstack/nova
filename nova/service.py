@@ -36,6 +36,7 @@ from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.objects import base as objects_base
+from nova.objects import service as service_obj
 from nova import rpc
 from nova import servicegroup
 from nova import utils
@@ -126,6 +127,34 @@ CONF.register_opts(service_opts)
 CONF.import_opt('host', 'nova.netconf')
 
 
+def _create_service_ref(this_service, context):
+    service = objects.Service(context)
+    service.host = this_service.host
+    service.binary = this_service.binary
+    service.topic = this_service.topic
+    service.report_count = 0
+    service.create()
+    return service
+
+
+def _update_service_ref(this_service, context):
+    service = objects.Service.get_by_host_and_binary(context,
+                                                     this_service.host,
+                                                     this_service.binary)
+    if not service:
+        LOG.error(_('Unable to find a service record to update for '
+                    '%(binary)s on %(host)s') % {'binary': this_service.binary,
+                                                 'host': this_service.host})
+        return
+    if service.version != service_obj.SERVICE_VERSION:
+        LOG.info(_LI('Updating service version for %(binary)s on '
+                     '%(host)s from %(old)i to %(new)i') % dict(
+                         binary=this_service.binary, host=this_service.host,
+                         old=service.version, new=service_obj.SERVICE_VERSION))
+        service.version = service_obj.SERVICE_VERSION
+        service.save()
+
+
 class Service(service.Service):
     """Service object for binaries running on hosts.
 
@@ -168,7 +197,7 @@ class Service(service.Service):
             ctxt, self.host, self.binary)
         if not self.service_ref:
             try:
-                self.service_ref = self._create_service_ref(ctxt)
+                self.service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
                     exception.ServiceBinaryExists):
                 # NOTE(danms): If we race to create a record with a sibling
@@ -213,15 +242,6 @@ class Service(service.Service):
                                      initial_delay=initial_delay,
                                      periodic_interval_max=
                                         self.periodic_interval_max)
-
-    def _create_service_ref(self, context):
-        service = objects.Service(context)
-        service.host = self.host
-        service.binary = self.binary
-        service.topic = self.topic
-        service.report_count = 0
-        service.create()
-        return service
 
     def __getattr__(self, key):
         manager = self.__dict__.get('manager', None)
@@ -323,6 +343,10 @@ class WSGIService(service.Service):
 
         """
         self.name = name
+        # NOTE(danms): Name can be metadata, os_compute, or ec2, per
+        # nova.service's enabled_apis
+        self.binary = 'nova-%s' % name
+        self.topic = None
         self.manager = self._get_manager()
         self.loader = loader or wsgi.Loader()
         self.app = self.loader.load_app(name)
@@ -391,6 +415,20 @@ class WSGIService(service.Service):
         :returns: None
 
         """
+        ctxt = context.get_admin_context()
+        service_ref = objects.Service.get_by_host_and_binary(ctxt, self.host,
+                                                             self.binary)
+        if not service_ref:
+            try:
+                service_ref = _create_service_ref(self, ctxt)
+            except (exception.ServiceTopicExists,
+                    exception.ServiceBinaryExists):
+                # NOTE(danms): If we race to create a record wth a sibling,
+                # don't fail here.
+                service_ref = objects.Service.get_by_host_and_binary(
+                    ctxt, self.host, self.binary)
+        _update_service_ref(service_ref, ctxt)
+
         if self.manager:
             self.manager.init_host()
             self.manager.pre_start_hook()
