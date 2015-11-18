@@ -10,4 +10,6 @@
 # and tempest config
 # - run live-migration tests
 
-tempest tox -eall --concurrency=$TEMPEST_CONCURRENCY live_migration
+set -x
+cd $BASE/new/tempest
+sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY live_migration
