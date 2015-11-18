@@ -33,6 +33,15 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertFalse(agg_mock.called)
 
+    def test_aggregate_filter_passes_empty_extra_specs(self, agg_mock):
+        capabilities = {'opt1': 1, 'opt2': 2}
+
+        filter_properties = {'context': mock.sentinel.ctx, 'instance_type':
+                {'memory_mb': 1024, 'extra_specs': {}}}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(agg_mock.called)
+
     def _do_test_aggregate_filter_extra_specs(self, especs, passes):
         filter_properties = {'context': mock.sentinel.ctx,
             'instance_type': {'memory_mb': 1024, 'extra_specs': especs}}
