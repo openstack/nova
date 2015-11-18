@@ -39,3 +39,6 @@ nosetests.xml
 nova/tests/cover/*
 nova/vcsversion.py
 tools/conf/nova.conf*
+
+ # Files created by releasenotes build
+releasenotes/build
