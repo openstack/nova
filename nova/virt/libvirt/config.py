@@ -1586,6 +1586,31 @@ class LibvirtConfigGuestCPUTuneEmulatorPin(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestCPUTuneVCPUSched(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCPUTuneVCPUSched, self).__init__(
+            root_name="vcpusched",
+            **kwargs)
+
+        self.vcpus = None
+        self.scheduler = None
+        self.priority = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestCPUTuneVCPUSched, self).format_dom()
+
+        if self.vcpus is not None:
+            root.set("vcpus",
+                     hardware.format_cpu_spec(self.vcpus))
+        if self.scheduler is not None:
+            root.set("scheduler", self.scheduler)
+        if self.priority is not None:
+            root.set("priority", str(self.priority))
+
+        return root
+
+
 class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1596,6 +1621,7 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         self.period = None
         self.vcpupin = []
         self.emulatorpin = None
+        self.vcpusched = []
 
     def format_dom(self):
         root = super(LibvirtConfigGuestCPUTune, self).format_dom()
@@ -1611,6 +1637,8 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
             root.append(self.emulatorpin.format_dom())
         for vcpu in self.vcpupin:
             root.append(vcpu.format_dom())
+        for sched in self.vcpusched:
+            root.append(sched.format_dom())
 
         return root
 
