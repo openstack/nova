@@ -1,0 +1,7 @@
+---
+features:
+  - A new service.status versioned notification has been introduced.
+    When the status of the Service object is changed nova will
+    send a new service.update notification with versioned payload
+    according to bp versioned-notification-api.
+
