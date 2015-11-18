@@ -1,0 +1,6 @@
+---
+other:
+  - The service subcommand of nova-manage is deprecated. Use the nova
+    service-* commands from python-novaclient instead or the os-services
+    REST resource. The service subcommand will be removed in the 14.0 release.
+
