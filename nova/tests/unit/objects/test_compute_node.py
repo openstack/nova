@@ -134,8 +134,11 @@ class _TestComputeNodeObject(object):
         self.assertJsonEqual(expected, obj_val)
 
     def pci_device_pools_comparator(self, expected, obj_val):
-        obj_val = obj_val.obj_to_primitive()
-        self.assertJsonEqual(expected, obj_val)
+        if obj_val is not None:
+            obj_val = obj_val.obj_to_primitive()
+            self.assertJsonEqual(expected, obj_val)
+        else:
+            self.assertEqual(expected, obj_val)
 
     def comparators(self):
         return {'stats': self.assertJsonEqual,
@@ -312,6 +315,44 @@ class _TestComputeNodeObject(object):
             obj = objects.ComputeNode.get_by_id(self.context, fake['id'])
             self.assertEqual(uuidsentinel.fake_compute_node, obj.uuid)
             self.assertFalse(mock_gu.called)
+
+    def test_save_pci_device_pools_empty(self):
+        fake_pci = jsonutils.dumps(
+            objects.PciDevicePoolList(objects=[]).obj_to_primitive())
+        compute_dict = fake_compute_node.copy()
+        compute_dict['pci_stats'] = fake_pci
+
+        with mock.patch.object(
+                db, 'compute_node_update',
+                return_value=compute_dict) as mock_compute_node_update:
+            compute = compute_node.ComputeNode(context=self.context)
+            compute.id = 123
+            compute.pci_device_pools = objects.PciDevicePoolList(objects=[])
+            compute.save()
+            self.compare_obj(compute, compute_dict,
+                             subs=self.subs(),
+                             comparators=self.comparators())
+
+        mock_compute_node_update.assert_called_once_with(
+            self.context, 123, {'pci_stats': fake_pci})
+
+    def test_save_pci_device_pools_null(self):
+        compute_dict = fake_compute_node.copy()
+        compute_dict['pci_stats'] = None
+
+        with mock.patch.object(
+                db, 'compute_node_update',
+                return_value=compute_dict) as mock_compute_node_update:
+            compute = compute_node.ComputeNode(context=self.context)
+            compute.id = 123
+            compute.pci_device_pools = None
+            compute.save()
+            self.compare_obj(compute, compute_dict,
+                             subs=self.subs(),
+                             comparators=self.comparators())
+
+        mock_compute_node_update.assert_called_once_with(
+            self.context, 123, {'pci_stats': None})
 
     @mock.patch.object(db, 'compute_node_create',
                        return_value=fake_compute_node)
