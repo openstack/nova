@@ -3441,8 +3441,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(vm_utils, "safe_find_sr", lambda _x: "asdf")
 
         expected = {'block_migration': True,
+                    'is_volume_backed': False,
                     'migrate_data': {
-                        'migrate_send_data': "fake_migrate_data",
+                        'migrate_send_data': {'value': 'fake_migrate_data'},
                         'destination_sr_ref': 'asdf'
                         }
                     }
@@ -3450,7 +3451,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                               {'host': 'host'},
                               {}, {},
                               True, False)
-        self.assertEqual(expected, result)
+        result.is_volume_backed = False
+        self.assertEqual(expected, result.to_legacy_dict())
 
     def test_check_live_migrate_destination_verifies_ip(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3508,6 +3510,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self._add_default_live_migrate_stubs(self.conn)
 
         dest_check_data = {'block_migration': True,
+                           'is_volume_backed': False,
                            'migrate_data': {
                             'destination_sr_ref': None,
                             'migrate_send_data': None
@@ -3515,7 +3518,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
                                                          dest_check_data)
-        self.assertEqual(dest_check_data, result)
+        self.assertEqual(dest_check_data, result.to_legacy_dict())
 
     def test_check_can_live_migrate_source_with_block_migrate_iscsi(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3534,6 +3537,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                        fake_make_plugin_call)
 
         dest_check_data = {'block_migration': True,
+                           'is_volume_backed': True,
                            'migrate_data': {
                             'destination_sr_ref': None,
                             'migrate_send_data': None
@@ -3541,7 +3545,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
                                                          dest_check_data)
-        self.assertEqual(dest_check_data, result)
+        self.assertEqual(dest_check_data, result.to_legacy_dict())
 
     def test_check_can_live_migrate_source_with_block_iscsi_fails(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3572,6 +3576,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self._add_default_live_migrate_stubs(self.conn)
 
         dest_check_data = {'block_migration': True,
+                           'is_volume_backed': True,
                            'migrate_data': {
                             'destination_sr_ref': None,
                             'migrate_send_data': None
