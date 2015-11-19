@@ -28,6 +28,7 @@ class BaseRamFilter(filters.BaseHostFilter):
     def _get_ram_allocation_ratio(self, host_state, filter_properties):
         raise NotImplementedError
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Only return hosts with sufficient available RAM."""
         instance_type = filter_properties.get('instance_type')

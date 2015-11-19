@@ -39,6 +39,7 @@ class IoOpsFilter(filters.BaseHostFilter):
     def _get_max_io_ops_per_host(self, host_state, filter_properties):
         return CONF.max_io_ops_per_host
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Use information about current vm and task states collected from
         compute node statistics to decide whether to filter.

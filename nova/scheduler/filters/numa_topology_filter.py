@@ -18,6 +18,7 @@ from nova.virt import hardware
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         ram_ratio = host_state.ram_allocation_ratio
         cpu_ratio = host_state.cpu_allocation_ratio

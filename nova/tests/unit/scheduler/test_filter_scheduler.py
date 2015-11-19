@@ -74,7 +74,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             os_type='Linux',
             uuid='fake-uuid',
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            instance_group=None)
         self.mox.ReplayAll()
         weighed_hosts = self.driver._schedule(self.context, spec_obj)
         self.assertEqual(len(weighed_hosts), 10)
@@ -143,7 +144,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   ephemeral_gb=0,
                                   vcpus=1),
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            instance_group=None)
         self.mox.ReplayAll()
         hosts = self.driver._schedule(self.context, spec_obj)
 
@@ -178,7 +180,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   ephemeral_gb=0,
                                   vcpus=1),
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            instance_group=None)
         self.mox.ReplayAll()
         hosts = self.driver._schedule(self.context, spec_obj)
 
@@ -222,7 +225,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   ephemeral_gb=0,
                                   vcpus=1),
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            instance_group=None)
 
         self.stubs.Set(weights.HostWeightHandler,
                         'get_weighed_objects', _fake_weigh_objects)

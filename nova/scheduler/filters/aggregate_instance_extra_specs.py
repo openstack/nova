@@ -33,6 +33,7 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can create instance_type
 

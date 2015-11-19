@@ -36,6 +36,7 @@ class NumInstancesFilter(filters.BaseHostFilter):
     def _get_max_instances_per_host(self, host_state, filter_properties):
         return CONF.max_instances_per_host
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         num_instances = host_state.num_instances
         max_instances = self._get_max_instances_per_host(

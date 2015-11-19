@@ -23,6 +23,7 @@ LOG = logging.getLogger(__name__)
 class ExactDiskFilter(filters.BaseHostFilter):
     """Exact Disk Filter."""
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Return True if host has the exact amount of disk available."""
         instance_type = filter_properties.get('instance_type')

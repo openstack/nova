@@ -95,6 +95,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
                    'hypervisor_version': hypervisor_version})
         return False
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Check if host passes specified image properties.
 

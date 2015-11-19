@@ -39,6 +39,7 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     # The configuration values do not change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         """Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
         to True::

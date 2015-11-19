@@ -329,7 +329,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self.assertEqual(set(info['expected_objs']), set(result))
 
     def test_get_filtered_hosts(self):
-        fake_properties = {'moo': 1, 'cow': 2}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=[],
+            force_nodes=[])
 
         info = {'expected_objs': self.fake_hosts,
                 'expected_fprops': fake_properties}
@@ -342,7 +346,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     @mock.patch.object(FakeFilterClass2, '_filter_one', return_value=True)
     def test_get_filtered_hosts_with_specified_filters(self, mock_filter_one):
-        fake_properties = {'moo': 1, 'cow': 2}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=[],
+            force_nodes=[])
 
         specified_filters = ['FakeFilterClass1', 'FakeFilterClass2']
         info = {'expected_objs': self.fake_hosts,
@@ -354,8 +362,12 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_ignore(self):
-        fake_properties = {'ignore_hosts': ['fake_host1', 'fake_host3',
-            'fake_host5', 'fake_multihost']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=['fake_host1', 'fake_host3',
+                          'fake_host5', 'fake_multihost'],
+            force_hosts=[],
+            force_nodes=[])
 
         # [1] and [3] are host2 and host4
         info = {'expected_objs': [self.fake_hosts[1], self.fake_hosts[3]],
@@ -367,8 +379,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_force_hosts(self):
-        fake_properties = {'force_hosts': ['fake_host1', 'fake_host3',
-            'fake_host5']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=['fake_host1', 'fake_host3', 'fake_host5'],
+            force_nodes=[])
 
         # [0] and [2] are host1 and host3
         info = {'expected_objs': [self.fake_hosts[0], self.fake_hosts[2]],
@@ -380,7 +395,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self._verify_result(info, result, False)
 
     def test_get_filtered_hosts_with_no_matching_force_hosts(self):
-        fake_properties = {'force_hosts': ['fake_host5', 'fake_host6']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=['fake_host5', 'fake_host6'],
+            force_nodes=[])
 
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}
@@ -392,8 +411,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_ignore_and_force_hosts(self):
         # Ensure ignore_hosts processed before force_hosts in host filters.
-        fake_properties = {'force_hosts': ['fake_host3', 'fake_host1'],
-                           'ignore_hosts': ['fake_host1']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=['fake_host1'],
+            force_hosts=['fake_host3', 'fake_host1'],
+            force_nodes=[])
 
         # only fake_host3 should be left.
         info = {'expected_objs': [self.fake_hosts[2]],
@@ -406,7 +428,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_force_host_and_many_nodes(self):
         # Ensure all nodes returned for a host with many nodes
-        fake_properties = {'force_hosts': ['fake_multihost']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=['fake_multihost'],
+            force_nodes=[])
 
         info = {'expected_objs': [self.fake_hosts[4], self.fake_hosts[5],
                                   self.fake_hosts[6], self.fake_hosts[7]],
@@ -418,8 +444,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self._verify_result(info, result, False)
 
     def test_get_filtered_hosts_with_force_nodes(self):
-        fake_properties = {'force_nodes': ['fake-node2', 'fake-node4',
-                                           'fake-node9']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=[],
+            force_nodes=['fake-node2', 'fake-node4', 'fake-node9'])
 
         # [5] is fake-node2, [7] is fake-node4
         info = {'expected_objs': [self.fake_hosts[5], self.fake_hosts[7]],
@@ -432,8 +461,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_force_hosts_and_nodes(self):
         # Ensure only overlapping results if both force host and node
-        fake_properties = {'force_hosts': ['fake_host1', 'fake_multihost'],
-                           'force_nodes': ['fake-node2', 'fake-node9']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=['fake_host1', 'fake_multihost'],
+            force_nodes=['fake-node2', 'fake-node9'])
 
         # [5] is fake-node2
         info = {'expected_objs': [self.fake_hosts[5]],
@@ -446,8 +478,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_force_hosts_and_wrong_nodes(self):
         # Ensure non-overlapping force_node and force_host yield no result
-        fake_properties = {'force_hosts': ['fake_multihost'],
-                           'force_nodes': ['fake-node']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=[],
+            force_hosts=['fake_multihost'],
+            force_nodes=['fake-node'])
 
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}
@@ -459,8 +494,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_ignore_hosts_and_force_nodes(self):
         # Ensure ignore_hosts can coexist with force_nodes
-        fake_properties = {'force_nodes': ['fake-node4', 'fake-node2'],
-                           'ignore_hosts': ['fake_host1', 'fake_host2']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=['fake_host1', 'fake_host2'],
+            force_hosts=[],
+            force_nodes=['fake-node4', 'fake-node2'])
 
         info = {'expected_objs': [self.fake_hosts[5], self.fake_hosts[7]],
                 'expected_fprops': fake_properties}
@@ -472,8 +510,11 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_get_filtered_hosts_with_ignore_hosts_and_force_same_nodes(self):
         # Ensure ignore_hosts is processed before force_nodes
-        fake_properties = {'force_nodes': ['fake_node4', 'fake_node2'],
-                           'ignore_hosts': ['fake_multihost']}
+        fake_properties = objects.RequestSpec(
+            instance_uuid='fake-uuid',
+            ignore_hosts=['fake_multihost'],
+            force_hosts=[],
+            force_nodes=['fake_node4', 'fake_node2'])
 
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}

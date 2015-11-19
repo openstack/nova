@@ -36,6 +36,7 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
     # Availability zones do not change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         spec = filter_properties.get('request_spec', {})
         props = spec.get('instance_properties', {})

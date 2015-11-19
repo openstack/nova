@@ -27,13 +27,13 @@ LOG = logging.getLogger(__name__)
 
 class BaseFilter(object):
     """Base class for all filter classes."""
-    def _filter_one(self, obj, filter_properties):
+    def _filter_one(self, obj, spec_obj):
         """Return True if it passes the filter, False otherwise.
         Override this in a subclass.
         """
         return True
 
-    def filter_all(self, filter_obj_list, filter_properties):
+    def filter_all(self, filter_obj_list, spec_obj):
         """Yield objects that pass the filter.
 
         Can be overridden in a subclass, if you need to base filtering
@@ -41,7 +41,7 @@ class BaseFilter(object):
         _filter_one() to filter a single object.
         """
         for obj in filter_obj_list:
-            if self._filter_one(obj, filter_properties):
+            if self._filter_one(obj, spec_obj):
                 yield obj
 
     # Set to true in a subclass if a filter only needs to be run once
@@ -65,7 +65,7 @@ class BaseFilterHandler(loadables.BaseLoader):
     This class should be subclassed where one needs to use filters.
     """
 
-    def get_filtered_objects(self, filters, objs, filter_properties, index=0):
+    def get_filtered_objects(self, filters, objs, spec_obj, index=0):
         list_objs = list(objs)
         LOG.debug("Starting with %d host(s)", len(list_objs))
         # Track the hosts as they are removed. The 'full_filter_results' list
@@ -82,7 +82,7 @@ class BaseFilterHandler(loadables.BaseLoader):
             if filter_.run_filter_for_index(index):
                 cls_name = filter_.__class__.__name__
                 start_count = len(list_objs)
-                objs = filter_.filter_all(list_objs, filter_properties)
+                objs = filter_.filter_all(list_objs, spec_obj)
                 if objs is None:
                     LOG.debug("Filter %s says to stop filtering", cls_name)
                     return
@@ -104,9 +104,17 @@ class BaseFilterHandler(loadables.BaseLoader):
                           {'cls_name': cls_name, 'obj_len': len(list_objs)})
         if not list_objs:
             # Log the filtration history
-            rspec = filter_properties.get("request_spec", {})
-            inst_props = rspec.get("instance_properties", {})
-            msg_dict = {"inst_uuid": inst_props.get("uuid", ""),
+            # NOTE(sbauza): Since the Cells scheduler still provides a legacy
+            # dictionary for filter_props, and since we agreed on not modifying
+            # the Cells scheduler to support that because of Cells v2, we
+            # prefer to define a compatible way to address both types
+            if isinstance(spec_obj, dict):
+                rspec = spec_obj.get("request_spec", {})
+                inst_props = rspec.get("instance_properties", {})
+                inst_uuid = inst_props.get("uuid", "")
+            else:
+                inst_uuid = spec_obj.instance_uuid
+            msg_dict = {"inst_uuid": inst_uuid,
                         "str_results": str(full_filter_results),
                        }
             full_msg = ("Filtering removed all hosts for the request with "

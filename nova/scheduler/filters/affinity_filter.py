@@ -30,6 +30,7 @@ class DifferentHostFilter(filters.BaseHostFilter):
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
@@ -49,6 +50,7 @@ class SameHostFilter(filters.BaseHostFilter):
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
@@ -67,6 +69,7 @@ class SimpleCIDRAffinityFilter(filters.BaseHostFilter):
     # The address of a host doesn't change within a request
     run_filter_once_per_request = True
 
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
@@ -87,6 +90,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on a different host from a set of group
     hosts.
     """
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'anti-affinity' is configured
         policies = filter_properties.get('group_policies', [])
@@ -113,6 +117,7 @@ class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
 class _GroupAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
+    @filters.compat_legacy_props
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'affinity' is configured
         policies = filter_properties.get('group_policies', [])
