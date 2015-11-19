@@ -37,7 +37,8 @@ class ImageMeta(base.NovaObject):
     # Version 1.5: ImageMetaProps version 1.5
     # Version 1.6: ImageMetaProps version 1.6
     # Version 1.7: ImageMetaProps version 1.7
-    VERSION = '1.7'
+    # Version 1.8: ImageMetaProps version 1.8
+    VERSION = '1.8'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -134,7 +135,8 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.5: added os_admin_user field
     # Version 1.6: Added 'lxc' and 'uml' enum types to DiskBusField
     # Version 1.7: added img_config_drive field
-    VERSION = '1.7'
+    # Version 1.8: Added 'lxd' to hypervisor types
+    VERSION = '1.8'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
