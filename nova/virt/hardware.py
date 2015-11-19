@@ -166,7 +166,7 @@ def get_number_of_serial_ports(flavor, image_meta):
     :param image_meta: nova.objects.ImageMeta object instance
 
     If flavor extra specs is not set, then any image meta value is permitted.
-    If flavour extra specs *is* set, then this provides the default serial
+    If flavor extra specs *is* set, then this provides the default serial
     port count. The image meta is permitted to override the extra specs, but
     *only* with a lower value. ie
 

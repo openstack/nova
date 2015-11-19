@@ -1214,7 +1214,7 @@ class API(base.Base):
     @staticmethod
     def _volume_size(instance_type, bdm):
         size = bdm.get('volume_size')
-        # NOTE (ndipanov): inherit flavour size only for swap and ephemeral
+        # NOTE (ndipanov): inherit flavor size only for swap and ephemeral
         if (size is None and bdm.get('source_type') == 'blank' and
                 bdm.get('destination_type') == 'local'):
             if bdm.get('guest_format') == 'swap':
