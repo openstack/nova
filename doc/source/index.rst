@@ -167,6 +167,7 @@ these are a great place to start reading up on the current plans.
    policy_enforcement
    stable_api
    code-review
+   scheduler_evolution
 
 Advanced testing and guides
 ----------------------------
