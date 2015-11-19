@@ -734,7 +734,8 @@ disk size: 4.4M
         expected_path = os.path.join(CONF.instances_path, instance['uuid'])
         self.assertEqual(expected_path, inst_path_at_dest)
 
-        migrate_data = dict(instance_relative_path='fake_relative_path')
+        migrate_data = objects.LibvirtLiveMigrateData(
+            instance_relative_path='fake_relative_path')
         inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(
             instance, migrate_data)
         expected_path = os.path.join(CONF.instances_path, 'fake_relative_path')

@@ -51,3 +51,141 @@ class TestLiveMigrateData(test_objects._LocalTest,
 class TestRemoteLiveMigrateData(test_objects._RemoteTest,
                                 _TestLiveMigrateData):
     pass
+
+
+class _TestLibvirtLiveMigrateData(object):
+    def test_bdm_to_disk_info(self):
+        obj = migrate_data.LibvirtLiveMigrateBDMInfo(
+            serial='foo', bus='scsi', dev='sda', type='disk')
+        expected_info = {
+            'dev': 'sda',
+            'bus': 'scsi',
+            'type': 'disk',
+        }
+        self.assertEqual(expected_info, obj.as_disk_info())
+        obj.format = 'raw'
+        obj.boot_index = 1
+        expected_info['format'] = 'raw'
+        expected_info['boot_index'] = '1'
+        self.assertEqual(expected_info, obj.as_disk_info())
+
+    def test_to_legacy_dict(self):
+        obj = migrate_data.LibvirtLiveMigrateData(
+            is_volume_backed=False,
+            filename='foo',
+            image_type='rbd',
+            block_migration=False,
+            disk_over_commit=False,
+            disk_available_mb=123,
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            instance_relative_path='foo/bar')
+        expected = {
+            'is_volume_backed': False,
+            'filename': 'foo',
+            'image_type': 'rbd',
+            'block_migration': False,
+            'disk_over_commit': False,
+            'disk_available_mb': 123,
+            'is_shared_instance_path': False,
+            'is_shared_block_storage': False,
+            'instance_relative_path': 'foo/bar',
+        }
+        self.assertEqual(expected, obj.to_legacy_dict())
+
+    def test_from_legacy_dict(self):
+        obj = migrate_data.LibvirtLiveMigrateData(
+            is_volume_backed=False,
+            filename='foo',
+            image_type='rbd',
+            block_migration=False,
+            disk_over_commit=False,
+            disk_available_mb=123,
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            instance_relative_path='foo/bar')
+        legacy = obj.to_legacy_dict()
+        legacy['ignore_this_thing'] = True
+        obj2 = migrate_data.LibvirtLiveMigrateData()
+        obj2.from_legacy_dict(legacy)
+        self.assertEqual(obj.filename, obj2.filename)
+
+    def test_to_legacy_dict_with_pre_result(self):
+        test_bdmi = migrate_data.LibvirtLiveMigrateBDMInfo(
+            serial='123',
+            bus='scsi',
+            dev='/dev/sda',
+            type='disk',
+            format='qcow2',
+            boot_index=1,
+            connection_info='myinfo')
+        obj = migrate_data.LibvirtLiveMigrateData(
+            is_volume_backed=False,
+            filename='foo',
+            image_type='rbd',
+            block_migration=False,
+            disk_over_commit=False,
+            disk_available_mb=123,
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            instance_relative_path='foo/bar',
+            graphics_listen_addr_vnc='127.0.0.1',
+            serial_listen_addr='127.0.0.1',
+            bdms=[test_bdmi])
+        legacy = obj.to_legacy_dict(pre_migration_result=True)
+        self.assertIn('pre_live_migration_result', legacy)
+        expected = {
+            'graphics_listen_addrs': {'vnc': '127.0.0.1',
+                                      'spice': None},
+            'serial_listen_addr': '127.0.0.1',
+            'volume': {
+                '123': {
+                    'connection_info': 'myinfo',
+                    'disk_info': {
+                        'bus': 'scsi',
+                        'dev': '/dev/sda',
+                        'type': 'disk',
+                        'format': 'qcow2',
+                        'boot_index': '1',
+                    }
+                }
+            }
+        }
+        self.assertEqual(expected, legacy['pre_live_migration_result'])
+
+    def test_from_legacy_with_pre_result(self):
+        test_bdmi = migrate_data.LibvirtLiveMigrateBDMInfo(
+            serial='123',
+            bus='scsi',
+            dev='/dev/sda',
+            type='disk',
+            format='qcow2',
+            boot_index=1,
+            connection_info='myinfo')
+        obj = migrate_data.LibvirtLiveMigrateData(
+            is_volume_backed=False,
+            filename='foo',
+            image_type='rbd',
+            block_migration=False,
+            disk_over_commit=False,
+            disk_available_mb=123,
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            instance_relative_path='foo/bar',
+            graphics_listen_addrs={'vnc': '127.0.0.1'},
+            serial_listen_addr='127.0.0.1',
+            bdms=[test_bdmi])
+        obj2 = migrate_data.LibvirtLiveMigrateData()
+        obj2.from_legacy_dict(obj.to_legacy_dict())
+        self.assertEqual(obj.to_legacy_dict(),
+                         obj2.to_legacy_dict())
+
+
+class TestLibvirtLiveMigrateData(test_objects._LocalTest,
+                                 _TestLibvirtLiveMigrateData):
+    pass
+
+
+class TestRemoteLibvirtLiveMigrateData(test_objects._RemoteTest,
+                                       _TestLibvirtLiveMigrateData):
+    pass

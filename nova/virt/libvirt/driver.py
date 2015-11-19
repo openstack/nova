@@ -78,6 +78,7 @@ from nova import image
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
+from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova import utils
@@ -5147,11 +5148,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # Create file on storage, to be checked on source host
         filename = self._create_shared_storage_test_file()
 
-        return {"filename": filename,
-                "image_type": CONF.libvirt.images_type,
-                "block_migration": block_migration,
-                "disk_over_commit": disk_over_commit,
-                "disk_available_mb": disk_available_mb}
+        data = objects.LibvirtLiveMigrateData()
+        data.filename = filename
+        data.image_type = CONF.libvirt.images_type
+        data.block_migration = block_migration
+        data.disk_over_commit = disk_over_commit
+        data.disk_available_mb = disk_available_mb
+        return data
 
     def check_can_live_migrate_destination_cleanup(self, context,
                                                    dest_check_data):
@@ -5180,13 +5183,18 @@ class LibvirtDriver(driver.ComputeDriver):
         # if block migration, instances_paths should not be on shared storage.
         source = CONF.host
 
-        dest_check_data.update({'is_shared_instance_path':
-                self._check_shared_storage_test_file(
-                    dest_check_data['filename'])})
+        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
+            md_obj = migrate_data_obj.LibvirtLiveMigrateData()
+            md_obj.from_legacy_dict(dest_check_data)
+            dest_check_data = md_obj
 
-        dest_check_data.update({'is_shared_block_storage':
-                self._is_shared_block_storage(instance, dest_check_data,
-                                              block_device_info)})
+        dest_check_data.is_shared_instance_path = (
+            self._check_shared_storage_test_file(
+                dest_check_data.filename))
+
+        dest_check_data.is_shared_block_storage = (
+            self._is_shared_block_storage(instance, dest_check_data,
+                                          block_device_info))
 
         disk_info_text = self.get_instance_disk_info(
             instance, block_device_info=block_device_info)
@@ -5194,15 +5202,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                                          disk_info_text)
         has_local_disk = self._has_local_disk(instance, disk_info_text)
 
-        if dest_check_data['block_migration']:
-            if (dest_check_data['is_shared_block_storage'] or
-                    dest_check_data['is_shared_instance_path']):
+        if dest_check_data.block_migration:
+            if (dest_check_data.is_shared_block_storage or
+                    dest_check_data.is_shared_instance_path):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
             self._assert_dest_node_has_enough_disk(context, instance,
-                                    dest_check_data['disk_available_mb'],
-                                    dest_check_data['disk_over_commit'],
+                                    dest_check_data.disk_available_mb,
+                                    dest_check_data.disk_over_commit,
                                     block_device_info)
             if block_device_info:
                 bdm = block_device_info.get('block_device_mapping')
@@ -5218,8 +5226,8 @@ class LibvirtDriver(driver.ComputeDriver):
                              'volumes') % instance.uuid)
                     raise exception.MigrationPreCheckError(reason=msg)
 
-        elif not (dest_check_data['is_shared_block_storage'] or
-                  dest_check_data['is_shared_instance_path'] or
+        elif not (dest_check_data.is_shared_block_storage or
+                  dest_check_data.is_shared_instance_path or
                   (booted_from_volume and not has_local_disk)):
             reason = _("Live migration can not be used "
                        "without shared storage except "
@@ -5232,13 +5240,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # same name to be used
         instance_path = libvirt_utils.get_instance_path(instance,
                                                         relative=True)
-        dest_check_data['instance_relative_path'] = instance_path
-
-        # NOTE(danms): Emulate this old flag in case we're talking to
-        # an older client (<= Juno). We can remove this when we bump the
-        # compute RPC API to 4.0.
-        dest_check_data['is_shared_storage'] = (
-            dest_check_data['is_shared_instance_path'])
+        dest_check_data.instance_relative_path = instance_path
 
         return dest_check_data
 
@@ -5255,18 +5257,19 @@ class LibvirtDriver(driver.ComputeDriver):
         :param dest_check_data: dict with boolean fields image_type,
                                 is_shared_instance_path, and is_volume_backed
         """
-        if (CONF.libvirt.images_type == dest_check_data.get('image_type') and
+        if (dest_check_data.obj_attr_is_set('image_type') and
+                CONF.libvirt.images_type == dest_check_data.image_type and
                 self.image_backend.backend().is_shared_block_storage()):
             # NOTE(dgenin): currently true only for RBD image backend
             return True
 
-        if (dest_check_data.get('is_shared_instance_path') and
+        if (dest_check_data.is_shared_instance_path and
                 self.image_backend.backend().is_file_in_instance_path()):
             # NOTE(angdraug): file based image backends (Raw, Qcow2)
             # place block device files under the instance path
             return True
 
-        if (dest_check_data.get('is_volume_backed') and
+        if (dest_check_data.is_volume_backed and
                 not bool(jsonutils.loads(
                     self.get_instance_disk_info(instance,
                                                 block_device_info)))):
@@ -6166,12 +6169,18 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(gcb): Failed block live migration may leave instance
             # directory at destination node, ensure it is always deleted.
             is_shared_instance_path = True
+            instance_relative_path = None
             if migrate_data:
                 is_shared_instance_path = migrate_data.get(
                         'is_shared_instance_path', True)
+                instance_relative_path = migrate_data.get(
+                        'instance_relative_path')
+            mdo = objects.LibvirtLiveMigrateData()
+            if instance_relative_path:
+                mdo.instance_relative_path = instance_relative_path
             if not is_shared_instance_path:
                 instance_dir = libvirt_utils.get_instance_path_at_destination(
-                                instance, migrate_data)
+                    instance, mdo)
                 if os.path.exists(instance_dir):
                         shutil.rmtree(instance_dir)
 
@@ -6186,13 +6195,15 @@ class LibvirtDriver(driver.ComputeDriver):
         is_shared_instance_path = True
         is_block_migration = True
         if migrate_data:
+            if not isinstance(migrate_data, migrate_data_obj.LiveMigrateData):
+                obj = objects.LibvirtLiveMigrateData()
+                obj.from_legacy_dict(migrate_data)
+                migrate_data = obj
             LOG.debug('migrate_data in pre_live_migration: %s', migrate_data,
                       instance=instance)
-            is_shared_block_storage = migrate_data.get(
-                    'is_shared_block_storage', True)
-            is_shared_instance_path = migrate_data.get(
-                    'is_shared_instance_path', True)
-            is_block_migration = migrate_data.get('block_migration', True)
+            is_shared_block_storage = migrate_data.is_shared_block_storage
+            is_shared_instance_path = migrate_data.is_shared_instance_path
+            is_block_migration = migrate_data.block_migration
 
         image_meta = objects.ImageMeta.from_instance(instance)
 
@@ -6282,25 +6293,32 @@ class LibvirtDriver(driver.ComputeDriver):
                     greenthread.sleep(1)
 
         # Store vncserver_listen and latest disk device info
-        res_data = {'graphics_listen_addrs': {}, 'volume': {},
-                    'serial_listen_addr': {}}
-        res_data['graphics_listen_addrs']['vnc'] = CONF.vnc.vncserver_listen
-        res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
-        res_data['serial_listen_addr'] = \
-                CONF.serial_console.proxyclient_address
+        if not migrate_data:
+            migrate_data = objects.LibvirtLiveMigrateData(bdms=[])
+        else:
+            migrate_data.bdms = []
+        migrate_data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
+        migrate_data.graphics_listen_addr_spice = CONF.spice.server_listen
+        migrate_data.serial_listen_addr = \
+            CONF.serial_console.proxyclient_address
+
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             if connection_info.get('serial'):
-                serial = connection_info['serial']
-                res_data['volume'][serial] = {'connection_info': {},
-                                              'disk_info': {}}
-                res_data['volume'][serial]['connection_info'] = \
-                    connection_info
                 disk_info = blockinfo.get_info_from_bdm(
                     instance, CONF.libvirt.virt_type, image_meta, vol)
-                res_data['volume'][serial]['disk_info'] = disk_info
 
-        return res_data
+                bdmi = objects.LibvirtLiveMigrateBDMInfo()
+                bdmi.serial = connection_info['serial']
+                bdmi.connection_info = connection_info
+                bdmi.bus = disk_info['bus']
+                bdmi.dev = disk_info['dev']
+                bdmi.type = disk_info['type']
+                bdmi.format = disk_info.get('format')
+                bdmi.boot_index = disk_info.get('boot_index')
+                migrate_data.bdms.append(bdmi)
+
+        return migrate_data
 
     def _try_fetch_image_cache(self, image, fetch_func, context, filename,
                                image_id, instance, size,
