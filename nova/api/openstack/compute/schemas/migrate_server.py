@@ -37,6 +37,3 @@ migrate_live = {
     'required': ['os-migrateLive'],
     'additionalProperties': False,
 }
-
-host = copy.deepcopy(parameter_types.hostname)
-host['type'] = ['string', 'null']
