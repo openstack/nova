@@ -5119,17 +5119,19 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete):
 ####################
 
 
+@main_context_manager.writer
 def agent_build_create(context, values):
     agent_build_ref = models.AgentBuild()
     agent_build_ref.update(values)
     try:
-        agent_build_ref.save()
+        agent_build_ref.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.AgentBuildExists(hypervisor=values['hypervisor'],
                         os=values['os'], architecture=values['architecture'])
     return agent_build_ref
 
 
+@main_context_manager.reader
 def agent_build_get_by_triple(context, hypervisor, os, architecture):
     return model_query(context, models.AgentBuild, read_deleted="no").\
                    filter_by(hypervisor=hypervisor).\
@@ -5138,6 +5140,7 @@ def agent_build_get_by_triple(context, hypervisor, os, architecture):
                    first()
 
 
+@main_context_manager.reader
 def agent_build_get_all(context, hypervisor=None):
     if hypervisor:
         return model_query(context, models.AgentBuild, read_deleted="no").\
@@ -5148,6 +5151,7 @@ def agent_build_get_all(context, hypervisor=None):
                    all()
 
 
+@main_context_manager.writer
 def agent_build_destroy(context, agent_build_id):
     rows_affected = model_query(context, models.AgentBuild).filter_by(
                                         id=agent_build_id).soft_delete()
@@ -5155,6 +5159,7 @@ def agent_build_destroy(context, agent_build_id):
         raise exception.AgentBuildNotFound(id=agent_build_id)
 
 
+@main_context_manager.writer
 def agent_build_update(context, agent_build_id, values):
     rows_affected = model_query(context, models.AgentBuild).\
                    filter_by(id=agent_build_id).\
@@ -5723,28 +5728,29 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 ##################
 
 
+@main_context_manager.writer
 def action_start(context, values):
     convert_objects_related_datetimes(values, 'start_time')
     action_ref = models.InstanceAction()
     action_ref.update(values)
-    action_ref.save()
+    action_ref.save(context.session)
     return action_ref
 
 
+@main_context_manager.writer
 def action_finish(context, values):
     convert_objects_related_datetimes(values, 'start_time', 'finish_time')
-    session = get_session()
-    with session.begin():
-        query = model_query(context, models.InstanceAction, session=session).\
-                           filter_by(instance_uuid=values['instance_uuid']).\
-                           filter_by(request_id=values['request_id'])
-        if query.update(values) != 1:
-            raise exception.InstanceActionNotFound(
-                                        request_id=values['request_id'],
-                                        instance_uuid=values['instance_uuid'])
-        return query.one()
+    query = model_query(context, models.InstanceAction).\
+                        filter_by(instance_uuid=values['instance_uuid']).\
+                        filter_by(request_id=values['request_id'])
+    if query.update(values) != 1:
+        raise exception.InstanceActionNotFound(
+                                    request_id=values['request_id'],
+                                    instance_uuid=values['instance_uuid'])
+    return query.one()
 
 
+@main_context_manager.reader
 def actions_get(context, instance_uuid):
     """Get all instance actions for the provided uuid."""
     actions = model_query(context, models.InstanceAction).\
@@ -5754,99 +5760,96 @@ def actions_get(context, instance_uuid):
     return actions
 
 
+@main_context_manager.reader
 def action_get_by_request_id(context, instance_uuid, request_id):
     """Get the action by request_id and given instance."""
     action = _action_get_by_request_id(context, instance_uuid, request_id)
     return action
 
 
-def _action_get_by_request_id(context, instance_uuid, request_id,
-                                                                session=None):
-    result = model_query(context, models.InstanceAction, session=session).\
+def _action_get_by_request_id(context, instance_uuid, request_id):
+    result = model_query(context, models.InstanceAction).\
                          filter_by(instance_uuid=instance_uuid).\
                          filter_by(request_id=request_id).\
                          first()
     return result
 
 
-def _action_get_last_created_by_instance_uuid(context, instance_uuid,
-                                              session=None):
-    result = (model_query(context, models.InstanceAction, session=session).
+def _action_get_last_created_by_instance_uuid(context, instance_uuid):
+    result = (model_query(context, models.InstanceAction).
                      filter_by(instance_uuid=instance_uuid).
                      order_by(desc("created_at"), desc("id")).
                      first())
     return result
 
 
+@main_context_manager.writer
 def action_event_start(context, values):
     """Start an event on an instance action."""
     convert_objects_related_datetimes(values, 'start_time')
-    session = get_session()
-    with session.begin():
-        action = _action_get_by_request_id(context, values['instance_uuid'],
-                                           values['request_id'], session)
-        # When nova-compute restarts, the context is generated again in
-        # init_host workflow, the request_id was different with the request_id
-        # recorded in InstanceAction, so we can't get the original record
-        # according to request_id. Try to get the last created action so that
-        # init_instance can continue to finish the recovery action, like:
-        # powering_off, unpausing, and so on.
-        if not action and not context.project_id:
-            action = _action_get_last_created_by_instance_uuid(
-                context, values['instance_uuid'], session)
+    action = _action_get_by_request_id(context, values['instance_uuid'],
+                                       values['request_id'])
+    # When nova-compute restarts, the context is generated again in
+    # init_host workflow, the request_id was different with the request_id
+    # recorded in InstanceAction, so we can't get the original record
+    # according to request_id. Try to get the last created action so that
+    # init_instance can continue to finish the recovery action, like:
+    # powering_off, unpausing, and so on.
+    if not action and not context.project_id:
+        action = _action_get_last_created_by_instance_uuid(
+            context, values['instance_uuid'])
 
-        if not action:
-            raise exception.InstanceActionNotFound(
-                                        request_id=values['request_id'],
-                                        instance_uuid=values['instance_uuid'])
+    if not action:
+        raise exception.InstanceActionNotFound(
+                                    request_id=values['request_id'],
+                                    instance_uuid=values['instance_uuid'])
 
-        values['action_id'] = action['id']
+    values['action_id'] = action['id']
 
-        event_ref = models.InstanceActionEvent()
-        event_ref.update(values)
-        session.add(event_ref)
+    event_ref = models.InstanceActionEvent()
+    event_ref.update(values)
+    context.session.add(event_ref)
     return event_ref
 
 
+@main_context_manager.writer
 def action_event_finish(context, values):
     """Finish an event on an instance action."""
     convert_objects_related_datetimes(values, 'start_time', 'finish_time')
-    session = get_session()
-    with session.begin():
-        action = _action_get_by_request_id(context, values['instance_uuid'],
-                                           values['request_id'], session)
-        # When nova-compute restarts, the context is generated again in
-        # init_host workflow, the request_id was different with the request_id
-        # recorded in InstanceAction, so we can't get the original record
-        # according to request_id. Try to get the last created action so that
-        # init_instance can continue to finish the recovery action, like:
-        # powering_off, unpausing, and so on.
-        if not action and not context.project_id:
-            action = _action_get_last_created_by_instance_uuid(
-                context, values['instance_uuid'], session)
+    action = _action_get_by_request_id(context, values['instance_uuid'],
+                                       values['request_id'])
+    # When nova-compute restarts, the context is generated again in
+    # init_host workflow, the request_id was different with the request_id
+    # recorded in InstanceAction, so we can't get the original record
+    # according to request_id. Try to get the last created action so that
+    # init_instance can continue to finish the recovery action, like:
+    # powering_off, unpausing, and so on.
+    if not action and not context.project_id:
+        action = _action_get_last_created_by_instance_uuid(
+            context, values['instance_uuid'])
 
-        if not action:
-            raise exception.InstanceActionNotFound(
-                                        request_id=values['request_id'],
-                                        instance_uuid=values['instance_uuid'])
+    if not action:
+        raise exception.InstanceActionNotFound(
+                                    request_id=values['request_id'],
+                                    instance_uuid=values['instance_uuid'])
 
-        event_ref = model_query(context, models.InstanceActionEvent,
-                                session=session).\
+    event_ref = model_query(context, models.InstanceActionEvent).\
                             filter_by(action_id=action['id']).\
                             filter_by(event=values['event']).\
                             first()
 
-        if not event_ref:
-            raise exception.InstanceActionEventNotFound(action_id=action['id'],
-                                                        event=values['event'])
-        event_ref.update(values)
+    if not event_ref:
+        raise exception.InstanceActionEventNotFound(action_id=action['id'],
+                                                    event=values['event'])
+    event_ref.update(values)
 
-        if values['result'].lower() == 'error':
-            action.update({'message': 'Error'})
+    if values['result'].lower() == 'error':
+        action.update({'message': 'Error'})
 
     return event_ref
 
 
+@main_context_manager.reader
 def action_events_get(context, action_id):
     events = model_query(context, models.InstanceActionEvent).\
                          filter_by(action_id=action_id).\
@@ -5856,6 +5859,7 @@ def action_events_get(context, action_id):
     return events
 
 
+@main_context_manager.reader
 def action_event_get_by_id(context, action_id, event_id):
     event = model_query(context, models.InstanceActionEvent).\
                         filter_by(action_id=action_id).\
