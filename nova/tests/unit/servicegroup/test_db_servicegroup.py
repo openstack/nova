@@ -86,6 +86,7 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         fn(service)
         upd_mock.assert_called_once_with()
         self.assertEqual(11, service_ref.report_count)
+        self.assertFalse(service.model_disconnected)
 
     @mock.patch.object(objects.Service, 'save')
     def _test_report_state_error(self, exc_cls, upd_mock):
@@ -96,11 +97,22 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
                                  service_ref=service_ref)
         fn = self.servicegroup_api._driver._report_state
         fn(service)  # fail if exception not caught
+        self.assertTrue(service.model_disconnected)
 
     def test_report_state_remote_error_handling(self):
         # test error handling using remote conductor
         self.flags(use_local=False, group='conductor')
+        self._test_report_state_error(messaging.RemoteError)
+
+    def test_report_state_remote_error_handling_timeout(self):
+        # test error handling using remote conductor
+        self.flags(use_local=False, group='conductor')
         self._test_report_state_error(messaging.MessagingTimeout)
+
+    def test_report_state_remote_unexpected_error(self):
+        # unexpected errors must be handled, but disconnected flag not touched
+        self.flags(use_local=False, group='conductor')
+        self._test_report_state_error(RuntimeError)
 
     def test_report_state_local_error_handling(self):
         # if using local conductor, the db driver must handle DB errors
@@ -109,3 +121,8 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         # mock an oslo.db DBError as it's an exception base class for
         # oslo.db DB errors (eg DBConnectionError)
         self._test_report_state_error(db_exception.DBError)
+
+    def test_report_state_local_unexpected_error(self):
+        # unexpected errors must be handled, but disconnected flag not touched
+        self.flags(use_local=True, group='conductor')
+        self._test_report_state_error(RuntimeError)
