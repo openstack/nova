@@ -7609,9 +7609,9 @@ class ComputeAPITestCase(BaseTestCase):
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
             self.context, instance_uuid)
 
-        ephemeral = filter(block_device.new_format_is_ephemeral, bdms)
+        ephemeral = list(filter(block_device.new_format_is_ephemeral, bdms))
         self.assertEqual(1, len(ephemeral))
-        swap = filter(block_device.new_format_is_swap, bdms)
+        swap = list(filter(block_device.new_format_is_swap, bdms))
         self.assertEqual(1, len(swap))
 
         self.assertEqual(1024, swap[0].volume_size)
@@ -7735,7 +7735,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertRaises(exception.InstanceUserDataTooLarge,
             self.compute_api.create, self.context, inst_type,
-            self.fake_image['id'], user_data=('1' * 65536))
+            self.fake_image['id'], user_data=(b'1' * 65536))
 
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
@@ -7747,7 +7747,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertRaises(exception.InstanceUserDataMalformed,
             self.compute_api.create, self.context, inst_type,
-            self.fake_image['id'], user_data='banana')
+            self.fake_image['id'], user_data=b'banana')
 
     def test_create_with_base64_user_data(self):
         # Test an instance type with ok much user data.
@@ -7761,7 +7761,7 @@ class ComputeAPITestCase(BaseTestCase):
         # base64
         (refs, resv_id) = self.compute_api.create(
             self.context, inst_type, self.fake_image['id'],
-            user_data=base64.encodestring('1' * 48510))
+            user_data=base64.encodestring(b'1' * 48510))
 
     def test_populate_instance_for_create(self):
         base_options = {'image_ref': self.fake_image['id'],
@@ -11687,8 +11687,8 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
     def test_injected_success(self):
         # test with valid b64 encoded content.
         injected_files = [
-            ('/a/b/c', base64.b64encode('foobarbaz')),
-            ('/d/e/f', base64.b64encode('seespotrun')),
+            ('/a/b/c', base64.b64encode(b'foobarbaz')),
+            ('/d/e/f', base64.b64encode(b'seespotrun')),
         ]
 
         decoded_files = [
@@ -11700,7 +11700,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
     def test_injected_invalid(self):
         # test with invalid b64 encoded content
         injected_files = [
-            ('/a/b/c', base64.b64encode('foobarbaz')),
+            ('/a/b/c', base64.b64encode(b'foobarbaz')),
             ('/d/e/f', 'seespotrun'),
         ]
 
