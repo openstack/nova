@@ -24,6 +24,7 @@ import string
 from eventlet import greenthread
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import strutils
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -84,7 +85,7 @@ def _parse_volume_info(connection_data):
             target_iqn is None):
         raise exception.StorageError(
                 reason=_('Unable to obtain target information %s') %
-                        connection_data)
+                        strutils.mask_password(connection_data))
     volume_info = {}
     volume_info['id'] = volume_id
     volume_info['target'] = target_host

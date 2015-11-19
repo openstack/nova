@@ -19,6 +19,7 @@ Management class for Storage-related functions (attach, detach, etc).
 
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import strutils
 
 from nova import exception
 from nova.i18n import _LI, _LW
@@ -91,7 +92,10 @@ class VolumeOps(object):
         return (sr_ref, sr_uuid)
 
     def _connect_hypervisor_to_volume(self, sr_ref, connection_data):
-        LOG.debug("Connect volume to hypervisor: %s", connection_data)
+        # connection_data can have credentials in it so make sure to scrub
+        # those before logging.
+        LOG.debug("Connect volume to hypervisor: %s",
+                  strutils.mask_password(connection_data))
         if 'vdi_uuid' in connection_data:
             vdi_ref = volume_utils.introduce_vdi(
                     self._session, sr_ref,

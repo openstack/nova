@@ -165,14 +165,26 @@ class ParseVolumeInfoTestCase(stubs.XenAPITestBaseNoDB):
                          'target_lun': None,
                          'auth_method': 'CHAP',
                          'auth_username': 'username',
-                         'auth_password': 'password'}}
+                         'auth_password': 'verybadpass'}}
 
     def test_parse_volume_info_parsing_auth_details(self):
         conn_info = self._make_connection_info()
         result = volume_utils._parse_volume_info(conn_info['data'])
 
         self.assertEqual('username', result['chapuser'])
-        self.assertEqual('password', result['chappassword'])
+        self.assertEqual('verybadpass', result['chappassword'])
+
+    def test_parse_volume_info_missing_details(self):
+        # Tests that a StorageError is raised if volume_id, target_host, or
+        # target_ign is missing from connection_data. Also ensures that the
+        # auth_password value is not present in the StorageError message.
+        for data_key_to_null in ('volume_id', 'target_portal', 'target_iqn'):
+            conn_info = self._make_connection_info()
+            conn_info['data'][data_key_to_null] = None
+            ex = self.assertRaises(exception.StorageError,
+                                   volume_utils._parse_volume_info,
+                                   conn_info['data'])
+            self.assertNotIn('verybadpass', six.text_type(ex))
 
     def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
         self.assertRaises(
