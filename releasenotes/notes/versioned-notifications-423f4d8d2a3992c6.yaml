@@ -1,0 +1,7 @@
+---
+features:
+  - As part of refactoring the notification interface of Nova
+    a new config option 'notification_format' has been added to specifies
+    which notification format shall be used by nova. The possible values
+    are 'unversioned' (e.g. legacy), 'versioned', 'both'. The default
+    value is 'both'.

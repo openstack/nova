@@ -21,10 +21,12 @@ from oslo_serialization import jsonutils
 from nova import rpc
 
 NOTIFICATIONS = []
+VERSIONED_NOTIFICATIONS = []
 
 
 def reset():
     del NOTIFICATIONS[:]
+    del VERSIONED_NOTIFICATIONS[:]
 
 
 FakeMessage = collections.namedtuple('Message',
@@ -64,11 +66,27 @@ class FakeNotifier(object):
         NOTIFICATIONS.append(msg)
 
 
+class FakeVersionedNotifier(FakeNotifier):
+    def _notify(self, priority, ctxt, event_type, payload):
+        payload = self._serializer.serialize_entity(ctxt, payload)
+        VERSIONED_NOTIFICATIONS.append({'publisher_id': self.publisher_id,
+                                        'priority': priority,
+                                        'event_type': event_type,
+                                        'payload': payload})
+
+
 def stub_notifier(stubs):
     stubs.Set(messaging, 'Notifier', FakeNotifier)
-    if rpc.NOTIFIER:
-        stubs.Set(rpc, 'NOTIFIER',
-                  FakeNotifier(rpc.NOTIFIER.transport,
-                               rpc.NOTIFIER.publisher_id,
-                               serializer=getattr(rpc.NOTIFIER, '_serializer',
+    if rpc.LEGACY_NOTIFIER and rpc.NOTIFIER:
+        stubs.Set(rpc, 'LEGACY_NOTIFIER',
+                  FakeNotifier(rpc.LEGACY_NOTIFIER.transport,
+                               rpc.LEGACY_NOTIFIER.publisher_id,
+                               serializer=getattr(rpc.LEGACY_NOTIFIER,
+                                                  '_serializer',
                                                   None)))
+        stubs.Set(rpc, 'NOTIFIER',
+                  FakeVersionedNotifier(rpc.NOTIFIER.transport,
+                                        rpc.NOTIFIER.publisher_id,
+                                        serializer=getattr(rpc.NOTIFIER,
+                                                           '_serializer',
+                                                           None)))

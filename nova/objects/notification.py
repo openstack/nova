@@ -114,8 +114,7 @@ class NotificationBase(base.NovaObject):
     }
 
     def _emit(self, context, event_type, publisher_id, payload):
-        assert rpc.NOTIFIER is not None
-        notifier = rpc.NOTIFIER.prepare(publisher_id=publisher_id)
+        notifier = rpc.get_versioned_notifier(publisher_id)
         notify = getattr(notifier, self.priority)
         notify(context, event_type=event_type, payload=payload)
 
