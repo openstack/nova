@@ -557,6 +557,11 @@ class ImageUnacceptable(Invalid):
     msg_fmt = _("Image %(image_id)s is unacceptable: %(reason)s")
 
 
+class ImageBadRequest(Invalid):
+    msg_fmt = _("Request of image %(image_id)s got BadRequest response: "
+                "%(response)s")
+
+
 class InstanceUnacceptable(Invalid):
     msg_fmt = _("Instance %(instance_id)s is unacceptable: %(reason)s")
 

@@ -640,7 +640,8 @@ def _translate_image_exception(image_id, exc_value):
     if isinstance(exc_value, glanceclient.exc.NotFound):
         return exception.ImageNotFound(image_id=image_id)
     if isinstance(exc_value, glanceclient.exc.BadRequest):
-        return exception.Invalid(six.text_type(exc_value))
+        return exception.ImageBadRequest(image_id=image_id,
+                                         response=six.text_type(exc_value))
     return exc_value
 
 
