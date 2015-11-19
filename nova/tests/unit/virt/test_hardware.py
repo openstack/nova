@@ -1090,6 +1090,18 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.ImageCPUPinningForbidden,
             },
+            {
+                # Invalid CPU pinning policy with realtime
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                                             "hw:cpu_policy": "shared",
+                                             "hw:cpu_realtime": "yes",
+                                         }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RealtimeConfigurationInvalid,
+            },
         ]
 
         for testitem in testdata:
