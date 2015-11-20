@@ -65,6 +65,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
+import nova.conf
 from nova import consoleauth
 import nova.context
 from nova import exception
@@ -249,7 +250,7 @@ instance_cleaning_opts = [
                     'files.'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(compute_opts)
 CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
@@ -265,8 +266,6 @@ CONF.import_opt('enabled', 'nova.rdp', group='rdp')
 CONF.import_opt('html5_proxy_base_url', 'nova.rdp', group='rdp')
 CONF.import_opt('enabled', 'nova.mks', group='mks')
 CONF.import_opt('mksproxy_base_url', 'nova.mks', group='mks')
-CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
-CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 CONF.import_opt('destroy_after_evacuate', 'nova.utils', group='workarounds')
 CONF.import_opt('scheduler_tracks_instance_changes',
                 'nova.scheduler.host_manager')

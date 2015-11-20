@@ -23,6 +23,7 @@ import nova.cmd.spicehtml5proxy
 import nova.conductor.api
 import nova.conductor.rpcapi
 import nova.conductor.tasks.live_migrate
+import nova.conf
 import nova.console.manager
 import nova.console.rpcapi
 import nova.console.serial
@@ -77,7 +78,6 @@ def list_opts():
              nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
              nova.cmd.novncproxy.opts,
-             nova.cmd.serialproxy.opts,
              nova.cmd.spicehtml5proxy.opts,
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
@@ -117,11 +117,7 @@ def list_opts():
              nova.keymgr.keymgr_opts,
          )),
         ('rdp', nova.rdp.rdp_opts),
-        ('serial_console',
-         itertools.chain(
-             nova.cmd.serialproxy.opts,
-             nova.console.serial.serial_opts,
-         )),
+        nova.conf.serial_console.list_opts(),
         ('spice',
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
