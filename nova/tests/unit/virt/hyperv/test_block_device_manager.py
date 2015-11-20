@@ -360,3 +360,72 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
         self.assertRaises(exception.InvalidDiskInfo,
                           self._bdman._check_and_update_bdm,
                           mock.sentinel.FAKE_SLOT_MAP, constants.VM_GEN_1, bdm)
+
+    def test_sort_by_boot_order(self):
+        original = [{'boot_index': 2}, {'boot_index': None}, {'boot_index': 1}]
+        expected = [original[2], original[0], original[1]]
+
+        self._bdman._sort_by_boot_order(original)
+        self.assertEqual(expected, original)
+
+    @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
+                       '_get_boot_order_gen1')
+    def test_get_boot_order_gen1_vm(self, mock_get_boot_order):
+        self._bdman.get_boot_order(constants.VM_GEN_1,
+                                   mock.sentinel.BLOCK_DEV_INFO)
+        mock_get_boot_order.assert_called_once_with(
+            mock.sentinel.BLOCK_DEV_INFO)
+
+    @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
+                       '_get_boot_order_gen2')
+    def test_get_boot_order_gen2_vm(self, mock_get_boot_order):
+        self._bdman.get_boot_order(constants.VM_GEN_2,
+                                   mock.sentinel.BLOCK_DEV_INFO)
+        mock_get_boot_order.assert_called_once_with(
+            mock.sentinel.BLOCK_DEV_INFO)
+
+    def test_get_boot_order_gen1_iso(self):
+        fake_bdi = {'root_disk': {'type': 'iso'}}
+        expected = [os_win_const.BOOT_DEVICE_CDROM,
+                    os_win_const.BOOT_DEVICE_HARDDISK,
+                    os_win_const.BOOT_DEVICE_NETWORK,
+                    os_win_const.BOOT_DEVICE_FLOPPY]
+
+        res = self._bdman._get_boot_order_gen1(fake_bdi)
+        self.assertEqual(expected, res)
+
+    def test_get_boot_order_gen1_vhd(self):
+        fake_bdi = {'root_disk': {'type': 'vhd'}}
+        expected = [os_win_const.BOOT_DEVICE_HARDDISK,
+                    os_win_const.BOOT_DEVICE_CDROM,
+                    os_win_const.BOOT_DEVICE_NETWORK,
+                    os_win_const.BOOT_DEVICE_FLOPPY]
+
+        res = self._bdman._get_boot_order_gen1(fake_bdi)
+        self.assertEqual(expected, res)
+
+    def test_get_boot_order_gen2(self):
+        fake_root_disk = {'boot_index': 0,
+                          'path': mock.sentinel.FAKE_ROOT_PATH}
+        fake_eph1 = {'boot_index': 2,
+                     'path': mock.sentinel.FAKE_EPH_PATH1}
+        fake_eph2 = {'boot_index': 3,
+                     'path': mock.sentinel.FAKE_EPH_PATH2}
+        fake_bdm = {'boot_index': 1,
+                    'connection_info': mock.sentinel.FAKE_CONN_INFO}
+        fake_bdi = {'root_disk': fake_root_disk,
+                    'ephemerals': [fake_eph1,
+                                   fake_eph2],
+                    'block_device_mapping': [fake_bdm]}
+
+        self._bdman._volops.get_mounted_disk_path_from_volume = (
+            mock.MagicMock(return_value=fake_bdm['connection_info']))
+
+        expected_res = [mock.sentinel.FAKE_ROOT_PATH,
+                        mock.sentinel.FAKE_CONN_INFO,
+                        mock.sentinel.FAKE_EPH_PATH1,
+                        mock.sentinel.FAKE_EPH_PATH2]
+
+        res = self._bdman._get_boot_order_gen2(fake_bdi)
+
+        self.assertEqual(expected_res, res)

@@ -223,3 +223,45 @@ class BlockDeviceInfoManager(object):
 
         # make sure that boot_index is set.
         bdm['boot_index'] = bdm.get('boot_index')
+
+    def _sort_by_boot_order(self, bd_list):
+        # we sort the block devices by boot_index leaving the ones that don't
+        # have a specified boot_index at the end
+        bd_list.sort(key=lambda x: (x['boot_index'] is None, x['boot_index']))
+
+    def get_boot_order(self, vm_gen, block_device_info):
+        if vm_gen == constants.VM_GEN_1:
+            return self._get_boot_order_gen1(block_device_info)
+        else:
+            return self._get_boot_order_gen2(block_device_info)
+
+    def _get_boot_order_gen1(self, block_device_info):
+        if block_device_info['root_disk']['type'] == 'iso':
+            return [os_win_const.BOOT_DEVICE_CDROM,
+                    os_win_const.BOOT_DEVICE_HARDDISK,
+                    os_win_const.BOOT_DEVICE_NETWORK,
+                    os_win_const.BOOT_DEVICE_FLOPPY]
+        else:
+            return [os_win_const.BOOT_DEVICE_HARDDISK,
+                    os_win_const.BOOT_DEVICE_CDROM,
+                    os_win_const.BOOT_DEVICE_NETWORK,
+                    os_win_const.BOOT_DEVICE_FLOPPY]
+
+    def _get_boot_order_gen2(self, block_device_info):
+        devices = [block_device_info['root_disk']]
+        devices += driver.block_device_info_get_ephemerals(
+            block_device_info)
+        devices += driver.block_device_info_get_mapping(block_device_info)
+
+        self._sort_by_boot_order(devices)
+
+        boot_order = []
+        for dev in devices:
+            if dev.get('connection_info'):
+                dev_path = self._volops.get_mounted_disk_path_from_volume(
+                    dev['connection_info'])
+                boot_order.append(dev_path)
+            else:
+                boot_order.append(dev['path'])
+
+        return boot_order
