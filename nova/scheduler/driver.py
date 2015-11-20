@@ -25,7 +25,7 @@ from oslo_config import cfg
 from oslo_utils import importutils
 import six
 
-from nova import db
+from nova import objects
 from nova import servicegroup
 
 scheduler_driver_opts = [
@@ -54,8 +54,8 @@ class Scheduler(object):
     def hosts_up(self, context, topic):
         """Return the list of hosts that have a running service for topic."""
 
-        services = db.service_get_all_by_topic(context, topic)
-        return [service['host']
+        services = objects.ServiceList.get_by_topic(context, topic)
+        return [service.host
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
 

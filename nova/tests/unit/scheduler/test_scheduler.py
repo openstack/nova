@@ -21,6 +21,7 @@ import mock
 
 from nova import context
 from nova import db
+from nova import objects
 from nova.scheduler import host_manager
 from nova.scheduler import manager
 from nova import servicegroup
@@ -121,14 +122,14 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.servicegroup_api = servicegroup.API()
 
     def test_hosts_up(self):
-        service1 = {'host': 'host1'}
-        service2 = {'host': 'host2'}
-        services = [service1, service2]
+        service1 = objects.Service(host='host1')
+        service2 = objects.Service(host='host2')
+        services = objects.ServiceList(objects=[service1, service2])
 
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
 
-        db.service_get_all_by_topic(self.context,
+        objects.ServiceList.get_by_topic(self.context,
                 self.topic).AndReturn(services)
         self.servicegroup_api.service_is_up(service1).AndReturn(False)
         self.servicegroup_api.service_is_up(service2).AndReturn(True)
