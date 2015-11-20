@@ -1,0 +1,19 @@
+# HYUNGBAI PARK <openstack.make@gmail.com>, 2015. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova 12.0.1.dev13\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2015-11-20 06:06+0000\n"
+"PO-Revision-Date: 2015-11-04 07:16+0000\n"
+"Last-Translator: HYUNGBAI PARK <openstack.make@gmail.com>\n"
+"Language-Team: Korean (South Korea)\n"
+"Language: ko-KR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Zanata 3.7.3\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+
+#, python-format
+msgid "Missing core API extensions: %s"
+msgstr "누락된 코어 API 확장기능: %s"

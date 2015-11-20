@@ -22,19 +22,19 @@
 # Vincent JOBARD <vinzjobard@gmail.com>, 2013
 # Benjamin Godard <ben@hacktopie.net>, 2013
 # Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# Gael Rehault <gael01@gmail.com>, 2015. #zanata
 # Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0rc2.dev16\n"
+"Project-Id-Version: nova 12.0.1.dev13\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-08 06:39+0000\n"
-"PO-Revision-Date: 2015-10-07 09:07+0000\n"
-"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
+"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"PO-Revision-Date: 2015-10-27 11:28+0000\n"
+"Last-Translator: Gael Rehault <gael01@gmail.com>\n"
 "Language: fr\n"
-"Language-Team: French (http://www.transifex.com/openstack/nova/language/"
-"fr/)\n"
+"Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -363,6 +363,10 @@ msgstr "La stratégie de groupe d'instances anti-affinité a été violée."
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"
 msgstr "Nom d'architecture '%(arch)s' n'est pas reconnu"
+
+#, python-format
+msgid "Architecture name '%s' is not valid"
+msgstr "Nom d'architecture '%s' n'est pas reconnu"
 
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr "L'argument 'type' pour le redémarrage n'est pas HARD ou SOFT"
@@ -1842,6 +1846,10 @@ msgstr ""
 #, python-format
 msgid "Hypervisor version %s is invalid."
 msgstr "La version d'hyperviseur %s est invalide."
+
+#, python-format
+msgid "Hypervisor virt type '%s' is not valid"
+msgstr "Le type de virtualisation de l'hyperviseur '%s' n'est pas reconnu."
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -4822,6 +4830,10 @@ msgstr "Echec du plugin d'interface virtuelle"
 #, python-format
 msgid "Virtual machine mode '%(vmmode)s' is not recognised"
 msgstr "Le mode de la machine virtuelle '%(vmmode)s' n'est pas reconnu"
+
+#, python-format
+msgid "Virtual machine mode '%s' is not valid"
+msgstr "Le mode de la machine virtuelle '%s' n'est pas valide"
 
 #, python-format
 msgid ""

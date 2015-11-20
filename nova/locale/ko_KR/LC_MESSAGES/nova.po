@@ -5,19 +5,19 @@
 # Translators:
 # Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
+# HYUNGBAI PARK <openstack.make@gmail.com>, 2015. #zanata
 # Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.0.0rc2.dev3\n"
+"Project-Id-Version: nova 12.0.1.dev13\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-03 06:33+0000\n"
-"PO-Revision-Date: 2015-09-30 04:54+0000\n"
-"Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
+"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"PO-Revision-Date: 2015-11-11 03:40+0000\n"
+"Last-Translator: HYUNGBAI PARK <openstack.make@gmail.com>\n"
 "Language: ko_KR\n"
-"Language-Team: Korean (Korea) (http://www.transifex.com/openstack/nova/"
-"language/ko_KR/)\n"
+"Language-Team: Korean (South Korea)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -49,6 +49,14 @@ msgstr "%(cidr)s이(가) 올바른 ip 네트워크가 아닙니다."
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid "%(field)s should not be part of the updates."
+msgstr "%(field)s 는 업데이트의 일부가 아니어야 합니다."
+
+#, python-format
+msgid "%(fieldname)s missing field type"
+msgstr "필드 유형이 누락된 %(fieldname)s"
 
 #, python-format
 msgid "%(host)s:%(port)s: Target closed"
@@ -91,6 +99,10 @@ msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s 하이퍼바이저가 PCI 디바이스를 지원하지 않음"
 
 #, python-format
+msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
+msgstr "%(fieldname)s의 %(typename)s은 Enum 인스턴스가 아닙니다"
+
+#, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
 msgstr "%(value_name)s은(는) %(max_value)d보다 작거나 같아야 함"
 
@@ -111,6 +123,10 @@ msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr ""
 "%(workers)s의 %(worker_name)s 값이 올바르지 않습니다. 해당 값은 0보다 커야 합"
 "니다."
+
+#, python-format
+msgid "%r failed. Not Retrying."
+msgstr "%r 실패. 재시도하지 않습니다."
 
 #, python-format
 msgid "%r failed. Retrying."
@@ -143,6 +159,10 @@ msgstr "%s이(가) 지원되지 않습니다."
 #, python-format
 msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr "%s은(는) 'MANUAL' 또는 'AUTO'여야 합니다. "
+
+#, python-format
+msgid "'%(other)s' should be an instance of '%(cls)s'"
+msgstr "'%(other)s'는  '%(cls)s'의 인스턴스여야 합니다"
 
 #, python-format
 msgid "'%s' is either missing or empty."
@@ -233,6 +253,9 @@ msgstr "주소를 변환할 수 없습니다. "
 msgid "Address not specified"
 msgstr "주소가 지정되지 않음"
 
+msgid "Affinity instance group policy was violated."
+msgstr "Affinity instance group policy was violated."
+
 #, python-format
 msgid "Agent does not support the call: %(method)s"
 msgstr "에이전트가 호출을 지원하지 않음: %(method)s"
@@ -299,6 +322,10 @@ msgstr "안티 선호도 인스턴스 그룹 정책을 위반했습니다."
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"
 msgstr "아키텍처 이름 '%(arch)s'이(가) 인식되지 않음"
+
+#, python-format
+msgid "Architecture name '%s' is not valid"
+msgstr "아키텍처 명칭 '%s'은 유효하지 않습니다"
 
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr "다시 부팅에 대한 인수 'type'이 HARD 또는 SOFT가 아님"
@@ -478,6 +505,13 @@ msgstr "CPU 번호 %(cpunum)d은(는) 최대값 %(cpumax)d 보다 큼"
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "CPU 번호 %(cpuset)s이(가) 어느 노드에도 지정되지 않았음"
 
+#, python-format
+msgid "CPU pinning is not supported by the host: %(reason)s"
+msgstr "CPU pinning is not supported by the host: %(reason)s"
+
+msgid "Can not add access to a public flavor."
+msgstr "공용 플레이버에 접근을 추가할 수 없습니다."
+
 msgid "Can not find requested image"
 msgstr "요청된 이미지를 찾을 수 없음"
 
@@ -634,6 +668,9 @@ msgstr ""
 "루트 디스크를 더 적은 크기로 조정할 수 없음. 현재 크기: %(curr_root_gb)sGB. "
 "요청된 크기: %(new_root_gb)sGB"
 
+msgid "Cannot run 'db sync' until 'db contract' is run"
+msgstr "'db contract'가 실행되기 전에는 'db sync'를 실행할 수 없습니다"
+
 msgid "Cannot run any more instances of this type."
 msgstr "이 유형의 인스턴스를 추가로 실행할 수 없습니다. "
 
@@ -680,6 +717,9 @@ msgstr "셀 메시지가 최대 홉 계수에 도달함: %(hop_count)s"
 
 msgid "Cell name cannot be empty"
 msgstr "셀 이름은 공백일 수 없음"
+
+msgid "Cell name cannot contain '!', '.' or '@'"
+msgstr "셈 명칭은 '!', '.' 또는 '@'를 포함할 수 없습니다"
 
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "셀 유형은 'parent' 또는 'child'여야 함"
@@ -745,6 +785,22 @@ msgid ""
 msgstr ""
 "구성이 명시적 CPU 모델을 요청했지만 현재 libvirt 하이퍼바이저 '%s'이(가) CPU "
 "모델 선택을 지원하지 않음"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s, but we were unable to "
+"determine the cause"
+msgstr ""
+" %(instance_uuid)s 인스턴스의 업데이트가 충동했지만, 원인을 판단할 수 없습니"
+"다"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s. Expected: %(expected)s. "
+"Actual: %(actual)s"
+msgstr ""
+"%(instance_uuid)s 인스턴스가 충돌했습니다. 예상 상태: %(expected)s. 인스턴스 "
+"상태: %(actual)s"
 
 msgid "Conflicting policies configured!"
 msgstr "구성된 정책이 충돌함!"
@@ -904,6 +960,10 @@ msgstr "DNS1"
 
 msgid "DNS2"
 msgstr "DNS2"
+
+#, python-format
+msgid "Database migration failed: %(reason)s"
+msgstr "데이터베이스 이동이 실패했습니다: %(reason)s"
 
 #, python-format
 msgid "Datastore regex %s did not match any datastores"
@@ -1135,6 +1195,10 @@ msgstr ""
 "인스턴스에 대한 최대 스케줄링 재시도 %(max_retries)d을(를) 초과"
 "함%(instance_uuid)s"
 
+#, python-format
+msgid "Exceeded maximum number of retries. %(reason)s"
+msgstr "재시도 최대 횟수를 초과했습니다. %(reason)s"
+
 msgid "Exceeded the maximum number of slots"
 msgstr "최대 슬롯 수를 초과함"
 
@@ -1174,6 +1238,14 @@ msgstr "노드 %s 매개변수 정리 실패"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr "제공된 추가 스펙 키의 유효성을 검증하지 못함. 문자열을 예상함"
+
+#, python-format
+msgid "Failed to access port %(port_id)s: %(reason)s"
+msgstr "%(port_id)s 포트 접속에 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to add bridge: %s"
+msgstr "브리지 추가 실패: %s"
 
 #, python-format
 msgid ""
@@ -1475,8 +1547,30 @@ msgstr "이름이 %(flavor_name)s인 플레이버를 찾을 수 없습니다."
 msgid "Flavor with name %(name)s already exists."
 msgstr "이름이 %(name)s인 플레이버가 이미 있습니다."
 
+#, python-format
+msgid ""
+"Flavor's disk is smaller than the minimum size specified in image metadata. "
+"Flavor disk is %(flavor_size)i bytes, minimum size is %(image_min_disk)i "
+"bytes."
+msgstr ""
+"플레이버 디스크가 이미지 메타데이터에 기술된 최소 크기보다 작습니다.  플레이"
+"버 디스크는 %(flavor_size)i bytes, 최소 크기는 %(image_min_disk)i bytes 입니"
+"다  ."
+
+#, python-format
+msgid ""
+"Flavor's disk is too small for requested image. Flavor disk is "
+"%(flavor_size)i bytes, image is %(image_size)i bytes."
+msgstr ""
+"플레이버 디스크가 요청된 이미지보다  너무 작습니다. 플레이버 디스크는  "
+"%(flavor_size)i bytes, 이미지는 %(image_size)i bytes 입니다."
+
 msgid "Flavor's memory is too small for requested image."
 msgstr "플레이버의 메모리가 요청된 이미지에 대해 너무 작습니다."
+
+#, python-format
+msgid "Floating IP %(address)s association has failed."
+msgstr "유동 IP %(address)s 연계에 실패했습니다."
 
 msgid "Floating IP allocate failed."
 msgstr "부동 IP 할당에 실패했습니다."
@@ -1595,6 +1689,10 @@ msgstr ""
 "간 마이그레이션을 수행할 경우 데이터가 유실될 수 있습니다. %(server)s에서 "
 "Nova를 업그레이드하여 다시 시도하십시오."
 
+#, python-format
+msgid "Host '%(name)s' is not mapped to any cell"
+msgstr "'%(name)s' 호스트가 어느 셀로도 대응되지 않았습니다"
+
 msgid "Host PowerOn is not supported by the Hyper-V driver"
 msgstr "Hyper-V 드라이버에서 호스트 PowerOn을 지원하지 않습니다."
 
@@ -1624,6 +1722,10 @@ msgstr ""
 #, python-format
 msgid "Hypervisor version %s is invalid."
 msgstr "하이퍼바이저 버전 %s이(가) 올바르지 않습니다."
+
+#, python-format
+msgid "Hypervisor virt type '%s' is not valid"
+msgstr "하이퍼바이저 가상화 유형 '%s'가 유효하지 않습니다"
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -1693,6 +1795,10 @@ msgstr "이미지 메타데이터 키가 너무 김"
 
 msgid "Image metadata limit exceeded"
 msgstr "이미지 메타데이터 한계 초과"
+
+#, python-format
+msgid "Image model '%(image)s' is not supported"
+msgstr "'%(image)s' 이미지 모델이 지원되지 않습니다"
 
 msgid "Image must be available"
 msgstr "이미지가 사용 가능해야 함"
@@ -1815,6 +1921,12 @@ msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
 msgstr "인스턴스 %(instance_uuid)s이(가) NUMA 토폴로지를 지정하지 않음"
 
 #, python-format
+msgid "Instance %(instance_uuid)s does not specify a migration context."
+msgstr ""
+"Instance %(instance_uuid)s 인스턴스는 이동을 위한 전후관계를 명시하지 않았습"
+"니다."
+
+#, python-format
 msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
 msgstr "%(instance_uuid)s 인스턴스에 고정 IP '%(ip)s'이(가) 없습니다. "
 
@@ -1853,6 +1965,10 @@ msgstr "%s 인스턴스가 첨부되지 않았습니다. "
 #, python-format
 msgid "Instance %s not found"
 msgstr "%s 인스턴스를 찾을 수 없음"
+
+#, python-format
+msgid "Instance %s provisioning was aborted"
+msgstr "인스턴스 %s 프로비저닝이 중단됐습니다"
 
 msgid "Instance could not be found"
 msgstr "인스턴스를 찾을 수 없음"
@@ -2040,6 +2156,10 @@ msgid "Invalid entry: '%s'; Expecting list or dict"
 msgstr "올바르지 않은 항목: '%s', 목록 또는 사전 예상"
 
 #, python-format
+msgid "Invalid event name %s"
+msgstr "유요하지 않은 이벤트 명칭 %s"
+
+#, python-format
 msgid "Invalid event status `%s'"
 msgstr "올바르지 않은 이벤트 상태 `%s'"
 
@@ -2077,6 +2197,10 @@ msgstr "올바르지 않은 ID: %(instance_id)s (\"i-...\" 예상)"
 #, python-format
 msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
 msgstr "올바르지 않은 ID: %(volume_id)s (\"i-...\" 예상)"
+
+#, python-format
+msgid "Invalid image format '%(format)s'"
+msgstr "유효하지 않은 이미지 형식 '%(format)s'"
 
 #, python-format
 msgid "Invalid image href %(image_href)s."
@@ -2534,6 +2658,9 @@ msgstr "사용 안함 이유 필드가 누락됨"
 msgid "Missing flavorRef attribute"
 msgstr "flavorRef 속성 누락"
 
+msgid "Missing forced_down field"
+msgstr "Missing forced_down field"
+
 msgid "Missing imageRef attribute"
 msgstr "imageRef 속성 누락"
 
@@ -2718,6 +2845,10 @@ msgstr "스왑하려면 새 볼륨을 분리해야 합니다."
 msgid "New volume must be the same size or larger."
 msgstr "새 볼륨은 동일한 크기이거나 이상이어야 합니다."
 
+#, python-format
+msgid "No Block Device Mapping with id %(id)s."
+msgstr "ID %(id)s에 대응된 블록 디바이스가 없습니다."
+
 msgid "No CIDR requested"
 msgstr "요청된 CIDR이 없음"
 
@@ -2730,6 +2861,10 @@ msgstr "요청 본문 없음"
 
 msgid "No Unique Match Found."
 msgstr "고유한 일치점을 찾지 못했습니다."
+
+msgid "No access_url in connection_info. Cannot validate protocol"
+msgstr ""
+"connection_info에 access_url이 없습니다. 프로토코를 유효화할 수 없습니다"
 
 msgid "No adminPass was specified"
 msgstr "adminPass가 지정되지 않았음"
@@ -2939,6 +3074,10 @@ msgid "Old volume is attached to a different instance."
 msgstr "이전 볼륨이 다른 인스턴스에 접속되어 있습니다."
 
 #, python-format
+msgid "One or more hosts already in availability zone(s) %s"
+msgstr "하나 이상의 호스트가 이미 가용성 구역 %s에 있습니다"
+
+#, python-format
 msgid ""
 "Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
 "%(unit_string)s."
@@ -3136,6 +3275,10 @@ msgstr "제공된 watchdog 조치(%(action)s)가 지원되지 않습니다."
 
 msgid "QEMU guest agent is not enabled"
 msgstr "QEMU 게스트 에이전트가 사용되지 않음"
+
+#, python-format
+msgid "Quiescing is not supported in instance %(instance_id)s"
+msgstr "%(instance_id)s 인스턴스 안에서 작업거부는 지원되지 않습니다."
 
 msgid "Quota"
 msgstr "Quota"
@@ -3502,9 +3645,20 @@ msgstr "호스트 %(host)s 바이너리 %(binary)s인 서비스가 존재합니�
 msgid "Service with host %(host)s topic %(topic)s exists."
 msgstr "호스트 %(host)s 주제 %(topic)s인 서비스가 존재합니다. "
 
+msgid "Set admin password is not supported"
+msgstr "관리자 비밀번호 설정은 지원되지 않습니다."
+
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
 msgstr "이름이 %(name)s인 새도우 테이블이 이미 존재합니다. "
+
+#, python-format
+msgid "Share '%s' is not supported"
+msgstr "'%s' 공유가 지원되지 않습니다"
+
+#, python-format
+msgid "Share level '%s' cannot have share configured"
+msgstr "공유 수준 '%s'는 설정을 공유하지 않습니다"
 
 msgid "Should we use a CA for each project?"
 msgstr "각 프로젝트에서 CA 사용 하실껀가요?"
@@ -3658,9 +3812,15 @@ msgstr ""
 "이 명령을 실행하기 전에 'nova-manage db sync'를 사용하여 데이터베이스를작성하"
 "십시오."
 
+msgid "The backlog must be more than 0"
+msgstr "백로그는 0보다 커야합니다"
+
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "콘솔 포트 범위 %(min_port)d-%(max_port)d이(가) 소진되었습니다."
+
+msgid "The created instance's disk would be too small."
+msgstr "생성된 인스턴스 디스크가 너무 작습니다."
 
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "현재 드라이버는 임시 파티션 유지를 지원하지 않습니다."
@@ -3675,6 +3835,9 @@ msgstr "%(src)s에서 %(dest)s(으)로의 파일 복사에 실패함"
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr "%s의 방화벽 필터가 없음"
+
+msgid "The floating IP request failed with a BadRequest"
+msgstr "잘못된 요청으로 유동 IP 요청이 실패했습니다."
 
 msgid "The input is not a string or unicode"
 msgstr "입력이 문자열 또는 Unicode가 아님"
@@ -3729,6 +3892,10 @@ msgstr ""
 "네트워크 범위가 %(num_networks)s에 맞추기에는 충분히 크지 않습니다. 네트워크 "
 "크기는 %(network_size)s입니다."
 
+#, python-format
+msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
+msgstr "정의된 포트 수: %(ports)d가 제한을 초과했습니다: %(quota)d"
+
 msgid "The only partition should be partition 1."
 msgstr "유일한 파티션은 파티션 1이어야 합니다."
 
@@ -3767,6 +3934,10 @@ msgid ""
 "The service from servicegroup driver %(driver)s is temporarily unavailable."
 msgstr ""
 "서비스 그룹 드라이버 %(driver)s의 서비스가 일시적으로사용 불가능합니다."
+
+#, python-format
+msgid "The specified cluster '%s' was not found in vCenter"
+msgstr "지정된 클러스터 '%s'가 vCenter에서 찾을 수 없습니다"
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "
@@ -4174,7 +4345,8 @@ msgid ""
 "%s"
 msgstr ""
 "API Error가 발생했습니다. http://bugs.launchpad.net/nova/ 에 상세 내용을 보내"
-"주십시오.  가능하면 Nova API 로그를 포함하여 보내주십시오. %s"
+"주십시오.  가능하면 Nova API 로그를 포함하여 보내주십시오.\n"
+"%s"
 
 #, python-format
 msgid "Unexpected aggregate action %s"
@@ -4376,6 +4548,10 @@ msgstr ""
 "%(property)s 매개변수 그룹에 대한 값(%(value)s)이 올바르지 않습니다. 컨텐츠"
 "는 '%(allowed)s'(으)로 제한됩니다. "
 
+#, python-format
+msgid "Value must be >= 0 for field %s"
+msgstr "%s 필드 값은 0 이상이어야 합니다"
+
 msgid "Value required for 'scality_sofs_config'"
 msgstr "'scality_sofs_config'에 필요한 값"
 
@@ -4408,6 +4584,10 @@ msgstr "가상 인터페이스 연결 실패했습니다"
 #, python-format
 msgid "Virtual machine mode '%(vmmode)s' is not recognised"
 msgstr "가상 머신 모드 '%(vmmode)s'이(가) 인식되지 않음"
+
+#, python-format
+msgid "Virtual machine mode '%s' is not valid"
+msgstr "가상 머신 모드 '%s'가 유효하지 않습니다"
 
 #, python-format
 msgid ""
@@ -4445,6 +4625,14 @@ msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
 msgid ""
 "Volume encryption is not supported for %(volume_type)s volume %(volume_id)s"
 msgstr "볼륨 암호화는 %(volume_type)s 볼륨 %(volume_id)s 를 지원하지 않습니다"
+
+#, python-format
+msgid ""
+"Volume is smaller than the minimum size specified in image metadata. Volume "
+"size is %(volume_size)i bytes, minimum size is %(image_min_disk)i bytes."
+msgstr ""
+"볼륨이 이미지 메타데이터에 기술된 최소 크기보다 작습니다. 볼륨 크기는 "
+"%(volume_size)i bytes, 최소 크기는 %(image_min_disk)i bytes 입니다 ."
 
 msgid "Volume must be attached in order to detach."
 msgstr "분리하려면 볼륨이 첨부되어야 합니다. "
@@ -4614,6 +4802,9 @@ msgstr "임의의 키를 저장할 수 없음"
 
 msgid "cannot understand JSON"
 msgstr "JSON을 이해할 수 없음"
+
+msgid "cell_uuid must be set"
+msgstr "cell_uuid가 설정돼야 함"
 
 msgid "clone() is not implemented"
 msgstr "clone()이 구현되지 않음"
