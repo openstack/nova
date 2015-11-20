@@ -2198,13 +2198,9 @@ class VMOps(object):
         if ('block_migration' in dest_check_data and
                 dest_check_data.block_migration):
             vm_ref = self._get_vm_opaque_ref(instance_ref)
-            migrate_data = {
-                'destination_sr_ref': dest_check_data.destination_sr_ref,
-                'migrate_send_data': dest_check_data.migrate_send_data,
-            }
             try:
                 self._call_live_migrate_command(
-                    "VM.assert_can_migrate", vm_ref, migrate_data)
+                    "VM.assert_can_migrate", vm_ref, dest_check_data)
             except self._session.XenAPI.Failure as exc:
                 reason = exc.details[0]
                 msg = _('assert_can_migrate failed because: %s') % reason
@@ -2288,8 +2284,8 @@ class VMOps(object):
 
     def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
         """unpack xapi specific parameters, and call a live migrate command."""
-        destination_sr_ref = migrate_data['destination_sr_ref']
-        migrate_send_data = migrate_data['migrate_send_data']
+        destination_sr_ref = migrate_data.destination_sr_ref
+        migrate_send_data = migrate_data.migrate_send_data
 
         vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
 
@@ -2331,8 +2327,8 @@ class VMOps(object):
             if migrate_data is not None:
                 (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(
                     self._session, vm_ref)
-                migrate_data['kernel-file'] = kernel
-                migrate_data['ramdisk-file'] = ramdisk
+                migrate_data.kernel_file = kernel
+                migrate_data.ramdisk_file = ramdisk
 
             if block_migration:
                 if not migrate_data:
@@ -2366,8 +2362,8 @@ class VMOps(object):
     def post_live_migration(self, context, instance, migrate_data=None):
         if migrate_data is not None:
             vm_utils.destroy_kernel_ramdisk(self._session, instance,
-                                            migrate_data.get('kernel-file'),
-                                            migrate_data.get('ramdisk-file'))
+                                            migrate_data.kernel_file,
+                                            migrate_data.ramdisk_file)
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info, block_migration,

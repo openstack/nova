@@ -5109,7 +5109,10 @@ class ComputeManager(manager.Manager):
                                        migrate_data)
         if isinstance(pre_live_migration_data,
                       migrate_data_obj.LiveMigrateData):
-            pre_live_migration_data = pre_live_migration_data.to_legacy_dict()
+            pre_live_migration_data = pre_live_migration_data.to_legacy_dict(
+                pre_migration_result=True)
+            pre_live_migration_data = pre_live_migration_data[
+                'pre_live_migration_result']
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -5129,6 +5132,21 @@ class ComputeManager(manager.Manager):
                      network_info=network_info)
 
         return pre_live_migration_data
+
+    def _get_migrate_data_obj(self):
+        # FIXME(danms): A couple patches from now, we'll be able to
+        # avoid this failure _if_ we get a new-style call with the
+        # object.
+        if CONF.compute_driver.startswith('libvirt'):
+            return objects.LibvirtLiveMigrateData()
+        elif CONF.compute_driver.startswith('xenapi'):
+            return objects.XenapiLiveMigrateData()
+        else:
+            LOG.error(_('Older RPC caller and unsupported virt driver in '
+                        'use. Unable to handle this!'))
+            raise exception.MigrationError(
+                _('Unknown compute driver while providing compatibility '
+                  'with older RPC formats'))
 
     def _do_live_migration(self, context, dest, instance, block_migration,
                            migration, migrate_data):
@@ -5153,7 +5171,8 @@ class ComputeManager(manager.Manager):
                 context, instance,
                 block_migration, disk, dest, migrate_data)
             migrate_data['pre_live_migration_result'] = pre_migration_data
-
+            migrate_data_obj = self._get_migrate_data_obj()
+            migrate_data_obj.from_legacy_dict(migrate_data)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Pre live migration failed at %s'),
@@ -5164,12 +5183,12 @@ class ComputeManager(manager.Manager):
 
         self._set_migration_status(migration, 'running')
 
-        migrate_data['migration'] = migration
+        migrate_data_obj.migration = migration
         try:
             self.driver.live_migration(context, instance, dest,
                                        self._post_live_migration,
                                        self._rollback_live_migration,
-                                       block_migration, migrate_data)
+                                       block_migration, migrate_data_obj)
         except Exception:
             # Executing live migration
             # live_migration might raises exceptions, but
@@ -5226,11 +5245,9 @@ class ComputeManager(manager.Manager):
         #                 block storage or instance path were shared
         is_shared_block_storage = not block_migration
         is_shared_instance_path = not block_migration
-        if migrate_data:
-            is_shared_block_storage = migrate_data.get(
-                    'is_shared_block_storage', is_shared_block_storage)
-            is_shared_instance_path = migrate_data.get(
-                    'is_shared_instance_path', is_shared_instance_path)
+        if isinstance(migrate_data, objects.LibvirtLiveMigrateData):
+            is_shared_block_storage = migrate_data.is_shared_block_storage
+            is_shared_instance_path = migrate_data.is_shared_instance_path
 
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
@@ -5347,9 +5364,9 @@ class ComputeManager(manager.Manager):
                  instance=instance)
 
         self._clean_instance_console_tokens(ctxt, instance)
-        if migrate_data and migrate_data.get('migration'):
-            migrate_data['migration'].status = 'completed'
-            migrate_data['migration'].save()
+        if migrate_data and migrate_data.obj_attr_is_set('migration'):
+            migrate_data.migration.status = 'completed'
+            migrate_data.migration.save()
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
@@ -5450,8 +5467,10 @@ class ComputeManager(manager.Manager):
 
         # NOTE(danms): Pop out the migration object so we don't pass
         # it over RPC unintentionally below
-        if migrate_data:
+        if isinstance(migrate_data, dict):
             migration = migrate_data.pop('migration', None)
+        elif isinstance(migrate_data, migrate_data_obj.LiveMigrateData):
+            migration = migrate_data.migration
         else:
             migration = None
 
@@ -5472,6 +5491,8 @@ class ComputeManager(manager.Manager):
                 block_migration, migrate_data)
 
         if do_cleanup:
+            if isinstance(migrate_data, migrate_data_obj.LiveMigrateData):
+                migrate_data = migrate_data.to_legacy_dict()
             self.compute_rpcapi.rollback_live_migration_at_destination(
                     context, instance, dest, destroy_disks=destroy_disks,
                     migrate_data=migrate_data)
