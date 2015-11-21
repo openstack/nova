@@ -670,12 +670,22 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 cells_api = cells_rpcapi.CellsAPI()
                 cells_api.instance_update_at_top(context, stale_instance)
 
-        # NOTE(danms): We have to be super careful here not to trigger
-        # any lazy-loads that will unmigrate or unbackport something. So,
-        # make a copy of the instance for notifications first.
-        new_ref = self.obj_clone()
+        def _notify():
+            # NOTE(danms): We have to be super careful here not to trigger
+            # any lazy-loads that will unmigrate or unbackport something. So,
+            # make a copy of the instance for notifications first.
+            new_ref = self.obj_clone()
 
-        notifications.send_update(context, old_ref, new_ref)
+            notifications.send_update(context, old_ref, new_ref)
+
+        # NOTE(alaski): If cell synchronization is blocked it means we have
+        # already run this block of code in either the parent or child of this
+        # cell.  Therefore this notification has already been sent.
+        if not self._sync_cells:
+            _notify = lambda: None  # noqa: F811
+
+        _notify()
+
         self.obj_reset_changes()
 
     @base.remotable

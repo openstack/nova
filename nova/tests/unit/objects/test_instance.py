@@ -522,11 +522,12 @@ class _TestInstanceObject(object):
             inst.save()
             self.assertFalse(mock_upd.called)
 
+    @mock.patch.object(notifications, 'send_update')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
     @mock.patch.object(db, 'instance_update_and_get_original')
     def _test_skip_cells_sync_helper(self, mock_db_update, mock_update_at_top,
-            mock_update_from_api, cell_type):
+            mock_update_from_api, mock_notif_update, cell_type):
         self.flags(enable=True, cell_type=cell_type, group='cells')
         inst = fake_instance.fake_instance_obj(self.context, cell_name='fake')
         inst.vm_state = 'foo'
@@ -544,6 +545,7 @@ class _TestInstanceObject(object):
 
         mock_update_at_top.assert_has_calls([])
         mock_update_from_api.assert_has_calls([])
+        self.assertFalse(mock_notif_update.called)
 
         inst.vm_state = 'bar'
         inst.task_state = 'foo'
@@ -561,6 +563,7 @@ class _TestInstanceObject(object):
             inst.save()
 
         self.assertEqual('foo!bar@baz', inst.cell_name)
+        self.assertTrue(mock_notif_update.called)
         if cell_type == 'compute':
             mock_update_at_top.assert_called_once_with(self.context, mock.ANY)
             # Compare primitives since we can't check instance object equality
