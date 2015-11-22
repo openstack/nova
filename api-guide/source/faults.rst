@@ -64,10 +64,9 @@ information about the fault in the body of the response.
 .. code::
 
     {
-       "computeFault":{
-          "code":500,
-          "message":"Fault!",
-          "details":"Error Details..."
+       "itemNotFound":{
+          "code": 404,
+          "message":"Aggregate agg_h1 could not be found."
        }
     }
 
@@ -126,10 +125,10 @@ created timestamp that specify when the fault occurred.
                 "id": "52415800-8b69-11e0-9b19-734f216543fd"
             },
             "fault" : {
-                "code" : 404,
+                "code" : 500,
                 "created": "2010-08-10T11:59:59Z",
-                "message" : "Could not find image 52415800-8b69-11e0-9b19-734f6f007777",
-                "details" : "Fault details"
+                "message": "No valid host was found. There are not enough hosts available.",
+                "details": [snip]
             },
             "links": [
                 {
