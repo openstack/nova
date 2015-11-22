@@ -20,7 +20,6 @@ from nova.api.openstack import wsgi
 import nova.cert.rpcapi
 from nova import exception
 from nova.i18n import _
-from nova import network
 
 ALIAS = "os-certificates"
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -37,7 +36,6 @@ class CertificatesController(wsgi.Controller):
     """The x509 Certificates API controller for the OpenStack API."""
 
     def __init__(self):
-        self.network_api = network.API()
         self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
         super(CertificatesController, self).__init__()
 
