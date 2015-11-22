@@ -218,13 +218,6 @@ on compute hosts rather than servers.
 
    TODO
 
-Error Handling
-==============
-
-The Compute API follows the standard HTTP error code conventions.
-
-TODO - add details including: request id, migrations and instance actions.
-
 Relationship with Volume API
 =============================
 
