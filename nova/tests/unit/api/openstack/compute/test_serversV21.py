@@ -2983,6 +2983,15 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.FixedIpNotFoundForAddress(
+                        address='dummy'))
+    def test_create_instance_raise_fixed_ip_not_found_bad_request(self,
+                                                                  mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_invalid_personality(self, mock_create):
         codec = 'utf8'
