@@ -1,0 +1,6 @@
+---
+upgrade:
+  - For backward compatible support the setting
+    ``CONF.vmware.integration_bridge`` needs to be set when
+    using the Neutron NSX|MH plugin.
+    The default value has been set to ``None``.
