@@ -161,8 +161,10 @@ interval_opts = [
                help="Number of seconds between instance network information "
                     "cache updates"),
     cfg.IntOpt('reclaim_instance_interval',
+               min=0,
                default=0,
-               help='Interval in seconds for reclaiming deleted instances'),
+               help='Interval in seconds for reclaiming deleted instances. '
+                    'It takes effect only when value is greater than 0.'),
     cfg.IntOpt('volume_usage_poll_interval',
                default=0,
                help='Interval in seconds for gathering volume usages'),
