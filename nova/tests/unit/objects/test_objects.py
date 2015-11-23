@@ -863,48 +863,6 @@ class TestObject(_LocalTest, _TestObject):
         self.assertTrue(obj.deleted)
 
 
-class TestRemoteObject(_RemoteTest, _TestObject):
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_major_version_mismatch(self, mock_otgv):
-        mock_otgv.return_value = {
-            'MyObj': '2.0',
-        }
-        self.assertRaises(ovo_exc.IncompatibleObjectVersion,
-                          MyObj.query, self.context)
-
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_minor_version_greater(self, mock_otgv):
-        mock_otgv.return_value = {
-            'MyObj': '1.7',
-        }
-        self.assertRaises(ovo_exc.IncompatibleObjectVersion,
-                          MyObj.query, self.context)
-
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_minor_version_less(self, mock_otgv):
-        mock_otgv.return_value = {
-            'MyObj': '1.2',
-        }
-        obj = MyObj.query(self.context)
-        self.assertEqual(obj.bar, 'bar')
-
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_compat(self, mock_otgv):
-        mock_otgv.return_value = {
-            'MyObj': '1.1',
-        }
-        obj = MyObj.query(self.context)
-        self.assertEqual('oldbar', obj.bar)
-
-    @mock.patch('oslo_versionedobjects.base.obj_tree_get_versions')
-    def test_revision_ignored(self, mock_otgv):
-        mock_otgv.return_value = {
-            'MyObj': '1.1.456',
-        }
-        obj = MyObj.query(self.context)
-        self.assertEqual('bar', obj.bar)
-
-
 class TestObjectSerializer(_BaseTestCase):
     def test_serialize_entity_primitive(self):
         ser = base.NovaObjectSerializer()
