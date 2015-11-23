@@ -6070,12 +6070,17 @@ def archive_deleted_rows(max_rows=None):
 
     """
     table_to_rows_archived = {}
-    tablenames = []
-    for model_class in six.itervalues(models.__dict__):
-        if hasattr(model_class, "__tablename__"):
-            tablenames.append(model_class.__tablename__)
     total_rows_archived = 0
-    for tablename in tablenames:
+    meta = MetaData(get_engine(use_slave=True))
+    meta.reflect()
+    # Reverse sort the tables so we get the leaf nodes first for processing.
+    for table in reversed(meta.sorted_tables):
+        tablename = table.name
+        # skip the special sqlalchemy-migrate migrate_version table and any
+        # shadow tables
+        if (tablename == 'migrate_version' or
+                tablename.startswith(_SHADOW_TABLE_PREFIX)):
+            continue
         rows_archived = _archive_deleted_rows_for_table(
             tablename, max_rows=max_rows - total_rows_archived)
         total_rows_archived += rows_archived
