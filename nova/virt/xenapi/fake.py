@@ -397,11 +397,11 @@ def _query_matches(record, query):
             matches = matches or _query_matches(record, clause)
         return matches
 
-    if query[:4] == 'not ':
+    if query.startswith('not '):
         return not _query_matches(record, query[4:])
 
     # Now it must be a single field - bad queries never match
-    if query[:5] != 'field':
+    if not query.startswith('field'):
         return False
     (field, value) = query[6:].split('=', 1)
 

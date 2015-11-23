@@ -329,7 +329,7 @@ class Limiter(object):
         result = []
         for group in limits.split(';'):
             group = group.strip()
-            if group[:1] != '(' or group[-1:] != ')':
+            if not group.startswith('(') or not group.endswith(')'):
                 raise ValueError("Limit rules must be surrounded by "
                                  "parentheses")
             group = group[1:-1]

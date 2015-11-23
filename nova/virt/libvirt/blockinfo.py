@@ -289,9 +289,9 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
        the disk device prefix is unknown.
     """
 
-    if disk_dev[:2] == 'hd':
+    if disk_dev.startswith('hd'):
         return "ide"
-    elif disk_dev[:2] == 'sd':
+    elif disk_dev.startswith('sd'):
         # Reverse mapping 'sd' is not reliable
         # there are many possible mappings. So
         # this picks the most likely mappings
@@ -301,13 +301,13 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
             return "sata"
         else:
             return "scsi"
-    elif disk_dev[:2] == 'vd':
+    elif disk_dev.startswith('vd'):
         return "virtio"
-    elif disk_dev[:2] == 'fd':
+    elif disk_dev.startswith('fd'):
         return "fdc"
-    elif disk_dev[:3] == 'xvd':
+    elif disk_dev.startswith('xvd'):
         return "xen"
-    elif disk_dev[:3] == 'ubd':
+    elif disk_dev.startswith('ubd'):
         return "uml"
     else:
         raise exception.NovaException(
