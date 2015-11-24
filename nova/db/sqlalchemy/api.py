@@ -1922,17 +1922,17 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     based on instance tags (not metadata tags). There are two types
     of these tags:
 
-    `tag` -- One or more strings that will be used to filter results
+    `tags` -- One or more strings that will be used to filter results
             in an AND expression.
 
-    `tag-any` -- One or more strings that will be used to filter results in
+    `tags-any` -- One or more strings that will be used to filter results in
             an OR expression.
 
     Tags should be represented as list::
 
     |    filters = {
-    |        'tag': [some-tag, some-another-tag],
-    |        'tag-any: [some-any-tag, some-another-any-tag]
+    |        'tags': [some-tag, some-another-tag],
+    |        'tags-any: [some-any-tag, some-another-any-tag]
     |    }
 
     """
@@ -2010,8 +2010,8 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         else:
             query_prefix = query_prefix.filter(models.Instance.cleaned == 0)
 
-    if 'tag' in filters:
-        tags = filters.pop('tag')
+    if 'tags' in filters:
+        tags = filters.pop('tags')
         # We build a JOIN ladder expression for each tag, JOIN'ing
         # the first tag to the instances table, and each subsequent
         # tag to the last JOIN'd tags table
@@ -2025,8 +2025,8 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                                              models.Instance.tags)
             query_prefix = query_prefix.filter(tag_alias.tag == tag)
 
-    if 'tag-any' in filters:
-        tags = filters.pop('tag-any')
+    if 'tags-any' in filters:
+        tags = filters.pop('tags-any')
         tag_alias = aliased(models.Tag)
         query_prefix = query_prefix.join(tag_alias, models.Instance.tags)
         query_prefix = query_prefix.filter(tag_alias.tag.in_(tags))
