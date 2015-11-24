@@ -60,13 +60,14 @@ fake_db_dev = {
     'instance_uuid': None,
     'extra_info': '{}',
     'request_id': None,
+    'parent_addr': None,
     }
 fake_db_dev_1 = dict(fake_db_dev, vendor_id='v1',
                      product_id='p1', id=2,
                      address='0000:00:00.2',
                      numa_node=0)
 fake_db_dev_2 = dict(fake_db_dev, id=3, address='0000:00:00.3',
-                     numa_node=None)
+                     numa_node=None, parent_addr='0000:00:00.1')
 fake_db_devs = [fake_db_dev, fake_db_dev_1, fake_db_dev_2]
 
 
@@ -272,7 +273,9 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                               dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
 
-    def test_save(self):
+    @mock.patch.object(objects.PciDevice, '_migrate_parent_addr',
+                       return_value=False)
+    def test_save(self, migrate_mock):
         self.stub_out(
                 'nova.db.pci_device_update',
                 self._fake_pci_device_update)

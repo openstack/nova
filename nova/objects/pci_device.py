@@ -18,6 +18,7 @@ import copy
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import objects
@@ -85,7 +86,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: added request_id field
     # Version 1.3: Added field to represent PCI device NUMA node
-    VERSION = '1.3'
+    # Version 1.4: Added parent_addr field
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -103,12 +105,30 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'request_id': fields.StringField(nullable=True),
         'extra_info': fields.DictOfStringsField(),
         'numa_node': fields.IntegerField(nullable=True),
+        'parent_addr': fields.StringField(nullable=True),
     }
+
+    @staticmethod
+    def _migrate_parent_addr():
+        # NOTE(ndipanov): Only migrate parent_addr if all services are up to at
+        # least version 4 - this should only ever be called from save()
+        services = ('conductor', 'api')
+        min_parent_addr_version = 4
+
+        min_deployed = min(objects.Service.get_minimum_version(
+            context.get_admin_context(), 'nova-' + service)
+            for service in services)
+        return min_deployed >= min_parent_addr_version
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'request_id' in primitive:
             del primitive['request_id']
+        if target_version < (1, 4) and 'parent_addr' in primitive:
+            if primitive['parent_addr'] is not None:
+                extra_info = primitive.get('extra_info', {})
+                extra_info['phys_function'] = primitive['parent_addr']
+            del primitive['parent_addr']
 
     def update_device(self, dev_dict):
         """Sync the content from device dictionary to device object.
@@ -156,6 +176,11 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 pci_device.extra_info = jsonutils.loads(extra_info)
         pci_device._context = context
         pci_device.obj_reset_changes()
+        # NOTE(ndipanov): As long as there is PF data in the old location, we
+        # want to load it as it may have be the only place we have it
+        if 'phys_function' in pci_device.extra_info:
+            pci_device.parent_addr = pci_device.extra_info['phys_function']
+
         return pci_device
 
     @base.remotable_classmethod
@@ -189,6 +214,24 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                   self.address)
         elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
+            if not self._migrate_parent_addr():
+                # NOTE(ndipanov): If we are not migrating data yet, make sure
+                # that any changes to parent_addr are also in the old location
+                # in extra_info
+                if 'parent_addr' in updates:
+                    extra_update = updates.get('extra_info', {})
+                    if not extra_update and self.obj_attr_is_set('extra_info'):
+                        extra_update = self.extra_info
+                    extra_update['phys_function'] = updates['parent_addr']
+                    updates['extra_info'] = extra_update
+            else:
+                # NOTE(ndipanov): Once we start migrating, meaning all control
+                # plane has been upgraded - aggressively migrate on every save
+                pf_extra = self.extra_info.pop('phys_function', None)
+                if pf_extra and 'parent_addr' not in updates:
+                    updates['parent_addr'] = pf_extra
+                updates['extra_info'] = self.extra_info
+
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])
             if updates:
@@ -270,6 +313,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             else:
                 instance.pci_devices.objects.remove(existed)
 
+    def is_available(self):
+        return self.status == fields.PciDeviceStatus.AVAILABLE
+
 
 @base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
@@ -277,7 +323,8 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
     #              PciDevice <= 1.1
     # Version 1.1: PciDevice 1.2
     # Version 1.2: PciDevice 1.3
-    VERSION = '1.2'
+    # Version 1.3: Adds get_by_parent_address
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
@@ -297,5 +344,13 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, uuid):
         db_dev_list = db.pci_device_get_all_by_instance_uuid(context, uuid)
+        return base.obj_make_list(context, cls(context), objects.PciDevice,
+                                  db_dev_list)
+
+    @base.remotable_classmethod
+    def get_by_parent_address(cls, context, node_id, parent_addr):
+        db_dev_list = db.pci_device_get_all_by_parent_addr(context,
+                                                           node_id,
+                                                           parent_addr)
         return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)

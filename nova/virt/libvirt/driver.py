@@ -4824,7 +4824,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         fun_cap.device_addrs[0][3])
                     return {
                         'dev_type': fields.PciDeviceType.SRIOV_VF,
-                        'phys_function': phys_address,
+                        'parent_addr': phys_address,
                     }
 
             # Note(moshele): libvirt < 1.3 reported virt_functions capability
