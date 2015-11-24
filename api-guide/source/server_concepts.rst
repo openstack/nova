@@ -390,3 +390,136 @@ assigned at creation time.
           "accessIPv6":"::babe:67.23.10.132"
        }
     }
+
+Moving servers
+~~~~~~~~~~~~~~
+
+There are several actions that may result in a server moving from one
+compute host to another including shelve, resize, migrations and
+evacuate. The following use cases demonstrate the intention of the
+actions and the consequence for operational procedures.
+
+**Shelving**
+
+Sometimes a user does not require a server to be active for a while,
+perhaps over a weekend or at certain times of day. This gives
+the cloud operator an opportunity to make better use of resources by
+freeing resources and rebalancing workloads across the infrastructure.
+
+When the user shelves a server the operator can choose to remove it
+from the compute hosts. When it is unshelved it is scheduled to a new
+host according to the operators policies for distributing work loads
+across the compute hosts, including taking disabled hosts into account.
+This will contribute to increased overall capacity, freeing hosts that
+are ear-marked for maintenance and providing contiguous blocks
+of resources on single hosts due to moving out old servers.
+
+Shelving a server is not normally a choice that is available to
+the cloud operator because it affects the availability of the server
+being provided to the user.
+
+**Resize**
+
+Sometimes a user may want to change the flavor of a server, e.g. change
+the quantity of cpus, disk, memory or any other resource. This is done
+by rebuilding the server with a new flavor. As the server is being
+rebuilt it is normal to reschedule the server to another host
+(although resize to the same host is an option for the operator).
+
+As with shelving, resize provides the cloud operator with an
+opportunity to redistribute work loads across the cloud according
+to the operators scheduling policy, providing the same benefits as
+above.
+
+Resizing a server is not normally a choice that is available to
+the cloud operator because it changes the nature of the server
+being provided to the user.
+
+**Migration (including cold and live migration)**
+
+Sometimes a cloud operator may need to redistribute work loads for
+operational purposes. For example, the operator may need to remove
+a compute host for maintenance or deploy a kernel security patch that
+requires the host to be rebooted.
+
+The operator has two actions available for deliberately moving
+work loads: cold migration (moving a server that is not active)
+and live migration (moving a server that is active).
+
+Cold migration moves a server from one host to another by copying its
+state, local storage and network configuration to new resources
+allocated on a new host selected by scheduling policies or as
+an explicit decision. The operation is relatively quick as the
+server is not changing its state during the copy process. The user
+does not have access to the server during the operation.
+
+Live migration moves a server from one host to another while it
+is active, so it is constantly changing its state during the action.
+As a result it can take considerably longer than cold migration.
+During the action the server is online and accessible, but only
+a limited set of management actions are available to the user.
+
+The following are two common patterns for employing migrations in
+a cloud:
+
+-  **Host maintenance**
+
+   If a compute host is to be removed from the cloud all its servers
+   will need to moved to other hosts. In this case it is normal for
+   the rest of the cloud to absorb the work load, redistributing
+   the servers by rescheduling them.
+
+   To prepare the host it will be disabled so it does not receive
+   any further servers. Then each server will be migrated to a new
+   host by cold or live migration, depending on the state of the
+   server. When complete, the host is free to be removed.
+
+-  **Rolling updates**
+
+   Often it is necessary to perform an update on all compute hosts
+   that requires them to be rebooted. In this case it is not
+   strictly necessary to move inactive instances because they
+   will be available after the reboot. However, active instances would
+   be impacted by the reboot. Live migration will allow them to
+   continue operation.
+
+   In this case a rolling approach can be taken by starting with an
+   empty compute host that has been updated and rebooted. Another host
+   that has not yet been updated is disabled and all its servers are
+   migrated to the new host. When the migrations are complete the
+   new host continues normal operation. The old host will be empty
+   and can be updated and rebooted. It then becomes the new target for
+   another round of migrations.
+
+   This process can be repeated until the whole cloud has been updated,
+   usually using a pool of empty hosts instead of just one.
+
+Migrating a server is not normally a choice that is available to
+the cloud user because the user is not normally aware of compute
+hosts. Management of the cloud and how servers are provisioned
+in it is the sole responsibility of the cloud operator.
+
+**Evacuate**
+
+Sometimes a compute host may fail. This is a rare occurrence, but when
+it happens during normal operation the servers running on the host may
+be lost. In this case the operator may recreate the servers on the
+remaining compute hosts using the evacuate action.
+
+Failure detection can be proved to be impossible in compute systems
+with asynchronous communication, so true failure detection cannot be
+achieved. Usually when a host is considered to have failed it should be
+excluded from the cloud and any virtual networking or storage associated
+with servers on the failed host should be isolated from it. These steps
+are called fencing the host. Initiating these action is outside the scope
+of Nova.
+
+Once the host has been fenced its servers can be recreated on other
+hosts without worry of the old incarnations reappearing and trying to
+access shared resources. It is usual to redistribute the servers
+from a failed host by rescheduling them.
+
+Evacuating a server is solely in the domain of the cloud operator because
+it must be performed in coordination with other operational procedures to
+be safe. A user is not normally aware of compute hosts but is adversely
+affected by their failure.
