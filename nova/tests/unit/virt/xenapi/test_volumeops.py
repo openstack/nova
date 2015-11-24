@@ -381,6 +381,22 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         mock_intro.assert_called_once_with(self.session, "sr",
                                            target_lun="lun")
 
+    @mock.patch.object(volume_utils, "introduce_vdi")
+    @mock.patch.object(volumeops.LOG, 'debug')
+    def test_connect_hypervisor_to_volume_mask_password(self, mock_debug,
+                                                        mock_intro):
+        # Tests that the connection_data is scrubbed before logging.
+        data = {'auth_password': 'verybadpass'}
+        self.ops._connect_hypervisor_to_volume("sr", data)
+        self.assertTrue(mock_debug.called, 'LOG.debug was not called')
+        password_logged = False
+        for call in mock_debug.call_args_list:
+            # The call object is a tuple of (args, kwargs)
+            if 'verybadpass' in call[0]:
+                password_logged = True
+                break
+        self.assertFalse(password_logged, 'connection_data was not scrubbed')
+
     @mock.patch.object(vm_utils, "is_vm_shutdown")
     @mock.patch.object(vm_utils, "create_vbd")
     def test_attach_volume_to_vm_plug(self, mock_vbd, mock_shutdown):
