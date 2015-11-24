@@ -442,8 +442,11 @@ class PciDeviceStatus(Enum):
     ALLOCATED = "allocated"
     REMOVED = "removed"  # The device has been hot-removed and not yet deleted
     DELETED = "deleted"  # The device is marked not available/deleted.
+    UNCLAIMABLE = "unclaimable"
+    UNAVAILABLE = "unavailable"
 
-    ALL = (AVAILABLE, CLAIMED, ALLOCATED, REMOVED, DELETED)
+    ALL = (AVAILABLE, CLAIMED, ALLOCATED, REMOVED, DELETED, UNAVAILABLE,
+           UNCLAIMABLE)
 
     def __init__(self):
         super(PciDeviceStatus, self).__init__(

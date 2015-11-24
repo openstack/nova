@@ -370,6 +370,20 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
             set([dev.address for dev in free_devs]),
             set(['0000:00:00.1', '0000:00:00.2', '0000:00:00.3']))
 
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
+    def test_free_devices(self, mock_get):
+        self._create_pci_requests_object(mock_get,
+            [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
+        self.tracker.claim_instance(None, self.inst)
+        self.tracker.update_pci_for_instance(None, self.inst, sign=1)
+
+        free_devs = self.tracker.pci_stats.get_free_devs()
+        self.assertEqual(len(free_devs), 2)
+
+        self.tracker.free_instance(None, self.inst)
+        free_devs = self.tracker.pci_stats.get_free_devs()
+        self.assertEqual(len(free_devs), 3)
+
 
 class PciGetInstanceDevs(test.TestCase):
     def setUp(self):

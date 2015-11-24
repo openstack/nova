@@ -215,11 +215,12 @@ class PciDevTracker(object):
         return None
 
     def _free_device(self, dev, instance=None):
-        dev.free(instance)
+        freed_devs = dev.free(instance)
         stale = self.stale.pop(dev.address, None)
         if stale:
             dev.update_device(stale)
-        self.stats.add_device(dev)
+        for dev in freed_devs:
+            self.stats.add_device(dev)
 
     def _free_instance(self, instance):
         # Note(yjiang5): When an instance is resized, the devices in the
