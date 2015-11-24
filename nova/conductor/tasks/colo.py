@@ -73,15 +73,10 @@ class COLOTasks(object):
         LOG.debug("Acquiring COLO VLAN ID for instance %s." % instance.uuid)
 
         if utils.ft_secondary(instance):
-            # TODO(ORBIT): Possible race if relation is created after this.
-            relation = (objects.FaultToleranceRelation.
-                        get_by_secondary_instance_uuid(context, instance.uuid))
-            primary_instance_uuid = relation.primary_instance_uuid
+            vlan_id = instance.system_metadata['instance_type_extra_ft:colo_vlan_id']
         else:
-            primary_instance_uuid = instance.uuid
-
-        # TODO(ORBIT): Handle COLONoVlanIdAvailable
-        vlan_id = db.colo_allocate_vlan(context, primary_instance_uuid)
+            # TODO(ORBIT): Handle COLONoVlanIdAvailable
+            vlan_id = db.colo_allocate_vlan(context, instance.uuid)
 
         LOG.debug("Got COLO VLAN ID %s for instance %s." % (vlan_id,
                                                             instance.uuid))

@@ -96,8 +96,10 @@ class FaultToleranceTasks(object):
     # TODO(ORBIT): This might come in handy if the secondary VM need different
     #              resources (more RAM?) than the primary VM.
     #              Right now, we just change the role in the extra_specs.
-    def _get_secondary_flavor(self, flavor):
+    def _get_secondary_flavor(self, flavor, primary_instance):
         flavor['extra_specs']['ft:secondary'] = '1'
+        vlan_id = primary_instance['system_metadata']['colo_vlan_id']
+        flavor['extra_specs']['ft:colo_vlan_id'] = vlan_id
         return flavor
 
     def deploy_secondary_instance(self, context, primary_instance_uuid,
@@ -115,7 +117,7 @@ class FaultToleranceTasks(object):
         primary_instance = self.compute_api.get(context, primary_instance_uuid)
 
         flavor = flavors.get_flavor(request_spec['instance_type']['id'])
-        flavor = self._get_secondary_flavor(flavor)
+        flavor = self._get_secondary_flavor(flavor, primary_instance)
 
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
         scheduler_hints['ft_secondary_host'] = dict(
