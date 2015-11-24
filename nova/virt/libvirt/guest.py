@@ -369,6 +369,10 @@ class Guest(object):
         "Determines whether guest is currently running."
         return self._domain.isActive()
 
+    def freeze_filesystems(self):
+        """Freeze filesystems within guest."""
+        self._domain.fsFreeze()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
