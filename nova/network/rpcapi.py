@@ -110,6 +110,9 @@ class NetworkAPI(object):
         ... Liberty supports message version 1.15.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.15.
+
+        * 1.16 - Transfer instance in addition to instance_id in
+                 setup_networks_on_host
     '''
 
     VERSION_ALIASES = {
@@ -243,11 +246,19 @@ class NetworkAPI(object):
         return self.client.call(ctxt, 'create_public_dns_domain',
                                 domain=domain, project=project)
 
-    def setup_networks_on_host(self, ctxt, instance_id, host, teardown):
+    def setup_networks_on_host(self, ctxt, instance_id, host, teardown,
+                               instance):
         # NOTE(tr3buchet): the call is just to wait for completion
-        return self.client.call(ctxt, 'setup_networks_on_host',
-                                instance_id=instance_id, host=host,
-                                teardown=teardown)
+        version = '1.16'
+        kwargs = {}
+        if not self.client.can_send_version(version):
+            version = '1.0'
+        else:
+            kwargs['instance'] = instance
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'setup_networks_on_host',
+                          instance_id=instance_id, host=host,
+                          teardown=teardown, **kwargs)
 
     def set_network_host(self, ctxt, network_ref):
         version = '1.15'
