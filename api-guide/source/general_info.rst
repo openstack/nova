@@ -51,7 +51,7 @@ several key concepts:
 -  **Key Pair**
 
    An ssh or x509 keypair that can be injected into a server. This allows you
-   to connect to your server once t has been created without having to use a
+   to connect to your server once it has been created without having to use a
    password. If you don't specify a key pair, Nova will create a root password
    for you, and return it in plain text in the server create response.
 
