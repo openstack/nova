@@ -346,14 +346,15 @@ class API(base_api.NetworkAPI):
         except neutron_client_exc.InvalidIpForNetworkClient:
             LOG.warning(_LW('Neutron error: %(ip)s is not a valid ip address '
                             'for network %(network_id)s.'),
-                        {'ip': fixed_ip, 'network_id': network_id})
+                        {'ip': fixed_ip, 'network_id': network_id},
+                        instance=instance)
             msg = (_('Fixed IP %(ip)s is not a valid ip address for '
                      'network %(network_id)s.') %
                    {'ip': fixed_ip, 'network_id': network_id})
             raise exception.InvalidInput(reason=msg)
         except neutron_client_exc.IpAddressInUseClient:
             LOG.warning(_LW('Neutron error: Fixed IP %s is '
-                            'already in use.'), fixed_ip)
+                            'already in use.'), fixed_ip, instance=instance)
             msg = _("Fixed IP %s is already in use.") % fixed_ip
             raise exception.FixedIpAlreadyInUse(message=msg)
         except neutron_client_exc.OverQuotaClient:
@@ -802,7 +803,8 @@ class API(base_api.NetworkAPI):
                 neutron.delete_port(port)
             except neutron_client_exc.NeutronClientException as e:
                 if e.status_code == 404:
-                    LOG.warning(_LW("Port %s does not exist"), port)
+                    LOG.warning(_LW("Port %s does not exist"), port,
+                                instance=instance)
                 else:
                     exceptions.append(e)
                     LOG.warning(
@@ -996,7 +998,7 @@ class API(base_api.NetworkAPI):
                            "%(subnet_id)s with failure: %(exception)s")
                     LOG.debug(msg, {'portid': p['id'],
                                     'subnet_id': subnet['id'],
-                                    'exception': ex})
+                                    'exception': ex}, instance=instance)
 
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance.uuid)
@@ -1023,7 +1025,8 @@ class API(base_api.NetworkAPI):
             except Exception as ex:
                 msg = ("Unable to update port %(portid)s with"
                        " failure: %(exception)s")
-                LOG.debug(msg, {'portid': p['id'], 'exception': ex})
+                LOG.debug(msg, {'portid': p['id'], 'exception': ex},
+                          instance=instance)
             return self._get_instance_nw_info(context, instance)
 
         raise exception.FixedIpNotFoundForSpecificInstance(
@@ -1252,7 +1255,8 @@ class API(base_api.NetworkAPI):
             msg_dict = dict(address=floating_address,
                             instance_id=orig_instance_uuid)
             LOG.info(_LI('re-assign floating IP %(address)s from '
-                         'instance %(instance_id)s'), msg_dict)
+                         'instance %(instance_id)s'), msg_dict,
+                     instance=instance)
             orig_instance = objects.Instance.get_by_uuid(context,
                                                          orig_instance_uuid)
 
@@ -1859,7 +1863,7 @@ class API(base_api.NetworkAPI):
                 except Exception:
                     with excutils.save_and_reraise_exception():
                         LOG.exception(_LE("Unable to update host of port %s"),
-                                      p['id'])
+                                      p['id'], instance=instance)
 
     def update_instance_vnic_index(self, context, instance, vif, index):
         """Update instance vnic index.
