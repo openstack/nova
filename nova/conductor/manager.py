@@ -330,8 +330,6 @@ class ComputeTaskManager(base.Base):
             security_groups, block_device_mapping=None, legacy_bdm=True):
         # TODO(ndipanov): Remove block_device_mapping and legacy_bdm in version
         #                 2.0 of the RPC API.
-        request_spec = scheduler_utils.build_request_spec(context, image,
-                                                          instances)
         # TODO(danms): Remove this in version 2.0 of the RPC API
         if (requested_networks and
                 not isinstance(requested_networks,
@@ -348,15 +346,15 @@ class ComputeTaskManager(base.Base):
             filter_properties = dict(filter_properties, instance_type=flavor)
 
         try:
-            scheduler_utils.setup_instance_group(context, request_spec,
-                                                 filter_properties)
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
             # have a single instance.
-            scheduler_utils.populate_retry(filter_properties,
-                instances[0].uuid)
-            hosts = self.scheduler_client.select_destinations(context,
-                    request_spec, filter_properties)
+            scheduler_utils.populate_retry(
+                filter_properties, instances[0].uuid)
+            request_spec = scheduler_utils.build_request_spec(
+                    context, image, instances)
+            hosts = self._schedule_instances(
+                    context, request_spec, filter_properties)
         except Exception as exc:
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
@@ -391,10 +389,7 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
 
-    def _schedule_instances(self, context, image, filter_properties,
-            *instances):
-        request_spec = scheduler_utils.build_request_spec(context, image,
-                instances)
+    def _schedule_instances(self, context, request_spec, filter_properties):
         scheduler_utils.setup_instance_group(context, request_spec,
                                              filter_properties)
         hosts = self.scheduler_client.select_destinations(context,
@@ -442,9 +437,10 @@ class ComputeTaskManager(base.Base):
                     filter_properties = {}
                     scheduler_utils.populate_retry(filter_properties,
                                                    instance.uuid)
-                    hosts = self._schedule_instances(context, image,
-                                                     filter_properties,
-                                                     instance)
+                    request_spec = scheduler_utils.build_request_spec(
+                            context, image, [instance])
+                    hosts = self._schedule_instances(
+                            context, request_spec, filter_properties)
                     host_state = hosts[0]
                     scheduler_utils.populate_filter_properties(
                             filter_properties, host_state)
@@ -484,15 +480,11 @@ class ComputeTaskManager(base.Base):
                 # NOTE(lcostantino): Retrieve scheduler filters for the
                 # instance when the feature is available
                 filter_properties = {'ignore_hosts': [instance.host]}
-                request_spec = scheduler_utils.build_request_spec(context,
-                                                                  image_ref,
-                                                                  [instance])
                 try:
-                    scheduler_utils.setup_instance_group(context, request_spec,
-                                                         filter_properties)
-                    hosts = self.scheduler_client.select_destinations(context,
-                                                            request_spec,
-                                                            filter_properties)
+                    request_spec = scheduler_utils.build_request_spec(
+                            context, image_ref, [instance])
+                    hosts = self._schedule_instances(
+                            context, request_spec, filter_properties)
                     host_dict = hosts.pop(0)
                     host, node, limits = (host_dict['host'],
                                           host_dict['nodename'],
