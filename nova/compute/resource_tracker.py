@@ -862,6 +862,7 @@ class ResourceTracker(object):
         # set some initial values, reserve room for host/hypervisor:
         self.compute_node.local_gb_used = CONF.reserved_host_disk_mb / 1024
         self.compute_node.memory_mb_used = CONF.reserved_host_memory_mb
+        self.compute_node.vcpus_used = 0
         self.compute_node.free_ram_mb = (self.compute_node.memory_mb -
                                          self.compute_node.memory_mb_used)
         self.compute_node.free_disk_gb = (self.compute_node.local_gb -

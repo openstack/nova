@@ -538,7 +538,14 @@ class TestUpdateAvailableResources(BaseTestCase):
                                           get_cn_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=1,
+                              memory_mb_used=128,
+                              local_gb_used=1)
+        self._setup_rt(virt_resources=virt_resources)
 
         get_mock.return_value = _INSTANCE_FIXTURES
         migr_mock.return_value = []
@@ -583,7 +590,12 @@ class TestUpdateAvailableResources(BaseTestCase):
                                               get_cn_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(memory_mb_used=64)
+        self._setup_rt(virt_resources=virt_resources)
 
         get_mock.return_value = []
         migr_mock.return_value = []
@@ -660,7 +672,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         # node in case of a revert of the resize.
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=4,
+                              memory_mb_used=128,
+                              local_gb_used=1)
+        self._setup_rt(virt_resources=virt_resources)
 
         get_mock.return_value = []
         migr_obj = _MIGRATION_FIXTURES['source-only']
@@ -723,7 +742,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         # node in case of a confirm of the resize.
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=2,
+                              memory_mb_used=256,
+                              local_gb_used=5)
+        self._setup_rt(virt_resources=virt_resources)
 
         get_mock.return_value = []
         migr_obj = _MIGRATION_FIXTURES['dest-only']
@@ -780,7 +806,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         # is in progress, but not finished yet.
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=2,
+                              memory_mb_used=256,
+                              local_gb_used=5)
+        self._setup_rt(virt_resources=virt_resources)
 
         get_mock.return_value = []
         migr_obj = _MIGRATION_FIXTURES['dest-only-evac']
@@ -842,7 +875,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         # resize instance types as taking up space on the node.
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
-        self._setup_rt()
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=4,
+                              memory_mb_used=512,
+                              local_gb_used=7)
+        self._setup_rt(virt_resources=virt_resources)
 
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         migr_mock.return_value = [migr_obj]
