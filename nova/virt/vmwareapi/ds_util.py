@@ -40,7 +40,7 @@ DcInfo = collections.namedtuple('DcInfo',
                                 ['ref', 'name', 'vmFolder'])
 
 # A cache for datastore/datacenter mappings. The key will be
-# the datastore moref. The value will the the DcInfo object.
+# the datastore moref. The value will be the DcInfo object.
 _DS_DC_MAPPING = {}
 
 

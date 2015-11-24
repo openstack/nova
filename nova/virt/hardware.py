@@ -1373,7 +1373,7 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
 
     :param host: nova.objects.ComputeNode instance, or a db object or dict
     :param instance: nova.objects.Instance instance, or a db object or dict
-    :param free: if True the the returned topology will have it's usage
+    :param free: if True the returned topology will have it's usage
                  decreased instead.
     :param never_serialize_result: if True result will always be an instance of
                                    objects.NUMATopology class.

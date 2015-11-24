@@ -2748,7 +2748,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     uuids.instance, 'fake-mac',
                     start_period=0, use_slave=True)
             # NOTE(sdague): bw_usage_update happens at some time in
-            # the future, so what last_refreshed is is irrelevant.
+            # the future, so what last_refreshed is irrelevant.
             bw_usage_update.assert_called_once_with(self.context,
                     uuids.instance,
                     'fake-mac', 0, 4, 6, 1, 2,
