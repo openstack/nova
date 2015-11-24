@@ -6439,6 +6439,13 @@ def pci_device_get_all_by_node(context, node_id):
                        all()
 
 
+def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
+    return model_query(context, models.PciDevice).\
+                       filter_by(compute_node_id=node_id).\
+                       filter_by(parent_addr=parent_addr).\
+                       all()
+
+
 @require_context
 @main_context_manager.reader
 def pci_device_get_all_by_instance_uuid(context, instance_uuid):
