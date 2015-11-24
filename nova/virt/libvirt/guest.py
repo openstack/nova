@@ -377,6 +377,25 @@ class Guest(object):
         """Thaw filesystems within guest."""
         self._domain.fsThaw()
 
+    def snapshot(self, conf, no_metadata=False,
+                 disk_only=False, reuse_ext=False, quiesce=False):
+        """Creates a guest snapshot.
+
+        :param conf: libvirt.LibvirtConfigGuestSnapshotDisk
+        :param no_metadata: Make snapshot without remembering it
+        :param disk_only: Disk snapshot, no system checkpoint
+        :param reuse_ext: Reuse any existing external files
+        :param quiesce: Use QGA to quiece all mounted file systems
+        """
+        flags = no_metadata and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA
+                                 or 0)
+        flags |= disk_only and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY
+                                or 0)
+        flags |= reuse_ext and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT
+                                or 0)
+        flags |= quiesce and libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE or 0
+        self._domain.snapshotCreateXML(conf.to_xml(), flags=flags)
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

@@ -14470,16 +14470,17 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
         if quiesce:
-            domain.snapshotCreateXML(snap_xml_src, snap_flags_q)
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
         else:
-            domain.snapshotCreateXML(snap_xml_src, snap_flags_q).\
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
                 AndRaise(fakelibvirt.libvirtError(
                             'quiescing failed, no qemu-ga'))
-            domain.snapshotCreateXML(snap_xml_src, snap_flags).AndReturn(0)
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
 
         self.mox.ReplayAll()
 
-        self.drvr._volume_snapshot_create(self.c, instance, domain,
+        guest = libvirt_guest.Guest(domain)
+        self.drvr._volume_snapshot_create(self.c, instance, guest,
                                           self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
@@ -14539,16 +14540,17 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
         if quiesce:
-            domain.snapshotCreateXML(snap_xml_src, snap_flags_q)
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
         else:
-            domain.snapshotCreateXML(snap_xml_src, snap_flags_q).\
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
                 AndRaise(fakelibvirt.libvirtError(
                     'quiescing failed, no qemu-ga'))
-            domain.snapshotCreateXML(snap_xml_src, snap_flags).AndReturn(0)
+            domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
 
         self.mox.ReplayAll()
 
-        self.drvr._volume_snapshot_create(self.c, instance, domain,
+        guest = libvirt_guest.Guest(domain)
+        self.drvr._volume_snapshot_create(self.c, instance, guest,
                                           self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
@@ -14599,17 +14601,18 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_create_outer_success(self):
         instance = objects.Instance(**self.inst)
 
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        domain = FakeVirtDomain(fake_xml=self.dom_xml, id=1)
+        guest = libvirt_guest.Guest(domain)
 
-        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
         self.mox.StubOutWithMock(self.drvr, '_volume_api')
         self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
 
-        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.get_guest(instance).AndReturn(guest)
 
         self.drvr._volume_snapshot_create(self.c,
                                           instance,
-                                          domain,
+                                          guest,
                                           self.volume_uuid,
                                           self.create_info['new_file'])
 
@@ -14631,17 +14634,18 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_create_outer_failure(self):
         instance = objects.Instance(**self.inst)
 
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        domain = FakeVirtDomain(fake_xml=self.dom_xml, id=1)
+        guest = libvirt_guest.Guest(domain)
 
-        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
         self.mox.StubOutWithMock(self.drvr, '_volume_api')
         self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
 
-        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.get_guest(instance).AndReturn(guest)
 
         self.drvr._volume_snapshot_create(self.c,
                                           instance,
-                                          domain,
+                                          guest,
                                           self.volume_uuid,
                                           self.create_info['new_file']).\
             AndRaise(exception.NovaException('oops'))
