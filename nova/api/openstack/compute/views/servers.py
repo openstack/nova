@@ -305,8 +305,7 @@ class ViewBuilderV21(ViewBuilder):
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
 
-        if (request.api_version_request >=
-                api_version_request.APIVersionRequest("2.9")):
+        if api_version_request.is_supported(request, min_version="2.9"):
             server["server"]["locked"] = (True if instance["locked_by"]
                                           else False)
 
