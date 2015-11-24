@@ -399,15 +399,20 @@ compute host to another including shelve, resize, migrations and
 evacuate. The following use cases demonstrate the intention of the
 actions and the consequence for operational procedures.
 
-**Shelving**
+User doesn't want to be charged when not using a server
+-------------------------------------------------------
 
 Sometimes a user does not require a server to be active for a while,
-perhaps over a weekend or at certain times of day. This gives
-the cloud operator an opportunity to make better use of resources by
-freeing resources and rebalancing workloads across the infrastructure.
+perhaps over a weekend or at certain times of day.
+Ideally they don't want to be billed for those resources.
+Just powering down a server does not free up any resources,
+but shelving a server does free up resources to be used by other users.
+This makes it feasible for a cloud operator to offer a discount when
+an server is shelved.
 
 When the user shelves a server the operator can choose to remove it
-from the compute hosts. When it is unshelved it is scheduled to a new
+from the compute hosts, i.e. the operator can offload the shelved server.
+When the user's server is unshelved, it is scheduled to a new
 host according to the operators policies for distributing work loads
 across the compute hosts, including taking disabled hosts into account.
 This will contribute to increased overall capacity, freeing hosts that
@@ -418,13 +423,29 @@ Shelving a server is not normally a choice that is available to
 the cloud operator because it affects the availability of the server
 being provided to the user.
 
-**Resize**
+User resizes server to get more resources
+-----------------------------------------
 
 Sometimes a user may want to change the flavor of a server, e.g. change
 the quantity of cpus, disk, memory or any other resource. This is done
 by rebuilding the server with a new flavor. As the server is being
-rebuilt it is normal to reschedule the server to another host
+moved, it is normal to reschedule the server to another host
 (although resize to the same host is an option for the operator).
+
+Resize involves shutting down the server, finding a host that has
+the correct resources for the new flavor size, moving the current
+server (including all storage) to the new host. Once the server
+has been given the appropriate resources to match the new flavor,
+the server is started again.
+
+After the resize operation, when the user is happy their server is
+working correctly after the resize, the user calls Confirm Resize.
+This deletes the backup server that was kept on the source host.
+Alternatively, the user can call Revert Resize to delete the new
+resized server, and restore the back up that was stored on the source
+host. If the user does not manually confirm the resize within a
+configured time period, the resize is automatically confirmed, to
+free up the space the backup is using on the source host.
 
 As with shelving, resize provides the cloud operator with an
 opportunity to redistribute work loads across the cloud according
@@ -435,7 +456,8 @@ Resizing a server is not normally a choice that is available to
 the cloud operator because it changes the nature of the server
 being provided to the user.
 
-**Migration (including cold and live migration)**
+Cloud operator needs to move a server
+-------------------------------------
 
 Sometimes a cloud operator may need to redistribute work loads for
 operational purposes. For example, the operator may need to remove
@@ -459,7 +481,7 @@ As a result it can take considerably longer than cold migration.
 During the action the server is online and accessible, but only
 a limited set of management actions are available to the user.
 
-The following are two common patterns for employing migrations in
+The following are common patterns for employing migrations in
 a cloud:
 
 -  **Host maintenance**
@@ -478,8 +500,8 @@ a cloud:
 
    Often it is necessary to perform an update on all compute hosts
    that requires them to be rebooted. In this case it is not
-   strictly necessary to move inactive instances because they
-   will be available after the reboot. However, active instances would
+   strictly necessary to move inactive servers because they
+   will be available after the reboot. However, active servers would
    be impacted by the reboot. Live migration will allow them to
    continue operation.
 
@@ -494,12 +516,22 @@ a cloud:
    This process can be repeated until the whole cloud has been updated,
    usually using a pool of empty hosts instead of just one.
 
+- **Resource Optimization**
+
+   To reduce energy usage, some users will try and move servers so
+   they fit into the minimum number of hosts, allowing some servers
+   to be turned off.
+
+   Sometimes higher performance might be wanted, so servers are
+   spread out between the hosts to minimize resource contention.
+
 Migrating a server is not normally a choice that is available to
 the cloud user because the user is not normally aware of compute
 hosts. Management of the cloud and how servers are provisioned
 in it is the sole responsibility of the cloud operator.
 
-**Evacuate**
+Recover from a failed compute host
+----------------------------------
 
 Sometimes a compute host may fail. This is a rare occurrence, but when
 it happens during normal operation the servers running on the host may
@@ -518,6 +550,15 @@ Once the host has been fenced its servers can be recreated on other
 hosts without worry of the old incarnations reappearing and trying to
 access shared resources. It is usual to redistribute the servers
 from a failed host by rescheduling them.
+
+Please note, this operation can result in data loss for the user's server.
+As there is no access to the original server, if there were any disks stored
+on local storage, that data will be lost. Evacuate does the same operation
+as a rebuild. It downloads any images from glance and creates new
+blank ephemeral disks. Any disks that were volumes, or on shared storage,
+are reconnected. There should be no data loss for those disks.
+This is why fencing the host is important, to ensure volumes and shared
+storage are not corrupted by two servers writing simultaneously.
 
 Evacuating a server is solely in the domain of the cloud operator because
 it must be performed in coordination with other operational procedures to
