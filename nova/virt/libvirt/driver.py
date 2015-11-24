@@ -1514,15 +1514,10 @@ class LibvirtDriver(driver.ComputeDriver):
         self._can_quiesce(instance, image_meta)
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove domain at the end.
-            domain = guest._domain
             if quiesced:
                 guest.freeze_filesystems()
             else:
-                domain.fsThaw()
+                guest.thaw_filesystems()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             msg = (_('Error from libvirt while quiescing %(instance_name)s: '

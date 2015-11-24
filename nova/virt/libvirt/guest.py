@@ -373,6 +373,10 @@ class Guest(object):
         """Freeze filesystems within guest."""
         self._domain.fsFreeze()
 
+    def thaw_filesystems(self):
+        """Thaw filesystems within guest."""
+        self._domain.fsThaw()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

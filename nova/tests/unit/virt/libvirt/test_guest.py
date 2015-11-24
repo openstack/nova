@@ -373,6 +373,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.freeze_filesystems()
         self.domain.fsFreeze.assert_called_once_with()
 
+    def test_thaw_filesystems(self):
+        self.guest.thaw_filesystems()
+        self.domain.fsThaw.assert_called_once_with()
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
