@@ -1901,8 +1901,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def _get_timestamp_filename(self):
         return '%s%s' % (imagecache.TIMESTAMP_PREFIX,
-                         timeutils.strtime(at=self.old_time,
-                                           fmt=imagecache.TIMESTAMP_FORMAT))
+                         self.old_time.strftime(imagecache.TIMESTAMP_FORMAT))
 
     def _override_time(self):
         self.old_time = datetime.datetime(2012, 11, 22, 12, 00, 00)

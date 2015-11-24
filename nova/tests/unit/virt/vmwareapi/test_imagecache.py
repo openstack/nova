@@ -54,8 +54,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             if not self.exists:
                 return
             ts = '%s%s' % (imagecache.TIMESTAMP_PREFIX,
-                    timeutils.strtime(at=self._time,
-                                      fmt=imagecache.TIMESTAMP_FORMAT))
+                           self._time.strftime(imagecache.TIMESTAMP_FORMAT))
             return ts
 
         with test.nested(

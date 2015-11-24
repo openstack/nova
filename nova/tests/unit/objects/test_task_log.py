@@ -18,7 +18,7 @@ from oslo_utils import timeutils
 
 from nova import objects
 from nova.tests.unit.objects import test_objects
-
+from nova import utils
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 
@@ -51,8 +51,8 @@ class _TestTaskLog(object):
         mock_get.assert_called_once_with(
             self.context,
             fake_task_log['task_name'],
-            timeutils.strtime(at=fake_task_log['period_beginning']),
-            timeutils.strtime(at=fake_task_log['period_ending']),
+            utils.strtime(fake_task_log['period_beginning']),
+            utils.strtime(fake_task_log['period_ending']),
             fake_task_log['host'],
             state=fake_task_log['state'])
         self.compare_obj(task_log, fake_task_log)
@@ -123,8 +123,8 @@ class _TestTaskLogList(object):
         mock_get_all.assert_called_once_with(
             self.context,
             fake_task_log['task_name'],
-            timeutils.strtime(at=fake_task_log['period_beginning']),
-            timeutils.strtime(at=fake_task_log['period_ending']),
+            utils.strtime(fake_task_log['period_beginning']),
+            utils.strtime(fake_task_log['period_ending']),
             host=fake_task_log['host'],
             state=fake_task_log['state'])
         for index, task_log in enumerate(task_logs):

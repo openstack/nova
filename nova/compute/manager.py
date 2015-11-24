@@ -4194,7 +4194,7 @@ class ComputeManager(manager.Manager):
         self._power_off_instance(context, instance, clean_shutdown)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
-        instance.system_metadata['shelved_at'] = timeutils.strtime()
+        instance.system_metadata['shelved_at'] = timeutils.utcnow().isoformat()
         instance.system_metadata['shelved_image_id'] = image_id
         instance.system_metadata['shelved_host'] = self.host
         instance.vm_state = vm_states.SHELVED

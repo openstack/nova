@@ -21,21 +21,21 @@ _ts_now = timeutils.utcnow()
 _monitor_metric_spec = {
     'name': fields.MonitorMetricType.CPU_FREQUENCY,
     'value': 1000,
-    'timestamp': timeutils.strtime(_ts_now),
+    'timestamp': _ts_now.isoformat(),
     'source': 'nova.virt.libvirt.driver'
 }
 
 _monitor_metric_perc_spec = {
     'name': fields.MonitorMetricType.CPU_PERCENT,
     'value': 0.17,
-    'timestamp': timeutils.strtime(_ts_now),
+    'timestamp': _ts_now.isoformat(),
     'source': 'nova.virt.libvirt.driver'
 }
 
 _monitor_numa_metric_spec = {
     'name': fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
     'numa_membw_values': {"0": 10, "1": 43},
-    'timestamp': timeutils.strtime(_ts_now),
+    'timestamp': _ts_now.isoformat(),
     'source': 'nova.virt.libvirt.driver'
 }
 

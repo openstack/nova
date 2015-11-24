@@ -11,7 +11,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-from oslo_utils import timeutils
 
 from nova.objects import base
 from nova.objects import fields
@@ -60,7 +59,7 @@ class MonitorMetric(base.NovaObject):
             # NOTE(jaypipes): This is what jsonutils.dumps() does to
             # datetime.datetime objects, which is what timestamp is in
             # this object as well as the original simple dict metrics
-            'timestamp': timeutils.strtime(self.timestamp),
+            'timestamp': utils.strtime(self.timestamp),
             'source': self.source,
         }
 

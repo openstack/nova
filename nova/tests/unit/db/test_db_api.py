@@ -3671,7 +3671,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         action = db.action_start(self.ctxt, self._create_action_values(uuid))
 
-        event_values = {'start_time': timeutils.strtime(timeutils.utcnow())}
+        event_values = {'start_time': timeutils.utcnow().isoformat()}
         event_values = self._create_event_values(uuid, extra=event_values)
         event = db.action_event_start(self.ctxt, event_values)
 
@@ -5779,8 +5779,8 @@ class TaskLogTestCase(test.TestCase):
         super(TaskLogTestCase, self).setUp()
         self.context = context.get_admin_context()
         now = timeutils.utcnow()
-        self.begin = timeutils.strtime(now - datetime.timedelta(seconds=10))
-        self.end = timeutils.strtime(now - datetime.timedelta(seconds=5))
+        self.begin = (now - datetime.timedelta(seconds=10)).isoformat()
+        self.end = (now - datetime.timedelta(seconds=5)).isoformat()
         self.task_name = 'fake-task-name'
         self.host = 'fake-host'
         self.message = 'Fake task message'
@@ -7912,9 +7912,9 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_bw_usage_get_by_uuids(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)
-        start_period_str = timeutils.strtime(start_period)
+        start_period_str = start_period.isoformat()
         uuid3_refreshed = now - datetime.timedelta(seconds=5)
-        uuid3_refreshed_str = timeutils.strtime(uuid3_refreshed)
+        uuid3_refreshed_str = uuid3_refreshed.isoformat()
 
         expected_bw_usages = {
             'fake_uuid1': {'uuid': 'fake_uuid1',
@@ -7987,7 +7987,7 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_bw_usage_get(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)
-        start_period_str = timeutils.strtime(start_period)
+        start_period_str = start_period.isoformat()
 
         expected_bw_usage = {'uuid': 'fake_uuid1',
                              'mac': 'fake_mac1',

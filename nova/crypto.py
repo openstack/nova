@@ -37,7 +37,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import fileutils
-from oslo_utils import timeutils
 import paramiko
 import six
 
@@ -253,12 +252,12 @@ def revoke_certs_by_user_and_project(user_id, project_id):
 
 def _project_cert_subject(project_id):
     """Helper to generate user cert subject."""
-    return CONF.project_cert_subject % (project_id, timeutils.isotime())
+    return CONF.project_cert_subject % (project_id, utils.isotime())
 
 
 def _user_cert_subject(user_id, project_id):
     """Helper to generate user cert subject."""
-    return CONF.user_cert_subject % (project_id, user_id, timeutils.isotime())
+    return CONF.user_cert_subject % (project_id, user_id, utils.isotime())
 
 
 def generate_x509_cert(user_id, project_id, bits=2048):

@@ -17,7 +17,6 @@
 import hashlib
 
 from oslo_log import log as logging
-from oslo_utils import timeutils
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
@@ -120,8 +119,8 @@ class ViewBuilder(common.ViewBuilder):
                 "hostId": self._get_host_id(instance) or "",
                 "image": self._get_image(request, instance),
                 "flavor": self._get_flavor(request, instance),
-                "created": timeutils.isotime(instance["created_at"]),
-                "updated": timeutils.isotime(instance["updated_at"]),
+                "created": utils.isotime(instance["created_at"]),
+                "updated": utils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance),
                 "accessIPv4": str(ip_v4) if ip_v4 is not None else '',
                 "accessIPv6": str(ip_v6) if ip_v6 is not None else '',
@@ -246,7 +245,7 @@ class ViewBuilder(common.ViewBuilder):
 
         fault_dict = {
             "code": fault["code"],
-            "created": timeutils.isotime(fault["created_at"]),
+            "created": utils.isotime(fault["created_at"]),
             "message": fault["message"],
         }
 
@@ -289,8 +288,8 @@ class ViewBuilderV21(ViewBuilder):
                 # V2.1.
                 "image": self._get_image(request, instance),
                 "flavor": self._get_flavor(request, instance),
-                "created": timeutils.isotime(instance["created_at"]),
-                "updated": timeutils.isotime(instance["updated_at"]),
+                "created": utils.isotime(instance["created_at"]),
+                "updated": utils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance,
                                                  extend_address),
                 "links": self._get_links(request,

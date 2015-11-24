@@ -560,8 +560,8 @@ class _TestObject(object):
                     'nova_object.changes':
                         ['deleted', 'created_at', 'deleted_at', 'updated_at'],
                     'nova_object.data':
-                        {'created_at': timeutils.isotime(dt),
-                         'updated_at': timeutils.isotime(dt),
+                        {'created_at': utils.isotime(dt),
+                         'updated_at': utils.isotime(dt),
                          'deleted_at': None,
                          'deleted': False,
                          }
@@ -1090,7 +1090,7 @@ class TestArgsSerializer(test.NoDBTestCase):
     def setUp(self):
         super(TestArgsSerializer, self).setUp()
         self.now = timeutils.utcnow()
-        self.str_now = timeutils.strtime(at=self.now)
+        self.str_now = utils.strtime(self.now)
         self.unicode_str = u'\xF0\x9F\x92\xA9'
 
     @base.serialize_args

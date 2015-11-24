@@ -44,6 +44,7 @@ from nova.tests.unit.objects import test_migration_context as test_mig_ctxt
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
 from nova.tests.unit.objects import test_vcpu_model
+from nova import utils
 
 
 class _TestInstanceObject(object):
@@ -74,7 +75,7 @@ class _TestInstanceObject(object):
 
     def test_datetime_deserialization(self):
         red_letter_date = timeutils.parse_isotime(
-            timeutils.isotime(datetime.datetime(1955, 11, 5)))
+            utils.isotime(datetime.datetime(1955, 11, 5)))
         inst = objects.Instance(uuid='fake-uuid', launched_at=red_letter_date)
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
@@ -1482,7 +1483,7 @@ class _TestInstanceListObject(object):
     def test_get_hung_in_rebooting(self):
         fakes = [self.fake_instance(1),
                  self.fake_instance(2)]
-        dt = timeutils.isotime()
+        dt = utils.isotime()
         self.mox.StubOutWithMock(db, 'instance_get_all_hung_in_rebooting')
         db.instance_get_all_hung_in_rebooting(self.context, dt).AndReturn(
             fakes)

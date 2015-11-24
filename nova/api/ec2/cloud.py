@@ -1802,7 +1802,7 @@ class CloudController(object):
                     raise exception.InternalError(message=err)
 
         # meaningful image name
-        name_map = dict(instance=instance_uuid, now=timeutils.isotime())
+        name_map = dict(instance=instance_uuid, now=utils.isotime())
         name = name or _('image of %(instance)s at %(now)s') % name_map
 
         new_image = self.compute_api.snapshot_volume_backed(context,

@@ -1084,8 +1084,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         """
         # NOTE(mriedem): We have to convert the datetime objects to string
         # primitives for the remote call.
-        begin = timeutils.isotime(begin)
-        end = timeutils.isotime(end) if end else None
+        begin = utils.isotime(begin)
+        end = utils.isotime(end) if end else None
         return cls._get_active_by_window_joined(context, begin, end,
                                                 project_id, host,
                                                 expected_attrs,

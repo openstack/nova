@@ -231,7 +231,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         except exception.InvalidStrTime as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        now = timeutils.parse_isotime(timeutils.strtime())
+        now = timeutils.parse_isotime(timeutils.utcnow().isoformat())
         if period_stop > now:
             period_stop = now
         usages = self._tenant_usages_for_period(context,
@@ -254,7 +254,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         except exception.InvalidStrTime as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        now = timeutils.parse_isotime(timeutils.strtime())
+        now = timeutils.parse_isotime(timeutils.utcnow().isoformat())
         if period_stop > now:
             period_stop = now
         usage = self._tenant_usages_for_period(context,

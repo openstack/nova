@@ -112,7 +112,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
     def _get_timestamp_filename(self):
         return '%s%s' % (TIMESTAMP_PREFIX,
-                         timeutils.strtime(fmt=TIMESTAMP_FORMAT))
+                         timeutils.utcnow().strftime(TIMESTAMP_FORMAT))
 
     def _get_datetime_from_filename(self, timestamp_filename):
         ts = timestamp_filename.lstrip(TIMESTAMP_PREFIX)

@@ -22,7 +22,6 @@ import traceback
 import netaddr
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovoo_base
 from oslo_versionedobjects import exception as ovoo_exc
 import six
@@ -356,7 +355,7 @@ def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
 def serialize_args(fn):
     """Decorator that will do the arguments serialization before remoting."""
     def wrapper(obj, *args, **kwargs):
-        args = [timeutils.strtime(at=arg) if isinstance(arg, datetime.datetime)
+        args = [utils.strtime(arg) if isinstance(arg, datetime.datetime)
                 else arg for arg in args]
         for k, v in six.iteritems(kwargs):
             if k == 'exc_val' and v:
@@ -364,7 +363,7 @@ def serialize_args(fn):
             elif k == 'exc_tb' and v and not isinstance(v, six.string_types):
                 kwargs[k] = ''.join(traceback.format_tb(v))
             elif isinstance(v, datetime.datetime):
-                kwargs[k] = timeutils.strtime(at=v)
+                kwargs[k] = utils.strtime(v)
         if hasattr(fn, '__call__'):
             return fn(obj, *args, **kwargs)
         # NOTE(danms): We wrap a descriptor, so use that protocol

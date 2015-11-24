@@ -16,13 +16,13 @@ import datetime
 
 import iso8601
 import netaddr
-from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
 from nova.network import model as network_model
 from nova.objects import fields
 from nova import test
+from nova import utils
 
 
 class FakeFieldType(fields.FieldType):
@@ -650,10 +650,10 @@ class TestDateTime(TestField):
         self.dt = datetime.datetime(1955, 11, 5, tzinfo=iso8601.iso8601.Utc())
         self.field = fields.DateTimeField()
         self.coerce_good_values = [(self.dt, self.dt),
-                                   (timeutils.isotime(self.dt), self.dt)]
+                                   (utils.isotime(self.dt), self.dt)]
         self.coerce_bad_values = [1, 'foo']
-        self.to_primitive_values = [(self.dt, timeutils.isotime(self.dt))]
-        self.from_primitive_values = [(timeutils.isotime(self.dt), self.dt)]
+        self.to_primitive_values = [(self.dt, utils.isotime(self.dt))]
+        self.from_primitive_values = [(utils.isotime(self.dt), self.dt)]
 
     def test_stringify(self):
         self.assertEqual(

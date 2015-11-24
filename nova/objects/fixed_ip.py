@@ -171,7 +171,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     @classmethod
     def disassociate_all_by_timeout(cls, context, host, time):
         return cls._disassociate_all_by_timeout(context, host,
-                                                timeutils.isotime(time))
+                                                utils.isotime(time))
 
     @obj_base.remotable
     def create(self):

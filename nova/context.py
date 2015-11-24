@@ -30,7 +30,7 @@ import six
 from nova import exception
 from nova.i18n import _, _LW
 from nova import policy
-
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -179,7 +179,7 @@ class RequestContext(context.RequestContext):
             'read_deleted': getattr(self, 'read_deleted', 'no'),
             'roles': getattr(self, 'roles', None),
             'remote_address': getattr(self, 'remote_address', None),
-            'timestamp': timeutils.strtime(self.timestamp) if hasattr(
+            'timestamp': utils.strtime(self.timestamp) if hasattr(
                 self, 'timestamp') else None,
             'request_id': getattr(self, 'request_id', None),
             'quota_class': getattr(self, 'quota_class', None),
