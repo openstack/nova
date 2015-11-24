@@ -152,6 +152,14 @@ Please note:
 * We are only talking about the testing of in-tree code. Please note the only
   public API is our REST API, see: :doc:`policies`
 
+Microversion API
+================
+
+* If an new microversion API is added, the following needs to happen:
+
+ * A new patch for the microversion API change in python-novaclient side
+   should be submitted.
+
 Release Notes
 =============
 
