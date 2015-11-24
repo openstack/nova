@@ -201,6 +201,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': 0,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict])
@@ -221,6 +223,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v1',
             'numa_node': 1,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict])
@@ -240,6 +244,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': 0,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict])
@@ -286,6 +292,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': 1,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict])
@@ -310,6 +318,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': 1,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         dev_dict2 = {
             'compute_node_id': 1,
@@ -317,6 +327,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': 2,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict, dev_dict2])
@@ -346,6 +358,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'product_id': 'p',
             'vendor_id': 'v',
             'numa_node': None,
+            'dev_type': 'type-PCI',
+            'parent_addr': 'a1',
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker._set_hvdevs([dev_dict])

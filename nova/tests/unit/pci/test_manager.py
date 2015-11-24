@@ -36,6 +36,8 @@ fake_pci = {
     'vendor_id': 'v',
     'request_id': None,
     'status': fields.PciDeviceStatus.AVAILABLE,
+    'dev_type': fields.PciDeviceType.STANDARD,
+    'parent_addr': None,
     'numa_node': 0}
 fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
