@@ -1371,6 +1371,8 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
               'compute_node_id', 'deleted'),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
+        Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
+              'compute_node_id', 'parent_addr', 'deleted'),
         schema.UniqueConstraint(
             "compute_node_id", "address", "deleted",
             name="uniq_pci_devices0compute_node_id0address0deleted")
@@ -1403,6 +1405,7 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
 
     numa_node = Column(Integer, nullable=True)
 
+    parent_addr = Column(String(12), nullable=True)
     instance = orm.relationship(Instance, backref="pci_devices",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
