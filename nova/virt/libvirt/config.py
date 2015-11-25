@@ -670,6 +670,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_format = None
         self.driver_cache = None
         self.driver_discard = None
+        self.driver_io = None
+        self.driver_mode = None
         self.source_path = None
         self.source_protocol = None
         self.source_name = None
@@ -712,6 +714,10 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 drv.set("cache", self.driver_cache)
             if self.driver_discard is not None:
                 drv.set("discard", self.driver_discard)
+            if self.driver_io is not None:
+                drv.set("io", self.driver_io)
+            if self.driver_mode is not None:
+                drv.set("mode", self.driver_mode)
             dev.append(drv)
 
         if self.source_type == "file":
@@ -810,6 +816,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.driver_format = c.get('type')
                 self.driver_cache = c.get('cache')
                 self.driver_discard = c.get('discard')
+                self.driver_io = c.get('io')
+                self.driver_mode = c.get('mode')
             elif c.tag == 'source':
                 if self.source_type == 'file':
                     self.source_path = c.get('file')
