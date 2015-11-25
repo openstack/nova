@@ -435,6 +435,10 @@ class GuestTestCase(test.NoDBTestCase):
                 | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE))
         conf.to_xml.assert_called_once_with()
 
+    def test_pause(self):
+        self.guest.pause()
+        self.domain.suspend.assert_called_once_with()
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
