@@ -396,6 +396,10 @@ class Guest(object):
         flags |= quiesce and libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE or 0
         self._domain.snapshotCreateXML(conf.to_xml(), flags=flags)
 
+    def shutdown(self):
+        """Shutdown guest"""
+        self._domain.shutdown()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

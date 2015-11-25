@@ -2119,16 +2119,12 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove dom at the end.
-        dom = guest._domain
         state = guest.get_power_state(self._host)
-        old_domid = dom.ID()
+        old_domid = guest.id
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
         if state == power_state.RUNNING:
-            dom.shutdown()
+            guest.shutdown()
         # NOTE(vish): This actually could take slightly longer than the
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
@@ -2137,12 +2133,8 @@ class LibvirtDriver(driver.ComputeDriver):
         for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
             guest = self._host.get_guest(instance)
 
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove dom at the end.
-            dom = guest._domain
             state = guest.get_power_state(self._host)
-            new_domid = dom.ID()
+            new_domid = guest.id
 
             # NOTE(ivoks): By checking domain IDs, we make sure we are
             #              not recreating domain that's already running.
@@ -2151,7 +2143,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              power_state.CRASHED]:
                     LOG.info(_LI("Instance shutdown successfully."),
                              instance=instance)
-                    self._create_domain(domain=dom)
+                    self._create_domain(domain=guest._domain)
                     timer = loopingcall.FixedIntervalLoopingCall(
                         self._wait_for_running, instance)
                     timer.start(interval=0.5).wait()
@@ -2259,11 +2251,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove dom at the end.
-            dom = guest._domain
         except exception.InstanceNotFound:
             # If the instance has gone then we don't need to
             # wait for it to shutdown
@@ -2277,18 +2264,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.debug("Shutting down instance from state %s", state,
                   instance=instance)
-        dom.shutdown()
+        guest.shutdown()
         retry_countdown = retry_interval
 
         for sec in six.moves.range(timeout):
 
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove dom at the end.
-            dom = guest._domain
-
             state = guest.get_power_state(self._host)
 
             if state in SHUTDOWN_STATES:
@@ -2309,7 +2290,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.debug("Instance in state %s after %d seconds - "
                               "resending shutdown", state, sec,
                               instance=instance)
-                    dom.shutdown()
+                    guest.shutdown()
                 except libvirt.libvirtError:
                     # Assume this is because its now shutdown, so loop
                     # one more time to clean up.

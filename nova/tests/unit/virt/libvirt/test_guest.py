@@ -78,6 +78,11 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.createWithFlags.assert_called_once_with(
             fakelibvirt.VIR_DOMAIN_START_PAUSED)
 
+    def test_shutdown(self):
+        self.domain.shutdown = mock.MagicMock()
+        self.guest.shutdown()
+        self.domain.shutdown.assert_called_once_with()
+
     @mock.patch.object(encodeutils, 'safe_decode')
     def test_launch_exception(self, mock_safe_decode):
         self.domain.createWithFlags.side_effect = test.TestingException
