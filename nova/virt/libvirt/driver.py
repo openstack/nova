@@ -663,15 +663,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def list_instances(self):
         names = []
-        for dom in self._host.list_instance_domains(only_running=False):
-            names.append(dom.name())
+        for guest in self._host.list_guests(only_running=False):
+            names.append(guest.name)
 
         return names
 
     def list_instance_uuids(self):
         uuids = []
-        for dom in self._host.list_instance_domains(only_running=False):
-            uuids.append(dom.UUIDString())
+        for guest in self._host.list_guests(only_running=False):
+            uuids.append(guest.uuid)
 
         return uuids
 
@@ -4584,12 +4584,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_all_block_devices(self):
         """Return all block devices in use on this node."""
         devices = []
-        for dom in self._host.list_instance_domains():
+        for guest in self._host.list_guests():
             try:
-                # TODO(sahid): list_instance_domain should
-                # be renamed as list_guest and so returning
-                # Guest objects.
-                guest = libvirt_guest.Guest(dom)
                 doc = etree.fromstring(guest.get_xml_desc())
             except libvirt.libvirtError as e:
                 LOG.warn(_LW("couldn't obtain the XML from domain:"
@@ -4697,17 +4693,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type == 'lxc':
             return total + 1
 
-        for dom in self._host.list_instance_domains():
+        for guest in self._host.list_guests():
             try:
-                # TODO(sahid): list_instance_domains should
-                # return Guest objects.
-                vcpus = libvirt_guest.Guest(dom).get_vcpus_info()
+                vcpus = guest.get_vcpus_info()
                 if vcpus is not None:
                     total += len(list(vcpus))
             except libvirt.libvirtError as e:
                 LOG.warn(_LW("couldn't obtain the vcpu count from domain id:"
                              " %(uuid)s, exception: %(ex)s"),
-                         {"uuid": dom.UUIDString(), "ex": e})
+                         {"uuid": guest.uuid, "ex": e})
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return total
@@ -6565,12 +6559,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         disk_over_committed_size = 0
-        for dom in self._host.list_instance_domains():
+        for guest in self._host.list_guests():
             try:
-                # TODO(sahid): list_instance_domain should
-                # be renamed as list_guest and so returning
-                # Guest objects.
-                guest = libvirt_guest.Guest(dom)
                 xml = guest.get_xml_desc()
 
                 disk_infos = self._get_instance_disk_info(guest.name, xml)

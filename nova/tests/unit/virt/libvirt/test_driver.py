@@ -4773,7 +4773,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(names[1], vm2.name())
         self.assertEqual(names[2], vm3.name())
         self.assertEqual(names[3], vm4.name())
-        mock_list.assert_called_with(only_running=False)
+        mock_list.assert_called_with(only_guests=True, only_running=False)
 
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_instance_uuids(self, mock_list):
@@ -4790,7 +4790,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(uuids[1], vm2.UUIDString())
         self.assertEqual(uuids[2], vm3.UUIDString())
         self.assertEqual(uuids[3], vm4.UUIDString())
-        mock_list.assert_called_with(only_running=False)
+        mock_list.assert_called_with(only_guests=True, only_running=False)
 
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_get_all_block_devices(self, mock_list):
@@ -4838,7 +4838,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         devices = drvr._get_all_block_devices()
         self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
-        mock_list.assert_called_with()
+        mock_list.assert_called_with(only_guests=True, only_running=True)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
     def test_get_host_vcpus(self, get_online_cpus):
@@ -9650,7 +9650,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             result = drvr._get_disk_over_committed_size_total()
             self.assertEqual(result, 10653532160)
-            mock_list.assert_called_with()
+            mock_list.assert_called_with(only_guests=True, only_running=True)
             self.assertTrue(mock_info.called)
 
     @mock.patch.object(host.Host, "list_instance_domains")
@@ -9702,7 +9702,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         result = drvr._get_disk_over_committed_size_total()
         self.assertEqual(21474836480, result)
-        mock_list.assert_called_with()
+        mock_list.assert_called_with(only_guests=True, only_running=True)
 
     @mock.patch.object(host.Host, "list_instance_domains",
                        return_value=[mock.MagicMock(name='foo')])
@@ -10791,7 +10791,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         self.assertEqual(5, drvr._get_vcpu_used())
-        mock_list.assert_called_with()
+        mock_list.assert_called_with(only_guests=True, only_running=True)
 
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_failing_vcpu_count_none(self, mock_list):
@@ -10817,7 +10817,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual(0, drvr._get_vcpu_used())
-        mock_list.assert_called_with()
+        mock_list.assert_called_with(only_guests=True, only_running=True)
 
     def test_get_instance_capabilities(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
