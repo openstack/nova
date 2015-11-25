@@ -69,6 +69,9 @@ __imagebackend_opts = [
                help='Discard option for nova managed disks (valid options '
                     'are: ignore, unmap). Need Libvirt(1.0.6) Qemu1.5 '
                     '(raw format) Qemu1.6(qcow2 format)'),
+    cfg.StrOpt('block_replication_path',
+               default=None,
+               help='Where block replication disk buffers are stored'),
         ]
 
 CONF = cfg.CONF
@@ -739,6 +742,63 @@ class Rbd(Image):
                                           reason=reason)
 
 
+class Replication(Qcow2):
+    def __init__(self, instance=None, disk_name=None, path=None):
+        super(Replication, self).__init__(instance=instance,
+                                          disk_name=disk_name,
+                                          path=path)
+        if not utils.ft_enabled(instance):
+            # TODO(ORBIT): Create better exception
+            raise Exception("Cannot use block replication with a non-ft "
+                            "instance.")
+        if utils.ft_secondary(instance):
+            self.driver_mode = 'secondary'
+        else:
+            self.driver_mode = 'primary'
+
+        prefix = ''
+        if CONF.libvirt.block_replication_path:
+            path = CONF.libvirt.block_replication_path
+            prefix = '%s_' % instance['uuid']
+        else:
+            path = os.path.dirname(self.path)
+        self.active_disk_path = os.path.join(path, prefix + 'active_disk.img')
+        self.hidden_disk_path = os.path.join(path, prefix + 'hidden_disk.img')
+
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
+                     extra_specs, hypervisor_version):
+        info = super(Replication, self).libvirt_info(disk_bus, disk_dev,
+                                                     device_type, cache_mode,
+                                                     extra_specs,
+                                                     hypervisor_version)
+        info.driver_format = 'replication'
+        info.driver_cache = 'none'
+        info.driver_io = 'native'
+        info.driver_mode = self.driver_mode
+
+        active_disk = vconfig.LibvirtConfigGuestDiskBackingStore()
+        active_disk.source_type = 'file'
+        active_disk.source_file = self.active_disk_path
+        active_disk.driver_format = 'qcow2'
+
+        hidden_disk = vconfig.LibvirtConfigGuestDiskBackingStore()
+        hidden_disk.source_type = 'file'
+        hidden_disk.source_file = self.hidden_disk_path
+        hidden_disk.driver_format = 'qcow2'
+
+        active_disk.backing_store = hidden_disk
+        info.backing_store = active_disk
+
+        return info
+
+    def create_image(self, prepare_template, base, size, *args, **kwargs):
+        super(Replication, self).create_image(prepare_template, base, size,
+                                              *args, **kwargs)
+
+        libvirt_utils.create_image('qcow2', self.active_disk_path, size)
+        libvirt_utils.create_image('qcow2', self.hidden_disk_path, size)
+
+
 class Backend(object):
     def __init__(self, use_cow):
         self.BACKEND = {
@@ -746,6 +806,7 @@ class Backend(object):
             'qcow2': Qcow2,
             'lvm': Lvm,
             'rbd': Rbd,
+            'replication': Replication,
             'default': Qcow2 if use_cow else Raw
         }
 

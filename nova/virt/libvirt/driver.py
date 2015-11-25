@@ -287,6 +287,8 @@ CONF.import_opt('proxyclient_address', 'nova.console.serial',
                 group='serial_console')
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
+CONF.import_opt('block_replication_path', 'nova.virt.libvirt.imagebackend',
+                group='libvirt')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -2640,8 +2642,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise loopingcall.LoopingCallDone()
 
         if utils.ft_enabled(instance):
-            if utils.ft_secondary(instance):
-                self._colo_init_secondary_instance(instance)
             # NOTE(ORBIT): Fault tolerant instances are not resumed because
             #              they need to synchronize before they are started.
             #              Skipping the wait.
@@ -3004,6 +3004,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 size = None
 
             backend = image('disk')
+            # TODO(ORBIT)
+            if utils.ft_secondary(instance):
+                backend = image('disk', 'replication')
             if backend.SUPPORTS_CLONE:
                 def clone_fallback_to_fetch(*args, **kwargs):
                     try:
@@ -3455,10 +3458,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 devices.append(diskos)
             else:
                 if 'disk' in disk_mapping:
+                    # TODO(ORBIT)
+                    image_type = None
+                    if utils.ft_secondary(instance):
+                        image_type = 'replication'
                     diskos = self._get_guest_disk_config(instance,
                                                          'disk',
                                                          disk_mapping,
-                                                         inst_type)
+                                                         inst_type,
+                                                         image_type=image_type)
                     devices.append(diskos)
 
                 if 'disk.local' in disk_mapping:
@@ -3946,19 +3954,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                                   block_device_info,
                                                   flavor):
             # TODO(ORBIT): Temp until quorum is supported
-            if utils.ft_enabled(instance) and config.source_device == "disk":
-                if utils.ft_secondary(instance):
-                    qemu_cmdline = ('-drive if=none'
-                                    ',driver=' + config.driver_format +
-                                    ',file=' + config.source_path +
-                                    ',id=colo1,cache=none,aio=native')
-                else:
-                    qemu_cmdline = ('-drive if=virtio,id=disk1,driver=quorum'
-                                    ',read-pattern=fifo,cache=none,addr=9'
-                                    ',aio=native,children.0.file.filename=' +
-                                    config.source_path +
-                                    ',children.0.driver=' +
-                                    config.driver_format)
+            if (utils.ft_enabled(instance) and
+                config.source_device == "disk" and
+                not utils.ft_secondary(instance)):
+                qemu_cmdline = ('-drive if=virtio,driver=quorum'
+                                ',read-pattern=fifo,cache=none,addr=9'
+                                ',aio=native,children.0.file.filename=' +
+                                config.source_path +
+                                ',children.0.driver=' +
+                                config.driver_format)
                 guest.add_qemu_cmdline(
                     vconfig.LibvirtConfigQEMUCommandline(qemu_cmdline))
             else:
@@ -6361,6 +6365,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 break
             except Exception:
                 pass
+
+        if CONF.libvirt.block_replication_path:
+            brp = CONF.libvirt.block_replication_path
+            prefix = '%s_' % instance['uuid']
+            active_disk_path = os.path.join(brp, prefix + 'active_disk.img')
+            hidden_disk_path = os.path.join(brp, prefix + 'hidden_disk.img')
+            utils.execute('rm', '-f', active_disk_path)
+            utils.execute('rm', '-f', hidden_disk_path)
+
+            if (os.path.exists(active_disk_path) or
+                    os.path.exists(hidden_disk_path)):
+                LOG.error('Failed to cleanup block replication disks in '
+                          '%(path)s', {'path': brp}, instance=instance)
+
         # Either the target or target_resize path may still exist if all
         # rename attempts failed.
         remaining_path = None
@@ -6444,59 +6462,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if not libvirt_utils.is_valid_hostname(secondary_host):
             raise exception.InvalidHostname(hostname=secondary_host)
 
-        disk_id = "colo1"
-        nbd_port = 8889
-
         # flaglist = CONF.libvirt.colo_migration_flag.split(',')
         # flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
         # logical_sum = reduce(lambda x, y: x | y, flagvals)
-
-        child_add_cmd = ("child_add disk1 child.driver=replication"
-                         ",child.mode=primary"
-                         ",child.file.host=" + secondary_host +
-                         ",child.file.port=" + str(nbd_port) +
-                         ",child.file.export=" + disk_id +
-                         ",child.file.driver=nbd,child.ignore-errors=on")
-        ret = self.exec_monitor_command(primary_instance, child_add_cmd)
 
         ret = self.exec_monitor_command(
             primary_instance, "migrate_set_capability colo on")
 
         ret = self.exec_monitor_command(
             primary_instance, "migrate -d tcp:" + secondary_host + ":8888")
-
-    def _colo_init_secondary_instance(self, instance):
-        disk_id = "colo1b"
-        reference_id = "colo1"
-        inst_path = libvirt_utils.get_instance_path(instance)
-        active_disk = os.path.join(inst_path, "active_disk.img")
-        hidden_disk = os.path.join(inst_path, "hidden_disk.img")
-        size = str(instance['root_gb']) + 'G'
-
-        utils.execute('qemu-img', 'create', '-f', 'qcow2', active_disk, size)
-        utils.execute('qemu-img', 'create', '-f', 'qcow2', hidden_disk, size)
-
-        drive_add_cmd = ("drive_add 0 if=none,id=" + disk_id +
-                         ",driver=replication" +
-                         ",mode=secondary,throttling.bps-total-max=70000000"
-                         ",file.file.filename=" + active_disk +
-                         ",file.driver=qcow2"
-                         ",file.backing.file.filename=" + hidden_disk +
-                         ",file.backing.driver=qcow2"
-                         ",file.backing.backing.backing_reference=" +
-                         reference_id +
-                         ",file.backing.allow-write-backing-file=on")
-        ret = self.exec_monitor_command(instance, drive_add_cmd)
-
-        device_add_cmd = ("device_add virtio-blk-pci,drive=" + disk_id +
-                          ",addr=9")
-        ret = self.exec_monitor_command(instance, device_add_cmd)
-
-        port = 8889
-        nbd_start_cmd = "nbd_server_start " + CONF.my_ip + ":" + str(port)
-        nbd_add_cmd = "nbd_server_add -w " + reference_id
-        ret = self.exec_monitor_command(instance, nbd_start_cmd)
-        ret = self.exec_monitor_command(instance, nbd_add_cmd)
 
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
