@@ -399,63 +399,6 @@ compute host to another including shelve, resize, migrations and
 evacuate. The following use cases demonstrate the intention of the
 actions and the consequence for operational procedures.
 
-User doesn't want to be charged when not using a server
--------------------------------------------------------
-
-Sometimes a user does not require a server to be active for a while,
-perhaps over a weekend or at certain times of day.
-Ideally they don't want to be billed for those resources.
-Just powering down a server does not free up any resources,
-but shelving a server does free up resources to be used by other users.
-This makes it feasible for a cloud operator to offer a discount when
-an server is shelved.
-
-When the user shelves a server the operator can choose to remove it
-from the compute hosts, i.e. the operator can offload the shelved server.
-When the user's server is unshelved, it is scheduled to a new
-host according to the operators policies for distributing work loads
-across the compute hosts, including taking disabled hosts into account.
-This will contribute to increased overall capacity, freeing hosts that
-are ear-marked for maintenance and providing contiguous blocks
-of resources on single hosts due to moving out old servers.
-
-Shelving a server is not normally a choice that is available to
-the cloud operator because it affects the availability of the server
-being provided to the user.
-
-User resizes server to get more resources
------------------------------------------
-
-Sometimes a user may want to change the flavor of a server, e.g. change
-the quantity of cpus, disk, memory or any other resource. This is done
-by rebuilding the server with a new flavor. As the server is being
-moved, it is normal to reschedule the server to another host
-(although resize to the same host is an option for the operator).
-
-Resize involves shutting down the server, finding a host that has
-the correct resources for the new flavor size, moving the current
-server (including all storage) to the new host. Once the server
-has been given the appropriate resources to match the new flavor,
-the server is started again.
-
-After the resize operation, when the user is happy their server is
-working correctly after the resize, the user calls Confirm Resize.
-This deletes the backup server that was kept on the source host.
-Alternatively, the user can call Revert Resize to delete the new
-resized server, and restore the back up that was stored on the source
-host. If the user does not manually confirm the resize within a
-configured time period, the resize is automatically confirmed, to
-free up the space the backup is using on the source host.
-
-As with shelving, resize provides the cloud operator with an
-opportunity to redistribute work loads across the cloud according
-to the operators scheduling policy, providing the same benefits as
-above.
-
-Resizing a server is not normally a choice that is available to
-the cloud operator because it changes the nature of the server
-being provided to the user.
-
 Cloud operator needs to move a server
 -------------------------------------
 
@@ -564,3 +507,60 @@ Evacuating a server is solely in the domain of the cloud operator because
 it must be performed in coordination with other operational procedures to
 be safe. A user is not normally aware of compute hosts but is adversely
 affected by their failure.
+
+User resizes server to get more resources
+-----------------------------------------
+
+Sometimes a user may want to change the flavor of a server, e.g. change
+the quantity of cpus, disk, memory or any other resource. This is done
+by rebuilding the server with a new flavor. As the server is being
+moved, it is normal to reschedule the server to another host
+(although resize to the same host is an option for the operator).
+
+Resize involves shutting down the server, finding a host that has
+the correct resources for the new flavor size, moving the current
+server (including all storage) to the new host. Once the server
+has been given the appropriate resources to match the new flavor,
+the server is started again.
+
+After the resize operation, when the user is happy their server is
+working correctly after the resize, the user calls Confirm Resize.
+This deletes the backup server that was kept on the source host.
+Alternatively, the user can call Revert Resize to delete the new
+resized server, and restore the back up that was stored on the source
+host. If the user does not manually confirm the resize within a
+configured time period, the resize is automatically confirmed, to
+free up the space the backup is using on the source host.
+
+As with shelving, resize provides the cloud operator with an
+opportunity to redistribute work loads across the cloud according
+to the operators scheduling policy, providing the same benefits as
+above.
+
+Resizing a server is not normally a choice that is available to
+the cloud operator because it changes the nature of the server
+being provided to the user.
+
+User doesn't want to be charged when not using a server
+-------------------------------------------------------
+
+Sometimes a user does not require a server to be active for a while,
+perhaps over a weekend or at certain times of day.
+Ideally they don't want to be billed for those resources.
+Just powering down a server does not free up any resources,
+but shelving a server does free up resources to be used by other users.
+This makes it feasible for a cloud operator to offer a discount when
+an server is shelved.
+
+When the user shelves a server the operator can choose to remove it
+from the compute hosts, i.e. the operator can offload the shelved server.
+When the user's server is unshelved, it is scheduled to a new
+host according to the operators policies for distributing work loads
+across the compute hosts, including taking disabled hosts into account.
+This will contribute to increased overall capacity, freeing hosts that
+are ear-marked for maintenance and providing contiguous blocks
+of resources on single hosts due to moving out old servers.
+
+Shelving a server is not normally a choice that is available to
+the cloud operator because it affects the availability of the server
+being provided to the user.
