@@ -87,6 +87,8 @@ VNIC_TYPE_NORMAL = 'normal'
 VNIC_TYPE_DIRECT = 'direct'
 VNIC_TYPE_MACVTAP = 'macvtap'
 
+VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP)
+
 # Constants for the 'vif_model' values
 VIF_MODEL_VIRTIO = 'virtio'
 VIF_MODEL_NE2K_PCI = 'ne2k_pci'
