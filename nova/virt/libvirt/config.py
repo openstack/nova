@@ -793,6 +793,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.readonly:
             dev.append(etree.Element("readonly"))
 
+        if self.backing_store:
+            dev.append(self.backing_store.format_dom())
+
         return dev
 
     def parse_dom(self, xmldoc):
@@ -875,6 +878,40 @@ class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
                 if c.getchildren():
                     self.backing_store = LibvirtConfigGuestDiskBackingStore()
                     self.backing_store.parse_dom(c)
+
+    def format_dom(self):
+        backing = super(LibvirtConfigGuestDiskBackingStore, self).format_dom()
+
+        backing.set("type", self.source_type)
+
+        if self.index is not None:
+            backing.set("index", self.index)
+
+        if self.source_type == "file":
+            backing.append(etree.Element("source", file=self.source_file))
+        elif self.source_type == "block":
+            backing.append(etree.Element("source", dev=self.source_file))
+        elif self.source_type == "mount":
+            backing.append(etree.Element("source", dir=self.source_file))
+        elif self.source_type == "network":
+            source = etree.Element("source", protocol=self.source_protocol)
+            if self.source_name is not None:
+                source.set('name', self.source_name)
+            hosts_info = zip(self.source_hosts, self.source_ports)
+            for name, port in hosts_info:
+                host = etree.Element('host', name=name)
+                if port is not None:
+                    host.set('port', port)
+                source.append(host)
+            backing.append(source)
+
+        if self.driver_format:
+            backing.append(etree.Element("format", type=self.driver_format))
+
+        if self.backing_store:
+            backing.append(self.backing_store.format_dom())
+
+        return backing
 
 
 class LibvirtConfigGuestSnapshotDisk(LibvirtConfigObject):
