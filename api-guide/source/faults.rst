@@ -88,21 +88,21 @@ http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-c
 Asynchronous faults
 ===================
 
-An error may occur in the background while a server or image is being
-built or while a server is executing an action.
+An error may occur in the background while a server is being built or while a
+server is executing an action.
 
-In these cases, the server or image is usually placed in an ``ERROR`` state.
-For some operations, like resize, its possible that the operations fails but
+In these cases, the server is usually placed in an ``ERROR`` state. For some
+operations, like resize, its possible that the operations fails but
 the instance gracefully returned to its original state before attempting the
 operation. In both of these cases, you should be able to find out more from
 the Server Actions API described above.
 
-When a server or image is placed into an ``ERROR`` state, a fault is
-embedded in the offending server or image. Note that these asynchronous
-faults follow the same format as the synchronous ones. The fault
-contains an error code, a human readable message, and optional details
-about the error. Additionally, asynchronous faults may also contain a
-created timestamp that specify when the fault occurred.
+When a server is placed into an ``ERROR`` state, a fault is embedded in the
+offending server. Note that these asynchronous faults follow the same format
+as the synchronous ones. The fault contains an error code, a human readable
+message, and optional details about the error. Additionally, asynchronous
+faults may also contain a created timestamp that specifies when the fault
+occurred.
 
 
 **Example: Server in error state: JSON response**
@@ -143,38 +143,3 @@ created timestamp that specify when the fault occurred.
             ]
         }
     }
-
-
-**Example: Image in error state: JSON response**
-
-.. code::
-
-    {
-        "image" : {
-            "id" : "52415800-8b69-11e0-9b19-734f5736d2a2",
-            "name" : "My Server Backup",
-            "created" : "2010-08-10T12:00:00Z",
-            "status" : "SAVING",
-            "progress" : 89,
-            "server" : {
-                "id": "52415800-8b69-11e0-9b19-734f335aa7b3"
-            },
-            "fault" : {
-                "code" : 500,
-                "message" : "An internal error occurred",
-                "details" : "Error details"
-            },
-            "links": [
-                {
-                    "rel" : "self",
-                    "href" : "http://servers.api.openstack.org/v2/1234/images/52415800-8b69-11e0-9b19-734f5736d2a2"
-                },
-                {
-                    "rel" : "bookmark",
-                    "href" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f5736d2a2"
-                }
-            ]
-        }
-    }
-
-
