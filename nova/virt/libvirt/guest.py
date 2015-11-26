@@ -481,6 +481,54 @@ class Guest(object):
         """
         self._domain.suspend()
 
+    def migrate(self, destination, params=None, flags=0, domain_xml=None,
+                bandwidth=0):
+        """Migrate guest object from its current host to the destination
+
+        :param destination: URI of host destination where guest will be migrate
+        :param flags: May be one of more of the following:
+           VIR_MIGRATE_LIVE Do not pause the VM during migration
+           VIR_MIGRATE_PEER2PEER Direct connection between source &
+                                 destination hosts
+           VIR_MIGRATE_TUNNELLED Tunnel migration data over the
+                                 libvirt RPC channel
+           VIR_MIGRATE_PERSIST_DEST If the migration is successful,
+                                    persist the domain on the
+                                    destination host.
+           VIR_MIGRATE_UNDEFINE_SOURCE If the migration is successful,
+                                       undefine the domain on the
+                                       source host.
+           VIR_MIGRATE_PAUSED Leave the domain suspended on the remote
+                              side.
+           VIR_MIGRATE_NON_SHARED_DISK Migration with non-shared
+                                       storage with full disk copy
+           VIR_MIGRATE_NON_SHARED_INC Migration with non-shared
+                                      storage with incremental disk
+                                      copy
+           VIR_MIGRATE_CHANGE_PROTECTION Protect against domain
+                                         configuration changes during
+                                         the migration process (set
+                                         automatically when
+                                         supported).
+           VIR_MIGRATE_UNSAFE Force migration even if it is considered
+                              unsafe.
+           VIR_MIGRATE_OFFLINE Migrate offline
+        :param domain_xml: Changing guest configuration during migration
+        :param bandwidth: The maximun bandwidth in MiB/s
+        """
+        if domain_xml is None:
+            self._domain.migrateToURI(
+                destination, flags=flags, bandwidth=bandwidth)
+        else:
+            if params:
+                self._domain.migrateToURI3(
+                    destination, params=params,
+                    flags=flags, bandwidth=bandwidth)
+            else:
+                self._domain.migrateToURI2(
+                    destination, dxml=domain_xml,
+                    flags=flags, bandwidth=bandwidth)
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
