@@ -413,10 +413,9 @@ and live migration (moving a server that is active).
 
 Cold migration moves a server from one host to another by copying its
 state, local storage and network configuration to new resources
-allocated on a new host selected by scheduling policies or as
-an explicit decision. The operation is relatively quick as the
-server is not changing its state during the copy process. The user
-does not have access to the server during the operation.
+allocated on a new host selected by scheduling policies. The operation is
+relatively quick as the server is not changing its state during the copy
+process. The user does not have access to the server during the operation.
 
 Live migration moves a server from one host to another while it
 is active, so it is constantly changing its state during the action.
@@ -461,9 +460,9 @@ a cloud:
 
 - **Resource Optimization**
 
-   To reduce energy usage, some users will try and move servers so
-   they fit into the minimum number of hosts, allowing some servers
-   to be turned off.
+   To reduce energy usage, some cloud operators will try and move
+   servers so they fit into the minimum number of hosts, allowing
+   some servers to be turned off.
 
    Sometimes higher performance might be wanted, so servers are
    spread out between the hosts to minimize resource contention.
