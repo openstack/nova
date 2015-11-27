@@ -521,6 +521,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.migrateToURI3.assert_called_once_with(
             'an-uri', bandwidth=2, flags=1, params={'p1': 'v1'})
 
+    def test_abort_job(self):
+        self.guest.abort_job()
+        self.domain.abortJob.assert_called_once_with()
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 

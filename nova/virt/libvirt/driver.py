@@ -6043,7 +6043,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 if abort:
                     try:
-                        dom.abortJob()
+                        guest.abort_job()
                     except libvirt.libvirtError as e:
                         LOG.warning(_LW("Failed to abort migration %s"),
                                  e, instance=instance)

@@ -529,6 +529,10 @@ class Guest(object):
                     destination, dxml=domain_xml,
                     flags=flags, bandwidth=bandwidth)
 
+    def abort_job(self):
+        """Requests to abort current backgroud job"""
+        self._domain.abortJob()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
