@@ -13,3 +13,50 @@
 set -x
 cd $BASE/new/tempest
 sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY live_migration
+
+#nfs preparation
+echo "subnode info:"
+cat /etc/nodepool/sub_nodes_private
+echo "inventory:"
+cat $WORKSPACE/inventory
+echo "process info:"
+ps aux | grep nova-compute
+source $WORKSPACE/devstack-gate/functions.sh
+
+if uses_debs; then
+    $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m apt \
+            -a "name=nfs-common state=present"
+    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m apt \
+            -a "name=nfs-kernel-server state=present"
+elif is_fedora; then
+    $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m yum \
+            -a "name=nfs-common state=present"
+    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m yum \
+            -a "name=nfs-kernel-server state=present"
+fi
+
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=/etc/idmapd.conf regexp='^Nobody-User = nobody' replace='Nobody-User = nova'"
+
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=/etc/idmapd.conf regexp='^Nobody-Group = nogroup' replace='Nobody-Group = nova'"
+
+SUBNODES=$(cat /etc/nodepool/sub_nodes_private)
+for SUBNODE in $SUBNODES ; do
+    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m lineinfile -a "dest=/etc/exports line='/opt/stack/data/nova/instances $SUBNODE(rw,fsid=0,insecure,no_subtree_check,async,no_root_squash)'"
+done
+
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "exportfs -a"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m service -a "name=nfs-kernel-server state=restarted"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m service -a "name=idmapd state=restarted"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p tcp --dport 111 -j ACCEPT"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p udp --dport 111 -j ACCEPT"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p tcp --dport 2049 -j ACCEPT"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p udp --dport 2049 -j ACCEPT"
+primary_node=$(cat /etc/nodepool/primary_node_private)
+$ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "mount -t nfs4 -o proto=tcp,port=2049 $primary_node:/ /opt/stack/data/nova/instances/"
+$ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m file -a "path=/opt/stack/data/nova/instances/test_file state=touch"
+echo "check whether NFS shared storage works or not:"
+ls -la /opt/stack/data/nova/instances
+SCREEN_NAME=${SCREEN_NAME:-stack}
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=$BASE/new/tempest/etc/tempest.conf regexp='^block_migration_for_live_migration = True' replace='block_migration_for_live_migration = False'"
+
+sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY live_migration
