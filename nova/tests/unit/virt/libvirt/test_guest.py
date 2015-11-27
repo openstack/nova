@@ -525,6 +525,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.abort_job()
         self.domain.abortJob.assert_called_once_with()
 
+    def test_migrate_configure_max_downtime(self):
+        self.guest.migrate_configure_max_downtime(1000)
+        self.domain.migrateSetMaxDowntime.assert_called_once_with(1000)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 

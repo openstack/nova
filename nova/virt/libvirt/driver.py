@@ -6063,7 +6063,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              instance=instance)
 
                     try:
-                        dom.migrateSetMaxDowntime(downtime[1])
+                        guest.migrate_configure_max_downtime(downtime[1])
                     except libvirt.libvirtError as e:
                         LOG.warning(
                             _LW("Unable to increase max downtime to %(time)d"

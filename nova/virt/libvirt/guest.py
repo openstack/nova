@@ -533,6 +533,13 @@ class Guest(object):
         """Requests to abort current backgroud job"""
         self._domain.abortJob()
 
+    def migrate_configure_max_downtime(self, mstime):
+        """Sets maximum time for which domain is allowed to be paused
+
+        :param mstime: Downtime in milliseconds.
+        """
+        self._domain.migrateSetMaxDowntime(mstime)
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""
