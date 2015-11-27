@@ -14,6 +14,8 @@
 
 import copy
 
+from oslo_utils import versionutils
+
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -141,7 +143,7 @@ class ImageMetaProps(base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 7):
             primitive.pop('img_config_drive', None)
         if target_version < (1, 5):

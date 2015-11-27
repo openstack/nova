@@ -12,12 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova import utils
 
 KEYPAIR_TYPE_SSH = 'ssh'
 KEYPAIR_TYPE_X509 = 'x509'
@@ -44,7 +45,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
 
     def obj_make_compatible(self, primitive, target_version):
         super(KeyPair, self).obj_make_compatible(primitive, target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'type' in primitive:
             del primitive['type']
 

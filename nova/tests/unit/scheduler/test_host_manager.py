@@ -22,6 +22,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 import six
 
 import nova
@@ -37,7 +38,6 @@ from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
-from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('scheduler_tracks_instance_changes',
@@ -811,7 +811,7 @@ class HostStateTestCase(test.NoDBTestCase):
             'io_workload': '42',
         }
 
-        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
             stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
@@ -852,7 +852,7 @@ class HostStateTestCase(test.NoDBTestCase):
             'io_workload': '42',
         }
 
-        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
@@ -884,7 +884,7 @@ class HostStateTestCase(test.NoDBTestCase):
             'io_workload': '42',
         }
 
-        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
@@ -1038,7 +1038,7 @@ class HostStateTestCase(test.NoDBTestCase):
                  source='source2',
                  timestamp=_ts_now),
         ]
-        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        hyper_ver_int = versionutils.convert_version_to_int('6.0.0')
         compute = objects.ComputeNode(
             metrics=jsonutils.dumps(metrics),
             memory_mb=0, free_disk_gb=0, local_gb=0,

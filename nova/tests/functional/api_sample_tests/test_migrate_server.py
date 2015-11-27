@@ -15,11 +15,11 @@
 
 import mock
 from oslo_config import cfg
+from oslo_utils import versionutils
 
 from nova.conductor import manager as conductor_manager
 from nova import db
 from nova.tests.functional.api_sample_tests import test_servers
-from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
@@ -72,8 +72,8 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
                            report_count=1,
                            updated_at='foo',
                            hypervisor_type='bar',
-                           hypervisor_version=utils.convert_version_to_int(
-                               '1.0'),
+                           hypervisor_version=(
+                                versionutils.convert_version_to_int('1.0')),
                            disabled=False)
             return {'compute_node': [service]}
         self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)

@@ -39,7 +39,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova import utils
 from nova import version
 from nova.virt.xenapi.client import objects as cli_objects
 from nova.virt.xenapi import pool
@@ -174,7 +173,8 @@ class XenAPISession(object):
             product_version_str = software_version.get('platform_version',
                                                        '0.0.0')
         product_brand = software_version.get('product_brand')
-        product_version = utils.convert_version_to_tuple(product_version_str)
+        product_version = versionutils.convert_version_to_tuple(
+                                                        product_version_str)
 
         return product_version, product_brand
 

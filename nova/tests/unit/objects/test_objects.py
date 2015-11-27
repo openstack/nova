@@ -23,6 +23,7 @@ import fixtures
 import mock
 from oslo_log import log
 from oslo_utils import timeutils
+from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
@@ -1265,7 +1266,7 @@ class TestObjectVersions(test.NoDBTestCase):
         for obj_name in obj_classes:
             versions = ovo_base.obj_tree_get_versions(obj_name)
             obj_class = obj_classes[obj_name][0]
-            version = utils.convert_version_to_tuple(obj_class.VERSION)
+            version = versionutils.convert_version_to_tuple(obj_class.VERSION)
             for n in range(version[1]):
                 test_version = '%d.%d' % (version[0], n)
                 LOG.info('testing obj: %s version: %s' %

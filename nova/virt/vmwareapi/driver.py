@@ -25,6 +25,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import versionutils as v_utils
 from oslo_vmware import api
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
@@ -34,7 +35,6 @@ from oslo_vmware import vim_util
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
-from nova import utils
 from nova.i18n import _, _LI, _LE, _LW
 from nova import objects
 from nova.virt import driver
@@ -193,10 +193,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._register_openstack_extension()
 
     def _check_min_version(self):
-        min_version = utils.convert_version_to_int(constants.MIN_VC_VERSION)
+        min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
         vc_version = vim_util.get_vc_version(self._session)
         LOG.info(_LI("VMware vCenter version: %s"), vc_version)
-        if min_version > utils.convert_version_to_int(vc_version):
+        if min_version > v_utils.convert_version_to_int(vc_version):
             # TODO(garyk): enforce this from M
             LOG.warning(_LW('Running Nova with a VMware vCenter version less '
                             'than %(version)s is deprecated. The required '

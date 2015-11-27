@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_utils import versionutils
 
 from nova import availability_zones
 from nova import db
@@ -21,7 +22,6 @@ from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                                           version_manifest):
         super(Service, self).obj_make_compatible_from_manifest(
             primitive, target_version, version_manifest)
-        _target_version = utils.convert_version_to_tuple(target_version)
+        _target_version = versionutils.convert_version_to_tuple(target_version)
         if _target_version < (1, 16) and 'version' in primitive:
             del primitive['version']
         if _target_version < (1, 14) and 'forced_down' in primitive:

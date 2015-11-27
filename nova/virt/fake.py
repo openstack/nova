@@ -29,6 +29,7 @@ import contextlib
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova.compute import arch
 from nova.compute import hv_type
@@ -39,7 +40,6 @@ from nova.console import type as ctype
 from nova import db
 from nova import exception
 from nova.i18n import _LW
-from nova import utils
 from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt import hardware
@@ -145,7 +145,7 @@ class FakeDriver(driver.ComputeDriver):
             local_gb=self.local_gb)
         self.host_status_base = {
           'hypervisor_type': 'fake',
-          'hypervisor_version': utils.convert_version_to_int('1.0'),
+          'hypervisor_version': versionutils.convert_version_to_int('1.0'),
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 0,

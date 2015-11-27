@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova.objects import base
 from nova.objects import fields
@@ -47,7 +48,7 @@ class MonitorMetric(base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         super(MonitorMetric, self).obj_make_compatible(primitive,
                                                        target_version)
-        target_version = utils.convert_version_to_tuple(target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'numa_nodes_values' in primitive:
             del primitive['numa_membw_values']
 
