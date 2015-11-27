@@ -60,10 +60,14 @@ def validate_num_values(vals, default=None, cast_to=int, based_on=min):
         return default
 
     if num_values > 1:
-        LOG.info(_LI("%(num_values)d values found, "
-                     "of which the minimum value will be used."),
-                 {'num_values': num_values})
-
+        if based_on == min:
+            LOG.info(_LI("%(num_values)d values found, "
+                         "of which the minimum value will be used."),
+                     {'num_values': num_values})
+        else:
+            LOG.info(_LI("%(num_values)d values found, "
+                         "of which the maximum value will be used."),
+                     {'num_values': num_values})
     return based_on([cast_to(val) for val in vals])
 
 
