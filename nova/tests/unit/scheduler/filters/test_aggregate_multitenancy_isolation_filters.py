@@ -12,6 +12,7 @@
 
 import mock
 
+from nova import objects
 from nova.scheduler.filters import aggregate_multitenancy_isolation as ami
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -27,48 +28,38 @@ class TestAggregateMultitenancyIsolationFilter(test.NoDBTestCase):
     def test_aggregate_multi_tenancy_isolation_with_meta_passes(self,
             agg_mock):
         agg_mock.return_value = {'filter_tenant_id': set(['my_tenantid'])}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'request_spec': {
-                                 'instance_properties': {
-                                     'project_id': 'my_tenantid'}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_multi_tenancy_isolation_with_meta_passes_comma(self,
             agg_mock):
         agg_mock.return_value = {'filter_tenant_id':
                                  set(['my_tenantid', 'mytenantid2'])}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'request_spec': {
-                                 'instance_properties': {
-                                     'project_id': 'my_tenantid'}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_multi_tenancy_isolation_fails(self, agg_mock):
         agg_mock.return_value = {'filter_tenant_id': set(['other_tenantid'])}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'request_spec': {
-                                 'instance_properties': {
-                                     'project_id': 'my_tenantid'}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_multi_tenancy_isolation_fails_comma(self, agg_mock):
         agg_mock.return_value = {'filter_tenant_id':
                                  set(['other_tenantid', 'other_tenantid2'])}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'request_spec': {
-                                 'instance_properties': {
-                                     'project_id': 'my_tenantid'}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
-        self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_aggregate_multi_tenancy_isolation_no_meta_passes(self, agg_mock):
         agg_mock.return_value = {}
-        filter_properties = {'context': mock.sentinel.ctx,
-                             'request_spec': {
-                                 'instance_properties': {
-                                     'project_id': 'my_tenantid'}}}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
-        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
