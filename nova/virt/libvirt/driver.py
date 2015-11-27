@@ -5686,7 +5686,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.MigrationError(reason=msg)
 
     def _live_migration_operation(self, context, instance, dest,
-                                  block_migration, migrate_data, dom,
+                                  block_migration, migrate_data, guest,
                                   device_names):
         """Invoke the live migration operation
 
@@ -5697,16 +5697,13 @@ class LibvirtDriver(driver.ComputeDriver):
         :param dest: destination host
         :param block_migration: if true, do block migration.
         :param migrate_data: a LibvirtLiveMigrateData object
-        :param dom: the libvirt domain object
+        :param guest: the guest domain object
         :param device_names: list of device names that are being migrated with
             instance
 
         This method is intended to be run in a background thread and will
         block that thread until the migration is finished or failed.
         """
-        # TODO(sahid): Should pass a guest to this method.
-        guest = libvirt_guest.Guest(dom)
-
         try:
             if migrate_data.block_migration:
                 migration_flags = self._block_migration_flags
@@ -5922,7 +5919,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _live_migration_monitor(self, context, instance, guest,
                                 dest, post_method,
                                 recover_method, block_migration,
-                                migrate_data, dom, finish_event,
+                                migrate_data, finish_event,
                                 disk_paths):
         on_migration_failure = deque()
         data_gb = self._live_migration_data_gb(instance, disk_paths)
@@ -5967,7 +5964,7 @@ class LibvirtDriver(driver.ComputeDriver):
         progress_time = start
         progress_watermark = None
         while True:
-            info = host.DomainJobInfo.for_domain(dom)
+            info = guest.get_job_info()
 
             if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
                 # Annoyingly this could indicate many possible
@@ -6198,15 +6195,10 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove dom at the end.
-        dom = guest._domain
-
         opthread = utils.spawn(self._live_migration_operation,
                                      context, instance, dest,
                                      block_migration,
-                                     migrate_data, dom,
+                                     migrate_data, guest,
                                      device_names)
 
         finish_event = eventlet.event.Event()
@@ -6227,7 +6219,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._live_migration_monitor(context, instance, guest, dest,
                                          post_method, recover_method,
                                          block_migration, migrate_data,
-                                         dom, finish_event, disk_paths)
+                                         finish_event, disk_paths)
         except Exception as ex:
             LOG.warning(_LW("Error monitoring migration: %(ex)s"),
                      {"ex": ex}, instance=instance, exc_info=True)
