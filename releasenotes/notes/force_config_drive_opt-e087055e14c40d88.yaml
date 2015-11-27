@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``force_config_drive`` configuration option provided an ``always``
+    value which was deprecated in the previous release. That ``always`` value
+    is now no longer accepted and deployments using that value have to change
+    it to ``True`` before upgrading.
