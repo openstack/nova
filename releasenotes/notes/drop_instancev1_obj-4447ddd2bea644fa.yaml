@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    (Only if you do continuous deployment)
+    1337890ace918fa2555046c01c8624be014ce2d8 drops support for an instance
+    major version, which means that you must have deployed at least commit
+    713d8cb0777afb9fe4f665b9a40cac894b04aacb before deploying this one.
