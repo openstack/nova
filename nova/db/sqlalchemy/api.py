@@ -2697,7 +2697,8 @@ def instance_info_cache_update(context, instance_uuid, values):
         values['instance_uuid'] = instance_uuid
 
     try:
-        info_cache.update(values)
+        with main_context_manager.writer.savepoint.using(context):
+            info_cache.update(values)
     except db_exc.DBDuplicateEntry:
         # NOTE(sirp): Possible race if two greenthreads attempt to
         # recreate the instance cache entry at the same time. First one
