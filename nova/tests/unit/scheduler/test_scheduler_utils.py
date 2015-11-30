@@ -234,6 +234,23 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertTrue(scheduler_utils.validate_filter('FakeFilter2'))
         self.assertFalse(scheduler_utils.validate_filter('FakeFilter3'))
 
+    def test_validate_weighers_configured(self):
+        self.flags(scheduler_weight_classes=
+                   ['ServerGroupSoftAntiAffinityWeigher',
+                    'FakeFilter1'])
+
+        self.assertTrue(scheduler_utils.validate_weigher(
+            'ServerGroupSoftAntiAffinityWeigher'))
+        self.assertTrue(scheduler_utils.validate_weigher('FakeFilter1'))
+        self.assertFalse(scheduler_utils.validate_weigher(
+            'ServerGroupSoftAffinityWeigher'))
+
+    def test_validate_weighers_configured_all_weighers(self):
+        self.assertTrue(scheduler_utils.validate_weigher(
+            'ServerGroupSoftAffinityWeigher'))
+        self.assertTrue(scheduler_utils.validate_weigher(
+            'ServerGroupSoftAntiAffinityWeigher'))
+
     def _create_server_group(self, policy='anti-affinity'):
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})
@@ -259,35 +276,22 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             group_info = scheduler_utils._get_group_details(
                 self.context, 'fake_uuid', group_hosts)
             self.assertEqual(
-                (set(['hostA', 'hostB']), [policy]),
+                (set(['hostA', 'hostB']), [policy], group.members),
                 group_info)
 
     def test_get_group_details(self):
-        for policy in ['affinity', 'anti-affinity']:
+        for policy in ['affinity', 'anti-affinity',
+                       'soft-affinity', 'soft-anti-affinity']:
             group = self._create_server_group(policy)
             self._get_group_details(group, policy=policy)
 
-    def test_get_group_details_with_no_affinity_filters(self):
-        self.flags(scheduler_default_filters=['fake'])
-        scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
-        scheduler_utils._SUPPORTS_AFFINITY = None
-        group_info = scheduler_utils._get_group_details(self.context,
-                                                        'fake-uuid')
-        self.assertIsNone(group_info)
-
     def test_get_group_details_with_no_instance_uuid(self):
-        self.flags(scheduler_default_filters=['fake'])
-        scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
-        scheduler_utils._SUPPORTS_AFFINITY = None
         group_info = scheduler_utils._get_group_details(self.context, None)
         self.assertIsNone(group_info)
 
     def _get_group_details_with_filter_not_configured(self, policy):
-        wrong_filter = {
-            'affinity': 'ServerGroupAntiAffinityFilter',
-            'anti-affinity': 'ServerGroupAffinityFilter',
-        }
-        self.flags(scheduler_default_filters=[wrong_filter[policy]])
+        self.flags(scheduler_default_filters=['fake'])
+        self.flags(scheduler_weight_classes=['fake'])
 
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})
@@ -300,24 +304,26 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
-            mock.patch.object(objects.InstanceGroup, 'get_hosts',
-                              return_value=['hostA']),
-        ) as (get_group, get_hosts):
+        ) as (get_group,):
             scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
             scheduler_utils._SUPPORTS_AFFINITY = None
+            scheduler_utils._SUPPORTS_SOFT_AFFINITY = None
+            scheduler_utils._SUPPORTS_SOFT_ANTI_AFFINITY = None
             self.assertRaises(exception.UnsupportedPolicyException,
                               scheduler_utils._get_group_details,
                               self.context, 'fake-uuid')
 
     def test_get_group_details_with_filter_not_configured(self):
-        policies = ['anti-affinity', 'affinity']
+        policies = ['anti-affinity', 'affinity',
+                    'soft-affinity', 'soft-anti-affinity']
         for policy in policies:
             self._get_group_details_with_filter_not_configured(policy)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_in_filter_properties(self, mock_ggd):
         mock_ggd.return_value = scheduler_utils.GroupDetails(
-            hosts=set(['hostA', 'hostB']), policies=['policy'])
+            hosts=set(['hostA', 'hostB']), policies=['policy'],
+            members=['instance1'])
         spec = {'instance_properties': {'uuid': 'fake-uuid'}}
         filter_props = {'group_hosts': ['hostC']}
 
@@ -327,7 +333,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                          ['hostC'])
         expected_filter_props = {'group_updated': True,
                                  'group_hosts': set(['hostA', 'hostB']),
-                                 'group_policies': ['policy']}
+                                 'group_policies': ['policy'],
+                                 'group_members': ['instance1']}
         self.assertEqual(expected_filter_props, filter_props)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')

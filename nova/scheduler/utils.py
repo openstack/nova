@@ -36,8 +36,11 @@ from nova import rpc
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+CONF.import_opt('scheduler_default_filters', 'nova.scheduler.host_manager')
+CONF.import_opt('scheduler_weight_classes', 'nova.scheduler.host_manager')
 
-GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies'])
+GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies',
+                                                       'members'])
 
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
@@ -248,8 +251,17 @@ def validate_filter(filter):
     return filter in CONF.scheduler_default_filters
 
 
+def validate_weigher(weigher):
+    """Validates that the weigher is configured in the default weighers."""
+    if 'nova.scheduler.weights.all_weighers' in CONF.scheduler_weight_classes:
+        return True
+    return weigher in CONF.scheduler_weight_classes
+
+
 _SUPPORTS_AFFINITY = None
 _SUPPORTS_ANTI_AFFINITY = None
+_SUPPORTS_SOFT_AFFINITY = None
+_SUPPORTS_SOFT_ANTI_AFFINITY = None
 
 
 def _get_group_details(context, instance_uuid, user_group_hosts=None):
@@ -270,9 +282,17 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
     if _SUPPORTS_ANTI_AFFINITY is None:
         _SUPPORTS_ANTI_AFFINITY = validate_filter(
             'ServerGroupAntiAffinityFilter')
-    _supports_server_groups = any((_SUPPORTS_AFFINITY,
-                                   _SUPPORTS_ANTI_AFFINITY))
-    if not _supports_server_groups or not instance_uuid:
+    global _SUPPORTS_SOFT_AFFINITY
+    if _SUPPORTS_SOFT_AFFINITY is None:
+        _SUPPORTS_SOFT_AFFINITY = validate_weigher(
+            'nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher')
+    global _SUPPORTS_SOFT_ANTI_AFFINITY
+    if _SUPPORTS_SOFT_ANTI_AFFINITY is None:
+        _SUPPORTS_SOFT_ANTI_AFFINITY = validate_weigher(
+            'nova.scheduler.weights.affinity.'
+            'ServerGroupSoftAntiAffinityWeigher')
+
+    if not instance_uuid:
         return
 
     try:
@@ -281,20 +301,31 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
     except exception.InstanceGroupNotFound:
         return
 
-    policies = set(('anti-affinity', 'affinity'))
+    policies = set(('anti-affinity', 'affinity', 'soft-affinity',
+                    'soft-anti-affinity'))
     if any((policy in policies) for policy in group.policies):
-        if (not _SUPPORTS_AFFINITY and 'affinity' in group.policies):
+        if not _SUPPORTS_AFFINITY and 'affinity' in group.policies:
             msg = _("ServerGroupAffinityFilter not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        if (not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies):
+        if not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies:
             msg = _("ServerGroupAntiAffinityFilter not configured")
+            LOG.error(msg)
+            raise exception.UnsupportedPolicyException(reason=msg)
+        if (not _SUPPORTS_SOFT_AFFINITY
+                and 'soft-affinity' in group.policies):
+            msg = _("ServerGroupSoftAffinityWeigher not configured")
+            LOG.error(msg)
+            raise exception.UnsupportedPolicyException(reason=msg)
+        if (not _SUPPORTS_SOFT_ANTI_AFFINITY
+                and 'soft-anti-affinity' in group.policies):
+            msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
         group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
-                            policies=group.policies)
+                            policies=group.policies, members=group.members)
 
 
 def setup_instance_group(context, request_spec, filter_properties):
@@ -315,6 +346,7 @@ def setup_instance_group(context, request_spec, filter_properties):
         filter_properties['group_updated'] = True
         filter_properties['group_hosts'] = group_info.hosts
         filter_properties['group_policies'] = group_info.policies
+        filter_properties['group_members'] = group_info.members
 
 
 def retry_on_timeout(retries=1):

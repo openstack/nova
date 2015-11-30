@@ -216,12 +216,14 @@ class _TestRequestSpecObject(object):
         filt_props['group_updated'] = True
         filt_props['group_policies'] = set(['affinity'])
         filt_props['group_hosts'] = set(['fake1'])
+        filt_props['group_members'] = set(['fake-instance1'])
 
         spec = objects.RequestSpec()
         spec._populate_group_info(filt_props)
         self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
         self.assertEqual(['affinity'], spec.instance_group.policies)
         self.assertEqual(['fake1'], spec.instance_group.hosts)
+        self.assertEqual(['fake-instance1'], spec.instance_group.members)
 
     def test_populate_group_info_missing_values(self):
         filt_props = {}
