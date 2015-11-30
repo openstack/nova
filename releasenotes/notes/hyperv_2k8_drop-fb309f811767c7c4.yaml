@@ -1,0 +1,6 @@
+---
+upgrade:
+  - Support for Windows / Hyper-V Server 2008 R2 has been deprecated in
+    Liberty (12.0.0) and it is no longer supported in Mitaka (13.0.0). If you
+    have compute nodes running that version, please consider moving the
+    running instances to other compute nodes before upgrading those to Mitaka.
