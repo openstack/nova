@@ -22,6 +22,7 @@ from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vif
 
+
 fake_vif = {
     'created_at': None,
     'updated_at': None,
@@ -190,6 +191,10 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         self.assertTrue(mock_create_vif.called)
         self.assertEqual('fake_vif_ref', ret_vif_ref)
 
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_bridge')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_delete_linux_port')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_device_exists',
+                       return_value=True)
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_br')
     @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_del_port')
     @mock.patch.object(network_utils, 'find_network_with_name_label',
@@ -198,7 +203,10 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
     def test_unplug(self, mock_super_unplug,
                     mock_find_network_with_name_label,
                     mock_ovs_del_port,
-                    mock_ovs_del_br):
+                    mock_ovs_del_br,
+                    mock_device_exists,
+                    mock_delete_linux_port,
+                    mock_delete_linux_bridge):
         instance = {'name': "fake_instance"}
         vm_ref = "fake_vm_ref"
 
@@ -241,10 +249,12 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
                           self.ovs_driver.unplug, instance, fake_vif,
                           vm_ref)
 
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_add_patch_port')
-    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_map_external_ids')
-    def test_post_start_actions(self, mock_ovs_map_external_ids,
-                                mock_ovs_add_patch_port):
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_brctl_add_if')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_create_linux_bridge')
+    @mock.patch.object(vif.XenAPIOpenVswitchDriver, '_ovs_add_port')
+    def test_post_start_actions(self, mock_ovs_add_port,
+                                mock_create_linux_bridge,
+                                mock_brctl_add_if):
         vif_ref = "fake_vif_ref"
         instance = {'name': 'fake_instance_name'}
         fake_vif_rec = {'uuid': fake_vif['uuid'],
@@ -267,8 +277,8 @@ class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):
         self.assertTrue(mock_VIF_get_record.called)
         self.assertTrue(mock_network_get_bridge.called)
         self.assertTrue(mock_network_get_uuid.called)
-        self.assertEqual(mock_ovs_add_patch_port.call_count, 2)
-        self.assertTrue(mock_ovs_map_external_ids.called)
+        self.assertEqual(mock_ovs_add_port.call_count, 1)
+        self.assertTrue(mock_brctl_add_if.called)
 
     @mock.patch.object(network_utils, 'find_network_with_name_label',
                        return_value="exist_network_ref")

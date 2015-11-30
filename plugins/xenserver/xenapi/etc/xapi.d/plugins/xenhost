@@ -252,12 +252,105 @@ def _ovs_set_if_external_id(args):
     return _run_command(cmd_args)
 
 
+def _ovs_add_port(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    port_name = pluginlib.exists(args, 'port_name')
+    cmd_args = ['ovs-vsctl', '--', '--if-exists', 'del-port', port_name,
+                '--', 'add-port', bridge_name, port_name]
+    return _run_command(cmd_args)
+
+
+def _ip_link_get_dev(args):
+    device_name = pluginlib.exists(args, 'device_name')
+    cmd_args = ['ip', 'link', 'show', device_name]
+    return _run_command(cmd_args)
+
+
+def _ip_link_del_dev(args):
+    device_name = pluginlib.exists(args, 'device_name')
+    cmd_args = ['ip', 'link', 'delete', device_name]
+    return _run_command(cmd_args)
+
+def _ip_link_add_veth_pair(args):
+    dev1_name = pluginlib.exists(args, 'dev1_name')
+    dev2_name = pluginlib.exists(args, 'dev2_name')
+    cmd_args = ['ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
+                'name', dev2_name]
+    return _run_command(cmd_args)
+
+
+def _ip_link_set_dev(args):
+    device_name = pluginlib.exists(args, 'device_name')
+    option = pluginlib.exists(args, 'option')
+    cmd_args = ['ip', 'link', 'set', device_name, option]
+    return _run_command(cmd_args)
+
+
+def _ip_link_set_promisc(args):
+    device_name = pluginlib.exists(args, 'device_name')
+    option = pluginlib.exists(args, 'option')
+    cmd_args = ['ip', 'link', 'set', device_name, 'promisc', option]
+    return _run_command(cmd_args)
+
+
+def _brctl_add_br(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    cmd_args = ['brctl', 'addbr', bridge_name]
+    return _run_command(cmd_args)
+
+
+def _brctl_del_br(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    cmd_args = ['brctl', 'delbr', bridge_name]
+    return _run_command(cmd_args)
+
+
+def _brctl_set_fd(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    fd = pluginlib.exists(args, 'fd')
+    cmd_args = ['brctl', 'setfd', bridge_name, fd]
+    return _run_command(cmd_args)
+
+
+def _brctl_set_stp(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    option = pluginlib.exists(args, 'option')
+    cmd_args = ['brctl', 'stp', bridge_name, option]
+    return _run_command(cmd_args)
+
+
+def _brctl_add_if(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    if_name = pluginlib.exists(args, 'interface_name')
+    cmd_args = ['brctl', 'addif', bridge_name, if_name]
+    return _run_command(cmd_args)
+
+
+def _brctl_del_if(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    if_name = pluginlib.exists(args, 'interface_name')
+    cmd_args = ['brctl', 'delif', bridge_name, if_name]
+    return _run_command(cmd_args)
+
+
 ALLOWED_NETWORK_CMDS = {
     # allowed cmds to config OVS bridge
     'ovs_add_patch_port': _ovs_add_patch_port,
+    'ovs_add_port': _ovs_add_port,
     'ovs_del_port': _ovs_del_port,
     'ovs_del_br': _ovs_del_br,
-    'ovs_set_if_external_id': _ovs_set_if_external_id
+    'ovs_set_if_external_id': _ovs_set_if_external_id,
+    'ip_link_add_veth_pair': _ip_link_add_veth_pair,
+    'ip_link_del_dev': _ip_link_del_dev,
+    'ip_link_get_dev': _ip_link_get_dev,
+    'ip_link_set_dev': _ip_link_set_dev,
+    'ip_link_set_promisc': _ip_link_set_promisc,
+    'brctl_add_br': _brctl_add_br,
+    'brctl_add_if': _brctl_add_if,
+    'brctl_del_br': _brctl_del_br,
+    'brctl_del_if': _brctl_del_if,
+    'brctl_set_fd': _brctl_set_fd,
+    'brctl_set_stp': _brctl_set_stp
     }
 
 
