@@ -134,10 +134,17 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Migration'),
         }
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_migration_get_unconfirmed_by_dest_compute(
+            context, confirm_window, dest_compute, use_slave=False):
+        return db.migration_get_unconfirmed_by_dest_compute(
+            context, confirm_window, dest_compute)
+
     @base.remotable_classmethod
     def get_unconfirmed_by_dest_compute(cls, context, confirm_window,
                                         dest_compute, use_slave=False):
-        db_migrations = db.migration_get_unconfirmed_by_dest_compute(
+        db_migrations = cls._db_migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute, use_slave=use_slave)
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)

@@ -89,6 +89,18 @@ def not_equal(*values):
 ###################
 
 
+def select_db_reader_mode(f):
+    """Decorator to select synchronous or asynchronous reader mode.
+
+    The kwarg argument 'use_slave' defines reader mode. Asynchronous reader
+    will be used if 'use_slave' is True and synchronous reader otherwise.
+    """
+    return IMPL.select_db_reader_mode(f)
+
+
+###################
+
+
 def service_destroy(context, service_id):
     """Destroy the service or raise if it does not exist."""
     return IMPL.service_destroy(context, service_id)
@@ -470,12 +482,12 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
-        dest_compute, use_slave=False):
+        dest_compute):
     """Finds all unconfirmed migrations within the confirmation window for
     a specific destination compute host.
     """
     return IMPL.migration_get_unconfirmed_by_dest_compute(context,
-            confirm_window, dest_compute, use_slave=use_slave)
+            confirm_window, dest_compute)
 
 
 def migration_get_in_progress_by_host_and_node(context, host, node):

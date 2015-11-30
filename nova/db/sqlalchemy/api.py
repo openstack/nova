@@ -21,6 +21,7 @@ import collections
 import copy
 import datetime
 import functools
+import inspect
 import sys
 import uuid
 
@@ -64,6 +65,7 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
 from nova import quota
+from nova import safe_utils
 
 db_opts = [
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
@@ -229,6 +231,34 @@ def require_aggregate_exists(f):
     def wrapper(context, aggregate_id, *args, **kwargs):
         aggregate_get(context, aggregate_id)
         return f(context, aggregate_id, *args, **kwargs)
+    return wrapper
+
+
+def select_db_reader_mode(f):
+    """Decorator to select synchronous or asynchronous reader mode.
+
+    The kwarg argument 'use_slave' defines reader mode. Asynchronous reader
+    will be used if 'use_slave' is True and synchronous reader otherwise.
+    If 'use_slave' is not specified default value 'False' will be used.
+
+    Wrapped function must have a context in the arguments.
+    """
+
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        wrapped_func = safe_utils.get_wrapped_function(f)
+        keyed_args = inspect.getcallargs(wrapped_func, *args, **kwargs)
+
+        context = keyed_args['context']
+        use_slave = keyed_args.get('use_slave', False)
+
+        if use_slave:
+            reader_mode = main_context_manager.async
+        else:
+            reader_mode = main_context_manager.reader
+
+        with reader_mode.using(context):
+            return f(*args, **kwargs)
     return wrapper
 
 
@@ -4441,25 +4471,25 @@ def project_get_networks(context, project_id, associate=True):
 ###################
 
 
+@main_context_manager.writer
 def migration_create(context, values):
     migration = models.Migration()
     migration.update(values)
-    migration.save()
+    migration.save(context.session)
     return migration
 
 
+@main_context_manager.writer
 def migration_update(context, id, values):
-    session = get_session()
-    with session.begin():
-        migration = _migration_get(context, id, session=session)
-        migration.update(values)
+    migration = migration_get(context, id)
+    migration.update(values)
 
     return migration
 
 
-def _migration_get(context, id, session=None):
-    result = model_query(context, models.Migration, session=session,
-                         read_deleted="yes").\
+@main_context_manager.reader
+def migration_get(context, id):
+    result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(id=id).\
                      first()
 
@@ -4469,10 +4499,7 @@ def _migration_get(context, id, session=None):
     return result
 
 
-def migration_get(context, id):
-    return _migration_get(context, id)
-
-
+@main_context_manager.reader
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(instance_uuid=instance_uuid).\
@@ -4486,19 +4513,20 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
     return result
 
 
+@main_context_manager.reader.allow_async
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
-                                              dest_compute, use_slave=False):
+                                              dest_compute):
     confirm_window = (timeutils.utcnow() -
                       datetime.timedelta(seconds=confirm_window))
 
-    return model_query(context, models.Migration, read_deleted="yes",
-                       use_slave=use_slave).\
+    return model_query(context, models.Migration, read_deleted="yes").\
              filter(models.Migration.updated_at <= confirm_window).\
              filter_by(status="finished").\
              filter_by(dest_compute=dest_compute).\
              all()
 
 
+@main_context_manager.reader
 def migration_get_in_progress_by_host_and_node(context, host, node):
 
     return model_query(context, models.Migration).\
@@ -4512,6 +4540,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
             all()
 
 
+@main_context_manager.reader
 def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:
