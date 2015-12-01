@@ -130,10 +130,10 @@ This is designed to balance the need for a smooth upgrade, against having to
 keep maintaining the compatibility code to make that upgrade possible.
 We talk about this approach as users consuming the stable branch.
 
-In addition, we also support users upgrading from the master branch.
-Technically, between any two between any two commits within the
-same release cycle. In certain cases, when crossing release boundaries, you
-must upgrade to the stable branch, before then upgrading to the tip of master.
+In addition, we also support users upgrading from the master branch,
+technically, between any two commits within the same release cycle.
+In certain cases, when crossing release boundaries, you
+must upgrade to the stable branch, before upgrading to the tip of master.
 This is to support those that are doing some level of
 "Continuous Deployment" from the tip of master into production.
 Many of the public cloud provides running OpenStack use this approach so they
@@ -167,7 +167,7 @@ rare cases, the feature no longer works, is not tested, and no one is stepping
 forward to maintain that feature, the best option can be to remove that
 feature.
 
-When we remove features, we need warn users by first marking those features as
+When we remove features, we need to warn users by first marking those features as
 deprecated, before we finally remove the feature. The idea is to get feedback
 on how important the feature is to our user base. Where a feature is important
 we work with the whole community to find a path forward for those users.
@@ -219,7 +219,7 @@ compatibility with third party APIs inside the Nova tree.
 
 As such, all new efforts should instead focus on external projects that
 provide third party compatibility on top of the Nova API. Where needed, we
-will work this those projects to extending the Nova API such that its
+will work with those projects to extend the Nova API such that its
 possible to add that functionality on top of the Nova API. However, we do
 not intend to add API calls for those services to persist third party API
 specific information in the Nova database. Instead we want to focus on
@@ -231,7 +231,7 @@ Scalability
 Our mission includes the text "massively scalable". Lets discuss what that
 means.
 
-Nova has three main axises of scale: Number of API requests, number of compute
+Nova has three main axes of scale: Number of API requests, number of compute
 nodes and number of active instances.
 In many cases the number of compute nodes and active instances are so closely
 related, you rarely need to consider those separately.
@@ -252,7 +252,7 @@ be considered.
 We intend Nova to be usable for both small and massive deployments.
 Where small involves 1-10 hypervisors and massive deployments are single
 regions with greater than 10,000 hypervisors. That should be seen as our
-current goal not an upper limit.
+current goal, not an upper limit.
 
 There are some features that would not scale well for either the small scale
 or the very large scale. Ideally we would not accept these features, but if
@@ -267,10 +267,10 @@ of classic Infrastructure-as-a-service clouds. A large pool of compute
 resources that people can consume in a self-service way.
 
 Nova is not currently optimized for dealing with a larger number of requests
-for compute resources compared with the amount of compute resource thats
+for compute resources compared with the amount of compute resources
 currently available.
-We generally assume a level of spare capacity is maintained for future
-requests. This is needed for users that want to quickly scale out, and extra
+We generally assume that a level of spare capacity is maintained for future
+requests. This is needed for users who want to quickly scale out, and extra
 capacity becomes available again as users scale in.
 While spare capacity is also not required, we are not optimizing for a
 system that aims to run at 100% capacity at all times.
