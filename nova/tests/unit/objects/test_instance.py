@@ -1228,6 +1228,20 @@ class _TestInstanceObject(object):
         mock_get.assert_called_once_with(self.context, inst)
         self.assertEqual(fake_ec2_ids, ec2_ids)
 
+    @mock.patch('nova.objects.SecurityGroupList.get_by_instance')
+    def test_load_security_groups(self, mock_get):
+        secgroups = []
+        for name in ('foo', 'bar'):
+            secgroup = security_group.SecurityGroup()
+            secgroup.name = name
+            secgroups.append(secgroup)
+        fake_secgroups = security_group.SecurityGroupList(objects=secgroups)
+        mock_get.return_value = fake_secgroups
+        inst = objects.Instance(context=self.context, uuid='fake')
+        secgroups = inst.security_groups
+        mock_get.assert_called_once_with(self.context, inst)
+        self.assertEqual(fake_secgroups, secgroups)
+
     def test_get_with_extras(self):
         pci_requests = objects.InstancePCIRequests(requests=[
             objects.InstancePCIRequest(count=123, spec=[])])

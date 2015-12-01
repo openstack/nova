@@ -778,6 +778,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_ec2_ids(self):
         self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
 
+    def _load_security_groups(self):
+        self.security_groups = objects.SecurityGroupList.get_by_instance(
+            self._context, self)
+
     def _load_migration_context(self, db_context=_NO_DATA_SENTINEL):
         if db_context is _NO_DATA_SENTINEL:
             try:
@@ -857,6 +861,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_ec2_ids()
         elif attrname == 'migration_context':
             self._load_migration_context()
+        elif attrname == 'security_groups':
+            self._load_security_groups()
         elif 'flavor' in attrname:
             self._load_flavor()
         else:
