@@ -74,3 +74,17 @@ Setting up iSCSI targets: unused
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
+
+    def test_libvirt_iscsi_driver_get_config(self):
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+
+        self.assertEqual('block', tree.get('type'))
+        self.assertEqual(device_path, tree.find('./source').get('dev'))
+        self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertEqual('native', tree.find('./driver').get('io'))

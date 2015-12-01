@@ -52,6 +52,7 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         conf.source_type = 'file'
         conf.source_path = connection_info['data']['device_path']
         conf.driver_format = connection_info['data'].get('format', 'raw')
+        conf.driver_io = "native"
         return conf
 
     def connect_volume(self, connection_info, disk_info):
