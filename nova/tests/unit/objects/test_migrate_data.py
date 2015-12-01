@@ -42,6 +42,34 @@ class _TestLiveMigrateData(object):
                           'is_volume_backed': False},
                          obj.to_legacy_dict(pre_migration_result=True))
 
+    def test_detect_implementation_none(self):
+        legacy = migrate_data.LiveMigrateData().to_legacy_dict()
+        self.assertIsInstance(
+            migrate_data.LiveMigrateData.detect_implementation(legacy),
+            migrate_data.LiveMigrateData)
+
+    def test_detect_implementation_libvirt(self):
+        legacy = migrate_data.LibvirtLiveMigrateData(
+            instance_relative_path='foo').to_legacy_dict()
+        self.assertIsInstance(
+            migrate_data.LiveMigrateData.detect_implementation(legacy),
+            migrate_data.LibvirtLiveMigrateData)
+
+    def test_detect_implementation_libvirt_early(self):
+        legacy = migrate_data.LibvirtLiveMigrateData(
+            image_type='foo').to_legacy_dict()
+        self.assertIsInstance(
+            migrate_data.LiveMigrateData.detect_implementation(legacy),
+            migrate_data.LibvirtLiveMigrateData)
+
+    def test_detect_implementation_xenapi(self):
+        legacy = migrate_data.XenapiLiveMigrateData(
+            migrate_send_data={},
+            destination_sr_ref='foo').to_legacy_dict()
+        self.assertIsInstance(
+            migrate_data.LiveMigrateData.detect_implementation(legacy),
+            migrate_data.XenapiLiveMigrateData)
+
 
 class TestLiveMigrateData(test_objects._LocalTest,
                           _TestLiveMigrateData):

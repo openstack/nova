@@ -1156,7 +1156,7 @@ object_data = {
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
-    'LibvirtLiveMigrateData': '1.0-eb8b5f6c49ae3858213a7012558a2f3d',
+    'LibvirtLiveMigrateData': '1.0-7d257257e7f98198b2e4982c33cf3fa5',
     'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
     'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
     'Migration': '1.2-8784125bedcea0a9227318511904e853',

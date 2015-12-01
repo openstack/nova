@@ -24,6 +24,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
 from nova.objects import block_device as objects_block_dev
+from nova.objects import migrate_data as migrate_data_obj
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
@@ -301,7 +302,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, dest='dest',
                 block_migration='blockity_block', host='tsoh',
                 migration='migration',
-                migrate_data={}, version='4.2')
+                migrate_data={}, version='4.8')
 
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'cast',
@@ -330,7 +331,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance_obj,
                 block_migration='block_migration', disk='disk', host='host',
-                migrate_data=None, version='4.0')
+                migrate_data=None, version='4.8')
 
     def test_prep_resize(self):
         self._test_compute_api('prep_resize', 'cast',
@@ -551,3 +552,111 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                           self._test_compute_api,
                           'trigger_crash_dump', 'cast',
                           instance=self.fake_instance_obj, version='4.6')
+
+    def _test_simple_call(self, method, inargs, callargs, callret,
+                               calltype='call', can_send=False):
+        rpc = compute_rpcapi.ComputeAPI()
+
+        @mock.patch.object(rpc, 'client')
+        @mock.patch.object(compute_rpcapi, '_compute_host')
+        def _test(mock_ch, mock_client):
+            mock_client.can_send_version.return_value = can_send
+            call = getattr(mock_client.prepare.return_value, calltype)
+            call.return_value = callret
+            ctxt = mock.MagicMock()
+            result = getattr(rpc, method)(ctxt, **inargs)
+            call.assert_called_once_with(ctxt, method, **callargs)
+            return result
+
+        return _test()
+
+    def test_check_can_live_migrate_source_converts_objects(self):
+        obj = migrate_data_obj.LiveMigrateData()
+        result = self._test_simple_call('check_can_live_migrate_source',
+                                        inargs={'instance': 'foo',
+                                                'dest_check_data': obj},
+                                        callargs={'instance': 'foo',
+                                                  'dest_check_data': {}},
+                                        callret=obj)
+        self.assertEqual(obj, result)
+        result = self._test_simple_call('check_can_live_migrate_source',
+                                        inargs={'instance': 'foo',
+                                                'dest_check_data': obj},
+                                        callargs={'instance': 'foo',
+                                                  'dest_check_data': {}},
+                                        callret={'foo': 'bar'})
+        self.assertIsInstance(result, migrate_data_obj.LiveMigrateData)
+
+    @mock.patch('nova.objects.migrate_data.LiveMigrateData.'
+                'detect_implementation')
+    def test_check_can_live_migrate_destination_converts_dict(self,
+                                                              mock_det):
+        result = self._test_simple_call('check_can_live_migrate_destination',
+                                        inargs={'instance': 'foo',
+                                                'destination': 'bar',
+                                                'block_migration': False,
+                                                'disk_over_commit': False},
+                                        callargs={'instance': 'foo',
+                                                  'block_migration': False,
+                                                  'disk_over_commit': False},
+                                        callret={'foo': 'bar'})
+        self.assertEqual(mock_det.return_value, result)
+
+    def test_live_migration_converts_objects(self):
+        obj = migrate_data_obj.LiveMigrateData()
+        self._test_simple_call('live_migration',
+                               inargs={'instance': 'foo',
+                                       'dest': 'foo',
+                                       'block_migration': False,
+                                       'host': 'foo',
+                                       'migration': None,
+                                       'migrate_data': obj},
+                               callargs={'instance': 'foo',
+                                         'dest': 'foo',
+                                         'block_migration': False,
+                                         'migration': None,
+                                         'migrate_data': {
+                                             'pre_live_migration_result': {}}},
+                               callret=None,
+                               calltype='cast')
+
+    def test_pre_live_migration_converts_objects(self):
+        obj = migrate_data_obj.LiveMigrateData()
+        result = self._test_simple_call('pre_live_migration',
+                                        inargs={'instance': 'foo',
+                                                'block_migration': False,
+                                                'disk': None,
+                                                'host': 'foo',
+                                                'migrate_data': obj},
+                                        callargs={'instance': 'foo',
+                                                  'block_migration': False,
+                                                  'disk': None,
+                                                  'migrate_data': {}},
+                                        callret=obj)
+        self.assertEqual(obj, result)
+        result = self._test_simple_call('pre_live_migration',
+                                        inargs={'instance': 'foo',
+                                                'block_migration': False,
+                                                'disk': None,
+                                                'host': 'foo',
+                                                'migrate_data': obj},
+                                        callargs={'instance': 'foo',
+                                                  'block_migration': False,
+                                                  'disk': None,
+                                                  'migrate_data': {}},
+                                        callret={'foo': 'bar'})
+        self.assertIsInstance(result, migrate_data_obj.LiveMigrateData)
+
+    def test_rollback_live_migration_at_destination_converts_objects(self):
+        obj = migrate_data_obj.LiveMigrateData()
+        method = 'rollback_live_migration_at_destination'
+        self._test_simple_call(method,
+                               inargs={'instance': 'foo',
+                                       'host': 'foo',
+                                       'destroy_disks': False,
+                                       'migrate_data': obj},
+                               callargs={'instance': 'foo',
+                                         'destroy_disks': False,
+                                         'migrate_data': {}},
+                               callret=None,
+                               calltype='cast')

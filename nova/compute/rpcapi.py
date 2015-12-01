@@ -25,6 +25,7 @@ from nova import exception
 from nova.i18n import _, _LI, _LE
 from nova import objects
 from nova.objects import base as objects_base
+from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import service as service_obj
 from nova import rpc
 
@@ -320,6 +321,9 @@ class ComputeAPI(object):
         * ...  - Remove refresh_security_group_rules()
         * 4.6  - Add trigger_crash_dump()
         * 4.7  - Add attachment_id argument to detach_volume()
+        * 4.8  - Send migrate_data in object format for live_migration,
+                 rollback_live_migration_at_destination, and
+                 pre_live_migration.
     '''
 
     VERSION_ALIASES = {
@@ -430,18 +434,37 @@ class ComputeAPI(object):
                                            block_migration, disk_over_commit):
         version = '4.0'
         cctxt = self.client.prepare(server=destination, version=version)
-        return cctxt.call(ctxt, 'check_can_live_migrate_destination',
-                          instance=instance,
-                          block_migration=block_migration,
-                          disk_over_commit=disk_over_commit)
+        result = cctxt.call(ctxt, 'check_can_live_migrate_destination',
+                            instance=instance,
+                            block_migration=block_migration,
+                            disk_over_commit=disk_over_commit)
+        if isinstance(result, migrate_data_obj.LiveMigrateData):
+            return result
+        elif result:
+            return migrate_data_obj.LiveMigrateData.detect_implementation(
+                result)
+        else:
+            return result
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        version = '4.0'
+        dest_check_data_obj = dest_check_data
+        version = '4.8'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            if dest_check_data:
+                dest_check_data = dest_check_data.to_legacy_dict()
         source = _compute_host(None, instance)
         cctxt = self.client.prepare(server=source, version=version)
-        return cctxt.call(ctxt, 'check_can_live_migrate_source',
-                          instance=instance,
-                          dest_check_data=dest_check_data)
+        result = cctxt.call(ctxt, 'check_can_live_migrate_source',
+                            instance=instance,
+                            dest_check_data=dest_check_data)
+        if isinstance(result, migrate_data_obj.LiveMigrateData):
+            return result
+        elif dest_check_data_obj and result:
+            dest_check_data_obj.from_legacy_dict(result)
+            return dest_check_data_obj
+        else:
+            return result
 
     def check_instance_shared_storage(self, ctxt, instance, data, host=None):
         version = '4.0'
@@ -599,7 +622,12 @@ class ComputeAPI(object):
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migration, migrate_data=None):
         args = {'migration': migration}
-        version = '4.2'
+        version = '4.8'
+        if not self.client.can_send_version(version):
+            version = '4.2'
+            if migrate_data:
+                migrate_data = migrate_data.to_legacy_dict(
+                    pre_migration_result=True)
         if not self.client.can_send_version(version):
             version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
@@ -622,12 +650,24 @@ class ComputeAPI(object):
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
-        version = '4.0'
+        migrate_data_orig = migrate_data
+        version = '4.8'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            if migrate_data:
+                migrate_data = migrate_data.to_legacy_dict()
         cctxt = self.client.prepare(server=host, version=version)
-        return cctxt.call(ctxt, 'pre_live_migration',
-                          instance=instance,
-                          block_migration=block_migration,
-                          disk=disk, migrate_data=migrate_data)
+        result = cctxt.call(ctxt, 'pre_live_migration',
+                            instance=instance,
+                            block_migration=block_migration,
+                            disk=disk, migrate_data=migrate_data)
+        if isinstance(result, migrate_data_obj.LiveMigrateData):
+            return result
+        elif migrate_data_orig and result:
+            migrate_data_orig.from_legacy_dict(result)
+            return migrate_data_orig
+        else:
+            return result
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
@@ -773,7 +813,11 @@ class ComputeAPI(object):
     def rollback_live_migration_at_destination(self, ctxt, instance, host,
                                                destroy_disks=True,
                                                migrate_data=None):
-        version = '4.0'
+        version = '4.8'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            if migrate_data:
+                migrate_data = migrate_data.to_legacy_dict()
         extra = {'destroy_disks': destroy_disks,
                  'migrate_data': migrate_data,
         }

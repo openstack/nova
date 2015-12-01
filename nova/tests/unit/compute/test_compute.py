@@ -5566,6 +5566,7 @@ class ComputeTestCase(BaseTestCase):
                          'source_type': 'volume',
                          'destination_type': 'volume'}))
         ]
+        migrate_data = migrate_data_obj.LiveMigrateData()
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver,
@@ -5589,7 +5590,7 @@ class ComputeTestCase(BaseTestCase):
                 block_device_info=block_device_info).AndReturn('fake_disk')
         self.compute.compute_rpcapi.pre_live_migration(c,
                 instance, True, 'fake_disk', dest_host,
-                {}).AndRaise(test.TestingException())
+                migrate_data).AndRaise(test.TestingException())
 
         self.compute.network_api.setup_networks_on_host(c,
                 instance, self.compute.host)
@@ -5600,7 +5601,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.compute_rpcapi.remove_volume_connection(
                 c, instance, uuids.volume_id_2, dest_host)
         self.compute.compute_rpcapi.rollback_live_migration_at_destination(
-                c, instance, dest_host, destroy_disks=True, migrate_data={})
+                c, instance, dest_host, destroy_disks=True,
+                migrate_data=mox.IsA(migrate_data_obj.LiveMigrateData))
 
         # start test
         self.mox.ReplayAll()
@@ -5609,7 +5611,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.live_migration,
                           c, dest=dest_host, block_migration=True,
                           instance=instance, migration=migration,
-                          migrate_data={})
+                          migrate_data=migrate_data)
         instance.refresh()
         self.assertEqual('src_host', instance.host)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
@@ -5626,12 +5628,15 @@ class ComputeTestCase(BaseTestCase):
         instance.host = self.compute.host
         dest = 'desthost'
 
-        migrate_data = {'is_shared_instance_path': False}
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_instance_path=False,
+            is_shared_block_storage=False)
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.compute.compute_rpcapi.pre_live_migration(
-            c, instance, False, None, dest, migrate_data)
+            c, instance, False, None, dest, migrate_data).AndReturn(
+                migrate_data)
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'migrate_instance_start')
@@ -5655,13 +5660,11 @@ class ComputeTestCase(BaseTestCase):
 
         migration = objects.Migration()
 
-        with mock.patch.object(self.compute, '_get_migrate_data_obj') as gmdo:
-            gmdo.return_value = migrate_data_obj.LiveMigrateData()
-            ret = self.compute.live_migration(c, dest=dest,
-                                              instance=instance,
-                                              block_migration=False,
-                                              migration=migration,
-                                              migrate_data=migrate_data)
+        ret = self.compute.live_migration(c, dest=dest,
+                                          instance=instance,
+                                          block_migration=False,
+                                          migration=migration,
+                                          migrate_data=migrate_data)
 
         self.assertIsNone(ret)
         event_mock.assert_called_with(
@@ -5983,16 +5986,19 @@ class ComputeTestCase(BaseTestCase):
                 side_effect=test.TestingException)
     @mock.patch('nova.virt.driver.ComputeDriver.'
                 'rollback_live_migration_at_destination')
+    @mock.patch('nova.objects.migrate_data.LiveMigrateData.'
+                'detect_implementation')
     def test_rollback_live_migration_at_destination_network_fails(
-            self, mock_rollback, net_mock):
+            self, mock_detect, mock_rollback, net_mock):
         c = context.get_admin_context()
         instance = self._create_fake_instance_obj()
         self.assertRaises(test.TestingException,
                           self.compute.rollback_live_migration_at_destination,
                           c, instance, destroy_disks=True, migrate_data={})
-        mock_rollback.assert_called_once_with(c, instance, mock.ANY, mock.ANY,
-                                              destroy_disks=True,
-                                              migrate_data={})
+        mock_rollback.assert_called_once_with(
+            c, instance, mock.ANY, mock.ANY,
+            destroy_disks=True,
+            migrate_data=mock_detect.return_value)
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.

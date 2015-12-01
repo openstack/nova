@@ -5396,7 +5396,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         """
-        filename = dest_check_data["filename"]
+        filename = dest_check_data.filename
         self._cleanup_shared_storage_test_file(filename)
 
     def check_can_live_migrate_source(self, context, instance,

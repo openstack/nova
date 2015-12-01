@@ -47,6 +47,19 @@ class LiveMigrateData(obj_base.NovaObject):
         if 'migration' in legacy:
             self.migration = legacy['migration']
 
+    @classmethod
+    def detect_implementation(cls, legacy_dict):
+        if 'instance_relative_path' in legacy_dict:
+            obj = LibvirtLiveMigrateData()
+        elif 'image_type' in legacy_dict:
+            obj = LibvirtLiveMigrateData()
+        elif 'migrate_data' in legacy_dict:
+            obj = XenapiLiveMigrateData()
+        else:
+            obj = LiveMigrateData()
+        obj.from_legacy_dict(legacy_dict)
+        return obj
+
 
 @obj_base.NovaObjectRegistry.register
 class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
@@ -105,7 +118,7 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'instance_relative_path': fields.StringField(),
         'graphics_listen_addr_vnc': fields.IPAddressField(nullable=True),
         'graphics_listen_addr_spice': fields.IPAddressField(nullable=True),
-        'serial_listen_addr': fields.StringField(),
+        'serial_listen_addr': fields.StringField(nullable=True),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
     }
 

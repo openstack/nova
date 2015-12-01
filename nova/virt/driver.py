@@ -954,7 +954,7 @@ class ComputeDriver(object):
         :param dst_compute_info: Info about the receiving machine
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
-        :returns: a dict containing migration info (hypervisor-dependent)
+        :returns: a LiveMigrateData object (hypervisor-dependent)
         """
         raise NotImplementedError()
 

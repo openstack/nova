@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 5
+SERVICE_VERSION = 6
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -63,6 +63,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.6'},
     # Version 5: Add attachment_id kwarg to detach_volume()
     {'compute_rpc': '4.7'},
+    # Version 6: Compute RPC version 4.8
+    {'compute_rpc': '4.8'},
 )
 
 

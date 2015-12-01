@@ -1766,12 +1766,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_check_can_live_migrate_source(self, event_mock):
         is_volume_backed = 'volume_backed'
-        dest_check_data = dict(foo='bar')
+        dest_check_data = migrate_data_obj.LiveMigrateData()
         db_instance = fake_instance.fake_db_instance()
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
-        expected_dest_check_data = dict(dest_check_data,
-                                        is_volume_backed=is_volume_backed)
 
         self.mox.StubOutWithMock(self.compute.compute_api,
                                  'is_volume_backed_instance')
@@ -1786,7 +1784,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, refresh_conn_info=True
                 ).AndReturn({'block_device_mapping': 'fake'})
         self.compute.driver.check_can_live_migrate_source(
-                self.context, instance, expected_dest_check_data,
+                self.context, instance, dest_check_data,
                 {'block_device_mapping': 'fake'})
 
         self.mox.ReplayAll()
@@ -1797,11 +1795,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event_mock.assert_called_once_with(
             self.context, 'compute_check_can_live_migrate_source',
             instance.uuid)
+        self.assertTrue(dest_check_data.is_volume_backed)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     def _test_check_can_live_migrate_destination(self, event_mock,
-                                                 do_raise=False,
-                                                 has_mig_data=False):
+                                                 do_raise=False):
         db_instance = fake_instance.fake_db_instance(host='fake-host')
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
@@ -1812,10 +1810,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         dest_info = 'dest_info'
         dest_check_data = dict(foo='bar')
         mig_data = dict(cow='moo')
-        expected_result = dict(mig_data)
-        if has_mig_data:
-            dest_check_data['migrate_data'] = dict(cat='meow')
-            expected_result.update(cat='meow')
 
         self.mox.StubOutWithMock(self.compute, '_get_compute_info')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -1852,16 +1846,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance=instance,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
-        self.assertEqual(expected_result, result)
+        self.assertEqual(mig_data, result)
         event_mock.assert_called_once_with(
             self.context, 'compute_check_can_live_migrate_destination',
             instance.uuid)
 
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()
-
-    def test_check_can_live_migrate_destination_success_w_mig_data(self):
-        self._test_check_can_live_migrate_destination(has_mig_data=True)
 
     def test_check_can_live_migrate_destination_fail(self):
         self.assertRaises(
@@ -4270,7 +4261,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     def test_check_migrate_source_converts_object(self):
         # NOTE(danms): Make sure that we legacy-ify any data objects
-        # the drivers give us back, until we're ready for them
+        # the drivers give us back, if we were passed a non-object
         data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
         compute = manager.ComputeManager()
 
@@ -4283,28 +4274,60 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 compute.check_can_live_migrate_source(
                     self.context, {'uuid': uuids.instance}, {}),
                 dict)
+            self.assertIsInstance(mock_cclms.call_args_list[0][0][2],
+                                  migrate_data_obj.LiveMigrateData)
 
         _test()
 
-    def test_check_migrate_destination_converts_object(self):
-        # NOTE(danms): Make sure that we legacy-ify any data objects
-        # the drivers give us back, until we're ready for them
-        data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
-        inst = objects.Instance(id=1, uuid=uuids.instance, host='bar')
+    def test_pre_live_migration_handles_dict(self):
         compute = manager.ComputeManager()
 
-        @mock.patch.object(compute.driver,
-                           'check_can_live_migrate_destination')
-        @mock.patch.object(compute.compute_rpcapi,
-                           'check_can_live_migrate_source')
-        @mock.patch.object(compute, '_get_compute_info')
-        def _test(mock_gci, mock_cclms, mock_cclmd):
-            mock_gci.return_value = inst
-            mock_cclmd.return_value = data
-            mock_cclms.return_value = {}
-            result = compute.check_can_live_migrate_destination(
-                self.context, inst, False, False)
-            self.assertIsInstance(mock_cclms.call_args_list[0][0][2], dict)
-            self.assertIsInstance(result, dict)
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(compute.driver, 'pre_live_migration')
+        @mock.patch.object(compute, '_get_instance_block_device_info')
+        @mock.patch.object(compute.compute_api, 'is_volume_backed_instance')
+        def _test(mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_notify):
+            migrate_data = migrate_data_obj.LiveMigrateData()
+            mock_plm.return_value = migrate_data
+            r = compute.pre_live_migration(self.context, {'uuid': 'foo'},
+                                           False, {}, {})
+            self.assertIsInstance(r, dict)
+            self.assertIsInstance(mock_plm.call_args_list[0][0][5],
+                                  migrate_data_obj.LiveMigrateData)
 
         _test()
+
+    def test_live_migration_handles_dict(self):
+        compute = manager.ComputeManager()
+
+        @mock.patch.object(compute, 'compute_rpcapi')
+        @mock.patch.object(compute, 'driver')
+        def _test(mock_driver, mock_rpc):
+            migrate_data = migrate_data_obj.LiveMigrateData()
+            migration = objects.Migration()
+            migration.save = mock.MagicMock()
+            mock_rpc.pre_live_migration.return_value = migrate_data
+            compute._do_live_migration(self.context, 'foo', {'uuid': 'foo'},
+                                       False, migration, {})
+            self.assertIsInstance(
+                mock_rpc.pre_live_migration.call_args_list[0][0][5],
+                migrate_data_obj.LiveMigrateData)
+
+        _test()
+
+    def test_rollback_live_migration_handles_dict(self):
+        compute = manager.ComputeManager()
+
+        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch.object(compute, '_live_migration_cleanup_flags')
+        @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+        def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi):
+            mock_bdm.return_value = []
+            mock_lmcf.return_value = False, False
+            self.compute._rollback_live_migration(self.context,
+                                                  mock.MagicMock(),
+                                                  'foo', False, {})
+            self.assertIsInstance(mock_lmcf.call_args_list[0][0][1],
+                                  migrate_data_obj.LiveMigrateData)
