@@ -23,6 +23,7 @@ from webob import exc
 from nova.api.openstack.compute import instance_actions as instance_actions_v21
 from nova.api.openstack.compute.legacy_v2.contrib import instance_actions \
         as instance_actions_v2
+from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -130,6 +131,11 @@ class InstanceActionsPolicyTestV2(InstanceActionsPolicyTestV21):
 
 class InstanceActionsTestV21(test.NoDBTestCase):
     instance_actions = instance_actions_v21
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
+
+    def fake_get(self, context, instance_uuid, expected_attrs=None,
+                     want_objects=False):
+        return objects.Instance(uuid=instance_uuid)
 
     def setUp(self):
         super(InstanceActionsTestV21, self).setUp()
@@ -137,22 +143,19 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.fake_actions = copy.deepcopy(fake_server_actions.FAKE_ACTIONS)
         self.fake_events = copy.deepcopy(fake_server_actions.FAKE_EVENTS)
 
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
-            return objects.Instance(uuid=instance_uuid)
-
         def fake_instance_get_by_uuid(context, instance_id, use_slave=False):
             return fake_instance.fake_instance_obj(None,
                 **{'name': 'fake', 'project_id': context.project_id})
 
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stubs.Set(compute_api.API, 'get', self.fake_get)
         self.stub_out('nova.db.instance_get_by_uuid',
                       fake_instance_get_by_uuid)
 
     def _get_http_req(self, action, use_admin_context=False):
         fake_url = '/123/servers/12/%s' % action
         return fakes.HTTPRequest.blank(fake_url,
-                                        use_admin_context=use_admin_context)
+                                       use_admin_context=use_admin_context,
+                                       version=self.wsgi_api_version)
 
     def _set_policy_rules(self):
         rules = {'compute:get': '',
@@ -244,6 +247,15 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         req = self._get_http_req('os-instance-actions/fake')
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, 'fake')
+
+
+class InstanceActionsTestV221(InstanceActionsTestV21):
+    wsgi_api_version = "2.21"
+
+    def fake_get(self, context, instance_uuid, expected_attrs=None,
+                 want_objects=False):
+        self.assertEqual('yes', context.read_deleted)
+        return objects.Instance(uuid=instance_uuid)
 
 
 class InstanceActionsTestV2(InstanceActionsTestV21):

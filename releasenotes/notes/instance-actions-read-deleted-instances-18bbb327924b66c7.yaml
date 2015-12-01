@@ -1,0 +1,9 @@
+---
+features:
+    - The os-instance-actions methods now read actions from deleted instances.
+      This means that
+      'GET /v2.1/{tenant-id}/servers/{server-id}/os-instance-actions'
+      and
+      'GET /v2.1/{tenant-id}/servers/{server-id}/os-instance-actions/{req-id}'
+      will return instance-action items even if the instance corresponding to
+      '{server-id}' has been deleted.
