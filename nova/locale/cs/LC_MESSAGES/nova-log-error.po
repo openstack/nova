@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
-"PO-Revision-Date: 2015-10-29 11:18+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"PO-Revision-Date: 2015-11-19 08:53+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Hledání VBD selhalo"
@@ -71,7 +71,7 @@ msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "Připojování zařízení PCI %(dev)s do %(dom)s selhalo."
 
 #, python-format
-msgid "Attaching network adapter failed. Exception:  %s"
+msgid "Attaching network adapter failed. Exception: %s"
 msgstr "Připojování síťového adaptéru selhalo. Výjimka: %s"
 
 #, python-format
@@ -968,7 +968,7 @@ msgid "Read/Write data failed"
 msgstr "Zápis/Čtení dat selhalo"
 
 #, python-format
-msgid "Requested VM Generation %s is not supported on  this OS."
+msgid "Requested VM Generation %s is not supported on this OS."
 msgstr "Požadované vytvoření VM %s není v tomto OS podporováno."
 
 #, python-format
@@ -1065,6 +1065,9 @@ msgstr ""
 msgid "Unable to destroy VBD"
 msgstr "Nelze zničit VBD"
 
+msgid "Unable to determine the glance API version"
+msgstr "Nelze zjistit API verzi glance"
+
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "Nelze spustit %(cmd)s. Výjimka: %(exception)s"
@@ -1074,6 +1077,10 @@ msgstr "Nelze najít SR z VBD"
 
 msgid "Unable to find SR from VDI"
 msgstr "Nelze najít SR z VDI"
+
+#, python-format
+msgid "Unable to find a service record to update for %(binary)s on %(host)s"
+msgstr "Nelze najít záznam služby k aktualizaci pro %(binary)s na %(host)s"
 
 #, python-format
 msgid "Unable to find address %r"
@@ -1202,6 +1209,14 @@ msgstr ""
 "XenAPI nemohlo najít repozitář úložišť na které instalovat hosty. Prosím "
 "zkontrolujte své nastavení (např. nastavte výchozí SR pro zásobu) a/nebo "
 "nastavte příznak 'sr_matching_filter'."
+
+msgid ""
+"You are running nova-compute on an unsupported version of Windows (older "
+"than Windows / Hyper-V Server 2012). The support for this version of Windows "
+"has been removed in Mitaka."
+msgstr ""
+"nova-compute spouštíte na nepodporované verzi Windows (starší než Windows / "
+"Hyper-V Server 2012). Podpora pro tuto verzi byla odstraněna v Mitaka."
 
 msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
 msgstr "Přesunutí a zmenšení disku selhalo. Obnovování původní vm"

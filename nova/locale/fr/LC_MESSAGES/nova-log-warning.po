@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-09-13 01:37+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid "%(cmd)s failed. Sleeping %(time)s seconds before retry."
@@ -837,13 +837,6 @@ msgstr ""
 "d'informations, voir : https://wiki.openstack.org/wiki/"
 "HypervisorSupportMatrix"
 
-msgid ""
-"The setting \"always\" will be deprecated in the Liberty version. Please use "
-"\"True\" instead"
-msgstr ""
-"La configuration \"always\" sera dépréciée dans la version Liberty. Veuillez "
-"utiliser \"True\" a la place."
-
 msgid "This shouldn't be getting called except during testing."
 msgstr "Le programme ne doit pas être appelé sauf pendant le test."
 
@@ -1011,22 +1004,6 @@ msgstr ""
 "X-instance-ID est présent dans les en-têtes de requêtes. L'option 'service-"
 "metadata-proxy' doit être activée pour traiter ces en-têtes."
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
-"node do not match the addresses on the source node. Since the source node "
-"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
-"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
-"the VM will continue to listen on the current addresses."
-msgstr ""
-"Votre version de libvirt ne supporte pas le drapeau "
-"VIR_DOMAIN_XML_MIGRATABLE, et l'adresse graphique (VNC et/ou SPICE) écoutée "
-"sur le nœud de destination n'est pas identique à l'adresse du nœud source. "
-"Le noeud source possède son adresse d'écoute réglée sur l'adresse \"catch-all"
-"\" (0.0.0.0 ou ::) ou alors l'adresse locale (127.0.0.1 ou ::1), la "
-"migration en cours s'effectura, mais la VM continuera d'écouter l'adresse "
-"actuelle."
-
 #, python-format
 msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
 msgstr ""
@@ -1038,13 +1015,6 @@ msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr ""
 "Impossible d'obtenir de la mémoire depuis le domaine : %(uuid)s, exception : "
 "%(ex)s"
-
-#, python-format
-msgid ""
-"couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
-msgstr ""
-"Impossible d'obtenir le compte de vpu depuis l'id du domaine : %(uuid)s, "
-"exception : %(ex)s"
 
 #, python-format
 msgid "cpu_arch not defined for node '%s'"

@@ -6,9 +6,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-09-08 05:38+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey)\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid ""
@@ -798,14 +798,6 @@ msgid "No valid host found for unshelve instance"
 msgstr "Askıdan alınmış sunucu için geçelir istemci bulunamadı"
 
 #, python-format
-msgid ""
-"No valid network found in %(opaque)s, from %(bridge)s or "
-"%(integration_bridge)s"
-msgstr ""
-"%(opaque)s için geçerli ağ bulunamadı, %(bridge)s den veya "
-"%(integration_bridge)s"
-
-#, python-format
 msgid "Node %(uuid)s has a malformed \"%(prop)s\". It should be an integer."
 msgstr "%(uuid)s düğümü kusurlu \"%(prop)s\" a sahip. Tam sayı olmalıdır."
 
@@ -1041,13 +1033,6 @@ msgstr ""
 "bknz: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
 
 msgid ""
-"The setting \"always\" will be deprecated in the Liberty version. Please use "
-"\"True\" instead"
-msgstr ""
-"\"her zaman\" ayarı Liberty sürümünde kalkacak. Lütfen bunun yerine \"Doğru"
-"\" kullanın"
-
-msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr ""
@@ -1276,21 +1261,6 @@ msgstr ""
 "İstek başlıklarında X-Instance-ID mevcut. Bu başlığın işlenmesi için "
 "'service_metadata_proxy' seçeneği etkin olmalı."
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
-"node do not match the addresses on the source node. Since the source node "
-"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
-"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
-"the VM will continue to listen on the current addresses."
-msgstr ""
-"Libvirt sürümünüz VIR_DOMAIN_XML_MIGRATABLE flag bayrağını desteklemiyor, "
-"ve  hedef düğümdeki grafik (VNC ve/veya SPICE) dinleme adresleri kaynak "
-"düğümdeki adreslerle eşleşmiyor. Kaynak düğümdeki dinleme adresleri hepsini "
-"yakalayan adres (0.0.0.0 veya ::) veya yerel adres (127.0.0.1 veya ::1) "
-"olarak ayarlandığından, canlı göç başarılı olacak, ama VM mevcut adreslerden "
-"dinlemeye devam edecek."
-
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"
 msgstr "_migrate_disk_resizing_up geri dönmede başarısız: %s"
@@ -1309,11 +1279,6 @@ msgstr "Alandan XML elde edilemedi: %(uuid)s, istisna: %(ex)s"
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "hafıza alandan elde edilemedi: %(uuid)s, istisna: %(ex)s"
-
-#, python-format
-msgid ""
-"couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
-msgstr "alandan vpu sayısı alınamadı id: %(uuid)s, istisna: %(ex)s"
 
 #, python-format
 msgid "cpu_arch not defined for node '%s'"

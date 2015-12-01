@@ -16,9 +16,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language: es\n"
@@ -388,10 +388,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "Se ha intentado sobreescribir un valor ya existente."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "Intento de reclamación: memoria %(memory_mb)d MB, disco %(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -948,9 +944,6 @@ msgstr "Faltan las extensiones Core API : %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "No se puede unir la imagen con el loopback: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "No se puede limpiar la compilación fallida, no se reprogramará."
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "No se ha podido captar la imagen %(image_id)s"
@@ -1159,9 +1152,6 @@ msgstr "Disco identificado como: %s no se ha encontrado adjunto a la instancia"
 msgid "Driver Error: %s"
 msgstr "Error de dispositivo: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "El controlador debe implementar select_destinatios"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Se ha encontrado nombre de VM duplicado: %s"
@@ -1295,14 +1285,6 @@ msgstr ""
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "El suceso debe ser una instancia de un nova.virt.event.Event"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"Se ha excedido el máximo de intentos de planificación %(max_attempts)d para "
-"la instancia %(instance_uuid)s. Última excepción: %(exc)s"
 
 #, python-format
 msgid ""
@@ -1855,10 +1837,6 @@ msgstr "El ID de host no se puede actualizar. "
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "El controlador del hipervisor no soporta método post_live_migration_at_source"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Versión de hipervisor %s no es válida."
 
 #, python-format
 msgid "Hypervisor virt type '%s' is not valid"
@@ -4000,15 +3978,6 @@ msgstr "La tarea %(task_name)s no se está ejecutando en el host %(host)s"
 msgid "Template for cloudpipe instance boot script"
 msgstr "Plantilla para script de arranque de instancia de cloudpipe"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"La opción \"force_hyperv_utils_v1\" no puede configurar para \"True\" en "
-"Servidor Windows/ Servidor Hyper-V 2012 R2 o mayor mientras que ya no se "
-"soporta el  espacio de nombre WMI \"administrador/virtualización\"."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "No se ha podido encontrar el archivo CA para %(project)s "
@@ -4848,10 +4817,6 @@ msgstr ""
 "Versión %(req_ver)s no soportada por el API.  Mínimo es %(min_ver)s y máximo "
 "es %(max_ver)s."
 
-#, python-format
-msgid "Version %(val)s is not a valid predicate in field %(attr)s"
-msgstr "La versión %(val)s no es un predicado válido en el campo %(attr)s"
-
 msgid "Virt driver does not implement host disabled status."
 msgstr "El controlador virt no implementa el estado inhabilitado de host."
 
@@ -5458,10 +5423,6 @@ msgstr "demasiadas claves de cuerpo"
 
 msgid "type"
 msgstr "tipo"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "Nombre de controlador ServiceGroup desconocido: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "cancelación de pausa no soportada para vmwareapi"

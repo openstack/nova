@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
-"PO-Revision-Date: 2015-10-22 07:20+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"PO-Revision-Date: 2015-11-24 04:00+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid ""
@@ -181,6 +181,15 @@ msgstr ""
 #, python-format
 msgid "Compute resource plugin %s was not loaded"
 msgstr "Zásuvný modul zdroje výpočtu %s nebyl načten"
+
+msgid ""
+"Conductor local mode is deprecated and will be removed in a subsequent "
+"release"
+msgstr "Místní režim Conductor je zastaralý a v následné verzi bude odstraněn."
+
+#, python-format
+msgid "Could not clean up failed build, not rescheduling. Error: %s"
+msgstr "Nelze vyčistit sestavení co selhalo, není znovu naplánováno. Chyba: %s"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -950,14 +959,6 @@ msgstr "Nenalezen žádný platný hostitel pro vyskladnění instance"
 
 #, python-format
 msgid ""
-"No valid network found in %(opaque)s, from %(bridge)s or "
-"%(integration_bridge)s"
-msgstr ""
-"V %(opaque)s nebyla nalezena žádná platná síť, z %(bridge)s či "
-"%(integration_bridge)s"
-
-#, python-format
-msgid ""
 "Node %(uuid)s has a malformed \"%(prop)s\". It should be an integer but its "
 "value is \"%(value)s\"."
 msgstr ""
@@ -1138,6 +1139,16 @@ msgstr ""
 
 #, python-format
 msgid ""
+"Running Nova with a block_migration_flag config option which does not "
+"contain %(flag)s will cause all block-migrations to be live-migrations "
+"instead. This setting should be on the block_migration_flag."
+msgstr ""
+"Spuštění Nova s volbou nastavení block_migration_flag neobsahující %(flag)s "
+"způsobí, že všechny přenosy bloku budou přenosy za provozu. Toto nastavení "
+"by se mělo používat pouze u block_migration_flag."
+
+#, python-format
+msgid ""
 "Running Nova with a libvirt version less than %(version)s is deprecated. The "
 "required minimum version of libvirt will be raised to %(version)s in the "
 "13.0.0 release."
@@ -1145,6 +1156,16 @@ msgstr ""
 "Spouštět Nova pomocí libvirt s verzí starší než %(version)s je zastaralé. "
 "Požadovaná minimální verze libvirt bude ve verzi 13.0.0 zvýšena na "
 "%(version)s."
+
+#, python-format
+msgid ""
+"Running Nova with a live_migration_flag config option which contains "
+"%(flag)s will cause all live-migrations to be block-migrations instead. This "
+"setting should only be on the block_migration_flag instead."
+msgstr ""
+"Spuštění Nova s volbou nastavení live_migration_flag obsahující %(flag)s "
+"způsobí, že všechny přenosy za provozu budou přenosy bloku. Toto nastavení "
+"by se mělo používat u block_migration_flag."
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1194,6 +1215,19 @@ msgid ""
 msgstr ""
 "ID nájemníka %(tenant_id)s se neshoduje s id nájemníka v instanci "
 "%(instance_id)s."
+
+msgid ""
+"The Extensible Resource Tracker is deprecated and will be removed in the "
+"14.0.0 release. If you use this functionality and have custom resources that "
+"are managed by the Extensible Resource Tracker, please contact the Nova "
+"development team by posting to the openstack-dev mailing list. There is no "
+"future planned support for the tracking of custom resources."
+msgstr ""
+"Sledovač rozšířitelných zdrojů je zastaralý a bude odstraněn ve verzi "
+"14.0.0. Pokud tuto funkci využíváte a máte vlastní zdroje které jsou tímto "
+"systémem spravované, prosím kontaktujte tým vývojářů Nova zasláním příspěvku "
+"na poštovní konferenci openstack-dev. Podpora sledování vlastních zdrojů "
+"není do budoucna plánována."
 
 msgid ""
 "The TrustedFilter is considered experimental by the OpenStack project "
@@ -1276,13 +1310,6 @@ msgstr ""
 "Stejný název páru klíčů '%(name)s' existuje v následujících buňkách: "
 "%(cell_names)s. Je vrácena hodnota páru z první buňky."
 
-msgid ""
-"The setting \"always\" will be deprecated in the Liberty version. Please use "
-"\"True\" instead"
-msgstr ""
-"Nastavení \"always\" bude od verze Liberty zastaralé. Místo toho prosím "
-"použijte \"True\"."
-
 #, python-format
 msgid "The volume %s does not exist!"
 msgstr "Svazek %s neexistuje!"
@@ -1354,13 +1381,6 @@ msgstr ""
 "Pokus o odstranění neexistujícího pravidla: %(chain)r %(rule)r %(wrap)r "
 "%(top)r"
 
-msgid ""
-"Trying to apply a migration context that does not seem to be set for this "
-"instance"
-msgstr ""
-"Pokus o použití kontextu přesunu, který nevypadá, že je nastaven na tuto "
-"instanci."
-
 #, python-format
 msgid ""
 "Trying to remove device with %(status)s ownership %(instance_uuid)s because "
@@ -1368,13 +1388,6 @@ msgid ""
 msgstr ""
 "Pokus o odstranění zařízení se stavem %(status)s ve vlastnictví "
 "%(instance_uuid)s z důvodu %(pci_exception)s"
-
-msgid ""
-"Trying to revert a migration context that does not seem to be set for this "
-"instance"
-msgstr ""
-"Pokus o vrácení kontextu přesunu zpět, který nevypadá, že je nastaven na "
-"tuto instanci."
 
 #, python-format
 msgid "URI %(uri)s does not support connection events: %(error)s"
@@ -1479,6 +1492,13 @@ msgstr "VM není přítomno, přeskakování ničení..."
 msgid "VM is not present, skipping soft delete..."
 msgstr "VM není přítomno, přeskakování měkkého smazání..."
 
+#, python-format
+msgid ""
+"VMware vCenter version less than %(version)s does not support the 'ovs' port "
+"type."
+msgstr ""
+" VMware vCenter s verzí starší než %(version)s nepodporuje typ portu 'ovs'."
+
 msgid ""
 "Value specified in conf file for xenserver.torrent_base_url does not contain "
 "a slash character, therefore it will not be used as part of the torrent URL. "
@@ -1564,15 +1584,6 @@ msgstr ""
 "%(expected_signature)s pro id: %(requestor_id)s. Formulář žádosti: "
 "%(requestor_address)s"
 
-msgid ""
-"You are running nova-compute on Windows / Hyper-V Server 2008 R2. This "
-"version of Windows is deprecated in the current version of OpenStack and the "
-"support for it will be removed in the next cycle."
-msgstr ""
-"nova-compute spouštíte na Windows / Hyper-V Server 2008 R2. Tato verze "
-"Windows je v současné verzi OpenStack považována za zastaralou a její "
-"podpora bude ukončena v další verzi."
-
 #, python-format
 msgid ""
 "You are running with libvirt version %s which is known to have broken NUMA "
@@ -1585,11 +1596,11 @@ msgstr ""
 
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
-"node do not match the addresses on the source node. Since the source node "
-"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
-"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
-"the VM will continue to listen on the current addresses."
+"and the graphics (VNC and/or SPICE) listen addresses on the destination node "
+"do not match the addresses on the source node. Since the source node has "
+"listen addresses set to either the catch-all address (0.0.0.0 or ::) or the "
+"local address (127.0.0.1 or ::1), the live migration will succeed, but the "
+"VM will continue to listen on the current addresses."
 msgstr ""
 "Vaše verze libvirt nepodporuje příznak VIR_DOMAIN_XML_MIGRATABLE a adresy "
 "pro odposlech grafiky (VNC a(nebo SPICE) na cílovém uzlu neodpovídají "
@@ -1619,7 +1630,7 @@ msgstr "nelze získat paměť z domény: %(uuid)s, výjimka: %(ex)s"
 
 #, python-format
 msgid ""
-"couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
+"couldn't obtain the vcpu count from domain id: %(uuid)s, exception: %(ex)s"
 msgstr "nelze získat počet vcpu z domény s id: %(uuid)s, výjimka: %(ex)s"
 
 #, python-format

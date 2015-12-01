@@ -15,9 +15,9 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-09-29 12:26+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language: de\n"
@@ -385,11 +385,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "Versuchte Überschreibung eines vorhandenen Wertes."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr ""
-"Forderung wird versucht: Speicher %(memory_mb)d MB, Platte %(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -975,10 +970,6 @@ msgstr "Erweiterungen der API-Kerndefinitionen fehlen: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "Image konnte nicht an Loopback angehängt werden: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr ""
-"Fehlgeschlagener Build konnte nicht bereinigt werden; keine Neuterminierung"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "Abbild %(image_id)s konnte nicht abgerufen werden"
@@ -1189,9 +1180,6 @@ msgstr "Platte mit ID %s nicht an Instanz angehängt gefunden."
 msgid "Driver Error: %s"
 msgstr "Treiberfehler: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "Treiber muss select_destinations implementieren"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Doppelter VM Name gefunden: %s"
@@ -1330,14 +1318,6 @@ msgstr "Ereignis %(event)s nicht gefunden für Aktions-ID '%(action_id)s'"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "Ereignis muss eine Instanz von 'nova.virt.event.Event' sein"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"Maximale Anzahl %(max_attempts)d Planungsversuche überschritten für Instanz "
-"%(instance_uuid)s. Letzte Ausnahme: %(exc)s"
 
 #, python-format
 msgid ""
@@ -1902,10 +1882,6 @@ msgstr "HostId kann nicht aktualisiert werden."
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "Hypervisortreiber unterstützt die Methode post_live_migration_at_source nicht"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Hypervisor-Version %s ist ungültig."
 
 #, python-format
 msgid "Hypervisor virt type '%s' is not valid"
@@ -4062,15 +4038,6 @@ msgstr "Task %(task_name)s wird nicht auf Host %(host)s ausgeführt"
 msgid "Template for cloudpipe instance boot script"
 msgstr "Vorlage für Boot-Script von Cloudpipe-Instanz"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"Die Option \"force_hyperv_utils_v1\" kann auf einem Windows-Server nicht auf "
-"\"True\" gesetzt werden / Hyper-V-Server 2012 R2 oder darüber wird als WMI-"
-"Namensbereich \"root/virtualization\" nicht mehr unterstützt."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr ""
@@ -4955,10 +4922,6 @@ msgstr ""
 "Version %(req_ver)s wird von der API nicht unterstützt. Minimum ist "
 "%(min_ver)s und Maximum ist %(max_ver)s."
 
-#, python-format
-msgid "Version %(val)s is not a valid predicate in field %(attr)s"
-msgstr "Version %(val)s ist kein korrekter Ausdruck im Feld %(attr)s"
-
 msgid "Virt driver does not implement host disabled status."
 msgstr "Virtueller Treiber implementiert den inaktivierten Hoststatus nicht."
 
@@ -5584,10 +5547,6 @@ msgstr "zu viele Textschlüssel"
 
 msgid "type"
 msgstr "Typ"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "unbekannter DienstGruppen-Treibername: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "'unpause' nicht unterstützt für 'vmwareapi'"

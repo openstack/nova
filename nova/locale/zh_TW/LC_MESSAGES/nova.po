@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language: zh_Hant_TW\n"
@@ -311,10 +311,6 @@ msgstr "嘗試從空儲存區耗用 PCI 裝置 %(compute_node_id)s：%(address)s
 
 msgid "Attempted overwrite of an existing value."
 msgstr "試圖改寫現有值。"
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "正在嘗試要求：記憶體 %(memory_mb)d MB，磁碟 %(disk_gb)d GB "
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -782,9 +778,6 @@ msgstr "遺漏了核心 API 延伸：%(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "無法將映像檔連接至迴圈：%s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "無法清除失敗的建置，將不會重新排定"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "無法提取映像檔 %(image_id)s"
@@ -970,9 +963,6 @@ msgstr "找不到已連接至實例且 ID 為 %s 的磁碟。"
 msgid "Driver Error: %s"
 msgstr "驅動程式錯誤：%s"
 
-msgid "Driver must implement select_destinations"
-msgstr "驅動程式必須實作 select_destinations"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "發現重複的 VM 名稱：%s"
@@ -1073,14 +1063,6 @@ msgstr "找不到動作識別碼 %(action_id)s 的事件 %(event)s"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "事件必須是 nova.virt.event.Event 的實例"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"已超出下列實例的排程嘗試次數上限 %(max_attempts)d：%(instance_uuid)s。前次異"
-"常狀況：%(exc)s"
 
 #, python-format
 msgid ""
@@ -1552,10 +1534,6 @@ msgstr "無法更新 HostId。"
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr "Hypervisor 驅動程式不支援 post_live_migration_at_source 方法"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Hypervisor 版本 %s 無效。"
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -3467,15 +3445,6 @@ msgstr "作業 %(task_name)s 未在主機 %(host)s 上執行"
 msgid "Template for cloudpipe instance boot script"
 msgstr "cloudpipe 實例啟動 Script 的範本"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"在 Windows Server / Hyper-V Server 2012 R2 或更高版本上，不能將 "
-"\"force_hyperv_utils_v1\" 選項設為 \"True\"，因為 WMI \"root/virtualization"
-"\" 名稱空間不再受支援。"
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "找不到 %(project)s 的 CA 檔案"
@@ -4742,10 +4711,6 @@ msgstr "主體金鑰太多"
 
 msgid "type"
 msgstr "類型"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "不明的 ServiceGroup 驅動程式名稱：%s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi 不支援取消暫停"

@@ -10,9 +10,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-10-07 05:40+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China)\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid ""
@@ -872,12 +872,6 @@ msgstr "没有找未停止实例的有效主机"
 
 #, python-format
 msgid ""
-"No valid network found in %(opaque)s, from %(bridge)s or "
-"%(integration_bridge)s"
-msgstr "在%(opaque)s中没有找到有效网络，从%(bridge)s 或%(integration_bridge)s"
-
-#, python-format
-msgid ""
 "Node %(uuid)s has a malformed \"%(prop)s\". It should be an integer but its "
 "value is \"%(value)s\"."
 msgstr ""
@@ -1139,12 +1133,6 @@ msgstr ""
 "的密钥对值。"
 
 msgid ""
-"The setting \"always\" will be deprecated in the Liberty version. Please use "
-"\"True\" instead"
-msgstr ""
-"在Liberty 版本，设置\"总是\" \"always\" 将会被废弃。请使用\"True\" 作为代替"
-
-msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr "秘钥管理器是不安全的，不推荐在生产部署环境中使用"
@@ -1200,11 +1188,6 @@ msgid ""
 "Tried to remove rule that was not there: %(chain)r %(rule)r %(wrap)r %(top)r"
 msgstr "试图移除不存在的规则：%(chain)r %(rule)r %(wrap)r %(top)r"
 
-msgid ""
-"Trying to apply a migration context that does not seem to be set for this "
-"instance"
-msgstr "尝试应用迁移上下文，这个上下文看起来不能够为这台实例设置"
-
 #, python-format
 msgid ""
 "Trying to remove device with %(status)s ownership %(instance_uuid)s because "
@@ -1212,11 +1195,6 @@ msgid ""
 msgstr ""
 "由于%(pci_exception)s，尝试移除%(status)s 的设备，设备所有者"
 "是%(instance_uuid)s"
-
-msgid ""
-"Trying to revert a migration context that does not seem to be set for this "
-"instance"
-msgstr "尝试还原迁移上下文，这个上下文看起来不能够为这台实例设置"
 
 #, python-format
 msgid "URI %(uri)s does not support connection events: %(error)s"
@@ -1378,14 +1356,6 @@ msgstr ""
 "X-Instance-ID-Signature: %(signature)s 不符合预期值：id %(requestor_id)s "
 "的%(expected_signature)s 。请求来源： %(requestor_address)s"
 
-msgid ""
-"You are running nova-compute on Windows / Hyper-V Server 2008 R2. This "
-"version of Windows is deprecated in the current version of OpenStack and the "
-"support for it will be removed in the next cycle."
-msgstr ""
-"你正在 Windows / Hyper-V Server 2008 R2 上运行nova-compute。在未来的OpenStack"
-"中当前版本中，Windows 的这个版本将废弃，在下个周期中将移除。"
-
 #, python-format
 msgid ""
 "You are running with libvirt version %s which is known to have broken NUMA "
@@ -1394,19 +1364,6 @@ msgid ""
 msgstr ""
 "您正在运行的libvirt 版本 %s，该版本已知对NUMA支持存在漏洞。如果您需要NUMA支"
 "持，请在主机上打补丁或升级libvirt。"
-
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
-"node do not match the addresses on the source node. Since the source node "
-"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
-"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
-"the VM will continue to listen on the current addresses."
-msgstr ""
-"您的libvirt 版本不支持VIR_DOMAIN_XML_MIGRATABLE 标记，并且在目的节点上的图像"
-"（ (VNC and/or SPICE)）监听地址与原节点上的地址不匹配。因为源节点监听地址设置"
-"为抓取锁地址(0.0.0.0 or ::) 或者本地地址 (127.0.0.1 or ::1)，在线迁移将会成"
-"功，但是虚拟机将继续监听当前地址。"
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"
@@ -1424,11 +1381,6 @@ msgstr "不能从域 %(uuid)s 获取XML，异常：%(ex)s"
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "不能从域：%(uuid)s 获取内存，异常： %(ex)s"
-
-#, python-format
-msgid ""
-"couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
-msgstr "不能从域id：%(uuid)s获取vpu计数，异常：%(ex)s"
 
 #, python-format
 msgid "cpu_arch not defined for node '%s'"

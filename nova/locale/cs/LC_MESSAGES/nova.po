@@ -11,10 +11,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
-"PO-Revision-Date: 2015-10-29 11:17+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
+"PO-Revision-Date: 2015-11-21 07:21+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language: cs\n"
 "Language-Team: Czech\n"
@@ -374,10 +374,6 @@ msgid "Attempted overwrite of an existing value."
 msgstr "Pokus o přepsání existující hodnoty."
 
 #, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "Pokus o získání: paměť  %(memory_mb)d MB, disk %(disk_gb)d GB"
-
-#, python-format
 msgid "Attribute not supported: %(attr)s"
 msgstr "Vlastnost není podporována: %(attr)s"
 
@@ -724,6 +720,11 @@ msgstr "Již nelze spouštět další instance tohoto typu."
 msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
 msgstr "Nelze nastavit popisná data %(metadata)s v agregátu %(id)s"
 
+msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
+msgstr ""
+"Nelze nastavit zásadu v reálném čase v nevyhrazené zásadě pro připnutí "
+"procesoru"
+
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "Nelze aktualizovat agregát %(aggregate_id)s. Důvod: %(reason)s."
@@ -920,9 +921,6 @@ msgstr "Rozšíření hlavního API chybí: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "Nelze připojit obraz do zpětné smyčky: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "Nelze vyčistit sestavení co selhalo, není znovu naplánováno"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "Nelze získat obraz %(image_id)s"
@@ -1116,9 +1114,6 @@ msgstr "Disk s id: %s nebylo připojeno k instanci."
 msgid "Driver Error: %s"
 msgstr "Chyba ovladače: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "Ovladač musí zavést select_destinations"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Nalezen duplicitní název VM: %s"
@@ -1260,10 +1255,10 @@ msgstr "Událost musí být instancí nova.virt.event.Event"
 #, python-format
 msgid ""
 "Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
+"%(instance_uuid)s. Last exception: %(exc_reason)s"
 msgstr ""
 "Překročen maximální počet pokusů o znovu naplánování %(max_attempts)d pro "
-"instanci %(instance_uuid)s. Poslední výjimka: %(exc)s"
+"instanci %(instance_uuid)s. Poslední výjimka: %(exc_reason)s"
 
 #, python-format
 msgid ""
@@ -1805,10 +1800,6 @@ msgstr "Nelze aktualizovat HostID."
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "Ovladač hypervizoru nepodporuje metodu po přesunutí za provozu ve zdroji"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Verze hypervizoru %s je neplatná."
 
 #, python-format
 msgid "Hypervisor virt type '%s' is not valid"
@@ -3159,9 +3150,15 @@ msgstr "Nezavedeno ve Windows"
 msgid "Not stored in rbd"
 msgstr "Neuloženo v rbd"
 
+msgid "Nothing was archived."
+msgstr "Nic nebylo archivováno."
+
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova vyžaduje verzi libvirt %s nebo novější"
+
+msgid "Number of Rows Archived"
+msgstr "Počet archivovaných řádků"
 
 #, python-format
 msgid "Number of retries to plugin (%(num_retries)d) exceeded."
@@ -3529,6 +3526,11 @@ msgid ""
 "Request must include either Timestamp or Expires, but cannot contain both"
 msgstr ""
 "Požadavky musí obsahovat buď časové razítko nebo vypršení, ale ne oboje"
+
+#, python-format
+msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
+msgstr ""
+"Žádost o obraz %(image_id)s obdržel odpověď o špatné žádosti: %(response)s"
 
 #, python-format
 msgid "Requested VM Generation %s is not supported on this OS."
@@ -3914,6 +3916,9 @@ msgstr "Požadovaný odkládací disk je větší než typ instance umožňuje."
 msgid "Swap only supports host devices"
 msgstr "Odkládání je podporováno pouze na zařízeních hostitele"
 
+msgid "Table"
+msgstr "Tabulka"
+
 #, python-format
 msgid "Target live migration host \"%s\" is unreachable"
 msgstr "Cílový hostitel přesunu za provozu \"%s\" je nedostupný"
@@ -3928,15 +3933,6 @@ msgstr "Úkol %(task_name)s není spuštěn na hostiteli %(host)s"
 
 msgid "Template for cloudpipe instance boot script"
 msgstr "Šablona pro zaváděcí skript instance cloudpipe"
-
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"Volba \"force_hyperv_utils_v1\" nemůže být nastavena na \"True\" v prostředí "
-"Windows Server / Hyper-V Server 2012 R2 a novější protože WMI jmenný prostor "
-"\"root/virtualization\" již není podporován"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -4226,6 +4222,13 @@ msgstr "Tento ovladač podporuje pouze typ 'a'"
 
 msgid "This driver only supports type 'a' entries."
 msgstr "Tento ovladač podporuje pouze záznamy typu 'a'."
+
+msgid ""
+"This method needs to be called with either networks=None and port_ids=None "
+"or port_ids and networks as not none."
+msgstr ""
+"Tuto metodu je třeba zavolat buď s parametry networks=None a port_ids=None "
+"nebo id portů a sítě nezadány jako none."
 
 msgid "This request was rate-limited."
 msgstr "Tento požadavek má omezeno množství."
@@ -4551,6 +4554,13 @@ msgstr "Nepřijatelné parametry."
 msgid "Unavailable console type %(console_type)s."
 msgstr "Nedostupný typ konzole %(console_type)s."
 
+msgid ""
+"Undefined Block Device Mapping root: BlockDeviceMappingList contains Block "
+"Device Mappings from multiple instances."
+msgstr ""
+"Neurčený kořen mapování blokového zařízení: BlockDeviceMappingList obsahuje "
+"mapování blokového zařízení z více instancí."
+
 #, python-format
 msgid ""
 "Unexpected API Error. Please report this at http://bugs.launchpad.net/nova/ "
@@ -4774,10 +4784,6 @@ msgid ""
 msgstr ""
 "Verze  %(req_ver)s není API podporována. Minimální verze je %(min_ver)s a "
 "maximální %(max_ver)s."
-
-#, python-format
-msgid "Version %(val)s is not a valid predicate in field %(attr)s"
-msgstr "Verze %(val)s není platný predikát v poli %(attr)s"
 
 msgid "Virt driver does not implement host disabled status."
 msgstr "Ovladač virt nezavádí stav vypnutého hostitele."
@@ -5385,10 +5391,6 @@ msgstr "příliš mnoho klíčů těla"
 msgid "type"
 msgstr "typ"
 
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "neznámý název ovladače skupiny serveru: %s"
-
 msgid "unpause not supported for vmwareapi"
 msgstr "zrušení pozastavení není v vmwareapi podporováno"
 
@@ -5415,6 +5417,9 @@ msgstr ""
 "požadovanému fyzickému adaptéru. Očekávaný vSwitch je %(expected)s, ale "
 "přidružen je %(actual)s."
 
+msgid "vcpu"
+msgstr "vcpu"
+
 msgid "version should be an integer"
 msgstr "verze by měla být celé číslo"
 
@@ -5427,6 +5432,10 @@ msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr ""
 "cesta soketu uživatele vhostitele není přítomna v podrobnostech vif "
 "%(vif_id)s"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "vif typu %s není podporován"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "parametr vif_type musí být přítomen pro toto zavedení ovladače vif."

@@ -10,9 +10,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid ""
@@ -851,14 +851,6 @@ msgid "No valid host found for unshelve instance"
 msgstr "No se ha encontrado anfitrión válido para extraer instancia"
 
 #, python-format
-msgid ""
-"No valid network found in %(opaque)s, from %(bridge)s or "
-"%(integration_bridge)s"
-msgstr ""
-"No se ha encontrado red válida en %(opaque)s, de %(bridge)s o "
-"%(integration_bridge)s"
-
-#, python-format
 msgid "Node %(uuid)s has a malformed \"%(prop)s\". It should be an integer."
 msgstr "Nodo %(uuid)s tiene \"%(prop)s\" incorrectas. Debe ser un entero."
 
@@ -1100,13 +1092,6 @@ msgstr ""
 "El controlador libvirt no ha sido probado en %(type)s/%(arch)s por el "
 "projecto de OpenStack  por lo cual su calidad no puede ser asegurada. Para "
 "mas información, ver: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-
-msgid ""
-"The setting \"always\" will be deprecated in the Liberty version. Please use "
-"\"True\" instead"
-msgstr ""
-"Se descarta el uso de la configuración \"always\" en la version Liberty. Por "
-"favor utilice en cambio \"True\""
 
 msgid ""
 "This key manager is insecure and is not recommended for production "
@@ -1357,22 +1342,6 @@ msgstr ""
 "%(expected_signature)s para id: %(requestor_id)s. Solicitud de: "
 "%(requestor_address)s"
 
-msgid ""
-"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag, "
-"and the  graphics (VNC and/or SPICE) listen addresses on the destination "
-"node do not match the addresses on the source node. Since the source node "
-"has listen addresses set to either the catch-all address (0.0.0.0 or ::) or "
-"the local address (127.0.0.1 or ::1), the live migration will succeed, but "
-"the VM will continue to listen on the current addresses."
-msgstr ""
-"Su versión de libvirt no soporta el indicador VIR_DOMAIN_XML_MIGRATABLE y la "
-"dirección de escucha de respuesta de las gráficas  (VNC y/o SPICE) en el "
-"nodo de destino no coincide con la dirección del nodo de origen. Ya que el "
-"nodo de origen tiene direcciones de escucha de respuesta configuradas a una "
-"dirección por defecto (0.0.0.0 ó ::) o dirección local (127.0.0.1 ó ::1), la "
-"migración en vivo tendrá éxito pero la VM continuará escuchando respuestas "
-"en las direcciones actuales."
-
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"
 msgstr "_migrate_disk_rezising_up fallido al revertir: %s"
@@ -1391,13 +1360,6 @@ msgstr "no se pudo obtener el XML del dominio: %(uuid)s, excepción: %(ex)s"
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "no se pudo obtener la memoria del dominio: %(uuid)s, excepción: %(ex)s"
-
-#, python-format
-msgid ""
-"couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
-msgstr ""
-"no se puede obtener el conteo de vpu del identificador del dominio: "
-"%(uuid)s, excepción: %(ex)s"
 
 #, python-format
 msgid "cpu_arch not defined for node '%s'"

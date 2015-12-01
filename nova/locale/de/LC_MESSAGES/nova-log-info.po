@@ -9,9 +9,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-10-03 03:02+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language-Team: German\n"
@@ -21,7 +21,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -436,15 +436,6 @@ msgstr "Filter %s hat 0 Hosts gefunden"
 
 #, python-format
 msgid ""
-"Filtering removed all hosts for the request with reservation ID '%(res_id)s' "
-"and instance ID '%(inst_uuid)s'. Filter results: %(str_results)s"
-msgstr ""
-"Filtern gelöscht an allen Hosts für die Anfrage mit Reservierungs-ID "
-"'%(res_id)s' und Instance-ID '%(inst_uuid)s'. Filterergebnisse: "
-"%(str_results)s"
-
-#, python-format
-msgid ""
 "Final resource view: name=%(node)s phys_ram=%(phys_ram)sMB used_ram="
 "%(used_ram)sMB phys_disk=%(phys_disk)sGB used_disk=%(used_disk)sGB "
 "total_vcpus=%(total_vcpus)s used_vcpus=%(used_vcpus)s pci_stats=%(pci_stats)s"
@@ -839,11 +830,6 @@ msgstr "Zurücknahme der gelöschten Instanz"
 msgid "Recovered connection to memcache server for reporting service status."
 msgstr ""
 "Wiederhergestellte Verbindung zu Memcache-Server für Bericht zum "
-"Dienstestatus."
-
-msgid "Recovered connection to nova-conductor for reporting service status."
-msgstr ""
-"Wiederhergestellte Verbindung zu Nova-Conductor für Bericht zum "
 "Dienstestatus."
 
 #, python-format
