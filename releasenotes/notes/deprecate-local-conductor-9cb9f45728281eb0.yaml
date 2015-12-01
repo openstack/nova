@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The local conductor mode is now deprecated and may be removed as early as
+    the 14.0.0 release.
+    If you are using local conductor mode, plan on deploying remote conductor
+    by the time you upgrade to the 14.0.0 release.
