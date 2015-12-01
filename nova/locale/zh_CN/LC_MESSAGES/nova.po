@@ -26,9 +26,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language: zh_Hans_CN\n"
@@ -373,10 +373,6 @@ msgstr "尝试从空池子中消费PCI设备%(compute_node_id)s:%(address)s"
 
 msgid "Attempted overwrite of an existing value."
 msgstr "尝试覆盖一个已存在的值。"
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "尝试声明：内存%(memory_mb)d MB, 磁盘 %(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -888,9 +884,6 @@ msgstr "核心API扩展 %(missing_apis)s 未找到"
 msgid "Could not attach image to loopback: %s"
 msgstr "无法给loopback附加镜像：%s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "不能清理失败的构建，不重新调度"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "未能访存映像 %(image_id)s"
@@ -1076,9 +1069,6 @@ msgstr " id: %s 磁盘没有绑定到实例。"
 msgid "Driver Error: %s"
 msgstr "驱动错误：%s"
 
-msgid "Driver must implement select_destinations"
-msgstr "驱动程序必须实现 select_destinations"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "找到重复 VM 名称：%s"
@@ -1201,14 +1191,6 @@ msgstr "对于操作标识 %(action_id)s，找不到事件 %(event)s"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "事件必须是 nova.virt.event.Event 的实例"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"对于实例%(instance_uuid)s超过最大调度尝试次数%(max_attempts)d。最后的异常："
-"%(exc)s"
 
 #, python-format
 msgid ""
@@ -1720,10 +1702,6 @@ msgstr "无法更新 HostId。"
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr "监测器驱动不支持post_live_migration_at_source方法"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "监测器版本%s无效。"
 
 #, python-format
 msgid "Hypervisor virt type '%s' is not valid"
@@ -3745,15 +3723,6 @@ msgstr "任务 %(task_name)s 未在主机 %(host)s 上运行"
 msgid "Template for cloudpipe instance boot script"
 msgstr "cloudpipe实例的启动脚本模板"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"在Windows Server / Hyper-V Server 2012 R2及以上版本，由于WMI \"root/"
-"virtualization\" 命名空间不再支持，\"force_hyperv_utils_v1\"选项不能设置为"
-"\"True\" 。"
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "找不到用于 %(project)s 的 CA 文件"
@@ -4551,10 +4520,6 @@ msgid ""
 msgstr ""
 "API不支持版本%(req_ver)s。小版本号是%(min_ver)s，大版本号是%(max_ver)s。"
 
-#, python-format
-msgid "Version %(val)s is not a valid predicate in field %(attr)s"
-msgstr "在字段%(attr)s中版本%(val)s不是一个有效的断言"
-
 msgid "Virt driver does not implement host disabled status."
 msgstr "虚拟驱动程序没有实现主机禁用状态。"
 
@@ -5135,10 +5100,6 @@ msgstr "过多主体密钥"
 
 msgid "type"
 msgstr "类型"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "ServiceGroup 驱动程序名称未知：%s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi 不支持取消暂停"

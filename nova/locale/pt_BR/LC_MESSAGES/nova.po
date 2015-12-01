@@ -18,9 +18,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-09-11 06:59+0000\n"
 "Last-Translator: Fernando Pimenta <fernando.c.pimenta@gmail.com>\n"
 "Language: pt_BR\n"
@@ -339,10 +339,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "Tentativa de sobrescrever um valor existente."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "Tentando solicitação: memória %(memory_mb)d MB, disco%(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -858,9 +854,6 @@ msgstr "As extensões da API principal estão ausentes: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "Não foi possível anexar imagem ao loopback: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "Não foi possível limpar construção que falhou, não replanejando"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "Não foi possível buscar a imagem %(image_id)s"
@@ -1064,9 +1057,6 @@ msgstr "Disco com o ID: %s não foi encontrado anexado à instância."
 msgid "Driver Error: %s"
 msgstr "Erro de driver: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "O driver deve implementar select_destinations"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Nome de VM duplicado localizado: %s"
@@ -1178,14 +1168,6 @@ msgstr "Evento %(event)s não localizado para o ID da ação %(action_id)s"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "O evento deve ser uma instância de nova.virt.event.Event"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"Máximo excedido de tentativas de planejamento %(max_attempts)d para a "
-"instância %(instance_uuid)s. Última exceção:%(exc)s"
 
 #, python-format
 msgid ""
@@ -1695,10 +1677,6 @@ msgstr "HostId não pode ser atualizado."
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "Driver do hypervisor não suporta o método post_live_migration_at_source"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Versão do hypervisor %s é inválida."
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -3718,15 +3696,6 @@ msgstr "A tarefa %(task_name)s não está em execução no host %(host)s"
 msgid "Template for cloudpipe instance boot script"
 msgstr "Modelo para o script de inicialização da instância cloudpipe"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"A opção \"force_hyperv_utils_v1\" não pode ser configurada para \"True\" no "
-"Windows Server / Hyper-V Server 2012 R2 ou acima como WMI \"root/"
-"virtualization\" namespace não é mais suportado."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "O arquivo CA de %(project)s não pôde ser localizado"
@@ -5086,10 +5055,6 @@ msgstr "excesso de chaves de corpo"
 
 msgid "type"
 msgstr "Tipo"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "nome do driver ServiceGroup desconhecido: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "cancelamento de pausa não suportado para vmwareapi"

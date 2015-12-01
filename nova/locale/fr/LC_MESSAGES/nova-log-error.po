@@ -8,14 +8,15 @@
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
 # Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
 # Kevin Tibi <kodokuu@gmail.com>, 2015. #zanata
+# Maxime Coquerel <max.coquerel@gmail.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:30+0000\n"
-"PO-Revision-Date: 2015-10-05 02:58+0000\n"
-"Last-Translator: Kevin Tibi <kodokuu@gmail.com>\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"PO-Revision-Date: 2015-11-27 05:04+0000\n"
+"Last-Translator: Maxime Coquerel <max.coquerel@gmail.com>\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -23,7 +24,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "Échec de la recherche du VDIs"
@@ -71,8 +72,8 @@ msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "La fixation des périphériques PCI %(dev)s à %(dom)s a echoué."
 
 #, python-format
-msgid "Attaching network adapter failed. Exception:  %s"
-msgstr "La fixation de l'adaptateur réseau a échoué. Exception : %s"
+msgid "Attaching network adapter failed. Exception: %s"
+msgstr "La fixation de l'adaptateur réseau a échoué. Exception: %s"
 
 #, python-format
 msgid "Cannot block migrate instance %s with mapped volumes"
@@ -938,6 +939,9 @@ msgstr ""
 msgid "Periodic task failed to offload instance."
 msgstr "La tâche périodique a échoué à décharger l'instance."
 
+msgid "Plugin config_file get_val failed"
+msgstr "Échec du plugin config_file get_val"
+
 #, python-format
 msgid "Pool-Join failed: %s"
 msgstr "Echec Pool-Join: %s"
@@ -958,8 +962,10 @@ msgid "Read/Write data failed"
 msgstr "Echec de Lecture/Ecriture des données"
 
 #, python-format
-msgid "Requested VM Generation %s is not supported on  this OS."
-msgstr "La VM Generation %s n'est pas supporté pour ce système d'exploitation "
+msgid "Requested VM Generation %s is not supported on this OS."
+msgstr ""
+"La génération VM demandée (%s) n'est pas prise en charge sur ce système "
+"d'exploitation."
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
@@ -1029,6 +1035,10 @@ msgstr "Le transfert de donnée a échoué"
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "Incapable d'accéder à l'IP flottante %s"
+
+#, python-format
+msgid "Unable to access floating IP for %s"
+msgstr "Incapable d'accéder à l'IP flottante pour %s"
 
 msgid "Unable to access the rescue disk"
 msgstr "Impossible d'accéder à la ressource du disque"

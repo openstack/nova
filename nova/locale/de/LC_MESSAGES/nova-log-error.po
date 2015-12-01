@@ -10,9 +10,9 @@
 # Reik Keutterling <spielkind@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:30+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
 "PO-Revision-Date: 2015-10-01 06:49+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language-Team: German\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Nachschau der VDIs fehlgeschlagen"
@@ -69,10 +69,6 @@ msgstr "Anhängen Datenträger fehlgeschlagen: %s"
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "Anhängen PCI Gerät %(dev)s an %(dom)s fehlgeschlagen."
-
-#, python-format
-msgid "Attaching network adapter failed. Exception:  %s"
-msgstr "Anhängen des Netzwerkadapters fehlgeschlagen. Ausnahme:  %s"
 
 #, python-format
 msgid "Cannot block migrate instance %s with mapped volumes"
@@ -962,11 +958,6 @@ msgstr "Vor-Live-Migration fehlgeschlagen an %s"
 
 msgid "Read/Write data failed"
 msgstr "Lesen/Schreiben von Daten fehlgeschlagen"
-
-#, python-format
-msgid "Requested VM Generation %s is not supported on  this OS."
-msgstr ""
-"Angefragte VM Generation %s wird von diesem Betriebssystem nicht unterstützt."
 
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."

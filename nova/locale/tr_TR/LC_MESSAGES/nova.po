@@ -7,9 +7,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language: tr_TR\n"
@@ -342,10 +342,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "Mevcut değerin üzerine yazılması girişimi."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "Talep ediliyor: hafıza %(memory_mb)d MB, disk %(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -839,9 +835,6 @@ msgstr "Çekirdek API eklentileri eksik: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "İmaj geri dönüşe eklenemiyor: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "Başarısız inşa temizlenemedi, yeniden zamanlanmıyor"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "%(image_id)s imajı getirilemedi"
@@ -1034,9 +1027,6 @@ msgstr "id:%s diski sunucuya ekli şekilde bulunmadı."
 msgid "Driver Error: %s"
 msgstr "Sürücü Hatası: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "Sürücü select_destinations uygulamalı"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Kopya VM ismi bulundu: %s"
@@ -1154,14 +1144,6 @@ msgstr "Olay %(event)s eylem kimliği %(action_id)s için bulunamadı"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "Olay bir nova.virt.event.Event örneği olmalı"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"%(instance_uuid)s sunucusu için %(max_attempts)d azami zamanlama girişimi "
-"aşıldı. Son istisna: %(exc)s"
 
 #, python-format
 msgid ""
@@ -1677,10 +1659,6 @@ msgstr "HostId güncellenemiyor."
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "Hipervizör sürücüsü post_live_migration_at_source yöntemini desteklemiyor"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "Hipervizör sürümü %s geçersiz."
 
 #, python-format
 msgid "Hypervisor virt type '%s' is not valid"
@@ -3735,15 +3713,6 @@ msgstr "Görev %(task_name)s %(host)s istemcisi üzerinde çalışmıyor"
 msgid "Template for cloudpipe instance boot script"
 msgstr "Cloudpipe sunucusu ön yükleme betiği için şablon"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"WMI \"kök/sanallaştırma\" isim uzayı artık desteklenmediğinden "
-"\"force_hyperv_utils_v1\" seçeneği Windows Sunucu / Hyper-V Sunucu 2012 R2 "
-"veya üstünde artık \"Doğru\" olarak ayarlanamaz."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "%(project)s için CA dosyası bulunamadı"
@@ -5086,10 +5055,6 @@ msgstr "Çok sayıda gövde anahtarları"
 
 msgid "type"
 msgstr "tür"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "bilinmeyen Servis Grubu sürücü ismi: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi için sürdürme desteklenmiyor"

@@ -15,9 +15,9 @@
 # Yuko Katabami <yukokatabami@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-10-08 04:20+0000\n"
 "Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
 "Language: ja\n"
@@ -340,10 +340,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "既存の値を上書きしようとしました。"
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "割り当て要求中: メモリー %(memory_mb)d MB、ディスク %(disk_gb)d GB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -848,11 +844,6 @@ msgstr "コア API 拡張がありません: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "イメージをループバック %s にアタッチできません。"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr ""
-"失敗したビルドをクリーンアップできませんでした。再スケジューリングは行われま"
-"せん"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "イメージ %(image_id)s を取り出すことができませんでした"
@@ -1054,9 +1045,6 @@ msgstr "ID が %s のインスタンスに接続されたディスクが見つ�
 msgid "Driver Error: %s"
 msgstr "ドライバーエラー: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "ドライバーは select_destinations を実装する必要があります"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "重複する VM 名が検出されました: %s"
@@ -1168,14 +1156,6 @@ msgstr ""
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "イベントは nova.virt.event.Event のインスタンスでなければなりません"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"インスタンス %(instance_uuid)s のスケジュールの最大試行回数 %(max_attempts)d "
-"を超過しました。最後の例外: %(exc)s"
 
 #, python-format
 msgid ""
@@ -1691,10 +1671,6 @@ msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "ハイパーバイザードライバーが post_live_migration_at_source メソッドをサポート"
 "していません"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "ハイパーバイザーバージョン %s は無効です。"
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -3744,15 +3720,6 @@ msgstr "タスク %(task_name)s はホスト %(host)s 上で実行されてい�
 msgid "Template for cloudpipe instance boot script"
 msgstr "cloudpipe インスタンスのブートスクリプト用テンプレート"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"Windows Server/Hyper-V Server 2012 R2 以降で は \"force_hyperv_utils_v1\" オ"
-"プションを \"True\" に設定できません。WMI \"root/virtualization\" 名前空間は"
-"もはやサポートされていません。"
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "%(project)s 用の CA ファイルが見つかりませんでした"
@@ -5096,10 +5063,6 @@ msgstr "本文にキーが多すぎます"
 
 msgid "type"
 msgstr "タイプ"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "不明な ServiceGroup ドライバー名: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi では一時停止解除はサポートされていません"

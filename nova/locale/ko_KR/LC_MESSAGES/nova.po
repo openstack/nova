@@ -11,9 +11,9 @@
 # Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
 "Language: ko_KR\n"
@@ -325,10 +325,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "기존 값을 겹쳐쓰려 했습니다."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr "청구 시도 중: 메모리 %(memory_mb)dMB, 디스크 %(disk_gb)dGB"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -815,9 +811,6 @@ msgstr "코어 API 확장기능이 누락되어 있음: %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "루프백에 이미지를 첨부할 수 없음: %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "살패한 빌드를 정리할 수 없음. 다시 스케줄하지 않음"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "%(image_id)s 이미지를 페치할 수 없음"
@@ -1007,9 +1000,6 @@ msgstr "인스턴스에 접속된 ID가 %s인 디스크를 찾을 수 없습니�
 msgid "Driver Error: %s"
 msgstr "드라이버 오류: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "드라이버가 select_destinations를 구현해야 합니다."
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "중복 VM 이름 발견: %s"
@@ -1118,14 +1108,6 @@ msgstr "조치 ID %(action_id)s에 대한 %(event)s 이벤트를 찾을 수 없�
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "이벤트는 nova.virt.event.Event의 인스턴스여야 함"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"%(instance_uuid)s 인스턴스에 대한 최대 스케줄링 시도 %(max_attempts)d "
-"%(instance_uuid)s. 마지막 예외: %(exc)s"
 
 #, python-format
 msgid ""
@@ -1620,10 +1602,6 @@ msgstr "HostId는 업데이트할 수 없습니다. "
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "하이퍼바이저 드라이버가 post_live_migration_at_source 메소드를 지원하지 않음"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "하이퍼바이저 버전 %s이(가) 올바르지 않습니다."
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -3598,15 +3576,6 @@ msgstr "%(task_name)s 태스크가 %(host)s 호스트에서 실행 중이 아님
 msgid "Template for cloudpipe instance boot script"
 msgstr "cloudpipe 인스턴스 부트 스크립트를 위한 템플리트"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"WMI \"root/virtualization\" 네임스페이스가 더 이상 지원되지 않으므로 Windows "
-"Server / Hyper-V Server 2012 R2 이상에서 \"force_hyperv_utils_v1\" 옵션을 "
-"\"True\"로 설정할 수 없습니다."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "%(project)s의 CA 파일을 찾을 수 없음"
@@ -4930,10 +4899,6 @@ msgstr "본문 키가 너무 많음"
 
 msgid "type"
 msgstr "type"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "알 수 없는 ServiceGroup 드라이버 이름: %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "vmwareapi에 대한 일시정지 해제는 지원되지 않음"

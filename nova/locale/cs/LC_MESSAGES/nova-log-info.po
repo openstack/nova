@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
-"PO-Revision-Date: 2015-10-16 09:43+0000\n"
+"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"PO-Revision-Date: 2015-11-30 03:50+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -33,6 +33,10 @@ msgstr "%(id)s (%(base_file)s): vytváření kontrolního součtu"
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s poslouchá na %(host)s:%(port)s"
+
+#, python-format
+msgid "%(num_values)d values found, of which the maximum value will be used."
+msgstr "%(num_values)d hodnot nalezeno, z nich bude použita maximální hodnota."
 
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
@@ -92,6 +96,14 @@ msgstr "Připojování svazku %(volume_id)s do %(mountpoint)s"
 
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr "Pokus o odfiltrování instance, která není filtrována"
+
+#, python-format
+msgid ""
+"Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB, vcpus "
+"%(vcpus)d CPU"
+msgstr ""
+"Pokus o získání: paměť  %(memory_mb)d MB, disk %(disk_gb)d GB, virtuální "
+"procesory %(vcpus)d CPU"
 
 #, python-format
 msgid "Auditing locally available compute resources for node %(node)s"
@@ -440,12 +452,11 @@ msgstr "Filtr %s vrátil 0 hostitelů"
 
 #, python-format
 msgid ""
-"Filtering removed all hosts for the request with reservation ID '%(res_id)s' "
-"and instance ID '%(inst_uuid)s'. Filter results: %(str_results)s"
+"Filtering removed all hosts for the request with instance ID "
+"'%(inst_uuid)s'. Filter results: %(str_results)s"
 msgstr ""
-"Filtrování odstranilo všechny hostitele z žádosti mající ID rezervace "
-"'%(res_id)s' a ID instance '%(inst_uuid)s'. Výsledky filtrování: "
-"%(str_results)s"
+"Filtrování odstranilo všechny hostitele z žádosti ID instance "
+"'%(inst_uuid)s'. Výsledky filtrování: %(str_results)s"
 
 #, python-format
 msgid ""
@@ -852,10 +863,6 @@ msgstr ""
 "Připojení k serveru memcache obnoveno a stav služby může být znovu "
 "kontrolován."
 
-msgid "Recovered connection to nova-conductor for reporting service status."
-msgstr ""
-"Připojení k nová-conductor obnoveno a stav služby může být znovu kontrolován."
-
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
 msgstr "Obraz %(image_location)s registrován s id %(image_id)s"
@@ -1118,6 +1125,12 @@ msgstr "Aktualizace zveřejnění obrazu %s"
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr "Aktualizování instance do původního stavu: '%s'"
+
+#, python-format
+msgid ""
+"Updating service version for %(binary)s on %(host)s from %(old)i to %(new)i"
+msgstr ""
+"Aktualizování verze služby pro %(binary)s na %(host)s z %(old)i na %(new)i"
 
 msgid "Using config drive"
 msgstr "Používání konfigurační jednotky"

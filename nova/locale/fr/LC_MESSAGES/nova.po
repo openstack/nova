@@ -27,9 +27,9 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev61\n"
+"Project-Id-Version: nova 13.0.0.dev385\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-30 06:16+0000\n"
+"POT-Creation-Date: 2015-12-01 06:31+0000\n"
 "PO-Revision-Date: 2015-10-07 11:52+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language: fr\n"
@@ -388,11 +388,6 @@ msgstr ""
 
 msgid "Attempted overwrite of an existing value."
 msgstr "Tentative d'écriture d'une valeur existante."
-
-#, python-format
-msgid "Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d GB"
-msgstr ""
-"Tentative de réclamation : mémoire %(memory_mb)d Mo, disque %(disk_gb)d Go"
 
 #, python-format
 msgid "Attribute not supported: %(attr)s"
@@ -949,9 +944,6 @@ msgstr "Les extension de Core API sont manquantes : %(missing_apis)s"
 msgid "Could not attach image to loopback: %s"
 msgstr "Impossible de lier l'image au loopback : %s"
 
-msgid "Could not clean up failed build, not rescheduling"
-msgstr "Impossible de nettoyer la génération qui a échoué, ne pas replanifier"
-
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "Impossible d'extraire l'image %(image_id)s"
@@ -1158,9 +1150,6 @@ msgstr "Disque introuvable avec l'ID %s et connecté à l'instance."
 msgid "Driver Error: %s"
 msgstr "Erreur du pilote: %s"
 
-msgid "Driver must implement select_destinations"
-msgstr "Le pilote doit implémenter select_destinations"
-
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr "Nom de machine virtuelle en double trouvé : %s"
@@ -1273,14 +1262,6 @@ msgstr "Evénement %(event)s non trouvé pour l'ID action %(action_id)s"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "L'événement doit être une instance de nova.virt.event.Event"
-
-#, python-format
-msgid ""
-"Exceeded max scheduling attempts %(max_attempts)d for instance "
-"%(instance_uuid)s. Last exception: %(exc)s"
-msgstr ""
-"Tentatives de planification max %(max_attempts)d pour l'instance "
-"%(instance_uuid)s. Dernière exception : %(exc)s"
 
 #, python-format
 msgid ""
@@ -1829,10 +1810,6 @@ msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
 "Le pilote de l'hyperviseur ne prend pas en charge la méthode "
 "post_live_migration_at_source"
-
-#, python-format
-msgid "Hypervisor version %s is invalid."
-msgstr "La version d'hyperviseur %s est invalide."
 
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
@@ -3928,15 +3905,6 @@ msgstr ""
 msgid "Template for cloudpipe instance boot script"
 msgstr "Modèle pour le script d'amorçage de l'instance cloudpipe"
 
-msgid ""
-"The \"force_hyperv_utils_v1\" option cannot be set to \"True\" on Windows "
-"Server / Hyper-V Server 2012 R2 or above as the WMI \"root/virtualization\" "
-"namespace is no longer supported."
-msgstr ""
-"L'option \"force_hyperv_utils_v1\" ne peut pas être défini sur \"True\" sous "
-"Windows Server / Hyper-V Server 2012 R2 ou ultérieur en tant qu'espace de "
-"nom WMI \"root/virtualization\" n'est plus pris en charge."
-
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr ""
@@ -5385,10 +5353,6 @@ msgstr "trop de clés de corps"
 
 msgid "type"
 msgstr "type"
-
-#, python-format
-msgid "unknown ServiceGroup driver name: %s"
-msgstr "Nom de pilote ServiceGroup inconnu : %s"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "annulation de la mise en pause non prise en charge pour vmwareapi"
