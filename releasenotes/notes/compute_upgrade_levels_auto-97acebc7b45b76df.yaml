@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    A new ``auto`` value for the configuration option
+    ``upgrade_levels.compute`` is accepted, that allows automatic determination
+    of the compute service version to use for RPC communication. By default, we
+    still use the newest version if not set in the config, a specific version
+    if asked, and only do this automatic behavior if 'auto' is configured.
