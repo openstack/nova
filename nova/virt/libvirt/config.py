@@ -694,6 +694,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.physical_block_size = None
         self.readonly = False
         self.snapshot = None
+        self.alias = None
         self.backing_store = None
 
     def format_dom(self):
@@ -799,6 +800,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.readonly:
             dev.append(etree.Element("readonly"))
 
+        if self.alias:
+            dev.append(etree.Element("alias", name=self.alias))
+
         if self.backing_store:
             dev.append(self.backing_store.format_dom())
 
@@ -842,6 +846,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                     self.target_dev = c.get('dev')
 
                 self.target_bus = c.get('bus', None)
+            elif c.tag == 'alias':
+                self.alias = c.get('name')
             elif c.tag == 'backingStore':
                 b = LibvirtConfigGuestDiskBackingStore()
                 b.parse_dom(c)
