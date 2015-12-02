@@ -17,12 +17,14 @@
 
 import logging
 
+from oslo_config import cfg
+from oslo_policy import policy
 from oslo_utils import excutils
 
 from nova import exception
-from nova.openstack.common import policy
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 _ENFORCER = None
 
@@ -48,7 +50,8 @@ def init(policy_file=None, rules=None, default_rule=None, use_conf=True):
 
     global _ENFORCER
     if not _ENFORCER:
-        _ENFORCER = policy.Enforcer(policy_file=policy_file,
+        _ENFORCER = policy.Enforcer(CONF,
+                                    policy_file=policy_file,
                                     rules=rules,
                                     default_rule=default_rule,
                                     use_conf=use_conf)

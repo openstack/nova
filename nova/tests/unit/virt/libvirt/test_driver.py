@@ -13202,7 +13202,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_same_host(self):
-        CONF.set_override('policy_dirs', [])
+        CONF.set_override('policy_dirs', [], group='oslo_policy')
         ins_ref = self._create_instance({'host': CONF.host})
 
         def fake_os_path_exists(path):
@@ -13223,7 +13223,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_not_same_host(self):
-        CONF.set_override('policy_dirs', [])
+        CONF.set_override('policy_dirs', [], group='oslo_policy')
         host = 'not' + CONF.host
         ins_ref = self._create_instance({'host': host})
 

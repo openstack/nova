@@ -25,6 +25,7 @@ import iso8601
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from six.moves import range
@@ -58,7 +59,6 @@ from nova.network import manager
 from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -834,12 +834,10 @@ class ServersControllerTest(ControllerTest):
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         rules = {
-            "os_compute_api:servers:index":
-                common_policy.parse_rule("project_id:fake"),
-            "os_compute_api:servers:index:get_all_tenants":
-                common_policy.parse_rule("project_id:fake")
+            "os_compute_api:servers:index": "project_id:fake",
+            "os_compute_api:servers:index:get_all_tenants": "project_id:fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
         req = self.req('/fake/servers?all_tenants=1')
         servers = self.controller.index(req)['servers']
@@ -852,12 +850,11 @@ class ServersControllerTest(ControllerTest):
 
         rules = {
             "os_compute_api:servers:index:get_all_tenants":
-                common_policy.parse_rule("project_id:non_fake"),
-            "os_compute_api:servers:get_all":
-                common_policy.parse_rule("project_id:fake"),
+                "project_id:non_fake",
+            "os_compute_api:servers:get_all": "project_id:fake",
         }
 
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = self.req('/fake/servers?all_tenants=1')
@@ -1717,10 +1714,9 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_start_policy_failed(self):
         rules = {
-            "os_compute_api:servers:start":
-                common_policy.parse_rule("project_id:non_fake")
+            "os_compute_api:servers:start": "project_id:non_fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
@@ -1761,10 +1757,9 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_stop_policy_failed(self):
         rules = {
-            "os_compute_api:servers:stop":
-                common_policy.parse_rule("project_id:non_fake")
+            "os_compute_api:servers:stop": "project_id:non_fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(stop='')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
@@ -1934,8 +1929,8 @@ class ServersControllerUpdateTest(ControllerTest):
                           req, FAKE_UUID, body=body)
 
     def test_update_server_policy_fail(self):
-        rule = {'compute:update': common_policy.parse_rule('role:admin')}
-        policy.set_rules(rule)
+        rule = {'compute:update': 'role:admin'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rule))
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body, {'name': 'server_test'})
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -1979,9 +1974,8 @@ class ServerStatusTest(test.TestCase):
 
         self.stubs.Set(self.controller, '_get_server', fake_get_server)
 
-        rule = {'compute:reboot':
-                common_policy.parse_rule('role:admin')}
-        policy.set_rules(rule)
+        rule = {'compute:reboot': 'role:admin'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_reboot, req, '1234',
@@ -2007,9 +2001,8 @@ class ServerStatusTest(test.TestCase):
 
         self.stubs.Set(self.controller, '_get_server', fake_get_server)
 
-        rule = {'compute:confirm_resize':
-                common_policy.parse_rule('role:admin')}
-        policy.set_rules(rule)
+        rule = {'compute:confirm_resize': 'role:admin'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_confirm_resize, req, '1234', {})
@@ -2029,9 +2022,8 @@ class ServerStatusTest(test.TestCase):
 
         self.stubs.Set(self.controller, '_get_server', fake_get_server)
 
-        rule = {'compute:revert_resize':
-                common_policy.parse_rule('role:admin')}
-        policy.set_rules(rule)
+        rule = {'compute:revert_resize': 'role:admin'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_revert_resize, req, '1234', {})

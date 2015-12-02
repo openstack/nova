@@ -17,6 +17,7 @@
 import datetime
 import uuid as stdlib_uuid
 
+from oslo_policy import policy as oslo_policy
 from oslo_utils import timeutils
 import webob
 
@@ -26,7 +27,6 @@ from nova.compute import vm_states
 from nova import console
 from nova import db
 from nova import exception
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -266,10 +266,10 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
 
     def _test_fail_policy(self, rule, action, data=None):
         rules = {
-            rule: common_policy.parse_rule("!"),
+            rule: "!",
         }
 
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         req = fakes.HTTPRequest.blank(self.url + '/20')
 
         if data is not None:

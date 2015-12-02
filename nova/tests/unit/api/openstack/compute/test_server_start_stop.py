@@ -16,6 +16,8 @@ from mox3 import mox
 import six
 import webob
 
+from oslo_policy import policy as oslo_policy
+
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute.legacy_v2.contrib import server_start_stop \
         as server_v2
@@ -24,7 +26,6 @@ from nova.api.openstack.compute import servers \
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -79,10 +80,9 @@ class ServerStartStopTestV21(test.TestCase):
 
     def test_start_policy_failed(self):
         rules = {
-            self.start_policy:
-                common_policy.parse_rule("project_id:non_fake")
+            self.start_policy: "project_id:non_fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         body = dict(start="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
@@ -123,10 +123,9 @@ class ServerStartStopTestV21(test.TestCase):
 
     def test_stop_policy_failed(self):
         rules = {
-            self.stop_policy:
-                common_policy.parse_rule("project_id:non_fake")
+            self.stop_policy: "project_id:non_fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         body = dict(stop="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
