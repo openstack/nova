@@ -346,7 +346,7 @@ class KeypairsTestV21(test.TestCase):
         self.assertEqual(202, res.status_code)
 
 
-class KeypairPolicyTestV21(test.TestCase):
+class KeypairPolicyTestV21(test.NoDBTestCase):
     KeyPairController = keypairs_v21.KeypairController()
     policy_path = 'os_compute_api:os-keypairs'
 
@@ -362,8 +362,6 @@ class KeypairPolicyTestV21(test.TestCase):
                        _db_key_pair_get)
         self.stubs.Set(db, "key_pair_get_all_by_user",
                        db_key_pair_get_all_by_user)
-        self.stubs.Set(db, "key_pair_create",
-                       db_key_pair_create)
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_destroy)
 
@@ -403,12 +401,22 @@ class KeypairPolicyTestV21(test.TestCase):
                           self.KeyPairController.create,
                           self.req, body=body)
 
-    def test_keypair_create_pass_policy(self):
+    def _assert_keypair_create(self, mock_create, req):
+        mock_create.assert_called_with(req, 'fake_user', 'create_test', 'ssh')
+
+    @mock.patch.object(compute_api.KeypairAPI, 'create_key_pair')
+    def test_keypair_create_pass_policy(self, mock_create):
+        keypair_obj = objects.KeyPair(name='', public_key='',
+                                      fingerprint='', user_id='')
+
+        mock_create.return_value = (keypair_obj, 'dummy')
         body = {'keypair': {'name': 'create_test'}}
         rules = {self.policy_path + ':create': ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
         res = self.KeyPairController.create(self.req, body=body)
         self.assertIn('keypair', res)
+        req = self.req.environ['nova.context']
+        self._assert_keypair_create(mock_create, req)
 
     def test_keypair_delete_fail_policy(self):
         rules = {self.policy_path + ':delete': 'role:admin'}
@@ -593,3 +601,6 @@ class KeypairsTestV210(KeypairsTestV22):
 class KeypairPolicyTestV2(KeypairPolicyTestV21):
     KeyPairController = keypairs_v2.KeypairController()
     policy_path = 'compute_extension:keypairs'
+
+    def _assert_keypair_create(self, mock_create, req):
+        mock_create.assert_called_with(req, 'fake_user', 'create_test')
