@@ -106,18 +106,10 @@ class ExtraSpecs(object):
                  memory_limits=None, disk_io_limits=None,
                  vif_limits=None):
         """ExtraSpecs object holds extra_specs for the instance."""
-        if cpu_limits is None:
-            cpu_limits = Limits()
-        self.cpu_limits = cpu_limits
-        if memory_limits is None:
-            memory_limits = Limits()
-        self.memory_limits = memory_limits
-        if disk_io_limits is None:
-            disk_io_limits = Limits()
-        self.disk_io_limits = disk_io_limits
-        if vif_limits is None:
-            vif_limits = Limits()
-        self.vif_limits = vif_limits
+        self.cpu_limits = cpu_limits or Limits()
+        self.memory_limits = memory_limits or Limits()
+        self.disk_io_limits = disk_io_limits or Limits()
+        self.vif_limits = vif_limits or Limits()
         self.hw_version = hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
