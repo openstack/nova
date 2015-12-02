@@ -22,9 +22,12 @@ Through this API, the service provides massively scalable, on demand,
 self-service access to compute resources. Depending on the deployment those
 compute resources might be Virtual Machines, Physical Machines or Containers.
 
+This guide covers the concepts in the OpenStack Compute API.
+For a full reference listing, please see:
+`Compute API Reference <http://developer.openstack.org/api-ref-compute-v2.1.html>`__.
+
 We welcome feedback, comments, and bug reports at
 `bugs.launchpad.net/nova <http://bugs.launchpad.net/nova>`__.
-
 
 Intended audience
 =================
@@ -40,9 +43,8 @@ following concepts:
 *  HTTP/1.1
 *  JSON data serialization formats
 
-
-Versions and Extensions
-=======================
+API Versions
+============
 
 Following the Liberty release, every Nova deployment should have
 the following endpoints:
@@ -52,27 +54,19 @@ the following endpoints:
 * /v1.1 - an alias for v2.0 for backwards compatibility
 * /v2.1 - same API, except uses microversions
 
-For more information on how to make use the API, how to get the endpoint
-from the keystone service catalog and pick what version of the API to use,
-please read:
+While this guide concentrates on documenting the v2.1 API,
+please note that the v2.0 and v1.1 API are (almost) identical to first
+microversion of the v2.1 API and are also covered by this guide.
 
-.. toctree::
-    :maxdepth: 1
-
-    versions
-    extensions
-    microversions
-
-
-Key API concepts
-================
-
-The following documents go into more details about the key concepts of the
-OpenStack Compute API:
+Contents
+========
 
 .. toctree::
     :maxdepth: 2
 
+    versions
+    extensions
+    microversions
     general_info
     server_concepts
     authentication
@@ -82,11 +76,3 @@ OpenStack Compute API:
     paginated_collections
     polling_changes-since_parameter
     request_and_response_formats
-
-
-Full reference
-==============
-
-For a full reference listing for the OpenStack Compute API, please see:
-
-* `*Compute API reference (CURRENT)* <http://developer.openstack.org/api-ref-compute-v2.1.html>`__.
