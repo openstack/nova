@@ -151,9 +151,8 @@ def read_stored_info(target, field=None, timestamped=False):
         # There is an assumption here that target is a base image filename.
         old_filename = target + '.sha1'
         if field == 'sha1' and os.path.exists(old_filename):
-            hash_file = open(old_filename)
-            hash_value = hash_file.read()
-            hash_file.close()
+            with open(old_filename) as hash_file:
+                hash_value = hash_file.read()
 
             write_stored_info(target, field=field, value=hash_value)
             os.remove(old_filename)

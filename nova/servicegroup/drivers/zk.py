@@ -87,11 +87,11 @@ class ZooKeeperDriver(base.Driver):
 
         :returns ZKSession - newly created session
         """
-        null = open(os.devnull, "w")
-        session = evzookeeper.ZKSession(CONF.zookeeper.address,
-                                              recv_timeout=
-                                                CONF.zookeeper.recv_timeout,
-                                              zklog_fd=null)
+        with open(os.devnull, "w") as null:
+            session = evzookeeper.ZKSession(
+                CONF.zookeeper.address,
+                recv_timeout=CONF.zookeeper.recv_timeout,
+                zklog_fd=null)
         # Make sure the prefix exists
         try:
             session.create(CONF.zookeeper.sg_prefix, "",
@@ -148,11 +148,11 @@ class ZooKeeperDriver(base.Driver):
         if monitor is None:
             path = "%s/%s" % (CONF.zookeeper.sg_prefix, group_id)
 
-            null = open(os.devnull, "w")
-            local_session = evzookeeper.ZKSession(CONF.zookeeper.address,
-                                                  recv_timeout=
-                                                  CONF.zookeeper.recv_timeout,
-                                                  zklog_fd=null)
+            with open(os.devnull, "w") as null:
+                local_session = evzookeeper.ZKSession(
+                    CONF.zookeeper.address,
+                    recv_timeout=CONF.zookeeper.recv_timeout,
+                    zklog_fd=null)
 
             monitor = membership.MembershipMonitor(local_session, path)
             self._monitors[group_id] = monitor
