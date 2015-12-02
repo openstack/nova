@@ -86,7 +86,6 @@ import nova.paths
 import nova.pci.request
 import nova.pci.whitelist
 import nova.quota
-import nova.rdp
 import nova.scheduler.driver
 import nova.scheduler.filter_scheduler
 import nova.scheduler.filters.aggregate_image_properties_isolation

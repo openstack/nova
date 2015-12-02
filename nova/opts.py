@@ -43,7 +43,6 @@ import nova.notifications
 import nova.objects.network
 import nova.paths
 import nova.quota
-import nova.rdp
 import nova.service
 import nova.servicegroup.api
 import nova.spice
@@ -92,7 +91,6 @@ def list_opts():
              nova.keymgr.conf_key_mgr.key_mgr_opts,
              nova.keymgr.keymgr_opts,
          )),
-        ('rdp', nova.rdp.rdp_opts),
         ('spice',
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
