@@ -868,6 +868,7 @@ class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
         self.source_ports = []
         self.driver_name = None
         self.driver_format = None
+        self.reference = None
         self.backing_store = None
 
     def parse_dom(self, xmldoc):
@@ -888,6 +889,8 @@ class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
                     if d.tag == 'host':
                         self.source_hosts.append(d.get('name'))
                         self.source_ports.append(d.get('port'))
+            elif c.tag == 'reference':
+                self.reference = c.get('name')
             elif c.tag == 'backingStore':
                 if c.getchildren():
                     self.backing_store = LibvirtConfigGuestDiskBackingStore()
@@ -921,6 +924,9 @@ class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
 
         if self.driver_format:
             backing.append(etree.Element("format", type=self.driver_format))
+
+        if self.reference:
+            backing.append(etree.Element("reference", name=self.reference))
 
         if self.backing_store:
             backing.append(self.backing_store.format_dom())
