@@ -306,7 +306,7 @@ class VMwareVMOps(object):
     def _get_extra_specs(self, flavor, image_meta=None):
         image_meta = image_meta or objects.ImageMeta.from_dict({})
         extra_specs = vm_util.ExtraSpecs()
-        for resource in ['cpu', 'memory', 'disk_io']:
+        for resource in ['cpu', 'memory', 'disk_io', 'vif']:
             for (key, type) in (('limit', int),
                                 ('reservation', int),
                                 ('shares_level', str),
@@ -318,6 +318,7 @@ class VMwareVMOps(object):
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
         extra_specs.disk_io_limits.validate()
+        extra_specs.vif_limits.validate()
         hw_version = flavor.extra_specs.get('vmware:hw_version')
         extra_specs.hw_version = hw_version
         if CONF.vmware.pbm_enabled:

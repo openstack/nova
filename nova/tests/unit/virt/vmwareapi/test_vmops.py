@@ -1852,6 +1852,27 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
         self._test_spawn(extra_specs=extra_specs)
 
+    def test_spawn_vif_limit(self):
+        vif_limits = vm_util.Limits(limit=7)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_vif_reservation(self):
+        vif_limits = vm_util.Limits(reservation=7)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_vif_shares_level(self):
+        vif_limits = vm_util.Limits(shares_level='high')
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_vif_shares_custom(self):
+        vif_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=1948)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
     def _validate_extra_specs(self, expected, actual):
         self.assertEqual(expected.cpu_limits.limit,
                          actual.cpu_limits.limit)

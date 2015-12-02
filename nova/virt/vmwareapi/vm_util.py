@@ -103,7 +103,8 @@ class ExtraSpecs(object):
 
     def __init__(self, cpu_limits=None, hw_version=None,
                  storage_policy=None, cores_per_socket=None,
-                 memory_limits=None, disk_io_limits=None):
+                 memory_limits=None, disk_io_limits=None,
+                 vif_limits=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = Limits()
@@ -114,6 +115,9 @@ class ExtraSpecs(object):
         if disk_io_limits is None:
             disk_io_limits = Limits()
         self.disk_io_limits = disk_io_limits
+        if vif_limits is None:
+            vif_limits = Limits()
+        self.vif_limits = vif_limits
         self.hw_version = hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
@@ -197,7 +201,12 @@ def _get_allocation_info(client_factory, limits, allocation_type):
     else:
         shares.level = 'normal'
         shares.shares = 0
-    allocation.shares = shares
+    # The VirtualEthernetCardResourceAllocation has 'share' instead of
+    # 'shares'.
+    if hasattr(allocation, 'share'):
+        allocation.share = shares
+    else:
+        allocation.shares = shares
     return allocation
 
 
@@ -255,7 +264,8 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
 
     devices = []
     for vif_info in vif_infos:
-        vif_spec = _create_vif_spec(client_factory, vif_info)
+        vif_spec = _create_vif_spec(client_factory, vif_info,
+                                    extra_specs.vif_limits)
         devices.append(vif_spec)
 
     serial_port_spec = create_serial_port_spec(client_factory)
@@ -403,7 +413,7 @@ def convert_vif_model(name):
     return name
 
 
-def _create_vif_spec(client_factory, vif_info):
+def _create_vif_spec(client_factory, vif_info, vif_limits=None):
     """Builds a config spec for the addition of a new network
     adapter to the VM.
     """
@@ -467,6 +477,16 @@ def _create_vif_spec(client_factory, vif_info):
     net_device.addressType = "manual"
     net_device.macAddress = mac_address
     net_device.wakeOnLanEnabled = True
+
+    # vnic limits are only supported from version 6.0
+    if vif_limits and vif_limits.has_limits():
+        if hasattr(net_device, 'resourceAllocation'):
+            net_device.resourceAllocation = _get_allocation_info(
+                client_factory, vif_limits,
+                'ns0:VirtualEthernetCardResourceAllocation')
+        else:
+            msg = _('Limits only supported from vCenter 6.0 and above')
+            raise exception.Invalid(msg)
 
     network_spec.device = net_device
     return network_spec
