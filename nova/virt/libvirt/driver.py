@@ -3004,9 +3004,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 size = None
 
             backend = image('disk')
-            # TODO(ORBIT)
-            if utils.ft_secondary(instance):
-                backend = image('disk', 'replication')
             if backend.SUPPORTS_CLONE:
                 def clone_fallback_to_fetch(*args, **kwargs):
                     try:
@@ -3023,6 +3020,10 @@ class LibvirtDriver(driver.ComputeDriver):
                           image_id=disk_images['image_id'],
                           user_id=instance['user_id'],
                           project_id=instance['project_id'])
+
+            if utils.ft_secondary(instance):
+                backend = image('disk', 'replication')
+                backend.create_image(None, None, size)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
@@ -3458,16 +3459,33 @@ class LibvirtDriver(driver.ComputeDriver):
                 devices.append(diskos)
             else:
                 if 'disk' in disk_mapping:
-                    # TODO(ORBIT)
-                    image_type = None
-                    if utils.ft_secondary(instance):
-                        image_type = 'replication'
                     diskos = self._get_guest_disk_config(instance,
                                                          'disk',
                                                          disk_mapping,
-                                                         inst_type,
-                                                         image_type=image_type)
+                                                         inst_type)
+
+                    if utils.ft_secondary(instance):
+                        diskos.target_dev = 'replication'
+                        diskos.alias = 'colo1'
+                        # TODO(ORBIT): Temp
+                        br_extra_specs = {
+                            'blockrep:reference': diskos.alias,
+                            'quota:disk_total_bytes_sec': 70000000
+                        }
+                        inst_type['extra_specs'].update(br_extra_specs)
+                        diskosrepl = self._get_guest_disk_config(instance,
+                                                                 'disk',
+                                                                 disk_mapping,
+                                                                 inst_type,
+                                                                 'replication')
+
                     devices.append(diskos)
+
+                    # TODO(ORBIT): Qemu ordering issue where reference can't be
+                    #              found when buffer disks comes before
+                    #              secondary disk.
+                    if utils.ft_secondary(instance):
+                        devices.append(diskosrepl)
 
                 if 'disk.local' in disk_mapping:
                     disklocal = self._get_guest_disk_config(instance,

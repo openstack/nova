@@ -742,11 +742,10 @@ class Rbd(Image):
                                           reason=reason)
 
 
-class Replication(Qcow2):
+class Replication(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
-        super(Replication, self).__init__(instance=instance,
-                                          disk_name=disk_name,
-                                          path=path)
+        super(Replication, self).__init__("file", "qcow2", is_block_dev=False)
+
         if not utils.ft_enabled(instance):
             # TODO(ORBIT): Create better exception
             raise Exception("Cannot use block replication with a non-ft "
@@ -756,14 +755,17 @@ class Replication(Qcow2):
         else:
             self.driver_mode = 'primary'
 
-        prefix = ''
+        prefix = disk_name + '_'
         if CONF.libvirt.block_replication_path:
             path = CONF.libvirt.block_replication_path
-            prefix = '%s_' % instance['uuid']
+            prefix += '%s_' % instance['uuid']
         else:
-            path = os.path.dirname(self.path)
-        self.active_disk_path = os.path.join(path, prefix + 'active_disk.img')
-        self.hidden_disk_path = os.path.join(path, prefix + 'hidden_disk.img')
+            path = libvirt_utils.get_instance_path(instance)
+
+        self.path = os.path.join(path, prefix + 'active.img')
+        self.hidden_disk_path = os.path.join(path, prefix + 'hidden.img')
+
+        self.preallocate = CONF.preallocate_images != 'none'
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
                      extra_specs, hypervisor_version):
@@ -772,30 +774,20 @@ class Replication(Qcow2):
                                                      extra_specs,
                                                      hypervisor_version)
         info.driver_format = 'replication'
-        info.driver_cache = 'none'
-        info.driver_io = 'native'
         info.driver_mode = self.driver_mode
-
-        active_disk = vconfig.LibvirtConfigGuestDiskBackingStore()
-        active_disk.source_type = 'file'
-        active_disk.source_file = self.active_disk_path
-        active_disk.driver_format = 'qcow2'
 
         hidden_disk = vconfig.LibvirtConfigGuestDiskBackingStore()
         hidden_disk.source_type = 'file'
         hidden_disk.source_file = self.hidden_disk_path
         hidden_disk.driver_format = 'qcow2'
+        hidden_disk.reference = extra_specs.get('blockrep:reference')
 
-        active_disk.backing_store = hidden_disk
-        info.backing_store = active_disk
+        info.backing_store = hidden_disk
 
         return info
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        super(Replication, self).create_image(prepare_template, base, size,
-                                              *args, **kwargs)
-
-        libvirt_utils.create_image('qcow2', self.active_disk_path, size)
+        libvirt_utils.create_image('qcow2', self.path, size)
         libvirt_utils.create_image('qcow2', self.hidden_disk_path, size)
 
 
