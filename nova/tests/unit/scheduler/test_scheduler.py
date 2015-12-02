@@ -20,7 +20,6 @@ Tests For Scheduler
 import mock
 
 from nova import context
-from nova import db
 from nova import objects
 from nova.scheduler import host_manager
 from nova.scheduler import manager
@@ -137,25 +136,3 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         result = self.driver.hosts_up(self.context, self.topic)
         self.assertEqual(result, ['host2'])
-
-
-class SchedulerInstanceGroupData(test.NoDBTestCase):
-
-    driver_cls = fakes.FakeScheduler
-
-    def setUp(self):
-        super(SchedulerInstanceGroupData, self).setUp()
-        self.user_id = 'fake_user'
-        self.project_id = 'fake_project'
-        self.context = context.RequestContext(self.user_id, self.project_id)
-        self.driver = self.driver_cls()
-
-    def _get_default_values(self):
-        return {'name': 'fake_name',
-                'user_id': self.user_id,
-                'project_id': self.project_id}
-
-    def _create_instance_group(self, context, values, policies=None,
-                               metadata=None, members=None):
-        return db.instance_group_create(context, values, policies=policies,
-                                        metadata=metadata, members=members)
