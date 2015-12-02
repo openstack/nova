@@ -112,6 +112,46 @@ A config option should be checked for:
 * Interdependencies to other options. If other config options have to be
   considered when this config option gets changed, is this described?
 
+Third Party Tests
+=================
+
+Any change that is not tested well by the Jenkins check jobs must have a
+recent +1 vote from an appropriate third party test (or tests) on the latest
+patchset, before a core reviewer is allowed to make a +2 vote.
+
+Virt drivers
+------------
+
+At a minimum, we must ensure that any technology specific code has a +1
+from the relevant third party test, on the latest patchset, before a +2 vote
+can be applied.
+Specifically, changes to nova/virt/driver/<NNNN> need a +1 vote from the
+respective third party CI.
+For example, if you change something in the XenAPI virt driver, you must wait
+for a +1 from the XenServer CI on the latest patchset, before you can give
+that patch set a +2 vote.
+
+This is important to ensure:
+
+* We keep those drivers stable
+* We don't break that third party CI
+
+Notes
+-----
+
+Please note:
+
+* Long term, we should ensure that any patch a third party CI is allowed to
+  vote on, can be blocked from merging by that third party CI.
+  But we need a lot more work to make something like that feasible, hence the
+  proposed compromise.
+* While its possible to break a virt driver CI system by changing code that is
+  outside the virt drivers, this policy is not focusing on fixing that.
+  A third party test failure should always be investigated, but the failure of
+  a third party test to report in a timely manner should not block others.
+* We are only talking about the testing of in-tree code. Please note the only
+  public API is our REST API, see: :doc:`policies`
+
 Release Notes
 =============
 
