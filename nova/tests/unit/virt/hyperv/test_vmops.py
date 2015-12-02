@@ -146,7 +146,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_get_cached_image.return_value = fake_vhd_path
         fake_root_path = self._vmops._pathutils.get_root_vhd_path.return_value
 
-        self.assertRaises(vmutils.VHDResizeException,
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           self._vmops._create_root_vhd, self.context,
                           mock_instance)
 
@@ -232,7 +232,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     def test_is_resize_needed_exception(self):
         inst = mock.MagicMock()
         self.assertRaises(
-            vmutils.VHDResizeException, self._vmops._is_resize_needed,
+            exception.FlavorDiskSmallerThanImage,
+            self._vmops._is_resize_needed,
             mock.sentinel.FAKE_PATH, self.FAKE_SIZE, self.FAKE_SIZE - 1, inst)
 
     def test_is_resize_needed_true(self):
@@ -320,8 +321,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                 mock_create_root_vhd.assert_called_once_with(self.context,
                                                              mock_instance)
             mock_create_ephemeral_vhd.assert_called_once_with(mock_instance)
-            mock_get_image_vm_gen.assert_called_once_with(fake_root_path,
-                                                          mock_image_meta)
+            mock_get_image_vm_gen.assert_called_once_with(
+                mock_instance.uuid, fake_root_path, mock_image_meta)
             mock_create_instance.assert_called_once_with(
                 mock_instance, mock.sentinel.INFO, mock.sentinel.DEV_INFO,
                 fake_root_path, fake_ephemeral_path, fake_vm_gen)
@@ -482,8 +483,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._hostutils.get_supported_vm_types.return_value = [
             constants.IMAGE_PROP_VM_GEN_1, constants.IMAGE_PROP_VM_GEN_2]
 
-        response = self._vmops.get_image_vm_generation(mock.sentinel.FAKE_PATH,
-                                                       image_meta)
+        response = self._vmops.get_image_vm_generation(
+            mock.sentinel.instance_id, mock.sentinel.FAKE_PATH, image_meta)
 
         self.assertEqual(constants.VM_GEN_1, response)
 
@@ -496,8 +497,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vhdutils.get_vhd_format.return_value = (
             constants.DISK_FORMAT_VHDX)
 
-        response = self._vmops.get_image_vm_generation(mock.sentinel.FAKE_PATH,
-                                                       image_meta)
+        response = self._vmops.get_image_vm_generation(
+            mock.sentinel.instance_id, mock.sentinel.FAKE_PATH, image_meta)
 
         self.assertEqual(constants.VM_GEN_2, response)
 
@@ -510,8 +511,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vhdutils.get_vhd_format.return_value = (
             constants.DISK_FORMAT_VHD)
 
-        self.assertRaises(vmutils.HyperVException,
+        self.assertRaises(exception.InstanceUnacceptable,
                           self._vmops.get_image_vm_generation,
+                          mock.sentinel.instance_id,
                           mock.sentinel.FAKE_PATH,
                           image_meta)
 
@@ -531,7 +533,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             side_effect]
 
         if config_drive_format != self.ISO9660:
-            self.assertRaises(vmutils.UnsupportedConfigDriveFormatException,
+            self.assertRaises(exception.ConfigDriveUnsupportedFormat,
                               self._vmops._create_config_drive,
                               mock_instance, [mock.sentinel.FILE],
                               mock.sentinel.PASSWORD,
@@ -1004,14 +1006,14 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     def test_get_console_output_exception(self, fake_path_exists, fake_open):
         fake_vm = mock.MagicMock()
 
-        fake_open.side_effect = vmutils.HyperVException
+        fake_open.side_effect = IOError
         fake_path_exists.return_value = True
         self._vmops._pathutils.get_vm_console_log_paths.return_value = (
             mock.sentinel.fake_console_log_path,
             mock.sentinel.fake_console_log_archived)
 
         with mock.patch('nova.virt.hyperv.vmops.open', fake_open, create=True):
-            self.assertRaises(vmutils.HyperVException,
+            self.assertRaises(exception.ConsoleLogOutputException,
                               self._vmops.get_console_output,
                               fake_vm)
 

@@ -21,6 +21,7 @@ import platform
 
 from oslo_log import log as logging
 
+from nova import exception
 from nova.i18n import _, _LE
 from nova import objects
 from nova.virt import driver
@@ -32,7 +33,6 @@ from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
 from nova.virt.hyperv import snapshotops
 from nova.virt.hyperv import vmops
-from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -65,12 +65,11 @@ class HyperVDriver(driver.ComputeDriver):
             # the version is of Windows is older than Windows Server 2012 R2.
             # Log an error, lettingusers know that this version is not
             # supported any longer.
-            err_msg = _LE('You are running nova-compute on an unsupported '
+            LOG.error(_LE('You are running nova-compute on an unsupported '
                           'version of Windows (older than Windows / Hyper-V '
                           'Server 2012). The support for this version of '
-                          'Windows has been removed in Mitaka.')
-            LOG.error(err_msg)
-            raise vmutils.HyperVException(err_msg)
+                          'Windows has been removed in Mitaka.'))
+            raise exception.HypervisorTooOld(version='6.2')
 
     def init_host(self, host):
         self._vmops.restart_vm_log_writers()

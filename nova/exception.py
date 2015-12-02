@@ -239,6 +239,11 @@ class InvalidBDMVolume(InvalidBDM):
                 "failed to get volume %(id)s.")
 
 
+class UnsupportedBDMVolumeAuthMethod(InvalidBDM):
+    msg_fmt = _("Block Device Mapping is Invalid: "
+                "%(auth_method)s is unsupported.")
+
+
 class InvalidBDMImage(InvalidBDM):
     msg_fmt = _("Block Device Mapping is Invalid: "
                 "failed to get image %(id)s.")
@@ -286,6 +291,11 @@ class InvalidAttribute(Invalid):
 
 class ValidationError(Invalid):
     msg_fmt = "%(detail)s"
+
+
+class VolumeAttachFailed(Invalid):
+    msg_fmt = _("Volume %(volume_id)s could not be attached. "
+                "Reason: %(reason)s")
 
 
 class VolumeUnattached(Invalid):
@@ -489,6 +499,11 @@ class UnableToMigrateToSelf(Invalid):
 
 class InvalidHypervisorType(Invalid):
     msg_fmt = _("The supplied hypervisor type of is invalid.")
+
+
+class HypervisorTooOld(Invalid):
+    msg_fmt = _("This compute node's hypervisor is older than the minimum "
+                "supported version: %(version)s.")
 
 
 class DestinationHypervisorTooOld(Invalid):
@@ -1089,6 +1104,11 @@ class MigrationNotFoundByStatus(MigrationNotFound):
                 "with status %(status)s.")
 
 
+class ConsoleLogOutputException(NovaException):
+    msg_fmt = _("Console log output could not be retrieved for instance "
+                "%(instance_id)s. Reason: %(reason)s")
+
+
 class ConsolePoolNotFound(NotFound):
     msg_fmt = _("Console pool %(pool_id)s could not be found.")
 
@@ -1470,6 +1490,10 @@ class ConfigDriveInvalidValue(Invalid):
     msg_fmt = _("Invalid value for Config Drive option: %(option)s")
 
 
+class ConfigDriveUnsupportedFormat(Invalid):
+    msg_fmt = _("Config drive format '%(format)s' is not supported.")
+
+
 class ConfigDriveMountFailed(NovaException):
     msg_fmt = _("Could not mount vfat config drive. %(operation)s failed. "
                 "Error: %(error)s")
@@ -1478,6 +1502,11 @@ class ConfigDriveMountFailed(NovaException):
 class ConfigDriveUnknownFormat(NovaException):
     msg_fmt = _("Unknown config drive format %(format)s. Select one of "
                 "iso9660 or vfat.")
+
+
+class ConfigDriveNotFound(NotFound):
+    msg_fmt = _("Instance %(instance_uuid)s requires config drive, but it "
+                "does not exist.")
 
 
 class InterfaceAttachFailed(Invalid):
