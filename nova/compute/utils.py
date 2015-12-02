@@ -24,7 +24,6 @@ from oslo_log import log
 import six
 
 from nova import block_device
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
@@ -494,28 +493,6 @@ def reserve_quota_delta(context, deltas, instance):
         quotas.reserve(project_id=project_id, user_id=user_id,
                        **deltas)
     return quotas
-
-
-def get_inst_attrs_from_migration(migration, instance):
-    """Get the instance vcpus and memory_mb attributes.
-
-    Provides instance vcpus and memory_mb attributes according to
-    old flavor type using migration object if old flavor exists.
-    """
-    instance_vcpus = instance.vcpus
-    instance_memory_mb = instance.memory_mb
-
-    old_inst_type_id = migration.old_instance_type_id
-    try:
-        old_inst_type = flavors.get_flavor(old_inst_type_id)
-    except exception.FlavorNotFound:
-        LOG.warning(_LW("Flavor %d not found"), old_inst_type_id)
-    else:
-        instance_vcpus = old_inst_type.vcpus
-        vram_mb = old_inst_type.extra_specs.get('hw_video:ram_max_mb', 0)
-        instance_memory_mb = old_inst_type.memory_mb + vram_mb
-
-    return instance_vcpus, instance_memory_mb
 
 
 def remove_shelved_keys_from_system_metadata(instance):

@@ -1764,25 +1764,19 @@ class API(base.Base):
 
     def _create_reservations(self, context, instance, original_task_state,
                              project_id, user_id):
-        instance_vcpus = instance.vcpus
-        instance_memory_mb = instance.memory_mb
         # NOTE(wangpan): if the instance is resizing, and the resources
         #                are updated to new instance type, we should use
         #                the old instance type to create reservation.
         # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
         if original_task_state in (task_states.RESIZE_MIGRATED,
                                    task_states.RESIZE_FINISH):
-            try:
-                migration = objects.Migration.get_by_instance_and_status(
-                    context.elevated(), instance.uuid, 'post-migrating')
-            except exception.MigrationNotFoundByStatus:
-                migration = None
-            if (migration and
-                    instance.instance_type_id ==
-                        migration.new_instance_type_id):
-                get_inst_attrs = compute_utils.get_inst_attrs_from_migration
-                instance_vcpus, instance_memory_mb = get_inst_attrs(migration,
-                                                                    instance)
+            old_flavor = instance.old_flavor
+            instance_vcpus = old_flavor.vcpus
+            vram_mb = old_flavor.extra_specs.get('hw_video:ram_max_mb', 0)
+            instance_memory_mb = old_flavor.memory_mb + vram_mb
+        else:
+            instance_vcpus = instance.vcpus
+            instance_memory_mb = instance.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,
