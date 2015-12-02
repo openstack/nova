@@ -219,8 +219,6 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
                 'ephemeral_gb': 10,
                 'swap': 0,
                 })
-        self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdc')
 
@@ -229,8 +227,6 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
 
@@ -239,8 +235,6 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
                 'ephemeral_gb': 10,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
 
@@ -249,8 +243,6 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
         self.data.append(self._fake_bdm(device))

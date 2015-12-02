@@ -78,23 +78,6 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(exception.FlavorNotFound,
                           flavors.get_default_flavor)
 
-    def test_will_get_flavor_by_id(self):
-        default_instance_type = flavors.get_default_flavor()
-        instance_type_id = default_instance_type.id
-        fetched = flavors.get_flavor(instance_type_id)
-        self.assertIsInstance(fetched, objects.Flavor)
-        self.assertEqual(default_instance_type.flavorid, fetched.flavorid)
-
-    def test_will_not_get_flavor_by_unknown_id(self):
-        # Ensure get by name returns default flavor with no name.
-        self.assertRaises(exception.FlavorNotFound,
-                         flavors.get_flavor, 10000)
-
-    def test_will_not_get_flavor_with_bad_id(self):
-        # Ensure get by name returns default flavor with bad name.
-        self.assertRaises(exception.FlavorNotFound,
-                          flavors.get_flavor, 'asdf')
-
     def test_flavor_get_by_None_name_returns_default(self):
         # Ensure get by name returns default flavor with no name.
         default = flavors.get_default_flavor()
@@ -481,7 +464,7 @@ class CreateInstanceTypeTest(test.TestCase):
 
         flavors.destroy('flavor')
         self.assertRaises(exception.FlavorNotFound,
-                          flavors.get_flavor, flavor.id)
+                          objects.Flavor.get_by_id, ctxt, flavor.id)
 
         # Deleted instance should not be in list anymore
         new_list = objects.FlavorList.get_all(ctxt)

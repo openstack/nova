@@ -36,7 +36,6 @@ import testtools
 
 from nova.compute import api as compute_api
 from nova.compute import arch
-from nova.compute import flavors
 from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
@@ -1516,7 +1515,7 @@ iface eth0 inet6 static
 
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
-        flavor = flavors.get_flavor(3)
+        flavor = objects.Flavor.get_by_id(self.context, 3)
 
         expected = {instance['uuid']: {'memory_mb': flavor['memory_mb'],
                                        'uuid': instance['uuid']}}
