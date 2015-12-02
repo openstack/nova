@@ -36,6 +36,8 @@ UNDERSCORE_IMPORT_FILES = []
 
 session_check = re.compile(r"\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(r".*\scfg\.")
+# Excludes oslo.config OptGroup objects
+cfg_opt_re = re.compile(r".*[\s\[]cfg\.[a-zA-Z]*Opt\(")
 vi_header_re = re.compile(r"^#\s+vim?:.+")
 virt_file_re = re.compile(r"\./nova/(?:tests/)?virt/(\w+)/")
 virt_import_re = re.compile(
@@ -550,6 +552,30 @@ def check_no_contextlib_nested(logical_line, filename):
         yield(0, msg)
 
 
+def check_config_option_in_central_place(logical_line, filename):
+    msg = ("N342: Config options should be in the central location "
+           "'/nova/conf/*'. Do not declare new config options outside "
+           "of that folder.")
+    # That's the correct location
+    if "nova/conf/" in filename:
+        return
+    # TODO(markus_z) This is just temporary until all config options are
+    # moved to the central place. To avoid that a once cleaned up place
+    # introduces new config options, we do a check here. This array will
+    # get quite huge over the time, but will be removed at the end of the
+    # reorganization.
+    # You can add the full path to a module or folder. It's just a substring
+    # check, which makes it flexible enough.
+    cleaned_up = ["nova/console/serial.py",
+                  "nova/cmd/serialproxy.py",
+                  ]
+    if not any(c in filename for c in cleaned_up):
+        return
+
+    if cfg_opt_re.match(logical_line):
+        yield(0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -578,3 +604,4 @@ def factory(register):
     register(check_http_not_implemented)
     register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
+    register(check_config_option_in_central_place)

@@ -52,6 +52,7 @@ Nova Specific Commandments
 - [N339] Check common raise_feature_not_supported() is used for v2.1 HTTPNotImplemented response.
 - [N340] Check nova.utils.spawn() is used instead of greenthread.spawn() and eventlet.spawn()
 - [N341] contextlib.nested is deprecated
+- [N342] Config options should be in the central location ``nova/conf/``
 
 Creating Unit Tests
 -------------------

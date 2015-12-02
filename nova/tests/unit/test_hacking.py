@@ -588,3 +588,43 @@ class HackingTestCase(test.NoDBTestCase):
 
         code = "nova.utils.spawn_n(func, arg1, kwarg1=kwarg1)"
         self._assert_has_no_errors(code, checks.check_greenthread_spawns)
+
+    def test_config_option_regex_match(self):
+        def should_match(code):
+            self.assertTrue(checks.cfg_opt_re.match(code))
+
+        def should_not_match(code):
+            self.assertFalse(checks.cfg_opt_re.match(code))
+
+        should_match("opt = cfg.StrOpt('opt_name')")
+        should_match("opt = cfg.IntOpt('opt_name')")
+        should_match("opt = cfg.DictOpt('opt_name')")
+        should_match("opt = cfg.Opt('opt_name')")
+        should_match("opts=[cfg.Opt('opt_name')]")
+        should_match("   cfg.Opt('opt_name')")
+        should_not_match("opt_group = cfg.OptGroup('opt_group_name')")
+
+    def test_check_config_option_in_central_place(self):
+        errors = [(1, 0, "N342")]
+        code = """
+        opts = [
+            cfg.StrOpt('random_opt',
+                       default='foo',
+                       help='I am here to do stuff'),
+            ]
+        """
+        # option at the right place in the tree
+        self._assert_has_no_errors(code,
+                                   checks.check_config_option_in_central_place,
+                                   filename="nova/conf/serial_console.py")
+        # option at a location which is not in scope right now
+        # TODO(markus_z): This is remporary until all config options are
+        # moved to /nova/conf
+        self._assert_has_no_errors(code,
+                                   checks.check_config_option_in_central_place,
+                                   filename="nova/dummy/non_existent.py")
+        # option at the wrong place in the tree
+        self._assert_has_errors(code,
+                                checks.check_config_option_in_central_place,
+                                filename="nova/cmd/serialproxy.py",
+                                expected_errors=errors)
