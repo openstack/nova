@@ -727,7 +727,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
 
-                    # TODO(sahid): At this point we should be a Guest object
                     state = guest.get_power_state(self._host)
                     if state == power_state.SHUTDOWN:
                         is_okay = True
