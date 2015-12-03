@@ -727,7 +727,7 @@ class API(base.Base):
         # the volume cannot have the same device name as root_device_name
         if image_ref:
             for bdm in block_device_mapping:
-                if (bdm.get('source_type') == 'volume' and
+                if (bdm.get('destination_type') == 'volume' and
                     block_device.strip_dev(bdm.get(
                     'device_name')) == root_device_name):
                     msg = _('The volume cannot be assigned the same device'
