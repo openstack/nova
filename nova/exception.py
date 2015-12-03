@@ -1998,12 +1998,18 @@ class InstanceQuiesceNotSupported(Invalid):
     msg_fmt = _('Quiescing is not supported in instance %(instance_id)s')
 
 
-class QemuGuestAgentNotEnabled(Invalid):
+class InstanceAgentNotEnabled(Invalid):
+    msg_fmt = _('Guest agent is not enabled for the instance')
+    safe = True
+
+
+class QemuGuestAgentNotEnabled(InstanceAgentNotEnabled):
     msg_fmt = _('QEMU guest agent is not enabled')
 
 
 class SetAdminPasswdNotSupported(Invalid):
     msg_fmt = _('Set admin password is not supported')
+    safe = True
 
 
 class MemoryPageSizeInvalid(Invalid):

@@ -87,6 +87,25 @@ class AdminPasswordTestV21(test.NoDBTestCase):
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.SetAdminPasswdNotSupported(instance="1",
+                                                                 reason=''))
+    def test_change_password_not_supported(self, mock_set_admin_password):
+        body = {'changePassword': {'adminPass': 'test'}}
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.InstanceAgentNotEnabled(instance="1",
+                                                              reason=''))
+    def test_change_password_guest_agent_disabled(self,
+                                                  mock_set_admin_password):
+        body = {'changePassword': {'adminPass': 'test'}}
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
         self.assertRaises(self.validiation_error,
