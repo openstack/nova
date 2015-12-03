@@ -30,7 +30,12 @@ server status is one of the following values:
    pulling the power plug on a physical server, plugging it back in, and
    rebooting it.
 
+-  ``MIGRATING``: The server is under migrating. This is caused by a
+   live migration (moving a server that is active) action.
+
 -  ``PASSWORD``: The password is being reset on the server.
+
+-  ``PAUSED``: The server is paused.
 
 -  ``REBOOT``: The server is in a soft reboot state. A reboot command
    was passed to the operating system.
@@ -46,6 +51,12 @@ server status is one of the following values:
    some reason. The destination server is being cleaned up and the
    original source server is restarting.
 
+-  ``SHELVED``: The server is in shelved state. Depends on the shelve offload
+   time, the server will be automatically shelved off loaded.
+
+-  ``SHELVED_OFFLOADED``: The shelved server is offloaded (removed from the
+   compute host) and it needs unshelved action to be used again.
+
 -  ``SHUTOFF``: The virtual machine (VM) was powered down by the user,
    but not through the OpenStack Compute API. For example, the user
    issued a ``shutdown -h`` command from within the server. If
@@ -54,6 +65,11 @@ server status is one of the following values:
    the OpenStack Compute API to restart the server, it might
    be deleted first, depending on the value in the
    *``shutdown_terminate``* database field on the Instance model.
+
+-  ``SOFT_DELETED``: The server is marked as deleted while will keep in the
+   cloud for some time(configurable), during the period authorized user can
+   restore the server back to normal state. When the time expires, the
+   server will be deleted permanently.
 
 -  ``SUSPENDED``: The server is suspended, either by request or
    necessity. This status appears for only the following hypervisors:
@@ -86,8 +102,6 @@ Status Transition:
 ``BUILD``
 
 ``ACTIVE``
-
-``BUILD``
 
 ``ERROR`` (on error)
 
