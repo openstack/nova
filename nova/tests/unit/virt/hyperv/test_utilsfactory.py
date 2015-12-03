@@ -21,7 +21,6 @@ import mock
 from oslo_config import cfg
 
 from nova import test
-from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
@@ -31,18 +30,25 @@ CONF = cfg.CONF
 
 class TestHyperVUtilsFactory(test.NoDBTestCase):
     def test_get_volumeutils_v2(self):
-        self._test_returned_class(volumeutilsv2.VolumeUtilsV2, False, True)
+        self._test_returned_class(expected_class=volumeutilsv2.VolumeUtilsV2,
+                                  os_supports_v2=True)
 
     def test_get_volumeutils_v1(self):
-        self._test_returned_class(volumeutils.VolumeUtils, False, False)
+        self._test_returned_class(expected_class=volumeutils.VolumeUtils)
 
     def test_get_volumeutils_force_v1_and_not_min_version(self):
-        self._test_returned_class(volumeutils.VolumeUtils, True, False)
+        self._test_returned_class(expected_class=volumeutils.VolumeUtils,
+                                  force_v1=True)
 
-    def _test_returned_class(self, expected_class, force_v1, os_supports_v2):
-        CONF.set_override('force_volumeutils_v1', force_v1, 'hyperv')
+    @mock.patch.object(utilsfactory, 'CONF')
+    def _test_returned_class(self, mock_CONF, expected_class, force_v1=False,
+                             os_supports_v2=False):
+        # NOTE(claudiub): temporary change, in order for unit tests to pass.
+        # force_hyperv_utils_v1 CONF flag does not exist anymore.
+        # utilsfactory and its test cases will be removed next commit.
+        mock_CONF.hyperv.force_volumeutils_v1 = force_v1
         with mock.patch.object(
-            hostutils.HostUtils,
+            utilsfactory.utils,
             'check_min_windows_version') as mock_check_min_windows_version:
             mock_check_min_windows_version.return_value = os_supports_v2
 

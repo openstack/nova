@@ -17,9 +17,13 @@
 A Hyper-V Nova Compute driver.
 """
 
+import functools
 import platform
 
+from os_win import exceptions as os_win_exc
+from os_win import utilsfactory
 from oslo_log import log as logging
+import six
 
 from nova import exception
 from nova.i18n import _, _LE
@@ -27,7 +31,6 @@ from nova import objects
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
-from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
@@ -38,6 +41,49 @@ from nova.virt.hyperv import volumeops
 LOG = logging.getLogger(__name__)
 
 
+def convert_exceptions(function, exception_map):
+    expected_exceptions = tuple(exception_map.keys())
+
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except expected_exceptions as ex:
+            raised_exception = exception_map.get(type(ex))
+            if not raised_exception:
+                # exception might be a subclass of an expected exception.
+                for expected in expected_exceptions:
+                    if isinstance(ex, expected):
+                        raised_exception = exception_map[expected]
+                        break
+
+            raise raised_exception(six.text_type(ex))
+    return wrapper
+
+
+def decorate_all_methods(decorator, *args, **kwargs):
+    def decorate(cls):
+        for attr in cls.__dict__:
+            class_member = getattr(cls, attr)
+            if callable(class_member):
+                setattr(cls, attr, decorator(class_member, *args, **kwargs))
+        return cls
+
+    return decorate
+
+
+exception_conversion_map = {
+    # expected_exception: converted_exception
+    os_win_exc.OSWinException: exception.NovaException,
+    os_win_exc.HyperVVMNotFoundException: exception.InstanceNotFound,
+}
+
+# NOTE(claudiub): the purpose of the decorator below is to prevent any
+# os_win exceptions (subclasses of OSWinException) to leak outside of the
+# HyperVDriver.
+
+
+@decorate_all_methods(convert_exceptions, exception_conversion_map)
 class HyperVDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": False,
@@ -61,7 +107,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
 
     def _check_minimum_windows_version(self):
-        if not hostutils.HostUtils().check_min_windows_version(6, 2):
+        if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
             # the version is of Windows is older than Windows Server 2012 R2.
             # Log an error, lettingusers know that this version is not
             # supported any longer.

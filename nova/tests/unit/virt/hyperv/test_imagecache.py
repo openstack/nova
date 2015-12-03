@@ -48,16 +48,12 @@ class ImageCacheTestCase(test.NoDBTestCase):
         # in order to return the proper Utils Class, so it must be mocked.
         patched_get_hostutils = mock.patch.object(imagecache.utilsfactory,
                                                   "get_hostutils")
-        patched_get_pathutils = mock.patch.object(imagecache.utilsfactory,
-                                                  "get_pathutils")
         patched_get_vhdutils = mock.patch.object(imagecache.utilsfactory,
                                                  "get_vhdutils")
         patched_get_hostutils.start()
-        patched_get_pathutils.start()
         patched_get_vhdutils.start()
 
         self.addCleanup(patched_get_hostutils.stop)
-        self.addCleanup(patched_get_pathutils.stop)
         self.addCleanup(patched_get_vhdutils.stop)
 
         self.imagecache = imagecache.ImageCache()
@@ -82,8 +78,8 @@ class ImageCacheTestCase(test.NoDBTestCase):
 
     @mock.patch.object(imagecache.ImageCache, '_get_root_vhd_size_gb')
     def test_resize_and_cache_vhd_smaller(self, mock_get_vhd_size_gb):
-        self.imagecache._vhdutils.get_vhd_info.return_value = {
-            'MaxInternalSize': (self.FAKE_VHD_SIZE_GB + 1) * units.Gi
+        self.imagecache._vhdutils.get_vhd_size.return_value = {
+            'VirtualSize': (self.FAKE_VHD_SIZE_GB + 1) * units.Gi
         }
         mock_get_vhd_size_gb.return_value = self.FAKE_VHD_SIZE_GB
         mock_internal_vhd_size = (
@@ -95,7 +91,7 @@ class ImageCacheTestCase(test.NoDBTestCase):
                           mock.sentinel.instance,
                           mock.sentinel.vhd_path)
 
-        self.imagecache._vhdutils.get_vhd_info.assert_called_once_with(
+        self.imagecache._vhdutils.get_vhd_size.assert_called_once_with(
             mock.sentinel.vhd_path)
         mock_get_vhd_size_gb.assert_called_once_with(mock.sentinel.instance)
         mock_internal_vhd_size.assert_called_once_with(

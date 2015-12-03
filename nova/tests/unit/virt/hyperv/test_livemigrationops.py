@@ -14,12 +14,12 @@
 #    under the License.
 
 import mock
+from os_win import exceptions as os_win_exc
 from oslo_config import cfg
 
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import livemigrationops
-from nova.virt.hyperv import vmutils
 
 CONF = cfg.CONF
 
@@ -44,8 +44,8 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         fake_dest = mock.sentinel.DESTINATION
         self._livemigrops._livemigrutils.live_migrate_vm.side_effect = [
             side_effect]
-        if side_effect is vmutils.HyperVException:
-            self.assertRaises(vmutils.HyperVException,
+        if side_effect is os_win_exc.HyperVException:
+            self.assertRaises(os_win_exc.HyperVException,
                               self._livemigrops.live_migration,
                               self.context, mock_instance, fake_dest,
                               mock_post, mock_recover, False, None)
@@ -70,7 +70,7 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self._test_live_migration(side_effect=None)
 
     def test_live_migration_exception(self):
-        self._test_live_migration(side_effect=vmutils.HyperVException)
+        self._test_live_migration(side_effect=os_win_exc.HyperVException)
 
     def test_live_migration_wrong_os_version(self):
         self._livemigrops._livemigrutils = None

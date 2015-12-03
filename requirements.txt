@@ -53,3 +53,4 @@ psutil<2.0.0,>=1.1.1
 oslo.versionedobjects>=0.13.0
 alembic>=0.8.0
 os-brick>=0.4.0 # Apache-2.0
+os-win>=0.0.6 # Apache-2.0

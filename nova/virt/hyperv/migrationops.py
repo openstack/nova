@@ -18,6 +18,7 @@ Management class for migration / resize operations.
 """
 import os
 
+from os_win import utilsfactory
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
@@ -27,7 +28,7 @@ from nova.i18n import _, _LE
 from nova import objects
 from nova.virt import configdrive
 from nova.virt.hyperv import imagecache
-from nova.virt.hyperv import utilsfactory
+from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
 
@@ -39,7 +40,7 @@ class MigrationOps(object):
         self._hostutils = utilsfactory.get_hostutils()
         self._vmutils = utilsfactory.get_vmutils()
         self._vhdutils = utilsfactory.get_vhdutils()
-        self._pathutils = utilsfactory.get_pathutils()
+        self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._vmops = vmops.VMOps()
         self._imagecache = imagecache.ImageCache()
@@ -201,11 +202,9 @@ class MigrationOps(object):
             self._vhdutils.reconnect_parent_vhd(diff_vhd_path,
                                                 base_vhd_copy_path)
 
-            LOG.debug("Merging base disk %(base_vhd_copy_path)s and "
-                      "diff disk %(diff_vhd_path)s",
-                      {'base_vhd_copy_path': base_vhd_copy_path,
-                       'diff_vhd_path': diff_vhd_path})
-            self._vhdutils.merge_vhd(diff_vhd_path, base_vhd_copy_path)
+            LOG.debug("Merging differential disk %s into its parent.",
+                      diff_vhd_path)
+            self._vhdutils.merge_vhd(diff_vhd_path)
 
             # Replace the differential VHD with the merged one
             self._pathutils.rename(base_vhd_copy_path, diff_vhd_path)
@@ -215,7 +214,7 @@ class MigrationOps(object):
                     self._pathutils.remove(base_vhd_copy_path)
 
     def _check_resize_vhd(self, vhd_path, vhd_info, new_size):
-        curr_size = vhd_info['MaxInternalSize']
+        curr_size = vhd_info['VirtualSize']
         if new_size < curr_size:
             raise exception.CannotResizeDisk(
                 reason=_("Cannot resize the root disk to a smaller size. "

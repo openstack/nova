@@ -16,8 +16,10 @@
 import os
 
 import mock
+from os_win import exceptions as os_win_exc
 
 from nova.compute import task_states
+from nova import exception
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import snapshotops
@@ -96,7 +98,7 @@ class SnapshotOpsTestCase(test_base.HyperVBaseTestCase):
             mock_reconnect.assert_called_once_with(dest_vhd_path,
                                                    base_dest_disk_path)
             self._snapshotops._vhdutils.merge_vhd.assert_called_once_with(
-                dest_vhd_path, base_dest_disk_path)
+                dest_vhd_path)
             mock_save_glance_image.assert_called_once_with(
                 self.context, mock.sentinel.IMAGE_ID, base_dest_disk_path)
         else:
@@ -119,3 +121,18 @@ class SnapshotOpsTestCase(test_base.HyperVBaseTestCase):
 
     def test_snapshot_no_base_disk(self):
         self._test_snapshot(base_disk_path=None)
+
+    @mock.patch.object(snapshotops.SnapshotOps, '_snapshot')
+    def test_snapshot_instance_not_found(self, mock_snapshot):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_snapshot.side_effect = os_win_exc.HyperVVMNotFoundException(
+            vm_name=mock_instance.name)
+
+        self.assertRaises(exception.InstanceNotFound,
+                          self._snapshotops.snapshot,
+                          self.context, mock_instance, mock.sentinel.image_id,
+                          mock.sentinel.update_task_state)
+
+        mock_snapshot.assert_called_once_with(self.context, mock_instance,
+                                              mock.sentinel.image_id,
+                                              mock.sentinel.update_task_state)

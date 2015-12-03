@@ -27,16 +27,10 @@ from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
 
-hyper_opts = [
-    cfg.BoolOpt('force_volumeutils_v1',
-                default=False,
-                help='Force V1 volume utility class'),
-]
-
 CONF = cfg.CONF
-CONF.register_opts(hyper_opts, 'hyperv')
 
 LOG = logging.getLogger(__name__)
+CONF.import_group('hyperv', 'os_win.utilsfactory')
 
 utils = hostutils.HostUtils()
 
