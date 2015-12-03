@@ -44,7 +44,7 @@ user documentation.
   ``reservation_id``, ``launch_index``, ``ramdisk_id``, ``kernel_id``, ``hostname``,
   ``root_device_name``, ``userdata``.
 
-  Exposed ``delete_on_termination`` for ``attached_volumes`` in ``os-extended-volumes``.
+  Exposed ``delete_on_termination`` for ``volumes_attached`` in ``os-extended-volumes``.
 
   This change is required for the extraction of EC2 API into a standalone
   service. It exposes necessary properties absent in public nova APIs yet.
