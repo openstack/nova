@@ -346,11 +346,8 @@ class ObjectHandler(BaseRequestHandler):
         self.set_header("Content-Type", "application/unknown")
         self.set_header("Last-Modified", datetime.datetime.utcfromtimestamp(
             info.st_mtime))
-        object_file = open(path, "r")
-        try:
+        with open(path, "r") as object_file:
             self.finish(object_file.read())
-        finally:
-            object_file.close()
 
     def put(self, bucket, object_name):
         object_name = urllib.unquote(object_name)
@@ -366,9 +363,8 @@ class ObjectHandler(BaseRequestHandler):
             return
         directory = os.path.dirname(path)
         fileutils.ensure_tree(directory)
-        object_file = open(path, "w")
-        object_file.write(self.request.body)
-        object_file.close()
+        with open(path, "w") as object_file:
+            object_file.write(self.request.body)
         self.set_header('ETag',
                         '"%s"' % utils.get_hash_str(self.request.body))
         self.finish()
