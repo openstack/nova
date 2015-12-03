@@ -51,7 +51,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
         parts = [dirname]
         parts.append('api_samples')
-        if cls.all_extensions:
+        # TODO(gmann): Once all tests gets merged for all extension
+        # then we need to have a simple logic here to select sample file
+        # directory which will be based on cls.sample_dir and api_version.
+        # All other things will go away from here. Currently hacking this
+        # till we merge every extensions tests.
+        if cls.all_extensions and not cls.sample_dir:
             parts.append('all_extensions')
         # Note(gmann): if _use_common_server_api_samples is set to True
         # then common server sample files present in 'servers' directory

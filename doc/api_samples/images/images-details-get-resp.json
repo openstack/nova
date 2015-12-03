@@ -1,6 +1,8 @@
 {
     "images": [
         {
+            "OS-DCF:diskConfig": "AUTO",
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -32,6 +34,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             "links": [
@@ -62,6 +65,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "a2459075-d96c-40d5-893e-577ff92e721c",
             "links": [
@@ -91,6 +95,8 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-DCF:diskConfig": "MANUAL",
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
             "links": [
@@ -122,6 +128,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
             "links": [
@@ -151,6 +158,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "cedef40a-ed67-4d10-800e-17455edce175",
             "links": [
@@ -180,6 +188,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
+            "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
             "id": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "links": [

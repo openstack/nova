@@ -1,5 +1,7 @@
 {
     "image": {
+        "OS-DCF:diskConfig": "AUTO",
+        "OS-EXT-IMG-SIZE:size": "74185822",
         "created": "2011-01-01T01:02:03Z",
         "id": "70a599e0-31e7-49b7-b260-868f441e862b",
         "links": [
