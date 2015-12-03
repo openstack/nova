@@ -115,7 +115,7 @@ In this section we focus on this related to networking.
 Administrator Concepts
 =======================
 
-Come APIs are largely focused on administration of Nova, and generally focus
+Some APIs are largely focused on administration of Nova, and generally focus
 on compute hosts rather than servers.
 
 -  **Services**
@@ -196,11 +196,31 @@ on compute hosts rather than servers.
 
 -  **Hosts**
 
-   TODO
+   Hosts are the *physical machines* that provide the resources for the virtual
+   servers created in Nova. They run a ``hypervisor`` (see definition below)
+   that handles the actual creation and management of the virtual servers.
+   Hosts also run the ``Nova compute service``, which receives requests from
+   Nova to interact with the virtual servers on that machine. When compute
+   service receives a request, it calls the appropriate methods of the driver
+   for that hypervisor in order to carry out the request. The driver acts as
+   the translator from generic Nova requests to hypervisor-specific calls.
+   Hosts report their current state back to Nova, where it is tracked by the
+   scheduler service, so that the scheduler can place requests for new virtual
+   servers on the hosts that can best fit them.
 
 -  **Host Actions**
 
-   TODO
+   A *host action* is one that affects the physical host machine, as opposed to
+   actions that only affect the virtual servers running on that machine. There
+   are three 'power' actions that are supported: *startup*, *shutdown*, and
+   *reboot*. There are also two 'state' actions: enabling/disabling the host,
+   and setting the host into or out of maintenance mode. Of course, carrying
+   out these actions can affect running virtual servers on that host, so their
+   state will need to be considered before carrying out the host action. For
+   example, if you want to call the 'shutdown' action to turn off a host
+   machine, you might want to migrate any virtual servers on that host before
+   shutting down the host machine so that the virtual servers continue to be
+   available without interruption.
 
 -  **Hypervisors**
 
