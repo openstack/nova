@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from oslo_config import cfg
+from oslo_db import exception as db_exception
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import timeutils
@@ -26,6 +27,7 @@ from nova.servicegroup.drivers import base
 
 CONF = cfg.CONF
 CONF.import_opt('service_down_time', 'nova.service')
+CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
 LOG = logging.getLogger(__name__)
 
@@ -82,6 +84,14 @@ class DbDriver(base.Driver):
 
     def _report_state(self, service):
         """Update the state of this service in the datastore."""
+
+        if CONF.conductor.use_local:
+            # need to catch DB type errors
+            exc_cls = db_exception.DBError  # oslo.db exception base class
+        else:
+            # need to catch messaging timeouts
+            exc_cls = messaging.MessagingTimeout
+
         try:
             service.service_ref.report_count += 1
             service.service_ref.save()
@@ -93,9 +103,8 @@ class DbDriver(base.Driver):
                     _LI('Recovered connection to nova-conductor '
                         'for reporting service status.'))
 
-        # because we are communicating over conductor, a failure to
-        # connect is going to be a messaging failure, not a db error.
-        except messaging.MessagingTimeout:
+        # the type of failure depends on use of remote or local conductor
+        except exc_cls:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
                 LOG.warn(_LW('Lost connection to nova-conductor '
