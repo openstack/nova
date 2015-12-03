@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fixes a bug where Nova services won't recover after a temporary DB
+    connection issue, when service group DB driver is used together with
+    local conductor, as the driver only handles RPC timeout errors.
+
+    For more info see https://bugs.launchpad.net/nova/+bug/1505471
