@@ -14,22 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.pci import devspec
 
-pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',
-                            default=[],
-                            help='White list of PCI devices available to VMs. '
-                            'For example: pci_passthrough_whitelist =  '
-                            '[{"vendor_id": "8086", "product_id": "0443"}]'
-                            )
-            ]
-CONF = cfg.CONF
-CONF.register_opts(pci_opts)
+CONF = nova.conf.CONF
 
 
 class Whitelist(object):

@@ -39,37 +39,18 @@
 import copy
 
 import jsonschema
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
+import nova.conf
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils
 
-pci_alias_opts = [
-    cfg.MultiStrOpt('pci_alias',
-                    default=[],
-                    help='An alias for a PCI passthrough device requirement. '
-                        'This allows users to specify the alias in the '
-                        'extra_spec for a flavor, without needing to repeat '
-                        'all the PCI property requirements. For example: '
-                        'pci_alias = '
-                          '{ "name": "QuickAssist", '
-                          '  "product_id": "0443", '
-                          '  "vendor_id": "8086", '
-                          '  "device_type": "type-PCI" '
-                          '} '
-                        'defines an alias for the Intel QuickAssist card. '
-                        '(multi valued)'
-                   )
-]
-
 PCI_NET_TAG = 'physical_network'
 
-CONF = cfg.CONF
-CONF.register_opts(pci_alias_opts)
+CONF = nova.conf.CONF
 
 
 _ALIAS_DEV_TYPE = [obj_fields.PciDeviceType.STANDARD,
