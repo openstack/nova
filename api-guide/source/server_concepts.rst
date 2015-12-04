@@ -8,6 +8,10 @@ a physical machine or a container.
 Server status
 ~~~~~~~~~~~~~
 
+TODO: This section's content is old, we need to update the status list.
+The task_state and vm_state which expose to Administrator need description to
+help user to understand the difference.
+
 You can filter the list of servers by image, flavor, name, and status
 through the respective query parameters.
 
@@ -117,6 +121,12 @@ when creating a server, only the server ID, its links, and the
 administrative password are guaranteed to be returned in the request.
 You can retrieve additional attributes by performing subsequent **GET**
 operations on the server.
+
+Server query
+~~~~~~~~~~~~
+
+TODO: We should introduce that there are multiple methods to filter the
+response of list servers.
 
 Server actions
 ~~~~~~~~~~~~~~~
@@ -299,6 +309,21 @@ size of the metadata key and value is 255 bytes each. The maximum number
 of key-value pairs that can be supplied per server is determined by the
 compute provider and may be queried via the maxServerMeta absolute
 limit.
+
+Block Device Mapping
+~~~~~~~~~~~~~~~~~~~~
+
+TODO: Add some description about BDM.
+
+Scheduler Hints
+~~~~~~~~~~~~~~~
+
+TODO: Add description about how to custom scheduling policy for server booting.
+
+Server Consoles
+~~~~~~~~~~~~~~~
+
+TODO: We have multiple endpoints about consoles, we should explain that.
 
 Server networks
 ~~~~~~~~~~~~~~~
