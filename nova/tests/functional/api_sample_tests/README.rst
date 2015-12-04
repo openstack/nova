@@ -7,11 +7,11 @@ tests in this directory.
 
 To add a new api sample, add tests for the common passing and failing
 cases in this directory for your extension, and modify test_samples.py
-for your tests. There should be both JSON and XML tests included.
+for your tests.
 
 Then run the following command:
 
-  GENERATE_SAMPLES=True tox -e functional
+    tox -e api-samples
 
 Which will create the files on doc/api_samples.
 
