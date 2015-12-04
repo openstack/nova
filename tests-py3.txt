@@ -284,7 +284,6 @@ nova.tests.unit.virt.libvirt.test_driver.LibvirtDriverTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtVolumeSnapshotTestCase
 nova.tests.unit.virt.libvirt.test_fakelibvirt.FakeLibvirtTests
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
-nova.tests.unit.virt.libvirt.test_host.HostTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.RawTestCase
