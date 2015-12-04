@@ -718,6 +718,10 @@ class ComputeManager(manager.Manager):
         self.use_legacy_block_device_info = \
                             self.driver.need_legacy_block_device_info
 
+    def reset(self):
+        LOG.info(_LI('Reloading compute RPC API'))
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:

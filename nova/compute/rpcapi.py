@@ -333,7 +333,6 @@ class ComputeAPI(object):
         self.client = self.get_client(target, version_cap, serializer)
 
     def _determine_version_cap(self, target):
-        # FIXME(danms): We should reload this on SIGHUP, or by timer
         service_version = objects.Service.get_minimum_version(
             context.get_admin_context(), 'nova-compute')
         history = service_obj.SERVICE_VERSION_HISTORY

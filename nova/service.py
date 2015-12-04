@@ -331,6 +331,9 @@ class Service(service.Service):
             LOG.error(_LE('Temporary directory is invalid: %s'), e)
             sys.exit(1)
 
+    def reset(self):
+        self.manager.reset()
+
 
 class WSGIService(service.Service):
     """Provides ability to launch API from a 'paste' configuration."""
