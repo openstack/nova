@@ -1059,16 +1059,16 @@ class LibvirtDriver(driver.ComputeDriver):
         return self.volume_drivers[driver_type]
 
     def _connect_volume(self, connection_info, disk_info):
-        driver = self._get_volume_driver(connection_info)
-        driver.connect_volume(connection_info, disk_info)
+        vol_driver = self._get_volume_driver(connection_info)
+        vol_driver.connect_volume(connection_info, disk_info)
 
     def _disconnect_volume(self, connection_info, disk_dev):
-        driver = self._get_volume_driver(connection_info)
-        driver.disconnect_volume(connection_info, disk_dev)
+        vol_driver = self._get_volume_driver(connection_info)
+        vol_driver.disconnect_volume(connection_info, disk_dev)
 
     def _get_volume_config(self, connection_info, disk_info):
-        driver = self._get_volume_driver(connection_info)
-        return driver.get_config(connection_info, disk_info)
+        vol_driver = self._get_volume_driver(connection_info)
+        return vol_driver.get_config(connection_info, disk_info)
 
     def _get_volume_encryptor(self, connection_info, encryption):
         encryptor = encryptors.get_volume_encryptor(connection_info,
