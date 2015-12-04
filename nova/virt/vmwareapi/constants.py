@@ -19,6 +19,7 @@ Shared constants across the VMware driver
 from nova.network import model as network_model
 
 MIN_VC_VERSION = '5.1.0'
+NEXT_MIN_VC_VERSION = '5.5.0'
 # The minimum VC version for Neutron 'ovs' port type support
 MIN_VC_OVS_VERSION = '5.5.0'
 

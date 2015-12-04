@@ -127,15 +127,22 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
+        next_min_ver = v_utils.convert_version_to_int(
+            constants.NEXT_MIN_VC_VERSION)
         vc_version = vim_util.get_vc_version(self._session)
         LOG.info(_LI("VMware vCenter version: %s"), vc_version)
-        if min_version > v_utils.convert_version_to_int(vc_version):
-            # TODO(garyk): enforce this from M
+        if v_utils.convert_version_to_int(vc_version) < min_version:
+            raise exception.NovaException(
+                _('Detected vCenter version %(version)s. Nova requires VMware '
+                  'vCenter version %(min_version)s or greater.') % {
+                      'version': vc_version,
+                      'min_version': constants.MIN_VC_VERSION})
+        elif v_utils.convert_version_to_int(vc_version) < next_min_ver:
             LOG.warning(_LW('Running Nova with a VMware vCenter version less '
                             'than %(version)s is deprecated. The required '
                             'minimum version of vCenter will be raised to '
-                            '%(version)s in the 13.0.0 release.'),
-                        {'version': constants.MIN_VC_VERSION})
+                            '%(version)s in the 16.0.0 release.'),
+                        {'version': constants.NEXT_MIN_VC_VERSION})
 
     @property
     def need_legacy_block_device_info(self):

@@ -1,0 +1,7 @@
+---
+upgrade:
+  - As of Ocata, the minimum version of VMware vCenter that nova compute will
+    interoperate with will be 5.1.0. Deployments using older versions of
+    vCenter should upgrade. Running with vCenter version less than 5.5.0 is
+    also now deprecated and 5.5.0 will become the minimum version in the
+    16.0.0 Pike release of Nova.
