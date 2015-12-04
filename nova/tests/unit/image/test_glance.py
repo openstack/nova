@@ -21,6 +21,7 @@ import glanceclient.exc
 import mock
 from oslo_config import cfg
 from oslo_utils import netutils
+import six
 import testtools
 
 from nova import context
@@ -459,7 +460,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     default of not allowing direct URI transfers is set.
     """
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_no_data_no_dest_path(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -474,7 +475,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                             mock.sentinel.image_id)
         self.assertEqual(mock.sentinel.image_chunks, res)
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_data_no_dest_path(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -498,7 +499,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         self.assertFalse(data.close.called)
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_no_data_dest_path(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -524,7 +525,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         writer.close.assert_called_once_with()
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_data_dest_path(self, show_mock, open_mock):
         # NOTE(jaypipes): This really shouldn't be allowed, but because of the
@@ -553,7 +554,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         self.assertFalse(data.close.called)
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_data_dest_path_write_fails(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -603,7 +604,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                                   mock.sentinel.dst_path,
                                                   mock.sentinel.loc_meta)
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_direct_exception_fallback(self, show_mock,
@@ -656,7 +657,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
 
-    @mock.patch('__builtin__.open')
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     def test_download_direct_no_mod_fallback(self, show_mock,

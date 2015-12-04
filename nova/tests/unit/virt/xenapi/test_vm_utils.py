@@ -1282,7 +1282,6 @@ class FakeFile(object):
 
 class StreamDiskTestCase(VMUtilsTestBase):
     def setUp(self):
-        import __builtin__
         super(StreamDiskTestCase, self).setUp()
         self.mox.StubOutWithMock(vm_utils.utils, 'make_dev_path')
         self.mox.StubOutWithMock(vm_utils.utils, 'temporary_chown')
@@ -1290,7 +1289,7 @@ class StreamDiskTestCase(VMUtilsTestBase):
 
         # NOTE(matelakat): This might hide the fail reason, as test runners
         # are unhappy with a mocked out open.
-        self.mox.StubOutWithMock(__builtin__, 'open')
+        self.mox.StubOutWithMock(six.moves.builtins, 'open')
         self.image_service_func = self.mox.CreateMockAnything()
 
     def test_non_ami(self):

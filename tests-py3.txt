@@ -191,7 +191,6 @@ nova.tests.unit.db.test_migrations.TestNovaMigrationsMySQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsPostgreSQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsSQLite
 nova.tests.unit.image.test_fake.FakeImageServiceTestCase
-nova.tests.unit.image.test_glance.TestDownloadNoDirectUri
 nova.tests.unit.image.test_s3.TestS3ImageService
 nova.tests.unit.keymgr.test_barbican.BarbicanKeyManagerTestCase
 nova.tests.unit.keymgr.test_conf_key_mgr.ConfKeyManagerTestCase
@@ -297,7 +296,6 @@ nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
 nova.tests.unit.virt.test_block_device.TestDriverBlockDevice
 nova.tests.unit.virt.test_hardware.CPUPinningCellTestCase
 nova.tests.unit.virt.test_hardware.CPUPinningTestCase
-nova.tests.unit.virt.test_virt.TestDiskImage
 nova.tests.unit.virt.test_virt_drivers.AbstractDriverTestCase
 nova.tests.unit.virt.test_virt_drivers.FakeConnectionTestCase
 nova.tests.unit.virt.test_virt_drivers.LibvirtConnTestCase
@@ -329,7 +327,6 @@ nova.tests.unit.virt.xenapi.test_vm_utils.CreateVmTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.GenerateDiskTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
-nova.tests.unit.virt.xenapi.test_vm_utils.StreamDiskTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.UnplugVbdTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.VMInfoTests
 nova.tests.unit.virt.xenapi.test_vm_utils.VMUtilsSRPath
