@@ -39,6 +39,11 @@ several key concepts:
    unique combination of disk space, memory capacity and priority for
    CPU time.
 
+-  **Flavor Extra Specs**
+
+   TODO: Short description at here. The detail reference to
+   :doc:`extra_specs_and_properties`
+
 -  **Image**
 
    A collection of files used to create or rebuild a server. Operators
@@ -47,6 +52,11 @@ several key concepts:
    custom images are useful for backup purposes or for producing “gold”
    server images if you plan to deploy a particular server configuration
    frequently.
+
+-  **Image Properties**
+
+   TODO: Short description at here. The detail reference to
+   :doc:`extra_specs_and_properties`
 
 -  **Key Pair**
 
