@@ -472,7 +472,9 @@ class API(base.Base):
 
         # Because metadata is stored in the DB, we hard-code the size limits
         # In future, we may support more variable length strings, so we act
-        #  as if this is quota-controlled for forwards compatibility
+        #  as if this is quota-controlled for forwards compatibility.
+        # Those are only used in V2 API, from V2.1 API, those checks are
+        # validated at API layer schema validation.
         for k, v in six.iteritems(metadata):
             try:
                 utils.check_string_length(v)
@@ -480,8 +482,6 @@ class API(base.Base):
             except exception.InvalidInput as e:
                 raise exception.InvalidMetadata(reason=e.format_message())
 
-            # For backward compatible we need raise HTTPRequestEntityTooLarge
-            # so we need to keep InvalidMetadataSize exception here
             if len(k) > 255:
                 msg = _("Metadata property key greater than 255 characters")
                 raise exception.InvalidMetadataSize(reason=msg)
