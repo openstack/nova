@@ -1279,55 +1279,6 @@ class StatsDictTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
 
-class StatsJsonTestCase(BaseTrackerTestCase):
-    """Test stats handling for a virt driver that provides
-    stats as a json string.
-    """
-    def _driver(self):
-        return FakeVirtDriver(stats=FAKE_VIRT_STATS_JSON)
-
-    def test_virt_stats(self):
-        # start with virt driver stats
-        stats = self.tracker.compute_node.stats
-        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
-
-        # adding an instance should keep virt driver stats
-        # and add rt stats
-        self._fake_instance_obj(vm_state=vm_states.ACTIVE, host=self.host)
-        self.tracker.update_available_resource(self.context)
-
-        stats = self.tracker.compute_node.stats
-        # compute node stats are coerced to strings
-        expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
-        for k, v in self.tracker.stats.items():
-            expected_stats[k] = six.text_type(v)
-        self.assertEqual(expected_stats, stats)
-
-        # removing the instances should keep only virt driver stats
-        self._instances = {}
-        self.tracker.update_available_resource(self.context)
-        stats = self.tracker.compute_node.stats
-        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
-
-
-class StatsInvalidJsonTestCase(BaseTrackerTestCase):
-    """Test stats handling for a virt driver that provides
-    an invalid type for stats.
-    """
-    def _driver(self):
-        return FakeVirtDriver(stats='this is not json')
-
-    def _init_tracker(self):
-        # do not do initial update in setup
-        pass
-
-    def test_virt_stats(self):
-        # should throw exception for string that does not parse as json
-        self.assertRaises(ValueError,
-                          self.tracker.update_available_resource,
-                          context=self.context)
-
-
 class StatsInvalidTypeTestCase(BaseTrackerTestCase):
     """Test stats handling for a virt driver that provides
     an invalid type for stats.

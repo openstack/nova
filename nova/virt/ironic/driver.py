@@ -368,7 +368,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             'memory_mb_used': memory_mb_used,
             'supported_instances': jsonutils.dumps(
                 _get_nodes_supported_instances(cpu_arch)),
-            'stats': jsonutils.dumps(nodes_extra_specs),
+            'stats': nodes_extra_specs,
             'numa_topology': None,
         }
         return dic

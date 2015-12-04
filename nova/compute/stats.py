@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_serialization import jsonutils
-
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.i18n import _
@@ -36,16 +34,10 @@ class Stats(dict):
 
     def digest_stats(self, stats):
         """Apply stats provided as a dict or a json encoded string."""
-        # NOTE(pmurray): allow json strings as some drivers pass in
-        # stats in that way - they shouldn't really do that.
         if stats is None:
             return
         if isinstance(stats, dict):
             self.update(stats)
-            return
-        if isinstance(stats, str):
-            _stats_from_json = jsonutils.loads(stats)
-            self.update(_stats_from_json)
             return
         raise ValueError(_('Unexpected type adding stats'))
 
