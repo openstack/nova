@@ -15,7 +15,7 @@
 #
 
 """Base proxy module used to create compatible consoles
-for Openstack Nova."""
+for OpenStack Nova."""
 
 import os
 import sys
