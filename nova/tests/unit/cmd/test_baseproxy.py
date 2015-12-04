@@ -65,3 +65,14 @@ class BaseProxyTestCase(test.NoDBTestCase):
             web='/usr/share/spice-html5', file_only=True,
             RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
         mock_start.assert_called_once_with()
+
+    @mock.patch('sys.stderr.write')
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('sys.exit', side_effect=test.TestingException)
+    def test_proxy_exit_with_error(self, mock_exit, mock_exists, mock_stderr):
+        self.flags(ssl_only=True)
+        self.assertRaises(test.TestingException, baseproxy.proxy,
+                          '0.0.0.0', '6080')
+        mock_stderr.assert_called_once_with(
+                                'SSL only and self.pem not found\n')
+        mock_exit.assert_called_once_with(-1)
