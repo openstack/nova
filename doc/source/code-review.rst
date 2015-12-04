@@ -85,6 +85,33 @@ Database Schema
   layer so that an object can load from either the old or new
   location, and save to the new one.
 
+REST API
+=========
+
+When making a change to the nova API, we should always follow
+`the API WG guidelines <https://specs.openstack.org/openstack/api-wg/>`_
+rather than going for "local" consistency.
+Developers and reviewers should read all of the guidelines, but they are
+very long. So here are some key points:
+
+* `Terms <https://specs.openstack.org/openstack/api-wg/guidelines/terms.html>`_
+
+    * ``project`` should be used in the REST API instead of ``tenant``.
+    * ``server`` should be used in the REST API instead of ``instance``.
+
+* `Naming Conventions <https://specs.openstack.org/openstack/api-wg/guidelines/naming.html>`_
+
+    * URL should not include underscores; use hyphens ('-') instead.
+    * The field names contained in a request/response body should
+      use snake_case style, not CamelCase or Mixed_Case style.
+
+* `HTTP Response Codes <http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-codes>`_
+
+    * Synchronous resource creation: ``201 Created``
+    * Asynchronous resource creation: ``202 Accepted``
+    * Synchronous resource deletion: ``204 No Content``
+    * For all other successful operations: ``200 OK``
+
 Config Options
 ==============
 
