@@ -18,14 +18,18 @@ import collections
 import copy
 import uuid
 
+from keystoneclient.auth import base as ksc_auth_base
+from keystoneclient.fixture import V2Token
 import mock
 from mox3 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+import requests_mock
 import six
 from six.moves import range
 
@@ -147,7 +151,6 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken_keystone_connection_error(self):
-        self.flags(auth_strategy='keystone', group='neutron')
         self.flags(url='http://anyhost/', group='neutron')
         my_context = context.RequestContext('userid', 'my_tenantid')
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
@@ -3835,18 +3838,34 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
 
 class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
-    @mock.patch('keystoneclient.auth.identity.v2.Password.get_token')
-    def _test_get_client_for_admin(self, auth_mock,
+    def setUp(self):
+        super(TestNeutronClientForAdminScenarios, self).setUp()
+        # NOTE(morganfainberg): The real configuration fixture here is used
+        # instead o the already existing fixtures to ensure that the new
+        # config options are automatically deregistered at the end of the
+        # test run. Without the use of this fixture, the config options
+        # from the plugin(s) would persist for all subsequent tests from when
+        # these are run (due to glonal conf object) and not be fully
+        # representative of a "clean" slate at the start of a test.
+        self.config_fixture = self.useFixture(config_fixture.Config())
+        plugin_class = ksc_auth_base.get_plugin_class('v2password')
+        plugin_class.register_conf_options(self.config_fixture, 'neutron')
+
+    @requests_mock.mock()
+    def _test_get_client_for_admin(self, req_mock,
                                    use_id=False, admin_context=False):
         token_value = uuid.uuid4().hex
-        auth_mock.return_value = token_value
+        auth_url = 'http://anyhost/auth'
+        token_resp = V2Token(token_id=token_value)
+        req_mock.post(auth_url + '/tokens', json=token_resp)
 
-        self.flags(auth_strategy=None, group='neutron')
         self.flags(url='http://anyhost/', group='neutron')
+        self.flags(auth_plugin='v2password', group='neutron')
+        self.flags(auth_url=auth_url, group='neutron')
         self.flags(timeout=30, group='neutron')
         if use_id:
-            self.flags(admin_tenant_id='admin_tenant_id', group='neutron')
-            self.flags(admin_user_id='admin_user_id', group='neutron')
+            self.flags(tenant_id='tenant_id', group='neutron')
+            self.flags(user_id='user_id', group='neutron')
 
         if admin_context:
             my_context = context.get_admin_context()
@@ -3870,20 +3889,18 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
         admin_auth = neutronapi._ADMIN_AUTH
 
-        self.assertEqual(CONF.neutron.admin_auth_url, admin_auth.auth_url)
-        self.assertEqual(CONF.neutron.admin_password, admin_auth.password)
+        self.assertEqual(CONF.neutron.auth_url, admin_auth.auth_url)
+        self.assertEqual(CONF.neutron.password, admin_auth.password)
 
         if use_id:
-            self.assertEqual(CONF.neutron.admin_tenant_id,
+            self.assertEqual(CONF.neutron.tenant_id,
                              admin_auth.tenant_id)
-            self.assertEqual(CONF.neutron.admin_user_id, admin_auth.user_id)
+            self.assertEqual(CONF.neutron.user_id, admin_auth.user_id)
 
             self.assertIsNone(admin_auth.tenant_name)
             self.assertIsNone(admin_auth.username)
         else:
-            self.assertEqual(CONF.neutron.admin_tenant_name,
-                             admin_auth.tenant_name)
-            self.assertEqual(CONF.neutron.admin_username, admin_auth.username)
+            self.assertEqual(CONF.neutron.username, admin_auth.username)
 
             self.assertIsNone(admin_auth.tenant_id)
             self.assertIsNone(admin_auth.user_id)
