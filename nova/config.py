@@ -18,9 +18,6 @@
 from oslo_config import cfg
 from oslo_db import options
 from oslo_log import log
-from oslo_reports import guru_meditation_report as gmr
-from oslo_reports import opts as gmr_opts
-
 
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import debugger
@@ -53,7 +50,6 @@ _DEFAULT_LOGGING_CONTEXT_FORMAT = ('%(asctime)s.%(msecs)03d %(process)d '
 def parse_args(argv, default_config_files=None, configure_db=True):
     log.set_defaults(_DEFAULT_LOGGING_CONTEXT_FORMAT, _DEFAULT_LOG_LEVELS)
     log.register_options(CONF)
-    gmr_opts.set_defaults(CONF)
     options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
                          sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
@@ -62,7 +58,6 @@ def parse_args(argv, default_config_files=None, configure_db=True):
          project='nova',
          version=version.version_string(),
          default_config_files=default_config_files)
-    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
     rpc.init(CONF)
 
     if configure_db:
