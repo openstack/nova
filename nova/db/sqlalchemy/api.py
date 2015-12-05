@@ -1030,23 +1030,20 @@ def floating_ip_update(context, address, values):
         return float_ip_ref
 
 
-def _dnsdomain_get(context, session, fqdomain):
-    return model_query(context, models.DNSDomain,
-                       session=session, read_deleted="no").\
+###################
+
+
+@require_context
+@main_context_manager.reader
+def dnsdomain_get(context, fqdomain):
+    return model_query(context, models.DNSDomain, read_deleted="no").\
                filter_by(domain=fqdomain).\
                with_lockmode('update').\
                first()
 
 
-@require_context
-def dnsdomain_get(context, fqdomain):
-    session = get_session()
-    with session.begin():
-        return _dnsdomain_get(context, session, fqdomain)
-
-
-def _dnsdomain_get_or_create(context, session, fqdomain):
-    domain_ref = _dnsdomain_get(context, session, fqdomain)
+def _dnsdomain_get_or_create(context, fqdomain):
+    domain_ref = dnsdomain_get(context, fqdomain)
     if not domain_ref:
         dns_ref = models.DNSDomain()
         dns_ref.update({'domain': fqdomain,
@@ -1057,30 +1054,30 @@ def _dnsdomain_get_or_create(context, session, fqdomain):
     return domain_ref
 
 
+@main_context_manager.writer
 def dnsdomain_register_for_zone(context, fqdomain, zone):
-    session = get_session()
-    with session.begin():
-        domain_ref = _dnsdomain_get_or_create(context, session, fqdomain)
-        domain_ref.scope = 'private'
-        domain_ref.availability_zone = zone
-        session.add(domain_ref)
+    domain_ref = _dnsdomain_get_or_create(context, fqdomain)
+    domain_ref.scope = 'private'
+    domain_ref.availability_zone = zone
+    context.session.add(domain_ref)
 
 
+@main_context_manager.writer
 def dnsdomain_register_for_project(context, fqdomain, project):
-    session = get_session()
-    with session.begin():
-        domain_ref = _dnsdomain_get_or_create(context, session, fqdomain)
-        domain_ref.scope = 'public'
-        domain_ref.project_id = project
-        session.add(domain_ref)
+    domain_ref = _dnsdomain_get_or_create(context, fqdomain)
+    domain_ref.scope = 'public'
+    domain_ref.project_id = project
+    context.session.add(domain_ref)
 
 
+@main_context_manager.writer
 def dnsdomain_unregister(context, fqdomain):
     model_query(context, models.DNSDomain).\
                  filter_by(domain=fqdomain).\
                  delete()
 
 
+@main_context_manager.reader
 def dnsdomain_get_all(context):
     return model_query(context, models.DNSDomain, read_deleted="no").all()
 
@@ -3797,17 +3794,16 @@ def reservation_expire(context):
 ###################
 
 
-def _ec2_volume_get_query(context, session=None):
-    return model_query(context, models.VolumeIdMapping,
-                       session=session, read_deleted='yes')
+def _ec2_volume_get_query(context):
+    return model_query(context, models.VolumeIdMapping, read_deleted='yes')
 
 
-def _ec2_snapshot_get_query(context, session=None):
-    return model_query(context, models.SnapshotIdMapping,
-                       session=session, read_deleted='yes')
+def _ec2_snapshot_get_query(context):
+    return model_query(context, models.SnapshotIdMapping, read_deleted='yes')
 
 
 @require_context
+@main_context_manager.writer
 def ec2_volume_create(context, volume_uuid, id=None):
     """Create ec2 compatible volume by provided uuid."""
     ec2_volume_ref = models.VolumeIdMapping()
@@ -3815,12 +3811,13 @@ def ec2_volume_create(context, volume_uuid, id=None):
     if id is not None:
         ec2_volume_ref.update({'id': id})
 
-    ec2_volume_ref.save()
+    ec2_volume_ref.save(context.session)
 
     return ec2_volume_ref
 
 
 @require_context
+@main_context_manager.reader
 def ec2_volume_get_by_uuid(context, volume_uuid):
     result = _ec2_volume_get_query(context).\
                     filter_by(uuid=volume_uuid).\
@@ -3833,6 +3830,7 @@ def ec2_volume_get_by_uuid(context, volume_uuid):
 
 
 @require_context
+@main_context_manager.reader
 def ec2_volume_get_by_id(context, volume_id):
     result = _ec2_volume_get_query(context).\
                     filter_by(id=volume_id).\
@@ -3845,6 +3843,7 @@ def ec2_volume_get_by_id(context, volume_id):
 
 
 @require_context
+@main_context_manager.writer
 def ec2_snapshot_create(context, snapshot_uuid, id=None):
     """Create ec2 compatible snapshot by provided uuid."""
     ec2_snapshot_ref = models.SnapshotIdMapping()
@@ -3852,12 +3851,13 @@ def ec2_snapshot_create(context, snapshot_uuid, id=None):
     if id is not None:
         ec2_snapshot_ref.update({'id': id})
 
-    ec2_snapshot_ref.save()
+    ec2_snapshot_ref.save(context.session)
 
     return ec2_snapshot_ref
 
 
 @require_context
+@main_context_manager.reader
 def ec2_snapshot_get_by_ec2_id(context, ec2_id):
     result = _ec2_snapshot_get_query(context).\
                     filter_by(id=ec2_id).\
@@ -3870,6 +3870,7 @@ def ec2_snapshot_get_by_ec2_id(context, ec2_id):
 
 
 @require_context
+@main_context_manager.reader
 def ec2_snapshot_get_by_uuid(context, snapshot_uuid):
     result = _ec2_snapshot_get_query(context).\
                     filter_by(uuid=snapshot_uuid).\
