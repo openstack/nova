@@ -25,8 +25,8 @@ import sys
 from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
 from cinderclient.v1 import client as v1_client
-from keystoneclient import exceptions as keystone_exception
-from keystoneclient import session
+from keystoneauth1 import exceptions as keystone_exception
+from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -83,9 +83,9 @@ deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
               'insecure': [cfg.DeprecatedOpt('api_insecure',
                                              group=CINDER_OPT_GROUP)]}
 
-session.Session.register_conf_options(CONF,
-                                      CINDER_OPT_GROUP,
-                                      deprecated_opts=deprecated)
+ks_loading.register_session_conf_options(CONF,
+                                         CINDER_OPT_GROUP,
+                                         deprecated_opts=deprecated)
 
 LOG = logging.getLogger(__name__)
 
@@ -105,8 +105,8 @@ def cinderclient(context):
     global _V1_ERROR_RAISED
 
     if not _SESSION:
-        _SESSION = session.Session.load_from_conf_options(CONF,
-                                                          CINDER_OPT_GROUP)
+        _SESSION = ks_loading.load_session_from_conf_options(CONF,
+                                                             CINDER_OPT_GROUP)
 
     url = None
     endpoint_override = None

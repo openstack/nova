@@ -19,12 +19,9 @@ import copy
 import time
 import uuid
 
-from keystoneclient import auth
-from keystoneclient.auth import token_endpoint
-from keystoneclient import session
+from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
-from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -72,9 +69,9 @@ deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
                 'timeout': [cfg.DeprecatedOpt('url_timeout',
                                               group=NEUTRON_GROUP)]}
 
-_neutron_options = session.Session.register_conf_options(
+_neutron_options = ks_loading.register_session_conf_options(
     CONF, NEUTRON_GROUP, deprecated_opts=deprecations)
-auth.register_conf_options(CONF, NEUTRON_GROUP)
+ks_loading.register_auth_conf_options(CONF, NEUTRON_GROUP)
 
 
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
@@ -90,12 +87,12 @@ _ADMIN_AUTH = None
 
 def list_opts():
     list = copy.deepcopy(_neutron_options)
-    list.insert(0, auth.get_common_conf_options()[0])
+    list.insert(0, ks_loading.get_auth_common_conf_options()[0])
     # NOTE(dims): There are a lot of auth plugins, we just generate
     # the config options for a few common ones
     plugins = ['password', 'v2password', 'v3password']
     for name in plugins:
-        for plugin_option in auth.get_plugin_class(name).get_options():
+        for plugin_option in ks_loading.get_plugin_loader(name).get_options():
             found = False
             for option in list:
                 if option.name == plugin_option.name:
@@ -116,7 +113,7 @@ def reset_state():
 
 
 def _load_auth_plugin(conf):
-    auth_plugin = auth.load_from_conf_options(conf, NEUTRON_GROUP)
+    auth_plugin = ks_loading.load_auth_from_conf_options(conf, NEUTRON_GROUP)
 
     if auth_plugin:
         return auth_plugin
@@ -136,25 +133,13 @@ def get_client(context, admin=False):
     auth_plugin = None
 
     if not _SESSION:
-        _SESSION = session.Session.load_from_conf_options(CONF, NEUTRON_GROUP)
+        _SESSION = ks_loading.load_session_from_conf_options(
+            CONF, NEUTRON_GROUP)
 
     if admin or (context.is_admin and not context.auth_token):
-        # NOTE(jamielennox): The theory here is that we maintain one
-        # authenticated admin auth globally. The plugin will authenticate
-        # internally (not thread safe) and on demand so we extract a current
-        # auth plugin from it (whilst locked). This may or may not require
-        # reauthentication. We then use the static token plugin to issue the
-        # actual request with that current token in a thread safe way.
         if not _ADMIN_AUTH:
             _ADMIN_AUTH = _load_auth_plugin(CONF)
-
-        with lockutils.lock('neutron_admin_auth_token_lock'):
-            # FIXME(jamielennox): We should also retrieve the endpoint from the
-            # catalog here rather than relying on setting it in CONF.
-            auth_token = _ADMIN_AUTH.get_token(_SESSION)
-
-        # FIXME(jamielennox): why aren't we using the service catalog?
-        auth_plugin = token_endpoint.Token(CONF.neutron.url, auth_token)
+        auth_plugin = _ADMIN_AUTH
 
     elif context.auth_token:
         auth_plugin = context.get_auth_plugin()

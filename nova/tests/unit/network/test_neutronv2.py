@@ -18,8 +18,8 @@ import collections
 import copy
 import uuid
 
-from keystoneclient.auth import base as ksc_auth_base
-from keystoneclient.fixture import V2Token
+from keystoneauth1.fixture import V2Token
+from keystoneauth1 import loading as ks_loading
 import mock
 from mox3 import mox
 from neutronclient.common import exceptions
@@ -3937,8 +3937,8 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
         # these are run (due to glonal conf object) and not be fully
         # representative of a "clean" slate at the start of a test.
         self.config_fixture = self.useFixture(config_fixture.Config())
-        plugin_class = ksc_auth_base.get_plugin_class('v2password')
-        plugin_class.register_conf_options(self.config_fixture, 'neutron')
+        oslo_opts = ks_loading.get_auth_plugin_conf_options('v2password')
+        self.config_fixture.register_opts(oslo_opts, 'neutron')
 
     @requests_mock.mock()
     def _test_get_client_for_admin(self, req_mock,
@@ -3949,7 +3949,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
         req_mock.post(auth_url + '/tokens', json=token_resp)
 
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(auth_plugin='v2password', group='neutron')
+        self.flags(auth_type='v2password', group='neutron')
         self.flags(auth_url=auth_url, group='neutron')
         self.flags(timeout=30, group='neutron')
         if use_id:
@@ -3994,11 +3994,15 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
             self.assertIsNone(admin_auth.tenant_id)
             self.assertIsNone(admin_auth.user_id)
 
-        self.assertEqual(CONF.neutron.timeout, neutronapi._SESSION.timeout)
+        self.assertEqual(CONF.neutron.timeout,
+                         neutronapi._SESSION.timeout)
 
-        self.assertEqual(token_value, context_client.httpclient.auth.token)
-        self.assertEqual(CONF.neutron.url,
-                         context_client.httpclient.auth.endpoint)
+        self.assertEqual(
+            token_value,
+            context_client.httpclient.auth.get_token(neutronapi._SESSION))
+        self.assertEqual(
+            CONF.neutron.url,
+            context_client.httpclient.get_endpoint())
 
     def test_get_client_for_admin(self):
         self._test_get_client_for_admin()
