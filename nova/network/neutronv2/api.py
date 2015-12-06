@@ -1184,7 +1184,9 @@ class API(base_api.NetworkAPI):
                 # Unlimited Port Quota
                 return num_instances
 
-            ports = neutron.list_ports(tenant_id=context.project_id)['ports']
+            # We only need the port count so only ask for ids back.
+            params = dict(tenant_id=context.project_id, fields=['id'])
+            ports = neutron.list_ports(**params)['ports']
             free_ports = quotas.get('port') - len(ports)
             if free_ports < 0:
                 msg = (_("The number of defined ports: %(ports)d "
