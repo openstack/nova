@@ -23,7 +23,6 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import versionutils as v_utils
 from oslo_vmware import api
@@ -353,8 +352,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 # impossible to provide any meaningful info on the CPU
                 # model of the "host"
                'cpu_info': None,
-               'supported_instances': jsonutils.dumps(
-                   host_stats['supported_instances']),
+               'supported_instances': host_stats['supported_instances'],
                'numa_topology': None,
                }
 
