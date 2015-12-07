@@ -755,12 +755,13 @@ class Replication(Image):
         else:
             self.driver_mode = 'primary'
 
-        prefix = disk_name + '_'
         if CONF.libvirt.block_replication_path:
-            path = CONF.libvirt.block_replication_path
-            prefix += '%s_' % instance['uuid']
+            path = os.path.join(CONF.libvirt.block_replication_path,
+                                instance['uuid'])
         else:
             path = libvirt_utils.get_instance_path(instance)
+
+        prefix = disk_name + '_'
 
         self.path = os.path.join(path, prefix + 'active.img')
         self.hidden_disk_path = os.path.join(path, prefix + 'hidden.img')
@@ -786,9 +787,19 @@ class Replication(Image):
 
         return info
 
+    # NOTE(ORBIT): Override to handle both disks
+    def cache(self, fetch_func, filename, size=None, *args, **kwargs):
+        super(Replication, self).cache(fetch_func, filename, size, *args,
+                                       **kwargs)
+        tmp = self.path
+        self.path = self.hidden_disk_path
+        super(Replication, self).cache(fetch_func, filename, size, *args,
+                                       **kwargs)
+        self.path = tmp
+
     def create_image(self, prepare_template, base, size, *args, **kwargs):
+        fileutils.ensure_tree(os.path.split(self.path)[0])
         libvirt_utils.create_image('qcow2', self.path, size)
-        libvirt_utils.create_image('qcow2', self.hidden_disk_path, size)
 
 
 class Backend(object):

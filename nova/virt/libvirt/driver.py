@@ -3023,7 +3023,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if utils.ft_secondary(instance):
                 backend = image('disk', 'replication')
-                backend.create_image(None, None, size)
+                # NOTE(ORBIT): No fetching for block replication disks
+                backend.cache(fetch_func=lambda *a, **k: None,
+                              filename='',
+                              size=size)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
@@ -6363,6 +6366,11 @@ class LibvirtDriver(driver.ComputeDriver):
         target = libvirt_utils.get_instance_path(instance)
         # A resize may be in progress
         target_resize = target + '_resize'
+        # Block replication disks might be located elsewhere
+        target_brp = ''
+        if CONF.libvirt.block_replication_path:
+            target_brp = os.path.join(CONF.libvirt.block_replication_path,
+                                      instance['uuid'])
         # Other threads may attempt to rename the path, so renaming the path
         # to target + '_del' (because it is atomic) and iterating through
         # twice in the unlikely event that a concurrent rename occurs between
@@ -6383,24 +6391,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 break
             except Exception:
                 pass
+            if target_brp:
+                try:
+                    utils.execute('mv', target_brp, target_del)
+                except Exception:
+                    pass
 
-        if CONF.libvirt.block_replication_path:
-            brp = CONF.libvirt.block_replication_path
-            prefix = '%s_' % instance['uuid']
-            active_disk_path = os.path.join(brp, prefix + 'active_disk.img')
-            hidden_disk_path = os.path.join(brp, prefix + 'hidden_disk.img')
-            utils.execute('rm', '-f', active_disk_path)
-            utils.execute('rm', '-f', hidden_disk_path)
-
-            if (os.path.exists(active_disk_path) or
-                    os.path.exists(hidden_disk_path)):
-                LOG.error('Failed to cleanup block replication disks in '
-                          '%(path)s', {'path': brp}, instance=instance)
-
-        # Either the target or target_resize path may still exist if all
-        # rename attempts failed.
+        # Either the target, target_resize or target_brp path may still exist
+        # if all rename attempts failed.
         remaining_path = None
-        for p in (target, target_resize):
+        for p in (target, target_resize, target_brp):
             if os.path.exists(p):
                 remaining_path = p
                 break
