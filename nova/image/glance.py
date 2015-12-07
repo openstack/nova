@@ -181,12 +181,18 @@ def get_api_servers():
     """
     api_servers = []
 
-    configured_servers = (['%s:%s' % (CONF.glance.host, CONF.glance.port)]
+    configured_servers = ([generate_glance_url()]
                           if CONF.glance.api_servers is None
                           else CONF.glance.api_servers)
     for api_server in configured_servers:
         if '//' not in api_server:
             api_server = 'http://' + api_server
+            # NOTE(sdague): remove in N.
+            LOG.warn(
+                _LW("No protocol specified in for api_server '%s', "
+                    "please update [glance] api_servers with fully "
+                    "qualified url including scheme (http / https)"),
+                api_server)
         o = urlparse.urlparse(api_server)
         port = o.port or 80
         host = o.netloc.rsplit(':', 1)[0]
