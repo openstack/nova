@@ -5071,11 +5071,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # an initialization issue with some versions of Libvirt (1.0.5.5).
         # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
         # See: https://bugs.launchpad.net/nova/+bug/1215593
-
-        # Temporary convert supported_instances into a string, while keeping
-        # the RPC version as JSON. Can be changed when RPC broadcast is removed
-        data["supported_instances"] = jsonutils.dumps(
-            self._get_instance_capabilities())
+        data["supported_instances"] = self._get_instance_capabilities()
 
         data["vcpus"] = self._get_vcpu_total()
         data["memory_mb"] = self._host.get_memory_mb_total()
