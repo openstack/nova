@@ -75,6 +75,15 @@ class LiveMigrationOps(object):
 
         self._volumeops.initialize_volumes_connection(block_device_info)
 
+        disk_path_mapping = self._volumeops.get_disk_path_mapping(
+            block_device_info)
+        if disk_path_mapping:
+            # We create a planned VM, ensuring that volumes will remain
+            # attached after the VM is migrated.
+            self._livemigrutils.create_planned_vm(instance.name,
+                                                  instance.host,
+                                                  disk_path_mapping)
+
     def post_live_migration(self, context, instance, block_device_info):
         self._volumeops.disconnect_volumes(block_device_info)
         self._pathutils.get_instance_dir(instance.name,
