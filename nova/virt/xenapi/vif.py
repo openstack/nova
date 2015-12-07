@@ -18,8 +18,11 @@
 """VIF drivers for XenAPI."""
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
+from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 
@@ -31,10 +34,55 @@ xenapi_ovs_integration_bridge_opt = cfg.StrOpt('ovs_integration_bridge',
 CONF = cfg.CONF
 CONF.register_opt(xenapi_ovs_integration_bridge_opt, 'xenserver')
 
+LOG = logging.getLogger(__name__)
+
 
 class XenVIFDriver(object):
     def __init__(self, xenapi_session):
         self._session = xenapi_session
+
+    def _get_vif_ref(self, vif, vm_ref):
+        vif_refs = self._session.call_xenapi("VM.get_VIFs", vm_ref)
+        for vif_ref in vif_refs:
+            try:
+                vif_rec = self._session.call_xenapi('VIF.get_record', vif_ref)
+                if vif_rec['MAC'] == vif['address']:
+                    return vif_ref
+            except Exception:
+                # When got exception here, maybe the vif is removed during the
+                # loop, ignore this vif and continue
+                continue
+        return None
+
+    def _create_vif(self, vif, vif_rec, vm_ref):
+        try:
+            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
+        except Exception as e:
+            LOG.warn(_LW("Failed to create vif, exception:%(exception)s, "
+                      "vif:%(vif)s"), {'exception': e, 'vif': vif})
+            raise exception.NovaException(
+                reason=_("Failed to create vif %s") % vif)
+
+        LOG.debug("create vif %(vif)s for vm %(vm_ref)s successfully",
+                  {'vif': vif, 'vm_ref': vm_ref})
+        return vif_ref
+
+    def unplug(self, instance, vif, vm_ref):
+        try:
+            LOG.debug("unplug vif, vif:%(vif)s, vm_ref:%(vm_ref)s",
+                      {'vif': vif, 'vm_ref': vm_ref}, instance=instance)
+            vif_ref = self._get_vif_ref(vif, vm_ref)
+            if not vif_ref:
+                LOG.debug("vif didn't exist, no need to unplug vif %s",
+                        vif, instance=instance)
+                return
+            self._session.call_xenapi('VIF.destroy', vif_ref)
+        except Exception as e:
+            LOG.warn(
+                _LW("Fail to unplug vif:%(vif)s, exception:%(exception)s"),
+                {'vif': vif, 'exception': e}, instance=instance)
+            raise exception.NovaException(
+                reason=_("Failed to unplug vif %s") % vif)
 
 
 class XenAPIBridgeDriver(XenVIFDriver):
@@ -43,6 +91,14 @@ class XenAPIBridgeDriver(XenVIFDriver):
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
             vm_ref = vm_utils.lookup(self._session, instance['name'])
+
+        # if VIF already exists, return this vif_ref directly
+        vif_ref = self._get_vif_ref(vif, vm_ref)
+        if vif_ref:
+            LOG.debug("VIF %s already exists when plug vif",
+                      vif_ref, instance=instance)
+            return vif_ref
+
         if not device:
             device = 0
 
@@ -65,7 +121,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
         else:
             vif_rec['qos_algorithm_type'] = ''
             vif_rec['qos_algorithm_params'] = {}
-        return vif_rec
+        return self._create_vif(vif, vif_rec, vm_ref)
 
     def _ensure_vlan_bridge(self, network):
         """Ensure that a VLAN bridge exists."""
@@ -126,8 +182,8 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
         return network_ref
 
-    def unplug(self, instance, vif):
-        pass
+    def unplug(self, instance, vif, vm_ref):
+        super(XenAPIBridgeDriver, self).unplug(instance, vif, vm_ref)
 
 
 class XenAPIOpenVswitchDriver(XenVIFDriver):
@@ -136,6 +192,13 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
             vm_ref = vm_utils.lookup(self._session, instance['name'])
+
+        # if VIF already exists, return this vif_ref directly
+        vif_ref = self._get_vif_ref(vif, vm_ref)
+        if vif_ref:
+            LOG.debug("VIF %s already exists when plug vif",
+                      vif_ref, instance=instance)
+            return vif_ref
 
         if not device:
             device = 0
@@ -155,7 +218,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         # OVS on the hypervisor monitors this key and uses it to
         # set the iface-id attribute
         vif_rec['other_config'] = {'nicira-iface-id': vif['id']}
-        return vif_rec
+        return self._create_vif(vif, vif_rec, vm_ref)
 
-    def unplug(self, instance, vif):
-        pass
+    def unplug(self, instance, vif, vm_ref):
+        super(XenAPIOpenVswitchDriver, self).unplug(instance, vif, vm_ref)
