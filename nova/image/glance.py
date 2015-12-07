@@ -193,13 +193,7 @@ def get_api_servers():
                     "please update [glance] api_servers with fully "
                     "qualified url including scheme (http / https)"),
                 api_server)
-        o = urlparse.urlparse(api_server)
-        port = o.port or 80
-        host = o.netloc.rsplit(':', 1)[0]
-        if host[0] == '[' and host[-1] == ']':
-            host = host[1:-1]
-        use_ssl = (o.scheme == 'https')
-        api_servers.append((host, port, use_ssl))
+        api_servers.append(GlanceEndpoint(url=api_server))
     random.shuffle(api_servers)
     return itertools.cycle(api_servers)
 
@@ -231,7 +225,7 @@ class GlanceClientWrapper(object):
         """Create a client that will be used for one call."""
         if self.api_servers is None:
             self.api_servers = get_api_servers()
-        self.host, self.port, self.use_ssl = next(self.api_servers)
+        self.host, self.port, self.use_ssl = next(self.api_servers).as_tuple()
         return _create_glance_client(context,
                                      self.host, self.port,
                                      self.use_ssl, version)
@@ -274,6 +268,54 @@ class GlanceClientWrapper(object):
                     raise exception.GlanceConnectionFailed(
                             host=host, port=port, reason=six.text_type(e))
                 time.sleep(1)
+
+
+class GlanceEndpoint(object):
+    """Provides a container to encapsulate glance endpoints.
+
+    In transitioning from handing around metadata that lets us build
+    an endpoint url, to actually just handing around the url, we need
+    a container which can encapsulate either. This allows for a
+    smoother transition to new code.
+
+    """
+
+    def __init__(self, **kwargs):
+        if kwargs['url']:
+            self.url = kwargs['url']
+        elif kwargs['port'] and kwargs['host'] and kwargs['use_ssl']:
+            host = kwargs['host']
+            self.url = '%s://%s:%s' % (
+                'https' if kwargs['use_ssl'] else 'http',
+                '[' + host + ']' if netutils.is_valid_ipv6(host) else host,
+                kwargs['port'])
+
+    def as_tuple(self):
+        parts = urlparse.urlparse(self.url)
+        host = parts.netloc.rsplit(':', 1)[0]
+        if host[0] == '[' and host[-1] == ']':
+            host = host[1:-1]
+        use_ssl = (parts.scheme == 'https')
+        port = parts.port or (443 if use_ssl else 80)
+        return (host, port, use_ssl)
+
+    @property
+    def host(self):
+        """Compute the host"""
+        return self.as_tuple()[0]
+
+    @property
+    def port(self):
+        """Compute the port"""
+        return self.as_tuple()[1]
+
+    @property
+    def use_ssl(self):
+        """Compute the use_ssl value"""
+        return self.as_tuple()[2]
+
+    def __str__(self):
+        return self.url
 
 
 class GlanceImageService(object):
