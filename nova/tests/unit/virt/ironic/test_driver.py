@@ -18,7 +18,6 @@
 from ironicclient import exc as ironic_exception
 import mock
 from oslo_config import cfg
-from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import uuidutils
 import six
@@ -303,8 +302,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(uuid=node_uuid, properties=props)
 
         result = self.driver._node_resource(node)
-        self.assertEqual('i686',
-                         jsonutils.loads(result['supported_instances'])[0][0])
+        self.assertEqual('i686', result['supported_instances'][0][0])
         self.assertEqual('i386', result['stats']['cpu_arch'])
 
     def test__node_resource_unknown_arch(self):
@@ -314,7 +312,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(uuid=node_uuid, properties=props)
 
         result = self.driver._node_resource(node)
-        self.assertEqual([], jsonutils.loads(result['supported_instances']))
+        self.assertEqual([], result['supported_instances'])
 
     def test__node_resource_exposes_capabilities(self):
         props = _get_properties()
