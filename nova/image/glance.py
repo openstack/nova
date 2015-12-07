@@ -119,40 +119,29 @@ def generate_identity_headers(context, status='Confirmed'):
         'X-Auth-Token': getattr(context, 'auth_token', None),
         'X-User-Id': getattr(context, 'user', None),
         'X-Tenant-Id': getattr(context, 'tenant', None),
-        'X-Roles': ','.join(context.roles),
+        'X-Roles': ','.join(getattr(context, 'roles', [])),
         'X-Identity-Status': status,
     }
 
 
-def _create_glance_client(context, host, port, use_ssl, version=1):
-    """Instantiate a new glanceclient.Client object."""
-    params = {}
-    if use_ssl:
-        scheme = 'https'
-        # https specific params
-        params['insecure'] = CONF.glance.api_insecure
-        params['ssl_compression'] = False
-        sslutils.is_enabled(CONF)
-        if CONF.ssl.cert_file:
-            params['cert_file'] = CONF.ssl.cert_file
-        if CONF.ssl.key_file:
-            params['key_file'] = CONF.ssl.key_file
-        if CONF.ssl.ca_file:
-            params['cacert'] = CONF.ssl.ca_file
-    else:
-        scheme = 'http'
-
-    if CONF.auth_strategy == 'keystone':
-        # NOTE(isethi): Glanceclient <= 0.9.0.49 accepts only
-        # keyword 'token', but later versions accept both the
-        # header 'X-Auth-Token' and 'token'
-        params['token'] = context.auth_token
+def _glanceclient_from_endpoint(context, endpoint, version=1):
+        """Instantiate a new glanceclient.Client object."""
+        params = {}
+        # NOTE(sdague): even if we aren't using keystone, it doesn't
+        # hurt to send these headers.
         params['identity_headers'] = generate_identity_headers(context)
-    if netutils.is_valid_ipv6(host):
-        # if so, it is ipv6 address, need to wrap it with '[]'
-        host = '[%s]' % host
-    endpoint = '%s://%s:%s' % (scheme, host, port)
-    return glanceclient.Client(str(version), endpoint, **params)
+        if endpoint.use_ssl:
+            # https specific params
+            params['insecure'] = CONF.glance.api_insecure
+            params['ssl_compression'] = False
+            sslutils.is_enabled(CONF)
+            if CONF.ssl.cert_file:
+                params['cert_file'] = CONF.ssl.cert_file
+            if CONF.ssl.key_file:
+                params['key_file'] = CONF.ssl.key_file
+            if CONF.ssl.ca_file:
+                params['cacert'] = CONF.ssl.ca_file
+        return glanceclient.Client(str(version), endpoint.url, **params)
 
 
 def _determine_curr_major_version(endpoint):
@@ -204,31 +193,25 @@ class GlanceClientWrapper(object):
     def __init__(self, context=None, host=None, port=None, use_ssl=False,
                  version=1):
         if host is not None:
+            endpoint = GlanceEndpoint(host=host, port=port, use_ssl=use_ssl)
             self.client = self._create_static_client(context,
-                                                     host, port,
-                                                     use_ssl, version)
+                                                     endpoint,
+                                                     version)
         else:
             self.client = None
         self.api_servers = None
 
-    def _create_static_client(self, context, host, port, use_ssl, version):
+    def _create_static_client(self, context, endpoint, version):
         """Create a client that we'll use for every call."""
-        self.host = host
-        self.port = port
-        self.use_ssl = use_ssl
-        self.version = version
-        return _create_glance_client(context,
-                                     self.host, self.port,
-                                     self.use_ssl, self.version)
+        self.api_server = str(endpoint)
+        return _glanceclient_from_endpoint(context, endpoint, version)
 
     def _create_onetime_client(self, context, version):
         """Create a client that will be used for one call."""
         if self.api_servers is None:
             self.api_servers = get_api_servers()
-        self.host, self.port, self.use_ssl = next(self.api_servers).as_tuple()
-        return _create_glance_client(context,
-                                     self.host, self.port,
-                                     self.use_ssl, version)
+        self.api_server = next(self.api_servers)
+        return _glanceclient_from_endpoint(context, self.api_server, version)
 
     def call(self, context, version, method, *args, **kwargs):
         """Call a glance client method.  If we get a connection error,
@@ -251,22 +234,19 @@ class GlanceClientWrapper(object):
             try:
                 return getattr(client.images, method)(*args, **kwargs)
             except retry_excs as e:
-                host = self.host
-                port = self.port
-
                 if attempt < num_attempts:
                     extra = "retrying"
                 else:
                     extra = 'done trying'
 
                 LOG.exception(_LE("Error contacting glance server "
-                                  "'%(host)s:%(port)s' for '%(method)s', "
+                                  "'%(server)s' for '%(method)s', "
                                   "%(extra)s."),
-                              {'host': host, 'port': port,
+                              {'server': self.api_server,
                                'method': method, 'extra': extra})
                 if attempt == num_attempts:
                     raise exception.GlanceConnectionFailed(
-                            host=host, port=port, reason=six.text_type(e))
+                        server=str(self.api_server), reason=six.text_type(e))
                 time.sleep(1)
 
 
@@ -281,12 +261,12 @@ class GlanceEndpoint(object):
     """
 
     def __init__(self, **kwargs):
-        if kwargs['url']:
-            self.url = kwargs['url']
-        elif kwargs['port'] and kwargs['host'] and kwargs['use_ssl']:
+        self.url = kwargs.get('url', None)
+
+        if self.url is None:
             host = kwargs['host']
             self.url = '%s://%s:%s' % (
-                'https' if kwargs['use_ssl'] else 'http',
+                'https' if kwargs.get('use_ssl', False) else 'http',
                 '[' + host + ']' if netutils.is_valid_ipv6(host) else host,
                 kwargs['port'])
 

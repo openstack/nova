@@ -196,11 +196,9 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         ipv6_mock.return_value = False
         auth_token = 'token'
         ctx = context.RequestContext('fake', 'fake', auth_token=auth_token)
-        host = 'host4'
-        port = 9295
-        use_ssl = False
 
         expected_endpoint = 'http://host4:9295'
+        endpoint = glance.GlanceEndpoint(url=expected_endpoint)
         expected_params = {
             'identity_headers': {
                 'X-Auth-Token': 'token',
@@ -208,10 +206,9 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
                 'X-Identity-Status': 'Confirmed'
-            },
-            'token': 'token'
+            }
         }
-        glance._create_glance_client(ctx, host, port, use_ssl)
+        glance._glanceclient_from_endpoint(ctx, endpoint)
         init_mock.assert_called_once_with('1', expected_endpoint,
                                           **expected_params)
 
@@ -227,25 +224,10 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Roles': '',
                 'X-Tenant-Id': 'fake',
                 'X-Identity-Status': 'Confirmed'
-            },
-            'token': 'token'
+            }
         }
-        glance._create_glance_client(ctx, host, port, use_ssl, version=2)
+        glance._glanceclient_from_endpoint(ctx, endpoint, version=2)
         init_mock.assert_called_once_with('2', expected_endpoint,
-                                          **expected_params)
-
-        # Test that non-keystone auth strategy doesn't bother to pass
-        # glanceclient all the Keystone-related headers.
-        ipv6_mock.reset_mock()
-        init_mock.reset_mock()
-
-        self.flags(auth_strategy='non-keystone')
-
-        expected_endpoint = 'http://host4:9295'
-        expected_params = {
-        }
-        glance._create_glance_client(ctx, host, port, use_ssl)
-        init_mock.assert_called_once_with('1', expected_endpoint,
                                           **expected_params)
 
         # Test that the IPv6 bracketization adapts the endpoint properly.
@@ -255,16 +237,15 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         ipv6_mock.return_value = True
 
         expected_endpoint = 'http://[host4]:9295'
-        expected_params = {
-        }
-        glance._create_glance_client(ctx, host, port, use_ssl)
+        endpoint = glance.GlanceEndpoint(url=expected_endpoint)
+        glance._glanceclient_from_endpoint(ctx, endpoint)
         init_mock.assert_called_once_with('1', expected_endpoint,
                                           **expected_params)
 
 
 class TestGlanceClientWrapper(test.NoDBTestCase):
     @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._create_glance_client')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_without_retries(self, create_client_mock,
                                            sleep_mock):
         client_mock = mock.MagicMock()
@@ -278,17 +259,16 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         host = 'host4'
         port = 9295
         use_ssl = False
-
         client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
                                             use_ssl=use_ssl)
-        create_client_mock.assert_called_once_with(ctx, host, port, use_ssl, 1)
+        create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
         self.assertFalse(sleep_mock.called)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._create_glance_client')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_with_retries_negative(self, create_client_mock,
                                                  sleep_mock, mock_log):
         client_mock = mock.Mock(spec=glanceclient.Client)
@@ -305,7 +285,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
 
         client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
                                             use_ssl=use_ssl)
-        create_client_mock.assert_called_once_with(ctx, host, port, use_ssl, 1)
+        create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
         self.assertTrue(mock_log.warning.called)
@@ -314,7 +294,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.assertFalse(sleep_mock.called)
 
     @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._create_glance_client')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_with_retries(self, create_client_mock,
                                         sleep_mock):
         self.flags(num_retries=1, group='glance')
@@ -339,7 +319,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
 
     @mock.patch('random.shuffle')
     @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._create_glance_client')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_default_client_without_retries(self, create_client_mock,
                                             sleep_mock, shuffle_mock):
         api_servers = [
@@ -365,22 +345,17 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         client = glance.GlanceClientWrapper()
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
+        self.assertEqual(str(client.api_server), "http://host1:9292")
         self.assertFalse(sleep_mock.called)
 
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
+        self.assertEqual(str(client.api_server), "https://host2:9293")
         self.assertFalse(sleep_mock.called)
-
-        create_client_mock.assert_has_calls(
-            [
-                mock.call(ctx, 'host1', 9292, False, 1),
-                mock.call(ctx, 'host2', 9293, True, 1),
-            ]
-        )
 
     @mock.patch('random.shuffle')
     @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._create_glance_client')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_default_client_with_retries(self, create_client_mock,
                                          sleep_mock, shuffle_mock):
         api_servers = [
@@ -407,13 +382,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
 
         client = glance.GlanceClientWrapper()
         client.call(ctx, 1, 'get', 'meow')
-
-        create_client_mock.assert_has_calls(
-            [
-                mock.call(ctx, 'host1', 9292, False, 1),
-                mock.call(ctx, 'host2', 9293, True, 1),
-            ]
-        )
+        self.assertEqual(str(client.api_server), "https://host2:9293")
         sleep_mock.assert_called_once_with(1)
 
     @mock.patch('oslo_service.sslutils.is_enabled')
@@ -423,10 +392,12 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
         ctxt = mock.sentinel.ctx
-        glance._create_glance_client(ctxt, 'host4', 9295, use_ssl=True)
+        endpoint = glance.GlanceEndpoint(url='https://host4:9295')
+        glance._glanceclient_from_endpoint(ctxt, endpoint)
         client_mock.assert_called_once_with(
             '1', 'https://host4:9295', insecure=False, ssl_compression=False,
-            cert_file='bar.cert', key_file='wut.key', cacert='foo.cert')
+            cert_file='bar.cert', key_file='wut.key', cacert='foo.cert',
+            identity_headers=mock.ANY)
 
     @mock.patch.object(glanceclient.common.http.HTTPClient, 'get')
     def test_determine_curr_major_version(self, http_client_mock):
