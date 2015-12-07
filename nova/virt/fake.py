@@ -149,9 +149,7 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 0,
-          'supported_instances': jsonutils.dumps([(arch.X86_64,
-                                                   hv_type.FAKE,
-                                                   vm_mode.HVM)]),
+          'supported_instances': [(arch.X86_64, hv_type.FAKE, vm_mode.HVM)],
           'numa_topology': None,
           }
         self._mounts = {}
