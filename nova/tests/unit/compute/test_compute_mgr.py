@@ -2868,6 +2868,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
             mock_rt.assert_called_once_with(self.context, instance)
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager._delete_instance')
+    def test_terminate_instance_no_bdm_volume_id(self, mock_delete_instance,
+                                                 mock_bdm_get_by_inst):
+        # Tests that we refresh the bdm list if a volume bdm does not have the
+        # volume_id set.
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ERROR,
+            task_state=task_states.DELETING)
+        bdm = fake_block_device.FakeDbBlockDeviceDict(
+            {'source_type': 'snapshot', 'destination_type': 'volume',
+             'instance_uuid': instance.uuid, 'device_name': '/dev/vda'})
+        bdms = block_device_obj.block_device_make_list(self.context, [bdm])
+        # since the bdms passed in don't have a volume_id, we'll go back to the
+        # database looking for updated versions
+        mock_bdm_get_by_inst.return_value = bdms
+        self.compute.terminate_instance(self.context, instance, bdms, [])
+        mock_bdm_get_by_inst.assert_called_once_with(
+            self.context, instance.uuid)
+        mock_delete_instance.assert_called_once_with(
+            self.context, instance, bdms, mock.ANY)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
