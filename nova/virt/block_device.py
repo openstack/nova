@@ -499,10 +499,29 @@ def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
     def _log_and_attach(bdm):
         context = attach_args[0]
         instance = attach_args[1]
-        LOG.info(_LI('Booting with volume %(volume_id)s at %(mountpoint)s'),
-                  {'volume_id': bdm.volume_id,
-                   'mountpoint': bdm['mount_device']},
-                  context=context, instance=instance)
+        if bdm.get('volume_id'):
+            LOG.info(_LI('Booting with volume %(volume_id)s at '
+                         '%(mountpoint)s'),
+                     {'volume_id': bdm.volume_id,
+                      'mountpoint': bdm['mount_device']},
+                     context=context, instance=instance)
+        elif bdm.get('snapshot_id'):
+            LOG.info(_LI('Booting with volume snapshot %(snapshot_id)s at '
+                         '%(mountpoint)s'),
+                     {'snapshot_id': bdm.snapshot_id,
+                      'mountpoint': bdm['mount_device']},
+                     context=context, instance=instance)
+        elif bdm.get('image_id'):
+            LOG.info(_LI('Booting with volume-backed-image %(image_id)s at '
+                         '%(mountpoint)s'),
+                     {'image_id': bdm.image_id,
+                      'mountpoint': bdm['mount_device']},
+                     context=context, instance=instance)
+        else:
+            LOG.info(_LI('Booting with blank volume at %(mountpoint)s'),
+                     {'mountpoint': bdm['mount_device']},
+                     context=context, instance=instance)
+
         bdm.attach(*attach_args, **attach_kwargs)
 
     map(_log_and_attach, block_device_mapping)

@@ -2304,6 +2304,23 @@ class ComputeManager(manager.Manager):
         if try_deallocate_networks:
             self._try_deallocate_network(context, instance, requested_networks)
 
+        # NOTE(mriedem): If we are deleting the instance while it was booting
+        # from volume, we could be racing with a database update of the BDM
+        # volume_id. Since the compute API passes the BDMs over RPC to compute
+        # here, the BDMs may be stale at this point. So check for any volume
+        # BDMs that don't have volume_id set and if we detect that, we need to
+        # refresh the BDM list before proceeding with detach.
+        for bdm in list(vol_bdms):
+            if not bdm.volume_id:
+                LOG.debug('There are potentially stale BDMs during delete, '
+                          'refreshing the BlockDeviceMappingList.',
+                          instance=instance)
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
+                # now filter the list again
+                vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
+                break
+
         timer.restart()
         for bdm in vol_bdms:
             try:
