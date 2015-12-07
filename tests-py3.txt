@@ -93,9 +93,6 @@ nova.tests.unit.keymgr.test_conf_key_mgr.ConfKeyManagerTestCase
 nova.tests.unit.keymgr.test_key.SymmetricKeyTestCase
 nova.tests.unit.keymgr.test_mock_key_mgr.MockKeyManagerTestCase
 nova.tests.unit.keymgr.test_single_key_mgr.SingleKeyManagerTestCase
-nova.tests.unit.network.test_linux_net.LinuxNetworkTestCase.test_get_dhcp_leases_for_nw00
-nova.tests.unit.network.test_linux_net.LinuxNetworkTestCase.test_get_dhcp_leases_for_nw01
-nova.tests.unit.network.test_manager.CommonNetworkTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.pci.test_manager.PciDevTrackerTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
