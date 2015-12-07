@@ -37,8 +37,9 @@ class BarbicanKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         super(BarbicanKeyManagerTestCase, self).setUp()
 
         # Create fake auth_token
-        self.ctxt = mock.Mock()
+        self.ctxt = mock.MagicMock()
         self.ctxt.auth_token = "fake_token"
+        self.ctxt.project = "fake_project"
 
         # Create mock barbican client
         self._build_mock_barbican()
@@ -49,6 +50,7 @@ class BarbicanKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         self.pre_hex = "AIDxQp2++uAbKaTVDMXFYIu8PIugJGqkK0JLqkU0rhY="
         self.hex = ("0080f1429dbefae01b29a4d50cc5c5608bbc3c8ba0246aa42b424baa4"
                     "534ae16")
+        self.key_mgr._current_context = self.ctxt
         self.key_mgr._base_url = "http://host:9311/v1"
         self.addCleanup(self._restore)
 
@@ -221,3 +223,51 @@ class BarbicanKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         self.key_mgr._barbican_client = None
         self.assertRaises(exception.Forbidden,
                           self.key_mgr.store_key, None, None)
+
+    @mock.patch('keystoneclient.session.Session')
+    @mock.patch('barbicanclient.client.Client')
+    def test_get_barbican_client_new(self, mock_barbican, mock_keystone):
+        manager = self._create_key_manager()
+        manager._get_barbican_client(self.ctxt)
+        self.assertEqual(mock_keystone.call_count, 1)
+        self.assertEqual(mock_barbican.call_count, 1)
+
+    @mock.patch('keystoneclient.session.Session')
+    @mock.patch('barbicanclient.client.Client')
+    def test_get_barbican_client_reused(self, mock_barbican, mock_keystone):
+        manager = self._create_key_manager()
+        manager._get_barbican_client(self.ctxt)
+        self.assertEqual(mock_keystone.call_count, 1)
+        self.assertEqual(mock_barbican.call_count, 1)
+        manager._get_barbican_client(self.ctxt)
+        self.assertEqual(mock_keystone.call_count, 1)
+        self.assertEqual(mock_barbican.call_count, 1)
+
+    @mock.patch('keystoneclient.session.Session')
+    @mock.patch('barbicanclient.client.Client')
+    def test_get_barbican_client_not_reused(self, mock_barbican,
+                                            mock_keystone):
+        manager = self._create_key_manager()
+        manager._get_barbican_client(self.ctxt)
+        self.assertEqual(mock_keystone.call_count, 1)
+        self.assertEqual(mock_barbican.call_count, 1)
+        ctxt2 = mock.MagicMock()
+        ctxt2.auth_token = "fake_token2"
+        ctxt2.project = "fake_project2"
+        manager._get_barbican_client(ctxt2)
+        self.assertEqual(mock_keystone.call_count, 2)
+        self.assertEqual(mock_barbican.call_count, 2)
+
+    def test_get_barbican_client_null_context(self):
+        self.assertRaises(exception.Forbidden,
+                          self.key_mgr._get_barbican_client, None)
+
+    def test_get_barbican_client_missing_project(self):
+        del(self.ctxt.project_id)
+        self.assertRaises(exception.KeyManagerError,
+                          self.key_mgr._get_barbican_client, self.ctxt)
+
+    def test_get_barbican_client_none_project(self):
+        self.ctxt.project_id = None
+        self.assertRaises(exception.KeyManagerError,
+                          self.key_mgr._get_barbican_client, self.ctxt)
