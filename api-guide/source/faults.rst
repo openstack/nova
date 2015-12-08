@@ -39,8 +39,8 @@ Instance Faults
 ---------------
 
 Nova often adds an instance fault DB entry for an exception that happens
-while processing an API request. This often includes more admin focused
-information, such as a stack trace.
+while processing an API request. This often includes more administrator
+focused information, such as a stack trace.
 However, there is currently no API to retrieve this information.
 
 Notifications
