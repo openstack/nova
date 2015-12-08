@@ -134,7 +134,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 setattr(self, k, v)
             else:
                 # Note (yjiang5) extra_info.update does not update
-                # obj_what_changed, set it explicitely
+                # obj_what_changed, set it explicitly
                 extra_info = self.extra_info
                 extra_info.update({k: v})
                 self.extra_info = extra_info
