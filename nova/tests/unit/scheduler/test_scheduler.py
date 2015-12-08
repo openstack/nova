@@ -21,7 +21,10 @@ import mock
 
 from nova import context
 from nova import objects
+from nova.scheduler import caching_scheduler
+from nova.scheduler import chance
 from nova.scheduler import driver
+from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import ironic_host_manager
 from nova.scheduler import manager
@@ -31,18 +34,74 @@ from nova.tests.unit import fake_server_actions
 from nova.tests.unit.scheduler import fakes
 
 
+class SchedulerManagerInitTestCase(test.NoDBTestCase):
+    """Test case for scheduler manager initiation."""
+    manager_cls = manager.SchedulerManager
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_default_schedulerdriver(self,
+                                                mock_init_agg,
+                                                mock_init_inst):
+        driver = self.manager_cls().driver
+        self.assertIsInstance(driver, filter_scheduler.FilterScheduler)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_chance_schedulerdriver(self,
+                                               mock_init_agg,
+                                               mock_init_inst):
+        self.flags(scheduler_driver='chance_scheduler')
+        driver = self.manager_cls().driver
+        self.assertIsInstance(driver, chance.ChanceScheduler)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_caching_schedulerdriver(self,
+                                                mock_init_agg,
+                                                mock_init_inst):
+        self.flags(scheduler_driver='caching_scheduler')
+        driver = self.manager_cls().driver
+        self.assertIsInstance(driver, caching_scheduler.CachingScheduler)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_nonexist_schedulerdriver(self,
+                                           mock_init_agg,
+                                           mock_init_inst):
+        self.flags(scheduler_driver='nonexist_scheduler')
+        self.assertRaises(RuntimeError, self.manager_cls)
+
+    # NOTE(Yingxin): Loading full class path is deprecated and should be
+    # removed in the N release.
+    @mock.patch.object(manager.LOG, 'warning')
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_classpath_to_schedulerdriver(self,
+                                                     mock_init_agg,
+                                                     mock_init_inst,
+                                                     mock_warning):
+        self.flags(
+            scheduler_driver=
+            'nova.scheduler.chance.ChanceScheduler')
+        driver = self.manager_cls().driver
+        self.assertIsInstance(driver, chance.ChanceScheduler)
+        warn_args, kwargs = mock_warning.call_args
+        self.assertIn("DEPRECATED", warn_args[0])
+
+
 class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
 
     manager_cls = manager.SchedulerManager
     driver_cls = fakes.FakeScheduler
-    driver_cls_name = 'nova.tests.unit.scheduler.fakes.FakeScheduler'
+    driver_plugin_name = 'fake_scheduler'
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerManagerTestCase, self).setUp()
-        self.flags(scheduler_driver=self.driver_cls_name)
+        self.flags(scheduler_driver=self.driver_plugin_name)
         with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
             self.manager = self.manager_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')

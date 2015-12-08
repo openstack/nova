@@ -270,20 +270,26 @@ and will be dropped in the N release.
 """)
 
 driver_opt = cfg.StrOpt("scheduler_driver",
-        default="nova.scheduler.filter_scheduler.FilterScheduler",
+        default="filter_scheduler",
         help="""
-The class of the driver used by the scheduler. This should be the full Python
-path to the class to be used. If nothing is specified in this option, the
-FilterScheduler is used.
+The class of the driver used by the scheduler. This should be chosen from one
+of the entrypoints under the namespace 'nova.scheduler.driver' of file
+'setup.cfg'. If nothing is specified in this option, the 'filter_scheduler' is
+used.
+
+This option also supports deprecated full Python path to the class to be used.
+For example, "nova.scheduler.filter_scheduler.FilterScheduler". But note: this
+support will be dropped in the N Release.
 
 Other options are:
 
-    * 'nova.scheduler.caching_scheduler.CachingScheduler' which aggressively
-    caches the system state for better individual scheduler performance at
-    the risk of more retries when running multiple schedulers.
+    * 'caching_scheduler' which aggressively caches the system state for better
+    individual scheduler performance at the risk of more retries when running
+    multiple schedulers.
 
-    * 'nova.scheduler.chance.ChanceScheduler' which simply picks a host at
-    random.
+    * 'chance_scheduler' which simply picks a host at random.
+
+    * 'fake_scheduler' which is used for testing.
 
 * Services that use this:
 
