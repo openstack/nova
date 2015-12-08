@@ -665,6 +665,7 @@ class SessionBase(object):
         return pickle.dumps(None)
 
     _plugin_glance_upload_vhd = _plugin_pickle_noop
+    _plugin_glance_upload_vhd2 = _plugin_pickle_noop
     _plugin_kernel_copy_vdi = _plugin_noop
     _plugin_kernel_create_kernel_ramdisk = _plugin_noop
     _plugin_kernel_remove_kernel_ramdisk = _plugin_noop
@@ -761,7 +762,7 @@ class SessionBase(object):
         return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
-        return pickle.dumps("1.2")
+        return pickle.dumps("1.3")
 
     def _plugin_xenhost_query_gc(self, method, args):
         return pickle.dumps("False")

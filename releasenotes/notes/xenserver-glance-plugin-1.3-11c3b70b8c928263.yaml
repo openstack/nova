@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The glance xenserver plugin has been bumped to version 1.3 which
+    includes new interfaces for referencing glance servers by url. All
+    dom0 will need to be upgraded with this plugin before upgrading
+    the nova code.
