@@ -25,17 +25,20 @@ class RetryFilter(filters.BaseHostFilter):
     purposes
     """
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Skip nodes that have already been attempted."""
-        retry = filter_properties.get('retry', None)
+        retry = spec_obj.retry
         if not retry:
             # Re-scheduling is disabled
             LOG.debug("Re-scheduling is disabled")
             return True
 
-        hosts = retry.get('hosts', [])
+        # TODO(sbauza): Once the HostState is actually a ComputeNode, we could
+        # easily get this one...
         host = [host_state.host, host_state.nodename]
+        # TODO(sbauza)... and we wouldn't need to primitive the hosts into
+        # lists
+        hosts = [[cn.host, cn.hypervisor_hostname] for cn in retry.hosts]
 
         passes = host not in hosts
 
