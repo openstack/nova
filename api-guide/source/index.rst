@@ -39,7 +39,7 @@ access to your own deployment, and you should also be familiar with the
 following concepts:
 
 *  OpenStack Compute service
-*  ReSTful web services
+*  ReSTful HTTP services
 *  HTTP/1.1
 *  JSON data serialization formats
 
