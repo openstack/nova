@@ -4517,33 +4517,21 @@ class ComputeTestCase(BaseTestCase):
             self.assertTrue(migration._context.is_admin)
             orig_mig_save()
 
-        def _instance_save0():
-            orig_inst_save()
-
-        def _instance_save1():
-            self.assertEqual(instance_type['id'],
-                             instance.instance_type_id)
-            orig_inst_save()
-
-        def _instance_save2(expected_task_state=None):
+        def _instance_save0(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_MIGRATED,
                              expected_task_state)
+            self.assertEqual(instance_type['id'],
+                             instance.instance_type_id)
             self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
             orig_inst_save(expected_task_state=expected_task_state)
 
-        def _instance_save3(expected_task_state=None):
+        def _instance_save1(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_FINISH,
                              expected_task_state)
             self.assertEqual(vm_states.RESIZED, instance.vm_state)
             self.assertIsNone(instance.task_state)
             self.assertIn('launched_at', instance.obj_what_changed())
             orig_inst_save(expected_task_state=expected_task_state)
-
-        # First save to update old flavor
-        instance.save().WithSideEffects(_instance_save0)
-
-        # Second save to update current flavor
-        instance.save().WithSideEffects(_instance_save1)
 
         network_api.setup_networks_on_host(self.context, instance,
                                            'fake-mini')
@@ -4554,9 +4542,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.get_instance_nw_info(
                 self.context, instance).AndReturn('fake-nwinfo1')
 
-        # Third save to update task state
+        # First save to update old/current flavor and task state
         exp_kwargs = dict(expected_task_state=task_states.RESIZE_MIGRATED)
-        instance.save(**exp_kwargs).WithSideEffects(_instance_save2)
+        instance.save(**exp_kwargs).WithSideEffects(_instance_save0)
 
         self.compute._notify_about_instance_usage(
                 self.context, instance, 'finish_resize.start',
@@ -4576,7 +4564,7 @@ class ComputeTestCase(BaseTestCase):
         # Ensure instance status updates is after the migration finish
         migration.save().WithSideEffects(_mig_save)
         exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
-        instance.save(**exp_kwargs).WithSideEffects(_instance_save3)
+        instance.save(**exp_kwargs).WithSideEffects(_instance_save1)
         self.compute._notify_about_instance_usage(
                 self.context, instance, 'finish_resize.end',
                 network_info='fake-nwinfo1')
@@ -5415,39 +5403,6 @@ class ComputeTestCase(BaseTestCase):
                 self.context))
         self._test_finish_revert_resize(power_on=True,
                                         numa_topology=numa_topology)
-
-    def _test_cleanup_stored_instance_types(self, old, new, revert=False):
-        instance = self._create_fake_instance_obj()
-        instance.system_metadata = dict(instance_type_id=old)
-
-        old_flavor = objects.Flavor(**test_flavor.fake_flavor)
-        old_flavor.id = old
-        new_flavor = objects.Flavor(**test_flavor.fake_flavor)
-        new_flavor.id = new
-
-        instance.old_flavor = old_flavor
-        instance.new_flavor = new_flavor
-        instance.flavor = new_flavor
-
-        with mock.patch.object(instance, 'save'):
-            sysmeta, flavor, drop_flavor = \
-                self.compute._cleanup_stored_instance_types(instance, revert)
-
-        self.assertEqual(int(revert and old or new), flavor['id'])
-        self.assertEqual(int(revert and new or old), drop_flavor['id'])
-        self.assertNotIn('old_instance_type_id', sysmeta)
-
-    def test_cleanup_stored_instance_types_for_resize(self):
-        self._test_cleanup_stored_instance_types('1', '2')
-
-    def test_cleanup_stored_instance_types_for_resize_with_update(self):
-        self._test_cleanup_stored_instance_types('1', '2', True)
-
-    def test_cleanup_stored_instance_types_for_migration(self):
-        self._test_cleanup_stored_instance_types('1', '1')
-
-    def test_cleanup_stored_instance_types_for_migration_with_update(self):
-        self._test_cleanup_stored_instance_types('1', '1', True)
 
     def test_get_by_flavor_id(self):
         flavor_type = flavors.get_flavor_by_flavor_id(1)
