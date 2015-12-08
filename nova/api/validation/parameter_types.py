@@ -103,6 +103,13 @@ valid_name_leading_trailing_spaces_regex = (
 valid_name_regex_obj = re.compile(valid_name_regex, re.UNICODE)
 
 
+valid_description_regex_base = '^[%s]*$'
+
+
+valid_description_regex = valid_description_regex_base % (
+    re.escape(_get_printable()))
+
+
 boolean = {
     'type': ['boolean', 'string'],
     'enum': [True, 'True', 'TRUE', 'true', '1', 'ON', 'On', 'on',
@@ -172,6 +179,12 @@ cell_name_leading_trailing_spaces = {
 name_with_leading_trailing_spaces = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'pattern': valid_name_leading_trailing_spaces_regex,
+}
+
+
+description = {
+    'type': ['string', 'null'], 'minLength': 0, 'maxLength': 255,
+    'pattern': valid_description_regex,
 }
 
 

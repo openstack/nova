@@ -510,3 +510,231 @@ class ServersTest(ServersTestBase):
 
 class ServersTestV21(ServersTest):
     api_major_version = 'v2.1'
+
+
+class ServersTestV219(ServersTestBase):
+    api_major_version = 'v2.1'
+
+    def _create_server(self, set_desc = True, desc = None):
+        server = self._build_minimal_create_server_request()
+        if set_desc:
+            server['description'] = desc
+        post = {'server': server}
+        response = self.api.api_post('/servers', post,
+                                     headers=self._headers).body
+        return (server, response['server'])
+
+    def _update_server(self, server_id, set_desc = True, desc = None):
+        new_name = integrated_helpers.generate_random_alphanumeric(8)
+        server = {'server': {'name': new_name}}
+        if set_desc:
+            server['server']['description'] = desc
+        self.api.api_put('/servers/%s' % server_id, server,
+                         headers=self._headers)
+
+    def _rebuild_server(self, server_id, set_desc = True, desc = None):
+        new_name = integrated_helpers.generate_random_alphanumeric(8)
+        post = {}
+        post['rebuild'] = {
+            "name": new_name,
+            self._image_ref_parameter: "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+            self._access_ipv4_parameter: "172.19.0.2",
+            self._access_ipv6_parameter: "fe80::2",
+            "metadata": {'some': 'thing'},
+        }
+        post['rebuild'].update(self._get_access_ips_params())
+        if set_desc:
+            post['rebuild']['description'] = desc
+        self.api.api_post('/servers/%s/action' % server_id, post,
+                          headers=self._headers)
+
+    def _create_server_and_verify(self, set_desc = True, expected_desc = None):
+        # Creates a server with a description and verifies it is
+        # in the GET responses.
+        created_server_id = self._create_server(set_desc,
+                                                expected_desc)[1]['id']
+        self._verify_server_description(created_server_id, expected_desc)
+        self._delete_server(created_server_id)
+
+    def _update_server_and_verify(self, server_id, set_desc = True,
+                                  expected_desc = None):
+        # Updates a server with a description and verifies it is
+        # in the GET responses.
+        self._update_server(server_id, set_desc, expected_desc)
+        self._verify_server_description(server_id, expected_desc)
+
+    def _rebuild_server_and_verify(self, server_id, set_desc = True,
+                                  expected_desc = None):
+        # Rebuilds a server with a description and verifies it is
+        # in the GET responses.
+        self._rebuild_server(server_id, set_desc, expected_desc)
+        self._verify_server_description(server_id, expected_desc)
+
+    def _verify_server_description(self, server_id, expected_desc = None,
+                                   desc_in_resp = True):
+        # Calls GET on the servers and verifies that the description
+        # is set as expected in the response, or not set at all.
+        response = self.api.api_get('/servers/%s' % server_id,
+                                    headers=self._headers)
+        found_server = response.body['server']
+        self.assertEqual(server_id, found_server['id'])
+        if desc_in_resp:
+            # Verify the description is set as expected (can be None)
+            self.assertEqual(expected_desc, found_server.get('description'))
+        else:
+            # Verify the description is not included in the response.
+            self.assertNotIn('description', found_server)
+
+        servers = self.api.api_get('/servers/detail',
+                                    headers=self._headers).body['servers']
+        server_map = {server['id']: server for server in servers}
+        found_server = server_map.get(server_id)
+        self.assertTrue(found_server)
+        if desc_in_resp:
+            # Verify the description is set as expected (can be None)
+            self.assertEqual(expected_desc, found_server.get('description'))
+        else:
+            # Verify the description is not included in the response.
+            self.assertNotIn('description', found_server)
+
+    def _create_assertRaisesRegex(self, desc):
+        # Verifies that a 400 error is thrown on create server
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._create_server(True, desc)
+        self.assertEqual(400, cm.exception.response.status_code)
+
+    def _update_assertRaisesRegex(self, server_id, desc):
+        # Verifies that a 400 error is thrown on update server
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._update_server(server_id, True, desc)
+        self.assertEqual(400, cm.exception.response.status_code)
+
+    def _rebuild_assertRaisesRegex(self, server_id, desc):
+        # Verifies that a 400 error is thrown on rebuild server
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._rebuild_server(server_id, True, desc)
+        self.assertEqual(400, cm.exception.response.status_code)
+
+    def test_create_server_with_description(self):
+        fake_network.set_stub_network_methods(self)
+
+        self._headers = {}
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+
+        # Create and get a server with a description
+        self._create_server_and_verify(True, 'test description')
+        # Create and get a server with an empty description
+        self._create_server_and_verify(True, '')
+        # Create and get a server with description set to None
+        self._create_server_and_verify()
+        # Create and get a server without setting the description
+        self._create_server_and_verify(False)
+
+    def test_update_server_with_description(self):
+        fake_network.set_stub_network_methods(self)
+
+        self._headers = {}
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+
+        # Create a server with an initial description
+        server_id = self._create_server(True, 'test desc 1')[1]['id']
+
+        # Update and get the server with a description
+        self._update_server_and_verify(server_id, True, 'updated desc')
+        # Update and get the server name without changing the description
+        self._update_server_and_verify(server_id, False, 'updated desc')
+        # Update and get the server with an empty description
+        self._update_server_and_verify(server_id, True, '')
+        # Update and get the server by removing the description (set to None)
+        self._update_server_and_verify(server_id)
+        # Update and get the server with a 2nd new description
+        self._update_server_and_verify(server_id, True, 'updated desc2')
+
+        # Cleanup
+        self._delete_server(server_id)
+
+    def test_rebuild_server_with_description(self):
+        fake_network.set_stub_network_methods(self)
+
+        self._headers = {}
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+
+        # Create a server with an initial description
+        server = self._create_server(True, 'test desc 1')[1]
+        server_id = server['id']
+        self._wait_for_state_change(server, 'BUILD')
+
+        # Rebuild and get the server with a description
+        self._rebuild_server_and_verify(server_id, True, 'updated desc')
+        # Rebuild and get the server name without changing the description
+        self._rebuild_server_and_verify(server_id, False, 'updated desc')
+        # Rebuild and get the server with an empty description
+        self._rebuild_server_and_verify(server_id, True, '')
+        # Rebuild and get the server by removing the description (set to None)
+        self._rebuild_server_and_verify(server_id)
+        # Rebuild and get the server with a 2nd new description
+        self._rebuild_server_and_verify(server_id, True, 'updated desc2')
+
+        # Cleanup
+        self._delete_server(server_id)
+
+    def test_version_compatibility(self):
+        fake_network.set_stub_network_methods(self)
+
+        # Create a server with microversion v2.19 and a description.
+        self._headers = {}
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+        server_id = self._create_server(True, 'test desc 1')[1]['id']
+        # Verify that the description is not included on V2.18 GETs
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
+        self._verify_server_description(server_id, desc_in_resp = False)
+        # Verify that updating the server with description on V2.18
+        # results in a 400 error
+        self._update_assertRaisesRegex(server_id, 'test update 2.18')
+        # Verify that rebuilding the server with description on V2.18
+        # results in a 400 error
+        self._rebuild_assertRaisesRegex(server_id, 'test rebuild 2.18')
+
+        # Cleanup
+        self._delete_server(server_id)
+
+        # Create a server on V2.18 and verify that the description
+        # defaults to the name on a V2.19 GET
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
+        server_req, response = self._create_server(False)
+        server_id = response['id']
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+        self._verify_server_description(server_id, server_req['name'])
+
+        # Cleanup
+        self._delete_server(server_id)
+
+        # Verify that creating a server with description on V2.18
+        # results in a 400 error
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
+        self._create_assertRaisesRegex('test create 2.18')
+
+    def test_description_errors(self):
+        fake_network.set_stub_network_methods(self)
+
+        self._headers = {}
+        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+
+        # Create servers with invalid descriptions.  These throw 400.
+        # Invalid unicode with non-printable control char
+        self._create_assertRaisesRegex(u'invalid\0dstring')
+        # Description is longer than 255 chars
+        self._create_assertRaisesRegex('x' * 256)
+
+        # Update and rebuild servers with invalid descriptions.
+        # These throw 400.
+        server_id = self._create_server(True, "desc")[1]['id']
+        # Invalid unicode with non-printable control char
+        self._update_assertRaisesRegex(server_id, u'invalid\u0604string')
+        self._rebuild_assertRaisesRegex(server_id, u'invalid\u0604string')
+        # Description is longer than 255 chars
+        self._update_assertRaisesRegex(server_id, 'x' * 256)
+        self._rebuild_assertRaisesRegex(server_id, 'x' * 256)

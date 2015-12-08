@@ -82,6 +82,10 @@ class ServersController(wsgi.Controller):
     schema_server_update_v20 = schema_servers.base_update_v20
     schema_server_rebuild_v20 = schema_servers.base_rebuild_v20
 
+    schema_server_create_v219 = schema_servers.base_create_v219
+    schema_server_update_v219 = schema_servers.base_update_v219
+    schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
+
     @staticmethod
     def _add_location(robj):
         # Just in case...
@@ -207,6 +211,9 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
             self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v219,
+                                          '2.19')
+            self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create, '2.1')
             self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create_v20,
@@ -224,6 +231,9 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if list(self.update_schema_manager):
             self.update_schema_manager.map(self._update_extension_schema,
+                                           self.schema_server_update_v219,
+                                           '2.19')
+            self.update_schema_manager.map(self._update_extension_schema,
                                            self.schema_server_update, '2.1')
             self.update_schema_manager.map(self._update_extension_schema,
                                            self.schema_server_update_v20,
@@ -240,6 +250,9 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if list(self.rebuild_schema_manager):
+            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
+                                            self.schema_server_rebuild_v219,
+                                            '2.19')
             self.rebuild_schema_manager.map(self._rebuild_extension_schema,
                                             self.schema_server_rebuild, '2.1')
             self.rebuild_schema_manager.map(self._rebuild_extension_schema,
@@ -514,7 +527,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 409, 413))
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
-    @validation.schema(schema_server_create, '2.1')
+    @validation.schema(schema_server_create, '2.1', '2.18')
+    @validation.schema(schema_server_create_v219, '2.19')
     def create(self, req, body):
         """Creates a new server for a given user."""
 
@@ -522,6 +536,16 @@ class ServersController(wsgi.Controller):
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
         name = common.normalize_name(server_dict['name'])
+
+        if api_version_request.is_supported(req, min_version='2.19'):
+            if 'description' in server_dict:
+                # This is allowed to be None
+                description = server_dict['description']
+            else:
+                # No default description
+                description = None
+        else:
+            description = name
 
         # Arguments to be passed to instance create function
         create_kwargs = {}
@@ -596,7 +620,7 @@ class ServersController(wsgi.Controller):
                             inst_type,
                             image_uuid,
                             display_name=name,
-                            display_description=name,
+                            display_description=description,
                             availability_zone=availability_zone,
                             forced_host=host, forced_node=node,
                             metadata=server_dict.get('metadata', {}),
@@ -767,7 +791,8 @@ class ServersController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404))
     @validation.schema(schema_server_update_v20, '2.0', '2.0')
-    @validation.schema(schema_server_update, '2.1')
+    @validation.schema(schema_server_update, '2.1', '2.18')
+    @validation.schema(schema_server_update_v219, '2.19')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -778,6 +803,10 @@ class ServersController(wsgi.Controller):
         if 'name' in body['server']:
             update_dict['display_name'] = common.normalize_name(
                 body['server']['name'])
+
+        if 'description' in body['server']:
+            # This is allowed to be None (remove description)
+            update_dict['display_description'] = body['server']['description']
 
         if list(self.update_extension_manager):
             self.update_extension_manager.map(self._update_extension_point,
@@ -972,7 +1001,8 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
-    @validation.schema(schema_server_rebuild, '2.1')
+    @validation.schema(schema_server_rebuild, '2.1', '2.18')
+    @validation.schema(schema_server_rebuild_v219, '2.19')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -988,6 +1018,7 @@ class ServersController(wsgi.Controller):
 
         attr_map = {
             'name': 'display_name',
+            'description': 'display_description',
             'metadata': 'metadata',
         }
 

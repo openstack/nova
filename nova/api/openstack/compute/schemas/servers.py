@@ -58,6 +58,11 @@ base_create_v20['properties']['server'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
 
+base_create_v219 = copy.deepcopy(base_create)
+base_create_v219['properties']['server'][
+    'properties']['description'] = parameter_types.description
+
+
 base_update = {
     'type': 'object',
     'properties': {
@@ -78,6 +83,9 @@ base_update_v20 = copy.deepcopy(base_update)
 base_update_v20['properties']['server'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
+base_update_v219 = copy.deepcopy(base_update)
+base_update_v219['properties']['server'][
+    'properties']['description'] = parameter_types.description
 
 base_rebuild = {
     'type': 'object',
@@ -104,6 +112,9 @@ base_rebuild_v20 = copy.deepcopy(base_rebuild)
 base_rebuild_v20['properties']['rebuild'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
+base_rebuild_v219 = copy.deepcopy(base_rebuild)
+base_rebuild_v219['properties']['rebuild'][
+    'properties']['description'] = parameter_types.description
 
 base_resize = {
     'type': 'object',

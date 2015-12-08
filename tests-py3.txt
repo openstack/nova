@@ -48,6 +48,7 @@ nova.tests.unit.api.openstack.compute.test_server_actions.ServerActionsControlle
 nova.tests.unit.api.openstack.compute.test_serversV21.Base64ValidationTest
 nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerCreateTest
 nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerRebuildInstanceTest
+nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerRebuildTestV219
 nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerTest
 nova.tests.unit.api.openstack.compute.test_serversV21.ServersControllerTestV29
 nova.tests.unit.api.openstack.compute.test_simple_tenant_usage.SimpleTenantUsageTestV2

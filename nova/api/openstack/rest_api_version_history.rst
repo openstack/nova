@@ -167,3 +167,9 @@ user documentation.
 2.18
 ----
   Establishes a set of routes that makes project_id an optional construct in v2.1.
+
+2.19
+----
+  Allow the user to set and get the server description.
+  The user will be able to set the description when creating, rebuilding,
+  or updating a server, and get the description as part of the server details.

@@ -1,0 +1,16 @@
+---
+features:
+  - In Nova Compute API microversion 2.19, you can
+    specify a "description" attribute when creating, rebuilding, or updating
+    a server instance.  This description can be retrieved by getting
+    server details, or list details for servers.
+
+    Refer to the Nova Compute API documentation for more
+    information.
+
+    Note that the description attribute existed in prior
+    Nova versions, but was set to the server name by Nova,
+    and was not visible to the user.  So, servers you
+    created with microversions prior to 2.19 will return
+    the description equals the name on server details
+    microversion 2.19.

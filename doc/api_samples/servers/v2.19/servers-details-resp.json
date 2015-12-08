@@ -1,0 +1,61 @@
+{
+    "servers": [
+        {
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
+            "addresses": {
+                "private": [
+                    {
+                        "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "OS-EXT-IPS:type": "fixed",
+                        "addr": "192.168.0.3",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2015-12-07T19:54:48Z",
+            "description": "new-server-description",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "hostId": "a672ab12738567bfcb852c846d66a6ce5c3555b42d73db80bdc6f1a4",
+            "id": "91965362-fd86-4543-8ce1-c17074d2984d",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/openstack/servers/91965362-fd86-4543-8ce1-c17074d2984d",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/openstack/servers/91965362-fd86-4543-8ce1-c17074d2984d",
+                    "rel": "bookmark"
+                }
+            ],
+            "locked": false,
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "progress": 0,
+            "status": "ACTIVE",
+            "tenant_id": "openstack",
+            "updated": "2015-12-07T19:54:49Z",
+            "user_id": "fake"
+        }
+    ]
+}
