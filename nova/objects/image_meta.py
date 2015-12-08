@@ -390,6 +390,7 @@ class ImageMetaProps(base.NovaObject):
         'bdm_v2': 'img_bdm_v2',
         'root_device_name': 'img_root_device_name',
         'hypervisor_version_requires': 'img_hv_requested_version',
+        'hypervisor_type': 'img_hv_type',
     }
 
     # TODO(berrange): Need to run this from a data migration
