@@ -159,6 +159,8 @@ class TestImageMetaProps(test.NoDBTestCase):
             'block_device_mapping': [],
             'bdm_v2': 'yes',
             'root_device_name': '/dev/vda',
+            'hypervisor_version_requires': '>=1.5.3',
+            'hypervisor_type': 'qemu',
         }
 
         image_meta = objects.ImageMetaProps.from_dict(legacy_props)
@@ -183,6 +185,8 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual([], image_meta.img_block_device_mapping)
         self.assertTrue(image_meta.img_bdm_v2)
         self.assertEqual("/dev/vda", image_meta.img_root_device_name)
+        self.assertEqual('>=1.5.3', image_meta.img_hv_requested_version)
+        self.assertEqual('qemu', image_meta.img_hv_type)
 
     def test_legacy_compat_vmware_adapter_types(self):
         legacy_types = ['lsiLogic', 'busLogic', 'ide', 'lsiLogicsas',
