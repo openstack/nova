@@ -19,11 +19,13 @@ Client side of the cert manager RPC API.
 import oslo_messaging as messaging
 
 import nova.conf
+from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class CertAPI(object):
     '''Client side of the cert rpc API.
 

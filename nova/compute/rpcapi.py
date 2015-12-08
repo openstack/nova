@@ -27,6 +27,7 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import service as service_obj
+from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
@@ -54,6 +55,7 @@ def _compute_host(host, instance):
     return instance.host
 
 
+@profiler.trace_cls("rpc")
 class ComputeAPI(object):
     '''Client side of the compute rpc API.
 

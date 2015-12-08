@@ -1,0 +1,27 @@
+---
+features:
+  - OSProfiler support was added. This cross-project profiling library
+    allows to trace various OpenStack requests through all OpenStack
+    services that support it. To initiate OpenStack
+    request tracing `--profile <HMAC_KEY>` option needs to be added to
+    the CLI command. This key needs to present one of the secret keys
+    defined in nova.conf configuration file with `hmac_keys` option
+    under the `[profiler]` configuration section. To enable or disable
+    Nova profiling the appropriate `enabled` option under the same
+    section needs to be set either to `True` or `False`. By default
+    Nova will trace all API and RPC requests, but there is an opportunity
+    to trace DB requests as well. For this purpose `trace_sqlalchemy`
+    option needs to be set to `True`. As a prerequisite OSProfiler
+    library and its storage backend needs to be installed to the
+    environment. If so (and if profiling is enabled in nova.conf)
+    the trace can be generated via following command, for instance -
+    `$ nova --profile SECRET_KEY boot --image <image> --flavor <flavor> <name>`.
+    At the end of output there will be message with <trace_id>, and
+    to plot nice HTML graphs the following command should be used -
+    `$ osprofiler trace show <trace_id> --html --out result.html`
+security:
+  - OSProfiler support requires passing of trace information
+    between various OpenStack services. This information is
+    securely signed by one of HMAC keys, defined in nova.conf configuration
+    file. To allow cross-project tracing user should use the key, that is
+    common among all OpenStack services he or she wants to trace.

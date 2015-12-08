@@ -52,9 +52,11 @@ This module provides Manager, a base class for managers.
 """
 
 from oslo_service import periodic_task
+import six
 
 import nova.conf
 from nova.db import base
+from nova import profiler
 from nova import rpc
 
 
@@ -66,7 +68,28 @@ class PeriodicTasks(periodic_task.PeriodicTasks):
         super(PeriodicTasks, self).__init__(CONF)
 
 
+class ManagerMeta(profiler.get_traced_meta(), type(PeriodicTasks)):
+    """Metaclass to trace all children of a specific class.
+
+    This metaclass wraps every public method (not starting with _ or __)
+    of the class using it. All children classes of the class using ManagerMeta
+    will be profiled as well.
+
+    Adding this metaclass requires that the __trace_args__ attribute be added
+    to the class we want to modify. That attribute is a dictionary
+    with one mandatory key: "name". "name" defines the name
+    of the action to be traced (for example, wsgi, rpc, db).
+
+    The OSprofiler-based tracing, although, will only happen if profiler
+    instance was initiated somewhere before in the thread, that can only happen
+    if profiling is enabled in nova.conf and the API call to Nova API contained
+    specific headers.
+    """
+
+
+@six.add_metaclass(ManagerMeta)
 class Manager(base.Base, PeriodicTasks):
+    __trace_args__ = {"name": "rpc"}
 
     def __init__(self, host=None, db_driver=None, service_name='undefined'):
         if not host:

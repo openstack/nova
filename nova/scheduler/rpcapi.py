@@ -20,11 +20,13 @@ import oslo_messaging as messaging
 
 import nova.conf
 from nova.objects import base as objects_base
+from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
 
 
+@profiler.trace_cls("rpc")
 class SchedulerAPI(object):
     '''Client side of the scheduler rpc API.
 

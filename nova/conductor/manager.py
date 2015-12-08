@@ -42,6 +42,7 @@ from nova import network
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
+from nova import profiler
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
@@ -176,6 +177,7 @@ def obj_target_cell(obj, cell):
             yield
 
 
+@profiler.trace_cls("rpc")
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
 

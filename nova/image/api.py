@@ -16,8 +16,10 @@ images used by the compute layer.
 """
 
 from nova.image import glance
+from nova import profiler
 
 
+@profiler.trace_cls("nova_image")
 class API(object):
 
     """Responsible for exposing a relatively stable internal API for other
