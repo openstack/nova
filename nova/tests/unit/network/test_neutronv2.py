@@ -1466,7 +1466,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                     {'quota': {'port': 50}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1494,7 +1495,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                     {'quota': {'port': 50}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1533,7 +1535,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                 {'quota': {'port': 50}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                  {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1726,7 +1729,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                     {'quota': {'port': 2}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1751,7 +1755,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                     {'quota': {'port': 5}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1788,7 +1793,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_quota(
             tenant_id='my_tenantid').AndReturn(
                     {'quota': {'port': 5}})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+        self.moxed_client.list_ports(
+            tenant_id='my_tenantid', fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -2897,7 +2903,7 @@ class TestNeutronv2WithMock(test.TestCase):
                               'fields': 'device_id'},
                              {'ports': []}),
 
-                            ({'tenant_id': 'fake-project'},
+                            ({'tenant_id': 'fake-project', 'fields': ['id']},
                              {'ports': [1, 2, 3, 4, 5]})]
 
         nets = [{'subnets': '1'}, {'subnets': '2'}]
@@ -2940,7 +2946,7 @@ class TestNeutronv2WithMock(test.TestCase):
                               'fixed_ips': 'ip_address=10.0.1.2',
                               'fields': 'device_id'},
                              {'ports': []}),
-                            ({'tenant_id': 'fake-project'},
+                            ({'tenant_id': 'fake-project', 'fields': ['id']},
                              {'ports': []})]
         self._test_validate_networks_fixed_ip_no_dup(nets1, requested_networks,
                                                      ids, list_port_values)
@@ -2970,7 +2976,7 @@ class TestNeutronv2WithMock(test.TestCase):
                               'fields': 'device_id'},
                              {'ports': []}),
 
-                            ({'tenant_id': 'fake-project'},
+                            ({'tenant_id': 'fake-project', 'fields': ['id']},
                              {'ports': []})]
 
         self._test_validate_networks_fixed_ip_no_dup(nets2, requested_networks,
