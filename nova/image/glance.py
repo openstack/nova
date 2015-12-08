@@ -98,20 +98,18 @@ def generate_image_url(image_ref):
     return "%s/images/%s" % (generate_glance_url(), image_ref)
 
 
-def _parse_image_ref(image_href):
-    """Parse an image href into composite parts.
+def _endpoint_from_image_ref(image_href):
+    """Return the image_ref and guessed endpoint from an image url.
 
     :param image_href: href of an image
-    :returns: a tuple of the form (image_id, host, port)
-    :raises ValueError
-
+    :returns: a tuple of the form (image_id, endpoint_url)
     """
-    o = urlparse.urlparse(image_href)
-    port = o.port or 80
-    host = o.netloc.rsplit(':', 1)[0]
-    image_id = o.path.split('/')[-1]
-    use_ssl = (o.scheme == 'https')
-    return (image_id, host, port, use_ssl)
+    parts = image_href.split('/')
+    image_id = parts[-1]
+    # the endpoint is everything in the url except the last 3 bits
+    # which are version, 'images', and image_id
+    endpoint = '/'.join(parts[:-3])
+    return (image_id, endpoint)
 
 
 def generate_identity_headers(context, status='Confirmed'):
@@ -190,10 +188,9 @@ def get_api_servers():
 class GlanceClientWrapper(object):
     """Glance client wrapper class that implements retries."""
 
-    def __init__(self, context=None, host=None, port=None, use_ssl=False,
-                 version=1):
-        if host is not None:
-            endpoint = GlanceEndpoint(host=host, port=port, use_ssl=use_ssl)
+    def __init__(self, context=None, endpoint=None, version=1):
+        if endpoint is not None:
+            endpoint = GlanceEndpoint(url=endpoint)
             self.client = self._create_static_client(context,
                                                      endpoint,
                                                      version)
@@ -706,10 +703,9 @@ def get_remote_image_service(context, image_href):
         return image_service, image_href
 
     try:
-        (image_id, glance_host, glance_port, use_ssl) = \
-            _parse_image_ref(image_href)
+        (image_id, endpoint) = _endpoint_from_image_ref(image_href)
         glance_client = GlanceClientWrapper(context=context,
-                host=glance_host, port=glance_port, use_ssl=use_ssl)
+                                            endpoint=endpoint)
     except ValueError:
         raise exception.InvalidImageRef(image_href=image_href)
 

@@ -178,14 +178,12 @@ class TestGetImageService(test.NoDBTestCase):
     @mock.patch.object(glance.GlanceClientWrapper, '__init__',
                        return_value=None)
     def test_get_remote_service_from_href(self, gcwi_mocked):
-        id_or_uri = 'http://127.0.0.1/123'
+        id_or_uri = 'http://127.0.0.1/v1/images/123'
         _ignored, image_id = glance.get_remote_image_service(
                 mock.sentinel.ctx, id_or_uri)
         self.assertEqual('123', image_id)
         gcwi_mocked.assert_called_once_with(context=mock.sentinel.ctx,
-                                            host='127.0.0.1',
-                                            port=80,
-                                            use_ssl=False)
+                                            endpoint='http://127.0.0.1')
 
 
 class TestCreateGlanceClient(test.NoDBTestCase):
@@ -258,9 +256,8 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         ctx = context.RequestContext('fake', 'fake')
         host = 'host4'
         port = 9295
-        use_ssl = False
-        client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
-                                            use_ssl=use_ssl)
+        endpoint = 'http://%s:%s' % (host, port)
+        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
         create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
@@ -281,10 +278,10 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         ctx = context.RequestContext('fake', 'fake')
         host = 'host4'
         port = 9295
-        use_ssl = False
+        endpoint = 'http://%s:%s' % (host, port)
 
-        client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
-                                            use_ssl=use_ssl)
+        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
+
         create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
         self.assertRaises(exception.GlanceConnectionFailed,
                 client.call, ctx, 1, 'get', 'meow')
@@ -310,10 +307,9 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         ctx = context.RequestContext('fake', 'fake')
         host = 'host4'
         port = 9295
-        use_ssl = False
+        endpoint = 'http://%s:%s' % (host, port)
 
-        client = glance.GlanceClientWrapper(context=ctx,
-                host=host, port=port, use_ssl=use_ssl)
+        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
         client.call(ctx, 1, 'get', 'meow')
         sleep_mock.assert_called_once_with(1)
 
