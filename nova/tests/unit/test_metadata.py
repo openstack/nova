@@ -40,17 +40,16 @@ from nova.compute import flavors
 from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
-from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.neutronv2 import api as neutronapi
+from nova.network.security_group import openstack_driver
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
-from nova.tests.unit.objects import test_security_group
 from nova.virt import netutils
 
 CONF = cfg.CONF
@@ -112,13 +111,13 @@ def fake_InstanceMetadata(stubs, inst_data, address=None,
     content = content or []
     extra_md = extra_md or {}
     if sgroups is None:
-        sgroups = [dict(test_security_group.fake_secgroup,
-                        name='default')]
+        sgroups = [{'name': 'default'}]
 
     def sg_get(*args, **kwargs):
         return sgroups
 
-    stubs.Set(api, 'security_group_get_by_instance', sg_get)
+    secgroup_api = openstack_driver.get_openstack_security_group_driver()
+    stubs.Set(secgroup_api.__class__, 'get_instance_security_groups', sg_get)
     return base.InstanceMetadata(inst_data, address=address,
         content=content, extra_md=extra_md,
         vd_driver=vd_driver, network_info=network_info,
@@ -187,15 +186,21 @@ class MetadataTestCase(test.TestCase):
             md.get_ec2_metadata(version='2009-04-04').get('user-data', obj),
             obj)
 
-    def test_security_groups(self):
+    def _test_security_groups(self):
         inst = self.instance.obj_clone()
-        sgroups = [dict(test_security_group.fake_secgroup, name='default'),
-                   dict(test_security_group.fake_secgroup, name='other')]
+        sgroups = [{'name': name} for name in ('default', 'other')]
         expected = ['default', 'other']
 
         md = fake_InstanceMetadata(self.stubs, inst, sgroups=sgroups)
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['security-groups'], expected)
+
+    def test_security_groups(self):
+        self._test_security_groups()
+
+    def test_neutron_security_groups(self):
+        self.flags(security_group_api='neutron')
+        self._test_security_groups()
 
     def test_local_hostname_fqdn(self):
         md = fake_InstanceMetadata(self.stubs, self.instance.obj_clone())
