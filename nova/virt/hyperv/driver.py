@@ -181,7 +181,7 @@ class HyperVDriver(driver.ComputeDriver):
                                              instance.name)
 
     def get_volume_connector(self, instance):
-        return self._volumeops.get_volume_connector(instance)
+        return self._volumeops.get_volume_connector()
 
     def get_available_resource(self, nodename):
         return self._hostops.get_available_resource()

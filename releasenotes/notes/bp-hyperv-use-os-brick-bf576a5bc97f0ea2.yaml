@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The Hyper-V driver now uses os-brick for volume related
+    operations, introducing the following new features:
+
+    - Attaching volumes over fibre channel on a passthrough
+      basis.
+    - Improved iSCSI MPIO support, by connecting to multiple
+      iSCSI targets/portals when available and allowing using
+      a predefined list of initiator HBAs.

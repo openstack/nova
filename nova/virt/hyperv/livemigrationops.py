@@ -96,7 +96,7 @@ class LiveMigrationOps(object):
             if not boot_from_volume and instance.image_ref:
                 self._imagecache.get_cached_image(context, instance)
 
-        self._volumeops.initialize_volumes_connection(block_device_info)
+        self._volumeops.connect_volumes(block_device_info)
 
         disk_path_mapping = self._volumeops.get_disk_path_mapping(
             block_device_info)

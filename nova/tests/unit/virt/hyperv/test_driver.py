@@ -196,8 +196,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
     def test_get_volume_connector(self):
         self.driver.get_volume_connector(mock.sentinel.instance)
-        self.driver._volumeops.get_volume_connector.assert_called_once_with(
-            mock.sentinel.instance)
+        self.driver._volumeops.get_volume_connector.assert_called_once_with()
 
     def test_get_available_resource(self):
         self.driver.get_available_resource(mock.sentinel.nodename)

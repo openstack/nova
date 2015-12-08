@@ -84,11 +84,9 @@ in order to limit the CPU features used by the instance.
         help="""
 Mounted disk query retry count
 
-The number of times to retry checking for a disk mounted via iSCSI.
-During long stress runs the WMI query that is looking for the iSCSI
-device number can incorrectly return no data. If the query is
-retried the appropriate data can then be obtained. The query runs
-until the device can be found or the retry count is reached.
+The number of times to retry checking for a mounted disk.
+The query runs until the device can be found or the retry
+count is reached.
 
 Possible values:
 
@@ -106,7 +104,7 @@ Related options:
         help="""
 Mounted disk query retry interval
 
-Interval between checks for a mounted iSCSI disk, in seconds.
+Interval between checks for a mounted disk, in seconds.
 
 Possible values:
 
@@ -259,12 +257,8 @@ Related options:
         help="""
 Volume attach retry count
 
-The number of times to retry to attach a volume. This option is used
-to avoid incorrectly returned no data when the system is under load.
-Volume attachment is retried until success or the given retry count
-is reached. To prepare the Hyper-V node to be able to attach to
-volumes provided by cinder you must first make sure the Windows iSCSI
-initiator service is running and started automatically.
+The number of times to retry attaching a volume. Volume attachment
+is retried until success or the given retry count is reached.
 
 Possible values:
 
@@ -321,6 +315,22 @@ extra specs:
 Windows / Hyper-V Server 2016. Acceptable values::
 
     64, 128, 256, 512, 1024
+"""),
+    cfg.BoolOpt('use_multipath_io',
+                default=False,
+                help="""
+Use multipath connections when attaching iSCSI or FC disks.
+
+This requires the Multipath IO Windows feature to be enabled. MPIO must be
+configured to claim such devices.
+"""),
+    cfg.ListOpt('iscsi_initiator_list',
+                default=[],
+                help="""
+List of iSCSI initiators that will be used for estabilishing iSCSI sessions.
+
+If none are specified, the Microsoft iSCSI initiator service will choose the
+initiator.
 """)
 ]
 
