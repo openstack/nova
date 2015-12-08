@@ -5001,6 +5001,13 @@ class ComputeManager(manager.Manager):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a dict containing migration info
         """
+        return self._do_check_can_live_migrate_destination(ctxt, instance,
+                                                            block_migration,
+                                                            disk_over_commit)
+
+    def _do_check_can_live_migrate_destination(self, ctxt, instance,
+                                               block_migration,
+                                               disk_over_commit):
         src_compute_info = obj_base.obj_to_primitive(
             self._get_compute_info(ctxt, instance.host))
         dst_compute_info = obj_base.obj_to_primitive(
