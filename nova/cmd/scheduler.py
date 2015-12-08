@@ -18,16 +18,15 @@
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import config
 from nova import objects
 from nova import service
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
+CONF = nova.conf.CONF
 
 
 def main():

@@ -13,24 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.scheduler import filters
 
-isolated_opts = [
-    cfg.ListOpt('isolated_images',
-                default=[],
-                help='Images to run on isolated host'),
-    cfg.ListOpt('isolated_hosts',
-                default=[],
-                help='Host reserved for specific images'),
-    cfg.BoolOpt('restrict_isolated_hosts_to_isolated_images',
-                default=True,
-                help='Whether to force isolated hosts to run only isolated '
-                     'images'),
-]
-CONF = cfg.CONF
-CONF.register_opts(isolated_opts)
+CONF = nova.conf.CONF
 
 
 class IsolatedHostsFilter(filters.BaseHostFilter):

@@ -26,45 +26,13 @@ in the configuration file as the followings:
     The final weight would be name1.value * 1.0 + name2.value * -1.0.
 """
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import exception
 from nova.scheduler import utils
 from nova.scheduler import weights
 
-metrics_weight_opts = [
-        cfg.FloatOpt('weight_multiplier',
-                     default=1.0,
-                     help='Multiplier used for weighing metrics.'),
-        cfg.ListOpt('weight_setting',
-                    default=[],
-                    help='How the metrics are going to be weighed. This '
-                         'should be in the form of "<name1>=<ratio1>, '
-                         '<name2>=<ratio2>, ...", where <nameX> is one '
-                         'of the metrics to be weighed, and <ratioX> is '
-                         'the corresponding ratio. So for "name1=1.0, '
-                         'name2=-1.0" The final weight would be '
-                         'name1.value * 1.0 + name2.value * -1.0.'),
-       cfg.BoolOpt('required',
-                    default=True,
-                    help='How to treat the unavailable metrics. When a '
-                         'metric is NOT available for a host, if it is set '
-                         'to be True, it would raise an exception, so it '
-                         'is recommended to use the scheduler filter '
-                         'MetricFilter to filter out those hosts. If it is '
-                         'set to be False, the unavailable metric would be '
-                         'treated as a negative factor in weighing '
-                         'process, the returned value would be set by '
-                         'the option weight_of_unavailable.'),
-       cfg.FloatOpt('weight_of_unavailable',
-                     default=float(-10000.0),
-                     help='The final weight value to be returned if '
-                          'required is set to False and any one of the '
-                          'metrics set by weight_setting is unavailable.'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(metrics_weight_opts, group='metrics')
+CONF = nova.conf.CONF
 
 
 class MetricsWeigher(weights.BaseHostWeigher):

@@ -13,20 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
-disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio", default=1.0,
-                         help="Virtual disk to physical disk allocation ratio")
-
-CONF = cfg.CONF
-CONF.register_opt(disk_allocation_ratio_opt)
+CONF = nova.conf.CONF
 
 
 class DiskFilter(filters.BaseHostFilter):

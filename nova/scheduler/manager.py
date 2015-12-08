@@ -19,13 +19,13 @@
 Scheduler Service
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
 from oslo_utils import importutils
 
+import nova.conf
 from nova import exception
 from nova import manager
 from nova import quota
@@ -33,20 +33,7 @@ from nova import quota
 
 LOG = logging.getLogger(__name__)
 
-scheduler_driver_opts = [
-    cfg.StrOpt('scheduler_driver',
-               default='nova.scheduler.filter_scheduler.FilterScheduler',
-               help='Default driver to use for the scheduler'),
-    cfg.IntOpt('scheduler_driver_task_period',
-               default=60,
-               help='How often (in seconds) to run periodic tasks in '
-                    'the scheduler driver of your choice. '
-                    'Please note this is likely to interact with the value '
-                    'of service_down_time, but exactly how they interact '
-                    'will depend on your choice of scheduler driver.'),
-]
-CONF = cfg.CONF
-CONF.register_opts(scheduler_driver_opts)
+CONF = nova.conf.CONF
 
 QUOTAS = quota.QUOTAS
 

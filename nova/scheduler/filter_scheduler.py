@@ -21,10 +21,10 @@ Weighing Functions.
 
 import random
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from six.moves import range
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -33,23 +33,8 @@ from nova.scheduler import driver
 from nova.scheduler import scheduler_options
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-
-
-filter_scheduler_opts = [
-    cfg.IntOpt('scheduler_host_subset_size',
-               default=1,
-               help='New instances will be scheduled on a host chosen '
-                    'randomly from a subset of the N best hosts. This '
-                    'property defines the subset size that a host is '
-                    'chosen from. A value of 1 chooses the '
-                    'first host returned by the weighing functions. '
-                    'This value must be at least 1. Any value less than 1 '
-                    'will be ignored, and 1 will be used instead')
-]
-
-CONF.register_opts(filter_scheduler_opts)
 
 
 class FilterScheduler(driver.Scheduler):

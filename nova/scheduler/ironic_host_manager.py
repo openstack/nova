@@ -21,35 +21,13 @@ This host manager will consume all cpu's, disk space, and
 ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import hv_type
+import nova.conf
 from nova.scheduler import host_manager
 
-host_manager_opts = [
-    cfg.ListOpt('baremetal_scheduler_default_filters',
-                default=[
-                    'RetryFilter',
-                    'AvailabilityZoneFilter',
-                    'ComputeFilter',
-                    'ComputeCapabilitiesFilter',
-                    'ImagePropertiesFilter',
-                    'ExactRamFilter',
-                    'ExactDiskFilter',
-                    'ExactCoreFilter',
-                ],
-                help='Which filter class names to use for filtering '
-                     'baremetal hosts when not specified in the request.'),
-    cfg.BoolOpt('scheduler_use_baremetal_filters',
-                default=False,
-                help='Flag to decide whether to use '
-                     'baremetal_scheduler_default_filters or not.'),
-
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(host_manager_opts)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
