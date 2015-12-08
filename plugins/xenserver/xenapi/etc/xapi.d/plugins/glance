@@ -31,6 +31,7 @@ except ImportError:
 import md5
 import socket
 import urllib2
+from urlparse import urlparse
 
 import pluginlib_nova
 import utils
@@ -114,10 +115,21 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     else:
         scheme = 'http'
 
-    url = ("%(scheme)s://%(glance_host)s:%(glance_port)d/v1/images/"
-           "%(image_id)s" % {'scheme': scheme, 'glance_host': glance_host,
-                             'glance_port': glance_port,
-                             'image_id': image_id})
+    endpoint = "%(scheme)s://%(glance_host)s:%(glance_port)d" % {
+        'scheme': scheme, 'glance_host': glance_host,
+        'glance_port': glance_port}
+    _download_tarball_by_url(sr_path, staging_path, image_id,
+                             endpoint, extra_headers)
+
+
+def _download_tarball_by_url(sr_path, staging_path, image_id,
+                      glance_endpoint, extra_headers):
+    """Download the tarball image from Glance and extract it into the staging
+    area. Retry if there is any failure.
+    """
+    url = ("%(glance_endpoint)s/v1/images/%(image_id)s" % {
+        'glance_endpoint': glance_endpoint,
+        'image_id': image_id})
     logging.info("Downloading %s" % url)
 
     request = urllib2.Request(url, headers=extra_headers)
@@ -130,6 +142,17 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
 
 def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                     glance_use_ssl, extra_headers, properties):
+    if glance_use_ssl:
+        scheme = 'https'
+    else:
+        scheme = 'http'
+
+    url = '%s://%s:%s' % (scheme, glance_host, glance_port)
+    _upload_tarball_by_url(staging_path, image_id, url,
+                          extra_headers, properties)
+
+def _upload_tarball_by_url(staging_path, image_id, glance_endpoint,
+                           extra_headers, properties):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -141,33 +164,35 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     # been adjusted by other library calls.
     socket.setdefaulttimeout(SOCKET_TIMEOUT_SECONDS)
 
-    if glance_use_ssl:
-        scheme = 'https'
-    else:
-        scheme = 'http'
-
-    url = '%s://%s:%s/v1/images/%s' % (scheme, glance_host, glance_port,
-                                       image_id)
+    url = '%(glance_endpoint)s/v1/images/%(image_id)s' % {
+        'glance_endpoint': glance_endpoint,
+        'image_id': image_id}
     logging.info("Writing image data to %s" % url)
 
+    # NOTE(sdague): this is python 2.4, which means urlparse returns a
+    # tuple, not a named tuple.
+    # 0 - scheme
+    # 1 - host:port (aka netloc)
+    # 2 - path
+    parts = urlparse(url)
+
     try:
-        if glance_use_ssl:
-            conn = httplib.HTTPSConnection(glance_host, glance_port)
+        if parts[0] == 'https':
+            conn = httplib.HTTPSConnection(parts[1])
         else:
-            conn = httplib.HTTPConnection(glance_host, glance_port)
+            conn = httplib.HTTPConnection(parts[1])
         conn.connect()
     except Exception, error:
         logging.exception('Failed to connect %(url)s' % {'url': url})
         raise RetryableError(error)
 
     try:
-        validate_image_status_before_upload(conn, glance_host, glance_port,
-                                            image_id, url, extra_headers)
+        validate_image_status_before_upload(conn, url, extra_headers)
 
         try:
             # NOTE(sirp): httplib under python2.4 won't accept
             # a file-like object to request
-            conn.putrequest('PUT', '/v1/images/%s' % image_id)
+            conn.putrequest('PUT', parts[2])
 
             # NOTE(sirp): There is some confusion around OVF. Here's a summary
             # of where we currently stand:
@@ -233,13 +258,13 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                       "Response Status: %i, Response body: %s"
                       % (url, resp.status, resp.read()))
 
-        check_resp_status_and_retry(resp, image_id, glance_host, glance_port)
+        check_resp_status_and_retry(resp, image_id, url)
 
     finally:
         conn.close()
 
 
-def check_resp_status_and_retry(resp, image_id, glance_host, glance_port):
+def check_resp_status_and_retry(resp, image_id, url):
     # Note(Jesse): This branch sorts errors into those that are permanent,
     # those that are ephemeral, and those that are unexpected.
     if resp.status in (httplib.BAD_REQUEST,                      # 400
@@ -268,9 +293,8 @@ def check_resp_status_and_retry(resp, image_id, glance_host, glance_port):
                        httplib.NOT_EXTENDED,                     # 510
                        ):
         raise PluginError("Got Permanent Error response [%i] while "
-                          "uploading image [%s] to glance host [%s:%s]"
-                          % (resp.status, image_id,
-                             glance_host, glance_port))
+                          "uploading image [%s] to glance [%s]"
+                          % (resp.status, image_id, url))
     # NOTE(nikhil): Only a sub-set of the 500 errors are retryable. We
     # optimistically retry on 500 errors below.
     elif resp.status in (httplib.REQUEST_TIMEOUT,                # 408
@@ -281,30 +305,30 @@ def check_resp_status_and_retry(resp, image_id, glance_host, glance_port):
                          httplib.INSUFFICIENT_STORAGE,           # 507
                          ):
         raise RetryableError("Got Ephemeral Error response [%i] while "
-                             "uploading image [%s] to glance host [%s:%s]"
-                             % (resp.status, image_id,
-                                glance_host, glance_port))
+                             "uploading image [%s] to glance [%s]"
+                             % (resp.status, image_id, url))
     else:
         # Note(Jesse): Assume unexpected errors are retryable. If you are
         # seeing this error message, the error should probably be added
         # to either the ephemeral or permanent error list.
         raise RetryableError("Got Unexpected Error response [%i] while "
-                             "uploading image [%s] to glance host [%s:%s]"
-                             % (resp.status, image_id,
-                                glance_host, glance_port))
+                             "uploading image [%s] to glance [%s]"
+                             % (resp.status, image_id, url))
 
 
-def validate_image_status_before_upload(conn, glance_host, glance_port,
-                                        image_id, url, extra_headers):
+def validate_image_status_before_upload(conn, url, extra_headers):
     try:
+        parts = urlparse(url)
+        path = parts[2]
+        image_id = path.split('/')[-1]
         # NOTE(nikhil): Attempt to determine if the Image has a status
         # of 'queued'. Because data will continued to be sent to Glance
         # until it has a chance to check the Image state, discover that
         # it is not 'active' and send back a 409. Hence, the data will be
         # unnecessarily buffered by Glance. This wastes time and bandwidth.
         # LP bug #1202785
-        conn.request('HEAD', '/v1/images/%s' % image_id,
-                     headers=extra_headers)
+
+        conn.request('HEAD', path, headers=extra_headers)
         head_resp = conn.getresponse()
         # NOTE(nikhil): read the response to re-use the conn object.
         body_data = head_resp.read(8192)
@@ -313,9 +337,9 @@ def validate_image_status_before_upload(conn, glance_host, glance_port,
                        'HEAD call had more than 8192 bytes of data in '
                        'the response body.' % {'image_id': image_id})
             raise PluginError("Got Permanent Error while uploading image "
-                              "[%s] to glance host [%s:%s]. "
-                              "Message: %s" % (image_id, glance_host,
-                                               glance_port, err_msg))
+                              "[%s] to glance [%s]. "
+                              "Message: %s" % (image_id, url,
+                                               err_msg))
         else:
             head_resp.read()
 
@@ -331,8 +355,7 @@ def validate_image_status_before_upload(conn, glance_host, glance_port,
                       "to image %s , url = %s , Response Status: "
                       "%i" % (image_id, url, head_resp.status))
 
-        check_resp_status_and_retry(head_resp, image_id, glance_host,
-                                    glance_port)
+        check_resp_status_and_retry(head_resp, image_id, url)
 
     else:
         image_status = head_resp.getheader('x-image-meta-status')
@@ -342,9 +365,9 @@ def validate_image_status_before_upload(conn, glance_host, glance_port,
                        {'image_id': image_id, 'image_status': image_status})
             logging.exception(err_msg)
             raise PluginError("Got Permanent Error while uploading image "
-                              "[%s] to glance host [%s:%s]. "
-                              "Message: %s" % (image_id, glance_host,
-                                               glance_port, err_msg))
+                              "[%s] to glance [%s]. "
+                              "Message: %s" % (image_id, url,
+                                               err_msg))
         else:
             logging.info('Found image %(image_id)s in status '
                          '%(image_status)s. Attempting to '
