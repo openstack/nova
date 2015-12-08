@@ -310,6 +310,9 @@ necessary to add changes to other places which describe your change:
   ``doc/api_samples/versions/versions-get-resp.json`` and
   ``nova/tests/functional/api_samples/versions/versions-get-resp.json.tpl``.
 
+* Make a new commit to python-novaclient and update corresponding
+  files to enable the newly added microversion API.
+
 Allocating a microversion
 -------------------------
 
