@@ -70,7 +70,7 @@ several key concepts:
    Quotas can be used to limit the number of servers a tenant creates, or the
    amount of disk space consumed, so that no one tenant can overwhelm the
    system and prevent normal operation for others. Changing quotas is an
-   admin-level action.
+   administrator-level action.
 
 -  **Rate Limiting**
 
@@ -83,8 +83,8 @@ several key concepts:
    zone" is used in other clouds, such as Amazon Web Services, to denote a
    physical separation of server locations that can be used to distribute cloud
    resources for fault tolerance in case one zone is unavailable for any
-   reason. Such a separation is possible in Nova if an admin carefully sets up
-   availability zones for that, but it is not the default.
+   reason. Such a separation is possible in Nova if an administrator carefully
+   sets up availability zones for that, but it is not the default.
 
 -  **User data**
    A user data file is a special key in the metadata service that holds a file
@@ -188,7 +188,8 @@ on compute hosts rather than servers.
    - **enable, disable, disable-log-reason**
 
      The service can be disabled to indicate the service didn't provided
-     service anymore. This is used by admin to stop service for maintenance.
+     service anymore. This is used by administrator to stop service for
+     maintenance.
      For example, when Administrator wants to maintain a specific compute node,
      Administrator can disable nova-compute service on that compute node. Then
      nova won't dispatch any new compute request to that compute node anymore.
