@@ -1179,24 +1179,24 @@ class API(base_api.NetworkAPI):
         # from the hypervisor.  So we just check the quota and return
         # how many of the requested number of instances can be created
         if ports_needed_per_instance:
-            ports = neutron.list_ports(tenant_id=context.project_id)['ports']
             quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
             if quotas.get('port', -1) == -1:
                 # Unlimited Port Quota
                 return num_instances
+
+            ports = neutron.list_ports(tenant_id=context.project_id)['ports']
+            free_ports = quotas.get('port') - len(ports)
+            if free_ports < 0:
+                msg = (_("The number of defined ports: %(ports)d "
+                         "is over the limit: %(quota)d") %
+                       {'ports': len(ports),
+                        'quota': quotas.get('port')})
+                raise exception.PortLimitExceeded(msg)
+            ports_needed = ports_needed_per_instance * num_instances
+            if free_ports >= ports_needed:
+                return num_instances
             else:
-                free_ports = quotas.get('port') - len(ports)
-                if free_ports < 0:
-                    msg = (_("The number of defined ports: %(ports)d "
-                             "is over the limit: %(quota)d") %
-                           {'ports': len(ports),
-                            'quota': quotas.get('port')})
-                    raise exception.PortLimitExceeded(msg)
-                ports_needed = ports_needed_per_instance * num_instances
-                if free_ports >= ports_needed:
-                    return num_instances
-                else:
-                    return free_ports // ports_needed_per_instance
+                return free_ports // ports_needed_per_instance
         return num_instances
 
     def _get_instance_uuids_by_ip(self, context, address):
