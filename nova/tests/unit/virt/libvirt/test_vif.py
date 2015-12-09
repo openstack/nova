@@ -319,7 +319,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           network=network_8021,
           type=network_model.VIF_TYPE_MACVTAP)
 
-    instance = objects.Instance(id=1, uuid='instance-uuid')
+    instance = objects.Instance(id=1,
+                                uuid='f0000000-0000-0000-0000-000000000001')
 
     bandwidth = {
         'quota:vif_inbound_peak': '200',
@@ -654,10 +655,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True),
                         mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
                                   'qvbvif-xxx-yyy', run_as_root=True)],
-            'create_ovs_vif_port': [mock.call('br0',
-                                              'qvovif-xxx-yyy', 'aaa-bbb-ccc',
-                                              'ca:fe:de:ad:be:ef',
-                                              'instance-uuid')]
+            'create_ovs_vif_port': [mock.call(
+                                    'br0', 'qvovif-xxx-yyy', 'aaa-bbb-ccc',
+                                    'ca:fe:de:ad:be:ef',
+                                    'f0000000-0000-0000-0000-000000000001')]
         }
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
@@ -773,8 +774,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                         mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
                                   'qvbvif-xxx-yyy', run_as_root=True)],
             'create_ivs_vif_port': [mock.call('qvovif-xxx-yyy', 'aaa-bbb-ccc',
-                                              'ca:fe:de:ad:be:ef',
-                                              'instance-uuid')]
+                                    'ca:fe:de:ad:be:ef',
+                                    'f0000000-0000-0000-0000-000000000001')]
         }
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
@@ -833,8 +834,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
             instance = objects.Instance(id=1,
-                                        uuid='instance-uuid',
-                                        project_id='myproject')
+                           uuid='f0000000-0000-0000-0000-000000000001',
+                           project_id='myproject')
             d.plug_iovisor(instance, self.vif_ivs)
 
     def test_unplug_vrouter_with_details(self):
@@ -1219,11 +1220,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_vhostuser_ovs_plug(self):
 
         calls = {
-                'create_ovs_vif_port': [mock.call('br0',
-                                                  'usv-xxx-yyy-zzz',
-                                                  'aaa-bbb-ccc',
-                                                  'ca:fe:de:ad:be:ef',
-                                                  'instance-uuid')],
+                'create_ovs_vif_port': [mock.call(
+                                      'br0', 'usv-xxx-yyy-zzz',
+                                      'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
+                                      'f0000000-0000-0000-0000-000000000001')],
                  'ovs_set_vhostuser_port_type': [mock.call('usv-xxx-yyy-zzz')]
         }
         with test.nested(

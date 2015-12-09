@@ -6387,16 +6387,20 @@ class ComputeTestCase(BaseTestCase):
         timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
         not_timed_out_time = timeutils.utcnow()
 
-        instances = [objects.Instance(uuid='fake_uuid1',
-                                           vm_state=vm_states.RESCUED,
-                                           launched_at=timed_out_time),
-                     objects.Instance(uuid='fake_uuid2',
-                                           vm_state=vm_states.RESCUED,
-                                           launched_at=timed_out_time),
-                     objects.Instance(uuid='fake_uuid3',
-                                           vm_state=vm_states.RESCUED,
-                                           launched_at=not_timed_out_time)]
-        unrescued_instances = {'fake_uuid1': False, 'fake_uuid2': False}
+        instances = [objects.Instance(
+                         uuid='f1000000-0000-0000-0000-000000000001',
+                         vm_state=vm_states.RESCUED,
+                         launched_at=timed_out_time),
+                     objects.Instance(
+                         uuid='f1000000-0000-0000-0000-000000000002',
+                         vm_state=vm_states.RESCUED,
+                         launched_at=timed_out_time),
+                     objects.Instance(
+                         uuid='f1000000-0000-0000-0000-000000000003',
+                         vm_state=vm_states.RESCUED,
+                         launched_at=not_timed_out_time)]
+        unrescued_instances = {'f1000000-0000-0000-0000-000000000001': False,
+                               'f1000000-0000-0000-0000-000000000002': False}
 
         def fake_instance_get_all_by_filters(context, filters,
                                              expected_attrs=None,
@@ -6423,15 +6427,18 @@ class ComputeTestCase(BaseTestCase):
     def test_poll_rebooting_instances(self, get):
         reboot_timeout = 60
         updated_at = timeutils.utcnow() - datetime.timedelta(minutes=5)
-        to_poll = [objects.Instance(uuid='fake_uuid1',
-                                         task_state=task_states.REBOOTING,
-                                         updated_at=updated_at),
-                   objects.Instance(uuid='fake_uuid2',
-                                         task_state=task_states.REBOOT_STARTED,
-                                         updated_at=updated_at),
-                   objects.Instance(uuid='fake_uuid3',
-                                         task_state=task_states.REBOOT_PENDING,
-                                         updated_at=updated_at)]
+        to_poll = [objects.Instance(
+                       uuid='f1000000-0000-0000-0000-000000000001',
+                       task_state=task_states.REBOOTING,
+                       updated_at=updated_at),
+                   objects.Instance(
+                       uuid='f1000000-0000-0000-0000-000000000002',
+                       task_state=task_states.REBOOT_STARTED,
+                       updated_at=updated_at),
+                   objects.Instance(
+                       uuid='f1000000-0000-0000-0000-000000000003',
+                       task_state=task_states.REBOOT_PENDING,
+                       updated_at=updated_at)]
         self.flags(reboot_timeout=reboot_timeout)
         get.return_value = to_poll
         ctxt = context.get_admin_context()
@@ -7409,7 +7416,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
         self.fake_image = {
-            'id': 1,
+            'id': 'f9000000-0000-0000-0000-000000000000',
             'name': 'fake_name',
             'status': 'active',
             'properties': {'kernel_id': 'fake_kernel_id',
@@ -7597,7 +7604,7 @@ class ComputeAPITestCase(BaseTestCase):
         for instance in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
-                'fake-image-uuid', **instance)
+                'f5000000-0000-0000-0000-000000000000', **instance)
             self.assertIsNotNone(ref[0]['display_name'])
 
     def test_create_instance_sets_system_metadata(self):
@@ -7605,7 +7612,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
-                image_href='fake-image-uuid')
+                image_href='f5000000-0000-0000-0000-000000000000')
 
         sys_metadata = db.instance_system_metadata_get(self.context,
                 ref[0]['uuid'])
@@ -7622,7 +7629,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=instance_type,
-                image_href='some-fake-image')
+                image_href='f4000000-0000-0000-0000-000000000000')
 
         instance = objects.Instance.get_by_uuid(self.context, ref[0]['uuid'])
         self.assertEqual(instance_type.flavorid, instance.flavor.flavorid)
@@ -7634,7 +7641,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
-                image_href='some-fake-image',
+                image_href='f4000000-0000-0000-0000-000000000000',
                 security_group=['testgroup'])
 
         groups_for_instance = db.security_group_get_by_instance(
@@ -7737,7 +7744,8 @@ class ComputeAPITestCase(BaseTestCase):
                  ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000',
                 display_name=display_name)
 
             self.assertEqual(ref[0]['hostname'], hostname)
@@ -7774,7 +7782,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
-                image_href='some-fake-image',
+                image_href='f4000000-0000-0000-0000-000000000000',
                 security_group=['testgroup'])
 
         db.instance_destroy(self.context, ref[0]['uuid'])
@@ -7788,7 +7796,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=flavors.get_default_flavor(),
-                image_href='some-fake-image',
+                image_href='f4000000-0000-0000-0000-000000000000',
                 security_group=['testgroup'])
 
         db.security_group_destroy(self.context, group['id'])
@@ -8018,9 +8026,9 @@ class ComputeAPITestCase(BaseTestCase):
         # Ensure instance hostname is set during creation.
         inst_type = flavors.get_flavor_by_name('m1.tiny')
         (instances, _) = self.compute_api.create(self.context,
-                                                 inst_type,
-                                                 image_href='some-fake-image',
-                                                 display_name='test host')
+                           inst_type,
+                           image_href='f4000000-0000-0000-0000-000000000000',
+                           display_name='test host')
 
         self.assertEqual('test-host', instances[0]['hostname'])
 
@@ -8940,7 +8948,8 @@ class ComputeAPITestCase(BaseTestCase):
                                 {'source_type': 'volume',
                                  'device_name': '/dev/vda',
                                  'volume_id': 'fake_volume_id',
-                                 'instance_uuid': 'some_instance_uuid',
+                                 'instance_uuid':
+                                     'f8000000-0000-0000-0000-000000000000',
                                  'boot_index': 0,
                                  'destination_type': 'volume'})])
         self.assertTrue(
@@ -8960,13 +8969,13 @@ class ComputeAPITestCase(BaseTestCase):
                  'device_name': '/dev/vda',
                  'volume_id': 'fake_volume_id',
                  'destination_type': 'local',
-                 'instance_uuid': 'some_instance_uuid',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
                  'boot_index': 0,
                  'snapshot_id': None}),
                 fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume',
                  'device_name': '/dev/vdb',
-                 'instance_uuid': 'some_instance_uuid',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
                  'boot_index': 1,
                  'destination_type': 'volume',
                  'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
@@ -8998,7 +9007,7 @@ class ComputeAPITestCase(BaseTestCase):
                 {'source_type': 'volume',
                  'device_name': '/dev/vda',
                  'snapshot_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
-                 'instance_uuid': 'some_instance_uuid',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
                  'destination_type': 'volume',
                  'boot_index': 0,
                  'volume_id': None})])
@@ -9020,7 +9029,8 @@ class ComputeAPITestCase(BaseTestCase):
         matches return value from create.
         """
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image')
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000')
         self.assertEqual(len(refs), 1)
         self.assertEqual(refs[0]['reservation_id'], resv_id)
 
@@ -9030,7 +9040,8 @@ class ComputeAPITestCase(BaseTestCase):
         in both instances.
         """
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000',
                 min_count=2, max_count=2)
         self.assertEqual(len(refs), 2)
         self.assertIsNotNone(resv_id)
@@ -9040,7 +9051,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_multi_instance_display_name_template(self):
         self.flags(multi_instance_display_name_template='%(name)s')
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000',
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x')
         self.assertEqual(refs[0]['hostname'], 'x')
@@ -9052,7 +9064,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.flags(multi_instance_display_name_template='%(name)s-%(uuid)s')
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000',
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x-%s' % refs[0]['uuid'])
         self.assertEqual(refs[0]['hostname'], 'x-%s' % refs[0]['uuid'])
@@ -9064,7 +9077,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def _multi_instance_display_name_default(self):
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
+                flavors.get_default_flavor(),
+                image_href='f4000000-0000-0000-0000-000000000000',
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x-1')
         self.assertEqual(refs[0]['hostname'], 'x-1')
@@ -9140,7 +9154,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(cinder.API, 'reserve_volume', fake)
 
         instance = fake_instance.fake_instance_obj(None, **{
-            'uuid': 'fake_uuid', 'locked': False,
+            'uuid': 'f3000000-0000-0000-0000-000000000000', 'locked': False,
             'vm_state': vm_states.RESCUED})
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.attach_volume,
@@ -9151,7 +9165,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_no_attach_volume_in_suspended_state(self):
         instance = fake_instance.fake_instance_obj(None, **{
-            'uuid': 'fake_uuid', 'locked': False,
+            'uuid': 'f3000000-0000-0000-0000-000000000000', 'locked': False,
             'vm_state': vm_states.SUSPENDED})
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.attach_volume,
@@ -9193,7 +9207,8 @@ class ComputeAPITestCase(BaseTestCase):
         # Make sure we can a vnc console for an instance.
 
         fake_instance = self._fake_instance(
-            {'uuid': 'fake_uuid', 'host': 'fake_compute_host'})
+            {'uuid': 'f3000000-0000-0000-0000-000000000000',
+             'host': 'fake_compute_host'})
         fake_console_type = "novnc"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
@@ -9213,7 +9228,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            'fake_console_port', 'fake_access_path',
+            'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
 
         self.mox.ReplayAll()
@@ -9233,7 +9249,8 @@ class ComputeAPITestCase(BaseTestCase):
         # Make sure we can a spice console for an instance.
 
         fake_instance = self._fake_instance(
-            {'uuid': 'fake_uuid', 'host': 'fake_compute_host'})
+            {'uuid': 'f3000000-0000-0000-0000-000000000000',
+             'host': 'fake_compute_host'})
         fake_console_type = "spice-html5"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
@@ -9253,7 +9270,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            'fake_console_port', 'fake_access_path',
+            'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
 
         self.mox.ReplayAll()
@@ -9272,7 +9290,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rdp_console(self):
         # Make sure we can a rdp console for an instance.
 
-        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+        fake_instance = self._fake_instance({
+                         'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
         fake_console_type = "rdp-html5"
         fake_connect_info = {'token': 'fake_token',
@@ -9293,7 +9312,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            'fake_console_port', 'fake_access_path',
+            'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
 
         self.mox.ReplayAll()
@@ -9312,7 +9332,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_serial_console(self):
         # Make sure we can  get a serial proxy url for an instance.
 
-        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+        fake_instance = self._fake_instance({
+                         'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
         fake_console_type = 'serial'
         fake_connect_info = {'token': 'fake_token',
@@ -9334,7 +9355,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.consoleauth_rpcapi.authorize_console(
                     self.context, 'fake_token', fake_console_type,
                     'fake_serial_host', 'fake_tcp_port',
-                    'fake_access_path', 'fake_uuid',
+                    'fake_access_path',
+                    'f3000000-0000-0000-0000-000000000000',
                     access_url='fake_access_url')
 
             console = self.compute_api.get_serial_console(self.context,
@@ -9351,7 +9373,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance, 'serial')
 
     def test_mks_console(self):
-        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+        fake_instance = self._fake_instance({
+                         'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
         fake_console_type = 'webmks'
         fake_connect_info = {'token': 'fake_token',
@@ -9383,7 +9406,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance, 'mks')
 
     def test_console_output(self):
-        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+        fake_instance = self._fake_instance({
+                         'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
         fake_tail_length = 699
         fake_console_output = 'fake console output'
@@ -9433,9 +9457,11 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_attach_interface_failed(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
-        instance = objects.Instance(uuid='fake_id', image_ref='foo',
-                                    system_metadata={},
-                                    flavor=new_type)
+        instance = objects.Instance(
+                       uuid='f0000000-0000-0000-0000-000000000000',
+                       image_ref='foo',
+                       system_metadata={},
+                       flavor=new_type)
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
@@ -9466,7 +9492,7 @@ class ComputeAPITestCase(BaseTestCase):
                        lambda a, b, c: [])
         instance = objects.Instance()
         instance.info_cache = objects.InstanceInfoCache.new(
-            self.context, 'fake-uuid')
+            self.context, 'f6000000-0000-0000-0000-000000000000')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
         self.compute.detach_interface(self.context, instance, port_id)
@@ -9475,9 +9501,9 @@ class ComputeAPITestCase(BaseTestCase):
     def test_detach_interface_failed(self):
         nwinfo, port_id = self.test_attach_interface()
         instance = objects.Instance()
-        instance['uuid'] = 'fake-uuid'
+        instance['uuid'] = 'f6000000-0000-0000-0000-000000000000'
         instance.info_cache = objects.InstanceInfoCache.new(
-            self.context, 'fake-uuid')
+            self.context, 'f6000000-0000-0000-0000-000000000000')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
 
@@ -9500,7 +9526,7 @@ class ComputeAPITestCase(BaseTestCase):
         nwinfo, port_id = self.test_attach_interface()
         instance = objects.Instance(uuid=uuidutils.generate_uuid())
         instance.info_cache = objects.InstanceInfoCache.new(
-            self.context, 'fake-uuid')
+            self.context, 'f6000000-0000-0000-0000-000000000000')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
 
@@ -9634,7 +9660,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_invalid_volume(self):
         # Ensure exception is raised while detaching an un-attached volume
-        fake_instance = self._fake_instance({'uuid': 'uuid1',
+        fake_instance = self._fake_instance({
+                    'uuid': 'f7000000-0000-0000-0000-000000000001',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE,
@@ -9648,20 +9675,22 @@ class ComputeAPITestCase(BaseTestCase):
     def test_detach_unattached_volume(self):
         # Ensure exception is raised when volume's idea of attached
         # instance doesn't match.
-        fake_instance = self._fake_instance({'uuid': 'uuid1',
+        fake_instance = self._fake_instance({
+                    'uuid': 'f7000000-0000-0000-0000-000000000001',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE,
                     'task_state': None})
         volume = {'id': 1, 'attach_status': 'attached',
-                  'instance_uuid': 'uuid2'}
+                  'instance_uuid': 'f7000000-0000-0000-0000-000000000002'}
 
         self.assertRaises(exception.VolumeUnattached,
                           self.compute_api.detach_volume, self.context,
                           fake_instance, volume)
 
     def test_detach_suspended_instance_fails(self):
-        fake_instance = self._fake_instance({'uuid': 'uuid1',
+        fake_instance = self._fake_instance({
+                    'uuid': 'f7000000-0000-0000-0000-000000000001',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.SUSPENDED,
