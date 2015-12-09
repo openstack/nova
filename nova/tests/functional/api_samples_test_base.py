@@ -43,8 +43,27 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _objectify(self, data):
         if not data:
             return {}
-        # NOTE(vish): allow non-quoted replacements to survive json
-        data = re.sub(r'([^"])%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
+        # NOTE(sdague): templates will contain values like %(foo)s
+        # throughout them. If these are inside of double quoted
+        # strings, life is good, and we can treat it just like valid
+        # json to load it to python.
+        #
+        # However we've got some fields which are ints, like
+        # aggregate_id. This means we've got a snippet in the sample
+        # that looks like:
+        #
+        #     "id": %(aggregate_id)s,
+        #
+        # which is not valid json, and will explode. We do a quick and
+        # dirty transform of this to:
+        #
+        #     "id": "%(int:aggregate_id)s",
+        #
+        # That makes it valid data to convert to json, but keeps
+        # around the information that we need to drop those strings
+        # later. The regex anchors from the ': ', as all of these will
+        # be top rooted keys.
+        data = re.sub(r'(\: )%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
         return jsonutils.loads(data)
 
     @classmethod
