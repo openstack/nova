@@ -15,22 +15,24 @@
 Microversions
 =============
 
-API v2.1 supports Microversions. User uses Microversions to discover the
-supported API version in the cloud. If cloud is upgraded to support newer
-versions, it will still support all older versions to maintain the backward
-compatibility for users using older versions. Also user can discover new
-features easily with Microversions, then user can take all the advantages of
-current cloud.
+API v2.1 supports Microversions: small, documented changes to the API. A user
+can use Microversions to discover the latest API version supported in their
+cloud. A cloud that is upgraded to support newer versions will still support
+all older versions to maintain the backward compatibility for those users who
+depend on older versions. Users can also discover new features easily with
+Microversions, so that they can benefit from all the advantages and
+improvements of the current cloud.
 
 There are multiple cases which you can resolve with Microversions:
 
 Legacy v2 API user with new cloud
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=================================
 
-The minimum version of Microversions is `2.1`, this is a version compatible
-with legacy v2 API. The legacy v2 API user don't need to worry about that his
-old client is broken with new cloud deployment. Cloud operator don't need to
-worry that upgrading cloud to newer versions will break any user with old
-client.
+The minimum version of Microversions is `2.1`, which is a version compatible
+with the legacy v2 API. The legacy v2 API user doesn't need to worry that their
+older client software will be broken when their cloud is upgraded with new
+versions. And the cloud operator doesn't need to worry that upgrading their
+cloud to newer versions will break any user with older clients that don't
+expect these changes.
 
 TODO: add more use-cases for Microversions
