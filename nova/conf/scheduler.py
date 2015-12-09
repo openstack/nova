@@ -334,20 +334,91 @@ a different scheduler, this option has no effect.
 
 isolated_img_opt = cfg.ListOpt("isolated_images",
         default=[],
-        help="Images to run on isolated host")
+        help="""
+If there is a need to restrict some images to only run on certain designated
+hosts, list those image UUIDs here.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    scheduler/isolated_hosts
+    scheduler/restrict_isolated_hosts_to_isolated_images
+""")
 
 isolated_host_opt = cfg.ListOpt("isolated_hosts",
         default=[],
-        help="Host reserved for specific images")
+        help="""
+If there is a need to restrict some images to only run on certain designated
+hosts, list those host names here.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    scheduler/isolated_images
+    scheduler/restrict_isolated_hosts_to_isolated_images
+""")
 
 restrict_iso_host_img_opt = cfg.BoolOpt(
         "restrict_isolated_hosts_to_isolated_images",
         default=True,
-        help="Whether to force isolated hosts to run only isolated images")
+        help="""
+This setting determines if the scheduler's isolated_hosts filter will allow
+non-isolated images on a host designated as an isolated host. When set to True
+(the default), non-isolated images will not be allowed to be built on isolated
+hosts. When False, non-isolated images can be built on both isolated and
+non-isolated hosts alike.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'IsolatedHostsFilter' filter is enabled. Even
+then, this option doesn't affect the behavior of requests for isolated images,
+which will *always* be restricted to isolated hosts.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    scheduler/isolated_images
+    scheduler/isolated_hosts
+""")
 
 # This option specifies an option group, so register separately
 rpcapi_cap_opt = cfg.StrOpt("scheduler",
-        help="Set a version cap for messages sent to scheduler services")
+        help="""
+Sets a version cap (limit) for messages sent to scheduler services. In the
+situation where there were multiple scheduler services running, and they were
+not being upgraded together, you would set this to the lowest deployed version
+to guarantee that other services never send messages that any of your running
+schedulers cannot understand.
+
+This is rarely needed in practice as most deployments run a single scheduler.
+It exists mainly for design compatibility with the other services, such as
+compute, which are routinely upgraded in a rolling fashion.
+
+* Services that use this:
+
+    ``nova-compute, nova-conductor``
+
+* Related options:
+
+    None
+""")
 
 # These opts are registered as a separate OptGroup
 trusted_opts = [
