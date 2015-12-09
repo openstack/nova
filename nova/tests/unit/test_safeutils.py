@@ -21,7 +21,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         pass
 
     def test_all_kwargs(self):
-        args = ()
+        args = (self,)
         kwargs = {'instance': {'uuid': 1}, 'red': 3, 'blue': 4}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         # implicit self counts as an arg
@@ -34,7 +34,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertEqual(4, callargs['blue'])
 
     def test_all_args(self):
-        args = ({'uuid': 1}, 3, 4)
+        args = (self, {'uuid': 1}, 3, 4)
         kwargs = {}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         # implicit self counts as an arg
@@ -47,7 +47,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertEqual(4, callargs['blue'])
 
     def test_mixed_args(self):
-        args = ({'uuid': 1}, 3)
+        args = (self, {'uuid': 1}, 3)
         kwargs = {'blue': 4}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         # implicit self counts as an arg
@@ -60,7 +60,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertEqual(4, callargs['blue'])
 
     def test_partial_kwargs(self):
-        args = ()
+        args = (self,)
         kwargs = {'instance': {'uuid': 1}, 'red': 3}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         # implicit self counts as an arg
@@ -73,7 +73,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertIsNone(callargs['blue'])
 
     def test_partial_args(self):
-        args = ({'uuid': 1}, 3)
+        args = (self, {'uuid': 1}, 3)
         kwargs = {}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         # implicit self counts as an arg
@@ -86,7 +86,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertIsNone(callargs['blue'])
 
     def test_partial_mixed_args(self):
-        args = (3,)
+        args = (self, 3)
         kwargs = {'instance': {'uuid': 1}}
         callargs = safe_utils.getcallargs(self._test_func, *args, **kwargs)
         self.assertEqual(4, len(callargs))
