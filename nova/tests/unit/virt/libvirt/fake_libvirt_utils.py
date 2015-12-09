@@ -40,7 +40,9 @@ def get_disk_backing_file(path):
     return disk_backing_files.get(path, None)
 
 
-def get_disk_type(path):
+def get_disk_type_from_path(path):
+    if disk_type in ('raw', 'qcow2'):
+        return None
     return disk_type
 
 
@@ -99,11 +101,11 @@ def file_open(path, mode=None):
 
 def find_disk(virt_dom):
     if disk_type == 'lvm':
-        return "/dev/nova-vg/lv"
+        return ("/dev/nova-vg/lv", "raw")
     elif disk_type in ['raw', 'qcow2']:
-        return "filename"
+        return ("filename", disk_type)
     else:
-        return "unknown_type_disk"
+        return ("unknown_type_disk", None)
 
 
 def load_file(path):
