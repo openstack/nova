@@ -38,24 +38,6 @@ CONF = cfg.CONF
 
 class LibvirtUtilsTestCase(test.NoDBTestCase):
 
-    @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
-    def test_get_disk_type(self, mock_execute, mock_exists):
-        path = "disk.config"
-        example_output = """image: disk.config
-file format: raw
-virtual size: 64M (67108864 bytes)
-cluster_size: 65536
-disk size: 96K
-blah BLAH: bb
-"""
-        mock_execute.return_value = (example_output, '')
-        disk_type = libvirt_utils.get_disk_type(path)
-        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
-                                             'qemu-img', 'info', path)
-        mock_exists.assert_called_once_with(path)
-        self.assertEqual('raw', disk_type)
-
     @mock.patch('nova.utils.execute')
     def test_copy_image_local_cp(self, mock_execute):
         libvirt_utils.copy_image('src', 'dest')
@@ -118,37 +100,21 @@ blah BLAH: bb
         self.assertEqual(2, mock_execute.call_count)
 
     @mock.patch('os.path.exists', return_value=True)
-    def test_disk_type(self, mock_exists):
+    def test_disk_type_from_path(self, mock_exists):
         # Seems like lvm detection
         # if its in /dev ??
         for p in ['/dev/b', '/dev/blah/blah']:
-            d_type = libvirt_utils.get_disk_type(p)
+            d_type = libvirt_utils.get_disk_type_from_path(p)
             self.assertEqual('lvm', d_type)
 
         # Try rbd detection
-        d_type = libvirt_utils.get_disk_type('rbd:pool/instance')
+        d_type = libvirt_utils.get_disk_type_from_path('rbd:pool/instance')
         self.assertEqual('rbd', d_type)
 
         # Try the other types
-        template_output = """image: %(path)s
-file format: %(format)s
-virtual size: 64M (67108864 bytes)
-cluster_size: 65536
-disk size: 96K
-"""
         path = '/myhome/disk.config'
-        for f in ['raw', 'qcow2']:
-            output = template_output % ({
-                'format': f,
-                'path': path,
-            })
-            with mock.patch('nova.utils.execute',
-                return_value=(output, '')) as mock_execute:
-                d_type = libvirt_utils.get_disk_type(path)
-                mock_execute.assert_called_once_with(
-                    'env', 'LC_ALL=C', 'LANG=C',
-                    'qemu-img', 'info', path)
-                self.assertEqual(f, d_type)
+        d_type = libvirt_utils.get_disk_type_from_path(path)
+        self.assertIsNone(d_type)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
