@@ -43,7 +43,7 @@ from nova.conf import ephemeral_storage
 # from nova.conf import glance
 # from nova.conf import guestfs
 # from nova.conf import host
-# from nova.conf import hyperv
+from nova.conf import hyperv
 # from nova.conf import image
 # from nova.conf import imagecache
 # from nova.conf import image_file_url
@@ -103,7 +103,7 @@ ephemeral_storage.register_opts(CONF)
 # glance.register_opts(CONF)
 # guestfs.register_opts(CONF)
 # host.register_opts(CONF)
-# hyperv.register_opts(CONF)
+hyperv.register_opts(CONF)
 # image.register_opts(CONF)
 # imagecache.register_opts(CONF)
 # image_file_url.register_opts(CONF)

@@ -23,28 +23,16 @@ if sys.platform == 'win32':
 from os_win import constants
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova.i18n import _LW
 from nova import utils
 from nova.virt import event as virtevent
 
 LOG = logging.getLogger(__name__)
 
-hyperv_opts = [
-    cfg.IntOpt('power_state_check_timeframe',
-                default=60,
-                help='The timeframe to be checked for instance power '
-                     'state changes.'),
-    cfg.IntOpt('power_state_event_polling_interval',
-                default=2,
-                help='Instance power state change event polling frequency.'),
-
-]
-
-CONF = cfg.CONF
-CONF.register_opts(hyperv_opts, 'hyperv')
+CONF = nova.conf.CONF
 
 
 class InstanceEventHandler(object):

@@ -24,12 +24,12 @@ import time
 
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from six.moves import range
 
 from nova import block_device
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import utils
@@ -37,25 +37,7 @@ from nova.virt import driver
 
 LOG = logging.getLogger(__name__)
 
-hyper_volumeops_opts = [
-    cfg.IntOpt('volume_attach_retry_count',
-               default=10,
-               help='The number of times to retry to attach a volume'),
-    cfg.IntOpt('volume_attach_retry_interval',
-               default=5,
-               help='Interval between volume attachment attempts, in seconds'),
-    cfg.IntOpt('mounted_disk_query_retry_count',
-               default=10,
-               help='The number of times to retry checking for a disk mounted '
-                    'via iSCSI.'),
-    cfg.IntOpt('mounted_disk_query_retry_interval',
-               default=5,
-               help='Interval between checks for a mounted iSCSI '
-                    'disk, in seconds.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(hyper_volumeops_opts, 'hyperv')
+CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 
