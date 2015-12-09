@@ -158,21 +158,91 @@ a different scheduler, this option has no effect.
 
 host_mgr_sched_wgt_cls_opt = cfg.ListOpt("scheduler_weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
-        help="Which weight class names to use for weighing hosts")
+        help="""
+This is a list of weigher class names. Only hosts which pass the filters are
+weighed. The weight for any host starts at 0, and the weighers order these
+hosts by adding to or subtracting from the weight assigned by the previous
+weigher. Weights may become negative.
+
+An instance will be scheduled to one of the N most-weighted hosts, where N is
+'scheduler_host_subset_size'.
+
+By default, this is set to all weighers that are included with Nova. If you
+wish to change this, replace this with a list of strings, where each element is
+the path to a weigher.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 host_mgr_tracks_inst_chg_opt = cfg.BoolOpt("scheduler_tracks_instance_changes",
         default=True,
-        help="Determines if the Scheduler tracks changes to instances to help "
-             "with its filtering decisions.")
+        help="""
+The scheduler may need information about the instances on a host in order to
+evaluate its filters and weighers. The most common need for this information is
+for the (anti-)affinity filters, which need to choose a host based on the
+instances already running on a host.
+
+If the configured filters and weighers do not need this information, disabling
+this option will improve performance. It may also be disabled when the tracking
+overhead proves too heavy, although this will cause classes requiring host
+usage data to query the database on each request instead.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 rpc_sched_topic_opt = cfg.StrOpt("scheduler_topic",
         default="scheduler",
-        help="The topic scheduler nodes listen on")
+        help="""
+This is the message queue topic that the scheduler 'listens' on. It is used
+when the scheduler service is started up to configure the queue, and whenever
+an RPC call to the scheduler is made. There is almost never any reason to ever
+change this value.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 scheduler_json_config_location_opt = cfg.StrOpt(
         "scheduler_json_config_location",
         default="",
-        help="Absolute path to scheduler configuration JSON file.")
+        help="""
+The absolute path to the scheduler configuration JSON file, if any. This file
+location is monitored by the scheduler for changes and reloads it if needed. It
+is converted from JSON to a Python data structure, and passed into the
+filtering and weighing functions of the scheduler, which can use it for dynamic
+configuration.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 sched_driver_host_mgr_opt = cfg.StrOpt("scheduler_host_manager",
         default="nova.scheduler.host_manager.HostManager",
