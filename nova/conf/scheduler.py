@@ -24,12 +24,29 @@ UPGRADE_GROUP_NAME = "upgrade_levels"
 
 host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
         default=1,
-        help="New instances will be scheduled on a host chosen randomly from "
-             "a subset of the N best hosts. This property defines the subset "
-             "size that a host is chosen from. A value of 1 chooses the first "
-             "host returned by the weighing functions.  This value must be at "
-             "least 1. Any value less than 1 will be ignored, and 1 will be "
-             "used instead")
+        help="""
+New instances will be scheduled on a host chosen randomly from a subset of the
+N best hosts, where N is the value set by this option.  Valid values are 1 or
+greater. Any value less than one will be treated as 1.
+
+Setting this to a value greater than 1 will reduce the chance that multiple
+scheduler processes handling similar requests will select the same host,
+creating a potential race condition. By selecting a host randomly from the N
+hosts that best fit the request, the chance of a conflict is reduced. However,
+the higher you set this value, the less optimal the chosen host may be for a
+given request.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 bm_default_filter_opt = cfg.ListOpt("baremetal_scheduler_default_filters",
         default=[
@@ -42,20 +59,69 @@ bm_default_filter_opt = cfg.ListOpt("baremetal_scheduler_default_filters",
             "ExactDiskFilter",
             "ExactCoreFilter",
         ],
-        help="Which filter class names to use for filtering baremetal hosts "
-             "when not specified in the request.")
+        help="""
+This option specifies the filters used for filtering baremetal hosts. The value
+should be a list of strings, with each string being the name of a filter class
+to be used. When used, they will be applied in order, so place your most
+restrictive filters first to make the filtering process more efficient.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    If the 'scheduler_use_baremetal_filters' option is False, this option has
+    no effect.
+""")
 
 use_bm_filters_opt = cfg.BoolOpt("scheduler_use_baremetal_filters",
         default=False,
-        help="Flag to decide whether to use "
-             "baremetal_scheduler_default_filters or not.")
+        help="""
+Set this to True to tell the nova scheduler that it should use the filters
+specified in the 'baremetal_scheduler_default_filters' option. If you are not
+scheduling baremetal nodes, leave this at the default setting of False.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    If this option is set to True, then the filters specified in the
+    'baremetal_scheduler_default_filters' are used instead of the filters
+    specified in 'scheduler_default_filters'.
+""")
 
 host_mgr_avail_filt_opt = cfg.MultiStrOpt("scheduler_available_filters",
         default=["nova.scheduler.filters.all_filters"],
-        help="Filter classes available to the scheduler which may be "
-             "specified more than once.  An entry of "
-             "'nova.scheduler.filters.all_filters' maps to all filters "
-             "included with nova.")
+        help="""
+This is an unordered list of the filter classes the Nova scheduler may apply.
+Only the filters specified in the 'scheduler_default_filters' option will be
+used, but any filter appearing in that option must also be included in this
+list.
+
+By default, this is set to all filters that are included with Nova. If you wish
+to change this, replace this with a list of strings, where each element is the
+path to a filter.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    scheduler_default_filters
+""")
 
 host_mgr_default_filt_opt = cfg.ListOpt("scheduler_default_filters",
         default=[
@@ -69,8 +135,26 @@ host_mgr_default_filt_opt = cfg.ListOpt("scheduler_default_filters",
           "ServerGroupAntiAffinityFilter",
           "ServerGroupAffinityFilter",
           ],
-        help="Which filter class names to use for filtering hosts when not "
-             "specified in the request.")
+        help="""
+This option is the list of filter class names that will be used for filtering
+hosts. The use of 'default' in the name of this option implies that other
+filters may sometimes be used, but that is not the case. These filters will be
+applied in the order they are listed, so place your most restrictive filters
+first to make the filtering process more efficient.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    All of the filters in this option *must* be present in the
+    'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
+    exception will be raised.
+""")
 
 host_mgr_sched_wgt_cls_opt = cfg.ListOpt("scheduler_weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
