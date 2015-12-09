@@ -15,7 +15,6 @@
 #    under the License.
 
 import base64
-import os
 import re
 import sys
 
@@ -1113,10 +1112,10 @@ class Controller(wsgi.Controller):
         image_id = str(image['id'])
         url_prefix = self._view_builder._update_glance_link_prefix(
                 req.application_url)
-        image_ref = os.path.join(url_prefix,
-                                 context.project_id,
-                                 'images',
-                                 image_id)
+        image_ref = common.url_join(url_prefix,
+                                    context.project_id,
+                                    'images',
+                                    image_id)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref

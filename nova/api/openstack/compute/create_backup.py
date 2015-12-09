@@ -13,8 +13,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import os.path
-
 import webob
 
 from nova.api.openstack import common
@@ -80,7 +78,8 @@ class CreateBackupController(wsgi.Controller):
         # build location of newly-created image entity if rotation is not zero
         if rotation > 0:
             image_id = str(image['id'])
-            image_ref = os.path.join(req.application_url, 'images', image_id)
+            image_ref = common.url_join(req.application_url, 'images',
+                                        image_id)
             resp.headers['Location'] = image_ref
 
         return resp
