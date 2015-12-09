@@ -375,7 +375,8 @@ class HostManager(object):
                 start_node += batch_size
                 end_node += batch_size
                 filters = {"host": [curr_node.host
-                                    for curr_node in curr_nodes]}
+                                    for curr_node in curr_nodes],
+                           "deleted": False}
                 result = objects.InstanceList.get_by_filters(context,
                                                              filters)
                 instances = result.objects

@@ -111,6 +111,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertIn('uuid1', fake_info['instances'])
         self.assertIn('uuid2', fake_info['instances'])
         self.assertNotIn('uuid3', fake_info['instances'])
+        exp_filters = {'deleted': False, 'host': [u'host1', u'host2']}
+        mock_get_by_filters.assert_called_once_with(mock.ANY, exp_filters)
 
     def test_default_filters(self):
         default_filters = self.host_manager.default_filters
