@@ -128,8 +128,9 @@ class XenAPISession(object):
                 master = e.details[1]
                 url = pool.swap_xapi_host(url, master)
                 session = self.XenAPI.Session(url)
-                session.login_with_password(user, pw,
-                                            self.nova_version, 'OpenStack')
+                with timeout.Timeout(CONF.xenserver.login_timeout, exception):
+                    session.login_with_password(user, pw,
+                                                self.nova_version, 'OpenStack')
                 self.is_slave = True
             else:
                 raise
