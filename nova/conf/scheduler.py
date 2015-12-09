@@ -246,22 +246,91 @@ configuration.
 
 sched_driver_host_mgr_opt = cfg.StrOpt("scheduler_host_manager",
         default="nova.scheduler.host_manager.HostManager",
-        help="The scheduler host manager class to use")
+        help="""
+The scheduler host manager class to use. Aside from the default, the only other
+option as of the Mitaka release is
+'nova.scheduler.ironic_host_manager.IronicHostManager', which should be used if
+you're using Ironic to provision bare-metal instances.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 driver_opt = cfg.StrOpt("scheduler_driver",
         default="nova.scheduler.filter_scheduler.FilterScheduler",
-        help="Default driver to use for the scheduler")
+        help="""
+The class of the driver used by the scheduler. This should be the full Python
+path to the class to be used. If nothing is specified in this option, the
+FilterScheduler is used.
+
+Other options are:
+
+    * 'nova.scheduler.caching_scheduler.CachingScheduler' which aggressively
+    caches the system state for better individual scheduler performance at
+    the risk of more retries when running multiple schedulers.
+
+    * 'nova.scheduler.chance.ChanceScheduler' which simply picks a host at
+    random.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 driver_period_opt = cfg.IntOpt("scheduler_driver_task_period",
         default=60,
-        help="How often (in seconds) to run periodic tasks in the scheduler "
-             "driver of your choice. Please note this is likely to interact "
-             "with the value of service_down_time, but exactly how they "
-             "interact will depend on your choice of scheduler driver.")
+        help="""
+This value controls how often (in seconds) to run periodic tasks in the
+scheduler. The specific tasks that are run for each period are determined by
+the particular scheduler being used.
+
+If this is larger than the nova-service 'service_down_time' setting, Nova may
+report the scheduler service as down. This is because the scheduler driver is
+responsible for sending a heartbeat and it will only do that as often as this
+option allows. As each scheduler can work a little differently than the others,
+be sure to test this with your selected scheduler.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    ``nova-service service_down_time``
+""")
 
 disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio",
         default=1.0,
-        help="Virtual disk to physical disk allocation ratio")
+        help="""
+This is the virtual disk to physical disk allocation ratio used by the
+disk_filter.py script to determine if a host has sufficient disk space to fit a
+requested instance. A ratio greater than 1.0 will result in over-subscription
+of the available physical disk, which can be useful for more efficiently
+packing instances created with images that don't use the entire virtual disk,
+such as sparse or compressed images. It can be set to a value between 0.0 and
+1.0 in order to preserve a percentage of the disk for uses other than
+instances.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 isolated_img_opt = cfg.ListOpt("isolated_images",
         default=[],
