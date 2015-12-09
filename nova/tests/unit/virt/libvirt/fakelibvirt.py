@@ -572,8 +572,8 @@ class Domain(object):
 
     def info(self):
         return [self._state,
-                long(self._def['memory']),
-                long(self._def['memory']),
+                int(self._def['memory']),
+                int(self._def['memory']),
                 self._def['vcpu'],
                 123456789]
 

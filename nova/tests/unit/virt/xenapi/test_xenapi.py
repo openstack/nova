@@ -608,7 +608,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def check_vm_record(self, conn, instance_type_id, check_injection):
         flavor = db.flavor_get(conn, instance_type_id)
-        mem_kib = long(flavor['memory_mb']) << 10
+        mem_kib = int(flavor['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = flavor['vcpus']
         vcpu_weight = flavor['vcpu_weight']

@@ -199,7 +199,9 @@ class BaseRequestHandler(object):
 
         if isinstance(value, six.string_types):
             parts.append(utils.xhtml_escape(value))
-        elif isinstance(value, int) or isinstance(value, long):
+        elif type(value) in six.integer_types:
+            parts.append(str(value))
+        elif isinstance(value, bool):
             parts.append(str(value))
         elif isinstance(value, datetime.datetime):
             parts.append(value.strftime("%Y-%m-%dT%H:%M:%S.000Z"))
