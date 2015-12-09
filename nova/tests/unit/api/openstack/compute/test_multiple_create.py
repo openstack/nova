@@ -139,6 +139,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
                        server_update)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
+        self.stub_out('nova.objects.RequestSpec.create', fake_method)
         self.req = fakes.HTTPRequest.blank('')
 
     def _test_create_extra(self, params, no_image=False,

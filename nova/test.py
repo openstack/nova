@@ -210,6 +210,7 @@ class TestCase(testtools.TestCase):
 
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
+            self.useFixture(nova_fixtures.Database(database='api'))
 
         # NOTE(blk-u): WarningsFixture must be after the Database fixture
         # because sqlalchemy-migrate messes with the warnings filters.

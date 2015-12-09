@@ -21,6 +21,8 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import request_spec
+from nova.tests.unit import fake_flavor
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
 
@@ -289,6 +291,25 @@ class _TestRequestSpecObject(object):
         # Make sure that all fields are set using that helper method
         for field in [f for f in spec.obj_fields if f != 'id']:
             self.assertTrue(spec.obj_attr_is_set(field),
+                             'Field: %s is not set' % field)
+        # just making sure that the context is set by the method
+        self.assertEqual(ctxt, spec._context)
+
+    def test_from_components(self):
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {}
+        instance_group = None
+
+        spec = objects.RequestSpec.from_components(ctxt, instance, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, instance_group, instance.availability_zone)
+        # Make sure that all fields are set using that helper method
+        for field in [f for f in spec.obj_fields if f != 'id']:
+            self.assertEqual(True, spec.obj_attr_is_set(field),
                              'Field: %s is not set' % field)
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
