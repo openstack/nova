@@ -258,6 +258,15 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.rpcserver.stop.assert_called_once_with()
         serv.rpcserver.wait.assert_called_once_with()
 
+    def test_reset(self):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        with mock.patch.object(serv.manager, 'reset') as mock_reset:
+            serv.reset()
+            mock_reset.assert_called_once_with()
+
 
 class TestWSGIService(test.NoDBTestCase):
 

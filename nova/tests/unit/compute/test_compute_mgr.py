@@ -2867,6 +2867,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
             mock_rt.assert_called_once_with(self.context, instance)
 
+    def test_reset_reloads_rpcapi(self):
+        orig_rpc = self.compute.compute_rpcapi
+        with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
+            self.compute.reset()
+            mock_rpc.assert_called_once_with()
+            self.assertIsNot(orig_rpc, self.compute.compute_rpcapi)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

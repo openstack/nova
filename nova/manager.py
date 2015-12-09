@@ -119,3 +119,9 @@ class Manager(base.Base, PeriodicTasks):
         Child classes should override this method.
         """
         pass
+
+    def reset(self):
+        """Hook called on SIGHUP to signal the manager to re-read any
+        dynamic configuration or do any reconfiguration tasks.
+        """
+        pass
