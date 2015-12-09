@@ -206,6 +206,8 @@ nova.tests.unit.network.test_manager.FlatNetworkTestCase
 nova.tests.unit.network.test_manager.FloatingIPTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.network.test_manager.VlanNetworkTestCase
+nova.tests.unit.network.test_neutronv2.TestNeutronv2.test_deallocate_for_instance_2
+nova.tests.unit.network.test_neutronv2.TestNeutronv2.test_deallocate_for_instance_2_with_requested
 nova.tests.unit.network.test_neutronv2.TestNeutronv2WithMock
 nova.tests.unit.pci.test_manager.PciDevTrackerTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
