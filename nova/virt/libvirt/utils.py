@@ -338,16 +338,26 @@ def find_disk(virt_dom):
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
     os_type = domain.find('os/type').text
+    driver = None
     if CONF.libvirt.virt_type == 'lxc':
-        source = domain.find('devices/filesystem/source')
+        filesystem = domain.find('devices/filesystem')
+        driver = filesystem.find('driver')
+
+        source = filesystem.find('source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
         disk_path = os.path.join(disk_path, 'disk')
     elif CONF.libvirt.virt_type == 'parallels' and os_type == vm_mode.EXE:
-        source = domain.find('devices/filesystem/source')
+        filesystem = domain.find('devices/filesystem')
+        driver = filesystem.find('driver')
+
+        source = filesystem.find('source')
         disk_path = source.get('file')
     else:
-        source = domain.find('devices/disk/source')
+        disk = domain.find('devices/disk')
+        driver = disk.find('driver')
+
+        source = disk.find('source')
         disk_path = source.get('file') or source.get('dev')
         if not disk_path and CONF.libvirt.images_type == 'rbd':
             disk_path = source.get('name')
@@ -358,10 +368,18 @@ def find_disk(virt_dom):
         raise RuntimeError(_("Can't retrieve root device path "
                              "from instance libvirt configuration"))
 
-    return disk_path
+    if driver is not None:
+        format = driver.get('type')
+        # This is a legacy quirk of libvirt/xen. Everything else should
+        # report the on-disk format in type.
+        if format == 'aio':
+            format = 'raw'
+    else:
+        format = None
+    return (disk_path, format)
 
 
-def get_disk_type(path):
+def get_disk_type_from_path(path):
     """Retrieve disk type (raw, qcow2, lvm, ploop) for given file."""
     if path.startswith('/dev'):
         return 'lvm'
@@ -371,7 +389,8 @@ def get_disk_type(path):
           os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
         return 'ploop'
 
-    return images.qemu_img_info(path).file_format
+    # We can't reliably determine the type from this path
+    return None
 
 
 def get_fs_info(path):

@@ -15014,11 +15014,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                        mock.Mock(return_value=True))
     @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
                  mock.Mock(return_value=False))
-    @mock.patch('nova.virt.libvirt.utils.get_disk_type',
-                return_value="fake_fmt")
+    @mock.patch('nova.virt.images.qemu_img_info',
+                return_value=mock.Mock(file_format="fake_fmt"))
     @mock.patch('nova.utils.execute')
     def test_volume_snapshot_delete_when_dom_not_running(self, mock_execute,
-                                                         mock_get_disk_type):
+                                                         mock_qemu_img_info):
         """Deleting newest snapshot of a file-based image when the domain is
         not running should trigger a blockRebase using qemu-img not libvirt.
         In this test, we rebase the image with another image as backing file.
@@ -15034,7 +15034,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                               self.volume_uuid, snapshot_id,
                                               self.delete_info_1)
 
-        mock_get_disk_type.assert_called_once_with("snap.img")
+        mock_qemu_img_info.assert_called_once_with("snap.img")
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', 'snap.img', '-F',
                                              'fake_fmt', 'disk1_file')
@@ -15043,11 +15043,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                        mock.Mock(return_value=True))
     @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
                  mock.Mock(return_value=False))
-    @mock.patch('nova.virt.libvirt.utils.get_disk_type',
-                return_value="fake_fmt")
+    @mock.patch('nova.virt.images.qemu_img_info',
+                return_value=mock.Mock(file_format="fake_fmt"))
     @mock.patch('nova.utils.execute')
     def test_volume_snapshot_delete_when_dom_not_running_and_no_rebase_base(
-        self, mock_execute, mock_get_disk_type):
+        self, mock_execute, mock_qemu_img_info):
         """Deleting newest snapshot of a file-based image when the domain is
         not running should trigger a blockRebase using qemu-img not libvirt.
         In this test, the image is rebased onto no backing file (i.e.
@@ -15064,7 +15064,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                               self.volume_uuid, snapshot_id,
                                               self.delete_info_3)
 
-        self.assertEqual(0, mock_get_disk_type.call_count)
+        self.assertEqual(0, mock_qemu_img_info.call_count)
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', '', 'disk1_file')
 
