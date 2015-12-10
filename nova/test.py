@@ -46,6 +46,7 @@ import testtools
 from nova import context
 from nova import db
 from nova.network import manager as network_manager
+from nova.network.security_group import openstack_driver
 from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
@@ -235,6 +236,8 @@ class TestCase(testtools.TestCase):
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
 
         self.useFixture(nova_fixtures.PoisonFunctions())
+
+        openstack_driver.DRIVER_CACHE = {}
 
     def _restore_obj_registry(self):
         objects_base.NovaObjectRegistry._registry._obj_classes = \
