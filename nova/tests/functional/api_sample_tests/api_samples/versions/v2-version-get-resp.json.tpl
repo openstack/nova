@@ -3,7 +3,7 @@
         "id": "v2.0",
         "links": [
             {
-                "href": "http://openstack.example.com/v2/",
+                "href": "%(host)s/v2/",
                 "rel": "self"
             },
             {

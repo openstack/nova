@@ -4,11 +4,11 @@
         "id": "1",
         "links": [
             {
-                "href": "%(host)s/v2/openstack/flavors/1",
+                "href": "%(versioned_compute_endpoint)s/flavors/1",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/openstack/flavors/1",
+                "href": "%(compute_endpoint)s/flavors/1",
                 "rel": "bookmark"
             }
         ],

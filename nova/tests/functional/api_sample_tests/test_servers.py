@@ -36,6 +36,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
+            'compute_endpoint': self._get_compute_endpoint(),
+            'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
             'glance_host': self._get_glance_host(),
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::'
@@ -174,14 +176,18 @@ class ServersActionsJsonTest(ServersSampleBase):
     def test_server_rebuild(self):
         uuid = self._post_server()
         image = fake.get_valid_image_id()
-        subs = {'host': self._get_host(),
-                'uuid': image,
-                'name': 'foobar',
-                'pass': 'seekr3t',
-                'hostid': '[a-f0-9]+',
-                'access_ip_v4': '1.2.3.4',
-                'access_ip_v6': '80fe::',
-                }
+        subs = {
+            'host': self._get_host(),
+            'compute_endpoint': self._get_compute_endpoint(),
+            'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
+            'uuid': image,
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+        }
+
         self._test_server_action(uuid, 'rebuild',
                                  'server-action-rebuild',
                                   subs,
