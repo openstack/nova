@@ -28,22 +28,20 @@ CONF = nova.conf.CONF
 class DiskFilter(filters.BaseHostFilter):
     """Disk Filter with over subscription flag."""
 
-    def _get_disk_allocation_ratio(self, host_state, filter_properties):
+    def _get_disk_allocation_ratio(self, host_state, spec_obj):
         return CONF.disk_allocation_ratio
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Filter based on disk usage."""
-        instance_type = filter_properties.get('instance_type')
-        requested_disk = (1024 * (instance_type['root_gb'] +
-                                 instance_type['ephemeral_gb']) +
-                         instance_type['swap'])
+        requested_disk = (1024 * (spec_obj.root_gb +
+                                  spec_obj.ephemeral_gb) +
+                          spec_obj.swap)
 
         free_disk_mb = host_state.free_disk_mb
         total_usable_disk_mb = host_state.total_usable_disk_gb * 1024
 
         disk_allocation_ratio = self._get_disk_allocation_ratio(
-            host_state, filter_properties)
+            host_state, spec_obj)
 
         disk_mb_limit = total_usable_disk_mb * disk_allocation_ratio
         used_disk_mb = total_usable_disk_mb - free_disk_mb
@@ -69,7 +67,7 @@ class AggregateDiskFilter(DiskFilter):
     found.
     """
 
-    def _get_disk_allocation_ratio(self, host_state, filter_properties):
+    def _get_disk_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'disk_allocation_ratio')

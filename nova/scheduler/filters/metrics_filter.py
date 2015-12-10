@@ -43,8 +43,7 @@ class MetricsFilter(filters.BaseHostFilter):
                                    name="metrics.weight_setting")
         self.keys = set([x[0] for x in opts])
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         metrics_on_host = set(m.name for m in host_state.metrics)
         if not self.keys.issubset(metrics_on_host):
             unavail = metrics_on_host - self.keys

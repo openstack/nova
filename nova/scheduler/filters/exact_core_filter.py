@@ -25,19 +25,14 @@ LOG = logging.getLogger(__name__)
 class ExactCoreFilter(filters.BaseHostFilter):
     """Exact Core Filter."""
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact number of CPU cores."""
-        instance_type = filter_properties.get('instance_type')
-        if not instance_type:
-            return True
-
         if not host_state.vcpus_total:
             # Fail safe
             LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
             return False
 
-        required_vcpus = instance_type['vcpus']
+        required_vcpus = spec_obj.vcpus
         usable_vcpus = host_state.vcpus_total - host_state.vcpus_used
 
         if required_vcpus != usable_vcpus:

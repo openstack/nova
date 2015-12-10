@@ -26,24 +26,19 @@ LOG = logging.getLogger(__name__)
 
 class BaseCoreFilter(filters.BaseHostFilter):
 
-    def _get_cpu_allocation_ratio(self, host_state, filter_properties):
+    def _get_cpu_allocation_ratio(self, host_state, spec_obj):
         raise NotImplementedError
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return True if host has sufficient CPU cores."""
-        instance_type = filter_properties.get('instance_type')
-        if not instance_type:
-            return True
-
         if not host_state.vcpus_total:
             # Fail safe
             LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
             return True
 
-        instance_vcpus = instance_type['vcpus']
+        instance_vcpus = spec_obj.vcpus
         cpu_allocation_ratio = self._get_cpu_allocation_ratio(host_state,
-                                                          filter_properties)
+                                                              spec_obj)
         vcpus_total = host_state.vcpus_total * cpu_allocation_ratio
 
         # Only provide a VCPU limit to compute if the virt driver is reporting
@@ -77,7 +72,7 @@ class BaseCoreFilter(filters.BaseHostFilter):
 class CoreFilter(BaseCoreFilter):
     """CoreFilter filters based on CPU core utilization."""
 
-    def _get_cpu_allocation_ratio(self, host_state, filter_properties):
+    def _get_cpu_allocation_ratio(self, host_state, spec_obj):
         return host_state.cpu_allocation_ratio
 
 
@@ -87,7 +82,7 @@ class AggregateCoreFilter(BaseCoreFilter):
     Fall back to global cpu_allocation_ratio if no per-aggregate setting found.
     """
 
-    def _get_cpu_allocation_ratio(self, host_state, filter_properties):
+    def _get_cpu_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'cpu_allocation_ratio')
