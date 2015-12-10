@@ -40,13 +40,11 @@ class InstanceUsageAuditLogJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-instance_usage_audit_log/%s' %
                                 urllib.quote('2012-07-05 10:00:00'))
         subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
         self._verify_response('inst-usage-audit-log-show-get-resp',
                               subs, response, 200)
 
     def test_index_instance_usage_audit_log(self):
         response = self._do_get('os-instance_usage_audit_log')
         subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
         self._verify_response('inst-usage-audit-log-index-get-resp',
                               subs, response, 200)

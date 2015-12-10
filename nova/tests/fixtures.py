@@ -19,7 +19,6 @@ from __future__ import absolute_import
 
 import logging as std_logging
 import os
-import uuid
 import warnings
 
 import fixtures
@@ -47,7 +46,10 @@ class ServiceFixture(fixtures.Fixture):
 
     def __init__(self, name, host=None, **kwargs):
         name = name
-        host = host or uuid.uuid4().hex
+        # If not otherwise specified, the host will default to the
+        # name of the service. Some things like aggregates care that
+        # this is stable.
+        host = host or name
         kwargs.setdefault('host', host)
         kwargs.setdefault('binary', 'nova-%s' % name)
         self.kwargs = kwargs

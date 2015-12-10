@@ -337,7 +337,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                            '[0-9a-f]{2}',
             'keypair_type': 'ssh|x509',
             'host': self._get_host(),
-            'host_name': '[0-9a-z]{32}',
+            'host_name': r'\w+',
             'glance_host': self._get_glance_host(),
             'compute_host': self.compute.host,
             'text': text,
