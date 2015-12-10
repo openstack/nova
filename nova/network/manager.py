@@ -27,7 +27,6 @@ topologies.  All of the network commands are issued to a subclass of
 import collections
 import datetime
 import functools
-import itertools
 import math
 import re
 import uuid
@@ -43,6 +42,7 @@ from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 from nova import context
 from nova import exception
@@ -1358,7 +1358,7 @@ class NetworkManager(manager.Manager):
             self._validate_cidr(context, nets, subnets_v4, fixed_net_v4)
 
         networks = objects.NetworkList(context=context, objects=[])
-        subnets = itertools.izip_longest(subnets_v4, subnets_v6)
+        subnets = six.moves.zip_longest(subnets_v4, subnets_v6)
         for index, (subnet_v4, subnet_v6) in enumerate(subnets):
             net = objects.Network(context=context)
             uuid = kwargs.get('uuid')
