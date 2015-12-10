@@ -99,7 +99,6 @@ def list_opts():
              nova.service.service_opts,
              nova.utils.monkey_patch_opts,
              nova.utils.utils_opts,
-             nova.vnc.vnc_opts,
              nova.vnc.xvp_proxy.xvp_proxy_opts,
              nova.volume._volume_opts,
              nova.wsgi.wsgi_opts,
@@ -131,6 +130,7 @@ def list_opts():
              [nova.console.rpcapi.rpcapi_cap_opt],
              [nova.consoleauth.rpcapi.rpcapi_cap_opt],
          )),
+        ('vnc', nova.vnc.vnc_opts),
         ('workarounds', nova.utils.workarounds_opts),
         ('zookeeper', nova.servicegroup.drivers.zk.zk_driver_opts)
     ]
