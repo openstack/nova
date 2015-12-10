@@ -720,6 +720,7 @@ class ComputeManager(manager.Manager):
 
     def reset(self):
         LOG.info(_LI('Reloading compute RPC API'))
+        compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def _get_resource_tracker(self, nodename):

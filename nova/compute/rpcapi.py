@@ -53,6 +53,7 @@ rpcapi_cap_opt = cfg.StrOpt('compute',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
+LAST_VERSION = None
 
 
 def _compute_host(host, instance):
@@ -339,6 +340,9 @@ class ComputeAPI(object):
         self.client = self.get_client(target, version_cap, serializer)
 
     def _determine_version_cap(self, target):
+        global LAST_VERSION
+        if LAST_VERSION:
+            return LAST_VERSION
         service_version = objects.Service.get_minimum_version(
             context.get_admin_context(), 'nova-compute')
         history = service_obj.SERVICE_VERSION_HISTORY
@@ -356,6 +360,7 @@ class ComputeAPI(object):
                           'service history for version %(version)i'),
                       {'version': service_version})
             return target.version
+        LAST_VERSION = version_cap
         LOG.info(_LI('Automatically selected compute RPC version %(rpc)s '
                      'from minimum service version %(service)i'),
                  {'rpc': version_cap,
