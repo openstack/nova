@@ -78,6 +78,7 @@ release = '2.1.0'
 #   giturl: The location of conf.py on Git. Must be set manually.
 #   gitsha: The SHA checksum of the bug description. Extracted from git log.
 #   bug_tag: Tag for categorizing the bug. Must be set manually.
+#   bug_project: Launchpad project to file bugs against.
 # These variables are passed to the logabug code via html_context.
 giturl = u'http://git.openstack.org/cgit/openstack/nova/tree/api-guide/source'
 git_cmd = "/usr/bin/git log | head -n1 | cut -f2 -d' '"
@@ -88,7 +89,8 @@ pwd = os.popen("pwd").read().strip('\n')
 html_context = {"pwd": pwd,
                 "gitsha": gitsha,
                 "bug_tag": bug_tag,
-                "giturl": giturl}
+                "giturl": giturl,
+                "bug_project": "nova"}
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
