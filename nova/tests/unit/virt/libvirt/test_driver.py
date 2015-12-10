@@ -13434,7 +13434,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.VerifyAll()
 
 
-def _fake_convert_image(source, dest, out_format,
+def _fake_convert_image(source, dest, in_format, out_format,
                                run_as_root=True):
     libvirt_driver.libvirt_utils.files[dest] = ''
 
@@ -13573,7 +13573,8 @@ class LVMSnapshotTests(_BaseSnapshotTests):
 
         mock_volume_info.assert_has_calls([mock.call('/dev/nova-vg/lv')])
         mock_convert_image.assert_called_once_with(
-                '/dev/nova-vg/lv', mock.ANY, disk_format, run_as_root=True)
+            '/dev/nova-vg/lv', mock.ANY, 'raw', disk_format,
+            run_as_root=True)
 
     def test_raw(self):
         self._test_lvm_snapshot('raw')
