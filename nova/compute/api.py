@@ -823,7 +823,7 @@ class API(base.Base):
                 return not (bdm.get('boot_index') == 0 and
                             bdm.get('source_type') == 'image')
 
-            block_device_mapping = (
+            block_device_mapping = list(
                 filter(not_image_and_root_bdm, block_device_mapping))
 
         block_device_mapping = self._merge_bdms_lists(
