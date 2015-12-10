@@ -116,7 +116,7 @@ class ServersSampleJson29Test(ServersSampleJsonTest):
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.9 which will run the original tests
     # by appending '(v2_9)' in test_id.
-    scenarios = [('v2_9', {})]
+    scenarios = [('v2_9', {'_api_version': 'v2.1'})]
 
 
 class ServerSortKeysJsonTests(ServersSampleBase):

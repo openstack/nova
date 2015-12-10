@@ -115,7 +115,7 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.2 which will run the original tests
     # by appending '(v2_2)' in test_id.
-    scenarios = [('v2_2', {})]
+    scenarios = [('v2_2', {'_api_version': 'v2.1'})]
 
     def test_keypairs_post(self):
         # NOTE(claudiub): overrides the method with the same name in
@@ -174,7 +174,7 @@ class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
     request_api_version = '2.10'
     expected_post_status_code = 201
     expected_delete_status_code = 204
-    scenarios = [('v2_10', {})]
+    scenarios = [('v2_10', {'_api_version': 'v2.1'})]
 
     def test_keypair_create_for_user(self):
         subs = {

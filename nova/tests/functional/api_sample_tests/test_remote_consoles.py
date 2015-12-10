@@ -89,7 +89,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.6 which will run the original tests
     # by appending '(v2_6)' in test_id.
-    scenarios = [('v2_6', {})]
+    scenarios = [('v2_6', {'_api_version': 'v2.1'})]
 
     def setUp(self):
         super(ConsolesV26SampleJsonTests, self).setUp()
@@ -110,7 +110,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
 class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-remote-consoles"
     request_api_version = '2.8'
-    scenarios = [('v2_8', {})]
+    scenarios = [('v2_8', {'_api_version': 'v2.1'})]
     _api_version = 'v2'
 
     def setUp(self):

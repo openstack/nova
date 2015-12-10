@@ -110,8 +110,8 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 class ServicesV211JsonTest(ServicesJsonTest):
     request_api_version = '2.11'
     # NOTE(gryf): There is no need to run those tests on v2 API. Only
-    # scenarios for v2_9 will be run.
-    scenarios = [('v2_11', {})]
+    # scenarios for v2_11 will be run.
+    scenarios = [('v2_11', {'_api_version': 'v2.1'})]
 
     def test_services_list(self):
         """Return a list of all agent builds."""

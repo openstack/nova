@@ -247,6 +247,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         """
         return subs
 
+    def _update_links(self, sample_data):
+        """Process sample data and update version specific links."""
+        url_re = self._get_host() + "/v(2|2\.1)"
+        new_url = self._get_host() + "/" + self._api_version
+        updated_data = re.sub(url_re, new_url, sample_data)
+        return updated_data
+
     def _verify_response(self, name, subs, response, exp_code):
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
@@ -267,6 +274,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             with file(self._get_sample(name,
                                        self.request_api_version)) as sample:
                 sample_data = sample.read()
+                sample_data = self._update_links(sample_data)
 
         try:
             template_data = self._objectify(template_data)

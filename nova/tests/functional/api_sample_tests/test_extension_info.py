@@ -38,11 +38,15 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions')
         subs = self._get_regexes()
+        # The full extension list is one of the places that things are
+        # different between the API versions and the legacy vs. new
+        # stack. We default to the v2.1 case.
         template = 'extensions-list-resp'
-        if self._test == 'v2':
-            template = 'extensions-list-resp-v2'
-        if self._test == 'v2.1_compatible':
+        if self._api_version == 'v2':
             template = 'extensions-list-resp-v21-compatible'
+        if self._api_version == 'v2' and self._legacy_v2_code:
+            template = 'extensions-list-resp-v2'
+
         self._verify_response(template, subs, response, 200)
 
 
