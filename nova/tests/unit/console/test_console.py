@@ -46,6 +46,14 @@ class ConsoleTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.host = 'test_compute_host'
 
+    def test_reset(self):
+        with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
+            old_rpcapi = self.console.compute_rpcapi
+            self.console.reset()
+            mock_rpc.assert_called_once_with()
+            self.assertNotEqual(old_rpcapi,
+                                self.console.compute_rpcapi)
+
     def _create_instance(self):
         """Create a test instance."""
         inst = {}
