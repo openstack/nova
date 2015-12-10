@@ -347,12 +347,12 @@ class CellStateManager(base.Base):
     @sync_before
     def get_child_cells(self):
         """Return list of child cell_infos."""
-        return self.child_cells.values()
+        return list(self.child_cells.values())
 
     @sync_before
     def get_parent_cells(self):
         """Return list of parent cell_infos."""
-        return self.parent_cells.values()
+        return list(self.parent_cells.values())
 
     @sync_before
     def get_parent_cell(self, cell_name):

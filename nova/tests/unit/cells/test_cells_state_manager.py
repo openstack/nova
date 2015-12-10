@@ -116,7 +116,7 @@ class TestCellsStateManager(test.NoDBTestCase):
     @mock.patch.object(utils, 'read_cached_file')
     def test_filemanager_returned(self, mock_read_cached_file, mock_find_file):
         mock_find_file.return_value = "/etc/nova/cells.json"
-        mock_read_cached_file.return_value = (False, six.StringIO({}))
+        mock_read_cached_file.return_value = (False, six.StringIO('{}'))
         self.flags(cells_config='cells.json', group='cells')
         manager = state.CellStateManager()
         self.assertIsInstance(manager,
@@ -145,7 +145,7 @@ class TestCellsStateManager(test.NoDBTestCase):
         self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
         self.assertEqual(0, cap['disk_free']['units_by_mb']['0'])
 
-        units = cell_free_ram / 50
+        units = cell_free_ram // 50
         self.assertEqual(units, cap['ram_free']['units_by_mb']['50'])
 
         sz = 25 * 1024
