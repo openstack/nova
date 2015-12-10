@@ -1995,3 +1995,7 @@ class HostMappingNotFound(Invalid):
 class RealtimeConfigurationInvalid(Invalid):
     msg_fmt = _("Cannot set realtime policy in a non dedicated "
                 "cpu pinning policy")
+
+
+class RequestSpecNotFound(NotFound):
+    msg_fmt = _("RequestSpec not found for instance %(instance_uuid)s")

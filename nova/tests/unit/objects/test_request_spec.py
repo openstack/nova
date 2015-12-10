@@ -13,11 +13,15 @@
 #    under the License.
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import base
+from nova.objects import request_spec
+from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
 
 
@@ -391,6 +395,83 @@ class _TestRequestSpecObject(object):
     def test_to_legacy_filter_properties_dict_with_unset_values(self):
         spec = objects.RequestSpec()
         self.assertEqual({}, spec.to_legacy_filter_properties_dict())
+
+    @mock.patch.object(request_spec.RequestSpec,
+            '_get_by_instance_uuid_from_db')
+    def test_get_by_instance_uuid(self, get_by_uuid):
+        fake_spec = fake_request_spec.fake_db_spec()
+        get_by_uuid.return_value = fake_spec
+
+        req_obj = request_spec.RequestSpec.get_by_instance_uuid(self.context,
+                fake_spec['instance_uuid'])
+
+        self.assertEqual(1, req_obj.num_instances)
+        self.assertEqual(['host2', 'host4'], req_obj.ignore_hosts)
+        self.assertEqual('fake', req_obj.project_id)
+        self.assertEqual({'hint': ['over-there']}, req_obj.scheduler_hints)
+        self.assertEqual(['host1', 'host3'], req_obj.force_hosts)
+        self.assertIsNone(req_obj.availability_zone)
+        self.assertEqual(['node1', 'node2'], req_obj.force_nodes)
+        self.assertIsInstance(req_obj.image, objects.ImageMeta)
+        self.assertIsInstance(req_obj.numa_topology,
+                objects.InstanceNUMATopology)
+        self.assertIsInstance(req_obj.pci_requests,
+                objects.InstancePCIRequests)
+        self.assertIsInstance(req_obj.flavor, objects.Flavor)
+        self.assertIsInstance(req_obj.retry, objects.SchedulerRetries)
+        self.assertIsInstance(req_obj.limits, objects.SchedulerLimits)
+        self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
+
+    def _check_update_primitive(self, req_obj, changes):
+        self.assertEqual(req_obj.instance_uuid, changes['instance_uuid'])
+        serialized_obj = objects.RequestSpec.obj_from_primitive(
+                jsonutils.loads(changes['spec']))
+
+        # primitive fields
+        for field in ['instance_uuid', 'num_instances', 'ignore_hosts',
+                'project_id', 'scheduler_hints', 'force_hosts',
+                'availability_zone', 'force_nodes']:
+            self.assertEqual(getattr(req_obj, field),
+                    getattr(serialized_obj, field))
+
+        # object fields
+        for field in ['image', 'numa_topology', 'pci_requests', 'flavor',
+                'retry', 'limits', 'instance_group']:
+            self.assertDictEqual(
+                    getattr(req_obj, field).obj_to_primitive(),
+                    getattr(serialized_obj, field).obj_to_primitive())
+
+    def test_create(self):
+        req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
+
+        def _test_create_args(self2, context, changes):
+            self._check_update_primitive(req_obj, changes)
+            # DB creation would have set an id
+            changes['id'] = 42
+            return changes
+
+        with mock.patch.object(request_spec.RequestSpec, '_create_in_db',
+                _test_create_args):
+            req_obj.create()
+
+    def test_create_id_set(self):
+        req_obj = request_spec.RequestSpec(self.context)
+        req_obj.id = 3
+
+        self.assertRaises(exception.ObjectActionError, req_obj.create)
+
+    def test_save(self):
+        req_obj = fake_request_spec.fake_spec_obj()
+
+        def _test_save_args(self2, context, instance_uuid, changes):
+            self._check_update_primitive(req_obj, changes)
+            # DB creation would have set an id
+            changes['id'] = 42
+            return changes
+
+        with mock.patch.object(request_spec.RequestSpec, '_save_in_db',
+                _test_save_args):
+            req_obj.save()
 
 
 class TestRequestSpecObject(test_objects._LocalTest,

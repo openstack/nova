@@ -12,13 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
 import six
 
+from nova.db.sqlalchemy import api as db
+from nova.db.sqlalchemy import api_models
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.virt import hardware
+
+LOG = logging.getLogger(__name__)
 
 
 @base.NovaObjectRegistry.register
@@ -28,7 +35,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.2: SchedulerRetries version 1.1
     # Version 1.3: InstanceGroup version 1.10
     # Version 1.4: ImageMeta version 1.7
-    VERSION = '1.4'
+    # Version 1.5: Added get_by_instance_uuid(), create(), save()
+    VERSION = '1.5'
 
     fields = {
         'id': fields.IntegerField(),
@@ -310,6 +318,85 @@ class RequestSpec(base.NovaObject):
             filt_props['scheduler_hints'] = {hint: self.get_scheduler_hint(
                 hint) for hint in self.scheduler_hints}
         return filt_props
+
+    @staticmethod
+    def _from_db_object(context, spec, db_spec):
+        spec = spec.obj_from_primitive(jsonutils.loads(db_spec['spec']))
+        spec._context = context
+        spec.obj_reset_changes()
+        return spec
+
+    @staticmethod
+    def _get_by_instance_uuid_from_db(context, instance_uuid):
+        session = db.get_api_session()
+
+        with session.begin():
+            db_spec = session.query(api_models.RequestSpec).filter_by(
+                    instance_uuid=instance_uuid).first()
+            if not db_spec:
+                raise exception.RequestSpecNotFound(
+                        instance_uuid=instance_uuid)
+        return db_spec
+
+    @base.remotable_classmethod
+    def get_by_instance_uuid(cls, context, instance_uuid):
+        db_spec = cls._get_by_instance_uuid_from_db(context, instance_uuid)
+        return cls._from_db_object(context, cls(), db_spec)
+
+    @staticmethod
+    @db.api_context_manager.writer
+    def _create_in_db(context, updates):
+        db_spec = api_models.RequestSpec()
+        db_spec.update(updates)
+        db_spec.save(context.session)
+        return db_spec
+
+    def _get_update_primitives(self):
+        """Serialize object to match the db model.
+
+        We store copies of embedded objects rather than
+        references to these objects because we want a snapshot of the request
+        at this point.  If the references changed or were deleted we would
+        not be able to reschedule this instance under the same conditions as
+        it was originally scheduled with.
+        """
+        updates = self.obj_get_changes()
+        # NOTE(alaski): The db schema is the full serialized object in a
+        # 'spec' column.  If anything has changed we rewrite the full thing.
+        if updates:
+            db_updates = {'spec': jsonutils.dumps(self.obj_to_primitive())}
+            if 'instance_uuid' in updates:
+                db_updates['instance_uuid'] = updates['instance_uuid']
+        return db_updates
+
+    @base.remotable
+    def create(self):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+
+        updates = self._get_update_primitives()
+
+        db_spec = self._create_in_db(self._context, updates)
+        self._from_db_object(self._context, self, db_spec)
+
+    @staticmethod
+    @db.api_context_manager.writer
+    def _save_in_db(context, instance_uuid, updates):
+        # FIXME(sbauza): Provide a classmethod when oslo.db bug #1520195 is
+        # fixed and released
+        db_spec = RequestSpec._get_by_instance_uuid_from_db(context,
+                                                            instance_uuid)
+        db_spec.update(updates)
+        db_spec.save(context.session)
+        return db_spec
+
+    @base.remotable
+    def save(self):
+        updates = self._get_update_primitives()
+        db_spec = self._save_in_db(self._context, self.instance_uuid, updates)
+        self._from_db_object(self._context, self, db_spec)
+        self.obj_reset_changes()
 
 
 @base.NovaObjectRegistry.register
