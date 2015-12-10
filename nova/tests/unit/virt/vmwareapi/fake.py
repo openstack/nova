@@ -582,7 +582,7 @@ class DatastoreHostMount(DataObject):
     def __init__(self, value='host-100'):
         super(DatastoreHostMount, self).__init__()
         host_ref = (_db_content["HostSystem"]
-                    [_db_content["HostSystem"].keys()[0]].obj)
+                    [list(_db_content["HostSystem"].keys())[0]].obj)
         host_system = DataObject()
         host_system.ManagedObjectReference = [host_ref]
         host_system.value = value
@@ -709,7 +709,7 @@ class HostSystem(ManagedObject):
             create_host_network_system()
         if not _get_object_refs('HostStorageSystem'):
             create_host_storage_system()
-        host_net_key = _db_content["HostNetworkSystem"].keys()[0]
+        host_net_key = list(_db_content["HostNetworkSystem"].keys())[0]
         host_net_sys = _db_content["HostNetworkSystem"][host_net_key].obj
         self.set("configManager.networkSystem", host_net_sys)
         host_storage_sys_key = _get_object_refs('HostStorageSystem')[0]
@@ -767,7 +767,8 @@ class HostSystem(ManagedObject):
 
         if _db_content.get("Network", None) is None:
             create_network()
-        net_ref = _db_content["Network"][_db_content["Network"].keys()[0]].obj
+        net_ref = _db_content["Network"][
+            list(_db_content["Network"].keys())[0]].obj
         network_do = DataObject()
         network_do.ManagedObjectReference = [net_ref]
         self.set("network", network_do)
@@ -870,7 +871,8 @@ class Datacenter(ManagedObject):
         self.set("vmFolder", "vm_folder_ref")
         if _db_content.get("Network", None) is None:
             create_network()
-        net_ref = _db_content["Network"][_db_content["Network"].keys()[0]].obj
+        net_ref = _db_content["Network"][
+            list(_db_content["Network"].keys())[0]].obj
         network_do = DataObject()
         network_do.ManagedObjectReference = [net_ref]
         self.set("network", network_do)
@@ -965,15 +967,16 @@ def create_vm(uuid=None, name=None,
         devices = []
 
     if vmPathName is None:
-        vm_path = ds_obj.DatastorePath(_db_content['Datastore'].values()[0])
+        vm_path = ds_obj.DatastorePath(
+            list(_db_content['Datastore'].values())[0])
     else:
         vm_path = ds_obj.DatastorePath.parse(vmPathName)
 
     if res_pool_ref is None:
-        res_pool_ref = _db_content['ResourcePool'].keys()[0]
+        res_pool_ref = list(_db_content['ResourcePool'].keys())[0]
 
     if host_ref is None:
-        host_ref = _db_content["HostSystem"].keys()[0]
+        host_ref = list(_db_content["HostSystem"].keys())[0]
 
     # Fill in the default path to the vmx file if we were only given a
     # datastore. Note that if you create a VM with vmPathName '[foo]', when you
@@ -1525,7 +1528,7 @@ class FakeVim(object):
 
     def _add_port_group(self, method, *args, **kwargs):
         """Adds a port group to the host system."""
-        _host_sk = _db_content["HostSystem"].keys()[0]
+        _host_sk = list(_db_content["HostSystem"].keys())[0]
         host_mdo = _db_content["HostSystem"][_host_sk]
         host_mdo._add_port_group(kwargs.get("portgrp"))
 

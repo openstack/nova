@@ -77,7 +77,6 @@ nova.tests.unit.api.openstack.compute.test_floating_ips.FloatingIpTestV2
 nova.tests.unit.api.openstack.compute.test_floating_ips.FloatingIpTestV21
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV2
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV21
-nova.tests.unit.api.openstack.compute.test_hosts.HostTestCaseV20
 nova.tests.unit.api.openstack.compute.test_image_metadata.ImageMetaDataTestV2
 nova.tests.unit.api.openstack.compute.test_image_metadata.ImageMetaDataTestV21
 nova.tests.unit.api.openstack.compute.test_image_size.ImageSizeTestV2
@@ -220,7 +219,6 @@ nova.tests.unit.test_cinder.CinderTestCase
 nova.tests.unit.test_cinder.CinderV2TestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
 nova.tests.unit.test_fixtures.TestOSAPIFixture
-nova.tests.unit.test_flavors.InstanceTypeToolsTest
 nova.tests.unit.test_hacking.HackingTestCase
 nova.tests.unit.test_iptables_network.IptablesManagerTestCase
 nova.tests.unit.test_ipv6.IPv6AccountIdentiferTestCase
@@ -284,7 +282,7 @@ nova.tests.unit.virt.libvirt.test_config.LibvirtConfigTest
 nova.tests.unit.virt.libvirt.test_driver.LibvirtConnTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtDriverTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtVolumeSnapshotTestCase
-nova.tests.unit.virt.libvirt.test_fakelibvirt.FakeLibvirtTests
+nova.tests.unit.virt.libvirt.test_fakelibvirt.FakeLibvirtTests.test_numa_topology_generation
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
@@ -309,7 +307,6 @@ nova.tests.unit.virt.vmwareapi.test_images.VMwareImagesTestCase
 nova.tests.unit.virt.vmwareapi.test_network_util.GetNetworkWithTheNameTestCase
 nova.tests.unit.virt.vmwareapi.test_read_write_util.ReadWriteUtilTestCase
 nova.tests.unit.virt.vmwareapi.test_vim_util.VMwareVIMUtilTestCase
-nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilGetHostRefTestCase
 nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilTestCase
 nova.tests.unit.virt.vmwareapi.test_vmops.VMwareVMOpsTestCase
 nova.tests.unit.virt.vmwareapi.test_volumeops.VMwareVolumeOpsTestCase
@@ -321,7 +318,6 @@ nova.tests.unit.virt.xenapi.image.test_vdi_through_dev.TestTarGzProducer
 nova.tests.unit.virt.xenapi.image.test_vdi_through_dev.TestUploadToGlanceAsRawTgz
 nova.tests.unit.virt.xenapi.test_agent.FileInjectionTestCase
 nova.tests.unit.virt.xenapi.test_driver.XenAPIDriverTestCase
-nova.tests.unit.virt.xenapi.test_network_utils.NetworkUtilsTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.CreateCachedImageTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.CreateVmRecordTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.CreateVmTestCase
@@ -345,7 +341,6 @@ nova.tests.unit.virt.xenapi.test_xenapi.XenAPILiveMigrateTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIMigrateInstance
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPISRSelectionTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVMTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVolumeTestCase
 nova.tests.unit.volume.encryptors.test_cryptsetup.CryptsetupEncryptorTestCase
 nova.tests.unit.volume.encryptors.test_luks.LuksEncryptorTestCase
 nova.tests.unit.volume.test_cinder.CinderApiTestCase

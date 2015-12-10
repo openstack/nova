@@ -371,7 +371,7 @@ def _create_vlan(pif_ref, vlan_num, network_ref):
 
 
 def get_all(table):
-    return _db_content[table].keys()
+    return list(_db_content[table].keys())
 
 
 def get_all_records(table):
@@ -482,7 +482,7 @@ class SessionBase(object):
         xenapi_session.apply_session_helpers(self)
 
     def pool_get_default_SR(self, _1, pool_ref):
-        return _db_content['pool'].values()[0]['default-SR']
+        return list(_db_content['pool'].values())[0]['default-SR']
 
     def VBD_insert(self, _1, vbd_ref, vdi_ref):
         vbd_rec = get_record('VBD', vbd_ref)

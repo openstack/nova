@@ -606,7 +606,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _fake_migration_update(self, ctxt, migration_id, values):
         # cheat and assume there's only 1 migration present
-        migration = self._migrations.values()[0]
+        migration = list(self._migrations.values())[0]
         migration.update(values)
         return migration
 

@@ -758,7 +758,7 @@ def get_sr_path(session, sr_ref=None):
 
     # NOTE(bobball): There can only be one PBD for a host/SR pair, but path is
     # not always present - older versions of XS do not set it.
-    pbd_ref = pbd_rec.keys()[0]
+    pbd_ref = list(pbd_rec.keys())[0]
     device_config = pbd_rec[pbd_ref]['device_config']
     if 'path' in device_config:
         return device_config['path']
@@ -847,7 +847,7 @@ def _find_cached_image(session, image_id, sr_ref):
     if number_found > 0:
         if number_found > 1:
             LOG.warning(_LW("Multiple base images for image: %s"), image_id)
-        return recs.keys()[0]
+        return list(recs.keys())[0]
 
 
 def _get_resize_func_name(session):
@@ -2222,7 +2222,7 @@ def get_this_vm_uuid(session):
                                   'field "is_control_domain"="true" and '
                                   'field "resident_on"="%s"' %
                                   session.host_ref)
-        return vms[vms.keys()[0]]['uuid']
+        return vms[list(vms.keys())[0]]['uuid']
     try:
         return _get_sys_hypervisor_uuid()
     except IOError:

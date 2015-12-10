@@ -561,7 +561,7 @@ class IptablesManager(object):
                 # if no duplicates, use original rule
                 if dup_filter:
                     # grab the last entry, if there is one
-                    dup = dup_filter[-1]
+                    dup = list(dup_filter)[-1]
                     rule_str = str(dup)
                 else:
                     rule_str = str(rule)
@@ -573,6 +573,7 @@ class IptablesManager(object):
 
         our_rules += bot_rules
 
+        new_filter = list(new_filter)
         new_filter[rules_index:rules_index] = our_rules
 
         new_filter[rules_index:rules_index] = [':%s - [0:0]' % (name,)

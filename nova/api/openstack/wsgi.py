@@ -495,7 +495,7 @@ def action_peek_json(body):
         raise exception.MalformedRequestBody(reason=msg)
 
     # Return the action and the decoded body...
-    return decoded.keys()[0]
+    return list(decoded.keys())[0]
 
 
 class ResourceExceptionHandler(object):

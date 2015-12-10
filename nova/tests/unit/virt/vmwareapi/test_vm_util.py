@@ -1564,7 +1564,7 @@ class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
         self.session = driver.VMwareAPISession()
 
         # Create a fake VirtualMachine running on a known host
-        self.host_ref = fake._db_content['HostSystem'].keys()[0]
+        self.host_ref = list(fake._db_content['HostSystem'].keys())[0]
         self.vm_ref = fake.create_vm(host_ref=self.host_ref)
 
     @mock.patch.object(vm_util, 'get_vm_ref')

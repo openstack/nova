@@ -2088,14 +2088,14 @@ class VMOps(object):
             msg = _('No suitable network for migrate')
             raise exception.MigrationPreCheckError(reason=msg)
 
-        pifkey = pifs.keys()[0]
+        pifkey = list(pifs.keys())[0]
         if not (netutils.is_valid_ipv4(pifs[pifkey]['IP']) or
                 netutils.is_valid_ipv6(pifs[pifkey]['IPv6'])):
             msg = (_('PIF %s does not contain IP address')
                    % pifs[pifkey]['uuid'])
             raise exception.MigrationPreCheckError(reason=msg)
 
-        nwref = pifs[pifs.keys()[0]]['network']
+        nwref = pifs[list(pifs.keys())[0]]['network']
         try:
             options = {}
             migrate_data = self._session.call_xenapi("host.migrate_receive",

@@ -136,7 +136,8 @@ class HostController(object):
         # Validate the request
         if len(params) > 0:
             # Some extra param was passed. Fail.
-            explanation = _("Invalid update setting: '%s'") % params.keys()[0]
+            explanation = _("Invalid update setting: '%s'") % list(
+                params.keys())[0]
             raise webob.exc.HTTPBadRequest(explanation=explanation)
         if orig_status is not None:
             status = read_enabled(orig_status, _("Invalid status: '%s'"))

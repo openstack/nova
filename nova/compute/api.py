@@ -2443,7 +2443,7 @@ class API(base.Base):
 
             orig_sys_metadata = dict(instance.system_metadata)
             # Remove the old keys
-            for key in instance.system_metadata.keys():
+            for key in list(instance.system_metadata.keys()):
                 if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
                     del instance.system_metadata[key]
 
