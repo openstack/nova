@@ -136,10 +136,10 @@ class VpnCommands(object):
     @args('--ip', metavar='<IP Address>', help='IP Address')
     @args('--port', metavar='<Port>', help='Port')
     def change(self, project_id, ip, port):
-        """Change the ip and port for a vpn.
+        """Change the IP and port for a VPN.
 
-        this will update all networks associated with a project
-        not sure if that's the desired behavior or not, patches accepted
+        This will update all networks associated with a project
+        not sure if that's the desired behavior or not, patches accepted.
 
         """
         # TODO(tr3buchet): perhaps this shouldn't update all networks
@@ -324,11 +324,11 @@ AccountCommands = ProjectCommands
 
 
 class FixedIpCommands(object):
-    """Class for managing fixed ip."""
+    """Class for managing fixed IP."""
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
-        """Lists all fixed ips (optionally by host)."""
+        """Lists all fixed IPs (optionally by host)."""
         ctxt = context.get_admin_context()
 
         try:
@@ -377,7 +377,7 @@ class FixedIpCommands(object):
                         hostname = instance['hostname']
                         host = instance['host']
                     else:
-                        print(_('WARNING: fixed ip %s allocated to missing'
+                        print(_('WARNING: fixed IP %s allocated to missing'
                                 ' instance') % str(fixed_ip['address']))
                 print("%-18s\t%-15s\t%-15s\t%s" % (
                         network['cidr'],
@@ -389,7 +389,7 @@ class FixedIpCommands(object):
 
     @args('--address', metavar='<ip address>', help='IP address')
     def reserve(self, address):
-        """Mark fixed ip as reserved
+        """Mark fixed IP as reserved
 
         arguments: address
         """
@@ -397,7 +397,7 @@ class FixedIpCommands(object):
 
     @args('--address', metavar='<ip address>', help='IP address')
     def unreserve(self, address):
-        """Mark fixed ip as free to use
+        """Mark fixed IP as free to use
 
         arguments: address
         """
@@ -418,7 +418,7 @@ class FixedIpCommands(object):
 
 
 class FloatingIpCommands(object):
-    """Class for managing floating ip."""
+    """Class for managing floating IP."""
 
     @staticmethod
     def address_to_hosts(addresses):
@@ -450,7 +450,7 @@ class FloatingIpCommands(object):
     @args('--pool', metavar='<pool>', help='Optional pool')
     @args('--interface', metavar='<interface>', help='Optional interface')
     def create(self, ip_range, pool=None, interface=None):
-        """Creates floating ips for zone by range."""
+        """Creates floating IPs for zone by range."""
         admin_context = context.get_admin_context()
         if not pool:
             pool = CONF.default_floating_pool
@@ -470,7 +470,7 @@ class FloatingIpCommands(object):
 
     @args('--ip_range', metavar='<range>', help='IP range')
     def delete(self, ip_range):
-        """Deletes floating ips by range."""
+        """Deletes floating IPs by range."""
         admin_context = context.get_admin_context()
 
         ips = ({'address': str(address)}
@@ -479,7 +479,7 @@ class FloatingIpCommands(object):
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
-        """Lists all floating ips (optionally by host).
+        """Lists all floating IPs (optionally by host).
 
         Note: if host is given, only active floating IPs are returned
         """
@@ -544,7 +544,7 @@ class NetworkCommands(object):
     @args('--dns2', metavar="<DNS Address>", help='Second DNS')
     @args('--uuid', metavar="<network uuid>", help='Network UUID')
     @args('--fixed_cidr', metavar='<x.x.x.x/yy>',
-            help='IPv4 subnet for fixed IPS (ex: 10.20.0.0/16)')
+            help='IPv4 subnet for fixed IPs (ex: 10.20.0.0/16)')
     @args('--project_id', metavar="<project id>",
           help='Project id')
     @args('--priority', metavar="<number>", help='Network interface priority')
@@ -554,7 +554,7 @@ class NetworkCommands(object):
                gateway_v6=None, bridge=None, bridge_interface=None,
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
-        """Creates fixed ips for host by range."""
+        """Creates fixed IPs for host by range."""
         kwargs = {k: v for k, v in six.iteritems(locals())
                   if v and k != "self"}
         if multi_host is not None:

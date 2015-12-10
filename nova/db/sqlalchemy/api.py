@@ -723,7 +723,7 @@ def floating_ip_get(context, id):
         if not result:
             raise exception.FloatingIpNotFound(id=id)
     except db_exc.DBError:
-        msg = _LW("Invalid floating ip id %s in request") % id
+        msg = _LW("Invalid floating IP ID %s in request") % id
         LOG.warn(msg)
         raise exception.InvalidID(id=id)
     return result
@@ -1090,7 +1090,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False, virtual_interface_id=None):
     """Keyword arguments:
     reserved -- should be a boolean value(True or False), exact value will be
-    used to filter on the fixed ip address
+    used to filter on the fixed IP address
     """
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)

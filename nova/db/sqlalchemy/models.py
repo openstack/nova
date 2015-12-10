@@ -827,7 +827,7 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
 
 # TODO(vish): can these both come from the same baseclass?
 class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a fixed ip for an instance."""
+    """Represents a fixed IP for an instance."""
     __tablename__ = 'fixed_ips'
     __table_args__ = (
         schema.UniqueConstraint(
@@ -885,7 +885,7 @@ class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
 
 
 class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a floating ip that dynamically forwards to a fixed ip."""
+    """Represents a floating IP that dynamically forwards to a fixed IP."""
     __tablename__ = 'floating_ips'
     __table_args__ = (
         schema.UniqueConstraint("address", "deleted",
