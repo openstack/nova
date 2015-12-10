@@ -90,8 +90,10 @@ def wrap_exception(notifier=None, get_notifier=None):
                 with excutils.save_and_reraise_exception():
                     if notifier or get_notifier:
                         payload = dict(exception=e)
-                        call_dict = safe_utils.getcallargs(f, self, context,
-                                                           *args, **kw)
+                        wrapped_func = safe_utils.get_wrapped_function(f)
+                        call_dict = safe_utils.getcallargs(wrapped_func, self,
+                                                           context, *args,
+                                                           **kw)
                         # self can't be serialized and shouldn't be in the
                         # payload
                         call_dict.pop('self', None)

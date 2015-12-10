@@ -9458,6 +9458,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_attach_interface_failed(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
         instance = objects.Instance(
+                       id=42,
                        uuid='f0000000-0000-0000-0000-000000000000',
                        image_ref='foo',
                        system_metadata={},
@@ -9500,7 +9501,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_interface_failed(self):
         nwinfo, port_id = self.test_attach_interface()
-        instance = objects.Instance()
+        instance = objects.Instance(id=42)
         instance['uuid'] = 'f6000000-0000-0000-0000-000000000000'
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, 'f6000000-0000-0000-0000-000000000000')
@@ -9524,7 +9525,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Tests that when deallocate_port_for_instance fails we log the failure
         # before exiting compute.detach_interface.
         nwinfo, port_id = self.test_attach_interface()
-        instance = objects.Instance(uuid=uuidutils.generate_uuid())
+        instance = objects.Instance(id=42, uuid=uuidutils.generate_uuid())
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, 'f6000000-0000-0000-0000-000000000000')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
@@ -9558,6 +9559,7 @@ class ComputeAPITestCase(BaseTestCase):
                 block_device_obj.BlockDeviceMapping(),
                 fake_bdm)
         instance = self._create_fake_instance_obj()
+        instance.id = 42
         fake_volume = {'id': 'fake-volume-id'}
 
         with test.nested(

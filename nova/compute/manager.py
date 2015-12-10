@@ -287,7 +287,7 @@ def errors_out_migration(function):
             return function(self, context, *args, **kwargs)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                wrapped_func = utils.get_wrapped_function(function)
+                wrapped_func = safe_utils.get_wrapped_function(function)
                 keyed_args = safe_utils.getcallargs(wrapped_func, self,
                                                     context, *args, **kwargs)
                 migration = keyed_args['migration']
@@ -329,7 +329,7 @@ def reverts_task_state(function):
                          e.format_message())
         except Exception:
             with excutils.save_and_reraise_exception():
-                wrapped_func = utils.get_wrapped_function(function)
+                wrapped_func = safe_utils.get_wrapped_function(function)
                 keyed_args = safe_utils.getcallargs(wrapped_func, self,
                                                     context, *args, **kwargs)
                 # NOTE(mriedem): 'instance' must be in keyed_args because we
@@ -389,7 +389,7 @@ def wrap_instance_event(function):
 
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
-        wrapped_func = utils.get_wrapped_function(function)
+        wrapped_func = safe_utils.get_wrapped_function(function)
         keyed_args = safe_utils.getcallargs(wrapped_func, self, context, *args,
                                             **kwargs)
         instance_uuid = keyed_args['instance']['uuid']
