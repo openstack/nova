@@ -115,7 +115,6 @@ class _IntegratedTestBase(test.TestCase):
 
         self.network = self.start_service('network')
         self.scheduler = self._setup_scheduler_service()
-        self.cells = self.start_service('cells', manager=CONF.cells.manager)
 
     def _get_test_client(self):
         return client.TestOpenStackClient('fake', 'fake', self.auth_url)

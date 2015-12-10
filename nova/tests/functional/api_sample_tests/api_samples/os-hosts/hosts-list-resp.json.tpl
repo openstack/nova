@@ -29,11 +29,6 @@
             "host_name": "%(host_name)s",
             "service": "scheduler",
             "zone": "internal"
-        },
-        {
-            "host_name": "%(host_name)s",
-            "service": "cells",
-            "zone": "internal"
         }
     ]
 }

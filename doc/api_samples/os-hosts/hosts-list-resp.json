@@ -29,11 +29,6 @@
             "host_name": "abffda96592c4eacaf4111c28fddee17",
             "service": "scheduler",
             "zone": "internal"
-        },
-        {
-            "host_name": "a8820f04962a4b4ba9fe2e9540c24094",
-            "service": "cells",
-            "zone": "internal"
         }
     ]
 }
