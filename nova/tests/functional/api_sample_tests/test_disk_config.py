@@ -85,7 +85,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server(use_common_server_api_samples=False)
         subs = {
             'image_id': fake.get_valid_image_id(),
-            'host': self._get_host(),
+            'compute_endpoint': self._get_compute_endpoint(),
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-rebuild-req', subs)

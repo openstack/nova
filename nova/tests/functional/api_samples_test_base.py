@@ -335,7 +335,20 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'text': text,
             'int': '[0-9]+',
             'user_id': text,
+            'api_vers': self._api_version,
+            'compute_endpoint': self._get_compute_endpoint(),
+            'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
         }
+
+    def _get_compute_endpoint(self):
+        # NOTE(sdague): "openstack" is stand in for project_id, it
+        # should be more generic in future.
+        return '%s/%s' % (self._get_host(), 'openstack')
+
+    def _get_vers_compute_endpoint(self):
+        # NOTE(sdague): "openstack" is stand in for project_id, it
+        # should be more generic in future.
+        return '%s/%s/%s' % (self._get_host(), self._api_version, 'openstack')
 
     def _get_response(self, url, method, body=None, strip_version=False,
                       api_version=None, headers=None):

@@ -5,11 +5,11 @@
         "id": "%(id)s",
         "links": [
             {
-                "href": "%(host)s/v2/openstack/servers/%(uuid)s",
+                "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/openstack/servers/%(uuid)s",
+                "href": "%(compute_endpoint)s/servers/%(uuid)s",
                 "rel": "bookmark"
             }
         ]

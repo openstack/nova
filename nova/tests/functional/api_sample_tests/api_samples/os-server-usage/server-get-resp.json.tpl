@@ -19,7 +19,7 @@
             "id": "1",
             "links": [
                 {
-                    "href": "%(host)s/openstack/flavors/1",
+                    "href": "%(compute_endpoint)s/flavors/1",
                     "rel": "bookmark"
                 }
             ]
@@ -30,7 +30,7 @@
             "id": "%(uuid)s",
             "links": [
                 {
-                    "href": "%(host)s/openstack/images/%(uuid)s",
+                    "href": "%(compute_endpoint)s/images/%(uuid)s",
                     "rel": "bookmark"
                 }
             ]
@@ -38,11 +38,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "%(host)s/v2/openstack/servers/%(uuid)s",
+                "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/openstack/servers/%(uuid)s",
+                "href": "%(compute_endpoint)s/servers/%(uuid)s",
                 "rel": "bookmark"
             }
         ],

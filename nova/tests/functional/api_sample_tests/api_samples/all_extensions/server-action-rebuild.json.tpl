@@ -1,6 +1,6 @@
 {
     "rebuild" : {
-        "imageRef" : "%(host)s/v2/32278/images/%(uuid)s",
+        "imageRef" : "%(versioned_compute_endpoint)s/images/%(uuid)s",
         "name" : "%(name)s",
         "adminPass" : "%(pass)s",
         "accessIPv4" : "%(access_ip_v4)s",

@@ -39,7 +39,7 @@ class UserDataJsonTest(api_sample_base.ApiSampleTestBaseV21):
         user_data = base64.b64encode(user_data_contents)
         subs = {
             'image_id': fake.get_valid_image_id(),
-            'host': self._get_host(),
+            'compute_endpoint': self._get_compute_endpoint(),
             'user_data': user_data
             }
         response = self._do_post('servers', 'userdata-post-req', subs)
