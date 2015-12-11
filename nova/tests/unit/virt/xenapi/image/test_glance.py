@@ -108,14 +108,16 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                  mock.call('glance', 'download_vhd2',
                            endpoint='http://10.0.0.1:9293',
                            **params)]
-        log_calls = [mock.call(mock.ANY, {'callback_result': '10.0.1.1',
-                                          'attempts': 3, 'attempt': 1,
-                                          'fn': 'download_vhd2',
-                                          'plugin': 'glance'}),
-                     mock.call(mock.ANY, {'callback_result': '10.0.0.1',
-                                          'attempts': 3, 'attempt': 2,
-                                          'fn': 'download_vhd2',
-                                          'plugin': 'glance'})]
+        log_calls = [mock.call(mock.ANY,
+                               {'callback_result': 'http://10.0.1.1:9292',
+                                'attempts': 3, 'attempt': 1,
+                                'fn': 'download_vhd2',
+                                'plugin': 'glance'}),
+                     mock.call(mock.ANY,
+                               {'callback_result': 'http://10.0.0.1:9293',
+                                'attempts': 3, 'attempt': 2,
+                                'fn': 'download_vhd2',
+                                'plugin': 'glance'})]
 
         glance_api_servers = ['10.0.1.1:9292',
                               'http://10.0.0.1:9293']
