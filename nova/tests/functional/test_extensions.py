@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
-    _api_version = 'v2'
+    api_major_version = 'v2'
 
     def setUp(self):
         self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())

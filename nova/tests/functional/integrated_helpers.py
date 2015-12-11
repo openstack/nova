@@ -85,7 +85,7 @@ class _IntegratedTestBase(test.TestCase):
         self._setup_services()
 
         self.api_fixture = self.useFixture(
-            nova_fixtures.OSAPIFixture(self._api_version))
+            nova_fixtures.OSAPIFixture(self.api_major_version))
 
         # if the class needs to run as admin, make the api endpoint
         # the admin, otherwise it's safer to run as non admin user.
@@ -125,7 +125,7 @@ class _IntegratedTestBase(test.TestCase):
         self.osapi.start()
         self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
             'host': self.osapi.host, 'port': self.osapi.port,
-            'api_version': self._api_version})
+            'api_version': self.api_major_version})
 
     def _get_flags(self):
         """Allow subclass to modify global config before we start services."""

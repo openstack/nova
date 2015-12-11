@@ -22,7 +22,7 @@ from nova.tests.unit import fake_network
 
 
 class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
-    _api_version = 'v2'
+    api_major_version = 'v2'
 
     def setUp(self):
         super(LegacyV2CompatibleTestBase, self).setUp()

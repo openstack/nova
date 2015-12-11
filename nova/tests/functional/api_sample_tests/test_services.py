@@ -28,7 +28,7 @@ CONF.import_opt('osapi_compute_extension',
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-services"
-    request_api_version = None
+    microversion = None
 
     def _get_flags(self):
         f = super(ServicesJsonTest, self)._get_flags()
@@ -61,7 +61,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_services_list(self):
         """Return a list of all agent builds."""
         response = self._do_get('os-services',
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -76,7 +76,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/enable',
                                 'service-enable-put-req', subs,
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         self._verify_response('service-enable-put-resp', subs, response, 200)
 
     def test_service_disable(self):
@@ -85,7 +85,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/disable',
                                 'service-disable-put-req', subs,
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
     def test_service_disable_log_reason(self):
@@ -95,28 +95,28 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'disabled_reason': 'test2'}
         response = self._do_put('os-services/disable-log-reason',
                                 'service-disable-log-put-req', subs,
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         self._verify_response('service-disable-log-put-resp',
                               subs, response, 200)
 
     def test_service_delete(self):
         """Delete an existing service."""
         response = self._do_delete('os-services/1',
-                                   api_version=self.request_api_version)
+                                   api_version=self.microversion)
         self.assertEqual(204, response.status_code)
         self.assertEqual("", response.content)
 
 
 class ServicesV211JsonTest(ServicesJsonTest):
-    request_api_version = '2.11'
+    microversion = '2.11'
     # NOTE(gryf): There is no need to run those tests on v2 API. Only
     # scenarios for v2_11 will be run.
-    scenarios = [('v2_11', {'_api_version': 'v2.1'})]
+    scenarios = [('v2_11', {'api_major_version': 'v2.1'})]
 
     def test_services_list(self):
         """Return a list of all agent builds."""
         response = self._do_get('os-services',
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -133,6 +133,6 @@ class ServicesV211JsonTest(ServicesJsonTest):
                 'forced_down': 'true'}
         response = self._do_put('os-services/force-down',
                                 'service-force-down-put-req', subs,
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         self._verify_response('service-force-down-put-resp', subs,
                               response, 200)

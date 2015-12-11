@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ServersTestBase(integrated_helpers._IntegratedTestBase):
-    _api_version = 'v2'
+    api_major_version = 'v2'
     _force_delete_parameter = 'forceDelete'
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
@@ -510,4 +510,4 @@ class ServersTest(ServersTestBase):
 
 
 class ServersTestV21(ServersTest):
-    _api_version = 'v2.1'
+    api_major_version = 'v2.1'

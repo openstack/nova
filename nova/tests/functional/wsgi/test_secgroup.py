@@ -40,10 +40,10 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
     # in the dictionary on ``self`` for each scenario.
     scenarios = [
         ('v2', {
-            '_api_version': 'v2'}),
+            'api_major_version': 'v2'}),
         # test v2.1 base microversion
         ('v2_1', {
-            '_api_version': 'v2.1'}),
+            'api_major_version': 'v2.1'}),
     ]
 
     def setUp(self):

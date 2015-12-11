@@ -22,7 +22,7 @@ LOG = logging.getLogger(__name__)
 
 
 class LoginTest(integrated_helpers._IntegratedTestBase):
-    _api_version = 'v2'
+    api_major_version = 'v2'
 
     def test_login(self):
         # Simple check - we list flavors - so we know we're logged in.
@@ -32,4 +32,4 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
 
 
 class LoginTestV21(LoginTest):
-    _api_version = 'v2.1'
+    api_major_version = 'v2.1'

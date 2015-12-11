@@ -33,7 +33,7 @@ CONF = cfg.CONF
 
 class ServerGroupTestBase(test.TestCase):
     REQUIRES_LOCKING = True
-    _api_version = 'v2'
+    api_major_version = 'v2'
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
 
@@ -439,4 +439,4 @@ class ServerGroupAntiAffinityConfTest(ServerGroupTestBase):
 
 
 class ServerGroupTestV21(ServerGroupTest):
-    _api_version = 'v2.1'
+    api_major_version = 'v2.1'

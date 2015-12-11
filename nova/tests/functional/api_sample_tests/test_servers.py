@@ -59,7 +59,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
 class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-    request_api_version = None
+    microversion = None
 
     def _get_flags(self):
         f = super(ServersSampleBase, self)._get_flags()
@@ -79,7 +79,7 @@ class ServersSampleJsonTest(ServersSampleBase):
     def test_servers_get(self):
         uuid = self.test_servers_post()
         response = self._do_get('servers/%s' % uuid,
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -92,7 +92,7 @@ class ServersSampleJsonTest(ServersSampleBase):
     def test_servers_list(self):
         uuid = self._post_server()
         response = self._do_get('servers',
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         subs = self._get_regexes()
         subs['id'] = uuid
         self._verify_response('servers-list-resp', subs, response, 200)
@@ -100,7 +100,7 @@ class ServersSampleJsonTest(ServersSampleBase):
     def test_servers_details(self):
         uuid = self._post_server()
         response = self._do_get('servers/detail',
-                                api_version=self.request_api_version)
+                                api_version=self.microversion)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -112,11 +112,11 @@ class ServersSampleJsonTest(ServersSampleBase):
 
 
 class ServersSampleJson29Test(ServersSampleJsonTest):
-    request_api_version = '2.9'
+    microversion = '2.9'
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.9 which will run the original tests
     # by appending '(v2_9)' in test_id.
-    scenarios = [('v2_9', {'_api_version': 'v2.1'})]
+    scenarios = [('v2_9', {'api_major_version': 'v2.1'})]
 
 
 class ServerSortKeysJsonTests(ServersSampleBase):
@@ -256,7 +256,7 @@ class ServerStartStopJsonTest(ServersSampleBase):
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     extra_extensions_to_load = ["os-access-ips"]
-    _api_version = 'v2'
+    api_major_version = 'v2'
 
     def _get_flags(self):
         f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()

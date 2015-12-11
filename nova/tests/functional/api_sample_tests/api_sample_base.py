@@ -45,9 +45,9 @@ CONF = cfg.CONF
 #
 # Things we need to set:
 #
-# - _api_version - what version of the API we should be hitting
+# - api_major_version - what version of the API we should be hitting
 #
-# - request_api_version - what API microversion should be used
+# - microversion - what API microversion should be used
 #
 # - _additional_fixtures - any additional fixtures need
 #
@@ -58,12 +58,12 @@ CONF = cfg.CONF
 # microversions, then replace the ``scenarios`` class variable in that
 # test class with something like:
 #
-# [("v2_11", {'_api_version': 'v2.1', 'request_api_version', '2.11'})]
+# [("v2_11", {'api_major_version': 'v2.1', 'microversion', '2.11'})]
 
 
 class ApiSampleTestBaseV21(testscenarios.WithScenarios,
                           api_samples_test_base.ApiSampleTestBase):
-    _api_version = 'v2'
+    api_major_version = 'v2'
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
     sample_dir = None
@@ -73,13 +73,13 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     scenarios = [
         # test v2 with the v2.1 compatibility stack
         ('v2', {
-            '_api_version': 'v2'}),
+            'api_major_version': 'v2'}),
         # test v2.1 base microversion
         ('v2_1', {
-            '_api_version': 'v2.1'}),
+            'api_major_version': 'v2.1'}),
         # test v2 with the v2 legacy code
         ('v2legacy', {
-            '_api_version': 'v2',
+            'api_major_version': 'v2',
             '_legacy_v2_code': True,
             '_additional_fixtures': [
                 api_paste_fixture.ApiPasteLegacyV2Fixture]})
