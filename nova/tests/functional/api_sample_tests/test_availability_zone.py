@@ -34,18 +34,6 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
             'Availability_zone')
         return f
 
-    def _setup_services(self):
-        self.conductor = self.start_service('conductor',
-            host='conductor', manager=CONF.conductor.manager)
-        self.compute = self.start_service('compute', host='compute')
-        self.cert = self.start_service('cert', host='cert')
-        self.consoleauth = self.start_service('consoleauth',
-                                              host='consoleauth')
-        self.network = self.start_service('network', host='network')
-        self.scheduler = self.start_service('scheduler', host='scheduler')
-        self.cells = self.start_service('cells', host='cells',
-                                        manager=CONF.cells.manager)
-
     def test_availability_zone_list(self):
         response = self._do_get('os-availability-zone')
         self._verify_response('availability-zone-list-resp', {}, response, 200)
