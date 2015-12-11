@@ -45,7 +45,7 @@ CONF.register_opts(image_opts)
 IMAGE_API = image.API()
 
 
-def qemu_img_info(path):
+def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
@@ -58,8 +58,10 @@ def qemu_img_info(path):
         raise exception.InvalidDiskInfo(reason=msg)
 
     try:
-        out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                                 'qemu-img', 'info', path)
+        cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
+        if format is not None:
+            cmd = cmd + ('-f', format)
+        out, err = utils.execute(*cmd)
     except processutils.ProcessExecutionError as exp:
         msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
                 {'path': path, 'exp': exp})

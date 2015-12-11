@@ -161,24 +161,25 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
         return None
 
 
-def get_disk_size(path):
+def get_disk_size(path, format=None):
     """Get the (virtual) size of a disk image
 
     :param path: Path to the disk image
+    :param format: the on-disk format of path
     :returns: Size (in bytes) of the given disk image as it would be seen
               by a virtual machine.
     """
-    size = images.qemu_img_info(path).virtual_size
+    size = images.qemu_img_info(path, format).virtual_size
     return int(size)
 
 
-def get_disk_backing_file(path, basename=True):
+def get_disk_backing_file(path, basename=True, format=None):
     """Get the backing file of a disk image
 
     :param path: Path to the disk image
     :returns: a path to the image's backing store
     """
-    backing_file = images.qemu_img_info(path).backing_file
+    backing_file = images.qemu_img_info(path, format).backing_file
     if backing_file and basename:
         backing_file = os.path.basename(backing_file)
 
