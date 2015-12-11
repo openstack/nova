@@ -12021,7 +12021,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
             drvr._live_snapshot(self.context, self.test_instance, guest,
-                                srcfile, dstfile, "qcow2", image_meta)
+                                srcfile, dstfile, "qcow2", "qcow2", image_meta)
 
             mock_dom.XMLDesc.assert_called_once_with(flags=(
                 fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
@@ -12032,8 +12032,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
                     fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW))
 
-            mock_size.assert_called_once_with(srcfile)
-            mock_backing.assert_called_once_with(srcfile, basename=False)
+            mock_size.assert_called_once_with(srcfile, format="qcow2")
+            mock_backing.assert_called_once_with(srcfile, basename=False,
+                                                 format="qcow2")
             mock_create_cow.assert_called_once_with(bckfile, dltfile, 1004009)
             mock_chown.assert_called_once_with(dltfile, os.getuid())
             mock_snapshot.assert_called_once_with(dltfile, "qcow2",

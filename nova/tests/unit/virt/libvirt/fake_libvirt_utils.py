@@ -32,11 +32,11 @@ def create_cow_image(backing_file, path):
     pass
 
 
-def get_disk_size(path):
+def get_disk_size(path, format=None):
     return 0
 
 
-def get_disk_backing_file(path):
+def get_disk_backing_file(path, format=None):
     return disk_backing_files.get(path, None)
 
 

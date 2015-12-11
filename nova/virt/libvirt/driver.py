@@ -1435,7 +1435,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     # NOTE(xqueralt): libvirt needs o+x in the temp directory
                     os.chmod(tmpdir, 0o701)
                     self._live_snapshot(context, instance, guest, disk_path,
-                                        out_path, image_format, image_meta)
+                                        out_path, source_format, image_format,
+                                        image_meta)
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
@@ -1541,7 +1542,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._set_quiesced(context, instance, image_meta, False)
 
     def _live_snapshot(self, context, instance, guest, disk_path, out_path,
-                       image_format, image_meta):
+                       source_format, image_format, image_meta):
         """Snapshot an instance without downtime."""
         dev = guest.get_block_device(disk_path)
 
@@ -1559,9 +1560,11 @@ class LibvirtDriver(driver.ComputeDriver):
         #             in QEMU 1.3. In order to do this, we need to create
         #             a destination image with the original backing file
         #             and matching size of the instance root disk.
-        src_disk_size = libvirt_utils.get_disk_size(disk_path)
+        src_disk_size = libvirt_utils.get_disk_size(disk_path,
+                                                    format=source_format)
         src_back_path = libvirt_utils.get_disk_backing_file(disk_path,
-                                                            basename=False)
+                                                        format=source_format,
+                                                        basename=False)
         disk_delta = out_path + '.delta'
         libvirt_utils.create_cow_image(src_back_path, disk_delta,
                                        src_disk_size)
