@@ -1685,6 +1685,11 @@ class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
     msg_fmt = _("The module %(module)s is misconfigured: %(reason)s.")
 
 
+class SignatureVerificationError(NovaException):
+    msg_fmt = _("Signature verification for the image "
+                "failed: %(reason)s.")
+
+
 class ResourceMonitorError(NovaException):
     msg_fmt = _("Error when creating resource monitor: %(monitor)s")
 
