@@ -17,18 +17,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova import cache_utils
+import nova.conf
 from nova.i18n import _, _LI, _LW
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
 
-CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.service')
+CONF = nova.conf.CONF
 
 
 LOG = logging.getLogger(__name__)

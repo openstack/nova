@@ -87,8 +87,6 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-CONF.import_opt('network_manager', 'nova.service')
-CONF.import_opt('service_down_time', 'nova.service')
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
 CONF.import_opt('connection', 'oslo_db.options', group='database')

@@ -38,8 +38,6 @@ from nova.vnc import xvp_proxy
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('enabled_apis', 'nova.service')
-CONF.import_opt('enabled_ssl_apis', 'nova.service')
 
 
 def main():

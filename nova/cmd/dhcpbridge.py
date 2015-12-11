@@ -43,7 +43,6 @@ from nova import rpc
 
 CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('network_manager', 'nova.service')
 LOG = logging.getLogger(__name__)
 
 

@@ -39,7 +39,6 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 
 
