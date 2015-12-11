@@ -1,0 +1,6 @@
+---
+deprecations:
+
+  - The host, port, and protocol options in the [glance] configuration
+    section are deprecated, and will be removed in the N release. The
+    api_servers value should be used instead.
