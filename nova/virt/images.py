@@ -44,7 +44,7 @@ CONF.register_opts(image_opts)
 IMAGE_API = image.API()
 
 
-def qemu_img_info(path):
+def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
@@ -56,8 +56,10 @@ def qemu_img_info(path):
         msg = (_("Path does not exist %(path)s") % {'path': path})
         raise exception.InvalidDiskInfo(reason=msg)
 
-    out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                             'qemu-img', 'info', path)
+    cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
+    if format is not None:
+        cmd = cmd + ('-f', format)
+    out, err = utils.execute(*cmd)
     if not out:
         msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
                {'path': path, 'error': err})
