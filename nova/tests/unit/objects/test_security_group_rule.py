@@ -94,3 +94,31 @@ class TestSecurityGroupRuleObject(test_objects._LocalTest,
 class TestSecurityGroupRuleObjectRemote(test_objects._RemoteTest,
                                         _TestSecurityGroupRuleObject):
     pass
+
+
+fake_rules = [
+    dict(fake_rule, id=1, grantee_group=test_security_group.fake_secgroup),
+    dict(fake_rule, id=2, grantee_group=test_security_group.fake_secgroup),
+]
+
+
+class _TestSecurityGroupRuleListObject(object):
+    @mock.patch('nova.db.security_group_rule_get_by_instance')
+    def test_get_by_instance(self, mock_get):
+        mock_get.return_value = fake_rules
+        instance = objects.Instance(uuid='fake-uuid')
+        rules = objects.SecurityGroupRuleList.get_by_instance(self.context,
+                                                              instance)
+        mock_get.assert_called_once_with(self.context, instance.uuid)
+        self.assertEqual(2, len(rules))
+        self.assertEqual([1, 2], [x.id for x in rules])
+
+
+class TestSecurityGroupRuleListObject(test_objects._LocalTest,
+                                      _TestSecurityGroupRuleListObject):
+    pass
+
+
+class TestSecurityGroupRuleListObjectRemote(test_objects._RemoteTest,
+                                            _TestSecurityGroupRuleListObject):
+    pass

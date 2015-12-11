@@ -4357,6 +4357,15 @@ def security_group_rule_get_by_security_group(context, security_group_id,
 
 
 @require_context
+def security_group_rule_get_by_instance(context, instance_uuid):
+    return (_security_group_rule_get_query(context).
+            join('parent_group', 'instances').
+            filter_by(uuid=instance_uuid).
+            options(joinedload('grantee_group')).
+            all())
+
+
+@require_context
 def security_group_rule_create(context, values):
     return _security_group_rule_create(context, values)
 

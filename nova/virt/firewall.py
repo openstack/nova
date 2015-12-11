@@ -346,69 +346,63 @@ class IptablesFirewallDriver(FirewallDriver):
             # Allow RA responses
             self._do_ra_rules(ipv6_rules, network_info)
 
-        security_groups = objects.SecurityGroupList.get_by_instance(
-            ctxt, instance)
-
         # then, security group chains and rules
-        for security_group in security_groups:
-            rules = objects.SecurityGroupRuleList.get_by_security_group(
-                    ctxt, security_group)
+        rules = objects.SecurityGroupRuleList.get_by_instance(ctxt, instance)
 
-            for rule in rules:
-                if not rule['cidr']:
-                    version = 4
-                else:
-                    version = netutils.get_ip_version(rule['cidr'])
+        for rule in rules:
+            if not rule.cidr:
+                version = 4
+            else:
+                version = netutils.get_ip_version(rule.cidr)
 
-                if version == 4:
-                    fw_rules = ipv4_rules
-                else:
-                    fw_rules = ipv6_rules
+            if version == 4:
+                fw_rules = ipv4_rules
+            else:
+                fw_rules = ipv6_rules
 
-                protocol = rule['protocol']
+            protocol = rule.protocol
 
-                if protocol:
-                    protocol = rule['protocol'].lower()
+            if protocol:
+                protocol = rule.protocol.lower()
 
-                if version == 6 and protocol == 'icmp':
-                    protocol = 'icmpv6'
+            if version == 6 and protocol == 'icmp':
+                protocol = 'icmpv6'
 
-                args = ['-j ACCEPT']
-                if protocol:
-                    args += ['-p', protocol]
+            args = ['-j ACCEPT']
+            if protocol:
+                args += ['-p', protocol]
 
-                if protocol in ['udp', 'tcp']:
-                    args += self._build_tcp_udp_rule(rule, version)
-                elif protocol == 'icmp':
-                    args += self._build_icmp_rule(rule, version)
-                if rule['cidr']:
-                    args += ['-s', str(rule['cidr'])]
-                    fw_rules += [' '.join(args)]
-                else:
-                    if rule['grantee_group']:
-                        insts = (
-                            objects.InstanceList.get_by_security_group(
-                                ctxt, rule['grantee_group']))
-                        for instance in insts:
-                            if instance.info_cache['deleted']:
-                                LOG.debug('ignoring deleted cache')
-                                continue
-                            nw_info = compute_utils.get_nw_info_for_instance(
-                                    instance)
+            if protocol in ['udp', 'tcp']:
+                args += self._build_tcp_udp_rule(rule, version)
+            elif protocol == 'icmp':
+                args += self._build_icmp_rule(rule, version)
+            if rule.cidr:
+                args += ['-s', str(rule.cidr)]
+                fw_rules += [' '.join(args)]
+            else:
+                if rule.grantee_group:
+                    insts = objects.InstanceList.get_by_security_group(
+                            ctxt, rule.grantee_group)
+                    for inst in insts:
+                        if inst.info_cache.deleted:
+                            LOG.debug('ignoring deleted cache')
+                            continue
+                        nw_info = compute_utils.get_nw_info_for_instance(
+                                inst)
 
-                            ips = [ip['address']
-                                for ip in nw_info.fixed_ips()
-                                    if ip['version'] == version]
+                        ips = [ip['address'] for ip in nw_info.fixed_ips()
+                               if ip['version'] == version]
 
-                            LOG.debug('ips: %r', ips, instance=instance)
-                            for ip in ips:
-                                subrule = args + ['-s %s' % ip]
-                                fw_rules += [' '.join(subrule)]
+                        LOG.debug('ips: %r', ips, instance=inst)
+                        for ip in ips:
+                            subrule = args + ['-s %s' % ip]
+                            fw_rules += [' '.join(subrule)]
 
         ipv4_rules += ['-j $sg-fallback']
         ipv6_rules += ['-j $sg-fallback']
-        LOG.debug('Security Groups %s translated to ipv4: %r, ipv6: %r',
-            security_groups, ipv4_rules, ipv6_rules, instance=instance)
+        LOG.debug('Security Group Rules %s translated to ipv4: %r, ipv6: %r',
+                  list(rules), ipv4_rules, ipv6_rules,
+                  instance=instance)
         return ipv4_rules, ipv6_rules
 
     def instance_filter_exists(self, instance, network_info):
