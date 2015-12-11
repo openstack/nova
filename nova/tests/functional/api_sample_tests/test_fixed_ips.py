@@ -121,7 +121,7 @@ class FixedIpV24Test(FixedIpTest):
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.4 which will run the original tests
     # by appending '(v2_4)' in test_id.
-    scenarios = [('v2_4', {})]
+    scenarios = [('v2_4', {'_api_version': 'v2.1'})]
 
     def test_get_fixed_ip(self):
         self._test_get_fixed_ip(reserved=False)
