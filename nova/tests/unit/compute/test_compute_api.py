@@ -252,6 +252,57 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_specified_ip_and_multiple_instances_helper(
             requested_networks)
 
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    def test_create_volume_bdm_call_reserve_dev_name(self, mock_reserve):
+        bdm = objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'id': 1,
+                 'volume_id': 1,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 'boot_index': 1,
+                 }))
+        mock_reserve.return_value = bdm
+        instance = self._create_instance_obj()
+        result = self.compute_api._create_volume_bdm(self.context,
+                                                     instance,
+                                                     'vda',
+                                                     '1',
+                                                     None,
+                                                     None)
+        self.assertTrue(mock_reserve.called)
+        self.assertEqual(result, bdm)
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'create')
+    def test_create_volume_bdm_local_creation(self, bdm_create):
+        instance = self._create_instance_obj()
+        volume_id = 'fake-vol-id'
+        bdm = objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'instance_uuid': instance.uuid,
+                 'volume_id': volume_id,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 'boot_index': None,
+                 'disk_bus': None,
+                 'device_type': None
+                 }))
+        result = self.compute_api._create_volume_bdm(self.context,
+                                                     instance,
+                                                     '/dev/vda',
+                                                     volume_id,
+                                                     None,
+                                                     None,
+                                                     is_local_creation=True)
+        self.assertEqual(result.instance_uuid, bdm.instance_uuid)
+        self.assertIsNone(result.device_name)
+        self.assertEqual(result.volume_id, bdm.volume_id)
+        self.assertTrue(bdm_create.called)
+
     def test_suspend(self):
         # Ensure instance can be suspended.
         instance = self._create_instance_obj()
@@ -790,6 +841,7 @@ class _ComputeAPIUnitTestMixIn(object):
         updates.update({'deleted_at': delete_time,
                         'deleted': True})
         fake_inst = fake_instance.fake_db_instance(**updates)
+        self.compute_api._local_cleanup_bdm_volumes([], inst, self.context)
         db.instance_destroy(self.context, inst.uuid,
                             constraint=None).AndReturn(fake_inst)
         compute_utils.notify_about_instance_usage(
@@ -3108,6 +3160,20 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
     def test_resize_same_flavor_fails(self):
         self.assertRaises(exception.CannotResizeToSameFlavor,
                           self._test_resize, same_flavor=True)
+
+    @mock.patch.object(compute_cells_api, 'ComputeRPCAPIRedirect')
+    def test_create_volume_bdm_call_reserve_dev_name(self, mock_reserve):
+        instance = self._create_instance_obj()
+        # In the cells rpcapi there isn't the call for the
+        # reserve_block_device_name so the volume_bdm returned
+        # by the _create_volume_bdm is None
+        result = self.compute_api._create_volume_bdm(self.context,
+                                                     instance,
+                                                     'vda',
+                                                     '1',
+                                                     None,
+                                                     None)
+        self.assertIsNone(result, None)
 
 
 class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,

@@ -9202,6 +9202,42 @@ class ComputeAPITestCase(BaseTestCase):
                 None,
                 '/invalid')
 
+    def test_check_dev_name_assign_dev_name(self):
+        instance = self._create_fake_instance_obj()
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'instance_uuid': instance.uuid,
+                 'volume_id': 'vol-id',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': None,
+                 'boot_index': None,
+                 'disk_bus': None,
+                 'device_type': None
+                 }))]
+        self.compute._check_dev_name(bdms, instance)
+        self.assertIsNotNone(bdms[0].device_name)
+
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_device_name_for_instance')
+    def test_check_dev_name_skip_bdms_with_dev_name(self, mock_get_dev_name):
+        instance = self._create_fake_instance_obj()
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'instance_uuid': instance.uuid,
+                 'volume_id': 'vol-id',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'boot_index': None,
+                 'disk_bus': None,
+                 'device_type': None
+                 }))]
+        self.compute._check_dev_name(bdms, instance)
+        self.assertFalse(mock_get_dev_name.called)
+
     def test_no_attach_volume_in_rescue_state(self):
         def fake(*args, **kwargs):
             pass
@@ -9241,7 +9277,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params=params)
 
         volume = {'id': 1, 'attach_status': 'attached',
-                  'instance_uuid': instance['uuid']}
+                   'instance_uuid': instance['uuid']}
 
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.detach_volume,
@@ -9654,6 +9690,25 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(a[2].device_name, '/dev/vdb')
             self.assertEqual(a[2].volume_id, uuids.volume_id)
 
+    def test_attach_volume_shelved_offloaded(self):
+        instance = self._create_fake_instance_obj()
+        with test.nested(
+             mock.patch.object(compute_api.API,
+                               '_check_attach_and_reserve_volume'),
+             mock.patch.object(cinder.API, 'attach')
+        ) as (mock_attach_and_reserve, mock_attach):
+            self.compute_api._attach_volume_shelved_offloaded(
+                    self.context, instance, 'fake-volume-id',
+                    '/dev/vdb', 'ide', 'cdrom')
+            mock_attach_and_reserve.assert_called_once_with(self.context,
+                                                            'fake-volume-id',
+                                                            instance)
+            mock_attach.assert_called_once_with(self.context,
+                                                'fake-volume-id',
+                                                instance.uuid,
+                                                '/dev/vdb')
+            self.assertTrue(mock_attach.called)
+
     def test_attach_volume_no_device(self):
 
         called = {}
@@ -9722,6 +9777,26 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(called.get('fake_check_detach'))
         self.assertTrue(called.get('fake_begin_detaching'))
         self.assertTrue(called.get('fake_rpc_detach_volume'))
+
+    @mock.patch.object(compute_api.API, '_check_and_begin_detach')
+    @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
+    def test_detach_volume_shelved_offloaded(self,
+                                             mock_block_dev,
+                                             mock_local_cleanup,
+                                             mock_check_begin_detach):
+
+        mock_block_dev.return_value = [block_device_obj.BlockDeviceMapping(
+                                      context=context)]
+        instance = self._create_fake_instance_obj()
+        volume = {'id': 1, 'attach_status': 'fake'}
+        self.compute_api._detach_volume_shelved_offloaded(self.context,
+                                                          instance,
+                                                          volume)
+        mock_check_begin_detach.assert_called_once_with(self.context,
+                                                        volume,
+                                                        instance)
+        self.assertTrue(mock_local_cleanup.called)
 
     def test_detach_invalid_volume(self):
         # Ensure exception is raised while detaching an un-attached volume
