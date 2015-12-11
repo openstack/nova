@@ -15,28 +15,21 @@
 import collections
 import itertools
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
 from oslo_utils import units
 import six
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import instance as obj_instance
 
-virt_cpu_opts = [
-    cfg.StrOpt('vcpu_pin_set',
-                help='Defines which pcpus that instance vcpus can use. '
-               'For example, "4-12,^8,15"'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(virt_cpu_opts)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 MEMPAGES_SMALL = -1
