@@ -23,7 +23,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class SuspendServerSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-suspend-server"
-    ctype = 'json'
 
     def _get_flags(self):
         f = super(SuspendServerSamplesJsonTest, self)._get_flags()
