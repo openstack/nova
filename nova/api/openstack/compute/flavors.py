@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova import utils
 
 ALIAS = 'flavors'
@@ -105,7 +106,7 @@ class FlavorsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            limited_flavors = flavors.get_all_flavors_sorted_list(context,
+            limited_flavors = objects.FlavorList.get_all(context,
                 filters=filters, sort_key=sort_key, sort_dir=sort_dir,
                 limit=limit, marker=marker)
         except exception.MarkerNotFound:

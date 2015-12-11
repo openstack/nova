@@ -93,44 +93,6 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertIsInstance(fetched, objects.Flavor)
         self.assertEqual(default_instance_type.flavorid, fetched.flavorid)
 
-    def test_get_all_flavors_sorted_list_sort(self):
-        # Test default sort
-        all_flavors = flavors.get_all_flavors_sorted_list()
-        self.assertEqual(len(DEFAULT_FLAVORS), len(all_flavors))
-        for i in range(len(all_flavors)):
-            f = all_flavors[i]
-            self.assertIsInstance(f, objects.Flavor)
-            self.assertEqual(DEFAULT_FLAVORS[i]['flavorid'], f.flavorid)
-
-        # Test sorted by name
-        all_flavors = flavors.get_all_flavors_sorted_list(sort_key='name')
-        expected = sorted(DEFAULT_FLAVORS, key=lambda item: item['name'])
-        self.assertEqual(len(expected), len(all_flavors))
-        for i in range(len(all_flavors)):
-            f = all_flavors[i]
-            self.assertIsInstance(f, objects.Flavor)
-            self.assertEqual(expected[i]['flavorid'], f.flavorid)
-
-    def test_get_all_flavors_sorted_list_limit(self):
-        limited_flavors = flavors.get_all_flavors_sorted_list(limit=2)
-        self.assertEqual(2, len(limited_flavors))
-
-    def test_get_all_flavors_sorted_list_marker(self):
-        all_flavors = flavors.get_all_flavors_sorted_list()
-
-        # Set the 3rd result as the marker
-        marker_flavorid = all_flavors[2].flavorid
-        marked_flavors = flavors.get_all_flavors_sorted_list(
-            marker=marker_flavorid)
-        # We expect everything /after/ the 3rd result
-        expected_results = all_flavors[3:]
-        self.assertEqual(len(expected_results), len(marked_flavors))
-        for i in range(len(marked_flavors)):
-            f = marked_flavors[i]
-            self.assertIsInstance(f, objects.Flavor)
-            self.assertEqual(expected_results[i].flavorid,
-                             f.flavorid)
-
 
 class InstanceTypeToolsTest(test.TestCase):
     def _dict_to_metadata(self, data):
