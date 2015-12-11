@@ -16,8 +16,26 @@ from oslo_config import cfg
 
 vcpu_pin_set = cfg.StrOpt(
     'vcpu_pin_set',
-    help='Defines which pcpus that instance vcpus can use. For example, '
-    '"4-12,^8,15"')
+    help="""Defines which physical CPUs (pCPUs) can be used by instance
+virtual CPUs (vCPUs).
+
+Possible values:
+
+* A comma-separated list of physical CPU numbers that virtual CPUs can be
+  allocated to by default. Each element should be either a single CPU number,
+  a range of CPU numbers, or a caret followed by a CPU number to be
+  excluded from a previous range. For example:
+
+    vcpu_pin_set = "4-12,^8,15"
+
+Services which consume this:
+
+* nova-scheduler
+* nova-compute
+
+Related options:
+
+* None""")
 
 
 ALL_OPTS = [vcpu_pin_set]
