@@ -103,8 +103,6 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
                        fake_attach_interface)
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
-        self.flags(auth_strategy=None, group='neutron')
-        self.flags(url='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
 
     def generalize_subs(self, subs, vanilla_regexes):

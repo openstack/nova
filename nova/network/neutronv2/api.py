@@ -20,7 +20,6 @@ import time
 import uuid
 
 from keystoneclient import auth
-from keystoneclient.auth.identity import v2 as v2_auth
 from keystoneclient.auth import token_endpoint
 from keystoneclient import session
 from neutronclient.common import exceptions as neutron_client_exc
@@ -48,71 +47,8 @@ neutron_opts = [
     cfg.StrOpt('url',
                default='http://127.0.0.1:9696',
                help='URL for connecting to neutron'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_user_id',
-               deprecated_for_removal=True,
-               help='User id for connecting to neutron in admin context. '
-                    'DEPRECATED: specify an auth_plugin and appropriate '
-                    'credentials instead.'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_username',
-               deprecated_for_removal=True,
-               help='Username for connecting to neutron in admin context '
-                    'DEPRECATED: specify an auth_plugin and appropriate '
-                    'credentials instead.'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_password',
-               deprecated_for_removal=True,
-               help='Password for connecting to neutron in admin context '
-                    'DEPRECATED: specify an auth_plugin and appropriate '
-                    'credentials instead.',
-               secret=True),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_tenant_id',
-               deprecated_for_removal=True,
-               help='Tenant id for connecting to neutron in admin context '
-                    'DEPRECATED: specify an auth_plugin and appropriate '
-                    'credentials instead.'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_tenant_name',
-               deprecated_for_removal=True,
-               help='Tenant name for connecting to neutron in admin context. '
-                    'This option will be ignored if neutron_admin_tenant_id '
-                    'is set. Note that with Keystone V3 tenant names are '
-                    'only unique within a domain. '
-                    'DEPRECATED: specify an auth_plugin and appropriate '
-                    'credentials instead.'),
     cfg.StrOpt('region_name',
                help='Region name for connecting to neutron in admin context'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('admin_auth_url',
-               default='http://localhost:5000/v2.0',
-               deprecated_for_removal=True,
-               help='Authorization URL for connecting to neutron in admin '
-                    'context. DEPRECATED: specify an auth_plugin and '
-                    'appropriate credentials instead.'),
-    # deprecated in Kilo, may be removed in Mitaka
-    # NOTE(mikal): we could have removed in Liberty, but we forgot to set
-    # deprecated_for_removal for this flag so no warnings were emitted.
-    cfg.StrOpt('auth_strategy',
-               default='keystone',
-               deprecated_for_removal=True,
-               help='Authorization strategy for connecting to neutron in '
-                    'admin context. DEPRECATED: specify an auth_plugin and '
-                    'appropriate credentials instead. If an auth_plugin is '
-                    'specified strategy will be ignored.'),
     # TODO(berrange) temporary hack until Neutron can pass over the
     # name of the OVS bridge it is configured with
     cfg.StrOpt('ovs_bridge',
@@ -185,26 +121,7 @@ def _load_auth_plugin(conf):
     if auth_plugin:
         return auth_plugin
 
-    if conf.neutron.auth_strategy == 'noauth':
-        if not conf.neutron.url:
-            message = _('For "noauth" authentication strategy, the '
-                        'endpoint must be specified conf.neutron.url')
-            raise neutron_client_exc.Unauthorized(message=message)
-
-        # NOTE(jamielennox): This will actually send 'noauth' as the token
-        # value because the plugin requires you to send something. It doesn't
-        # matter as it will be ignored anyway.
-        return token_endpoint.Token(conf.neutron.url, 'noauth')
-
-    if conf.neutron.auth_strategy in ('keystone', None):
-        return v2_auth.Password(auth_url=conf.neutron.admin_auth_url,
-                                user_id=conf.neutron.admin_user_id,
-                                username=conf.neutron.admin_username,
-                                password=conf.neutron.admin_password,
-                                tenant_id=conf.neutron.admin_tenant_id,
-                                tenant_name=conf.neutron.admin_tenant_name)
-
-    err_msg = _('Unknown auth strategy: %s') % conf.neutron.auth_strategy
+    err_msg = _('Unknown auth plugin: %s') % conf.neutron.auth_plugin
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
