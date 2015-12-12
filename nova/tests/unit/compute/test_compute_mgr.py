@@ -1103,6 +1103,42 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         exc = exception.DiskNotFound
         self._test_shutdown_instance_exception(exc)
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._get_instance_block_device_info')
+    @mock.patch('nova.virt.driver.ComputeDriver.destroy')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.virt.fake.SmallFakeDriver.get_volume_connector')
+    @mock.patch('nova.volume.cinder.API.terminate_connection',
+                side_effect=exception.VolumeNotFound(volume_id=None))
+    def test_shutdown_instance_no_bdm_volume_id(self, mock_terminate,
+            mock_connector, mock_bdm_get_by_inst, mock_destroy,
+            mock_blk_device_info, mock_nw_info, mock_elevated):
+        # Tests that we refresh the bdm list if a volume bdm does not have the
+        # volume_id set.
+        mock_elevated.return_value = self.context
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ERROR,
+            task_state=task_states.DELETING)
+        bdm = fake_block_device.FakeDbBlockDeviceDict(
+            {'source_type': 'snapshot', 'destination_type': 'volume',
+             'instance_uuid': instance.uuid, 'device_name': '/dev/vda'})
+        bdms = block_device_obj.block_device_make_list(self.context, [bdm])
+        # since the bdms passed in don't have a volume_id, we'll go back to the
+        # database looking for updated versions which will be the same so we
+        # get the warning
+        mock_bdm_get_by_inst.return_value = bdms
+        mock_connector.return_value = mock.sentinel.connector
+        self.compute._shutdown_instance(
+            self.context, instance, bdms, notify=False,
+            try_deallocate_networks=False)
+        mock_bdm_get_by_inst.assert_called_once_with(
+            self.context, instance.uuid)
+        mock_connector.assert_called_once_with(instance)
+        mock_terminate.assert_called_once_with(
+            self.context, bdms[0].volume_id, mock.sentinel.connector)
+
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):
         instance.host = self.compute.host
