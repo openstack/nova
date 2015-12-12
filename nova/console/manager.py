@@ -24,6 +24,7 @@ from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova.i18n import _LI
 from nova import manager
 from nova import utils
 
@@ -61,6 +62,11 @@ class ConsoleProxyManager(manager.Manager):
         super(ConsoleProxyManager, self).__init__(service_name='console',
                                                   *args, **kwargs)
         self.driver.host = self.host
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+
+    def reset(self):
+        LOG.info(_LI('Reloading compute RPC API'))
+        compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def init_host(self):

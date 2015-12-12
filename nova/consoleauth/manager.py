@@ -56,6 +56,11 @@ class ConsoleAuthManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
+    def reset(self):
+        LOG.info(_LI('Reloading compute RPC API'))
+        compute_rpcapi.LAST_VERSION = None
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+
     def _get_tokens_for_instance(self, instance_uuid):
         tokens_str = self.mc.get(instance_uuid.encode('UTF-8'))
         if not tokens_str:

@@ -36,6 +36,14 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.context = context.get_admin_context()
         self.instance_uuid = '00000000-0000-0000-0000-000000000000'
 
+    def test_reset(self):
+        with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
+            old_rpcapi = self.manager_api.compute_rpcapi
+            self.manager_api.reset()
+            mock_rpc.assert_called_once_with()
+            self.assertNotEqual(old_rpcapi,
+                                self.manager_api.compute_rpcapi)
+
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_tokens_expire(self, mock_get):
         mock_get.return_value = None

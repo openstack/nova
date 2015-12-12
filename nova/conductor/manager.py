@@ -32,7 +32,7 @@ from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova import image
 from nova import manager
 from nova import objects
@@ -150,6 +150,11 @@ class ComputeTaskManager(base.Base):
         self.servicegroup_api = servicegroup.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.notifier = rpc.get_notifier('compute', CONF.host)
+
+    def reset(self):
+        LOG.info(_LI('Reloading compute RPC API'))
+        compute_rpcapi.LAST_VERSION = None
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,

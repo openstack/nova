@@ -908,6 +908,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor = conductor_manager.ComputeTaskManager()
         self.conductor_manager = self.conductor
 
+    def test_reset(self):
+        with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
+            old_rpcapi = self.conductor_manager.compute_rpcapi
+            self.conductor_manager.reset()
+            mock_rpc.assert_called_once_with()
+            self.assertNotEqual(old_rpcapi,
+                                self.conductor_manager.compute_rpcapi)
+
     def test_migrate_server_fails_with_rebuild(self):
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
             self.context, None, None, True, True, None, None, None)
