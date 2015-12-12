@@ -94,8 +94,18 @@ class MonitorMetricList(base.ObjectListBase, base.NovaObject):
         :returns: a MonitorMetricList Object.
         """
         metrics = jsonutils.loads(metrics) if metrics else []
-        metric_list = [
-            MonitorMetric(**metric) for metric in metrics]
+
+        # NOTE(suro-patz): While instantiating the MonitorMetric() from
+        #                  JSON-ified string, we need to re-convert the
+        #                  normalized metrics to avoid truncation to 0 by
+        #                  typecasting into an integer.
+        metric_list = []
+        for metric in metrics:
+            if ('value' in metric and metric['name'] in
+                                      FIELDS_REQUIRING_CONVERSION):
+                metric['value'] = metric['value'] * 100
+            metric_list.append(MonitorMetric(**metric))
+
         return MonitorMetricList(objects=metric_list)
 
     # NOTE(jaypipes): This method exists to convert the object to the
