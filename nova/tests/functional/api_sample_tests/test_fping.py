@@ -50,11 +50,9 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
     def test_get_fping(self):
         self._post_server()
         response = self._do_get('os-fping')
-        subs = self._get_regexes()
-        self._verify_response('fping-get-resp', subs, response, 200)
+        self._verify_response('fping-get-resp', {}, response, 200)
 
     def test_get_fping_details(self):
         uuid = self._post_server()
         response = self._do_get('os-fping/%s' % (uuid))
-        subs = self._get_regexes()
-        self._verify_response('fping-get-details-resp', subs, response, 200)
+        self._verify_response('fping-get-details-resp', {}, response, 200)

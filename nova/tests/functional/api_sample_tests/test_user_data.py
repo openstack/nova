@@ -44,5 +44,4 @@ class UserDataJsonTest(api_sample_base.ApiSampleTestBaseV21):
             }
         response = self._do_post('servers', 'userdata-post-req', subs)
 
-        subs.update(self._get_regexes())
         self._verify_response('userdata-post-resp', subs, response, 202)

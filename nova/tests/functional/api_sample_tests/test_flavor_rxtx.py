@@ -56,13 +56,11 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
             'flavor_id': flavor_id,
             'flavor_name': 'm1.tiny'
         }
-        subs.update(self._get_regexes())
         self._verify_response('flavor-rxtx-get-resp', subs, response, 200)
 
     def test_flavors_rxtx_detail(self):
         response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-rxtx-list-resp', subs, response, 200)
+        self._verify_response('flavor-rxtx-list-resp', {}, response, 200)
 
     def test_flavors_rxtx_create(self):
         subs = {
@@ -72,5 +70,4 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_post('flavors',
                                  'flavor-rxtx-post-req',
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response('flavor-rxtx-post-resp', subs, response, 200)

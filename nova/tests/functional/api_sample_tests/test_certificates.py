@@ -47,10 +47,8 @@ class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_create_certificates(self):
         response = self._do_post('os-certificates',
                                  'certificate-create-req', {})
-        subs = self._get_regexes()
-        self._verify_response('certificate-create-resp', subs, response, 200)
+        self._verify_response('certificate-create-resp', {}, response, 200)
 
     def test_get_root_certificate(self):
         response = self._do_get('os-certificates/root')
-        subs = self._get_regexes()
-        self._verify_response('certificate-get-root-resp', subs, response, 200)
+        self._verify_response('certificate-get-root-resp', {}, response, 200)

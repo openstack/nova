@@ -82,7 +82,6 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             'hypervisor_id': hypervisor_id
         }
         response = self._do_get('os-hypervisors/detail')
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-detail-resp', subs, response, 200)
 
     def test_hypervisors_show(self):
@@ -91,7 +90,6 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             'hypervisor_id': hypervisor_id
         }
         response = self._do_get('os-hypervisors/%s' % hypervisor_id)
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-show-resp', subs, response, 200)
 
     def test_hypervisors_statistics(self):

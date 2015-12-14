@@ -80,7 +80,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
         response = self._do_get('servers/%s/os-instance-actions/%s' %
                                 (fake_uuid, fake_request_id))
-        subs = self._get_regexes()
+        subs = {}
         subs['action'] = '(reboot)|(resize)'
         subs['instance_uuid'] = fake_uuid
         subs['integer_id'] = '[0-9]+'
@@ -93,7 +93,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_instance_actions_list(self):
         fake_uuid = fake_server_actions.FAKE_UUID
         response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
-        subs = self._get_regexes()
+        subs = {}
         subs['action'] = '(reboot)|(resize)'
         subs['integer_id'] = '[0-9]+'
         subs['request_id'] = ('req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'

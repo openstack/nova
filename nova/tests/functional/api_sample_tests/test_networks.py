@@ -55,8 +55,7 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def test_network_list(self):
         response = self._do_get('os-networks')
-        subs = self._get_regexes()
-        self._verify_response('networks-list-resp', subs, response, 200)
+        self._verify_response('networks-list-resp', {}, response, 200)
 
     def test_network_disassociate(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
@@ -68,14 +67,12 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_get('os-networks/%s' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('network-show-resp', subs, response, 200)
+        self._verify_response('network-show-resp', {}, response, 200)
 
     def test_network_create(self):
         response = self._do_post("os-networks",
                                  'network-create-req', {})
-        subs = self._get_regexes()
-        self._verify_response('network-create-resp', subs, response, 200)
+        self._verify_response('network-create-resp', {}, response, 200)
 
     def test_network_add(self):
         response = self._do_post("os-networks/add",

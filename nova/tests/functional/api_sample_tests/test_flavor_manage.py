@@ -55,9 +55,9 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_post("flavors",
                                  "flavor-create-post-req",
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response("flavor-create-post-resp", subs, response, 200)
 
+    # TODO(sdague): remove duplication
     def test_create_flavor(self):
         # Get api sample to create a flavor.
         self._create_flavor()

@@ -37,7 +37,6 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_list_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions')
-        subs = self._get_regexes()
         # The full extension list is one of the places that things are
         # different between the API versions and the legacy vs. new
         # stack. We default to the v2.1 case.
@@ -47,7 +46,7 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         if self.api_major_version == 'v2' and self._legacy_v2_code:
             template = 'extensions-list-resp-v2'
 
-        self._verify_response(template, subs, response, 200)
+        self._verify_response(template, {}, response, 200)
 
 
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -58,11 +57,10 @@ class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_get_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions/os-agents')
-        subs = self._get_regexes()
         # The extension details info are different between legacy v2 and v2.1
         # stack. namespace link and updated date are different. So keep both
         # version for testing and default to v2.1
         template = 'extensions-get-resp'
         if self._legacy_v2_code:
             template = 'extensions-get-resp-v2'
-        self._verify_response(template, subs, response, 200)
+        self._verify_response(template, {}, response, 200)

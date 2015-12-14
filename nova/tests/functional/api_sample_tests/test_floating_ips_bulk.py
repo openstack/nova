@@ -69,15 +69,13 @@ class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_floating_ips_bulk_list(self):
         response = self._do_get('os-floating-ips-bulk')
-        subs = self._get_regexes()
         self._verify_response('floating-ips-bulk-list-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_floating_ips_bulk_list_by_host(self):
         response = self._do_get('os-floating-ips-bulk/testHost')
-        subs = self._get_regexes()
         self._verify_response('floating-ips-bulk-list-by-host-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_floating_ips_bulk_create(self):
         response = self._do_post('os-floating-ips-bulk',
@@ -85,14 +83,12 @@ class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
                                  {"ip_range": "192.168.1.0/24",
                                   "pool": CONF.default_floating_pool,
                                   "interface": CONF.public_interface})
-        subs = self._get_regexes()
-        self._verify_response('floating-ips-bulk-create-resp', subs,
+        self._verify_response('floating-ips-bulk-create-resp', {},
                               response, 200)
 
     def test_floating_ips_bulk_delete(self):
         response = self._do_put('os-floating-ips-bulk/delete',
                                 'floating-ips-bulk-delete-req',
                                 {"ip_range": "192.168.1.0/24"})
-        subs = self._get_regexes()
-        self._verify_response('floating-ips-bulk-delete-resp', subs,
+        self._verify_response('floating-ips-bulk-delete-resp', {},
                               response, 200)

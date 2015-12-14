@@ -43,7 +43,7 @@ class ExtendedStatusSampleJsonTests(test_servers.ServersSampleBase):
     def test_show(self):
         uuid = self._post_server()
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
@@ -52,7 +52,7 @@ class ExtendedStatusSampleJsonTests(test_servers.ServersSampleBase):
     def test_detail(self):
         uuid = self._post_server()
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'

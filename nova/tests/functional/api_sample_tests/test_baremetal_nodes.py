@@ -68,8 +68,7 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         v2_1_mock_get_irc.return_value = fake_client()
 
         response = self._do_get('os-baremetal-nodes')
-        subs = self._get_regexes()
-        self._verify_response('baremetal-node-list-resp', subs, response, 200)
+        self._verify_response('baremetal-node-list-resp', {}, response, 200)
 
     @mock.patch("nova.api.openstack.compute.baremetal_nodes"
                 "._get_ironic_client")
@@ -81,5 +80,4 @@ class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
         response = self._do_get('os-baremetal-nodes/'
                                 '058d27fa-241b-445a-a386-08c04f96db43')
-        subs = self._get_regexes()
-        self._verify_response('baremetal-node-get-resp', subs, response, 200)
+        self._verify_response('baremetal-node-get-resp', {}, response, 200)

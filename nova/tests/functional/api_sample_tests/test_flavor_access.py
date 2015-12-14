@@ -65,16 +65,15 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_post("flavors",
                                  "flavor-access-create-req",
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response("flavor-access-create-resp", subs, response, 200)
 
+    # TODO(sdague): remove tests that are duplicative
     def test_flavor_access_create(self):
         self._create_flavor()
 
     def test_flavor_access_detail(self):
         response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-access-detail-resp', subs, response, 200)
+        self._verify_response('flavor-access-detail-resp', {}, response, 200)
 
     def test_flavor_access_list(self):
         self._create_flavor()
@@ -93,7 +92,6 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         subs = {
             'flavor_id': flavor_id
         }
-        subs.update(self._get_regexes())
         self._verify_response('flavor-access-show-resp', subs, response, 200)
 
     def test_flavor_access_add_tenant(self):

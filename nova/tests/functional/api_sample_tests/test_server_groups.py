@@ -42,7 +42,7 @@ class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = self._get_create_subs()
         response = self._do_post('os-server-groups',
                                  'server-groups-post-req', subs)
-        subs = self._get_regexes()
+        subs = {}
         subs['name'] = 'test'
         return self._verify_response('server-groups-post-resp',
                                      subs, response, 200)
@@ -59,7 +59,6 @@ class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = self._get_create_subs()
         uuid = self._post_server_group()
         response = self._do_get('os-server-groups')
-        subs.update(self._get_regexes())
         subs['id'] = uuid
         self._verify_response('server-groups-list-resp',
                               subs, response, 200)

@@ -67,7 +67,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'zone': 'nova',
                 'status': 'disabled',
                 'state': 'up'}
-        subs.update(self._get_regexes())
         self._verify_response('services-list-get-resp', subs, response, 200)
 
     def test_service_enable(self):
@@ -123,7 +122,6 @@ class ServicesV211JsonTest(ServicesJsonTest):
                 'forced_down': 'false',
                 'status': 'disabled',
                 'state': 'up'}
-        subs.update(self._get_regexes())
         self._verify_response('services-list-get-resp', subs, response, 200)
 
     def test_force_down(self):

@@ -55,13 +55,11 @@ class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def test_list_networks(self):
         response = self._do_get('os-tenant-networks')
-        subs = self._get_regexes()
-        self._verify_response('networks-list-res', subs, response, 200)
+        self._verify_response('networks-list-res', {}, response, 200)
 
     def test_create_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        subs = self._get_regexes()
-        self._verify_response('networks-post-res', subs, response, 200)
+        self._verify_response('networks-post-res', {}, response, 200)
 
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})

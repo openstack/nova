@@ -110,7 +110,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     def test_server_get(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
@@ -119,7 +119,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     def test_server_detail(self):
         self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
@@ -152,24 +152,21 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     def test_security_groups_list(self):
         # Get api sample of security groups get list request.
         response = self._do_get('os-security-groups')
-        subs = self._get_regexes()
         self._verify_response('security-groups-list-get-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_security_groups_get(self):
         # Get api sample of security groups get request.
         security_group_id = '11111111-1111-1111-1111-111111111111'
         response = self._do_get('os-security-groups/%s' % security_group_id)
-        subs = self._get_regexes()
-        self._verify_response('security-groups-get-resp', subs, response, 200)
+        self._verify_response('security-groups-get-resp', {}, response, 200)
 
     def test_security_groups_list_server(self):
         # Get api sample of security groups for a specific server.
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s/os-security-groups' % uuid)
-        subs = self._get_regexes()
         self._verify_response('server-security-groups-list-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_security_groups_add(self):
         self._create_security_group()

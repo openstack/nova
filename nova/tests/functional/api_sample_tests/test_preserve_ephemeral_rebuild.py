@@ -63,7 +63,7 @@ class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
                                  'server-action-rebuild-preserve-ephemeral',
                                  subs)
         if resp_tpl:
-            subs.update(self._get_regexes())
+            del subs['uuid']
             self._verify_response(resp_tpl, subs, response, 202)
         else:
             self.assertEqual(202, response.status_code)

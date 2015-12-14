@@ -55,13 +55,11 @@ class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_get_used_limits(self):
         # Get api sample to used limits.
         response = self._do_get('limits')
-        subs = self._get_regexes()
-        self._verify_response(self.template, subs, response, 200)
+        self._verify_response(self.template, {}, response, 200)
 
     def test_get_used_limits_for_admin(self):
         # TODO(sdague): if we split the admin tests out the whole
         # class doesn't need admin api enabled.
         tenant_id = 'openstack'
         response = self._do_get('limits?tenant_id=%s' % tenant_id)
-        subs = self._get_regexes()
-        self._verify_response(self.template, subs, response, 200)
+        self._verify_response(self.template, {}, response, 200)

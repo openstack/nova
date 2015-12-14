@@ -39,6 +39,8 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
             'nova.api.openstack.compute.contrib.keypairs.Keypairs')
         return f
 
+    # TODO(sdague): this is only needed because we randomly choose the
+    # uuid each time.
     def generalize_subs(self, subs, vanilla_regexes):
         subs['keypair_name'] = 'keypair-[0-9a-f-]+'
         return subs
@@ -52,9 +54,8 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = dict(keypair_name=key_name, **kwargs)
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
                                  api_version=self.microversion)
+        subs = {'keypair_name': key_name}
 
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-post-resp', subs, response,
                               self.expected_post_status_code)
         # NOTE(maurosr): return the key_name is necessary cause the
@@ -71,13 +72,12 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = {
             'keypair_name': key_name,
-            'public_key': public_key
         }
-        subs.update(**kwargs)
+        params = subs.copy()
+        params['public_key'] = public_key
+        params.update(**kwargs)
         response = self._do_post('os-keypairs', 'keypairs-import-post-req',
-                                 subs, api_version=self.microversion)
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
+                                 params, api_version=self.microversion)
         self._verify_response('keypairs-import-post-resp', subs, response,
                               self.expected_post_status_code)
 
@@ -86,8 +86,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         key_name = self.test_keypairs_post()
         response = self._do_get('os-keypairs',
                                 api_version=self.microversion)
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
+        subs = {'keypair_name': key_name}
         self._verify_response('keypairs-list-resp', subs, response, 200)
 
     def test_keypairs_get(self):
@@ -95,8 +94,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         key_name = self.test_keypairs_post()
         response = self._do_get('os-keypairs/%s' % key_name,
                                 api_version=self.microversion)
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
+        subs = {'keypair_name': key_name}
         self._verify_response('keypairs-get-resp', subs, response, 200)
 
     def test_keypairs_delete(self):

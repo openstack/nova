@@ -37,5 +37,4 @@ class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
                                  'console-output-post-req', {})
-        subs = self._get_regexes()
-        self._verify_response('console-output-post-resp', subs, response, 200)
+        self._verify_response('console-output-post-resp', {}, response, 200)

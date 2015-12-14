@@ -51,5 +51,4 @@ class ServerExternalEventsSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('os-server-external-events',
                                  'event-create-req',
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response('event-create-resp', subs, response, 200)

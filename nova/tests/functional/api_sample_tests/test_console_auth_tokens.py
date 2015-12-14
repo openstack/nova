@@ -58,7 +58,7 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
 
         response = self._do_get('os-console-auth-tokens/%s' % token)
 
-        subs = self._get_regexes()
+        subs = {}
         subs["uuid"] = uuid
         subs["host"] = r"[\w\.\-]+"
         subs["port"] = "[0-9]+"
