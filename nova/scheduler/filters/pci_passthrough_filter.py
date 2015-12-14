@@ -40,12 +40,9 @@ class PciPassthroughFilter(filters.BaseHostFilter):
 
     """
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return true if the host has the required PCI devices."""
-        request_spec = filter_properties.get('request_spec', {})
-        instance = request_spec.get('instance_properties', {})
-        pci_requests = instance.get('pci_requests')
+        pci_requests = spec_obj.pci_requests
         if not pci_requests:
             return True
         if not host_state.pci_stats.support_requests(pci_requests.requests):

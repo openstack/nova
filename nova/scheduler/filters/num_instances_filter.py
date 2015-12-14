@@ -28,14 +28,13 @@ CONF = nova.conf.CONF
 class NumInstancesFilter(filters.BaseHostFilter):
     """Filter out hosts with too many instances."""
 
-    def _get_max_instances_per_host(self, host_state, filter_properties):
+    def _get_max_instances_per_host(self, host_state, spec_obj):
         return CONF.max_instances_per_host
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         num_instances = host_state.num_instances
         max_instances = self._get_max_instances_per_host(
-            host_state, filter_properties)
+            host_state, spec_obj)
         passes = num_instances < max_instances
         if not passes:
             LOG.debug("%(host_state)s fails num_instances check: Max "
@@ -52,7 +51,7 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
     found.
     """
 
-    def _get_max_instances_per_host(self, host_state, filter_properties):
+    def _get_max_instances_per_host(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_instances_per_host')

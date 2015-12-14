@@ -22,16 +22,13 @@ LOG = logging.getLogger(__name__)
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         ram_ratio = host_state.ram_allocation_ratio
         cpu_ratio = host_state.cpu_allocation_ratio
-        request_spec = filter_properties.get('request_spec', {})
-        instance = request_spec.get('instance_properties', {})
-        requested_topology = hardware.instance_topology_from_instance(instance)
+        requested_topology = spec_obj.numa_topology
         host_topology, _fmt = hardware.host_topology_and_format_from_host(
                 host_state)
-        pci_requests = instance.get('pci_requests')
+        pci_requests = spec_obj.pci_requests
         if pci_requests:
             pci_requests = pci_requests.requests
         if requested_topology and host_topology:
@@ -48,7 +45,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
                           "requirements. The instance does not fit on this "
                           "host.", {'host': host_state.host,
                                     'node': host_state.nodename},
-                          instance_uuid=instance.get('instance_uuid'))
+                          instance_uuid=spec_obj.instance_uuid)
                 return False
             host_state.limits['numa_topology'] = limits
             return True
@@ -57,7 +54,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
                       "No host NUMA topology while the instance specified "
                       "one.",
                       {'host': host_state.host, 'node': host_state.nodename},
-                      instance_uuid=instance.get('instance_uuid'))
+                      instance_uuid=spec_obj.instance_uuid)
             return False
         else:
             return True
