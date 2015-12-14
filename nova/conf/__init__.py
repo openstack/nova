@@ -40,7 +40,7 @@ from nova.conf import conductor
 # from nova.conf import disk
 from nova.conf import ephemeral_storage
 from nova.conf import floating_ips
-# from nova.conf import glance
+from nova.conf import glance
 # from nova.conf import guestfs
 # from nova.conf import host
 from nova.conf import hyperv
@@ -101,7 +101,7 @@ conductor.register_opts(CONF)
 # disk.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
 floating_ips.register_opts(CONF)
-# glance.register_opts(CONF)
+glance.register_opts(CONF)
 # guestfs.register_opts(CONF)
 # host.register_opts(CONF)
 hyperv.register_opts(CONF)

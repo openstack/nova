@@ -20,17 +20,18 @@ from six.moves import StringIO
 import cryptography
 import glanceclient.exc
 import mock
-from oslo_config import cfg
+
 from oslo_service import sslutils
 import six
 import testtools
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
 
 
