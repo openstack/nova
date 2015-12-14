@@ -29,7 +29,6 @@ def list_opts():
          itertools.chain(
              nova.network._network_opts,
              nova.network.driver.driver_opts,
-             nova.network.floating_ips.floating_opts,
              nova.network.ldapdns.ldap_dns_opts,
              nova.network.linux_net.linux_net_opts,
              nova.network.manager.network_opts,
