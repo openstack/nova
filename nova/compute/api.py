@@ -26,7 +26,6 @@ import re
 import string
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -48,6 +47,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
+import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
@@ -85,73 +85,8 @@ get_notifier = functools.partial(rpc.get_notifier, service='compute')
 wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
-compute_opts = [
-    cfg.BoolOpt('allow_resize_to_same_host',
-                default=False,
-                help='Allow destination machine to match source for resize. '
-                     'Useful when testing in single-host environments.'),
-    cfg.StrOpt('default_schedule_zone',
-               help='Availability zone to use when user doesn\'t specify one'),
-    cfg.ListOpt('non_inheritable_image_properties',
-                default=['cache_in_nova',
-                         'bittorrent'],
-                help='These are image properties which a snapshot should not'
-                     ' inherit from an instance'),
-    cfg.StrOpt('null_kernel',
-               default='nokernel',
-               help='Kernel image that indicates not to use a kernel, but to '
-                    'use a raw disk image instead'),
-    cfg.StrOpt('multi_instance_display_name_template',
-               default='%(name)s-%(count)d',
-               help='When creating multiple instances with a single request '
-                    'using the os-multiple-create API extension, this '
-                    'template will be used to build the display name for '
-                    'each instance. The benefit is that the instances '
-                    'end up with different hostnames. To restore legacy '
-                    'behavior of every instance having the same name, set '
-                    'this option to "%(name)s".  Valid keys for the '
-                    'template are: name, uuid, count.'),
-    cfg.IntOpt('max_local_block_devices',
-               default=3,
-               help='Maximum number of devices that will result '
-                    'in a local image being created on the hypervisor node. '
-                    'A negative number means unlimited. Setting '
-                    'max_local_block_devices to 0 means that any request that '
-                    'attempts to create a local disk will fail. This option '
-                    'is meant to limit the number of local discs (so root '
-                    'local disc that is the result of --image being used, and '
-                    'any other ephemeral and swap disks). 0 does not mean '
-                    'that images will be automatically converted to volumes '
-                    'and boot instances from volumes - it just means that all '
-                    'requests that attempt to create a local disk will fail.'),
-]
+CONF = nova.conf.CONF
 
-ephemeral_storage_encryption_group = cfg.OptGroup(
-    name='ephemeral_storage_encryption',
-    title='Ephemeral storage encryption options')
-
-ephemeral_storage_encryption_opts = [
-    cfg.BoolOpt('enabled',
-                default=False,
-                help='Whether to encrypt ephemeral storage'),
-    cfg.StrOpt('cipher',
-               default='aes-xts-plain64',
-               help='The cipher and mode to be used to encrypt ephemeral '
-                    'storage. Which ciphers are available ciphers depends '
-                    'on kernel support. See /proc/crypto for the list of '
-                    'available options.'),
-    cfg.IntOpt('key_size',
-               default=512,
-               help='The bit length of the encryption key to be used to '
-                    'encrypt ephemeral storage (in XTS mode only half of '
-                    'the bits are used for encryption key)')
-]
-
-CONF = cfg.CONF
-CONF.register_opts(compute_opts)
-CONF.register_group(ephemeral_storage_encryption_group)
-CONF.register_opts(ephemeral_storage_encryption_opts,
-                   group='ephemeral_storage_encryption')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')

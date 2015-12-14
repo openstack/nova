@@ -28,7 +28,7 @@ from oslo_config import cfg
 # from nova.conf import cells
 # from nova.conf import cinder
 # from nova.conf import cloudpipe
-# from nova.conf import compute
+from nova.conf import compute
 # from nova.conf import conductor
 # from nova.conf import configdrive
 # from nova.conf import console
@@ -37,7 +37,7 @@ from oslo_config import cfg
 # from nova.conf import crypto
 # from nova.conf import database
 # from nova.conf import disk
-# from nova.conf import ephemeral_storage_encryption
+from nova.conf import ephemeral_storage
 # from nova.conf import floating_ip
 # from nova.conf import glance
 # from nova.conf import guestfs
@@ -86,7 +86,7 @@ CONF = cfg.CONF
 # cells.register_opts(CONF)
 # cinder.register_opts(CONF)
 # cloudpipe.register_opts(CONF)
-# compute.register_opts(CONF)
+compute.register_opts(CONF)
 # conductor.register_opts(CONF)
 # configdrive.register_opts(CONF)
 # console.register_opts(CONF)
@@ -95,7 +95,7 @@ CONF = cfg.CONF
 # crypto.register_opts(CONF)
 # database.register_opts(CONF)
 # disk.register_opts(CONF)
-# ephemeral_storage_encryption.register_opts(CONF)
+ephemeral_storage.register_opts(CONF)
 # floating_ip.register_opts(CONF)
 # glance.register_opts(CONF)
 # guestfs.register_opts(CONF)
