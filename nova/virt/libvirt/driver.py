@@ -3979,7 +3979,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 config.source_device == "disk" and
                 not utils.ft_secondary(instance)):
                 qemu_cmdline = ('-drive if=virtio,driver=quorum'
-                                ',read-pattern=fifo,cache=none,addr=9'
+                                ',read-pattern=fifo,cache=none'
                                 ',aio=native,children.0.file.filename=' +
                                 config.source_path +
                                 ',children.0.driver=' +
@@ -6483,12 +6483,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # flaglist = CONF.libvirt.colo_migration_flag.split(',')
         # flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
         # logical_sum = reduce(lambda x, y: x | y, flagvals)
-
-        ret = self.exec_monitor_command(
-            primary_instance, "migrate_set_capability colo on")
-
-        ret = self.exec_monitor_command(
-            primary_instance, "migrate -d tcp:" + secondary_host + ":8888")
 
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
