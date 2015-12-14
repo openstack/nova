@@ -256,7 +256,6 @@ class ServerStartStopJsonTest(ServersSampleBase):
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     extra_extensions_to_load = ["os-access-ips"]
-    api_major_version = 'v2'
 
     def _get_flags(self):
         f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()

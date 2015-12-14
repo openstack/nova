@@ -111,7 +111,6 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-remote-consoles"
     microversion = '2.8'
     scenarios = [('v2_8', {'api_major_version': 'v2.1'})]
-    api_major_version = 'v2'
 
     def setUp(self):
         super(ConsolesV28SampleJsonTests, self).setUp()
