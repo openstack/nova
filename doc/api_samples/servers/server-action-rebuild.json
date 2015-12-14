@@ -2,7 +2,7 @@
     "rebuild" : {
         "accessIPv4" : "1.2.3.4",
         "accessIPv6" : "80fe::",
-        "imageRef" : "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "imageRef" : "70a599e0-31e7-49b7-b260-868f441e862b",
         "name" : "foobar",
         "adminPass" : "seekr3t",
         "metadata" : {
