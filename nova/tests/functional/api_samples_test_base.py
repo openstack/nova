@@ -253,7 +253,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         updated_data = re.sub(url_re, new_url, sample_data)
         return updated_data
 
-    def _verify_response(self, name, subs, response, exp_code):
+    def _verify_response(self, name, subs, response, exp_code,
+                         update_links=True):
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
         response_data = self._pretty_data(response_data)
@@ -273,7 +274,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             with file(self._get_sample(name,
                                        self.microversion)) as sample:
                 sample_data = sample.read()
-                sample_data = self._update_links(sample_data)
+                if update_links:
+                    sample_data = self._update_links(sample_data)
 
         try:
             template_data = self._objectify(template_data)
