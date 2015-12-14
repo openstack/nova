@@ -23,9 +23,9 @@ import mock
 from os_win import exceptions as os_win_exc
 
 from nova import exception
+from nova import safe_utils
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
-from nova import utils
 from nova.virt import driver as base_driver
 from nova.virt.hyperv import driver
 
@@ -66,7 +66,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             if callable(class_member):
                 mocked_method = mock.patch.object(
                     driver.HyperVDriver, attr,
-                    utils.get_wrapped_function(class_member))
+                    safe_utils.get_wrapped_function(class_member))
                 mocked_method.start()
                 self.addCleanup(mocked_method.stop)
 

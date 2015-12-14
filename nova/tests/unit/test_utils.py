@@ -13,7 +13,6 @@
 #    under the License.
 
 import datetime
-import functools
 import hashlib
 import importlib
 import logging
@@ -845,58 +844,6 @@ class MetadataToDictTestCase(test.NoDBTestCase):
 
     def test_dict_to_metadata_empty(self):
         self.assertEqual(utils.dict_to_metadata({}), [])
-
-
-class WrappedCodeTestCase(test.NoDBTestCase):
-    """Test the get_wrapped_function utility method."""
-
-    def _wrapper(self, function):
-        @functools.wraps(function)
-        def decorated_function(self, *args, **kwargs):
-            function(self, *args, **kwargs)
-        return decorated_function
-
-    def test_single_wrapped(self):
-        @self._wrapper
-        def wrapped(self, instance, red=None, blue=None):
-            pass
-
-        func = utils.get_wrapped_function(wrapped)
-        func_code = func.__code__
-        self.assertEqual(4, len(func_code.co_varnames))
-        self.assertIn('self', func_code.co_varnames)
-        self.assertIn('instance', func_code.co_varnames)
-        self.assertIn('red', func_code.co_varnames)
-        self.assertIn('blue', func_code.co_varnames)
-
-    def test_double_wrapped(self):
-        @self._wrapper
-        @self._wrapper
-        def wrapped(self, instance, red=None, blue=None):
-            pass
-
-        func = utils.get_wrapped_function(wrapped)
-        func_code = func.__code__
-        self.assertEqual(4, len(func_code.co_varnames))
-        self.assertIn('self', func_code.co_varnames)
-        self.assertIn('instance', func_code.co_varnames)
-        self.assertIn('red', func_code.co_varnames)
-        self.assertIn('blue', func_code.co_varnames)
-
-    def test_triple_wrapped(self):
-        @self._wrapper
-        @self._wrapper
-        @self._wrapper
-        def wrapped(self, instance, red=None, blue=None):
-            pass
-
-        func = utils.get_wrapped_function(wrapped)
-        func_code = func.__code__
-        self.assertEqual(4, len(func_code.co_varnames))
-        self.assertIn('self', func_code.co_varnames)
-        self.assertIn('instance', func_code.co_varnames)
-        self.assertIn('red', func_code.co_varnames)
-        self.assertIn('blue', func_code.co_varnames)
 
 
 class ExpectedArgsTestCase(test.NoDBTestCase):

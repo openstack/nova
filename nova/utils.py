@@ -57,6 +57,7 @@ from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
+from nova import safe_utils
 
 notify_decorator = 'nova.notifications.notify_decorator'
 
@@ -1041,32 +1042,11 @@ def instance_sys_meta(instance):
                                 include_deleted=True)
 
 
-def get_wrapped_function(function):
-    """Get the method at the bottom of a stack of decorators."""
-    if not hasattr(function, '__closure__') or not function.__closure__:
-        return function
-
-    def _get_wrapped_function(function):
-        if not hasattr(function, '__closure__') or not function.__closure__:
-            return None
-
-        for closure in function.__closure__:
-            func = closure.cell_contents
-
-            deeper_func = _get_wrapped_function(func)
-            if deeper_func:
-                return deeper_func
-            elif hasattr(closure.cell_contents, '__call__'):
-                return closure.cell_contents
-
-    return _get_wrapped_function(function)
-
-
 def expects_func_args(*args):
     def _decorator_checker(dec):
         @functools.wraps(dec)
         def _decorator(f):
-            base_f = get_wrapped_function(f)
+            base_f = safe_utils.get_wrapped_function(f)
             arg_names, a, kw, _default = inspect.getargspec(base_f)
             if a or kw or set(args) <= set(arg_names):
                 # NOTE (ndipanov): We can't really tell if correct stuff will
