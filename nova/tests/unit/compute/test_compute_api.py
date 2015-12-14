@@ -51,6 +51,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit.objects import test_service
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.volume import cinder
 
@@ -1738,13 +1739,13 @@ class _ComputeAPIUnitTestMixIn(object):
                     'launched_at': timeutils.utcnow(),
                     'locked': False,
                     'availability_zone': 'fake_az',
-                    'uuid': 'fake'})
+                    'uuid': uuids.vol_instance})
         volumes = {}
         old_volume_id = uuidutils.generate_uuid()
         volumes[old_volume_id] = {'id': old_volume_id,
                                   'display_name': 'old_volume',
                                   'attach_status': 'attached',
-                                  'instance_uuid': 'fake',
+                                  'instance_uuid': uuids.vol_instance,
                                   'size': 5,
                                   'status': 'in-use'}
         new_volume_id = uuidutils.generate_uuid()
@@ -1770,13 +1771,13 @@ class _ComputeAPIUnitTestMixIn(object):
         volumes[old_volume_id]['attach_status'] = 'attached'
 
         # Should fail if old volume's instance_uuid is not that of the instance
-        volumes[old_volume_id]['instance_uuid'] = 'fake2'
+        volumes[old_volume_id]['instance_uuid'] = uuids.vol_instance_2
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        volumes[old_volume_id]['instance_uuid'] = 'fake'
+        volumes[old_volume_id]['instance_uuid'] = uuids.vol_instance
 
         # Should fail if new volume is attached
         volumes[new_volume_id]['attach_status'] = 'attached'
@@ -2558,14 +2559,17 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_external_instance_event(self):
         instances = [
-            objects.Instance(uuid='uuid1', host='host1'),
-            objects.Instance(uuid='uuid2', host='host1'),
-            objects.Instance(uuid='uuid3', host='host2'),
+            objects.Instance(uuid=uuids.instance_1, host='host1'),
+            objects.Instance(uuid=uuids.instance_2, host='host1'),
+            objects.Instance(uuid=uuids.instance_3, host='host2'),
             ]
         events = [
-            objects.InstanceExternalEvent(instance_uuid='uuid1'),
-            objects.InstanceExternalEvent(instance_uuid='uuid2'),
-            objects.InstanceExternalEvent(instance_uuid='uuid3'),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_1),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_2),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_3),
             ]
         self.compute_api.compute_rpcapi = mock.MagicMock()
         self.compute_api.external_instance_event(self.context,
@@ -2877,7 +2881,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_check_and_transform_bdm(self):
         instance_type = self._create_flavor()
-        base_options = {'uuid': 'fake_uuid',
+        base_options = {'uuid': uuids.bdm_instance,
                         'image_ref': 'fake_image_ref',
                         'metadata': {}}
         image_meta = {'status': 'active',
@@ -3059,7 +3063,7 @@ class SecurityGroupAPITest(test.NoDBTestCase):
                           objects.SecurityGroup(name='bar')]
         mock_get.return_value = groups
         names = self.secgroup_api.get_instance_security_groups(self.context,
-                                                               'fake-uuid')
+                    uuids.instance)
         self.assertEqual([{'name': 'bar'}, {'name': 'foo'}], sorted(names))
         self.assertEqual(1, mock_get.call_count)
-        self.assertEqual('fake-uuid', mock_get.call_args_list[0][0][1].uuid)
+        self.assertEqual(uuids.instance, mock_get.call_args_list[0][0][1].uuid)
