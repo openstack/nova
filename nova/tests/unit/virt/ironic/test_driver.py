@@ -56,7 +56,7 @@ FAKE_CLIENT = ironic_utils.FakeClient()
 
 
 class FakeClientWrapper(cw.IronicClientWrapper):
-    def _get_client(self):
+    def _get_client(self, retry_on_conflict=True):
         return FAKE_CLIENT
 
 
@@ -897,8 +897,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.driver.spawn, self.ctx, instance, None, [], None)
         self.assertEqual(0, mock_destroy.call_count)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__add_driver_fields_good(self, mock_update):
+    def _test_add_driver_fields(self, mock_update=None, mock_call=None):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
@@ -921,7 +920,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
                            'value': str(node.properties.get('local_gb', 0))},
                           {'path': '/instance_uuid', 'op': 'add',
                            'value': instance.uuid}]
-        mock_update.assert_called_once_with(node.uuid, expected_patch)
+
+        if mock_call is not None:
+            # assert call() is invoked with retry_on_conflict False to
+            # avoid bug #1341420
+            mock_call.assert_called_once_with('node.update', node.uuid,
+                                              expected_patch,
+                                              retry_on_conflict=False)
+        if mock_update is not None:
+            mock_update.assert_called_once_with(node.uuid, expected_patch)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    def test__add_driver_fields_mock_update(self, mock_update):
+        self._test_add_driver_fields(mock_update=mock_update)
+
+    @mock.patch.object(cw.IronicClientWrapper, 'call')
+    def test__add_driver_fields_mock_call(self, mock_call):
+        self._test_add_driver_fields(mock_call=mock_call)
 
     @mock.patch.object(FAKE_CLIENT.node, 'update')
     def test__add_driver_fields_fail(self, mock_update):

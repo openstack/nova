@@ -392,7 +392,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         patch.append({'path': '/instance_uuid', 'op': 'add',
                       'value': instance.uuid})
         try:
-            self.ironicclient.call('node.update', node.uuid, patch)
+            # FIXME(lucasagomes): The "retry_on_conflict" parameter was added
+            # to basically causes the deployment to fail faster in case the
+            # node picked by the scheduler is already associated with another
+            # instance due bug #1341420.
+            self.ironicclient.call('node.update', node.uuid, patch,
+                                   retry_on_conflict=False)
         except ironic.exc.BadRequest:
             msg = (_("Failed to add deploy parameters on node %(node)s "
                      "when provisioning the instance %(instance)s")
