@@ -77,3 +77,9 @@ class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         uuid = self._post_server_group()
         response = self._do_delete('os-server-groups/%s' % uuid)
         self.assertEqual(204, response.status_code)
+
+
+class ServerGroupsV213SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    extension_name = "os-server-groups"
+    request_api_version = '2.13'
+    scenarios = [('v2_13', {})]

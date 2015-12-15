@@ -16,6 +16,8 @@
 from oslo_utils import uuidutils
 import webob
 
+import mock
+
 from nova.api.openstack.compute.legacy_v2.contrib import server_groups
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova.api.openstack import extensions
@@ -126,6 +128,120 @@ class ServerGroupTestV21(test.TestCase):
         members = [instance.uuid for instance in instances]
         ig_uuid = self._create_instance_group(ctx, members)
         return (ig_uuid, instances, members)
+
+    @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
+    @mock.patch.object(nova.db, 'instance_group_get_all')
+    def _test_list_server_group_all(self,
+                                    mock_get_all,
+                                    mock_get_by_project,
+                                    api_version='2.1'):
+        policies = ['anti-affinity']
+        members = []
+        metadata = {}  # always empty
+        names = ['default-x', 'test']
+        p_id = 'project_id'
+        u_id = 'user_id'
+        if api_version >= '2.13':
+            sg1 = server_group_resp_template(id=str(1345),
+                                            name=names[0],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata,
+                                            project_id=p_id,
+                                            user_id=u_id)
+            sg2 = server_group_resp_template(id=str(891),
+                                            name=names[1],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata,
+                                            project_id=p_id,
+                                            user_id=u_id)
+        else:
+            sg1 = server_group_resp_template(id=str(1345),
+                                            name=names[0],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata)
+            sg2 = server_group_resp_template(id=str(891),
+                                            name=names[1],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata)
+        tenant_groups = [sg2]
+        all_groups = [sg1, sg2]
+
+        all = {'server_groups': all_groups}
+        tenant_specific = {'server_groups': tenant_groups}
+
+        def return_all_server_groups():
+            return [server_group_db(sg) for sg in all_groups]
+
+        mock_get_all.return_value = return_all_server_groups()
+
+        def return_tenant_server_groups():
+            return [server_group_db(sg) for sg in tenant_groups]
+
+        mock_get_by_project.return_value = return_tenant_server_groups()
+
+        path = '/os-server-groups?all_projects=True'
+
+        req = fakes.HTTPRequest.blank(path, use_admin_context=True,
+                                      version=api_version)
+        res_dict = self.controller.index(req)
+        self.assertEqual(all, res_dict)
+        req = fakes.HTTPRequest.blank(path,
+                                      version=api_version)
+        res_dict = self.controller.index(req)
+        self.assertEqual(tenant_specific, res_dict)
+
+    @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
+    def _test_list_server_group_by_tenant(self, mock_get_by_project,
+                                         api_version='2.1'):
+        policies = ['anti-affinity']
+        members = []
+        metadata = {}  # always empty
+        names = ['default-x', 'test']
+        p_id = 'project_id'
+        u_id = 'user_id'
+        if api_version >= '2.13':
+            sg1 = server_group_resp_template(id=str(1345),
+                                            name=names[0],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata,
+                                            project_id=p_id,
+                                            user_id=u_id)
+            sg2 = server_group_resp_template(id=str(891),
+                                            name=names[1],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata,
+                                            project_id=p_id,
+                                            user_id=u_id)
+        else:
+            sg1 = server_group_resp_template(id=str(1345),
+                                            name=names[0],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata)
+            sg2 = server_group_resp_template(id=str(891),
+                                            name=names[1],
+                                            policies=policies,
+                                            members=members,
+                                            metadata=metadata)
+        groups = [sg1, sg2]
+        expected = {'server_groups': groups}
+
+        def return_server_groups():
+            return [server_group_db(sg) for sg in groups]
+
+        return_get_by_project = return_server_groups()
+        mock_get_by_project.return_value = return_get_by_project
+        path = '/os-server-groups'
+        self.req = fakes.HTTPRequest.blank(path,
+                                           version=api_version)
+        res_dict = self.controller.index(self.req)
+        self.assertEqual(expected, res_dict)
 
     def test_display_members(self):
         ctx = context.RequestContext('fake_user', 'fake')
@@ -262,76 +378,10 @@ class ServerGroupTestV21(test.TestCase):
                           self.controller.create, self.req, body=body)
 
     def test_list_server_group_by_tenant(self):
-        groups = []
-        policies = ['anti-affinity']
-        members = []
-        metadata = {}  # always empty
-        names = ['default-x', 'test']
-        sg1 = server_group_resp_template(id=str(1345),
-                                           name=names[0],
-                                           policies=policies,
-                                           members=members,
-                                           metadata=metadata)
-        sg2 = server_group_resp_template(id=str(891),
-                                           name=names[1],
-                                           policies=policies,
-                                           members=members,
-                                           metadata=metadata)
-        groups = [sg1, sg2]
-        expected = {'server_groups': groups}
-
-        def return_server_groups(context, project_id):
-            return [server_group_db(sg) for sg in groups]
-
-        self.stubs.Set(nova.db, 'instance_group_get_all_by_project_id',
-                       return_server_groups)
-
-        res_dict = self.controller.index(self.req)
-        self.assertEqual(res_dict, expected)
+        self._test_list_server_group_by_tenant(api_version='2.1')
 
     def test_list_server_group_all(self):
-        all_groups = []
-        tenant_groups = []
-        policies = ['anti-affinity']
-        members = []
-        metadata = {}  # always empty
-        names = ['default-x', 'test']
-        sg1 = server_group_resp_template(id=str(1345),
-                                           name=names[0],
-                                           policies=[],
-                                           members=members,
-                                           metadata=metadata)
-        sg2 = server_group_resp_template(id=str(891),
-                                           name=names[1],
-                                           policies=policies,
-                                           members=members,
-                                           metadata={})
-        tenant_groups = [sg2]
-        all_groups = [sg1, sg2]
-
-        all = {'server_groups': all_groups}
-        tenant_specific = {'server_groups': tenant_groups}
-
-        def return_all_server_groups(context):
-            return [server_group_db(sg) for sg in all_groups]
-
-        self.stubs.Set(nova.db, 'instance_group_get_all',
-                       return_all_server_groups)
-
-        def return_tenant_server_groups(context, project_id):
-            return [server_group_db(sg) for sg in tenant_groups]
-
-        self.stubs.Set(nova.db, 'instance_group_get_all_by_project_id',
-                       return_tenant_server_groups)
-
-        path = '/os-server-groups?all_projects=True'
-
-        req = fakes.HTTPRequest.blank(path, use_admin_context=True)
-        res_dict = self.controller.index(req)
-        self.assertEqual(res_dict, all)
-        req = fakes.HTTPRequest.blank(path)
-        res_dict = self.controller.index(req)
-        self.assertEqual(res_dict, tenant_specific)
+        self._test_list_server_group_all(api_version='2.1')
 
     def test_delete_server_group_by_id(self):
         sg = server_group_template(id='123')
@@ -373,3 +423,16 @@ class ServerGroupTestV2(ServerGroupTestV21):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {}
         self.controller = server_groups.ServerGroupController(ext_mgr)
+
+
+class ServerGroupTestV213(ServerGroupTestV21):
+    wsgi_api_version = '2.13'
+
+    def _setup_controller(self):
+        self.controller = sg_v21.ServerGroupController()
+
+    def test_list_server_group_all(self):
+        self._test_list_server_group_all(api_version='2.13')
+
+    def test_list_server_group_by_tenant(self):
+        self._test_list_server_group_by_tenant(api_version='2.13')
