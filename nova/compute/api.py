@@ -1780,24 +1780,53 @@ class API(base.Base):
                        ram=-instance_memory_mb)
         return quotas
 
+    def _get_stashed_volume_connector(self, bdm, instance):
+        """Lookup a connector dict from the bdm.connection_info if set
+
+        Gets the stashed connector dict out of the bdm.connection_info if set
+        and the connector host matches the instance host.
+
+        :param bdm: nova.objects.block_device.BlockDeviceMapping
+        :param instance: nova.objects.instance.Instance
+        :returns: volume connector dict or None
+        """
+        if 'connection_info' in bdm and bdm.connection_info is not None:
+            # NOTE(mriedem): We didn't start stashing the connector in the
+            # bdm.connection_info until Mitaka so it might not be there on old
+            # attachments. Also, if the volume was attached when the instance
+            # was in shelved_offloaded state and it hasn't been unshelved yet
+            # we don't have the attachment/connection information either.
+            connector = jsonutils.loads(bdm.connection_info).get('connector')
+            if connector:
+                if connector.get('host') == instance.host:
+                    return connector
+                LOG.debug('Found stashed volume connector for instance but '
+                          'connector host %(connector_host)s does not match '
+                          'the instance host %(instance_host)s.',
+                          {'connector_host': connector.get('host'),
+                           'instance_host': instance.host}, instance=instance)
+
     def _local_cleanup_bdm_volumes(self, bdms, instance, context):
         """The method deletes the bdm records and, if a bdm is a volume, call
         the terminate connection and the detach volume via the Volume API.
-        Note that at this point we do not have the information about the
-        correct connector so we pass a fake one.
         """
         elevated = context.elevated()
         for bdm in bdms:
             if bdm.is_volume:
-                # NOTE(vish): We don't have access to correct volume
-                #             connector info, so just pass a fake
-                #             connector. This can be improved when we
-                #             expose get_volume_connector to rpc.
-                connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
                 try:
-                    self.volume_api.terminate_connection(context,
-                                                         bdm.volume_id,
-                                                         connector)
+                    connector = self._get_stashed_volume_connector(
+                        bdm, instance)
+                    if connector:
+                        self.volume_api.terminate_connection(context,
+                                                             bdm.volume_id,
+                                                             connector)
+                    else:
+                        LOG.debug('Unable to find connector for volume %s, '
+                                  'not attempting terminate_connection.',
+                                  bdm.volume_id, instance=instance)
+                    # Attempt to detach the volume. If there was no connection
+                    # made in the first place this is just cleaning up the
+                    # volume state in the Cinder database.
                     self.volume_api.detach(elevated, bdm.volume_id,
                                            instance.uuid)
                     if bdm.delete_on_termination:

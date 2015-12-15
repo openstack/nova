@@ -1205,7 +1205,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute_api.volume_api,
-                                 'terminate_connection')
+                                 'detach')
         self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'destroy')
 
         compute_utils.notify_about_instance_usage(
@@ -1216,9 +1216,9 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.network_api.deallocate_for_instance(
                         self.context, inst)
 
-        self.compute_api.volume_api.terminate_connection(
-            mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
-               AndRaise(exception.  VolumeNotFound('volume_id'))
+        self.compute_api.volume_api.detach(
+            mox.IgnoreArg(), 'volume_id', inst.uuid).\
+               AndRaise(exception.VolumeNotFound('volume_id'))
         bdms[0].destroy()
 
         inst.destroy()
@@ -1231,6 +1231,68 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
                                        self._fake_do_delete)
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    def test_local_cleanup_bdm_volumes_stashed_connector(self, mock_destroy):
+        """Tests that we call volume_api.terminate_connection when we found
+        a stashed connector in the bdm.connection_info dict.
+        """
+        inst = self._create_instance_obj()
+        # create two fake bdms, one is a volume and one isn't, both will be
+        # destroyed but we only cleanup the volume bdm in cinder
+        conn_info = {'connector': {'host': inst.host}}
+        vol_bdm = objects.BlockDeviceMapping(self.context, id=1,
+                                             instance_uuid=inst.uuid,
+                                             volume_id=uuids.volume_id,
+                                             source_type='volume',
+                                             destination_type='volume',
+                                             delete_on_termination=True,
+                                             connection_info=jsonutils.dumps(
+                                                conn_info
+                                             ))
+        loc_bdm = objects.BlockDeviceMapping(self.context, id=2,
+                                             instance_uuid=inst.uuid,
+                                             volume_id=uuids.volume_id2,
+                                             source_type='blank',
+                                             destination_type='local')
+        bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, loc_bdm])
+
+        @mock.patch.object(self.compute_api.volume_api, 'terminate_connection')
+        @mock.patch.object(self.compute_api.volume_api, 'detach')
+        @mock.patch.object(self.compute_api.volume_api, 'delete')
+        @mock.patch.object(self.context, 'elevated', return_value=self.context)
+        def do_test(self, mock_elevated, mock_delete,
+                    mock_detach, mock_terminate):
+            self.compute_api._local_cleanup_bdm_volumes(
+                bdms, inst, self.context)
+            mock_terminate.assert_called_once_with(
+                self.context, uuids.volume_id, conn_info['connector'])
+            mock_detach.assert_called_once_with(
+                self.context, uuids.volume_id, inst.uuid)
+            mock_delete.assert_called_once_with(self.context, uuids.volume_id)
+            self.assertEqual(2, mock_destroy.call_count)
+
+        do_test(self)
+
+    def test_get_stashed_volume_connector_none(self):
+        inst = self._create_instance_obj()
+        # connection_info isn't set
+        bdm = objects.BlockDeviceMapping(self.context)
+        self.assertIsNone(
+            self.compute_api._get_stashed_volume_connector(bdm, inst))
+        # connection_info is None
+        bdm.connection_info = None
+        self.assertIsNone(
+            self.compute_api._get_stashed_volume_connector(bdm, inst))
+        # connector is not set in connection_info
+        bdm.connection_info = jsonutils.dumps({})
+        self.assertIsNone(
+            self.compute_api._get_stashed_volume_connector(bdm, inst))
+        # connector is set but different host
+        conn_info = {'connector': {'host': 'other_host'}}
+        bdm.connection_info = jsonutils.dumps(conn_info)
+        self.assertIsNone(
+            self.compute_api._get_stashed_volume_connector(bdm, inst))
 
     def test_local_delete_without_info_cache(self):
         inst = self._create_instance_obj()
