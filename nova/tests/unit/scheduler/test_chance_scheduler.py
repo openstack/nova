@@ -22,6 +22,7 @@ from mox3 import mox
 
 from nova import context
 from nova import exception
+from nova import objects
 from nova.scheduler import chance
 from nova.tests.unit.scheduler import test_scheduler
 
@@ -37,11 +38,9 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         """
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(instance_properties=dict(host='host2'))
-        filter_properties = {'ignore_hosts': ['host2']}
+        spec_obj = objects.RequestSpec(ignore_hosts=['host2'])
 
-        filtered = self.driver._filter_hosts(request_spec, hosts,
-                filter_properties=filter_properties)
+        filtered = self.driver._filter_hosts(hosts, spec_obj=spec_obj)
         self.assertEqual(filtered, ['host1', 'host3'])
 
     def test_filter_hosts_no_avoid(self):
@@ -50,11 +49,9 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         """
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(instance_properties=dict(host='host2'))
-        filter_properties = {'ignore_hosts': []}
+        spec_obj = objects.RequestSpec(ignore_hosts=[])
 
-        filtered = self.driver._filter_hosts(request_spec, hosts,
-                filter_properties=filter_properties)
+        filtered = self.driver._filter_hosts(hosts, spec_obj=spec_obj)
         self.assertEqual(filtered, hosts)
 
     def test_select_destinations(self):
