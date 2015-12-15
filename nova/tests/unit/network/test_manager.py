@@ -2677,10 +2677,7 @@ class AllocateTestCase(test.TestCase):
         dns = 'nova.network.noop_dns_driver.NoopDNSDriver'
         self.flags(instance_dns_manager=dns)
         self.useFixture(test.SampleNetworks())
-        self.conductor = self.start_service(
-            'conductor', manager=CONF.conductor.manager)
-        self.compute = self.start_service('compute')
-        self.network = self.start_service('network')
+        self.network = network_manager.VlanManager(host=HOST)
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -2698,7 +2695,7 @@ class AllocateTestCase(test.TestCase):
                               {'address': address,
                                'pool': 'nova'})
         inst = objects.Instance(context=self.context)
-        inst.host = self.compute.host
+        inst.host = HOST
         inst.display_name = HOST
         inst.instance_type_id = 1
         inst.uuid = FAKEUUID
@@ -2706,7 +2703,7 @@ class AllocateTestCase(test.TestCase):
         networks = db.network_get_all(self.context)
         for network in networks:
             db.network_update(self.context, network['id'],
-                              {'host': self.network.host})
+                              {'host': HOST})
         project_id = self.user_context.project_id
         nw_info = self.network.allocate_for_instance(self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
@@ -2724,7 +2721,7 @@ class AllocateTestCase(test.TestCase):
         for network in networks:
             # set all networks to other projects
             db.network_update(self.context, network['id'],
-                              {'host': self.network.host,
+                              {'host': HOST,
                                'project_id': 'otherid'})
             requested_networks.append((network['uuid'], None))
         # set the first network to our project
@@ -2732,7 +2729,7 @@ class AllocateTestCase(test.TestCase):
                           {'project_id': self.user_context.project_id})
 
         inst = objects.Instance(context=self.context)
-        inst.host = self.compute.host
+        inst.host = HOST
         inst.display_name = HOST
         inst.instance_type_id = 1
         inst.uuid = FAKEUUID
@@ -2746,13 +2743,13 @@ class AllocateTestCase(test.TestCase):
 
     def test_allocate_for_instance_with_mac(self):
         available_macs = set(['ca:fe:de:ad:be:ef'])
-        inst = db.instance_create(self.context, {'host': self.compute.host,
+        inst = db.instance_create(self.context, {'host': HOST,
                                                  'display_name': HOST,
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
         for network in networks:
             db.network_update(self.context, network['id'],
-                              {'host': self.network.host})
+                              {'host': HOST})
         project_id = self.context.project_id
         nw_info = self.network.allocate_for_instance(self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
@@ -2768,7 +2765,7 @@ class AllocateTestCase(test.TestCase):
 
     def test_allocate_for_instance_not_enough_macs(self):
         available_macs = set()
-        inst = db.instance_create(self.context, {'host': self.compute.host,
+        inst = db.instance_create(self.context, {'host': HOST,
                                                  'display_name': HOST,
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
