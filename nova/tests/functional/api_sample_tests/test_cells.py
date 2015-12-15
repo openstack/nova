@@ -44,6 +44,7 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         # db_check_interval < 0 makes cells manager always hit the DB
         self.flags(enable=True, db_check_interval=-1, group='cells')
         super(CellsSampleJsonTest, self).setUp()
+        self.cells = self.start_service('cells', manager=CONF.cells.manager)
         self._stub_cells()
 
     def _stub_cells(self, num_cells=5):

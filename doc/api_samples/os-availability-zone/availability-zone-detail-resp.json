@@ -2,13 +2,6 @@
     "availabilityZoneInfo": [
         {
             "hosts": {
-                "cells": {
-                    "nova-cells": {
-                        "active": true,
-                        "available": true,
-                        "updated_at": null
-                    }
-                },
                 "cert": {
                     "nova-cert": {
                         "active": true,
