@@ -28,7 +28,6 @@ CONF.import_opt('osapi_compute_extension',
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-migrate-server"
-    ctype = 'json'
 
     def _get_flags(self):
         f = super(MigrateServerSamplesJsonTest, self)._get_flags()

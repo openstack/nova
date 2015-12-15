@@ -28,7 +28,6 @@ class NoMatch(test.TestingException):
 
 
 class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
-    ctype = 'json'
     all_extensions = False
     extension_name = None
     sample_dir = None
@@ -91,7 +90,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 parts.append(cls.extension_name)
             if api_version:
                 parts.append('v' + api_version)
-        parts.append(name + "." + cls.ctype + suffix)
+        parts.append(name + ".json" + suffix)
         return os.path.join(*parts)
 
     @classmethod
@@ -302,10 +301,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return 'http://glance.openstack.example.com'
 
     def _get_regexes(self):
-        if self.ctype == 'json':
-            text = r'(\\"|[^"])*'
-        else:
-            text = r'[^<]*'
+        text = r'(\\"|[^"])*'
         isotime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}Z'
         strtime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}\.\d{6}'
         xmltime_re = ('\d{4}-[0,1]\d-[0-3]\d '
@@ -362,8 +358,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _get_response(self, url, method, body=None, strip_version=False,
                       api_version=None, headers=None):
         headers = headers or {}
-        headers['Content-Type'] = 'application/' + self.ctype
-        headers['Accept'] = 'application/' + self.ctype
+        headers['Content-Type'] = 'application/json'
+        headers['Accept'] = 'application/json'
         if api_version:
             headers['X-OpenStack-Nova-API-Version'] = api_version
         return self.api.api_request(url, body=body, method=method,
