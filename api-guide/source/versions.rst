@@ -5,9 +5,9 @@ Versions
 The OpenStack Compute API uses both a URI and a MIME type versioning
 scheme. In the URI scheme, the first element of the path contains the
 target version identifier (e.g. https://servers.api.openstack.org/
-v2.0/...). The MIME type versioning scheme uses HTTP content negotiation
+v2.1/...). The MIME type versioning scheme uses HTTP content negotiation
 where the ``Accept`` or ``Content-Type`` headers contains a MIME type
-that identifies the version (application/vnd.openstack.compute.v2+json).
+that identifies the version (application/vnd.openstack.compute.v2.1+json).
 A version MIME type is always linked to a base MIME type, such as
 application/json. If conflicting versions are specified using both an HTTP
 header and a URI, the URI takes precedence.
@@ -18,7 +18,7 @@ header and a URI, the URI takes precedence.
 
     GET /214412/images HTTP/1.1
     Host: servers.api.openstack.org
-    Accept: application/vnd.openstack.compute.v2+json
+    Accept: application/vnd.openstack.compute.v2.1+json
     X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
 
 
@@ -26,7 +26,7 @@ header and a URI, the URI takes precedence.
 
 .. code::
 
-    GET /v2/214412/images HTTP/1.1
+    GET /v2.1/214412/images HTTP/1.1
     Host: servers.api.openstack.org
     Accept: application/json
     X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
@@ -48,51 +48,50 @@ links and MIME types to available versions.
 
 .. code::
 
-    {
-       "choices":[
-          {
-             "id":"v1.0",
-             "status":"DEPRECATED",
-             "links":[
+  {
+    "choices": [
+        {
+            "id": "v2.0",
+            "links": [
                 {
-                   "rel":"self",
-                   "href":"http://servers.api.openstack.org/v1.0/1234/servers/52415800-8b69-11e0-9b19-734f6af67565"
+                    "href": "http://servers.api.openstack.org/v2/7f5b2214547e4e71970e329ccf0b257c/servers/detail",
+                    "rel": "self"
                 }
-             ],
-             "media-types":[
+            ],
+            "media-types": [
                 {
-                   "base":"application/json",
-                   "type":"application/vnd.openstack.compute.v1.0+json"
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute+json;version=2"
                 }
-             ]
-          },
-          {
-             "id":"v2",
-             "status":"CURRENT",
-             "links":[
+            ],
+            "status": "SUPPORTED"
+        },
+        {
+            "id": "v2.1",
+            "links": [
                 {
-                   "rel":"self",
-                   "href":"http://servers.api.openstack.org/v2/1234/servers/52415800-8b69-11e0-9b19-734f6af67565"
+                    "href": "http://servers.api.openstack.org/v2.1/7f5b2214547e4e71970e329ccf0b257c/servers/detail",
+                    "rel": "self"
                 }
-             ],
-             "media-types":[
+            ],
+            "media-types": [
                 {
-                   "base":"application/json",
-                   "type":"application/vnd.openstack.compute.v2+json"
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute+json;version=2.1"
                 }
-             ]
-          }
-       ]
-    }
+            ],
+            "status": "CURRENT"
+        }
+    ]
+  }
 
-
-New features and functionality that do not break API-compatibility are
-introduced in the current version of the API as extensions and the URI and MIME
-types remain unchanged. Features or functionality changes that would necessitate a break in API-compatibility require a new version, which results
-in URI and MIME type version being updated accordingly. When new API versions
-are released, older versions are marked as ``DEPRECATED``. Providers should
-work with developers and partners to ensure there is adequate time to
-migrate to the new version before deprecated versions are discontinued.
+The API with ``CURRENT`` status is the newest API and continue improved by the
+Nova project. The API with ``SUPPORTED`` is the old API and new features is
+frozen. The API with ``DEPRECATED`` status is the API will be removed in the
+foreseeable future. Providers should work with developers and partners to
+ensure there is adequate time to migrate to the new version before deprecated
+versions are discontinued. For any API which is under development and didn't
+release yet, the API status is ``EXPERIMENTAL``.
 
 Your application can programmatically determine available API versions
 by performing a **GET** on the root URL (i.e. with the version and
@@ -101,11 +100,11 @@ authentication system.
 
 You can also obtain additional information about a specific version by
 performing a **GET** on the base version URL (such as,
-``https://servers.api.openstack.org/v2/``). Version request URLs must
+``https://servers.api.openstack.org/v2.1/``). Version request URLs must
 always end with a trailing slash (``/``). If you omit the slash, the
 server might respond with a 302 redirection request. Format extensions
 can be placed after the slash (such as,
-``https://servers.api.openstack.org/v2/.json``).
+``https://servers.api.openstack.org/v2.1/.json``).
 
 .. note:: This special case does not hold true for other API requests. In
    general, requests such as ``/servers.json`` and ``/servers/.json`` are
@@ -113,7 +112,7 @@ can be placed after the slash (such as,
 
 For examples of the list versions and get version details requests and
 responses, see `*API versions*
-<http://developer.openstack.org/api-ref-compute-v2.html#compute_versions>`__.
+<http://developer.openstack.org/api-ref-compute-v2.1.html#versions-v2.1>`__.
 
 The detailed version response contains pointers to both a human-readable
 and a machine-processable description of the API service. The
