@@ -9786,6 +9786,7 @@ class ComputeAPITestCase(BaseTestCase):
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
                   'volume_id': volume_id,
+                  'destination_type': 'volume'
                   }
         db.block_device_mapping_create(admin, values)
 
