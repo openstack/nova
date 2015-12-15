@@ -33,6 +33,7 @@ from nova.objects import virtual_interface as vif_obj
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_pci_device
+from nova.tests import uuidsentinel as uuids
 
 
 HOST = "testhost"
@@ -57,27 +58,27 @@ class FakeNetworkManager(network_manager.NetworkManager):
                  'updated_at': None,
                  'deleted_at': None,
                  'deleted': 0,
-                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
+                 'instance_uuid': uuids.instance_1,
                  'network_id': 1,
-                 'uuid': 'fake-uuid',
+                 'uuid': uuids.vifs_1,
                  'address': 'DC:AD:BE:FF:EF:01'},
                 {'id': 1,
                  'created_at': None,
                  'updated_at': None,
                  'deleted_at': None,
                  'deleted': 0,
-                 'instance_uuid': '00000000-0000-0000-0000-000000000020',
+                 'instance_uuid': uuids.instance_2,
                  'network_id': 21,
-                 'uuid': 'fake-uuid2',
+                 'uuid': uuids.vifs_2,
                  'address': 'DC:AD:BE:FF:EF:02'},
                 {'id': 2,
                  'created_at': None,
                  'updated_at': None,
                  'deleted_at': None,
                  'deleted': 0,
-                 'instance_uuid': '00000000-0000-0000-0000-000000000030',
+                 'instance_uuid': uuids.instance_1,
                  'network_id': 31,
-                 'uuid': 'fake-uuid3',
+                 'uuid': uuids.vifs_3,
                  'address': 'DC:AD:BE:FF:EF:03'}]
 
         floating_ips = [dict(address='172.16.1.1',
@@ -166,7 +167,7 @@ def fake_network(network_id, ipv6=None):
     if ipv6 is None:
         ipv6 = CONF.use_ipv6
     fake_network = {'id': network_id,
-             'uuid': '00000000-0000-0000-0000-00000000000000%02d' % network_id,
+             'uuid': getattr(uuids, 'network%i' % network_id),
              'label': 'test%d' % network_id,
              'injected': False,
              'multi_host': False,
@@ -184,7 +185,7 @@ def fake_network(network_id, ipv6=None):
              'dns3': '192.168.%d.3' % network_id,
              'vlan': None,
              'host': None,
-             'project_id': 'fake_project',
+             'project_id': uuids.project,
              'vpn_public_address': '192.168.%d.2' % network_id,
              'vpn_public_port': None,
              'vpn_private_address': None,
@@ -221,9 +222,9 @@ def fake_vif(x):
            'deleted_at': None,
            'deleted': 0,
            'address': 'DE:AD:BE:EF:00:%02x' % x,
-           'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
+           'uuid': getattr(uuids, 'vif%i' % x),
            'network_id': x,
-           'instance_uuid': 'fake-uuid'}
+           'instance_uuid': uuids.vifs_1}
 
 
 def floating_ip_ids():
@@ -247,7 +248,7 @@ def next_fixed_ip(network_id, num_floating_ips=0):
     return {'id': next_id,
             'network_id': network_id,
             'address': '192.168.%d.%03d' % (network_id, (next_id + 99)),
-            'instance_uuid': 1,
+            'instance_uuid': uuids.fixed_ip,
             'allocated': False,
             'reserved': False,
             'created_at': None,
@@ -312,7 +313,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
             'updated_at': None,
             'deleted_at': None,
             'deleted': False,
-            'instance_uuid': 'fake-uuid',
+            'instance_uuid': uuids.vifs_1,
             'network_info': '[]',
             }
         return fake_info_cache
