@@ -1061,6 +1061,7 @@ class ComputeManager(manager.Manager):
                           task_states.REBOOTING]
             if instance.task_state in soft_types and reboot_type == 'HARD':
                 instance.task_state = task_states.REBOOT_PENDING_HARD
+                instance.save()
 
             self.reboot_instance(context, instance, block_device_info=None,
                                  reboot_type=reboot_type)
