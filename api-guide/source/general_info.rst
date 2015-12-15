@@ -96,17 +96,6 @@ several key concepts:
    reason. Such a separation is possible in Nova if an administrator carefully
    sets up availability zones for that, but it is not the default.
 
--  **User data**
-   A user data file is a special key in the metadata service that holds a file
-   that cloud-aware applications in the server can access.
-
-   Nova has two ways to send user data to the deploying instance, one is by
-   metadata service to let server able to connect to its metadata through
-   a predefined ip address (169.254.169.254), then other is to use config
-   drive which will wrap metadata into a iso9660 or vfat format disk so that
-   the new deployed server can consume it by active engines such as cloud-init
-   during its boot process.
-
 Networking Concepts
 -------------------
 

@@ -333,24 +333,6 @@ time. One or more networks can be specified. User can also specify a
 specific port on the network or the fixed IP address to assign to the
 server interface.
 
-Server personality
-~~~~~~~~~~~~~~~~~~
-
-You can customize the personality of a server by injecting data
-into its file system. For example, you might want to insert ssh keys,
-set configuration files, or store data that you want to retrieve from
-inside the server. This feature provides a minimal amount of
-launch-time personalization. If you require significant customization,
-create a custom image.
-
-Follow these guidelines when you inject files:
-
--  The maximum size of the file path data is 255 bytes.
-
--  Encode the file contents as a Base64 string. The maximum size of the
-   file contents is determined by the compute provider and may vary
-   based on the image that is used to create the server
-
 Considerations
 ~~~~~~~~~~~~~~
 
@@ -602,3 +584,46 @@ of resources on single hosts due to moving out old servers.
 Shelving a server is not normally a choice that is available to
 the cloud operator because it affects the availability of the server
 being provided to the user.
+
+Configure Guest OS
+~~~~~~~~~~~~~~~~~~
+
+Metadata API
+------------
+
+TODO
+
+Config Drive
+------------
+
+TODO
+
+User data
+---------
+A user data file is a special key in the metadata service that holds a file
+that cloud-aware applications in the server can access.
+
+Nova has two ways to send user data to the deployed server, one is by
+metadata service to let server able to access to its metadata through
+a predefined ip address (169.254.169.254), then other way is to use config
+drive which will wrap metadata into a iso9660 or vfat format disk so that
+the deployed server can consume it by active engines such as cloud-init
+during its boot process.
+
+Server personality
+------------------
+
+You can customize the personality of a server by injecting data
+into its file system. For example, you might want to insert ssh keys,
+set configuration files, or store data that you want to retrieve from
+inside the server. This feature provides a minimal amount of
+launch-time personalization. If you require significant customization,
+create a custom image.
+
+Follow these guidelines when you inject files:
+
+-  The maximum size of the file path data is 255 bytes.
+
+-  Encode the file contents as a Base64 string. The maximum size of the
+   file contents is determined by the compute provider and may vary
+   based on the image that is used to create the server.
