@@ -24,14 +24,12 @@ import uuid
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from nova import crypto
 import nova.image.glance
 from nova import service
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.unit import cast_as_call
-from nova.tests.unit import fake_crypto
 import nova.tests.unit.image.fake
 
 
@@ -76,12 +74,6 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(verbose=True)
 
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
-        self.stubs.Set(crypto, 'ensure_ca_filesystem',
-                       fake_crypto.ensure_ca_filesystem)
-        self.stubs.Set(crypto, 'fetch_ca',
-                       fake_crypto.fetch_ca)
-        self.stubs.Set(crypto, 'generate_x509_cert',
-                       fake_crypto.generate_x509_cert)
         self._setup_services()
 
         self.api_fixture = self.useFixture(
@@ -110,7 +102,6 @@ class _IntegratedTestBase(test.TestCase):
         self.conductor = self.start_service('conductor',
                                             manager=CONF.conductor.manager)
         self.compute = self._setup_compute_service()
-        self.cert = self.start_service('cert')
         self.consoleauth = self.start_service('consoleauth')
 
         self.network = self.start_service('network')
