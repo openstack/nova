@@ -52,6 +52,7 @@ from nova.tests.unit.objects import test_floating_ip
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_service
 from nova.tests.unit import utils as test_utils
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = cfg.CONF
@@ -205,7 +206,7 @@ class FlatNetworkTestCase(test.TestCase):
             check = {'bridge': 'fake_br%d' % nid,
                      'cidr': '192.168.%s.0/24' % nid,
                      'cidr_v6': '2001:db8:0:%x::/64' % nid,
-                     'id': '00000000-0000-0000-0000-00000000000000%02d' % nid,
+                     'id': getattr(uuids, 'vif%i' % nid),
                      'multi_host': False,
                      'injected': False,
                      'bridge_interface': None,
@@ -220,8 +221,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'rxtx_cap': 30,
                      'vif_type': net_model.VIF_TYPE_BRIDGE,
                      'vif_devname': None,
-                     'vif_uuid':
-                        '00000000-0000-0000-0000-00000000000000%02d' % nid,
+                     'vif_uuid': getattr(uuids, 'vif%i' % nid),
                      'ovs_interfaceid': None,
                      'qbh_params': None,
                      'qbg_params': None,
