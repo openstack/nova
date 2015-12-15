@@ -43,6 +43,44 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
                                                     expected_version,
                                                     'OpenStack')
 
+    @mock.patch('eventlet.timeout.Timeout')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    def test_session_login_with_timeout(self, mock_verify, mock_version,
+                                        create_session, mock_timeout):
+        self.flags(connection_concurrent=2, group='xenserver')
+        sess = mock.Mock()
+        create_session.return_value = sess
+        mock_version.return_value = ('version', 'brand')
+
+        session.XenAPISession('url', 'username', 'password')
+        self.assertEqual(2, sess.login_with_password.call_count)
+        self.assertEqual(2, mock_timeout.call_count)
+
+    @mock.patch('eventlet.timeout.Timeout')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_get_host_uuid')
+    @mock.patch.object(session.XenAPISession, '_get_host_ref')
+    def test_session_raises_exception(self, mock_ref, mock_uuid,
+                                      mock_verify, mock_version,
+                                      create_session, mock_timeout):
+        import XenAPI
+        self.flags(connection_concurrent=2, group='xenserver')
+        sess = mock.Mock()
+        create_session.return_value = sess
+        # First login fails, second login in except block succeeds,
+        # third login for the pool succeeds
+        sess.login_with_password.side_effect = [
+                XenAPI.Failure(['HOST_IS_SLAVE', 'master']), None, None]
+        mock_version.return_value = ('version', 'brand')
+
+        session.XenAPISession('url', 'username', 'password')
+        self.assertEqual(3, sess.login_with_password.call_count)
+        self.assertEqual(3, mock_timeout.call_count)
+
 
 class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):

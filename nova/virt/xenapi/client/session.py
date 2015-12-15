@@ -106,6 +106,11 @@ class XenAPISession(object):
 
         apply_session_helpers(self)
 
+    def _login_with_password(self, user, pw, session, exception):
+        with timeout.Timeout(CONF.xenserver.login_timeout, exception):
+            session.login_with_password(user, pw,
+                                        self.nova_version, 'OpenStack')
+
     def _verify_plugin_version(self):
         requested_version = self.PLUGIN_REQUIRED_VERSION
         current_version = self.call_plugin_serialized(
@@ -118,19 +123,14 @@ class XenAPISession(object):
 
     def _create_first_session(self, url, user, pw, exception):
         try:
-            session = self._create_session(url)
-            with timeout.Timeout(CONF.xenserver.login_timeout, exception):
-                session.login_with_password(user, pw,
-                                            self.nova_version, 'OpenStack')
+            session = self._create_session_and_login(url, user, pw, exception)
         except self.XenAPI.Failure as e:
             # if user and pw of the master are different, we're doomed!
             if e.details[0] == 'HOST_IS_SLAVE':
                 master = e.details[1]
                 url = pool.swap_xapi_host(url, master)
-                session = self.XenAPI.Session(url)
-                with timeout.Timeout(CONF.xenserver.login_timeout, exception):
-                    session.login_with_password(user, pw,
-                                                self.nova_version, 'OpenStack')
+                session = self._create_session_and_login(url, user, pw,
+                                                         exception)
                 self.is_slave = True
             else:
                 raise
@@ -139,10 +139,7 @@ class XenAPISession(object):
 
     def _populate_session_pool(self, url, user, pw, exception):
         for i in range(CONF.xenserver.connection_concurrent - 1):
-            session = self._create_session(url)
-            with timeout.Timeout(CONF.xenserver.login_timeout, exception):
-                session.login_with_password(user, pw,
-                                            self.nova_version, 'OpenStack')
+            session = self._create_session_and_login(url, user, pw, exception)
             self._sessions.put(session)
 
     def _get_host_uuid(self):
@@ -285,6 +282,11 @@ class XenAPISession(object):
         if self.is_local_connection:
             return self.XenAPI.xapi_local()
         return self.XenAPI.Session(url)
+
+    def _create_session_and_login(self, url, user, pw, exception):
+        session = self._create_session(url)
+        self._login_with_password(user, pw, session, exception)
+        return session
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details."""
