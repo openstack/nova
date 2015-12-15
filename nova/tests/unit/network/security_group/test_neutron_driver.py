@@ -24,6 +24,7 @@ from nova import context
 from nova import exception
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import neutron_driver
+from nova.network.security_group import openstack_driver
 from nova import test
 
 
@@ -412,3 +413,19 @@ class TestNeutronDriverWithoutMock(test.NoDBTestCase):
                           'a' * 256, 'name', None)
         self.assertRaises(exception.Invalid, sg_api.validate_property,
                           None, 'name', None)
+
+
+class TestGetter(test.NoDBTestCase):
+    @mock.patch('nova.network.security_group.openstack_driver.'
+                '_get_openstack_security_group_driver')
+    def test_caches(self, mock_get):
+        getter = openstack_driver.get_openstack_security_group_driver
+        openstack_driver.DRIVER_CACHE = {}
+        getter(False)
+        getter(False)
+        getter(True)
+        getter(False)
+        self.assertEqual(2, len(mock_get.call_args_list))
+        self.assertEqual({True: mock_get.return_value,
+                          False: mock_get.return_value},
+                         openstack_driver.DRIVER_CACHE)
