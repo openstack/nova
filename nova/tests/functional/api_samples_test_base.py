@@ -248,7 +248,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _update_links(self, sample_data):
         """Process sample data and update version specific links."""
-        url_re = self._get_host() + "/v(2|2\.1)"
+        url_re = self._get_host() + "/v(2\.1|2)"
         new_url = self._get_host() + "/" + self.api_major_version
         updated_data = re.sub(url_re, new_url, sample_data)
         return updated_data
