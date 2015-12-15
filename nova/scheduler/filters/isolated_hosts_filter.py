@@ -25,8 +25,7 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     # The configuration values do not change within a request
     run_filter_once_per_request = True
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
         to True::
 
@@ -58,9 +57,7 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
             return ((not restrict_isolated_hosts_to_isolated_images) or
                    (host_state.host not in isolated_hosts))
 
-        spec = filter_properties.get('request_spec', {})
-        props = spec.get('instance_properties', {})
-        image_ref = props.get('image_ref')
+        image_ref = spec_obj.image.id if spec_obj.image else None
         image_isolated = image_ref in isolated_images
         host_isolated = host_state.host in isolated_hosts
 

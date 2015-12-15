@@ -126,15 +126,11 @@ class JsonFilter(filters.BaseHostFilter):
         result = method(self, cooked_args)
         return result
 
-    @filters.compat_legacy_props
-    def host_passes(self, host_state, filter_properties):
+    def host_passes(self, host_state, spec_obj):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
-        try:
-            query = filter_properties['scheduler_hints']['query']
-        except KeyError:
-            query = None
+        query = spec_obj.get_scheduler_hint('query')
         if not query:
             return True
 
