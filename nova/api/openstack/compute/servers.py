@@ -102,25 +102,32 @@ class ServersController(wsgi.Controller):
     def __init__(self, **kwargs):
         def _check_load_extension(required_function):
 
-            def check_whiteblack_lists(ext):
+            def should_load_extension(ext):
                 # Check whitelist is either empty or if not then the extension
                 # is in the whitelist
-                if (not CONF.osapi_v21.extensions_whitelist or
-                        ext.obj.alias in CONF.osapi_v21.extensions_whitelist):
-
-                    # Check the extension is not in the blacklist
-                    extensions_blacklist = CONF.osapi_v21.extensions_blacklist
-                    if ext.obj.alias not in extensions_blacklist:
-                        return True
-                    else:
-                        LOG.warning(_LW("Not loading %s because it is "
-                                        "in the blacklist"), ext.obj.alias)
+                whitelist = CONF.osapi_v21.extensions_whitelist
+                blacklist = CONF.osapi_v21.extensions_blacklist
+                if not whitelist:
+                    # if there is no whitelist, we accept everything,
+                    # so we only care about the blacklist.
+                    if ext.obj.alias in blacklist:
                         return False
+                    else:
+                        return True
                 else:
-                    LOG.warning(
-                        _LW("Not loading %s because it is not in the "
-                            "whitelist"), ext.obj.alias)
-                    return False
+                    if ext.obj.alias in whitelist:
+                        if ext.obj.alias in blacklist:
+                            LOG.warn(
+                                _LW(
+                                    "Extension %s is both in whitelist and "
+                                    "blacklist, blacklisting takes precedence"
+                                ),
+                                ext.obj.alias)
+                            return False
+                        else:
+                            return True
+                    else:
+                        return False
 
             def check_load_extension(ext):
                 if isinstance(ext.obj, extensions.V21APIExtensionBase):
@@ -135,7 +142,7 @@ class ServersController(wsgi.Controller):
                                   'servers extension for function %(func)s',
                                   {'ext_alias': ext.obj.alias,
                                    'func': required_function})
-                        return check_whiteblack_lists(ext)
+                        return should_load_extension(ext)
                     else:
                         LOG.debug(
                             'extension %(ext_alias)s is missing %(func)s',
