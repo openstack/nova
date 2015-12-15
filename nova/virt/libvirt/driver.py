@@ -2366,12 +2366,18 @@ class LibvirtDriver(driver.ComputeDriver):
             self._host.get_guest(instance).inject_nmi()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
-            msg = (_('Error from libvirt while injecting an NMI to '
-                     '%(instance_uuid)s: '
-                     '[Error Code %(error_code)s] %(ex)s')
-                   % {'instance_uuid': instance.uuid,
-                      'error_code': error_code, 'ex': ex})
-            raise exception.NovaException(msg)
+
+            if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                raise exception.NMINotSupported()
+            elif error_code == libvirt.VIR_ERR_OPERATION_INVALID:
+                raise exception.InstanceNotRunning(instance_id=instance.uuid)
+
+            LOG.exception(_LE('Error from libvirt while injecting an NMI to '
+                              '%(instance_uuid)s: '
+                              '[Error Code %(error_code)s] %(ex)s'),
+                          {'instance_uuid': instance.uuid,
+                           'error_code': error_code, 'ex': ex})
+            raise
 
     def suspend(self, context, instance):
         """Suspend the specified instance."""

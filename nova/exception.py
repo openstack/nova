@@ -2004,3 +2004,7 @@ class RealtimeConfigurationInvalid(Invalid):
 
 class RequestSpecNotFound(NotFound):
     msg_fmt = _("RequestSpec not found for instance %(instance_uuid)s")
+
+
+class NMINotSupported(Invalid):
+    msg_fmt = _("Injecting NMI is not supported")
