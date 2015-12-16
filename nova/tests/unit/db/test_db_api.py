@@ -2509,123 +2509,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertTrue(result[1]['cleaned'])
             self.assertFalse(result[0]['cleaned'])
 
-    def test_instance_get_all_by_filters_tag_any(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args()
-        inst3 = self.create_instance_with_args()
-
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-
-        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
-        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t3])
-        db.instance_tag_set(self.ctxt, inst3.uuid, [t3])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags-any': [t1, t2]})
-        self._assertEqualListsOfObjects([inst1, inst2], result,
-                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
-                              'system_metadata', 'info_cache', 'pci_devices'])
-
-    def test_instance_get_all_by_filters_tag_any_empty(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args()
-
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-        t4 = u'tag4'
-
-        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
-        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags-any': [t3, t4]})
-        self.assertEqual([], result)
-
-    def test_instance_get_all_by_filters_tag(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args()
-        inst3 = self.create_instance_with_args()
-
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-
-        db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t3])
-        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
-        db.instance_tag_set(self.ctxt, inst3.uuid, [t1, t2, t3])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags': [t1, t2]})
-        self._assertEqualListsOfObjects([inst2, inst3], result,
-                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
-                              'system_metadata', 'info_cache', 'pci_devices'])
-
-    def test_instance_get_all_by_filters_tag_empty(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args()
-
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-
-        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
-        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags': [t3]})
-        self.assertEqual([], result)
-
-    def test_instance_get_all_by_filters_tag_any_and_tag(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args()
-        inst3 = self.create_instance_with_args()
-
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-        t4 = u'tag4'
-
-        db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t2])
-        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t4])
-        db.instance_tag_set(self.ctxt, inst3.uuid, [t2, t3])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags': [t1, t2],
-                                                 'tags-any': [t3, t4]})
-        self._assertEqualListsOfObjects([inst2], result,
-                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
-                              'system_metadata', 'info_cache', 'pci_devices'])
-
-    def test_instance_get_all_by_filters_tags_and_project_id(self):
-        context1 = context.RequestContext('user1', 'p1')
-        context2 = context.RequestContext('user2', 'p2')
-
-        inst1 = self.create_instance_with_args(context=context1,
-                                               project_id='p1')
-        inst2 = self.create_instance_with_args(context=context1,
-                                               project_id='p1')
-        inst3 = self.create_instance_with_args(context=context2,
-                                               project_id='p2')
-        t1 = u'tag1'
-        t2 = u'tag2'
-        t3 = u'tag3'
-        t4 = u'tag4'
-
-        db.instance_tag_set(context1, inst1.uuid, [t1, t2])
-        db.instance_tag_set(context1, inst2.uuid, [t1, t2, t4])
-        db.instance_tag_set(context2, inst3.uuid, [t1, t2, t3, t4])
-
-        result = db.instance_get_all_by_filters(self.ctxt,
-                                                {'tags': [t1, t2],
-                                                 'tags-any': [t3, t4],
-                                                 'project_id': 'p1'})
-        self._assertEqualListsOfObjects([inst2], result,
-                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
-                              'system_metadata', 'info_cache', 'pci_devices'])
-
     def test_instance_get_all_by_host_and_node_no_join(self):
         instance = self.create_instance_with_args()
         result = db.instance_get_all_by_host_and_node(self.ctxt, 'h1', 'n1')
@@ -9859,13 +9742,94 @@ class TestInstanceTagsFiltering(test.TestCase):
         super(TestInstanceTagsFiltering, self).setUp()
         self.ctxt = context.RequestContext('user1', 'project1')
 
+    def _create_instance_with_kwargs(self, **kw):
+        context = kw.pop('context', self.ctxt)
+        data = self.sample_data.copy()
+        data.update(kw)
+        return db.instance_create(context, data)
+
     def _create_instances(self, count):
-        return [db.instance_create(self.ctxt, self.sample_data)['uuid']
+        return [self._create_instance_with_kwargs()['uuid']
                 for i in range(count)]
 
     def _assertEqualInstanceUUIDs(self, expected_uuids, observed_instances):
         observed_uuids = [inst['uuid'] for inst in observed_instances]
         self.assertEqual(sorted(expected_uuids), sorted(observed_uuids))
+
+    def test_instance_get_all_by_filters_tag_any(self):
+        uuids = self._create_instances(3)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't3'])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags-any': [u't1', u't2']})
+        self._assertEqualInstanceUUIDs([uuids[0], uuids[1]], result)
+
+    def test_instance_get_all_by_filters_tag_any_empty(self):
+        uuids = self._create_instances(2)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2'])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags-any': [u't3', u't4']})
+        self.assertEqual([], result)
+
+    def test_instance_get_all_by_filters_tag(self):
+        uuids = self._create_instances(3)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2', u't3'])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't1', u't2']})
+        self._assertEqualInstanceUUIDs([uuids[1], uuids[2]], result)
+
+    def test_instance_get_all_by_filters_tag_empty(self):
+        uuids = self._create_instances(2)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2'])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't3']})
+        self.assertEqual([], result)
+
+    def test_instance_get_all_by_filters_tag_any_and_tag(self):
+        uuids = self._create_instances(3)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2', u't4'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't2', u't3'])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't1', u't2'],
+                                                 'tags-any': [u't3', u't4']})
+        self._assertEqualInstanceUUIDs([uuids[1]], result)
+
+    def test_instance_get_all_by_filters_tags_and_project_id(self):
+        context1 = context.RequestContext('user1', 'p1')
+        context2 = context.RequestContext('user2', 'p2')
+
+        uuid1 = self._create_instance_with_kwargs(
+            context=context1, project_id='p1')['uuid']
+        uuid2 = self._create_instance_with_kwargs(
+            context=context1, project_id='p1')['uuid']
+        uuid3 = self._create_instance_with_kwargs(
+            context=context2, project_id='p2')['uuid']
+
+        db.instance_tag_set(context1, uuid1, [u't1', u't2'])
+        db.instance_tag_set(context1, uuid2, [u't1', u't2', u't4'])
+        db.instance_tag_set(context2, uuid3, [u't1', u't2', u't3', u't4'])
+
+        result = db.instance_get_all_by_filters(context.get_admin_context(),
+                                                {'tags': [u't1', u't2'],
+                                                 'tags-any': [u't3', u't4'],
+                                                 'project_id': 'p1'})
+        self._assertEqualInstanceUUIDs([uuid2], result)
 
     def test_instance_get_all_by_filters_not_tags(self):
         uuids = self._create_instances(8)
