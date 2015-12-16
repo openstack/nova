@@ -18,16 +18,19 @@ from nova import db
 from nova import exception
 from nova.objects import instance_fault
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 fake_faults = {
     'fake-uuid': [
-        {'id': 1, 'instance_uuid': 'fake-uuid', 'code': 123, 'message': 'msg1',
-         'details': 'details', 'host': 'host', 'deleted': False,
-         'created_at': None, 'updated_at': None, 'deleted_at': None},
-        {'id': 2, 'instance_uuid': 'fake-uuid', 'code': 456, 'message': 'msg2',
-         'details': 'details', 'host': 'host', 'deleted': False,
-         'created_at': None, 'updated_at': None, 'deleted_at': None},
+        {'id': 1, 'instance_uuid': uuids.faults_instance, 'code': 123,
+         'message': 'msg1', 'details': 'details', 'host': 'host',
+         'deleted': False, 'created_at': None, 'updated_at': None,
+         'deleted_at': None},
+        {'id': 2, 'instance_uuid': uuids.faults_instance, 'code': 456,
+         'message': 'msg2', 'details': 'details', 'host': 'host',
+         'deleted': False, 'created_at': None, 'updated_at': None,
+         'deleted_at': None},
         ]
     }
 
@@ -78,7 +81,7 @@ class _TestInstanceFault(object):
     def _test_create(self, update_cells, mock_create, cells_fault_create):
         mock_create.return_value = fake_faults['fake-uuid'][1]
         fault = instance_fault.InstanceFault(context=self.context)
-        fault.instance_uuid = 'fake-uuid'
+        fault.instance_uuid = uuids.faults_instance
         fault.code = 456
         fault.message = 'foo'
         fault.details = 'you screwed up'
@@ -86,11 +89,11 @@ class _TestInstanceFault(object):
         fault.create()
         self.assertEqual(2, fault.id)
         mock_create.assert_called_once_with(self.context,
-                                            {'instance_uuid': 'fake-uuid',
-                                             'code': 456,
-                                             'message': 'foo',
-                                             'details': 'you screwed up',
-                                             'host': 'myhost'})
+            {'instance_uuid': uuids.faults_instance,
+             'code': 456,
+             'message': 'foo',
+             'details': 'you screwed up',
+             'host': 'myhost'})
         if update_cells:
             cells_fault_create.assert_called_once_with(
                     self.context, fake_faults['fake-uuid'][1])

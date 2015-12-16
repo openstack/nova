@@ -24,6 +24,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance_info_cache
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 fake_info_cache = {
@@ -31,7 +32,7 @@ fake_info_cache = {
     'updated_at': None,
     'deleted_at': None,
     'deleted': False,
-    'instance_uuid': 'fake-uuid',
+    'instance_uuid': uuids.info_instance,
     'network_info': '[]',
     }
 
@@ -40,29 +41,31 @@ class _TestInstanceInfoCacheObject(object):
     def test_get_by_instance_uuid(self):
         nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
         self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(self.context, 'fake-uuid').AndReturn(
+        db.instance_info_cache_get(
+            self.context, uuids.info_instance).AndReturn(
             dict(fake_info_cache, network_info=nwinfo.json()))
         self.mox.ReplayAll()
         obj = instance_info_cache.InstanceInfoCache.get_by_instance_uuid(
-            self.context, 'fake-uuid')
-        self.assertEqual('fake-uuid', obj.instance_uuid)
+            self.context, uuids.info_instance)
+        self.assertEqual(uuids.info_instance, obj.instance_uuid)
         self.assertEqual(nwinfo, obj.network_info)
 
     def test_get_by_instance_uuid_no_entries(self):
         self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(self.context, 'fake-uuid').AndReturn(None)
+        db.instance_info_cache_get(self.context,
+                                   uuids.info_instance).AndReturn(None)
         self.mox.ReplayAll()
         self.assertRaises(
                 exception.InstanceInfoCacheNotFound,
                 instance_info_cache.InstanceInfoCache.get_by_instance_uuid,
-                self.context, 'fake-uuid')
+                self.context, uuids.info_instance)
 
     def test_new(self):
         obj = instance_info_cache.InstanceInfoCache.new(self.context,
-                                                        'fake-uuid')
+                                                        uuids.info_instance)
         self.assertEqual(set(['instance_uuid', 'network_info']),
                          obj.obj_what_changed())
-        self.assertEqual('fake-uuid', obj.instance_uuid)
+        self.assertEqual(uuids.info_instance, obj.instance_uuid)
         self.assertIsNone(obj.network_info)
 
     def _save_helper(self, cell_type, update_cells):
@@ -79,7 +82,7 @@ class _TestInstanceInfoCacheObject(object):
         new_info_cache = fake_info_cache.copy()
         new_info_cache['network_info'] = nwinfo.json()
         db.instance_info_cache_update(
-                self.context, 'fake-uuid',
+                self.context, uuids.info_instance,
                 {'network_info': nwinfo.json()}).AndReturn(new_info_cache)
         if update_cells:
             cells_opts.get_cell_type().AndReturn(cell_type)
@@ -89,7 +92,7 @@ class _TestInstanceInfoCacheObject(object):
                     self.context, 'foo')
         self.mox.ReplayAll()
         obj._context = self.context
-        obj.instance_uuid = 'fake-uuid'
+        obj.instance_uuid = uuids.info_instance
         obj.network_info = nwinfo
         obj.save(update_cells=update_cells)
 
@@ -113,20 +116,20 @@ class _TestInstanceInfoCacheObject(object):
         new_info_cache['network_info'] = nwinfo_json
         mock_update.return_value = new_info_cache
         obj = instance_info_cache.InstanceInfoCache(context=self.context)
-        obj.instance_uuid = 'fake-uuid'
+        obj.instance_uuid = uuids.info_instance
         obj.network_info = nwinfo_json
         obj.save()
-        mock_update.assert_called_once_with(self.context, 'fake-uuid',
+        mock_update.assert_called_once_with(self.context, uuids.info_instance,
                                             {'network_info': nwinfo_json})
         self.assertEqual(timeutils.normalize_time(fake_updated_at),
                          timeutils.normalize_time(obj.updated_at))
 
     def test_refresh(self):
         obj = instance_info_cache.InstanceInfoCache.new(self.context,
-                                                        'fake-uuid1')
+                                                        uuids.info_instance_1)
         self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(self.context, 'fake-uuid1').AndReturn(
-            fake_info_cache)
+        db.instance_info_cache_get(
+            self.context, uuids.info_instance_1).AndReturn(fake_info_cache)
         self.mox.ReplayAll()
         obj.refresh()
         self.assertEqual(fake_info_cache['instance_uuid'], obj.instance_uuid)
