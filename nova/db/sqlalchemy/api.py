@@ -1154,6 +1154,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                                filter_by(reserved=False).\
                                filter_by(instance_uuid=None).\
                                filter_by(host=None).\
+                               filter_by(leased=False).\
                                first()
 
         if not fixed_ip_ref:
@@ -1176,6 +1177,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
             filter_by(reserved=False).\
             filter_by(instance_uuid=None).\
             filter_by(host=None).\
+            filter_by(leased=False).\
             filter_by(address=fixed_ip_ref['address']).\
             update(params, synchronize_session='evaluate')
 

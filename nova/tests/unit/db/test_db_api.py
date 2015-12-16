@@ -4674,6 +4674,14 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.NoMoreFixedIps, db.fixed_ip_associate_pool,
                           self.ctxt, None, instance_uuid)
 
+    def test_fixed_ip_associate_pool_ignores_leased_addresses(self):
+        instance_uuid = self._create_instance()
+        params = {'address': '192.168.1.5',
+                  'leased': True}
+        db.fixed_ip_create(self.ctxt, params)
+        self.assertRaises(exception.NoMoreFixedIps, db.fixed_ip_associate_pool,
+                          self.ctxt, None, instance_uuid)
+
     def test_fixed_ip_associate_pool_succeeds(self):
         instance_uuid = self._create_instance()
         network = db.network_create_safe(self.ctxt, {})
