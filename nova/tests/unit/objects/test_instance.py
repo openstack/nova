@@ -1078,33 +1078,6 @@ class _TestInstanceObject(object):
         self.assertEqual(db_flavor['flavorid'],
                          inst.get_flavor('old').flavorid)
 
-    def _test_set_flavor(self, namespace):
-        prefix = ('%s_' % namespace) if namespace else ''
-        db_flavor = flavors.get_default_flavor()
-        inst = objects.Instance()
-        with mock.patch.object(inst, 'save'):
-            inst.set_flavor(db_flavor, namespace)
-        self.assertEqual(db_flavor['flavorid'],
-                         getattr(inst, '%sflavor' % prefix).flavorid)
-
-    def test_set_flavor(self):
-        self._test_set_flavor(None)
-
-    def test_set_flavor_namespace(self):
-        self._test_set_flavor('old')
-
-    def test_delete_flavor(self):
-        inst = objects.Instance(
-            old_flavor=flavors.get_default_flavor())
-        with mock.patch.object(inst, 'save'):
-            inst.delete_flavor('old')
-        self.assertIsNone(inst.old_flavor)
-
-    def test_delete_flavor_no_namespace_fails(self):
-        inst = objects.Instance(system_metadata={})
-        self.assertRaises(ValueError, inst.delete_flavor, None)
-        self.assertRaises(ValueError, inst.delete_flavor, '')
-
     @mock.patch.object(db, 'instance_metadata_delete')
     def test_delete_metadata_key(self, db_delete):
         inst = objects.Instance(context=self.context,

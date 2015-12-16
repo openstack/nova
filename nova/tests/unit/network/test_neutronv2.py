@@ -893,8 +893,7 @@ class TestNeutronv2(TestNeutronv2Base):
         flavor = flavors.get_default_flavor()
         flavor['rxtx_factor'] = 1
         instance = objects.Instance(system_metadata={})
-        with mock.patch.object(instance, 'save'):
-            instance.set_flavor(flavor)
+        instance.flavor = flavor
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(self.context, instance,
                                                None, port_req_body)

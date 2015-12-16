@@ -878,22 +878,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # is not nullable.
             return None
 
-    def set_flavor(self, flavor, namespace=None):
-        prefix = ('%s_' % namespace) if namespace is not None else ''
-        attr = '%sflavor' % prefix
-        if not isinstance(flavor, objects.Flavor):
-            flavor = objects.Flavor(**flavor)
-        setattr(self, attr, flavor)
-
-        self.save()
-
-    def delete_flavor(self, namespace):
-        prefix = ('%s_' % namespace) if namespace else ''
-        attr = '%sflavor' % prefix
-        setattr(self, attr, None)
-
-        self.save()
-
     @base.remotable
     def delete_metadata_key(self, key):
         """Optimized metadata delete method.

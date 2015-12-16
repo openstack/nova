@@ -89,8 +89,7 @@ def fake_inst_obj(context):
     inst.info_cache = objects.InstanceInfoCache(context=context,
                                                 instance_uuid=inst.uuid,
                                                 network_info=nwinfo)
-    with mock.patch.object(inst, 'save'):
-        inst.set_flavor(flavors.get_default_flavor())
+    inst.flavor = flavors.get_default_flavor()
     return inst
 
 

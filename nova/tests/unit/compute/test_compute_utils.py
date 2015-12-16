@@ -97,31 +97,13 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
 
         flavor = objects.Flavor(**test_flavor.fake_flavor)
         self.instance.system_metadata = {}
-        with mock.patch.object(self.instance, 'save'):
-            self.instance.set_flavor(flavor)
+        self.instance.flavor = flavor
         self.instance.default_swap_device = None
 
         self.data = []
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        lambda context, instance, use_slave=False: self.data)
-
-    def _update_flavor(self, flavor_info):
-        self.flavor = {
-            'id': 1,
-            'name': 'foo',
-            'memory_mb': 128,
-            'vcpus': 1,
-            'root_gb': 10,
-            'ephemeral_gb': 10,
-            'flavorid': 1,
-            'swap': 0,
-            'rxtx_factor': 1.0,
-            'vcpu_weight': 1,
-            }
-        self.flavor.update(flavor_info)
-        with mock.patch.object(self.instance, 'save'):
-            self.instance.set_flavor(self.flavor)
 
     def _validate_device(self, device=None):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -215,34 +197,26 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         self.assertEqual(device, '/dev/vdc')
 
     def test_ephemeral_xenapi(self):
-        self._update_flavor({
-                'ephemeral_gb': 10,
-                'swap': 0,
-                })
+        self.instance.flavor.ephemeral_gb = 10
+        self.instance.flavor.swap = 0
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdc')
 
     def test_swap_xenapi(self):
-        self._update_flavor({
-                'ephemeral_gb': 0,
-                'swap': 10,
-                })
+        self.instance.flavor.ephemeral_gb = 0
+        self.instance.flavor.swap = 10
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
 
     def test_swap_and_ephemeral_xenapi(self):
-        self._update_flavor({
-                'ephemeral_gb': 10,
-                'swap': 10,
-                })
+        self.instance.flavor.ephemeral_gb = 10
+        self.instance.flavor.swap = 10
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
 
     def test_swap_and_one_attachment_xenapi(self):
-        self._update_flavor({
-                'ephemeral_gb': 0,
-                'swap': 10,
-                })
+        self.instance.flavor.ephemeral_gb = 0
+        self.instance.flavor.swap = 10
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
         self.data.append(self._fake_bdm(device))
