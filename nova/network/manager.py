@@ -1094,13 +1094,13 @@ class NetworkManager(manager.Manager):
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
-            LOG.warning(_LW('IP %s leased that is not associated'), address,
+            LOG.warning(_LW('IP %s leased that is not associated'), fixed_ip,
                         context=context)
             return
         fixed_ip.leased = True
         fixed_ip.save()
         if not fixed_ip.allocated:
-            LOG.warning(_LW('IP |%s| leased that isn\'t allocated'), address,
+            LOG.warning(_LW('IP |%s| leased that isn\'t allocated'), fixed_ip,
                         context=context, instance_uuid=fixed_ip.instance_uuid)
 
     def release_fixed_ip(self, context, address, mac=None):
@@ -1109,11 +1109,11 @@ class NetworkManager(manager.Manager):
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
-            LOG.warning(_LW('IP %s released that is not associated'), address,
+            LOG.warning(_LW('IP %s released that is not associated'), fixed_ip,
                         context=context)
             return
         if not fixed_ip.leased:
-            LOG.warning(_LW('IP %s released that was not leased'), address,
+            LOG.warning(_LW('IP %s released that was not leased'), fixed_ip,
                         context=context, instance_uuid=fixed_ip.instance_uuid)
         else:
             fixed_ip.leased = False
