@@ -16,7 +16,6 @@
 from oslo_config import cfg
 from oslo_utils import timeutils
 
-from nova import db
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
 
@@ -44,19 +43,16 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(ServicesJsonTest, self).setUp()
-        self.stubs.Set(db, "service_get_all",
-                       test_services.fake_db_api_service_get_all)
-        self.stubs.Set(timeutils, "utcnow", test_services.fake_utcnow)
-        self.stubs.Set(timeutils, "utcnow_ts",
-                       test_services.fake_utcnow_ts)
-        self.stubs.Set(db, "service_get_by_host_and_binary",
-                       test_services.fake_service_get_by_host_binary)
-        self.stubs.Set(db, "service_update",
-                       test_services.fake_service_update)
-
-    def tearDown(self):
-        super(ServicesJsonTest, self).tearDown()
-        timeutils.clear_time_override()
+        self.stub_out("nova.db.service_get_all",
+                      test_services.fake_db_api_service_get_all)
+        self.stub_out("oslo_utils.timeutils.utcnow", test_services.fake_utcnow)
+        self.stub_out("oslo_utils.timeutils.utcnow_ts",
+                      test_services.fake_utcnow_ts)
+        self.stub_out("nova.db.service_get_by_host_and_binary",
+                      test_services.fake_service_get_by_host_binary)
+        self.stub_out("nova.db.service_update",
+                      test_services.fake_service_update)
+        self.addCleanup(timeutils.clear_time_override)
 
     def test_services_list(self):
         """Return a list of all agent builds."""
