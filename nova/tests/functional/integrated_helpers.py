@@ -26,10 +26,8 @@ from oslo_log import log as logging
 
 from nova import crypto
 import nova.image.glance
-from nova import service
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_crypto
 import nova.tests.unit.image.fake
@@ -115,16 +113,6 @@ class _IntegratedTestBase(test.TestCase):
 
         self.network = self.start_service('network')
         self.scheduler = self._setup_scheduler_service()
-
-    def _get_test_client(self):
-        return client.TestOpenStackClient('fake', 'fake', self.auth_url)
-
-    def _start_api_service(self):
-        self.osapi = service.WSGIService("osapi_compute")
-        self.osapi.start()
-        self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
-            'host': self.osapi.host, 'port': self.osapi.port,
-            'api_version': self.api_major_version})
 
     def _get_flags(self):
         """Allow subclass to modify global config before we start services."""
