@@ -24,7 +24,7 @@ responses from the server.
 
 .. warning:: The ``latest`` value is mostly meant for integration testing and
   would be dangerous to rely on in client code since Nova microversions are not
-  following semver and therefore backward compability is not guaranteed.
+  following semver and therefore backward compatibility is not guaranteed.
   Clients, like python-novaclient, should always require a specific
   microversion but limit what is acceptable to the version range that it
   understands at the time.
