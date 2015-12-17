@@ -48,6 +48,7 @@ from nova.tests.unit import fake_server_actions
 import nova.tests.unit.image.fake
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
+from nova.tests import uuidsentinel as uuids
 from nova.virt import driver
 
 CONF = cfg.CONF
@@ -237,7 +238,8 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.ephemerals = block_device_obj.block_device_make_list(
                 self.context,
                 [fake_block_device.FakeDbBlockDeviceDict(
-                 {'id': 1, 'instance_uuid': 'fake-instance',
+                 {'id': 1,
+                  'instance_uuid': uuids.block_device_instance,
                   'device_name': '/dev/vdb',
                   'source_type': 'blank',
                   'destination_type': 'local',
@@ -248,7 +250,8 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.swap = block_device_obj.block_device_make_list(
                 self.context,
                 [fake_block_device.FakeDbBlockDeviceDict(
-                 {'id': 2, 'instance_uuid': 'fake-instance',
+                 {'id': 2,
+                  'instance_uuid': uuids.block_device_instance,
                   'device_name': '/dev/vdc',
                   'source_type': 'blank',
                   'destination_type': 'local',
@@ -259,26 +262,30 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.block_device_mapping = block_device_obj.block_device_make_list(
                 self.context,
                 [fake_block_device.FakeDbBlockDeviceDict(
-                 {'id': 3, 'instance_uuid': 'fake-instance',
+                 {'id': 3,
+                  'instance_uuid': uuids.block_device_instance,
                   'device_name': '/dev/vda',
                   'source_type': 'volume',
                   'destination_type': 'volume',
                   'volume_id': 'fake-volume-id-1',
                   'boot_index': 0}),
                  fake_block_device.FakeDbBlockDeviceDict(
-                 {'id': 4, 'instance_uuid': 'fake-instance',
+                 {'id': 4,
+                  'instance_uuid': uuids.block_device_instance,
                   'device_name': '/dev/vdd',
                   'source_type': 'snapshot',
                   'destination_type': 'volume',
                   'snapshot_id': 'fake-snapshot-id-1',
                   'boot_index': -1}),
                  fake_block_device.FakeDbBlockDeviceDict(
-                 {'id': 5, 'instance_uuid': 'fake-instance',
+                 {'id': 5,
+                  'instance_uuid': uuids.block_device_instance,
                   'device_name': '/dev/vde',
                   'source_type': 'blank',
                   'destination_type': 'volume',
                   'boot_index': -1})])
-        self.instance = {'uuid': 'fake_instance', 'ephemeral_gb': 2}
+        self.instance = {'uuid': uuids.instance,
+                         'ephemeral_gb': 2}
         self.is_libvirt = False
         self.root_device_name = '/dev/vda'
         self.update_called = False

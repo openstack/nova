@@ -39,6 +39,7 @@ from nova import test
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
+from nova.tests import uuidsentinel as uuids
 
 
 ORIG_COMPUTE_API = None
@@ -196,7 +197,8 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         # it will raise ObjectActionError if the instance has already
         # been deleted by a instance_destroy_at_top, and instance.refresh()
         # will raise InstanceNotFound
-        instance = objects.Instance(uuid='fake-uuid', cell_name=None)
+        instance = objects.Instance(uuid=uuids.destroy_instance,
+                                    cell_name=None)
         actionerror = exception.ObjectActionError(action='destroy', reason='')
         notfound = exception.InstanceNotFound(instance_id=instance.uuid)
 
@@ -223,7 +225,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         # lookup before instance.destroy() is reached, if the instance has
         # already been deleted by a instance_destroy_at_top,
         # InstanceNotFound will be raised
-        instance = objects.Instance(uuid='fake-uuid', cell_name=None)
+        instance = objects.Instance(uuid=uuids.delete_instance, cell_name=None)
         notfound = exception.InstanceNotFound(instance_id=instance.uuid)
 
         @mock.patch.object(compute_api.API, 'delete')
