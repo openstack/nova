@@ -160,9 +160,6 @@ class SecurityGroupBase(object):
     def ensure_default(self, context):
         pass
 
-    def trigger_handler(self, event, *args):
-        pass
-
     def trigger_rules_refresh(self, context, id):
         """Called when a rule is added to or removed from a security_group."""
         pass
