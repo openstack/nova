@@ -79,10 +79,6 @@ def pipeline_factory_v21(loader, global_conf, **local_conf):
     return _load_pipeline(loader, local_conf[CONF.auth_strategy].split())
 
 
-# NOTE(oomichi): This pipeline_factory_v3 is for passing check-grenade-dsvm.
-pipeline_factory_v3 = pipeline_factory_v21
-
-
 class InjectContext(wsgi.Middleware):
     """Add a 'nova.context' to WSGI environ."""
 
