@@ -162,7 +162,7 @@ class Ec2utilsTestCase(test.NoDBTestCase):
 
         self.assertThat(out_dict, matchers.DictMatches(expected_dict))
 
-    def test_properties_root_defice_name(self):
+    def test_properties_root_device_name(self):
         mappings = [{"device": "/dev/sda1", "virtual": "root"}]
         properties0 = {'mappings': mappings}
         properties1 = {'root_device_name': '/dev/sdb', 'mappings': mappings}
