@@ -19,11 +19,13 @@ import sys
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_reports import guru_meditation_report as gmr
 
 from nova import config
 from nova import objects
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('topic', 'nova.conductor.api', group='conductor')
@@ -34,6 +36,8 @@ def main():
     logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-conductor',
                                     topic=CONF.conductor.topic,

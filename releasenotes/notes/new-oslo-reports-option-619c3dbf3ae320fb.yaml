@@ -1,6 +1,0 @@
----
-features:
-  - You can now specify a directory for generating GMR logs
-    by adding a "log_dir" key under the "[oslo_report]" section in
-    nova.conf. If you do not specify this option, you will see the GMR
-    output in Nova logs.
