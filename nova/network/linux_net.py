@@ -1067,11 +1067,6 @@ def update_dns(context, dev, network_ref):
     restart_dhcp(context, dev, network_ref, fixedips)
 
 
-def update_dhcp_hostfile_with_text(dev, hosts_text):
-    conffile = _dhcp_file(dev, 'conf')
-    write_to_file(conffile, hosts_text)
-
-
 def kill_dhcp(dev):
     pid = _dnsmasq_pid_for(dev)
     if pid:
