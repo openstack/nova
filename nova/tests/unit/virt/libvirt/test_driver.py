@@ -22545,7 +22545,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.drvr, '_create_domain',
                 side_effect=fake_create_domain) as mock_create_domain:
             self.drvr.rescue(self.context, instance,
-                             network_info, image_meta, rescue_password)
+                             network_info, image_meta, rescue_password, None)
 
             self.assertTrue(mock_create_domain.called)
 

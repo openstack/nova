@@ -298,7 +298,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
-                               image_meta, '')
+                               image_meta, '', None)
 
     @catch_notimplementederror
     @mock.patch('os.unlink')
@@ -313,7 +313,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
-                               image_meta, '')
+                               image_meta, '', None)
         self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror

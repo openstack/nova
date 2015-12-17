@@ -3004,7 +3004,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
 
-        self.driver.rescue(self.ctx, instance, None, None, 'xyz')
+        self.driver.rescue(self.ctx, instance, None, None, 'xyz', None)
         mock_sps.assert_called_once_with(node.uuid, 'rescue',
                                          rescue_password='xyz')
 
@@ -3021,7 +3021,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
 
         self.assertRaises(exception.InstanceRescueFailure,
                           self.driver.rescue,
-                          self.ctx, instance, None, None, 'xyz')
+                          self.ctx, instance, None, None, 'xyz', None)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -3035,7 +3035,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
 
         self.assertRaises(exception.InstanceRescueFailure,
                           self.driver.rescue,
-                          self.ctx, instance, None, None, 'xyz')
+                          self.ctx, instance, None, None, 'xyz', None)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -3051,7 +3051,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
 
         self.assertRaises(exception.InstanceRescueFailure,
                           self.driver.rescue,
-                          self.ctx, instance, None, None, 'xyz')
+                          self.ctx, instance, None, None, 'xyz', None)
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')

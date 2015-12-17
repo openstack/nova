@@ -2120,7 +2120,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                     version=max_version)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password):
+               rescue_password, block_device_info):
         """Rescue the specified instance.
 
         :param nova.context.RequestContext context:
@@ -2133,6 +2133,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param nova.objects.ImageMeta image_meta:
             The metadata of the image of the instance. Ignored by this driver.
         :param rescue_password: new root password to set for rescue.
+        :param dict block_device_info:
+            The block device mapping of the instance.
         :raise InstanceRescueFailure if rescue fails.
         """
         LOG.debug('Rescue called for instance', instance=instance)

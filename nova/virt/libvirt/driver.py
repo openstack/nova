@@ -3389,7 +3389,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._hard_reboot(context, instance, network_info, block_device_info)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password):
+               rescue_password, block_device_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
