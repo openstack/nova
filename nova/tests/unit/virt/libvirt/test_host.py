@@ -344,9 +344,9 @@ class HostTestCase(test.NoDBTestCase):
             self.assertFalse(self.host.has_version(lv_ver, hv_ver_, hv_type))
         self.assertFalse(self.host.has_version(lv_ver, hv_ver, 'abc'))
 
-        self.assertTrue(self.host.has_min_version(lv_ver, hv_ver, None))
-        self.assertTrue(self.host.has_min_version(lv_ver, None, hv_type))
-        self.assertTrue(self.host.has_min_version(None, hv_ver, hv_type))
+        self.assertTrue(self.host.has_version(lv_ver, hv_ver, None))
+        self.assertTrue(self.host.has_version(lv_ver, None, hv_type))
+        self.assertTrue(self.host.has_version(None, hv_ver, hv_type))
 
     @mock.patch.object(fakelibvirt.virConnect, "lookupByID")
     def test_get_domain_by_id(self, fake_lookup):
