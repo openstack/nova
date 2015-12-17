@@ -28,6 +28,7 @@ terminating it.
 import base64
 import contextlib
 import functools
+import inspect
 import socket
 import sys
 import time
@@ -288,8 +289,8 @@ def errors_out_migration(function):
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 wrapped_func = safe_utils.get_wrapped_function(function)
-                keyed_args = safe_utils.getcallargs(wrapped_func, self,
-                                                    context, *args, **kwargs)
+                keyed_args = inspect.getcallargs(wrapped_func, self, context,
+                                                 *args, **kwargs)
                 migration = keyed_args['migration']
 
                 # NOTE(rajesht): If InstanceNotFound error is thrown from
@@ -330,8 +331,8 @@ def reverts_task_state(function):
         except Exception:
             with excutils.save_and_reraise_exception():
                 wrapped_func = safe_utils.get_wrapped_function(function)
-                keyed_args = safe_utils.getcallargs(wrapped_func, self,
-                                                    context, *args, **kwargs)
+                keyed_args = inspect.getcallargs(wrapped_func, self, context,
+                                                 *args, **kwargs)
                 # NOTE(mriedem): 'instance' must be in keyed_args because we
                 # have utils.expects_func_args('instance') decorating this
                 # method.
@@ -390,8 +391,8 @@ def wrap_instance_event(function):
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
         wrapped_func = safe_utils.get_wrapped_function(function)
-        keyed_args = safe_utils.getcallargs(wrapped_func, self, context, *args,
-                                            **kwargs)
+        keyed_args = inspect.getcallargs(wrapped_func, self, context, *args,
+                                         **kwargs)
         instance_uuid = keyed_args['instance']['uuid']
 
         event_name = 'compute_{0}'.format(function.__name__)

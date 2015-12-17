@@ -23,6 +23,7 @@ SHOULD include dedicated exception logging.
 """
 
 import functools
+import inspect
 import sys
 
 from oslo_config import cfg
@@ -91,9 +92,8 @@ def wrap_exception(notifier=None, get_notifier=None):
                     if notifier or get_notifier:
                         payload = dict(exception=e)
                         wrapped_func = safe_utils.get_wrapped_function(f)
-                        call_dict = safe_utils.getcallargs(wrapped_func, self,
-                                                           context, *args,
-                                                           **kw)
+                        call_dict = inspect.getcallargs(wrapped_func, self,
+                                                        context, *args, **kw)
                         # self can't be serialized and shouldn't be in the
                         # payload
                         call_dict.pop('self', None)
