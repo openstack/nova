@@ -16,6 +16,7 @@
 from oslo_utils import strutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import migrate_server
 from nova.api.openstack import extensions
@@ -61,20 +62,30 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('os-migrateLive')
-    @validation.schema(migrate_server.migrate_live)
+    @validation.schema(migrate_server.migrate_live, "2.1", "2.24")
+    @validation.schema(migrate_server.migrate_live_v2_25, "2.25")
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
         authorize(context, action='migrate_live')
 
-        block_migration = body["os-migrateLive"]["block_migration"]
-        disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
         host = body["os-migrateLive"]["host"]
+        block_migration = body["os-migrateLive"]["block_migration"]
 
-        block_migration = strutils.bool_from_string(block_migration,
-                                                    strict=True)
-        disk_over_commit = strutils.bool_from_string(disk_over_commit,
-                                                     strict=True)
+        if api_version_request.is_supported(req, min_version='2.25'):
+            if block_migration == 'auto':
+                block_migration = None
+            else:
+                block_migration = strutils.bool_from_string(block_migration,
+                                                            strict=True)
+            disk_over_commit = None
+        else:
+            disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
+
+            block_migration = strutils.bool_from_string(block_migration,
+                                                        strict=True)
+            disk_over_commit = strutils.bool_from_string(disk_over_commit,
+                                                         strict=True)
 
         try:
             instance = common.get_instance(self.compute_api, context, id)
@@ -92,7 +103,8 @@ class MigrateServerController(wsgi.Controller):
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
                 exception.MigrationPreCheckError,
-                exception.LiveMigrationWithOldNovaNotSafe) as ex:
+                exception.LiveMigrationWithOldNovaNotSafe,
+                exception.LiveMigrationWithOldNovaNotSupported) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

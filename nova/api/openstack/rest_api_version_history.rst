@@ -212,3 +212,9 @@ user documentation.
   A new API call to cancel a running live migration::
 
     DELETE /servers/<uuid>/migrations/<id>
+
+2.25
+----
+
+  Modify input parameter for ``os-migrateLive``. The block_migration will
+  support 'auto' value, and disk_over_commit flag will be removed.

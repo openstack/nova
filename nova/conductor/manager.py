@@ -160,19 +160,21 @@ class ComputeTaskManager(base.Base):
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
-    @messaging.expected_exceptions(exception.NoValidHost,
-                                   exception.ComputeServiceUnavailable,
-                                   exception.InvalidHypervisorType,
-                                   exception.InvalidCPUInfo,
-                                   exception.UnableToMigrateToSelf,
-                                   exception.DestinationHypervisorTooOld,
-                                   exception.InvalidLocalStorage,
-                                   exception.InvalidSharedStorage,
-                                   exception.HypervisorUnavailable,
-                                   exception.InstanceInvalidState,
-                                   exception.MigrationPreCheckError,
-                                   exception.LiveMigrationWithOldNovaNotSafe,
-                                   exception.UnsupportedPolicyException)
+    @messaging.expected_exceptions(
+        exception.NoValidHost,
+        exception.ComputeServiceUnavailable,
+        exception.InvalidHypervisorType,
+        exception.InvalidCPUInfo,
+        exception.UnableToMigrateToSelf,
+        exception.DestinationHypervisorTooOld,
+        exception.InvalidLocalStorage,
+        exception.InvalidSharedStorage,
+        exception.HypervisorUnavailable,
+        exception.InstanceInvalidState,
+        exception.MigrationPreCheckError,
+        exception.LiveMigrationWithOldNovaNotSafe,
+        exception.LiveMigrationWithOldNovaNotSupported,
+        exception.UnsupportedPolicyException)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None,
             clean_shutdown=True, request_spec=None):
@@ -319,6 +321,7 @@ class ComputeTaskManager(base.Base):
                 exception.InstanceInvalidState,
                 exception.MigrationPreCheckError,
                 exception.LiveMigrationWithOldNovaNotSafe,
+                exception.LiveMigrationWithOldNovaNotSupported,
                 exception.MigrationSchedulerRPCError) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
