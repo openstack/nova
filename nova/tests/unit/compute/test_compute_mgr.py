@@ -1189,18 +1189,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             if state == vm_states.ERROR:
                 continue
             instance.vm_state = state
-            self._test_init_instance_retries_reboot(instance, 'HARD',
-                                                    power_state.SHUTDOWN)
-            self.assertEqual(task_states.REBOOT_PENDING_HARD,
-                             instance.task_state)
+            with mock.patch.object(instance, 'save'):
+                self._test_init_instance_retries_reboot(instance, 'HARD',
+                                                        power_state.SHUTDOWN)
+                self.assertEqual(task_states.REBOOT_PENDING_HARD,
+                                instance.task_state)
 
     def test_init_instance_retries_reboot_started(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.REBOOT_STARTED
-        self._test_init_instance_retries_reboot(instance, 'HARD',
-                                                power_state.NOSTATE)
+        with mock.patch.object(instance, 'save'):
+            self._test_init_instance_retries_reboot(instance, 'HARD',
+                                                    power_state.NOSTATE)
 
     def test_init_instance_retries_reboot_started_hard(self):
         instance = objects.Instance(self.context)
