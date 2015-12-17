@@ -899,11 +899,6 @@ class ComputeAPI(object):
                 block_device_mapping=block_device_mapping, node=node,
                 limits=limits)
 
-    def colo_migration(self, ctxt, primary_instance, secondary_instance):
-        cctxt = self.client.prepare(server=_compute_host(None,
-                                                         primary_instance))
-        cctxt.cast(ctxt, 'colo_migration', primary_instance=primary_instance,
-                   secondary_instance=secondary_instance)
 
     def colo_failover(self, ctxt, instance):
         cctxt = self.client.prepare(server=_compute_host(None, instance))

@@ -705,9 +705,6 @@ class ComputeTaskManager(base.Base):
                             block_device_mapping=block_device_mapping,
                             legacy_bdm=legacy_bdm)
 
-                        colo_tasks.migrate(context, instance,
-                                           secondary_instance)
-
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)
 
