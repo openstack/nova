@@ -918,6 +918,8 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual([], host.pci_stats.pools)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
+    @mock.patch('nova.utils.synchronized',
+                side_effect=lambda a: lambda f: lambda *args: f(*args))
     @mock.patch('nova.virt.hardware.get_host_numa_usage_from_instance')
     @mock.patch('nova.objects.Instance')
     @mock.patch('nova.virt.hardware.numa_fit_instance_to_host')
@@ -925,7 +927,8 @@ class HostStateTestCase(test.NoDBTestCase):
     def test_stat_consumption_from_instance(self, host_topo_mock,
                                             numa_fit_mock,
                                             instance_init_mock,
-                                            numa_usage_mock):
+                                            numa_usage_mock,
+                                            sync_mock):
         fake_numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell()])
         fake_host_numa_topology = mock.Mock()
@@ -949,6 +952,7 @@ class HostStateTestCase(test.NoDBTestCase):
                                               limits=None, pci_requests=None,
                                               pci_stats=None)
         numa_usage_mock.assert_called_once_with(host, fake_instance)
+        sync_mock.assert_called_once_with(("fakehost", "fakenode"))
         self.assertEqual(fake_host_numa_topology, host.numa_topology)
         self.assertIsNotNone(host.updated)
 
