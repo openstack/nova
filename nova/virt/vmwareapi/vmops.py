@@ -81,10 +81,9 @@ CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
 
-VMWARE_POWER_STATES = {
-                   'poweredOff': power_state.SHUTDOWN,
-                    'poweredOn': power_state.RUNNING,
-                    'suspended': power_state.SUSPENDED}
+VMWARE_POWER_STATES = {'poweredOff': power_state.SHUTDOWN,
+                       'poweredOn': power_state.RUNNING,
+                       'suspended': power_state.SUSPENDED}
 
 RESIZE_TOTAL_STEPS = 6
 

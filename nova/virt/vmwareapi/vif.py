@@ -99,7 +99,7 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
         # Check if the vlan id is proper for the port group
         if pg_vlanid != vlan_num:
             raise exception.InvalidVLANTag(bridge=bridge, tag=vlan_num,
-                                       pgroup=pg_vlanid)
+                                           pgroup=pg_vlanid)
     return network_ref
 
 
