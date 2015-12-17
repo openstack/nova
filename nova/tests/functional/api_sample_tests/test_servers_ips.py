@@ -23,7 +23,6 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class ServersIpsJsonTest(test_servers.ServersSampleBase):
-    extends_name = 'core_only'
     sample_dir = 'server-ips'
 
     def test_get(self):
