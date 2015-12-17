@@ -751,6 +751,12 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
                                  'evacuation'),
                             nullable=True)
     hidden = Column(Boolean, default=False)
+    memory_total = Column(BigInteger, nullable=True)
+    memory_processed = Column(BigInteger, nullable=True)
+    memory_remaining = Column(BigInteger, nullable=True)
+    disk_total = Column(BigInteger, nullable=True)
+    disk_processed = Column(BigInteger, nullable=True)
+    disk_remaining = Column(BigInteger, nullable=True)
 
     instance = orm.relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '

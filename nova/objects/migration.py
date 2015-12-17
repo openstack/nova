@@ -36,7 +36,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Added migration_type and hidden
     # Version 1.3: Added get_by_id_and_instance()
-    VERSION = '1.3'
+    # Version 1.4: Added migration progress detail
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -53,6 +54,12 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
                                             'live-migration', 'evacuation'],
                                            nullable=False),
         'hidden': fields.BooleanField(nullable=False, default=False),
+        'memory_total': fields.IntegerField(nullable=True),
+        'memory_processed': fields.IntegerField(nullable=True),
+        'memory_remaining': fields.IntegerField(nullable=True),
+        'disk_total': fields.IntegerField(nullable=True),
+        'disk_processed': fields.IntegerField(nullable=True),
+        'disk_remaining': fields.IntegerField(nullable=True),
         }
 
     @staticmethod
@@ -74,6 +81,14 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
             if 'migration_type' in primitive:
                 del primitive['migration_type']
                 del primitive['hidden']
+        if target_version < (1, 4):
+            if 'memory_total' in primitive:
+                del primitive['memory_total']
+                del primitive['memory_processed']
+                del primitive['memory_remaining']
+                del primitive['disk_total']
+                del primitive['disk_processed']
+                del primitive['disk_remaining']
 
     def obj_load_attr(self, attrname):
         if attrname == 'migration_type':
