@@ -27,7 +27,6 @@ import shutil
 import tempfile
 import time
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
@@ -42,6 +41,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -62,49 +62,8 @@ ironic = None
 
 LOG = logging.getLogger(__name__)
 
-opts = [
-    cfg.IntOpt('api_version',
-               default=1,
-               help='Version of Ironic API service endpoint.'),
-    cfg.StrOpt('api_endpoint',
-               help='URL for Ironic API endpoint.'),
-    cfg.StrOpt('admin_username',
-               help='Ironic keystone admin name'),
-    cfg.StrOpt('admin_password',
-               secret=True,
-               help='Ironic keystone admin password.'),
-    cfg.StrOpt('admin_auth_token',
-               secret=True,
-               deprecated_for_removal=True,
-               help='Ironic keystone auth token.'
-                    'DEPRECATED: use admin_username, admin_password, and '
-                    'admin_tenant_name instead'),
-    cfg.StrOpt('admin_url',
-               help='Keystone public API endpoint.'),
-    cfg.StrOpt('client_log_level',
-               deprecated_for_removal=True,
-               help='Log level override for ironicclient. Set this in '
-                    'order to override the global "default_log_levels", '
-                    '"verbose", and "debug" settings. '
-                    'DEPRECATED: use standard logging configuration.'),
-    cfg.StrOpt('admin_tenant_name',
-               help='Ironic keystone tenant name.'),
-    cfg.IntOpt('api_max_retries',
-               default=60,
-               help=('How many retries when a request does conflict. '
-                     'If <= 0, only try once, no retries.')),
-    cfg.IntOpt('api_retry_interval',
-               default=2,
-               help='How often to retry in seconds when a request '
-                    'does conflict'),
-    ]
 
-ironic_group = cfg.OptGroup(name='ironic',
-                            title='Ironic Options')
-
-CONF = cfg.CONF
-CONF.register_group(ironic_group)
-CONF.register_opts(opts, ironic_group)
+CONF = nova.conf.CONF
 
 _POWER_STATE_MAP = {
     ironic_states.POWER_ON: power_state.RUNNING,

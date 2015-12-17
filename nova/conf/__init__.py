@@ -46,7 +46,7 @@ from oslo_config import cfg
 # from nova.conf import image
 # from nova.conf import imagecache
 # from nova.conf import image_file_url
-# from nova.conf import ironic
+from nova.conf import ironic
 # from nova.conf import keymgr
 # from nova.conf import keystone_authtoken
 # from nova.conf import libvirt
@@ -104,7 +104,7 @@ CONF = cfg.CONF
 # image.register_opts(CONF)
 # imagecache.register_opts(CONF)
 # image_file_url.register_opts(CONF)
-# ironic.register_opts(CONF)
+ironic.register_opts(CONF)
 # keymgr.register_opts(CONF)
 # keystone_authtoken.register_opts(CONF)
 # libvirt.register_opts(CONF)
