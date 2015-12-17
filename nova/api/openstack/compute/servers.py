@@ -64,12 +64,8 @@ class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
 
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v21.extensions.server.create'
-    EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE = (
-        'nova.api.v21.extensions.server.create.deserialize')
 
     EXTENSION_REBUILD_NAMESPACE = 'nova.api.v21.extensions.server.rebuild'
-    EXTENSION_DESERIALIZE_EXTRACT_REBUILD_NAMESPACE = (
-        'nova.api.v21.extensions.server.rebuild.deserialize')
 
     EXTENSION_UPDATE_NAMESPACE = 'nova.api.v21.extensions.server.update'
 
