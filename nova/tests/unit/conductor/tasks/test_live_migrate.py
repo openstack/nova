@@ -433,8 +433,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 .AndRaise(exception.DestinationHypervisorTooOld)
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.MaxRetriesExceeded,
-                          self.task._find_destination)
+        with mock.patch.object(self.task.migration, 'save') as save_mock:
+            self.assertRaises(exception.MaxRetriesExceeded,
+                              self.task._find_destination)
+            self.assertEqual('failed', self.task.migration.status)
+            save_mock.assert_called_once_with()
 
     def test_find_destination_when_runs_out_of_hosts(self):
         self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')

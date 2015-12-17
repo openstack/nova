@@ -191,6 +191,9 @@ class LiveMigrationTask(base.TaskBase):
 
         retries = len(attempted_hosts) - 1
         if retries > CONF.migrate_max_retries:
+            if self.migration:
+                self.migration.status = 'failed'
+                self.migration.save()
             msg = (_('Exceeded max scheduling retries %(max_retries)d for '
                      'instance %(instance_uuid)s during live migration')
                    % {'max_retries': retries,
