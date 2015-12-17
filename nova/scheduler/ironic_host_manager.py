@@ -38,7 +38,7 @@ class IronicNodeState(host_manager.HostState):
     previously used and lock down access.
     """
 
-    def update_from_compute_node(self, compute):
+    def _update_from_compute_node(self, compute):
         """Update information about a host from a ComputeNode object."""
         self.vcpus_total = compute.vcpus
         self.vcpus_used = compute.vcpus_used
@@ -86,14 +86,14 @@ class IronicHostManager(host_manager.HostManager):
         """Factory function/property to create a new HostState."""
         compute = kwargs.get('compute')
         if compute and compute.get('hypervisor_type') == hv_type.IRONIC:
-            return IronicNodeState(host, node, **kwargs)
+            return IronicNodeState(host, node)
         else:
-            return host_manager.HostState(host, node, **kwargs)
+            return host_manager.HostState(host, node)
 
     def _init_instance_info(self):
         """Ironic hosts should not pass instance info."""
         pass
 
-    def _add_instance_info(self, context, compute, host_state):
+    def _get_instance_info(self, context, compute):
         """Ironic hosts should not pass instance info."""
-        host_state.instances = {}
+        return {}

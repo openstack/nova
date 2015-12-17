@@ -106,9 +106,10 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, node, compute=None):
+    def __init__(self, host, node):
         self.host = host
         self.nodename = node
+        self._lock_name = (host, node)
 
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
@@ -151,13 +152,29 @@ class HostState(object):
         self.cpu_allocation_ratio = None
 
         self.updated = None
-        if compute:
-            self.update_from_compute_node(compute)
 
-    def update_service(self, service):
-        self.service = ReadOnlyDict(service)
+    def update(self, compute=None, service=None, aggregates=None,
+            inst_dict=None):
+        """Update all information about a host."""
 
-    def update_from_compute_node(self, compute):
+        @utils.synchronized(self._lock_name)
+        def _locked_update(self, compute, service, aggregates, inst_dict):
+            if compute is not None:
+                LOG.debug("Update host state from compute node: %s", compute)
+                self._update_from_compute_node(compute)
+            if aggregates is not None:
+                LOG.debug("Update host state with aggregates: %s", aggregates)
+                self.aggregates = aggregates
+            if service is not None:
+                LOG.debug("Update host state with service dict: %s", service)
+                self.service = ReadOnlyDict(service)
+            if inst_dict is not None:
+                LOG.debug("Update host state with instances: %s", inst_dict)
+                self.instances = inst_dict
+
+        return _locked_update(self, compute, service, aggregates, inst_dict)
+
+    def _update_from_compute_node(self, compute):
         """Update information about a host from a ComputeNode object."""
         if (self.updated and compute.updated_at
                 and self.updated > compute.updated_at):
@@ -285,7 +302,7 @@ class HostManager(object):
 
     # Can be overridden in a subclass
     def host_state_cls(self, host, node, **kwargs):
-        return HostState(host, node, **kwargs)
+        return HostState(host, node)
 
     def __init__(self):
         self.host_state_map = {}
@@ -527,19 +544,17 @@ class HostManager(object):
             node = compute.hypervisor_hostname
             state_key = (host, node)
             host_state = self.host_state_map.get(state_key)
-            if host_state:
-                host_state.update_from_compute_node(compute)
-            else:
+            if not host_state:
                 host_state = self.host_state_cls(host, node, compute=compute)
                 self.host_state_map[state_key] = host_state
             # We force to update the aggregates info each time a new request
             # comes in, because some changes on the aggregates could have been
             # happening after setting this field for the first time
-            host_state.aggregates = [self.aggs_by_id[agg_id] for agg_id in
-                                     self.host_aggregates_map[
-                                         host_state.host]]
-            host_state.update_service(dict(service))
-            self._add_instance_info(context, compute, host_state)
+            host_state.update(compute,
+                              dict(service),
+                              self._get_aggregates_info(host),
+                              self._get_instance_info(context, compute))
+
             seen_nodes.add(state_key)
 
         # remove compute nodes from host_state_map if they are not active
@@ -552,8 +567,12 @@ class HostManager(object):
 
         return six.itervalues(self.host_state_map)
 
-    def _add_instance_info(self, context, compute, host_state):
-        """Adds the host instance info to the host_state object.
+    def _get_aggregates_info(self, host):
+        return [self.aggs_by_id[agg_id] for agg_id in
+                self.host_aggregates_map[host]]
+
+    def _get_instance_info(self, context, compute):
+        """Gets the host instance info from the compute host.
 
         Some older compute nodes may not be sending instance change updates to
         the Scheduler; other sites may disable this feature for performance
@@ -571,7 +590,7 @@ class HostManager(object):
             inst_list = objects.InstanceList.get_by_host(context, host_name)
             inst_dict = {instance.uuid: instance
                          for instance in inst_list.objects}
-        host_state.instances = inst_dict
+        return inst_dict
 
     def _recreate_instance_info(self, context, host_name):
         """Get the InstanceList for the specified host, and store it in the

@@ -188,7 +188,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
-    @mock.patch('nova.scheduler.host_manager.HostManager._add_instance_info')
+    @mock.patch('nova.scheduler.host_manager.HostManager._get_instance_info')
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.ComputeNodeList.get_all',
@@ -198,7 +198,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                               'pci_requests': None})
     def test_schedule_chooses_best_host(self, mock_get_extra, mock_cn_get_all,
                                         mock_get_by_binary,
-                                        mock_add_inst_info):
+                                        mock_get_inst_info):
         """If scheduler_host_subset_size is 1, the largest host with greatest
         weight should be returned.
         """

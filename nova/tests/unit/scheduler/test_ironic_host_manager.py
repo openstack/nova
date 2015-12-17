@@ -187,7 +187,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     def test_update_from_compute_node(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
-        host.update_from_compute_node(self.compute_node)
+        host.update(compute=self.compute_node)
 
         self.assertEqual(1024, host.free_ram_mb)
         self.assertEqual(1024, host.total_usable_ram_mb)
@@ -201,7 +201,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     def test_consume_identical_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
-        host.update_from_compute_node(self.compute_node)
+        host.update(compute=self.compute_node)
 
         self.assertIsNone(host.updated)
         spec_obj = objects.RequestSpec(
@@ -217,7 +217,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     def test_consume_larger_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
-        host.update_from_compute_node(self.compute_node)
+        host.update(compute=self.compute_node)
 
         self.assertIsNone(host.updated)
         spec_obj = objects.RequestSpec(
@@ -232,7 +232,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     def test_consume_smaller_instance_from_compute(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
-        host.update_from_compute_node(self.compute_node)
+        host.update(compute=self.compute_node)
 
         self.assertIsNone(host.updated)
         spec_obj = objects.RequestSpec(
