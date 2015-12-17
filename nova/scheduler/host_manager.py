@@ -490,6 +490,8 @@ class HostManager(object):
                 # NOTE(deva): Skip filters when forcing host or node
                 if name_to_cls_map:
                     return name_to_cls_map.values()
+                else:
+                    return []
             hosts = six.itervalues(name_to_cls_map)
 
         return self.filter_handler.get_filtered_objects(filters,

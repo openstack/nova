@@ -281,8 +281,12 @@ class HostManagerTestCase(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
-                fake_properties)
+        with mock.patch.object(self.host_manager.filter_handler,
+                'get_filtered_objects') as fake_filter:
+            result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                    fake_properties)
+            self.assertFalse(fake_filter.called)
+
         self._verify_result(info, result, False)
 
     def test_get_filtered_hosts_with_ignore_and_force_hosts(self):
