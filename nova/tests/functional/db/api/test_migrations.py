@@ -238,6 +238,25 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertEqual(['id'], fk['referred_columns'])
         self.assertEqual(['flavor_id'], fk['constrained_columns'])
 
+    def _check_006(self, engine, data):
+        for column in ['id', 'request_spec_id', 'project_id', 'user_id',
+                'display_name', 'instance_metadata', 'progress', 'vm_state',
+                'image_ref', 'access_ip_v4', 'access_ip_v6', 'info_cache',
+                'security_groups', 'config_drive', 'key_name', 'locked_by']:
+            self.assertColumnExists(engine, 'build_requests', column)
+
+        self.assertIndexExists(engine, 'build_requests',
+            'build_requests_project_id_idx')
+        self.assertUniqueConstraintExists(engine, 'build_requests',
+                ['request_spec_id'])
+
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('build_requests')[0]
+        self.assertEqual('request_specs', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['request_spec_id'], fk['constrained_columns'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
