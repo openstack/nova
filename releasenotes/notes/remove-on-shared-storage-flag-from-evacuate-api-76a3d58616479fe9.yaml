@@ -1,0 +1,7 @@
+---
+features:
+  - Remove ``onSharedStorage`` parameter from server's evacuate action in
+    microversion 2.14. Nova will automatically detect if the instance is on
+    shared storage. Also adminPass is removed from the response body which
+    makes the response body empty. The user can get the password with the
+    server's os-server-password action.

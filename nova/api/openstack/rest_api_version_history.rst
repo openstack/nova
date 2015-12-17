@@ -137,3 +137,10 @@ user documentation.
   Add information ``project_id`` and ``user_id`` to ``os-server-groups``
   API response data.
 
+2.14
+----
+
+  Remove ``onSharedStorage`` parameter from server's evacuate action. Nova will
+  automatically detect if the instance is on shared storage.
+  Also adminPass is removed from the response body. The user can get the
+  password with the server's os-server-password action.
