@@ -127,8 +127,8 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         mock_get_memory_info.assert_called_once_with()
         mock_get_cpu_info.assert_called_once_with()
         mock_get_hypervisor_version.assert_called_once_with()
-        expected = {'supported_instances': '[["i686", "hyperv", "hvm"], '
-                                           '["x86_64", "hyperv", "hvm"]]',
+        expected = {'supported_instances': [("i686", "hyperv", "hvm"),
+                                            ("x86_64", "hyperv", "hvm")],
                     'hypervisor_hostname': mock_node(),
                     'cpu_info': jsonutils.dumps(mock_cpu_info),
                     'hypervisor_version': mock.sentinel.VERSION,

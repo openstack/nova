@@ -140,9 +140,9 @@ class HostOps(object):
                'hypervisor_hostname': platform.node(),
                'vcpus_used': 0,
                'cpu_info': jsonutils.dumps(cpu_info),
-               'supported_instances': jsonutils.dumps(
+               'supported_instances':
                    [(arch.I686, hv_type.HYPERV, vm_mode.HVM),
-                    (arch.X86_64, hv_type.HYPERV, vm_mode.HVM)]),
+                    (arch.X86_64, hv_type.HYPERV, vm_mode.HVM)],
                'numa_topology': None,
                }
 
