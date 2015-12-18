@@ -109,14 +109,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {'retry': retry}
 
         host_state = host_manager.HostState('host', 'node')
-        host_state.limits['vcpus'] = 5
+        host_state.limits['vcpu'] = 5
         scheduler_utils.populate_filter_properties(filter_properties,
                 host_state)
 
         self.assertEqual(['host', 'node'],
                          filter_properties['retry']['hosts'][0])
 
-        self.assertEqual({'vcpus': 5}, host_state.limits)
+        self.assertEqual({'vcpu': 5}, host_state.limits)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
