@@ -256,7 +256,7 @@ class MetadataRequestHandler(wsgi.Application):
 
         # instance_data is unicode-encoded, while memorycache doesn't like
         # that. Therefore we convert to str
-        if isinstance(instance_id, unicode):
+        if isinstance(instance_id, six.text_type):
             instance_id = instance_id.encode('utf-8')
         return instance_id, tenant_id
 
