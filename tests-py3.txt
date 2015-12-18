@@ -14,7 +14,6 @@ nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ExtensionControl
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ExtensionManagerTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.RequestExtensionTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ResourceExtensionTest
-nova.tests.unit.api.openstack.compute.legacy_v2.test_servers.Base64ValidationTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_servers.ServersControllerCreateTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_servers.ServersControllerCreateTestWithMock
 nova.tests.unit.api.openstack.compute.legacy_v2.test_servers.ServersControllerRebuildInstanceTest

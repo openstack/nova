@@ -364,6 +364,11 @@ class Controller(wsgi.Controller):
                            '|[A-Za-z0-9+\/]{3}=)?$')
 
     def _decode_base64(self, data):
+        if isinstance(data, six.binary_type) and hasattr(data, "decode"):
+            try:
+                data = data.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
         data = re.sub(r'\s', '', data)
         if not self.B64_REGEX.match(data):
             return None

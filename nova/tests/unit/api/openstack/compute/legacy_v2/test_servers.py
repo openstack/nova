@@ -126,18 +126,18 @@ class Base64ValidationTest(test.TestCase):
         self.controller = servers.Controller(self.ext_mgr)
 
     def test_decode_base64(self):
-        value = "A random string"
+        value = b"A random string"
         result = self.controller._decode_base64(base64.b64encode(value))
         self.assertEqual(value, result)
 
     def test_decode_base64_binary(self):
-        value = "\x00\x12\x75\x99"
+        value = b"\x00\x12\x75\x99"
         result = self.controller._decode_base64(base64.b64encode(value))
         self.assertEqual(value, result)
 
     def test_decode_base64_whitespace(self):
-        value = "A random string"
-        encoded = base64.b64encode(value)
+        value = b"A random string"
+        encoded = base64.b64encode(value).decode("ascii")
         white = "\n \n%s\t%s\n" % (encoded[:2], encoded[2:])
         result = self.controller._decode_base64(white)
         self.assertEqual(value, result)
@@ -148,8 +148,8 @@ class Base64ValidationTest(test.TestCase):
         self.assertIsNone(result)
 
     def test_decode_base64_illegal_bytes(self):
-        value = "A random string"
-        encoded = base64.b64encode(value)
+        value = b"A random string"
+        encoded = base64.b64encode(value).decode("ascii")
         white = ">\x01%s*%s()" % (encoded[:2], encoded[2:])
         result = self.controller._decode_base64(white)
         self.assertIsNone(result)
