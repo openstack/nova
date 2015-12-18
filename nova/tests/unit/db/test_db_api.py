@@ -28,6 +28,7 @@ import netaddr
 from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
@@ -179,6 +180,58 @@ class DecoratorTestCase(test.TestCase):
     def test_require_deadlock_retry_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(
             oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True))
+
+    @mock.patch.object(enginefacade._TransactionContextManager, 'using')
+    @mock.patch.object(enginefacade._TransactionContextManager, '_clone')
+    def test_select_db_reader_mode_select_sync(self, mock_clone, mock_using):
+
+        @db.select_db_reader_mode
+        def func(self, context, value, use_slave=False):
+            pass
+
+        mock_clone.return_value = enginefacade._TransactionContextManager(
+            mode=enginefacade._READER)
+        ctxt = context.get_admin_context()
+        value = 'some_value'
+        func(self, ctxt, value)
+
+        mock_clone.assert_called_once_with(mode=enginefacade._READER)
+        mock_using.assert_called_once_with(ctxt)
+
+    @mock.patch.object(enginefacade._TransactionContextManager, 'using')
+    @mock.patch.object(enginefacade._TransactionContextManager, '_clone')
+    def test_select_db_reader_mode_select_async(self, mock_clone, mock_using):
+
+        @db.select_db_reader_mode
+        def func(self, context, value, use_slave=False):
+            pass
+
+        mock_clone.return_value = enginefacade._TransactionContextManager(
+            mode=enginefacade._ASYNC_READER)
+        ctxt = context.get_admin_context()
+        value = 'some_value'
+        func(self, ctxt, value, use_slave=True)
+
+        mock_clone.assert_called_once_with(mode=enginefacade._ASYNC_READER)
+        mock_using.assert_called_once_with(ctxt)
+
+    @mock.patch.object(enginefacade._TransactionContextManager, 'using')
+    @mock.patch.object(enginefacade._TransactionContextManager, '_clone')
+    def test_select_db_reader_mode_no_use_slave_select_sync(self, mock_clone,
+                                                            mock_using):
+
+        @db.select_db_reader_mode
+        def func(self, context, value):
+            pass
+
+        mock_clone.return_value = enginefacade._TransactionContextManager(
+            mode=enginefacade._READER)
+        ctxt = context.get_admin_context()
+        value = 'some_value'
+        func(self, ctxt, value)
+
+        mock_clone.assert_called_once_with(mode=enginefacade._READER)
+        mock_using.assert_called_once_with(ctxt)
 
 
 def _get_fake_aggr_values():
