@@ -1,6 +1,11 @@
 
-Hypervisor Support Matrix
-=========================
+Feature Support Matrix
+======================
+
+.. warning::
+    Please note, while this document is still being maintained, this is slowly
+    being updated to re-group and classify features using the definitions
+    described in here: :doc:`feature_classification`
 
 When considering which capabilities should be marked as mandatory the
 following general guiding principles were applied

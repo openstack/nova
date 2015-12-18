@@ -72,16 +72,26 @@ There was a session on the v2.1 API at the Liberty summit which you can watch
 
 
 
-Hypervisor Support Matrix
-=========================
+Feature Status
+==============
 
-The hypervisor support matrix is how we document what features we require
-hypervisor drivers to implement, as well as the level of support for optional
-features that we currently have. You can see the support matrix here:
+Nova aims to have a single compute API that works the same across
+all deployments of Nova.
+While many features are well-tested, well-documented, support live upgrade,
+and are ready for production, some are not. Also the choice of underlying
+technology affects the list of features that are ready for production.
+
+Our first attempt to communicate this is the feature support matrix
+(previously called the hypervisor support matrix).
+Over time we hope to evolve that to include a classification of each feature's
+maturity and exactly what technology combinations are covered by current
+integration testing efforts.
 
 .. toctree::
    :maxdepth: 1
 
+   test_strategy
+   feature_classification
    support-matrix
 
 Developer Guide
