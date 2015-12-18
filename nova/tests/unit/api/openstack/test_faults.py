@@ -16,7 +16,6 @@
 
 import mock
 from oslo_serialization import jsonutils
-import six
 import webob
 import webob.dec
 import webob.exc
@@ -57,7 +56,7 @@ class TestFaultWrapper(test.NoDBTestCase):
         # translate().
         mock_translate.assert_any_call(u'Should be translated.', None)
         # The return value from translate() should appear in the response.
-        self.assertIn("I've been translated!", six.text_type(response.body))
+        self.assertIn("I've been translated!", response.body.decode("UTF-8"))
 
 
 class TestFaults(test.NoDBTestCase):
