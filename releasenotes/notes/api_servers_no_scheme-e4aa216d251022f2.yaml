@@ -1,0 +1,9 @@
+---
+prelude: >
+
+deprecations:
+
+  - It is now deprecated to use [glance] api_servers without a
+    protocol scheme (http / https). This is required to support urls
+    throughout the system. Update any api_servers list with fully
+    qualified https / http urls.
