@@ -400,6 +400,17 @@ class Guest(object):
         """Shutdown guest"""
         self._domain.shutdown()
 
+    def pause(self):
+        """Suspends an active guest
+
+        Process is frozen without further access to CPU resources and
+        I/O but the memory used by the domain at the hypervisor level
+        will stay allocated.
+
+        See method "resume()" to reactive guest.
+        """
+        self._domain.suspend()
+
 
 class BlockDevice(object):
     """Wrapper around block device API"""

@@ -2221,13 +2221,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def pause(self, instance):
         """Pause VM instance."""
-        guest = self._host.get_guest(instance)
-
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove dom at the end.
-        dom = guest._domain
-        dom.suspend()
+        self._host.get_guest(instance).pause()
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
