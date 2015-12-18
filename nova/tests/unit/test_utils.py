@@ -1321,3 +1321,24 @@ class SpawnTestCase(SpawnNTestCase):
     def setUp(self):
         super(SpawnTestCase, self).setUp()
         self.spawn_name = 'spawn'
+
+
+class UT8TestCase(test.NoDBTestCase):
+    def test_none_value(self):
+        self.assertIsInstance(utils.utf8(None), type(None))
+
+    def test_bytes_value(self):
+        some_value = b"fake data"
+        return_value = utils.utf8(some_value)
+        # check that type of returned value doesn't changed
+        self.assertIsInstance(return_value, type(some_value))
+        self.assertEqual(some_value, return_value)
+
+    def test_not_text_type(self):
+        return_value = utils.utf8(1)
+        self.assertEqual(b"1", return_value)
+        self.assertIsInstance(return_value, six.binary_type)
+
+    def test_text_type_with_encoding(self):
+        some_value = 'test\u2026config'
+        self.assertEqual(some_value, utils.utf8(some_value).decode("utf-8"))

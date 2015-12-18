@@ -588,14 +588,17 @@ def xhtml_escape(value):
 def utf8(value):
     """Try to turn a string into utf-8 if possible.
 
-    Code is directly from the utf8 function in
+    The original code was copied from the utf8 function in
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
 
     """
-    if isinstance(value, six.text_type):
-        return value.encode('utf-8')
-    assert isinstance(value, str)
-    return value
+    if value is None or isinstance(value, six.binary_type):
+        return value
+
+    if not isinstance(value, six.text_type):
+        value = six.text_type(value)
+
+    return value.encode('utf-8')
 
 
 def check_isinstance(obj, cls):
