@@ -24,6 +24,7 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -528,16 +529,18 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
                            "%(left)s bytes left to copy",
                            {"complete_pct": 50.0, "left": 1})
         current = timeutils.utcnow()
-        timeutils.set_time_override(current)
-        timeutils.advance_time_seconds(vm_utils.PROGRESS_INTERVAL_SECONDS + 1)
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(current))
+        time_fixture.advance_time_seconds(
+            vm_utils.PROGRESS_INTERVAL_SECONDS + 1)
         self.mox.ReplayAll()
         vm_utils._log_progress_if_required(1, current, 2)
 
     def test_log_progress_if_not_required(self):
         self.mox.StubOutWithMock(vm_utils.LOG, "debug")
         current = timeutils.utcnow()
-        timeutils.set_time_override(current)
-        timeutils.advance_time_seconds(vm_utils.PROGRESS_INTERVAL_SECONDS - 1)
+        time_fixture = self.useFixture(utils_fixture.TimeFixture(current))
+        time_fixture.advance_time_seconds(
+            vm_utils.PROGRESS_INTERVAL_SECONDS - 1)
         self.mox.ReplayAll()
         vm_utils._log_progress_if_required(1, current, 2)
 

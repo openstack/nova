@@ -15,6 +15,7 @@
 import traceback
 
 import mock
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 import six
 
@@ -78,7 +79,7 @@ class _TestInstanceActionObject(object):
                          self.context.timestamp)
 
     def test_pack_action_finish(self):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         values = instance_action.InstanceAction.pack_action_finish(
             self.context, 'fake-uuid')
         self.assertEqual(values['request_id'], self.context.request_id)
@@ -111,7 +112,7 @@ class _TestInstanceActionObject(object):
 
     @mock.patch.object(db, 'action_finish')
     def test_action_finish(self, mock_finish):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceAction
         expected_packed_values = test_class.pack_action_finish(
             self.context, 'fake-uuid')
@@ -124,7 +125,7 @@ class _TestInstanceActionObject(object):
 
     @mock.patch.object(db, 'action_finish')
     def test_action_finish_no_result(self, mock_finish):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceAction
         expected_packed_values = test_class.pack_action_finish(
             self.context, 'fake-uuid')
@@ -138,7 +139,7 @@ class _TestInstanceActionObject(object):
     @mock.patch.object(db, 'action_finish')
     @mock.patch.object(db, 'action_start')
     def test_finish(self, mock_start, mock_finish):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         expected_packed_action_start = {
             'request_id': self.context.request_id,
             'user_id': self.context.user_id,
@@ -197,7 +198,7 @@ class _TestInstanceActionEventObject(object):
 
     @mock.patch.object(db, 'action_event_start')
     def test_event_start(self, mock_start):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_start(
             self.context, 'fake-uuid', 'fake-event')
@@ -210,7 +211,7 @@ class _TestInstanceActionEventObject(object):
 
     @mock.patch.object(db, 'action_event_start')
     def test_event_start_no_result(self, mock_start):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_start(
             self.context, 'fake-uuid', 'fake-event')
@@ -223,11 +224,11 @@ class _TestInstanceActionEventObject(object):
 
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish(self, mock_finish):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event')
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
         mock_finish.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=True)
@@ -237,11 +238,11 @@ class _TestInstanceActionEventObject(object):
 
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_no_result(self, mock_finish):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event')
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
         mock_finish.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=False)
@@ -252,11 +253,11 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(traceback, 'format_tb')
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_with_failure(self, mock_finish, mock_tb):
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
 
         mock_finish.return_value = fake_event
         event = test_class.event_finish_with_failure(
@@ -271,11 +272,11 @@ class _TestInstanceActionEventObject(object):
     def test_event_finish_with_failure_legacy(self, mock_finish, mock_tb):
         # Tests that exc_tb is serialized when it's not a string type.
         mock_tb.return_value = 'fake-tb'
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
 
         mock_finish.return_value = fake_event
         fake_tb = mock.sentinel.fake_tb
@@ -290,12 +291,12 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_with_failure_legacy_unicode(self, mock_finish):
         # Tests that traceback.format_tb is not called when exc_tb is unicode.
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event', 'val',
             six.text_type('fake-tb'))
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
 
         mock_finish.return_value = fake_event
         event = test_class.event_finish_with_failure(
@@ -311,11 +312,11 @@ class _TestInstanceActionEventObject(object):
         # Tests that traceback.format_tb is not called when exc_tb is a str
         # and want_result is False, so no event should come back.
         mock_tb.return_value = 'fake-tb'
-        timeutils.set_time_override(override_time=NOW)
+        self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
-        expected_packed_values['finish_time'] = timeutils.utcnow()
+        expected_packed_values['finish_time'] = NOW
 
         mock_finish.return_value = fake_event
         event = test_class.event_finish_with_failure(

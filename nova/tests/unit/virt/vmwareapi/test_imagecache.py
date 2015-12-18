@@ -16,7 +16,7 @@ import datetime
 
 import mock
 from oslo_config import cfg
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import vim_util as vutil
 
@@ -99,7 +99,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertIsNone(ts)
 
     def test_get_timestamp_filename(self):
-        timeutils.set_time_override(override_time=self._time)
+        self.useFixture(utils_fixture.TimeFixture(self._time))
         fn = self._imagecache._get_timestamp_filename()
         self.assertEqual(self._file_name, fn)
 
@@ -217,7 +217,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                               fake_timestamp_cleanup),
         ) as (_get_ds_browser, _get_timestamp, _mkdir, _file_delete,
               _timestamp_cleanup):
-            timeutils.set_time_override(override_time=self._time)
+            self.useFixture(utils_fixture.TimeFixture(self._time))
             datastore = ds_obj.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = ds_util.DcInfo(ref='dc_ref', name='name',
                                      vmFolder='vmFolder')

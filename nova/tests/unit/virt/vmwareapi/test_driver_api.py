@@ -26,7 +26,7 @@ from eventlet import greenthread
 import mock
 from mox3 import mox
 from oslo_config import cfg
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -1974,7 +1974,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.flags(remove_unused_original_minimum_age_seconds=aging_time)
         self._image_aging_image_marked_for_deletion()
         all_instances = []
-        timeutils.set_time_override(cur_time)
+        self.useFixture(utils_fixture.TimeFixture(cur_time))
         self.conn.manage_image_cache(self.context, all_instances)
 
     def test_image_aging_aged(self):

@@ -21,6 +21,7 @@ import mock
 from mox3 import mox
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
@@ -756,7 +757,7 @@ class _ComputeAPIUnitTestMixIn(object):
                   'ram': -inst.memory_mb}
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                         tzinfo=iso8601.iso8601.Utc())
-        timeutils.set_time_override(delete_time)
+        self.useFixture(utils_fixture.TimeFixture(delete_time))
         task_state = (delete_type == 'soft_delete' and
                       task_states.SOFT_DELETING or task_states.DELETING)
         updates = {'progress': 0, 'task_state': task_state}
@@ -1093,7 +1094,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(inst, 'save')
 
         delete_time = datetime.datetime(1955, 11, 5)
-        timeutils.set_time_override(delete_time)
+        self.useFixture(utils_fixture.TimeFixture(delete_time))
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid, use_slave=False).AndReturn([])

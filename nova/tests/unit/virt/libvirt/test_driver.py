@@ -41,8 +41,8 @@ from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import fileutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import importutils
-from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
@@ -10118,7 +10118,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        timeutils.set_time_override(diags_time)
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
@@ -10229,7 +10229,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        timeutils.set_time_override(diags_time)
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
@@ -10334,7 +10334,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        timeutils.set_time_override(diags_time)
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
@@ -10448,7 +10448,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        timeutils.set_time_override(diags_time)
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
@@ -10572,7 +10572,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        timeutils.set_time_override(diags_time)
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)
@@ -10610,10 +10610,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     'version': '1.0'}
         self.assertEqual(expected, actual.serialize())
 
-    @mock.patch.object(timeutils, 'utcnow')
     @mock.patch.object(host.Host, 'get_domain')
-    def test_diagnostic_full_with_multiple_interfaces(self, mock_get_domain,
-                                                      mock_utcnow):
+    def test_diagnostic_full_with_multiple_interfaces(self, mock_get_domain):
         xml = """
                 <domain type='kvm'>
                     <devices>
@@ -10712,7 +10710,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
-        mock_utcnow.return_value = diags_time
+        self.useFixture(utils_fixture.TimeFixture(diags_time))
 
         instance.launched_at = lt
         actual = drvr.get_instance_diagnostics(instance)

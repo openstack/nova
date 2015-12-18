@@ -30,7 +30,7 @@ from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import units
 import six
 
@@ -586,17 +586,13 @@ class AuditPeriodTest(test.NoDBTestCase):
     def setUp(self):
         super(AuditPeriodTest, self).setUp()
         # a fairly random time to test with
-        self.test_time = datetime.datetime(second=23,
-                                           minute=12,
-                                           hour=8,
-                                           day=5,
-                                           month=3,
-                                           year=2012)
-        timeutils.set_time_override(override_time=self.test_time)
-
-    def tearDown(self):
-        timeutils.clear_time_override()
-        super(AuditPeriodTest, self).tearDown()
+        self.useFixture(utils_fixture.TimeFixture(
+            datetime.datetime(second=23,
+                              minute=12,
+                              hour=8,
+                              day=5,
+                              month=3,
+                              year=2012)))
 
     def test_hour(self):
         begin, end = utils.last_completed_audit_period(unit='hour')
