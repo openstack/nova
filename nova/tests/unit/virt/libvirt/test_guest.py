@@ -377,6 +377,59 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.thaw_filesystems()
         self.domain.fsThaw.assert_called_once_with()
 
+    def _conf_snapshot(self):
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestSnapshotDisk)
+        conf.to_xml.return_value = '<disk/>'
+        return conf
+
+    def test_snapshot(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf)
+        self.domain.snapshotCreateXML('<disk/>', flags=0)
+        conf.to_xml.assert_called_once_with()
+
+    def test_snapshot_no_metadata(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf, no_metadata=True)
+        self.domain.snapshotCreateXML(
+            '<disk/>',
+            flags=fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA)
+        conf.to_xml.assert_called_once_with()
+
+    def test_snapshot_disk_only(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf, disk_only=True)
+        self.domain.snapshotCreateXML(
+            '<disk/>', flags=fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY)
+        conf.to_xml.assert_called_once_with()
+
+    def test_snapshot_reuse_ext(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf, reuse_ext=True)
+        self.domain.snapshotCreateXML(
+            '<disk/>', flags=fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
+        conf.to_xml.assert_called_once_with()
+
+    def test_snapshot_quiesce(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf, quiesce=True)
+        self.domain.snapshotCreateXML(
+            '<disk/>', flags=fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
+        conf.to_xml.assert_called_once_with()
+
+    def test_snapshot_all(self):
+        conf = self._conf_snapshot()
+        self.guest.snapshot(conf, no_metadata=True,
+                            disk_only=True, reuse_ext=True,
+                            quiesce=True)
+        self.domain.snapshotCreateXML(
+            '<disk/>', flags=(
+                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT
+                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY
+                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA
+                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE))
+        conf.to_xml.assert_called_once_with()
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 

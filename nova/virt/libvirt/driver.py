@@ -1620,19 +1620,15 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.exception(_LE('Failed to send updated snapshot status '
                               'to volume service.'))
 
-    def _volume_snapshot_create(self, context, instance, domain,
+    def _volume_snapshot_create(self, context, instance, guest,
                                 volume_id, new_file):
         """Perform volume snapshot.
 
-           :param domain: VM that volume is attached to
+           :param guest: VM that volume is attached to
            :param volume_id: volume UUID to snapshot
            :param new_file: relative path to new qcow2 file present on share
 
         """
-
-        # TODO(sahid): An object Guest should be passed instead of
-        # a "domain" as virDomain.
-        guest = libvirt_guest.Guest(domain)
         xml = guest.get_xml_desc()
         xml_doc = etree.fromstring(xml)
 
@@ -1715,16 +1711,9 @@ class LibvirtDriver(driver.ComputeDriver):
         snapshot_xml = snapshot.to_xml()
         LOG.debug("snap xml: %s", snapshot_xml, instance=instance)
 
-        snap_flags = (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
-
-        QUIESCE = libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE
-
         try:
-            domain.snapshotCreateXML(snapshot_xml,
-                                     snap_flags | QUIESCE)
-
+            guest.snapshot(snapshot, no_metadata=True, disk_only=True,
+                           reuse_ext=True, quiesce=True)
             return
         except libvirt.libvirtError:
             LOG.exception(_LE('Unable to create quiesced VM snapshot, '
@@ -1732,7 +1721,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           instance=instance)
 
         try:
-            domain.snapshotCreateXML(snapshot_xml, snap_flags)
+            guest.snapshot(snapshot, no_metadata=True, disk_only=True,
+                           reuse_ext=True, quiesce=False)
         except libvirt.libvirtError:
             LOG.exception(_LE('Unable to create VM snapshot, '
                               'failing volume_snapshot operation.'),
@@ -1768,11 +1758,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -1786,7 +1771,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             'in create_info'))
 
         try:
-            self._volume_snapshot_create(context, instance, virt_dom,
+            self._volume_snapshot_create(context, instance, guest,
                                          volume_id, create_info['new_file'])
         except Exception:
             with excutils.save_and_reraise_exception():
