@@ -1214,8 +1214,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                     message.ctxt, instance_uuid, volume_id)
 
     def get_migrations(self, message, filters):
-        context = message.ctxt
-        return self.compute_api.get_migrations(context, filters)
+        return self.compute_api.get_migrations(message.ctxt, filters)
 
     def get_keypair_at_top(self, message, user_id, name):
         """Get keypair in API cells by name. Just return None if there is
