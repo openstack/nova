@@ -12,17 +12,16 @@ version might not be available in another.
 
 Extensions may also be queried individually by their unique alias. This
 provides the simplest method of checking if an extension is available
-because an unavailable extension issues an itemNotFound (404) response.
+because an unavailable extension issues an itemNotFound (404)
+response.
 
 Extensions may define new data types, parameters, actions, headers,
-states, and resources. In XML, additional elements and attributes can be
-defined. These elements must be defined in the namespace for the
-extension. In JSON, the alias must be used. The volumes element is
-defined in the ``RS-CBS`` namespace. Extended headers are always
-prefixed with ``X-`` followed by the alias and a dash:
-(``X-RS-CBS-HEADER1``). States and parameters must be prefixed with the
-extension alias followed by a colon. For example, an image might be in
-the ``RS-PIE:PrepareShare`` state.
+states, and resources.
+
+NOTE: Extensions is a deprecated concept in Nova and their support
+will be removed in a future version. If your product or cloud relies
+on extensions you should work on getting those features into the main
+upstream project.
 
 Important
 ~~~~~~~~~
@@ -146,4 +145,3 @@ extended request.
           "href":"https://cbs.api.rackspacecloud.com/12934/volumes/19"
        }
     }
-
