@@ -518,6 +518,48 @@ class _BaseTaskTestCase(object):
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
 
+    def test_build_instances_retry_exceeded(self):
+        instances = [fake_instance.fake_instance_obj(self.context)]
+        image = {'fake-data': 'should_pass_silently'}
+        filter_properties = {'retry': {'num_attempts': 10, 'hosts': []}}
+        updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+
+        @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+        @mock.patch.object(scheduler_utils, 'populate_retry')
+        @mock.patch('nova.utils.spawn_n')
+        def _test(spawn_mock, populate_retry, set_vm_state_and_notify):
+            # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that
+            # makes mocking hard so use direct call instead.
+            spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
+
+            # build_instances() is a cast, we need to wait for it to
+            # complete
+            self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+            populate_retry.side_effect = exc.MaxRetriesExceeded(
+                reason="Too many try")
+
+            self.conductor.build_instances(
+                self.context,
+                instances=instances,
+                image=image,
+                filter_properties=filter_properties,
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False)
+
+            populate_retry.assert_called_once_with(
+                filter_properties, instances[0].uuid)
+            set_vm_state_and_notify.assert_called_once_with(
+                self.context, instances[0].uuid, 'compute_task',
+                'build_instances', updates, mock.ANY, {},
+                self.conductor_manager.db)
+
+        _test()
+
     @mock.patch('nova.utils.spawn_n')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
