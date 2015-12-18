@@ -36,7 +36,7 @@ class GlanceStore(object):
         glance_api_servers = glance.get_api_servers()
 
         def pick_glance(kwargs):
-            g_host, g_port, g_use_ssl = next(glance_api_servers)
+            g_host, g_port, g_use_ssl = next(glance_api_servers).as_tuple()
             kwargs['glance_host'] = g_host
             kwargs['glance_port'] = g_port
             kwargs['glance_use_ssl'] = g_use_ssl

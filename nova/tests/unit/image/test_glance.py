@@ -1256,7 +1256,7 @@ class TestGlanceApiServers(test.NoDBTestCase):
         i = 0
         for server in api_servers:
             i += 1
-            self.assertIn(server[0], glance_host)
+            self.assertIn(server.host, glance_host)
             if i > 2:
                 break
 
@@ -1271,9 +1271,32 @@ class TestGlanceApiServers(test.NoDBTestCase):
         i = 0
         for server in api_servers:
             i += 1
-            self.assertIn(server[0], glance_host)
+            self.assertIn(server.host, glance_host)
             if i > 2:
                 break
+
+
+class TestGlanceNoApiServers(test.NoDBTestCase):
+    def test_get_api_server_no_server(self):
+        self.flags(group='glance',
+                   host="10.0.0.1",
+                   port=9292)
+        api_servers = glance.get_api_servers()
+        self.assertEqual("http://10.0.0.1:9292", str(next(api_servers)))
+
+        self.flags(group='glance',
+                   host="10.0.0.1",
+                   protocol="https",
+                   port=9292)
+        api_servers = glance.get_api_servers()
+        self.assertEqual("https://10.0.0.1:9292", str(next(api_servers)))
+
+        self.flags(group='glance',
+                   host="f000::c0de",
+                   protocol="https",
+                   port=9292)
+        api_servers = glance.get_api_servers()
+        self.assertEqual("https://[f000::c0de]:9292", str(next(api_servers)))
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):
