@@ -177,6 +177,15 @@ we need a microversion".
   validation can fail with a 400 for invalid json request body. Request to
   url/resource that does not exist always fails with 404.
 
+When a microversion is not needed
+---------------------------------
+
+A microversion is not needed in the following situation:
+
+- the response
+
+  - Changing the error message without changing the response code
+    does not require a new microversion.
 
 In Code
 -------
