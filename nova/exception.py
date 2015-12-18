@@ -188,7 +188,7 @@ class VirtualInterfacePlugException(NovaException):
 
 
 class GlanceConnectionFailed(NovaException):
-    msg_fmt = _("Connection to glance host %(host)s:%(port)s failed: "
+    msg_fmt = _("Connection to glance host %(server)s failed: "
         "%(reason)s")
 
 
