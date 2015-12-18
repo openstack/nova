@@ -2004,7 +2004,6 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         query_prefix = query_prefix.\
                             filter(models.Instance.updated_at >= changes_since)
 
-    deleted = False
     if 'deleted' in filters:
         # Instances can be soft or hard deleted and the query needs to
         # include or exclude both
