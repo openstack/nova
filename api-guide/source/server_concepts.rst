@@ -348,9 +348,6 @@ Considerations
    The maximum limit refers to the number of bytes in the decoded data
    and not the number of characters in the encoded data.
 
--  You can inject text files only. You cannot inject binary or zip files
-   into a new build.
-
 -  The maximum number of file path/content pairs that you can supply is
    also determined by the compute provider and is defined by the
    maxPersonality absolute limit.
