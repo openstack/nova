@@ -5927,12 +5927,9 @@ class ComputeManager(manager.Manager):
                                compute_utils.usage_volume_info(vol_usage))
 
     @periodic_task.periodic_task(spacing=CONF.volume_usage_poll_interval)
-    def _poll_volume_usage(self, context, start_time=None):
+    def _poll_volume_usage(self, context):
         if CONF.volume_usage_poll_interval == 0:
             return
-
-        if not start_time:
-            start_time = utils.last_completed_audit_period()[1]
 
         compute_host_bdms = self._get_host_volume_bdms(context,
                                                        use_slave=True)
