@@ -29,7 +29,6 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -366,8 +365,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             'disk_available_least': local_gb - local_gb_used,
             'memory_mb': memory_mb,
             'memory_mb_used': memory_mb_used,
-            'supported_instances': jsonutils.dumps(
-                _get_nodes_supported_instances(cpu_arch)),
+            'supported_instances': _get_nodes_supported_instances(cpu_arch),
             'stats': nodes_extra_specs,
             'numa_topology': None,
         }
