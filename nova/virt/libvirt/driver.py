@@ -1520,7 +1520,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # We should be able to remove domain at the end.
             domain = guest._domain
             if quiesced:
-                domain.fsFreeze()
+                guest.freeze_filesystems()
             else:
                 domain.fsThaw()
         except libvirt.libvirtError as ex:

@@ -369,6 +369,10 @@ class GuestTestCase(test.NoDBTestCase):
         with mock.patch.object(self.domain, "isActive", return_value=False):
             self.assertFalse(self.guest.is_active())
 
+    def test_freeze_filesystems(self):
+        self.guest.freeze_filesystems()
+        self.domain.fsFreeze.assert_called_once_with()
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
