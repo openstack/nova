@@ -375,6 +375,24 @@ def validate_image_status_before_upload(conn, url, extra_headers):
                                       'image_status': image_status})
 
 
+def download_vhd2(session, image_id, endpoint,
+                  uuid_stack, sr_path, extra_headers):
+    """Download an image from Glance, unbundle it, and then deposit the VHDs
+    into the storage repository
+    """
+    staging_path = utils.make_staging_area(sr_path)
+    try:
+        # Download tarball into staging area and extract it
+        _download_tarball_by_url(
+            sr_path, staging_path, image_id,
+            endpoint, extra_headers)
+
+        # Move the VHDs from the staging area into the storage repository
+        return utils.import_vhds(sr_path, staging_path, uuid_stack)
+    finally:
+        utils.cleanup_staging_area(staging_path)
+
+
 def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
                  uuid_stack, sr_path, extra_headers):
     """Download an image from Glance, unbundle it, and then deposit the VHDs
@@ -393,6 +411,19 @@ def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
         utils.cleanup_staging_area(staging_path)
 
 
+def upload_vhd2(session, vdi_uuids, image_id,
+               endpoint, sr_path, extra_headers, properties):
+    """Bundle the VHDs comprising an image and then stream them into Glance.
+    """
+    staging_path = utils.make_staging_area(sr_path)
+    try:
+        utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
+        _upload_tarball_by_url(staging_path, image_id,
+                        endpoint, extra_headers, properties)
+    finally:
+        utils.cleanup_staging_area(staging_path)
+
+
 def upload_vhd(session, vdi_uuids, image_id, glance_host, glance_port,
                glance_use_ssl, sr_path, extra_headers, properties):
     """Bundle the VHDs comprising an image and then stream them into Glance.
@@ -407,4 +438,5 @@ def upload_vhd(session, vdi_uuids, image_id, glance_host, glance_port,
 
 
 if __name__ == '__main__':
-    utils.register_plugin_calls(download_vhd, upload_vhd)
+    utils.register_plugin_calls(download_vhd, upload_vhd,
+                                download_vhd2, upload_vhd2)
