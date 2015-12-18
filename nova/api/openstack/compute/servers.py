@@ -1176,10 +1176,11 @@ def remove_invalid_options(context, search_options, allowed_search_options):
     # Otherwise, strip out all unknown options
     unknown_options = [opt for opt in search_options
                         if opt not in allowed_search_options]
-    LOG.debug("Removing options '%s' from query",
-              ", ".join(unknown_options))
-    for opt in unknown_options:
-        search_options.pop(opt, None)
+    if unknown_options:
+        LOG.debug("Removing options '%s' from query",
+                  ", ".join(unknown_options))
+        for opt in unknown_options:
+            search_options.pop(opt, None)
 
 
 class Servers(extensions.V21APIExtensionBase):
