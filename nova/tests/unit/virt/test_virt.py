@@ -254,6 +254,11 @@ class TestVirtDisk(test.NoDBTestCase):
                               ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
 
+        # NOTE(thomasem): Not adding any commands in this case, because we're
+        # not expecting an additional umount for LocalBlockImages. This is to
+        # assert that no additional commands are run in this case.
+        disk_api.teardown_container('/dev/volume-group/uuid_disk')
+
         self.assertEqual(self.executes, expected_commands)
 
     def test_lxc_teardown_container_with_namespace_cleaned(self):

@@ -16,6 +16,10 @@ import mock
 
 from nova import test
 from nova.virt.disk.mount import api
+from nova.virt.disk.mount import block
+from nova.virt.disk.mount import loop
+from nova.virt.disk.mount import nbd
+from nova.virt.image import model as imgmodel
 
 
 PARTITION = 77
@@ -114,3 +118,81 @@ class MountTestCase(test.NoDBTestCase):
         self.assertEqual(ORIG_DEVICE, mount.mapped_device)
         self.assertFalse(mount.automapped)
         self.assertTrue(mount.mapped)
+
+    def test_instance_for_format_raw(self):
+        image = imgmodel.LocalFileImage("/some/file.raw",
+                                        imgmodel.FORMAT_RAW)
+        mount_dir = '/mount/dir'
+        partition = -1
+        inst = api.Mount.instance_for_format(image, mount_dir, partition)
+        self.assertIsInstance(inst, loop.LoopMount)
+
+    def test_instance_for_format_qcow2(self):
+        image = imgmodel.LocalFileImage("/some/file.qcows",
+                                        imgmodel.FORMAT_QCOW2)
+        mount_dir = '/mount/dir'
+        partition = -1
+        inst = api.Mount.instance_for_format(image, mount_dir, partition)
+        self.assertIsInstance(inst, nbd.NbdMount)
+
+    def test_instance_for_format_block(self):
+        image = imgmodel.LocalBlockImage(
+            "/dev/mapper/instances--instance-0000001_disk",)
+        mount_dir = '/mount/dir'
+        partition = -1
+        inst = api.Mount.instance_for_format(image, mount_dir, partition)
+        self.assertIsInstance(inst, block.BlockMount)
+
+    def test_instance_for_device_loop(self):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = -1
+        device = '/dev/loop0'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, loop.LoopMount)
+
+    def test_instance_for_device_loop_partition(self):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = 1
+        device = '/dev/mapper/loop0p1'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, loop.LoopMount)
+
+    def test_instance_for_device_nbd(self):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = -1
+        device = '/dev/nbd0'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, nbd.NbdMount)
+
+    def test_instance_for_device_nbd_partition(self):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = 1
+        device = '/dev/mapper/nbd0p1'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, nbd.NbdMount)
+
+    def test_instance_for_device_block(self):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = -1
+        device = '/dev/mapper/instances--instance-0000001_disk'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, block.BlockMount)
+
+    def test_instance_for_device_block_partiton(self,):
+        image = mock.MagicMock()
+        mount_dir = '/mount/dir'
+        partition = 1
+        device = '/dev/mapper/instances--instance-0000001_diskp1'
+        inst = api.Mount.instance_for_device(image, mount_dir, partition,
+                                               device)
+        self.assertIsInstance(inst, block.BlockMount)
