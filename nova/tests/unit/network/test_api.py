@@ -138,7 +138,7 @@ class ApiTestCase(test.TestCase):
         self.assertEqual(123, vifs[0].network_id)
         self.assertEqual(str(mock.sentinel.network_uuid), vifs[0].net_uuid)
         mock_get_by_instance.assert_called_once_with(
-            self.context, str(mock.sentinel.inst_uuid), use_slave=False)
+            self.context, str(mock.sentinel.inst_uuid))
         mock_get_by_id.assert_called_once_with(self.context, 123,
                                                project_only='allow_none')
 

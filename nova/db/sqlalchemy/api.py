@@ -1446,6 +1446,7 @@ def _fixed_ip_count_by_project(context, project_id, session=None):
 
 
 @require_context
+@main_context_manager.writer
 def virtual_interface_create(context, values):
     """Create a new virtual interface record in the database.
 
@@ -1454,19 +1455,19 @@ def virtual_interface_create(context, values):
     try:
         vif_ref = models.VirtualInterface()
         vif_ref.update(values)
-        vif_ref.save()
+        vif_ref.save(context.session)
     except db_exc.DBError:
         raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
 
 
-def _virtual_interface_query(context, session=None, use_slave=False):
-    return model_query(context, models.VirtualInterface, session=session,
-                       read_deleted="no", use_slave=use_slave)
+def _virtual_interface_query(context):
+    return model_query(context, models.VirtualInterface, read_deleted="no")
 
 
 @require_context
+@main_context_manager.reader
 def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table.
 
@@ -1479,6 +1480,7 @@ def virtual_interface_get(context, vif_id):
 
 
 @require_context
+@main_context_manager.reader
 def virtual_interface_get_by_address(context, address):
     """Gets a virtual interface from the table.
 
@@ -1496,6 +1498,7 @@ def virtual_interface_get_by_address(context, address):
 
 
 @require_context
+@main_context_manager.reader
 def virtual_interface_get_by_uuid(context, vif_uuid):
     """Gets a virtual interface from the table.
 
@@ -1509,12 +1512,13 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 @require_context
 @require_instance_exists_using_uuid
-def virtual_interface_get_by_instance(context, instance_uuid, use_slave=False):
+@main_context_manager.reader.allow_async
+def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
 
     :param instance_uuid: = uuid of the instance to retrieve vifs for
     """
-    vif_refs = _virtual_interface_query(context, use_slave=use_slave).\
+    vif_refs = _virtual_interface_query(context).\
                        filter_by(instance_uuid=instance_uuid).\
                        order_by(asc("created_at"), asc("id")).\
                        all()
@@ -1522,6 +1526,7 @@ def virtual_interface_get_by_instance(context, instance_uuid, use_slave=False):
 
 
 @require_context
+@main_context_manager.reader
 def virtual_interface_get_by_instance_and_network(context, instance_uuid,
                                                   network_id):
     """Gets virtual interface for instance that's associated with network."""
@@ -1533,6 +1538,7 @@ def virtual_interface_get_by_instance_and_network(context, instance_uuid,
 
 
 @require_context
+@main_context_manager.writer
 def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records that are associated
     with the instance given by instance_id.
@@ -1545,6 +1551,7 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
 
 
 @require_context
+@main_context_manager.reader
 def virtual_interface_get_all(context):
     """Get all vifs."""
     vif_refs = _virtual_interface_query(context).all()
@@ -5951,13 +5958,16 @@ def _ec2_instance_get_query(context, session=None):
                        read_deleted='yes')
 
 
+##################
+
+
 def _task_log_get_query(context, task_name, period_beginning,
-                        period_ending, host=None, state=None, session=None):
+                        period_ending, host=None, state=None):
     values = {'period_beginning': period_beginning,
               'period_ending': period_ending}
     values = convert_objects_related_datetimes(values, *values.keys())
 
-    query = model_query(context, models.TaskLog, session=session).\
+    query = model_query(context, models.TaskLog).\
                      filter_by(task_name=task_name).\
                      filter_by(period_beginning=values['period_beginning']).\
                      filter_by(period_ending=values['period_ending'])
@@ -5968,18 +5978,21 @@ def _task_log_get_query(context, task_name, period_beginning,
     return query
 
 
+@main_context_manager.reader
 def task_log_get(context, task_name, period_beginning, period_ending, host,
                  state=None):
     return _task_log_get_query(context, task_name, period_beginning,
                                period_ending, host, state).first()
 
 
+@main_context_manager.reader
 def task_log_get_all(context, task_name, period_beginning, period_ending,
                      host=None, state=None):
     return _task_log_get_query(context, task_name, period_beginning,
                                period_ending, host, state).all()
 
 
+@main_context_manager.writer
 def task_log_begin_task(context, task_name, period_beginning, period_ending,
                         host, task_items=None, message=None):
     values = {'period_beginning': period_beginning,
@@ -5997,25 +6010,26 @@ def task_log_begin_task(context, task_name, period_beginning, period_ending,
     if task_items:
         task.task_items = task_items
     try:
-        task.save()
+        task.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
 
 
+@main_context_manager.writer
 def task_log_end_task(context, task_name, period_beginning, period_ending,
                       host, errors, message=None):
     values = dict(state="DONE", errors=errors)
     if message:
         values["message"] = message
 
-    session = get_session()
-    with session.begin():
-        rows = _task_log_get_query(context, task_name, period_beginning,
-                                       period_ending, host, session=session).\
-                        update(values)
-        if rows == 0:
-            # It's not running!
-            raise exception.TaskNotRunning(task_name=task_name, host=host)
+    rows = _task_log_get_query(context, task_name, period_beginning,
+                               period_ending, host).update(values)
+    if rows == 0:
+        # It's not running!
+        raise exception.TaskNotRunning(task_name=task_name, host=host)
+
+
+##################
 
 
 def _archive_deleted_rows_for_table(tablename, max_rows):
