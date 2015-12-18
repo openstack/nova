@@ -24,6 +24,7 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova.i18n import _
+from nova.objects import migrate_data as migrate_data_obj
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vmops
@@ -116,7 +117,7 @@ class LiveMigrationOps(object):
                                            block_migration=False,
                                            disk_over_commit=False):
         LOG.debug("check_can_live_migrate_destination called", instance_ref)
-        return {}
+        return migrate_data_obj.LiveMigrateData()
 
     @check_os_version_requirement
     def check_can_live_migrate_destination_cleanup(self, ctxt,

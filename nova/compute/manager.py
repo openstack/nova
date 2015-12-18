@@ -85,6 +85,7 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
+from nova.objects import migrate_data as migrate_data_obj
 from nova import paths
 from nova import rpc
 from nova import safe_utils
@@ -5014,6 +5015,8 @@ class ComputeManager(manager.Manager):
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
+        if isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
+            dest_check_data = dest_check_data.to_legacy_dict()
         migrate_data = {}
         try:
             migrate_data = self.compute_rpcapi.\
@@ -5045,9 +5048,12 @@ class ComputeManager(manager.Manager):
         dest_check_data['is_volume_backed'] = is_volume_backed
         block_device_info = self._get_instance_block_device_info(
                             ctxt, instance, refresh_conn_info=True)
-        return self.driver.check_can_live_migrate_source(ctxt, instance,
-                                                         dest_check_data,
-                                                         block_device_info)
+        result = self.driver.check_can_live_migrate_source(ctxt, instance,
+                                                           dest_check_data,
+                                                           block_device_info)
+        if isinstance(result, migrate_data_obj.LiveMigrateData):
+            result = result.to_legacy_dict()
+        return result
 
     @wrap_exception()
     @wrap_instance_event
@@ -5078,6 +5084,9 @@ class ComputeManager(manager.Manager):
                                        network_info,
                                        disk,
                                        migrate_data)
+        if isinstance(pre_live_migration_data,
+                      migrate_data_obj.LiveMigrateData):
+            pre_live_migration_data = pre_live_migration_data.to_legacy_dict()
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,

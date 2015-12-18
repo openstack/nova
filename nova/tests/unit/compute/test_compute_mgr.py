@@ -42,6 +42,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.objects import migrate_data as migrate_data_obj
 from nova import test
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
@@ -4252,3 +4253,44 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertEqual(0, compute._live_migration_semaphore.balance)
         self.assertIsInstance(compute._live_migration_semaphore,
                               compute_utils.UnlimitedSemaphore)
+
+    def test_check_migrate_source_converts_object(self):
+        # NOTE(danms): Make sure that we legacy-ify any data objects
+        # the drivers give us back, until we're ready for them
+        data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
+        compute = manager.ComputeManager()
+
+        @mock.patch.object(compute.driver, 'check_can_live_migrate_source')
+        @mock.patch.object(compute, '_get_instance_block_device_info')
+        @mock.patch.object(compute.compute_api, 'is_volume_backed_instance')
+        def _test(mock_ivbi, mock_gibdi, mock_cclms):
+            mock_cclms.return_value = data
+            self.assertIsInstance(
+                compute.check_can_live_migrate_source(
+                    self.context, {'uuid': 'foo'}, {}),
+                dict)
+
+        _test()
+
+    def test_check_migrate_destination_converts_object(self):
+        # NOTE(danms): Make sure that we legacy-ify any data objects
+        # the drivers give us back, until we're ready for them
+        data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
+        inst = objects.Instance(id=1, uuid='foo', host='bar')
+        compute = manager.ComputeManager()
+
+        @mock.patch.object(compute.driver,
+                           'check_can_live_migrate_destination')
+        @mock.patch.object(compute.compute_rpcapi,
+                           'check_can_live_migrate_source')
+        @mock.patch.object(compute, '_get_compute_info')
+        def _test(mock_gci, mock_cclms, mock_cclmd):
+            mock_gci.return_value = inst
+            mock_cclmd.return_value = data
+            mock_cclms.return_value = {}
+            result = compute.check_can_live_migrate_destination(
+                self.context, inst, False, False)
+            self.assertIsInstance(mock_cclms.call_args_list[0][0][2], dict)
+            self.assertIsInstance(result, dict)
+
+        _test()
