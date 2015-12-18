@@ -17,6 +17,7 @@ import netaddr
 
 from nova.objects import network as network_obj
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 fake_network = {
@@ -48,7 +49,7 @@ fake_network = {
     'project_id': None,
     'priority': None,
     'host': None,
-    'uuid': 'fake-uuid',
+    'uuid': uuids.network_instance,
     'mtu': None,
     'dhcp_server': '192.168.1.1',
     'enable_dhcp': True,
