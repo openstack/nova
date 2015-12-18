@@ -150,15 +150,28 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
              search_opts=None):
         """Returns list of security group rules owned by tenant."""
         neutron = neutronapi.get_client(context)
-        search_opts = {}
+        params = {}
+        search_opts = search_opts if search_opts else {}
         if names:
-            search_opts['name'] = names
+            params['name'] = names
         if ids:
-            search_opts['id'] = ids
-        if project:
-            search_opts['tenant_id'] = project
+            params['id'] = ids
+
+        # NOTE(jeffrey4l): list all the security groups when following
+        # conditions are met
+        #   * names and ids don't exist.
+        #   * it is admin context and all_tenants exist in search_opts.
+        #   * project is not specified.
+        list_all_tenants = (context.is_admin
+                            and 'all_tenants' in search_opts
+                            and not any([names, ids]))
+        # NOTE(jeffrey4l): The neutron doesn't have `all-tenants` concept.
+        # All the security group will be returned if the project/tenant
+        # id is not passed.
+        if project and not list_all_tenants:
+            params['tenant_id'] = project
         try:
-            security_groups = neutron.list_security_groups(**search_opts).get(
+            security_groups = neutron.list_security_groups(**params).get(
                 'security_groups')
         except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+import mock
 from mox3 import mox
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
@@ -45,6 +46,100 @@ class TestNeutronDriver(test.NoDBTestCase):
 
         sg_api = neutron_driver.SecurityGroupAPI()
         sg_api.list(self.context, project=project_id)
+
+    def test_list_with_all_tenants_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context,
+                        project=project_id,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with()
+
+    def test_list_without_all_tenants_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id)
+
+            mock_list_secgroup.assert_called_once_with(tenant_id=project_id)
+
+    def test_list_with_all_tenants_sec_name_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_group_names = ['secgroup_ssh']
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id,
+                        names=security_group_names,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                name=security_group_names,
+                tenant_id=project_id)
+
+    def test_list_with_all_tenants_sec_name_ids_and_admin_context(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
+        search_opts = {'all_tenants': 1}
+        security_group_names = ['secgroup_ssh']
+        security_group_ids = ['id1']
+        security_groups_list = {'security_groups': []}
+        admin_context = context.RequestContext('user1', project_id, True)
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(admin_context, project=project_id,
+                        names=security_group_names,
+                        ids=security_group_ids,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                name=security_group_names,
+                id=security_group_ids,
+                tenant_id=project_id)
+
+    def test_list_with_all_tenants_not_admin(self):
+        search_opts = {'all_tenants': 1}
+        security_groups_list = {'security_groups': []}
+        self.mox.ReplayAll()
+
+        with mock.patch.object(
+                self.moxed_client,
+                'list_security_groups',
+                return_value=security_groups_list) as mock_list_secgroup:
+            sg_api = neutron_driver.SecurityGroupAPI()
+            sg_api.list(self.context, project=self.context.tenant,
+                        search_opts=search_opts)
+
+            mock_list_secgroup.assert_called_once_with(
+                tenant_id=self.context.tenant)
 
     def test_get_with_name_duplicated(self):
         sg_name = 'web_server'
