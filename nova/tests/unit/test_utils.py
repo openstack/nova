@@ -141,7 +141,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                 raise processutils.ProcessExecutionError()
             return 'fakecontents', None
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
         contents = utils.read_file_as_root('good')
         self.assertEqual(contents, 'fakecontents')
         self.assertRaises(exception.FileNotFound,
@@ -151,7 +151,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         def fake_execute(*args, **kwargs):
             if args[0] == 'chown':
                 fake_execute.uid = args[1]
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
 
         with tempfile.NamedTemporaryFile() as f:
             with utils.temporary_chown(f.name, owner_uid=2):
@@ -743,34 +743,41 @@ class AuditPeriodTest(test.NoDBTestCase):
 
 class MkfsTestCase(test.NoDBTestCase):
 
-    def test_mkfs(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F', '/my/block/dev',
-                      run_as_root=False)
-        utils.execute('mkfs', '-t', 'msdos', '/my/msdos/block/dev',
-                      run_as_root=False)
-        utils.execute('mkswap', '/my/swap/block/dev',
-                      run_as_root=False)
-        self.mox.ReplayAll()
-
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_ext4(self, mock_execute):
         utils.mkfs('ext4', '/my/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
+            '/my/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_msdos(self, mock_execute):
         utils.mkfs('msdos', '/my/msdos/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
+            '/my/msdos/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_swap(self, mock_execute):
         utils.mkfs('swap', '/my/swap/block/dev')
+        mock_execute.assert_called_once_with('mkswap', '/my/swap/block/dev',
+            run_as_root=False)
 
-    def test_mkfs_with_label(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F',
-                      '-L', 'ext4-vol', '/my/block/dev', run_as_root=False)
-        utils.execute('mkfs', '-t', 'msdos',
-                      '-n', 'msdos-vol', '/my/msdos/block/dev',
-                      run_as_root=False)
-        utils.execute('mkswap', '-L', 'swap-vol', '/my/swap/block/dev',
-                      run_as_root=False)
-        self.mox.ReplayAll()
-
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_ext4_withlabel(self, mock_execute):
         utils.mkfs('ext4', '/my/block/dev', 'ext4-vol')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
+            '-L', 'ext4-vol', '/my/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_msdos_withlabel(self, mock_execute):
         utils.mkfs('msdos', '/my/msdos/block/dev', 'msdos-vol')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
+            '-n', 'msdos-vol', '/my/msdos/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_swap_withlabel(self, mock_execute):
         utils.mkfs('swap', '/my/swap/block/dev', 'swap-vol')
+        mock_execute.assert_called_once_with('mkswap', '-L', 'swap-vol',
+            '/my/swap/block/dev', run_as_root=False)
 
 
 class LastBytesTestCase(test.NoDBTestCase):
