@@ -22,13 +22,11 @@ import uuid
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 import mock
-from mox3 import mox
 from oslo_concurrency import processutils
 import paramiko
 import six
 
 from nova import crypto
-from nova import db
 from nova import exception
 from nova import test
 from nova import utils
@@ -95,7 +93,8 @@ class X509Test(test.TestCase):
 
 class RevokeCertsTest(test.TestCase):
 
-    def test_revoke_certs_by_user_and_project(self):
+    @mock.patch('nova.crypto.revoke_cert')
+    def test_revoke_certs_by_user_and_project(self, mock_revoke):
         user_id = 'test_user'
         project_id = 2
         file_name = 'test_file'
@@ -107,17 +106,15 @@ class RevokeCertsTest(test.TestCase):
             return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_user_and_project',
-                           mock_certificate_get_all_by_user_and_project)
-
-        self.mox.StubOutWithMock(crypto, 'revoke_cert')
-        crypto.revoke_cert(project_id, file_name)
-
-        self.mox.ReplayAll()
+        self.stub_out('nova.db.certificate_get_all_by_user_and_project',
+                       mock_certificate_get_all_by_user_and_project)
 
         crypto.revoke_certs_by_user_and_project(user_id, project_id)
 
-    def test_revoke_certs_by_user(self):
+        mock_revoke.assert_called_once_with(project_id, file_name)
+
+    @mock.patch('nova.crypto.revoke_cert')
+    def test_revoke_certs_by_user(self, mock_revoke):
         user_id = 'test_user'
         project_id = 2
         file_name = 'test_file'
@@ -127,17 +124,14 @@ class RevokeCertsTest(test.TestCase):
             return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_user',
-                                    mock_certificate_get_all_by_user)
-
-        self.mox.StubOutWithMock(crypto, 'revoke_cert')
-        crypto.revoke_cert(project_id, mox.IgnoreArg())
-
-        self.mox.ReplayAll()
+        self.stub_out('nova.db.certificate_get_all_by_user',
+                       mock_certificate_get_all_by_user)
 
         crypto.revoke_certs_by_user(user_id)
+        mock_revoke.assert_called_once_with(project_id, mock.ANY)
 
-    def test_revoke_certs_by_project(self):
+    @mock.patch('nova.crypto.revoke_cert')
+    def test_revoke_certs_by_project(self, mock_revoke):
         user_id = 'test_user'
         project_id = 2
         file_name = 'test_file'
@@ -147,15 +141,11 @@ class RevokeCertsTest(test.TestCase):
             return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_project',
-                                    mock_certificate_get_all_by_project)
-
-        self.mox.StubOutWithMock(crypto, 'revoke_cert')
-        crypto.revoke_cert(project_id, mox.IgnoreArg())
-
-        self.mox.ReplayAll()
+        self.stub_out('nova.db.certificate_get_all_by_project',
+                       mock_certificate_get_all_by_project)
 
         crypto.revoke_certs_by_project(project_id)
+        mock_revoke.assert_called_once_with(project_id, mock.ANY)
 
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError)

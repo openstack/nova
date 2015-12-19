@@ -83,7 +83,7 @@ class ContextTestCase(test.NoDBTestCase):
         def fake_warn(log_msg):
             info['log_msg'] = log_msg
 
-        self.stubs.Set(context.LOG, 'warning', fake_warn)
+        self.stub_out('nova.context.LOG.warning', fake_warn)
 
         c = context.RequestContext('user', 'project',
                 extra_arg1='meow', extra_arg2='wuff')
@@ -128,7 +128,7 @@ class ContextTestCase(test.NoDBTestCase):
                 a = a[0]
             warns.append(str(msg) % a)
 
-        self.stubs.Set(context.LOG, 'warn', stub_warn)
+        self.stub_out('nova.context.LOG.warn', stub_warn)
 
         ctxt = context.RequestContext('111',
                                       '222',

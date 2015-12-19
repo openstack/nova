@@ -39,7 +39,6 @@ from nova import block_device
 from nova.compute import flavors
 from nova.conductor import api as conductor_api
 from nova import context
-from nova import db
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
@@ -249,7 +248,7 @@ class MetadataTestCase(test.TestCase):
                      'delete_on_termination': None,
                      'device_name': '/dev/sdb'})]
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
                        fake_bdm_get)
 
         expected = {'ami': 'sda1',
@@ -312,15 +311,14 @@ class MetadataTestCase(test.TestCase):
 
         self.assertTrue(md._check_version('2009-04-04', '2009-04-04'))
 
-    def test_InstanceMetadata_uses_passed_network_info(self):
+    @mock.patch('nova.virt.netutils.get_injected_network_template')
+    def test_InstanceMetadata_uses_passed_network_info(self, mock_get):
         network_info = []
-
-        self.mox.StubOutWithMock(netutils, "get_injected_network_template")
-        netutils.get_injected_network_template(network_info).AndReturn(False)
-        self.mox.ReplayAll()
+        mock_get.return_value = False
 
         base.InstanceMetadata(fake_inst_obj(self.context),
                               network_info=network_info)
+        mock_get.assert_called_once_with(network_info)
 
     @mock.patch.object(netutils, "get_network_metadata", autospec=True)
     def test_InstanceMetadata_gets_network_metadata(self, mock_netutils):
@@ -337,17 +335,13 @@ class MetadataTestCase(test.TestCase):
         for (path, value) in inst_md.metadata_for_config_drive():
             self.assertIsNotNone(path)
 
-    def test_InstanceMetadata_queries_network_API_when_needed(self):
+    @mock.patch('nova.virt.netutils.get_injected_network_template')
+    def test_InstanceMetadata_queries_network_API_when_needed(self, mock_get):
         network_info_from_api = []
 
-        self.mox.StubOutWithMock(netutils, "get_injected_network_template")
-
-        netutils.get_injected_network_template(
-            network_info_from_api).AndReturn(False)
-
-        self.mox.ReplayAll()
-
+        mock_get.return_value = False
         base.InstanceMetadata(fake_inst_obj(self.context))
+        mock_get.assert_called_once_with(network_info_from_api)
 
     def test_local_ipv4(self):
         nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
@@ -779,7 +773,7 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertTrue(response_ctype.startswith("application/json"))
 
     def test_user_data_non_existing_fixed_address(self):
-        self.stubs.Set(network_api.API, 'get_fixed_ip_by_address',
+        self.stub_out('nova.network.api.get_fixed_ip_by_address',
                        return_non_existing_address)
         response = fake_request(None, self.mdinst, "/2009-04-04/user-data",
                                 "127.1.1.1")
