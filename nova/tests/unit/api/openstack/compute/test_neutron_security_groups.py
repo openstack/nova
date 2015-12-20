@@ -370,7 +370,8 @@ class TestNeutronSecurityGroupsV21(
                     {'name': sg3['id']}]
         security_group_api = self.controller.security_group_api
         sgs = security_group_api.get_instance_security_groups(
-            context.get_admin_context(), test_security_groups.FAKE_UUID1)
+            context.get_admin_context(),
+            instance_obj.Instance(uuid=test_security_groups.FAKE_UUID1))
         self.assertEqual(sgs, expected)
 
     @mock.patch('nova.network.security_group.neutron_driver.SecurityGroupAPI.'
@@ -382,7 +383,7 @@ class TestNeutronSecurityGroupsV21(
         security_group_api = self.controller.security_group_api
         ctx = context.get_admin_context()
         sgs = security_group_api.get_instance_security_groups(ctx,
-                test_security_groups.FAKE_UUID1)
+                instance_obj.Instance(uuid=test_security_groups.FAKE_UUID1))
 
         neutron_sg_bind_mock.assert_called_once_with(ctx, servers, False)
         self.assertEqual([], sgs)
@@ -396,7 +397,8 @@ class TestNeutronSecurityGroupsV21(
             device_id=test_security_groups.FAKE_UUID1)
         security_group_api = self.controller.security_group_api
         sgs = security_group_api.get_instance_security_groups(
-            context.get_admin_context(), test_security_groups.FAKE_UUID1)
+            context.get_admin_context(),
+            instance_obj.Instance(uuid=test_security_groups.FAKE_UUID1))
         self.assertEqual(sgs, [{'name': 'test1'}])
 
     def test_create_port_with_sg_and_port_security_enabled_false(self):

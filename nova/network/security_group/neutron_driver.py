@@ -407,16 +407,15 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         return instances_security_group_bindings
 
-    def get_instance_security_groups(self, context, instance_uuid,
-                                     detailed=False):
+    def get_instance_security_groups(self, context, instance, detailed=False):
         """Returns the security groups that are associated with an instance.
         If detailed is True then it also returns the full details of the
         security groups associated with an instance.
         """
-        servers = [{'id': instance_uuid}]
+        servers = [{'id': instance.uuid}]
         sg_bindings = self.get_instances_security_groups_bindings(
                                   context, servers, detailed)
-        return sg_bindings.get(instance_uuid, [])
+        return sg_bindings.get(instance.uuid, [])
 
     def _has_security_group_requirements(self, port):
         port_security_enabled = port.get('port_security_enabled', True)

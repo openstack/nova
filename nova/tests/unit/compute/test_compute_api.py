@@ -3644,19 +3644,15 @@ class SecurityGroupAPITest(test.NoDBTestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
 
-    @mock.patch('nova.objects.security_group.SecurityGroupList.'
-                'get_by_instance')
-    def test_get_instance_security_groups(self, mock_get):
+    def test_get_instance_security_groups(self):
         groups = objects.SecurityGroupList()
         groups.objects = [objects.SecurityGroup(name='foo'),
                           objects.SecurityGroup(name='bar')]
-        mock_get.return_value = groups
+        instance = objects.Instance(security_groups=groups)
         names = self.secgroup_api.get_instance_security_groups(self.context,
-                    uuids.instance)
+                                                               instance)
         self.assertEqual(sorted([{'name': 'bar'}, {'name': 'foo'}], key=str),
                          sorted(names, key=str))
-        self.assertEqual(1, mock_get.call_count)
-        self.assertEqual(uuids.instance, mock_get.call_args_list[0][0][1].uuid)
 
     @mock.patch('nova.objects.security_group.make_secgroup_list')
     def test_populate_security_groups(self, mock_msl):

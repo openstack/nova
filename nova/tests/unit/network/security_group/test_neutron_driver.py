@@ -27,6 +27,7 @@ from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 
 class TestNeutronDriver(test.NoDBTestCase):
@@ -394,12 +395,14 @@ class TestNeutronDriver(test.NoDBTestCase):
 
     def test_instance_empty_security_groups(self):
 
-        port_list = {'ports': [{'id': 1, 'device_id': '1',
+        port_list = {'ports': [{'id': 1, 'device_id': uuids.instance,
                      'security_groups': []}]}
-        self.moxed_client.list_ports(device_id=['1']).AndReturn(port_list)
+        self.moxed_client.list_ports(
+            device_id=[uuids.instance]).AndReturn(port_list)
         self.mox.ReplayAll()
         sg_api = neutron_driver.SecurityGroupAPI()
-        result = sg_api.get_instance_security_groups(self.context, '1')
+        result = sg_api.get_instance_security_groups(
+            self.context, objects.Instance(uuid=uuids.instance))
         self.assertEqual([], result)
 
 
