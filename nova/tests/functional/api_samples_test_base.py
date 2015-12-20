@@ -27,43 +27,45 @@ class NoMatch(test.TestingException):
     pass
 
 
+def pretty_data(data):
+    data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
+                           indent=4)
+    return '\n'.join(line.rstrip() for line in data.split('\n')).strip()
+
+
+def objectify(data):
+    if not data:
+        return {}
+    # NOTE(sdague): templates will contain values like %(foo)s
+    # throughout them. If these are inside of double quoted
+    # strings, life is good, and we can treat it just like valid
+    # json to load it to python.
+    #
+    # However we've got some fields which are ints, like
+    # aggregate_id. This means we've got a snippet in the sample
+    # that looks like:
+    #
+    #     "id": %(aggregate_id)s,
+    #
+    # which is not valid json, and will explode. We do a quick and
+    # dirty transform of this to:
+    #
+    #     "id": "%(int:aggregate_id)s",
+    #
+    # That makes it valid data to convert to json, but keeps
+    # around the information that we need to drop those strings
+    # later. The regex anchors from the ': ', as all of these will
+    # be top rooted keys.
+    data = re.sub(r'(\: )%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
+    return jsonutils.loads(data)
+
+
 class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     all_extensions = False
     extension_name = None
     sample_dir = None
     microversion = None
     _use_common_server_api_samples = False
-
-    def _pretty_data(self, data):
-        data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
-                indent=4)
-        return '\n'.join(line.rstrip() for line in data.split('\n')).strip()
-
-    def _objectify(self, data):
-        if not data:
-            return {}
-        # NOTE(sdague): templates will contain values like %(foo)s
-        # throughout them. If these are inside of double quoted
-        # strings, life is good, and we can treat it just like valid
-        # json to load it to python.
-        #
-        # However we've got some fields which are ints, like
-        # aggregate_id. This means we've got a snippet in the sample
-        # that looks like:
-        #
-        #     "id": %(aggregate_id)s,
-        #
-        # which is not valid json, and will explode. We do a quick and
-        # dirty transform of this to:
-        #
-        #     "id": "%(int:aggregate_id)s",
-        #
-        # That makes it valid data to convert to json, but keeps
-        # around the information that we need to drop those strings
-        # later. The regex anchors from the ': ', as all of these will
-        # be top rooted keys.
-        data = re.sub(r'(\: )%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
-        return jsonutils.loads(data)
 
     @classmethod
     def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
@@ -221,8 +223,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 # TODO(tdurakov): remove this check as soon as
                 # hypervisor.cpu_info become common JSON object in REST API.
                 try:
-                    expected = self._objectify(expected)
-                    result = self._objectify(result)
+                    expected = objectify(expected)
+                    result = objectify(result)
                     return self._compare_result(subs, expected, result,
                                                 result_str)
                 except ValueError:
@@ -257,7 +259,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                          update_links=True):
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
-        response_data = self._pretty_data(response_data)
+        response_data = pretty_data(response_data)
         if not os.path.exists(self._get_template(name,
                                                  self.microversion)):
             self._write_template(name, response_data)
@@ -278,8 +280,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     sample_data = self._update_links(sample_data)
 
         try:
-            template_data = self._objectify(template_data)
-            response_data = self._objectify(response_data)
+            template_data = objectify(template_data)
+            response_data = objectify(response_data)
             response_result = self._compare_result(subs, template_data,
                                                    response_data, "Response")
             # NOTE(danms): replace some of the subs with patterns for the
@@ -290,7 +292,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             subs['compute_host'] = vanilla_regexes['host_name']
             subs['id'] = vanilla_regexes['id']
             subs = self.generalize_subs(subs, vanilla_regexes)
-            sample_data = self._objectify(sample_data)
+            sample_data = objectify(sample_data)
             self._compare_result(subs, template_data, sample_data, "Sample")
             return response_result
         except NoMatch:
