@@ -1,6 +1,6 @@
 {
     "rebuild": {
-        "imageRef": "%(glance_host)s/images/%(uuid)s",
+        "imageRef": "%(uuid)s",
         "name": "%(name)s",
         "adminPass": "%(pass)s",
         "metadata": {

@@ -1,8 +1,8 @@
 {
     "server": {
         "name": "new-server-test",
-        "imageRef": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
-        "flavorRef": "http://openstack.example.com/openstack/flavors/1",
+        "imageRef": "70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef": "1",
         "metadata": {
             "My Server Name": "Apache1"
         },

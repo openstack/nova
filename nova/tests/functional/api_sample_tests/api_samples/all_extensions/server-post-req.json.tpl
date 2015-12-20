@@ -1,8 +1,8 @@
 {
     "server" : {
         "name" : "new-server-test",
-        "imageRef" : "%(glance_host)s/images/%(image_id)s",
-        "flavorRef" : "%(host)s/flavors/1",
+        "imageRef" : "%(image_id)s",
+        "flavorRef" : "1",
         "metadata" : {
             "My Server Name" : "Apache1"
         }
