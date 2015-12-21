@@ -40,16 +40,6 @@ TEST_ECC_PRIVATE_KEY = ec.generate_private_key(ec.SECP521R1(),
 TEST_DSA_PRIVATE_KEY = dsa.generate_private_key(key_size=3072,
                                                 backend=default_backend())
 
-# ECC curves, for generating private keys
-ECC_CURVE_METHODS = {
-    signature_utils.ECC_SECT571K1: ec.SECT571K1(),
-    signature_utils.ECC_SECT409K1: ec.SECT409K1(),
-    signature_utils.ECC_SECT571R1: ec.SECT571R1(),
-    signature_utils.ECC_SECT409R1: ec.SECT409R1(),
-    signature_utils.ECC_SECP521R1: ec.SECP521R1(),
-    signature_utils.ECC_SECP384R1: ec.SECP384R1(),
-}
-
 # Required image property names
 SIGNATURE = signature_utils.SIGNATURE
 HASH_METHOD = signature_utils.HASH_METHOD
@@ -172,9 +162,9 @@ class TestSignatureUtils(test.NoDBTestCase):
     def test_verify_signature_ECC(self, mock_get_pub_key):
         data = b'224626ae19824466f2a7f39ab7b80f7f'
         # test every ECC curve
-        for curve_name, curve_method in ECC_CURVE_METHODS.items():
+        for curve in signature_utils.ECC_CURVES:
             # Create a private key to use
-            private_key = ec.generate_private_key(curve_method,
+            private_key = ec.generate_private_key(curve,
                                                   default_backend())
             mock_get_pub_key.return_value = private_key.public_key()
             for hash_name, hash_alg in signature_utils.HASH_METHODS.items():
@@ -186,7 +176,7 @@ class TestSignatureUtils(test.NoDBTestCase):
                 image_props = {CERT_UUID:
                                'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
                                HASH_METHOD: hash_name,
-                               KEY_TYPE: curve_name,
+                               KEY_TYPE: 'ECC_' + curve.name.upper(),
                                SIGNATURE: signature}
                 verifier = signature_utils.get_verifier(None, image_props)
                 verifier.update(data)
@@ -285,48 +275,56 @@ class TestSignatureUtils(test.NoDBTestCase):
                                'Invalid signature hash method: .*',
                                signature_utils.get_hash_method, 'SHA-2')
 
-    def test_get_signature_key_type(self):
-        for sig_format in signature_utils.SIGNATURE_KEY_TYPES:
-            result = signature_utils.get_signature_key_type(sig_format)
-            self.assertEqual(sig_format, result)
+    def test_signature_key_type_lookup(self):
+        for sig_format in ['RSA-PSS', 'DSA']:
+            sig_key_type = signature_utils.SignatureKeyType.lookup(sig_format)
+            self.assertIsInstance(sig_key_type,
+                                  signature_utils.SignatureKeyType)
+            self.assertEqual(sig_format, sig_key_type.name)
 
-    def test_get_signature_key_type_fail(self):
+    def test_signature_key_type_lookup_fail(self):
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Invalid signature key type: .*',
-                               signature_utils.get_signature_key_type,
+                               signature_utils.SignatureKeyType.lookup,
                                'RSB-PSS')
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_rsa(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate()
         mock_get_cert.return_value = fake_cert
-        result_pub_key = signature_utils.get_public_key(None, None, 'RSA-PSS')
+        sig_key_type = signature_utils.SignatureKeyType.lookup('RSA-PSS')
+        result_pub_key = signature_utils.get_public_key(None, None,
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_ecc(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate(TEST_ECC_PRIVATE_KEY.public_key())
         mock_get_cert.return_value = fake_cert
+        sig_key_type = signature_utils.SignatureKeyType.lookup('ECC_SECP521R1')
         result_pub_key = signature_utils.get_public_key(None, None,
-                                                        'ECC_SECP521R1')
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_dsa(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate(TEST_DSA_PRIVATE_KEY.public_key())
         mock_get_cert.return_value = fake_cert
-        result_pub_key = signature_utils.get_public_key(None, None, 'DSA')
+        sig_key_type = signature_utils.SignatureKeyType.lookup('DSA')
+        result_pub_key = signature_utils.get_public_key(None, None,
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_invalid_key(self, mock_get_certificate):
         bad_pub_key = 'A' * 256
         mock_get_certificate.return_value = FakeCryptoCertificate(bad_pub_key)
+        sig_key_type = signature_utils.SignatureKeyType.lookup('RSA-PSS')
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Invalid public key type for '
                                'signature key type: .*',
                                signature_utils.get_public_key, None,
-                               None, 'RSA-PSS')
+                               None, sig_key_type)
 
     @mock.patch('cryptography.x509.load_der_x509_certificate')
     @mock.patch('castellan.key_manager.API', return_value=FakeKeyManager())
