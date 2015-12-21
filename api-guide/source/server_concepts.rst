@@ -359,11 +359,6 @@ Considerations
 The file injection might not occur until after the server is built and
 booted.
 
-During file injection, any existing files that match specified files are
-renamed to include the BAK extension appended with a time stamp. For
-example, if the ``/etc/passwd`` file exists, it is backed up as
-``/etc/passwd.bak.1246036261.5785``.
-
 After file injection, personality files are accessible by only system
 administrators. For example, on Linux, all files have root and the root
 group as the owner and group owner, respectively, and allow user and
