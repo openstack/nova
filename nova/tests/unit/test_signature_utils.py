@@ -34,6 +34,7 @@ TEST_RSA_PRIVATE_KEY = rsa.generate_private_key(public_exponent=3,
                                                 key_size=1024,
                                                 backend=default_backend())
 
+# secp521r1 is assumed to be available on all supported platforms
 TEST_ECC_PRIVATE_KEY = ec.generate_private_key(ec.SECP521R1(),
                                                default_backend())
 
@@ -163,6 +164,14 @@ class TestSignatureUtils(test.NoDBTestCase):
         data = b'224626ae19824466f2a7f39ab7b80f7f'
         # test every ECC curve
         for curve in signature_utils.ECC_CURVES:
+            key_type_name = 'ECC_' + curve.name.upper()
+            try:
+                signature_utils.SignatureKeyType.lookup(key_type_name)
+            except exception.SignatureVerificationError:
+                import warnings
+                warnings.warn("ECC curve '%s' not supported" % curve.name)
+                continue
+
             # Create a private key to use
             private_key = ec.generate_private_key(curve,
                                                   default_backend())
@@ -176,7 +185,7 @@ class TestSignatureUtils(test.NoDBTestCase):
                 image_props = {CERT_UUID:
                                'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
                                HASH_METHOD: hash_name,
-                               KEY_TYPE: 'ECC_' + curve.name.upper(),
+                               KEY_TYPE: key_type_name,
                                SIGNATURE: signature}
                 verifier = signature_utils.get_verifier(None, image_props)
                 verifier.update(data)
