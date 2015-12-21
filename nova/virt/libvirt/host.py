@@ -694,6 +694,19 @@ class Host(object):
 
         return doms
 
+    def list_guests(self, only_running=True, only_guests=True):
+        """Get a list of Guest objects for nova instances
+
+        :param only_running: True to only return running instances
+        :param only_guests: True to filter out any host domain (eg Dom-0)
+
+        See method "list_instance_domains" for more informations.
+
+        :returns: list of Guest objects
+        """
+        return [libvirt_guest.Guest(dom) for dom in self.list_instance_domains(
+            only_running=only_running, only_guests=only_guests)]
+
     def list_instance_domains(self, only_running=True, only_guests=True):
         """Get a list of libvirt.Domain objects for nova instances
 
@@ -920,20 +933,17 @@ class Host(object):
         idx3 = m.index('Cached:')
         if CONF.libvirt.virt_type == 'xen':
             used = 0
-            for dom in self.list_instance_domains(only_guests=False):
+            for guest in self.list_guests(only_guests=False):
                 try:
-                    # TODO(sahid): we should have method list_guests()
-                    # which returns Guest's objects
-                    guest = libvirt_guest.Guest(dom)
                     # TODO(sahid): Use get_info...
                     dom_mem = int(guest._get_domain_info(self)[2])
                 except libvirt.libvirtError as e:
                     LOG.warn(_LW("couldn't obtain the memory from domain:"
                                  " %(uuid)s, exception: %(ex)s") %
-                             {"uuid": dom.UUIDString(), "ex": e})
+                             {"uuid": guest.uuid, "ex": e})
                     continue
                 # skip dom0
-                if dom.ID() != 0:
+                if guest.id != 0:
                     used += dom_mem
                 else:
                     # the mem reported by dom0 is be greater of what

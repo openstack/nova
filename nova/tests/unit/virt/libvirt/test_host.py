@@ -606,6 +606,18 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(doms[2].name(), vm2.name())
         mock_list.assert_called_with(True)
 
+    @mock.patch.object(host.Host, "list_instance_domains")
+    def test_list_guests(self, mock_list_domains):
+        dom0 = mock.Mock(spec=fakelibvirt.virDomain)
+        dom1 = mock.Mock(spec=fakelibvirt.virDomain)
+        mock_list_domains.return_value = [
+            dom0, dom1]
+        result = self.host.list_guests(True, False)
+        mock_list_domains.assert_called_once_with(
+            only_running=True, only_guests=False)
+        self.assertEqual(dom0, result[0]._domain)
+        self.assertEqual(dom1, result[1]._domain)
+
     def test_cpu_features_bug_1217630(self):
         self.host.get_connection()
 
@@ -816,15 +828,15 @@ Active:          8381604 kB
         with test.nested(
                 mock.patch.object(six.moves.builtins, "open", m, create=True),
                 mock.patch.object(host.Host,
-                                  "list_instance_domains"),
+                                  "list_guests"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
                                   "_conn"),
                 mock.patch('sys.platform', 'linux2'),
                 ) as (mock_file, mock_list, mock_conn, mock_platform):
             mock_list.return_value = [
-                DiagFakeDomain(0, 15814),
-                DiagFakeDomain(1, 750),
-                DiagFakeDomain(2, 1042)]
+                libvirt_guest.Guest(DiagFakeDomain(0, 15814)),
+                libvirt_guest.Guest(DiagFakeDomain(1, 750)),
+                libvirt_guest.Guest(DiagFakeDomain(2, 1042))]
             mock_conn.getInfo.return_value = [
                 arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
