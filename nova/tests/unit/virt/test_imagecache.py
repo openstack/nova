@@ -18,6 +18,7 @@ from nova import block_device
 from nova.compute import vm_states
 from nova import context
 from nova import objects
+from nova.objects import block_device as block_device_obj
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.virt import imagecache
@@ -101,12 +102,16 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                    'get_by_instance_uuid')
 
         ctxt = context.get_admin_context()
+        swap_bdm_256_list = block_device_obj.block_device_make_list_from_dicts(
+            ctxt, swap_bdm_256)
+        swap_bdm_128_list = block_device_obj.block_device_make_list_from_dicts(
+            ctxt, swap_bdm_128)
         objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(swap_bdm_256)
+                ctxt, '123').AndReturn(swap_bdm_256_list)
         objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '456').AndReturn(swap_bdm_128)
+                ctxt, '456').AndReturn(swap_bdm_128_list)
         objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '789').AndReturn(swap_bdm_128)
+                ctxt, '789').AndReturn(swap_bdm_128_list)
 
         self.mox.ReplayAll()
 
@@ -154,8 +159,10 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                    'get_by_instance_uuid')
 
         ctxt = context.get_admin_context()
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            ctxt, swap_bdm_256)
         objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(swap_bdm_256)
+                ctxt, '123').AndReturn(bdms)
 
         self.mox.ReplayAll()
         running = image_cache_manager._list_running_instances(ctxt,

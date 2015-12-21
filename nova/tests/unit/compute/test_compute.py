@@ -534,8 +534,10 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'volume_size': 55,
                 'delete_on_termination': False,
             })]
+            bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, block_device_mapping)
             prepped_bdm = self.compute._prep_block_device(
-                    self.context, self.instance_object, block_device_mapping)
+                    self.context, self.instance_object, bdms)
             self.assertEqual(2, mock_save.call_count)
             volume_driver_bdm = prepped_bdm['block_device_mapping'][0]
             self.assertEqual(volume_driver_bdm['connection_info']['serial'],
@@ -1146,6 +1148,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'image_id': 1,
                 'device_name': '/dev/vdb',
             })]
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, bdms)
         self.assertRaises(exception.VolumeLimitExceeded,
                           compute_manager.ComputeManager()._prep_block_device,
                           self.context, instance, bdms)
