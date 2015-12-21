@@ -11,11 +11,6 @@
             "zone": "nova"
         },
         {
-            "host_name": "a942ebfa00064d9d89a9e5a175cb9ba8",
-            "service": "cert",
-            "zone": "internal"
-        },
-        {
             "host_name": "e73ec0bd35c64de4a1adfa8b8969a1f6",
             "service": "consoleauth",
             "zone": "internal"

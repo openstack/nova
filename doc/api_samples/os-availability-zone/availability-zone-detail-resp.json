@@ -2,13 +2,6 @@
     "availabilityZoneInfo": [
         {
             "hosts": {
-                "cert": {
-                    "nova-cert": {
-                        "active": true,
-                        "available": true,
-                        "updated_at": null
-                    }
-                },
                 "conductor": {
                     "nova-conductor": {
                         "active": true,
