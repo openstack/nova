@@ -247,7 +247,8 @@ on compute hosts rather than servers.
 
 -  **Certificates**
 
-   TODO
+   Nova service "nova-cert" handles the management of X509 certificates which
+   are used to generate certificates for euca-bundle-image.
 
 Relationship with Volume API
 =============================
