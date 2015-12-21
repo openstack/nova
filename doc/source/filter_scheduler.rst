@@ -340,6 +340,16 @@ driver.  The standard nova filters and MyFilter are available to the
 FilterScheduler.  The RamFilter, ComputeFilter, and MyFilter are used by
 default when no filters are specified in the request.
 
+Each filter selects hosts in a different way and has different costs. The order of
+``scheduler_default_filters`` affects scheduling performance. The general suggestion
+is to filter out invalid hosts as soon as possible to avoid unnecessary costs.
+We can sort ``scheduler_default_filters`` items by their costs in reverse order.
+For example, ComputeFilter is better before any resource calculating filters
+like RamFilter, CoreFilter.
+
+In medium/large environments having AvailabilityZoneFilter before any capability or
+resource calculating filters can be useful.
+
 Weights
 -------
 
