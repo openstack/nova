@@ -224,9 +224,15 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             return
         return cls._from_db_object(context, cls(), db_service)
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_service_get_by_compute_host(context, host, use_slave=False):
+        return db.service_get_by_compute_host(context, host)
+
     @base.remotable_classmethod
     def get_by_compute_host(cls, context, host, use_slave=False):
-        db_service = db.service_get_by_compute_host(context, host)
+        db_service = cls._db_service_get_by_compute_host(context, host,
+                                                         use_slave=use_slave)
         return cls._from_db_object(context, cls(), db_service)
 
     # NOTE(ndipanov): This is deprecated and should be removed on the next
@@ -314,6 +320,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def clear_min_version_cache(cls):
         cls._MIN_VERSION_CACHE = {}
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_service_get_minimum_version(context, binary, use_slave=False):
+        return db.service_get_minimum_version(context, binary)
+
     @base.remotable_classmethod
     def get_minimum_version(cls, context, binary, use_slave=False):
         if not binary.startswith('nova-'):
@@ -326,8 +337,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             cached_version = cls._MIN_VERSION_CACHE.get(binary)
             if cached_version:
                 return cached_version
-        version = db.service_get_minimum_version(context, binary,
-                                                 use_slave=use_slave)
+        version = cls._db_service_get_minimum_version(context, binary,
+                                                      use_slave=use_slave)
         if version is None:
             return 0
         # NOTE(danms): Since our return value is not controlled by object
