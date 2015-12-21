@@ -292,6 +292,8 @@ class TestImageMetaProps(test.NoDBTestCase):
             'img_hv_requested_version': '>= 1.0',
             'os_require_quiesce': True,
             'os_secure_boot': 'required',
+            'hw_rescue_bus': 'ide',
+            'hw_rescue_device': 'disk',
         }
 
         obj = objects.ImageMetaProps(**props)
