@@ -72,7 +72,6 @@ def list_opts():
              nova.virt.hyperv.vmops.hyperv_opts,
              nova.virt.hyperv.volumeops.hyper_volumeops_opts,
          )),
-        nova.conf.ironic.list_opts(),
         ('libvirt',
          itertools.chain(
              nova.virt.libvirt.driver.libvirt_opts,

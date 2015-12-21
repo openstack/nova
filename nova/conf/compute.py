@@ -63,4 +63,4 @@ def register_opts(conf):
 
 
 def list_opts():
-    return compute_opts
+    return {'DEFAULT': compute_opts}

@@ -45,4 +45,4 @@ def register_opts(conf):
 
 
 def list_opts():
-    return ephemeral_storage_encryption_opts
+    return {'ephemeral_storage_encryption': ephemeral_storage_encryption_opts}

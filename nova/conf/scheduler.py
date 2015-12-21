@@ -250,3 +250,11 @@ def register_opts(conf):
     conf.register_group(trust_group)
     conf.register_opts(trusted_opts, group=trust_group)
     conf.register_opts(metrics_weight_opts, group="metrics")
+
+
+def list_opts():
+    return {"DEFAULT": SIMPLE_OPTS,
+            "upgrade_levels": [rpcapi_cap_opt],
+            "trusted_computing": trusted_opts,
+            "metrics": metrics_weight_opts,
+            }
