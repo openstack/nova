@@ -5026,7 +5026,7 @@ class LibvirtDriver(driver.ComputeDriver):
         This method is called when nova-compute launches, and
         as part of a periodic task that records the results in the DB.
 
-        :param nodename: will be put in PCI device
+        :param nodename: unused in this driver
         :returns: dictionary containing resource info
         """
 
