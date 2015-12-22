@@ -449,7 +449,7 @@ def get_instance_path_at_destination(instance, migrate_data=None):
     """
     instance_relative_path = None
     if migrate_data:
-        instance_relative_path = migrate_data.get('instance_relative_path')
+        instance_relative_path = migrate_data.instance_relative_path
     # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
     # because we are ensuring that the same instance directory name
     # is used as was at the source
