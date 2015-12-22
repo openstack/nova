@@ -379,7 +379,7 @@ class VMwareVolumeOps(object):
                   instance=instance)
         if driver_type == constants.DISK_FORMAT_VMDK:
             self._attach_volume_vmdk(connection_info, instance, adapter_type)
-        elif driver_type == 'iscsi':
+        elif driver_type == constants.DISK_FORMAT_ISCSI:
             self._attach_volume_iscsi(connection_info, instance, adapter_type)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
@@ -579,7 +579,7 @@ class VMwareVolumeOps(object):
                   instance=instance)
         if driver_type == constants.DISK_FORMAT_VMDK:
             self._detach_volume_vmdk(connection_info, instance)
-        elif driver_type == 'iscsi':
+        elif driver_type == constants.DISK_FORMAT_ISCSI:
             self._detach_volume_iscsi(connection_info, instance)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)

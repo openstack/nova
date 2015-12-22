@@ -424,7 +424,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 vm_ref, connection_info['data']['volume_id'], disk_uuid)
 
     def _test_attach_volume_iscsi(self, adapter_type=None):
-        connection_info = {'driver_volume_type': 'iscsi',
+        connection_info = {'driver_volume_type': constants.DISK_FORMAT_ISCSI,
                            'serial': 'volume-fake-id',
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
