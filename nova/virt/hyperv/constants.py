@@ -76,3 +76,7 @@ SERIAL_PORT_TYPE_RW = 'rw'
 # The default serial console port number used for
 # logging and interactive sessions.
 DEFAULT_SERIAL_CONSOLE_PORT = 1
+
+FLAVOR_ESPEC_REMOTEFX_RES = 'os:resolution'
+FLAVOR_ESPEC_REMOTEFX_MONITORS = 'os:monitors'
+FLAVOR_ESPEC_REMOTEFX_VRAM = 'os:vram'

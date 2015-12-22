@@ -279,6 +279,8 @@ class VMOps(object):
                                 instance_path,
                                 [instance.uuid])
 
+        self._configure_remotefx(instance, vm_gen)
+
         self._vmutils.create_scsi_controller(instance_name)
         controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
 
@@ -318,6 +320,45 @@ class VMOps(object):
 
         if CONF.hyperv.enable_instance_metrics_collection:
             self._metricsutils.enable_vm_metrics_collection(instance_name)
+
+    def _configure_remotefx(self, instance, vm_gen):
+        extra_specs = instance.flavor.extra_specs
+        remotefx_max_resolution = extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_RES)
+        if not remotefx_max_resolution:
+            # RemoteFX not required.
+            return
+
+        if not CONF.hyperv.enable_remotefx:
+            raise exception.InstanceUnacceptable(
+                _("enable_remotefx configuration option needs to be set to "
+                  "True in order to use RemoteFX."))
+
+        if not self._hostutils.check_server_feature(
+                self._hostutils.FEATURE_RDS_VIRTUALIZATION):
+            raise exception.InstanceUnacceptable(
+                _("The RDS-Virtualization feature must be installed in order "
+                  "to use RemoteFX."))
+
+        if not self._vmutils.vm_gen_supports_remotefx(vm_gen):
+            raise exception.InstanceUnacceptable(
+                _("RemoteFX is not supported on generation %s virtual "
+                  "machines on this version of Windows.") % vm_gen)
+
+        instance_name = instance.name
+        LOG.debug('Configuring RemoteFX for instance: %s', instance_name)
+
+        remotefx_monitor_count = int(extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_MONITORS) or 1)
+        remotefx_vram = extra_specs.get(
+            constants.FLAVOR_ESPEC_REMOTEFX_VRAM)
+        vram_bytes = int(remotefx_vram) * units.Mi if remotefx_vram else None
+
+        self._vmutils.enable_remotefx_video_adapter(
+            instance_name,
+            remotefx_monitor_count,
+            remotefx_max_resolution,
+            vram_bytes)
 
     def _attach_drive(self, instance_name, path, drive_addr, ctrl_disk_addr,
                       controller_type, drive_type=constants.DISK):

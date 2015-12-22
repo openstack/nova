@@ -411,6 +411,49 @@ Related options:
 """)
 
 
+enable_remotefx_opt = cfg.BoolOpt('enable_remotefx',
+                default=False,
+                help="""
+Enable RemoteFX feature
+
+This requires at least one DirectX 11 capable graphics adapter for
+Windows / Hyper-V Server 2012 R2 or newer and RDS-Virtualization
+feature has to be enabled.
+
+Possible values:
+
+* False: Disables the feature (Default).
+* True: Enables the feature.
+
+Instances with RemoteFX can be requested with the following flavor
+extra specs:
+
+**os:resolution**. Guest VM screen resolution size. Acceptable values::
+
+    1024x768, 1280x1024, 1600x1200, 1920x1200, 2560x1600, 3840x2160
+
+``3840x2160`` is only available on Windows / Hyper-V Server 2016.
+
+**os:monitors**. Guest VM number of monitors. Acceptable values::
+
+    [1, 4] - Windows / Hyper-V Server 2012 R2
+    [1, 8] - Windows / Hyper-V Server 2016
+
+**os:vram**. Guest VM VRAM amount. Only available on
+Windows / Hyper-V Server 2016. Acceptable values::
+
+    64, 128, 256, 512, 1024
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
+""")
+
+
 ALL_OPTS = [dynamic_memory_ratio_opt,
             enable_instance_metrics_collection_opt,
             instances_path_share_opt,
@@ -425,7 +468,8 @@ ALL_OPTS = [dynamic_memory_ratio_opt,
             config_drive_cdrom_opt,
             config_drive_inject_password_opt,
             volume_attach_retry_count_opt,
-            volume_attach_retry_interval_opt]
+            volume_attach_retry_interval_opt,
+            enable_remotefx_opt]
 
 
 def register_opts(conf):

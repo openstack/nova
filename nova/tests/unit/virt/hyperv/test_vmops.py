@@ -26,7 +26,9 @@ from oslo_utils import units
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
+from nova.objects import flavor as flavor_obj
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_virtual_interface
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
@@ -403,9 +405,11 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                 '.attach_volumes')
     @mock.patch.object(vmops.VMOps, '_attach_drive')
     @mock.patch.object(vmops.VMOps, '_create_vm_com_port_pipes')
-    def _test_create_instance(self, mock_create_pipes,
-                              mock_attach_drive, mock_attach_volumes,
-                              fake_root_path, fake_ephemeral_path,
+    @mock.patch.object(vmops.VMOps, '_configure_remotefx')
+    def _test_create_instance(self, mock_configure_remotefx,
+                              mock_create_pipes, mock_attach_drive,
+                              mock_attach_volumes, fake_root_path,
+                              fake_ephemeral_path,
                               enable_instance_metrics,
                               vm_gen=constants.VM_GEN_1):
         mock_vif_driver = mock.MagicMock()
@@ -416,6 +420,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                              'address': mock.sentinel.ADDRESS}
         mock_instance = fake_instance.fake_instance_obj(self.context)
         instance_path = os.path.join(CONF.instances_path, mock_instance.name)
+
+        flavor = flavor_obj.Flavor(**test_flavor.fake_flavor)
+        mock_instance.flavor = flavor
 
         self._vmops.create_instance(instance=mock_instance,
                                     network_info=[fake_network_info],
@@ -428,6 +435,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_instance.vcpus, CONF.hyperv.limit_cpu_features,
             CONF.hyperv.dynamic_memory_ratio, vm_gen, instance_path,
             [mock_instance.uuid])
+
+        mock_configure_remotefx.assert_called_once_with(mock_instance, vm_gen)
         expected = []
         ctrl_type = vmops.VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
         ctrl_disk_addr = 0
@@ -1041,6 +1050,64 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                                       mock.sentinel.FAKE_DEST_PATH),
                             mock.call(mock.sentinel.FAKE_DVD_PATH2,
                                       mock.sentinel.FAKE_DEST_PATH))
+
+    def _setup_remotefx_mocks(self):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance.flavor.extra_specs = {
+            'os:resolution': os_win_const.REMOTEFX_MAX_RES_1920x1200,
+            'os:monitors': '2',
+            'os:vram': '256'}
+
+        return mock_instance
+
+    def test_configure_remotefx_not_required(self):
+        self.flags(enable_remotefx=False, group='hyperv')
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+
+        self._vmops._configure_remotefx(mock_instance, mock.sentinel.VM_GEN)
+
+    def test_configure_remotefx_exception_enable_config(self):
+        self.flags(enable_remotefx=False, group='hyperv')
+        mock_instance = self._setup_remotefx_mocks()
+
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._vmops._configure_remotefx,
+                          mock_instance, mock.sentinel.VM_GEN)
+
+    def test_configure_remotefx_exception_server_feature(self):
+        self.flags(enable_remotefx=True, group='hyperv')
+        mock_instance = self._setup_remotefx_mocks()
+        self._vmops._hostutils.check_server_feature.return_value = False
+
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._vmops._configure_remotefx,
+                          mock_instance, mock.sentinel.VM_GEN)
+
+    def test_configure_remotefx_exception_vm_gen(self):
+        self.flags(enable_remotefx=True, group='hyperv')
+        mock_instance = self._setup_remotefx_mocks()
+        self._vmops._hostutils.check_server_feature.return_value = True
+        self._vmops._vmutils.vm_gen_supports_remotefx.return_value = False
+
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._vmops._configure_remotefx,
+                          mock_instance, mock.sentinel.VM_GEN)
+
+    def test_configure_remotefx(self):
+        self.flags(enable_remotefx=True, group='hyperv')
+        mock_instance = self._setup_remotefx_mocks()
+        self._vmops._hostutils.check_server_feature.return_value = True
+        self._vmops._vmutils.vm_gen_supports_remotefx.return_value = True
+        extra_specs = mock_instance.flavor.extra_specs
+
+        self._vmops._configure_remotefx(mock_instance,
+                                        constants.VM_GEN_1)
+        mock_enable_remotefx = (
+            self._vmops._vmutils.enable_remotefx_video_adapter)
+        mock_enable_remotefx.assert_called_once_with(
+            mock_instance.name, int(extra_specs['os:monitors']),
+            extra_specs['os:resolution'],
+            int(extra_specs['os:vram']) * units.Mi)
 
     @mock.patch.object(vmops.VMOps, '_get_vm_state')
     def test_check_hotplug_available_vm_disabled(self, mock_get_vm_state):
