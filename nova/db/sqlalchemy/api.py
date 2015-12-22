@@ -5198,11 +5198,11 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 @require_context
-def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
+@main_context_manager.reader.allow_async
+def bw_usage_get(context, uuid, start_period, mac):
     values = {'start_period': start_period}
     values = convert_objects_related_datetimes(values, 'start_period')
-    return model_query(context, models.BandwidthUsage, read_deleted="yes",
-                       use_slave=use_slave).\
+    return model_query(context, models.BandwidthUsage, read_deleted="yes").\
                            filter_by(start_period=values['start_period']).\
                            filter_by(uuid=uuid).\
                            filter_by(mac=mac).\
@@ -5210,12 +5210,12 @@ def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
 
 
 @require_context
-def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
+@main_context_manager.reader.allow_async
+def bw_usage_get_by_uuids(context, uuids, start_period):
     values = {'start_period': start_period}
     values = convert_objects_related_datetimes(values, 'start_period')
     return (
-        model_query(context, models.BandwidthUsage, read_deleted="yes",
-                    use_slave=use_slave).
+        model_query(context, models.BandwidthUsage, read_deleted="yes").
         filter(models.BandwidthUsage.uuid.in_(uuids)).
         filter_by(start_period=values['start_period']).
         all()
@@ -5224,10 +5224,9 @@ def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed=None):
-
-    session = get_session()
 
     if last_refreshed is None:
         last_refreshed = timeutils.utcnow()
@@ -5235,48 +5234,48 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
     # NOTE(comstud): More often than not, we'll be updating records vs
     # creating records.  Optimize accordingly, trying to update existing
     # records.  Fall back to creation when no rows are updated.
-    with session.begin():
-        ts_values = {'last_refreshed': last_refreshed,
-                     'start_period': start_period}
-        ts_keys = ('start_period', 'last_refreshed')
-        ts_values = convert_objects_related_datetimes(ts_values, *ts_keys)
-        values = {'last_refreshed': ts_values['last_refreshed'],
-                  'last_ctr_in': last_ctr_in,
-                  'last_ctr_out': last_ctr_out,
-                  'bw_in': bw_in,
-                  'bw_out': bw_out}
-        bw_usage = model_query(context, models.BandwidthUsage, session=session,
-                read_deleted='yes').\
-                        filter_by(start_period=ts_values['start_period']).\
-                        filter_by(uuid=uuid).\
-                        filter_by(mac=mac).first()
+    ts_values = {'last_refreshed': last_refreshed,
+                 'start_period': start_period}
+    ts_keys = ('start_period', 'last_refreshed')
+    ts_values = convert_objects_related_datetimes(ts_values, *ts_keys)
+    values = {'last_refreshed': ts_values['last_refreshed'],
+              'last_ctr_in': last_ctr_in,
+              'last_ctr_out': last_ctr_out,
+              'bw_in': bw_in,
+              'bw_out': bw_out}
+    bw_usage = model_query(context, models.BandwidthUsage,
+            read_deleted='yes').\
+                    filter_by(start_period=ts_values['start_period']).\
+                    filter_by(uuid=uuid).\
+                    filter_by(mac=mac).first()
 
-        if bw_usage:
-            bw_usage.update(values)
-            return bw_usage
+    if bw_usage:
+        bw_usage.update(values)
+        return bw_usage
 
-        bwusage = models.BandwidthUsage()
-        bwusage.start_period = ts_values['start_period']
-        bwusage.uuid = uuid
-        bwusage.mac = mac
-        bwusage.last_refreshed = ts_values['last_refreshed']
-        bwusage.bw_in = bw_in
-        bwusage.bw_out = bw_out
-        bwusage.last_ctr_in = last_ctr_in
-        bwusage.last_ctr_out = last_ctr_out
-        try:
-            bwusage.save(session=session)
-        except db_exc.DBDuplicateEntry:
-            # NOTE(sirp): Possible race if two greenthreads attempt to create
-            # the usage entry at the same time. First one wins.
-            pass
-        return bwusage
+    bwusage = models.BandwidthUsage()
+    bwusage.start_period = ts_values['start_period']
+    bwusage.uuid = uuid
+    bwusage.mac = mac
+    bwusage.last_refreshed = ts_values['last_refreshed']
+    bwusage.bw_in = bw_in
+    bwusage.bw_out = bw_out
+    bwusage.last_ctr_in = last_ctr_in
+    bwusage.last_ctr_out = last_ctr_out
+    try:
+        bwusage.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        # NOTE(sirp): Possible race if two greenthreads attempt to create
+        # the usage entry at the same time. First one wins.
+        pass
+    return bwusage
 
 
 ####################
 
 
 @require_context
+@main_context_manager.reader
 def vol_get_usage_by_time(context, begin):
     """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
@@ -5284,119 +5283,118 @@ def vol_get_usage_by_time(context, begin):
                               models.VolumeUsage.tot_last_refreshed > begin,
                               models.VolumeUsage.curr_last_refreshed == null(),
                               models.VolumeUsage.curr_last_refreshed > begin,
-                              )).\
-                              all()
+                              )).all()
 
 
 @require_context
+@main_context_manager.writer
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      instance_id, project_id, user_id, availability_zone,
                      update_totals=False):
-    session = get_session()
 
     refreshed = timeutils.utcnow()
 
-    with session.begin():
-        values = {}
-        # NOTE(dricco): We will be mostly updating current usage records vs
-        # updating total or creating records. Optimize accordingly.
-        if not update_totals:
-            values = {'curr_last_refreshed': refreshed,
-                      'curr_reads': rd_req,
-                      'curr_read_bytes': rd_bytes,
-                      'curr_writes': wr_req,
-                      'curr_write_bytes': wr_bytes,
-                      'instance_uuid': instance_id,
-                      'project_id': project_id,
-                      'user_id': user_id,
-                      'availability_zone': availability_zone}
-        else:
-            values = {'tot_last_refreshed': refreshed,
-                      'tot_reads': models.VolumeUsage.tot_reads + rd_req,
-                      'tot_read_bytes': models.VolumeUsage.tot_read_bytes +
-                                        rd_bytes,
-                      'tot_writes': models.VolumeUsage.tot_writes + wr_req,
-                      'tot_write_bytes': models.VolumeUsage.tot_write_bytes +
-                                         wr_bytes,
-                      'curr_reads': 0,
-                      'curr_read_bytes': 0,
-                      'curr_writes': 0,
-                      'curr_write_bytes': 0,
-                      'instance_uuid': instance_id,
-                      'project_id': project_id,
-                      'user_id': user_id,
-                      'availability_zone': availability_zone}
+    values = {}
+    # NOTE(dricco): We will be mostly updating current usage records vs
+    # updating total or creating records. Optimize accordingly.
+    if not update_totals:
+        values = {'curr_last_refreshed': refreshed,
+                  'curr_reads': rd_req,
+                  'curr_read_bytes': rd_bytes,
+                  'curr_writes': wr_req,
+                  'curr_write_bytes': wr_bytes,
+                  'instance_uuid': instance_id,
+                  'project_id': project_id,
+                  'user_id': user_id,
+                  'availability_zone': availability_zone}
+    else:
+        values = {'tot_last_refreshed': refreshed,
+                  'tot_reads': models.VolumeUsage.tot_reads + rd_req,
+                  'tot_read_bytes': models.VolumeUsage.tot_read_bytes +
+                                    rd_bytes,
+                  'tot_writes': models.VolumeUsage.tot_writes + wr_req,
+                  'tot_write_bytes': models.VolumeUsage.tot_write_bytes +
+                                     wr_bytes,
+                  'curr_reads': 0,
+                  'curr_read_bytes': 0,
+                  'curr_writes': 0,
+                  'curr_write_bytes': 0,
+                  'instance_uuid': instance_id,
+                  'project_id': project_id,
+                  'user_id': user_id,
+                  'availability_zone': availability_zone}
 
-        current_usage = model_query(context, models.VolumeUsage,
-                            session=session, read_deleted="yes").\
-                            filter_by(volume_id=id).\
-                            first()
-        if current_usage:
-            if (rd_req < current_usage['curr_reads'] or
-                rd_bytes < current_usage['curr_read_bytes'] or
-                wr_req < current_usage['curr_writes'] or
-                    wr_bytes < current_usage['curr_write_bytes']):
-                LOG.info(_LI("Volume(%s) has lower stats then what is in "
-                             "the database. Instance must have been rebooted "
-                             "or crashed. Updating totals."), id)
-                if not update_totals:
-                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
-                                           current_usage['curr_reads'])
-                    values['tot_read_bytes'] = (
-                        models.VolumeUsage.tot_read_bytes +
-                        current_usage['curr_read_bytes'])
-                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
-                                            current_usage['curr_writes'])
-                    values['tot_write_bytes'] = (
-                        models.VolumeUsage.tot_write_bytes +
-                        current_usage['curr_write_bytes'])
-                else:
-                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
-                                           current_usage['curr_reads'] +
-                                           rd_req)
-                    values['tot_read_bytes'] = (
-                        models.VolumeUsage.tot_read_bytes +
-                        current_usage['curr_read_bytes'] + rd_bytes)
-                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
-                                            current_usage['curr_writes'] +
-                                            wr_req)
-                    values['tot_write_bytes'] = (
-                        models.VolumeUsage.tot_write_bytes +
-                        current_usage['curr_write_bytes'] + wr_bytes)
+    current_usage = model_query(context, models.VolumeUsage,
+                        read_deleted="yes").\
+                        filter_by(volume_id=id).\
+                        first()
+    if current_usage:
+        if (rd_req < current_usage['curr_reads'] or
+            rd_bytes < current_usage['curr_read_bytes'] or
+            wr_req < current_usage['curr_writes'] or
+                wr_bytes < current_usage['curr_write_bytes']):
+            LOG.info(_LI("Volume(%s) has lower stats then what is in "
+                         "the database. Instance must have been rebooted "
+                         "or crashed. Updating totals."), id)
+            if not update_totals:
+                values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                       current_usage['curr_reads'])
+                values['tot_read_bytes'] = (
+                    models.VolumeUsage.tot_read_bytes +
+                    current_usage['curr_read_bytes'])
+                values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                        current_usage['curr_writes'])
+                values['tot_write_bytes'] = (
+                    models.VolumeUsage.tot_write_bytes +
+                    current_usage['curr_write_bytes'])
+            else:
+                values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                       current_usage['curr_reads'] +
+                                       rd_req)
+                values['tot_read_bytes'] = (
+                    models.VolumeUsage.tot_read_bytes +
+                    current_usage['curr_read_bytes'] + rd_bytes)
+                values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                        current_usage['curr_writes'] +
+                                        wr_req)
+                values['tot_write_bytes'] = (
+                    models.VolumeUsage.tot_write_bytes +
+                    current_usage['curr_write_bytes'] + wr_bytes)
 
-            current_usage.update(values)
-            current_usage.save(session=session)
-            session.refresh(current_usage)
-            return current_usage
+        current_usage.update(values)
+        current_usage.save(context.session)
+        context.session.refresh(current_usage)
+        return current_usage
 
-        vol_usage = models.VolumeUsage()
-        vol_usage.volume_id = id
-        vol_usage.instance_uuid = instance_id
-        vol_usage.project_id = project_id
-        vol_usage.user_id = user_id
-        vol_usage.availability_zone = availability_zone
+    vol_usage = models.VolumeUsage()
+    vol_usage.volume_id = id
+    vol_usage.instance_uuid = instance_id
+    vol_usage.project_id = project_id
+    vol_usage.user_id = user_id
+    vol_usage.availability_zone = availability_zone
 
-        if not update_totals:
-            vol_usage.curr_last_refreshed = refreshed
-            vol_usage.curr_reads = rd_req
-            vol_usage.curr_read_bytes = rd_bytes
-            vol_usage.curr_writes = wr_req
-            vol_usage.curr_write_bytes = wr_bytes
-        else:
-            vol_usage.tot_last_refreshed = refreshed
-            vol_usage.tot_reads = rd_req
-            vol_usage.tot_read_bytes = rd_bytes
-            vol_usage.tot_writes = wr_req
-            vol_usage.tot_write_bytes = wr_bytes
+    if not update_totals:
+        vol_usage.curr_last_refreshed = refreshed
+        vol_usage.curr_reads = rd_req
+        vol_usage.curr_read_bytes = rd_bytes
+        vol_usage.curr_writes = wr_req
+        vol_usage.curr_write_bytes = wr_bytes
+    else:
+        vol_usage.tot_last_refreshed = refreshed
+        vol_usage.tot_reads = rd_req
+        vol_usage.tot_read_bytes = rd_bytes
+        vol_usage.tot_writes = wr_req
+        vol_usage.tot_write_bytes = wr_bytes
 
-        vol_usage.save(session=session)
+    vol_usage.save(context.session)
 
-        return vol_usage
+    return vol_usage
 
 
 ####################
 
 
+@main_context_manager.reader
 def s3_image_get(context, image_id):
     """Find local s3 image represented by the provided id."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
@@ -5409,6 +5407,7 @@ def s3_image_get(context, image_id):
     return result
 
 
+@main_context_manager.reader
 def s3_image_get_by_uuid(context, image_uuid):
     """Find local s3 image represented by the provided uuid."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
@@ -5421,12 +5420,13 @@ def s3_image_get_by_uuid(context, image_uuid):
     return result
 
 
+@main_context_manager.writer
 def s3_image_create(context, image_uuid):
     """Create local s3 image represented by provided uuid."""
     try:
         s3_image_ref = models.S3Image()
         s3_image_ref.update({'uuid': image_uuid})
-        s3_image_ref.save()
+        s3_image_ref.save(context.session)
     except Exception as e:
         raise db_exc.DBError(e)
 

@@ -46,11 +46,17 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
         bw_usage.obj_reset_changes()
         return bw_usage
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_bw_usage_get(context, uuid, start_period, mac, use_slave=False):
+        return db.bw_usage_get(context, uuid=uuid, start_period=start_period,
+                               mac=mac)
+
     @base.serialize_args
     @base.remotable_classmethod
     def get_by_instance_uuid_and_mac(cls, context, instance_uuid, mac,
                                      start_period=None, use_slave=False):
-        db_bw_usage = db.bw_usage_get(context, uuid=instance_uuid,
+        db_bw_usage = cls._db_bw_usage_get(context, uuid=instance_uuid,
                                       start_period=start_period, mac=mac,
                                       use_slave=use_slave)
         if db_bw_usage:
@@ -79,10 +85,17 @@ class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('BandwidthUsage'),
     }
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_bw_usage_get_by_uuids(context, uuids, start_period,
+                                  use_slave=False):
+        return db.bw_usage_get_by_uuids(context, uuids=uuids,
+                                        start_period=start_period)
+
     @base.serialize_args
     @base.remotable_classmethod
     def get_by_uuids(cls, context, uuids, start_period=None, use_slave=False):
-        db_bw_usages = db.bw_usage_get_by_uuids(context, uuids=uuids,
+        db_bw_usages = cls._db_bw_usage_get_by_uuids(context, uuids=uuids,
                                                 start_period=start_period,
                                                 use_slave=use_slave)
         return base.obj_make_list(context, cls(), BandwidthUsage, db_bw_usages)
