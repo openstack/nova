@@ -95,7 +95,7 @@ def _quota_reserve(context, project_id, user_id):
 
     """
     def get_sync(resource, usage):
-        def sync(elevated, project_id, user_id, session):
+        def sync(elevated, project_id, user_id):
             return {resource: usage}
         return sync
     quotas = {}
@@ -7034,7 +7034,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         _quota_reserve(self.ctxt, 'p1', 'u1')
         with mock.patch.object(query.Query, 'order_by') as order_mock:
             sqlalchemy_api._get_project_user_quota_usages(
-                self.ctxt, None, 'p1', 'u1')
+                self.ctxt, 'p1', 'u1')
         self.assertTrue(order_mock.called)
 
     def test_quota_usage_update_nonexistent(self):
@@ -7094,10 +7094,10 @@ class QuotaReserveNoDbTestCase(test.NoDBTestCase):
         # Now test if the QuotaUsage was created with a user_id or not.
         if per_project_quotas:
             quc.assert_called_once_with(
-                project_id, None, resource, 0, 0, None, session=session)
+                project_id, None, resource, 0, 0, None, session)
         else:
             quc.assert_called_once_with(
-                project_id, user_id, resource, 0, 0, None, session=session)
+                project_id, user_id, resource, 0, 0, None, session)
 
     def test_create_quota_usage_if_missing_created_per_project_quotas(self):
         self._test_create_quota_usage_if_missing_created(True)
