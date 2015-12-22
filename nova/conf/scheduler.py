@@ -327,6 +327,11 @@ ram_weight_mult_opt = cfg.FloatOpt("ram_weight_multiplier",
         help="Multiplier used for weighing ram. Negative numbers mean to "
              "stack vs spread.")
 
+disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
+        default=1.0,
+        help="Multiplier used for weighing free disk space. Negative "
+             "numbers mean to stack vs spread.")
+
 io_ops_weight_mult_opt = cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
         help="Multiplier used for weighing host io ops. Negative numbers mean "
@@ -406,6 +411,7 @@ default_opts = [host_subset_size_opt,
                agg_img_prop_iso_separator_opt,
                max_instances_per_host_opt,
                ram_weight_mult_opt,
+               disk_weight_mult_opt,
                io_ops_weight_mult_opt,
                scheduler_max_att_opt,
                soft_affinity_weight_opt,
