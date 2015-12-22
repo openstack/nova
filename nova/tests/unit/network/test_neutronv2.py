@@ -2454,7 +2454,6 @@ class TestNeutronv2(TestNeutronv2Base):
                                               fake_subnets)
         self.assertEqual(fake_subnets, net['subnets'])
         self.assertEqual('net-id1', net['id'])
-        self.assertEqual('net-id1', net['id'])
         self.assertEqual('tenant', net['meta']['tenant_id'])
 
     def test_nw_info_build_network_vhostuser(self):
