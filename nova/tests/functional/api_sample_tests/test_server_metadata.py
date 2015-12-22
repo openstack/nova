@@ -23,7 +23,6 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class ServersMetadataJsonTest(test_servers.ServersSampleBase):
-    extends_name = 'core_only'
     sample_dir = 'server-metadata'
 
     def _create_and_set(self, subs):
