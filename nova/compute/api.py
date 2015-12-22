@@ -1984,6 +1984,19 @@ class API(base.Base):
         #                 availability_zone isn't used by run_instance.
         self.compute_rpcapi.start_instance(context, instance)
 
+    @check_instance_lock
+    @check_instance_host
+    @check_instance_cell
+    @check_instance_state(vm_state=vm_states.ALLOW_TRIGGER_CRASH_DUMP)
+    def trigger_crash_dump(self, context, instance):
+        """Trigger crash dump in an instance."""
+        LOG.debug("Try to trigger crash dump", instance=instance)
+
+        self._record_action_start(context, instance,
+                                  instance_actions.TRIGGER_CRASH_DUMP)
+
+        self.compute_rpcapi.trigger_crash_dump(context, instance)
+
     def get(self, context, instance_id, want_objects=False,
             expected_attrs=None):
         """Get a single instance with the given instance_id."""

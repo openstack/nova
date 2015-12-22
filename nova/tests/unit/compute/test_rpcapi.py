@@ -519,3 +519,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_unquiesce_instance(self):
         self._test_compute_api('unquiesce_instance', 'cast',
                 instance=self.fake_instance_obj, mapping=None, version='4.0')
+
+    def test_trigger_crash_dump(self):
+        self._test_compute_api('trigger_crash_dump', 'cast',
+                instance=self.fake_instance_obj, version='4.6')
+
+    def test_trigger_crash_dump_incompatible(self):
+        self.flags(compute='4.0', group='upgrade_levels')
+        self.assertRaises(exception.NMINotSupported,
+                          self._test_compute_api,
+                          'trigger_crash_dump', 'cast',
+                          instance=self.fake_instance_obj, version='4.6')

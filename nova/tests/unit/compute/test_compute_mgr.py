@@ -2902,6 +2902,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_delete_instance.assert_called_once_with(
             self.context, instance, bdms, mock.ANY)
 
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_notify_about_instance_usage')
+    def test_trigger_crash_dump(self, notify_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
+
+        self.compute.trigger_crash_dump(self.context, instance)
+
+        notify_mock.assert_has_calls([
+            mock.call(self.context, instance, 'trigger_crash_dump.start'),
+            mock.call(self.context, instance, 'trigger_crash_dump.end')
+        ])
+        self.assertIsNone(instance.task_state)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

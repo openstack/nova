@@ -430,6 +430,47 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.stop,
                           self.context, instance)
 
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.trigger_crash_dump')
+    def test_trigger_crash_dump(self,
+                                trigger_crash_dump,
+                                _record_action_start):
+        instance = self._create_instance_obj()
+
+        self.compute_api.trigger_crash_dump(self.context, instance)
+
+        _record_action_start.assert_called_once_with(self.context, instance,
+            instance_actions.TRIGGER_CRASH_DUMP)
+
+        if self.cell_type == 'api':
+            # cell api has not been implemented.
+            pass
+        else:
+            trigger_crash_dump.assert_called_once_with(self.context, instance)
+
+        self.assertIsNone(instance.task_state)
+
+    def test_trigger_crash_dump_invalid_state(self):
+        params = dict(vm_state=vm_states.STOPPED)
+        instance = self._create_instance_obj(params)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.trigger_crash_dump,
+                          self.context, instance)
+
+    def test_trigger_crash_dump_no_host(self):
+        params = dict(host='')
+        instance = self._create_instance_obj(params=params)
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.trigger_crash_dump,
+                          self.context, instance)
+
+    def test_trigger_crash_dump_locked(self):
+        params = dict(locked=True)
+        instance = self._create_instance_obj(params=params)
+        self.assertRaises(exception.InstanceIsLocked,
+                          self.compute_api.trigger_crash_dump,
+                          self.context, instance)
+
     def _test_shelve(self, vm_state=vm_states.ACTIVE,
                      boot_from_volume=False, clean_shutdown=True):
         params = dict(task_state=None, vm_state=vm_state,
