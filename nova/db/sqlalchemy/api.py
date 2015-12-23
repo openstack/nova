@@ -354,8 +354,7 @@ def _sync_floating_ips(context, project_id, user_id):
 
 
 def _sync_fixed_ips(context, project_id, user_id):
-    return dict(fixed_ips=_fixed_ip_count_by_project(
-                context, project_id, context.session))
+    return dict(fixed_ips=_fixed_ip_count_by_project(context, project_id))
 
 
 def _sync_security_groups(context, project_id, user_id):
@@ -1116,6 +1115,7 @@ def dnsdomain_get_all(context):
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
+@main_context_manager.writer
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False, virtual_interface_id=None):
     """Keyword arguments:
@@ -1125,165 +1125,157 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
-    session = get_session()
-    with session.begin():
-        network_or_none = or_(models.FixedIp.network_id == network_id,
-                              models.FixedIp.network_id == null())
-        fixed_ip_ref = model_query(context, models.FixedIp, session=session,
-                                   read_deleted="no").\
-                               filter(network_or_none).\
-                               filter_by(reserved=reserved).\
-                               filter_by(address=address).\
-                               first()
+    network_or_none = or_(models.FixedIp.network_id == network_id,
+                          models.FixedIp.network_id == null())
+    fixed_ip_ref = model_query(context, models.FixedIp, read_deleted="no").\
+                           filter(network_or_none).\
+                           filter_by(reserved=reserved).\
+                           filter_by(address=address).\
+                           first()
 
-        if fixed_ip_ref is None:
-            raise exception.FixedIpNotFoundForNetwork(address=address,
-                                            network_uuid=network_id)
-        if fixed_ip_ref.instance_uuid:
-            raise exception.FixedIpAlreadyInUse(address=address,
-                                                instance_uuid=instance_uuid)
+    if fixed_ip_ref is None:
+        raise exception.FixedIpNotFoundForNetwork(address=address,
+                                        network_uuid=network_id)
+    if fixed_ip_ref.instance_uuid:
+        raise exception.FixedIpAlreadyInUse(address=address,
+                                            instance_uuid=instance_uuid)
 
-        params = {'instance_uuid': instance_uuid,
-                  'allocated': virtual_interface_id is not None}
-        if not fixed_ip_ref.network_id:
-            params['network_id'] = network_id
-        if virtual_interface_id:
-            params['virtual_interface_id'] = virtual_interface_id
+    params = {'instance_uuid': instance_uuid,
+              'allocated': virtual_interface_id is not None}
+    if not fixed_ip_ref.network_id:
+        params['network_id'] = network_id
+    if virtual_interface_id:
+        params['virtual_interface_id'] = virtual_interface_id
 
-        rows_updated = model_query(context, models.FixedIp, session=session,
-                                   read_deleted="no").\
-                                filter_by(id=fixed_ip_ref.id).\
-                                filter(network_or_none).\
-                                filter_by(reserved=reserved).\
-                                filter_by(address=address).\
-                                update(params, synchronize_session='evaluate')
+    rows_updated = model_query(context, models.FixedIp, read_deleted="no").\
+                            filter_by(id=fixed_ip_ref.id).\
+                            filter(network_or_none).\
+                            filter_by(reserved=reserved).\
+                            filter_by(address=address).\
+                            update(params, synchronize_session='evaluate')
 
-        if not rows_updated:
-            LOG.debug('The row was updated in a concurrent transaction, '
-                      'we will fetch another row')
-            raise db_exc.RetryRequest(
-                exception.FixedIpAssociateFailed(net=network_id))
+    if not rows_updated:
+        LOG.debug('The row was updated in a concurrent transaction, '
+                  'we will fetch another row')
+        raise db_exc.RetryRequest(
+            exception.FixedIpAssociateFailed(net=network_id))
 
     return fixed_ip_ref
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
+@main_context_manager.writer
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None, virtual_interface_id=None):
     if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
-    session = get_session()
-    with session.begin():
-        network_or_none = or_(models.FixedIp.network_id == network_id,
-                              models.FixedIp.network_id == null())
-        fixed_ip_ref = model_query(context, models.FixedIp, session=session,
-                                   read_deleted="no").\
-                               filter(network_or_none).\
-                               filter_by(reserved=False).\
-                               filter_by(instance_uuid=None).\
-                               filter_by(host=None).\
-                               filter_by(leased=False).\
-                               first()
+    network_or_none = or_(models.FixedIp.network_id == network_id,
+                          models.FixedIp.network_id == null())
+    fixed_ip_ref = model_query(context, models.FixedIp, read_deleted="no").\
+                           filter(network_or_none).\
+                           filter_by(reserved=False).\
+                           filter_by(instance_uuid=None).\
+                           filter_by(host=None).\
+                           filter_by(leased=False).\
+                           first()
 
-        if not fixed_ip_ref:
-            raise exception.NoMoreFixedIps(net=network_id)
+    if not fixed_ip_ref:
+        raise exception.NoMoreFixedIps(net=network_id)
 
-        params = {'allocated': virtual_interface_id is not None}
-        if fixed_ip_ref['network_id'] is None:
-            params['network_id'] = network_id
-        if instance_uuid:
-            params['instance_uuid'] = instance_uuid
-        if host:
-            params['host'] = host
-        if virtual_interface_id:
-            params['virtual_interface_id'] = virtual_interface_id
+    params = {'allocated': virtual_interface_id is not None}
+    if fixed_ip_ref['network_id'] is None:
+        params['network_id'] = network_id
+    if instance_uuid:
+        params['instance_uuid'] = instance_uuid
+    if host:
+        params['host'] = host
+    if virtual_interface_id:
+        params['virtual_interface_id'] = virtual_interface_id
 
-        rows_updated = model_query(context, models.FixedIp, session=session,
-                                   read_deleted="no").\
-            filter_by(id=fixed_ip_ref['id']).\
-            filter_by(network_id=fixed_ip_ref['network_id']).\
-            filter_by(reserved=False).\
-            filter_by(instance_uuid=None).\
-            filter_by(host=None).\
-            filter_by(leased=False).\
-            filter_by(address=fixed_ip_ref['address']).\
-            update(params, synchronize_session='evaluate')
+    rows_updated = model_query(context, models.FixedIp, read_deleted="no").\
+        filter_by(id=fixed_ip_ref['id']).\
+        filter_by(network_id=fixed_ip_ref['network_id']).\
+        filter_by(reserved=False).\
+        filter_by(instance_uuid=None).\
+        filter_by(host=None).\
+        filter_by(leased=False).\
+        filter_by(address=fixed_ip_ref['address']).\
+        update(params, synchronize_session='evaluate')
 
-        if not rows_updated:
-            LOG.debug('The row was updated in a concurrent transaction, '
-                      'we will fetch another row')
-            raise db_exc.RetryRequest(
-                exception.FixedIpAssociateFailed(net=network_id))
+    if not rows_updated:
+        LOG.debug('The row was updated in a concurrent transaction, '
+                  'we will fetch another row')
+        raise db_exc.RetryRequest(
+            exception.FixedIpAssociateFailed(net=network_id))
 
     return fixed_ip_ref
 
 
 @require_context
+@main_context_manager.writer
 def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
     try:
-        fixed_ip_ref.save()
+        fixed_ip_ref.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.FixedIpExists(address=values['address'])
     return fixed_ip_ref
 
 
 @require_context
+@main_context_manager.writer
 def fixed_ip_bulk_create(context, ips):
-    engine = get_engine()
-    with engine.begin() as conn:
-        try:
-            tab = models.FixedIp.__table__
-            conn.execute(tab.insert(), ips)
-        except db_exc.DBDuplicateEntry as e:
-            raise exception.FixedIpExists(address=e.value)
+    try:
+        tab = models.FixedIp.__table__
+        context.session.execute(tab.insert(), ips)
+    except db_exc.DBDuplicateEntry as e:
+        raise exception.FixedIpExists(address=e.value)
 
 
 @require_context
+@main_context_manager.writer
 def fixed_ip_disassociate(context, address):
-    session = get_session()
-    with session.begin():
-        _fixed_ip_get_by_address(context, address, session=session).\
-                                 update({'instance_uuid': None,
-                                         'virtual_interface_id': None})
+    _fixed_ip_get_by_address(context, address).update(
+        {'instance_uuid': None,
+         'virtual_interface_id': None})
 
 
+@main_context_manager.writer
 def fixed_ip_disassociate_all_by_timeout(context, host, time):
-    session = get_session()
     # NOTE(vish): only update fixed ips that "belong" to this
     #             host; i.e. the network host or the instance
     #             host matches. Two queries necessary because
     #             join with update doesn't work.
-    with session.begin():
-        host_filter = or_(and_(models.Instance.host == host,
-                               models.Network.multi_host == true()),
-                          models.Network.host == host)
-        result = model_query(context, models.FixedIp, (models.FixedIp.id,),
-                             read_deleted="no", session=session).\
-                filter(models.FixedIp.allocated == false()).\
-                filter(models.FixedIp.updated_at < time).\
-                join((models.Network,
-                      models.Network.id == models.FixedIp.network_id)).\
-                join((models.Instance,
-                      models.Instance.uuid == models.FixedIp.instance_uuid)).\
-                filter(host_filter).\
-                all()
-        fixed_ip_ids = [fip[0] for fip in result]
-        if not fixed_ip_ids:
-            return 0
-        result = model_query(context, models.FixedIp, session=session).\
-                             filter(models.FixedIp.id.in_(fixed_ip_ids)).\
-                             update({'instance_uuid': None,
-                                     'leased': False,
-                                     'updated_at': timeutils.utcnow()},
-                                    synchronize_session='fetch')
-        return result
+    host_filter = or_(and_(models.Instance.host == host,
+                           models.Network.multi_host == true()),
+                      models.Network.host == host)
+    result = model_query(context, models.FixedIp, (models.FixedIp.id,),
+                         read_deleted="no").\
+            filter(models.FixedIp.allocated == false()).\
+            filter(models.FixedIp.updated_at < time).\
+            join((models.Network,
+                  models.Network.id == models.FixedIp.network_id)).\
+            join((models.Instance,
+                  models.Instance.uuid == models.FixedIp.instance_uuid)).\
+            filter(host_filter).\
+            all()
+    fixed_ip_ids = [fip[0] for fip in result]
+    if not fixed_ip_ids:
+        return 0
+    result = model_query(context, models.FixedIp).\
+                         filter(models.FixedIp.id.in_(fixed_ip_ids)).\
+                         update({'instance_uuid': None,
+                                 'leased': False,
+                                 'updated_at': timeutils.utcnow()},
+                                synchronize_session='fetch')
+    return result
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ip_get(context, id, get_network=False):
     query = model_query(context, models.FixedIp).filter_by(id=id)
     if get_network:
@@ -1303,6 +1295,7 @@ def fixed_ip_get(context, id, get_network=False):
     return result
 
 
+@main_context_manager.reader
 def fixed_ip_get_all(context):
     result = model_query(context, models.FixedIp, read_deleted="yes").all()
     if not result:
@@ -1312,47 +1305,44 @@ def fixed_ip_get_all(context):
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ip_get_by_address(context, address, columns_to_join=None):
     return _fixed_ip_get_by_address(context, address,
                                     columns_to_join=columns_to_join)
 
 
-def _fixed_ip_get_by_address(context, address, session=None,
-                             columns_to_join=None):
-    if session is None:
-        session = get_session()
+def _fixed_ip_get_by_address(context, address, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = []
 
-    with session.begin(subtransactions=True):
-        try:
-            result = model_query(context, models.FixedIp, session=session)
-            for column in columns_to_join:
-                result = result.options(joinedload_all(column))
-            result = result.filter_by(address=address).first()
-            if not result:
-                raise exception.FixedIpNotFoundForAddress(address=address)
-        except db_exc.DBError:
-            msg = _("Invalid fixed IP Address %s in request") % address
-            LOG.warning(msg)
-            raise exception.FixedIpInvalid(msg)
+    try:
+        result = model_query(context, models.FixedIp)
+        for column in columns_to_join:
+            result = result.options(joinedload_all(column))
+        result = result.filter_by(address=address).first()
+        if not result:
+            raise exception.FixedIpNotFoundForAddress(address=address)
+    except db_exc.DBError:
+        msg = _("Invalid fixed IP Address %s in request") % address
+        LOG.warning(msg)
+        raise exception.FixedIpInvalid(msg)
 
-        # NOTE(sirp): shouldn't we just use project_only here to restrict the
-        # results?
-        if (nova.context.is_user_context(context) and
-                result['instance_uuid'] is not None):
-            instance = _instance_get_by_uuid(
-                context.elevated(read_deleted='yes'),
-                result['instance_uuid'],
-                session
-            )
-            nova.context.authorize_project_context(context,
-                                                   instance.project_id)
-
+    # NOTE(sirp): shouldn't we just use project_only here to restrict the
+    # results?
+    if (nova.context.is_user_context(context) and
+            result['instance_uuid'] is not None):
+        instance = _instance_get_by_uuid(
+            context.elevated(read_deleted='yes'),
+            result['instance_uuid'],
+            context.session
+        )
+        nova.context.authorize_project_context(context,
+                                               instance.project_id)
     return result
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ip_get_by_floating_address(context, floating_address):
     return model_query(context, models.FixedIp).\
                        join(models.FloatingIp,
@@ -1364,6 +1354,7 @@ def fixed_ip_get_by_floating_address(context, floating_address):
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
@@ -1387,20 +1378,19 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     return result
 
 
+@main_context_manager.reader
 def fixed_ip_get_by_host(context, host):
-    session = get_session()
-    with session.begin():
-        instance_uuids = _instance_get_all_uuids_by_host(context, host,
-                                                         session=session)
-        if not instance_uuids:
-            return []
+    instance_uuids = _instance_get_all_uuids_by_host(context, host)
+    if not instance_uuids:
+        return []
 
-        return model_query(context, models.FixedIp, session=session).\
-                 filter(models.FixedIp.instance_uuid.in_(instance_uuids)).\
-                 all()
+    return model_query(context, models.FixedIp).\
+             filter(models.FixedIp.instance_uuid.in_(instance_uuids)).\
+             all()
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ip_get_by_network_host(context, network_id, host):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(network_id=network_id).\
@@ -1414,6 +1404,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
 
 
 @require_context
+@main_context_manager.reader
 def fixed_ips_by_virtual_interface(context, vif_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(virtual_interface_id=vif_id).\
@@ -1425,17 +1416,15 @@ def fixed_ips_by_virtual_interface(context, vif_id):
 
 
 @require_context
+@main_context_manager.writer
 def fixed_ip_update(context, address, values):
-    session = get_session()
-    with session.begin():
-        _fixed_ip_get_by_address(context, address, session=session).\
-                                 update(values)
+    _fixed_ip_get_by_address(context, address).update(values)
 
 
-def _fixed_ip_count_by_project(context, project_id, session=None):
+def _fixed_ip_count_by_project(context, project_id):
     nova.context.authorize_project_context(context, project_id)
     return model_query(context, models.FixedIp, (models.FixedIp.id,),
-                       read_deleted="no", session=session).\
+                       read_deleted="no").\
                 join((models.Instance,
                       models.Instance.uuid == models.FixedIp.instance_uuid)).\
                 filter(models.Instance.project_id == project_id).\
