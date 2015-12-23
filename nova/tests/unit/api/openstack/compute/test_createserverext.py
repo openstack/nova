@@ -134,7 +134,7 @@ class CreateserverextTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-create-server-ext')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
-        req.body = jsonutils.dumps(body_dict)
+        req.body = jsonutils.dump_as_bytes(body_dict)
         return req
 
     def _create_instance_with_networks_json(self, networks):

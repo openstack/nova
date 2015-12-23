@@ -28,7 +28,7 @@ def webob_factory(url):
             req.content_type = "application/json"
             req.method = method
         if body:
-            req.body = jsonutils.dumps(body)
+            req.body = jsonutils.dump_as_bytes(body)
         return req
     return web_request
 

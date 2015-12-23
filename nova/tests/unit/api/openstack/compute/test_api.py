@@ -39,7 +39,7 @@ class APITest(test.NoDBTestCase):
     def test_malformed_json(self):
         req = webob.Request.blank('/')
         req.method = 'POST'
-        req.body = '{'
+        req.body = b'{'
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.wsgi_app)
@@ -48,7 +48,7 @@ class APITest(test.NoDBTestCase):
     def test_malformed_xml(self):
         req = webob.Request.blank('/')
         req.method = 'POST'
-        req.body = '<hi im not xml>'
+        req.body = b'<hi im not xml>'
         req.headers["content-type"] = "application/xml"
 
         res = req.get_response(self.wsgi_app)

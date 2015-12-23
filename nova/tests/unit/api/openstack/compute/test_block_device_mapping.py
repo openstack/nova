@@ -88,7 +88,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
 
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
 
         if override_controller:
             override_controller.create(req, body=body).obj['server']

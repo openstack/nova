@@ -417,7 +417,7 @@ class ActionExtensionTest(ExtensionTestCase):
         request = webob.Request.blank(url)
         request.method = 'POST'
         request.content_type = 'application/json'
-        request.body = jsonutils.dumps(body)
+        request.body = jsonutils.dump_as_bytes(body)
         response = request.get_response(app)
         return response
 
@@ -573,7 +573,7 @@ class ControllerExtensionTest(ExtensionTestCase):
         request = webob.Request.blank("/fake/tweedles/foo/action")
         request.method = 'POST'
         request.headers['Content-Type'] = 'application/json'
-        request.body = jsonutils.dumps(dict(fooAction=True))
+        request.body = jsonutils.dump_as_bytes(dict(fooAction=True))
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(extension_body, response.body)
@@ -596,7 +596,7 @@ class ControllerExtensionTest(ExtensionTestCase):
         request = webob.Request.blank("/fake/tweedles/foo/action")
         request.method = 'POST'
         request.headers['Content-Type'] = 'application/json'
-        request.body = jsonutils.dumps(dict(fooAction=True))
+        request.body = jsonutils.dump_as_bytes(dict(fooAction=True))
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(extension_body, response.body)

@@ -69,7 +69,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
                   'flavorRef': '1',
                }}
 
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
@@ -93,7 +93,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
             'os:scheduler_hints': {'group': 'foo'},
         }
 
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
@@ -109,7 +109,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
             },
             'os:scheduler_hints': param,
         }
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
 
@@ -198,7 +198,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         body.update(params)
         req = self._get_request()
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
         server = self.no_scheduler_hints_controller.create(
                      req, body=body).obj['server']

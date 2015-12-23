@@ -152,7 +152,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         body = dict(server=server)
         req = fakes.HTTPRequest.blank(self.base_url + 'servers')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
         if override_controller is not None:
             server = override_controller.create(req, body=body).obj['server']
@@ -193,7 +193,7 @@ class ServersControllerCreateTestV21(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.base_url + 'servers')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
 
         return req, body

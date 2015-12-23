@@ -30,6 +30,7 @@ if hasattr(boto.connection, 'HTTPResponse'):
 else:
     from six.moves import http_client as httplib
 import fixtures
+from oslo_utils import encodeutils
 from oslo_utils import versionutils
 import webob
 
@@ -68,7 +69,7 @@ class FakeHttplibConnection(object):
     def request(self, method, path, data, headers):
         req = webob.Request.blank(path)
         req.method = method
-        req.body = data
+        req.body = encodeutils.safe_encode(data)
         req.headers = headers
         req.headers['Accept'] = 'text/html'
         req.host = self.host

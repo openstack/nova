@@ -17,6 +17,7 @@ import mock
 from mox3 import mox
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import security_groups as \
@@ -1335,7 +1336,7 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         req = webob.Request.blank(url)
         if body:
             req.method = 'POST'
-            req.body = self._encode_body(body)
+            req.body = encodeutils.safe_encode(self._encode_body(body))
         req.content_type = self.content_type
         req.headers['Accept'] = self.content_type
         res = req.get_response(self.app)

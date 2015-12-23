@@ -20,6 +20,7 @@ from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import security_groups
@@ -504,7 +505,7 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
         req = webob.Request.blank(url)
         if body:
             req.method = 'POST'
-            req.body = self._encode_body(body)
+            req.body = encodeutils.safe_encode(self._encode_body(body))
         req.content_type = self.content_type
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))

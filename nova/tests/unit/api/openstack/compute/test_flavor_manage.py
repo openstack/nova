@@ -184,7 +184,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         req = req if req else self._get_http_request(url=self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         res = req.get_response(self.app)
         self.assertEqual(200, res.status_code)
         return jsonutils.loads(res.body)
@@ -407,7 +407,7 @@ class PrivateFlavorManageTestV21(test.TestCase):
         req = self._get_http_request(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
-        req.body = jsonutils.dumps(self.expected)
+        req.body = jsonutils.dump_as_bytes(self.expected)
         res = req.get_response(self.app)
         return jsonutils.loads(res.body)
 

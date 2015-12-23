@@ -147,7 +147,7 @@ class ServersControllerCreateTest(test.TestCase):
         body = dict(server=server)
         req = fakes.HTTPRequestV21.blank('/servers')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
         if override_controller:
             server = override_controller.create(req, body=body).obj['server']

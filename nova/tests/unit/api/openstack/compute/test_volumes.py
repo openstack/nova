@@ -175,7 +175,7 @@ class BootFromVolumeTest(test.TestCase):
                 ))
         req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app(
             init_only=('os-volumes_boot', 'servers')))
@@ -203,7 +203,7 @@ class BootFromVolumeTest(test.TestCase):
                 ))
         req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app(
             init_only=('os-volumes_boot', 'servers')))
@@ -251,7 +251,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
         body = {"volume": vol}
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         req.method = 'POST'
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
         resp = req.get_response(self.app)
 
@@ -383,7 +383,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -396,7 +396,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -412,7 +412,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -428,7 +428,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -514,7 +514,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                                     'device': '/dev/fake'}}
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)
@@ -528,7 +528,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                                     'device': None}}
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)
@@ -548,7 +548,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                                     'device': '/dev/fake'}}
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -569,7 +569,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -589,7 +589,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -603,7 +603,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -621,7 +621,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(
                   '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'PUT'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         return attachments.update(req, FAKE_UUID, uuid, body=body)
@@ -695,7 +695,7 @@ class VolumeAttachTestsV2(VolumeAttachTestsV21):
                                     'extra': 'extra_arg'}}
         req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
-        req.body = jsonutils.dumps({})
+        req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = self.attachments.create(req, FAKE_UUID, body=body)

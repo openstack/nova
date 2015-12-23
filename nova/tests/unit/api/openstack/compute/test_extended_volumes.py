@@ -120,7 +120,7 @@ class ExtendedVolumesTestV21(test.TestCase):
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
                        self.wsgi_api_version}
         if body:
-            req.body = jsonutils.dumps(body)
+            req.body = jsonutils.dump_as_bytes(body)
             req.method = 'POST'
         req.content_type = self.content_type
         res = req.get_response(self.app)

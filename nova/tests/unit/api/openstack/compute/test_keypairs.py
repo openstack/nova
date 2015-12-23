@@ -319,7 +319,7 @@ class KeypairsTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(self.base_url + '/servers')
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dumps({'server': {'name': 'test',
+        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
                                                'flavorRef': 1,
                                                'keypair_name': '  abc  ',
                                                'imageRef': FAKE_UUID}})
@@ -337,7 +337,7 @@ class KeypairsTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(self.base_url + '/servers')
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dumps({'server': {'name': 'test',
+        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
                                                'flavorRef': 1,
                                                'keypair_name': '  abc  ',
                                                'imageRef': FAKE_UUID}})
@@ -462,7 +462,7 @@ class KeypairsTestV2(KeypairsTestV21):
         req = fakes.HTTPRequest.blank(self.base_url + '/servers')
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dumps({'server': {'name': 'test',
+        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
                                                'flavorRef': 1,
                                                'keypair_name': '  abc  ',
                                                'imageRef': FAKE_UUID}})
