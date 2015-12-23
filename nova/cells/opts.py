@@ -15,57 +15,9 @@
 """
 Global cells config options
 """
+import nova.conf
 
-import itertools
-
-from oslo_config import cfg
-from oslo_utils import importutils
-
-
-cells_opts = [
-    cfg.BoolOpt('enable',
-                default=False,
-                help='Enable cell functionality'),
-    cfg.StrOpt('topic',
-                default='cells',
-                help='The topic cells nodes listen on'),
-    cfg.StrOpt('manager',
-               default='nova.cells.manager.CellsManager',
-               help='Manager for cells'),
-    cfg.StrOpt('name',
-                default='nova',
-                help='Name of this cell'),
-    cfg.ListOpt('capabilities',
-                default=['hypervisor=xenserver;kvm', 'os=linux;windows'],
-                help='Key/Multi-value list with the capabilities of the cell'),
-    cfg.IntOpt('call_timeout',
-                default=60,
-                help='Seconds to wait for response from a call to a cell.'),
-    cfg.FloatOpt('reserve_percent',
-                 default=10.0,
-                 help='Percentage of cell capacity to hold in reserve. '
-                      'Affects both memory and disk utilization'),
-    cfg.StrOpt('cell_type',
-               default='compute',
-               choices=('api', 'compute'),
-               help='Type of cell'),
-    cfg.IntOpt("mute_child_interval",
-               default=300,
-               help='Number of seconds after which a lack of capability and '
-                     'capacity updates signals the child cell is to be '
-                     'treated as a mute.'),
-    cfg.IntOpt('bandwidth_update_interval',
-                default=600,
-                help='Seconds between bandwidth updates for cells.'),
-    cfg.IntOpt('instance_update_sync_database_limit',
-            default=100,
-            help='Number of instances to pull from the database at one '
-                 'time for a sync.  If there are more instances to update '
-                 'the results will be paged through'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(cells_opts, group='cells')
+CONF = nova.conf.CONF
 
 
 def get_cell_type():
@@ -77,32 +29,4 @@ def get_cell_type():
 
 
 def list_opts():
-    return [
-        ('cells',
-         itertools.chain(
-             cells_opts,
-             importutils.import_module(
-                 "nova.cells.manager").cell_manager_opts,
-             importutils.import_module(
-                 "nova.cells.messaging").cell_messaging_opts,
-             importutils.import_module(
-                 "nova.cells.rpc_driver").cell_rpc_driver_opts,
-             importutils.import_module(
-                 "nova.cells.scheduler").cell_scheduler_opts,
-             importutils.import_module(
-                 "nova.cells.state").cell_state_manager_opts,
-             importutils.import_module(
-                 "nova.cells.weights.mute_child").mute_weigher_opts,
-             importutils.import_module(
-                 "nova.cells.weights.ram_by_instance_type").ram_weigher_opts,
-             importutils.import_module(
-                 "nova.cells.weights.weight_offset").weigher_opts
-         )),
-        ('upgrade_levels',
-         itertools.chain(
-             [importutils.import_module(
-                 "nova.cells.rpc_driver").rpcapi_cap_opt],
-             [importutils.import_module(
-                 "nova.cells.rpcapi").rpcapi_cap_opt],
-         )),
-    ]
+    return []

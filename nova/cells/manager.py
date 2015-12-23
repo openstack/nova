@@ -19,7 +19,6 @@ Cells Service Manager
 import datetime
 import time
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
 from oslo_service import periodic_task
@@ -31,6 +30,7 @@ from six.moves import range
 from nova.cells import messaging
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _LW
@@ -39,23 +39,8 @@ from nova import objects
 from nova.objects import base as base_obj
 from nova.objects import instance as instance_obj
 
-cell_manager_opts = [
-        cfg.StrOpt('driver',
-                default='nova.cells.rpc_driver.CellsRPCDriver',
-                help='Cells communication driver to use'),
-        cfg.IntOpt("instance_updated_at_threshold",
-                default=3600,
-                help="Number of seconds after an instance was updated "
-                        "or deleted to continue to update cells"),
-        cfg.IntOpt("instance_update_num_instances",
-                default=1,
-                help="Number of instances to update per periodic task run")
-]
 
-
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.register_opts(cell_manager_opts, group='cells')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 

@@ -31,7 +31,6 @@ import sys
 import traceback
 
 from eventlet import queue
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -48,6 +47,7 @@ from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
@@ -58,19 +58,7 @@ from nova.objects import base as objects_base
 from nova import rpc
 from nova import utils
 
-
-cell_messaging_opts = [
-    cfg.IntOpt('max_hop_count',
-            default=10,
-            help='Maximum number of hops for cells routing.'),
-    cfg.StrOpt('scheduler',
-            default='nova.cells.scheduler.CellsScheduler',
-            help='Cells scheduler to use')]
-
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.import_opt('call_timeout', 'nova.cells.opts', group='cells')
-CONF.register_opts(cell_messaging_opts, group='cells')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
