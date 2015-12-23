@@ -416,8 +416,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             context.get_admin_context().AndReturn(self.context)
             db.instance_get_all_by_host(
                     self.context, our_host,
-                    columns_to_join=['info_cache', 'metadata'],
-                    use_slave=False
+                    columns_to_join=['info_cache', 'metadata']
                     ).AndReturn(startup_instances)
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_on()
@@ -515,8 +514,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.driver.init_host(host=our_host)
         context.get_admin_context().AndReturn(self.context)
         db.instance_get_all_by_host(self.context, our_host,
-                                    columns_to_join=['info_cache', 'metadata'],
-                                    use_slave=False
+                                    columns_to_join=['info_cache', 'metadata']
                                     ).AndReturn([])
         self.compute.init_virt_events()
 
@@ -1284,9 +1282,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 {'uuid': [inst['uuid'] for
                           inst in driver_instances]},
                 'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None,
-                use_slave=True).AndReturn(
-                        driver_instances)
+                limit=None, marker=None).AndReturn(driver_instances)
 
         self.mox.ReplayAll()
 
@@ -1335,8 +1331,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         db.instance_get_all_by_filters(
                 self.context, filters,
                 'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None,
-                use_slave=True).AndReturn(all_instances)
+                limit=None, marker=None).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 

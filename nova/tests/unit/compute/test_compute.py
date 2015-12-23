@@ -6625,7 +6625,6 @@ class ComputeTestCase(BaseTestCase):
                                             sort_dir,
                                             marker=None,
                                             columns_to_join=[],
-                                            use_slave=True,
                                             limit=None)
             self.assertThat(conductor_instance_update.mock_calls,
                             testtools_matchers.HasLength(len(old_instances)))

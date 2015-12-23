@@ -841,7 +841,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             compute = importutils.import_object(CONF.compute_manager)
             self.flags(use_local=True, group='conductor')
             compute.conductor_api = conductor.API()
-            compute._run_image_cache_manager_pass(None)
+            ctxt = context.get_admin_context()
+            compute._run_image_cache_manager_pass(ctxt)
             self.assertTrue(was['called'])
 
     def test_store_swap_image(self):

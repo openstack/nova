@@ -884,7 +884,7 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                                mox.IgnoreArg(), use_slave=False,
+                                mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
                                                  'security_groups']
                                 ).AndReturn(fake_inst(display_name=HOST,
@@ -918,7 +918,7 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                                mox.IgnoreArg(), use_slave=False,
+                                mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
                                                  'security_groups']
                                 ).AndReturn(fake_inst(display_name=HOST,
@@ -1604,7 +1604,7 @@ class VlanNetworkTestCase(test.TestCase):
                        ).AndReturn(dict(test_network.fake_network,
                                         **networks[0]))
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                                mox.IgnoreArg(), use_slave=False,
+                                mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
                                                  'security_groups']
                                 ).AndReturn(fake_inst(display_name=HOST,
