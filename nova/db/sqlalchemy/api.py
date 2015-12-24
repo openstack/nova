@@ -4548,6 +4548,23 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
 
 
 @main_context_manager.reader
+def migration_get_in_progress_by_instance(context, instance_uuid,
+                                          migration_type=None):
+    # TODO(Shaohe Feng) we should share the in-progress list.
+    # TODO(Shaohe Feng) will also summarize all status to a new
+    # MigrationStatus class.
+    query = model_query(context, models.Migration).\
+            filter_by(instance_uuid=instance_uuid).\
+            filter(models.Migration.status.in_(['queued', 'preparing',
+                                                'running',
+                                                'post-migrating']))
+    if migration_type:
+        query = query.filter(models.Migration.migration_type == migration_type)
+
+    return query.all()
+
+
+@main_context_manager.reader
 def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:

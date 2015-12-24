@@ -65,6 +65,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              and shelved_offloaded state
     * 2.21 - Make os-instance-actions read deleted instances
     * 2.22 - Add API to force live migration to complete
+    * 2.23 - Add index/show API for server migrations.
+             Also add migration_type for /os-migrations and add ref link for it
+             when the migration is an in progress live migration.
 """
 
 # The minimum and maximum versions of the API supported
@@ -73,7 +76,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.22"
+_MAX_API_VERSION = "2.23"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

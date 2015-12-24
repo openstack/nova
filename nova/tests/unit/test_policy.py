@@ -362,7 +362,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-assisted-volume-snapshots:delete",
 "os_compute_api:os-console-auth-tokens",
 "os_compute_api:os-quota-class-sets:update",
-"os_compute_api:os-server-external-events:create")
+"os_compute_api:os-server-external-events:create",
+"os_compute_api:servers:migrations:index",
+"os_compute_api:servers:migrations:show",
+)
 
         self.admin_or_owner_rules = (
 "default",

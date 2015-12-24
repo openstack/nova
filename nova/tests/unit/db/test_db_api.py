@@ -1355,6 +1355,7 @@ class MigrationTestCase(test.TestCase):
                   'dest_node': dest_node, 'instance_uuid': instance['uuid'],
                   'migration_type': migration_type}
         db.migration_create(self.ctxt, values)
+        return values
 
     def _assert_in_progress(self, migrations):
         for migration in migrations:
@@ -1474,6 +1475,37 @@ class MigrationTestCase(test.TestCase):
         self.assertEqual(0, len(results))
         db.migration_update(self.ctxt, migration['id'],
                             {"status": "CONFIRMED"})
+
+    def test_migration_get_in_progress_by_instance(self):
+        values = self._create(status='running',
+                              migration_type="live-migration")
+        results = db.migration_get_in_progress_by_instance(
+                self.ctxt, values["instance_uuid"], "live-migration")
+
+        self.assertEqual(1, len(results))
+
+        for key in values:
+            self.assertEqual(values[key], results[0][key])
+
+        self.assertEqual("running", results[0]["status"])
+
+    def test_migration_get_in_progress_by_instance_not_in_progress(self):
+        values = self._create(migration_type="live-migration")
+        results = db.migration_get_in_progress_by_instance(
+                self.ctxt, values["instance_uuid"], "live-migration")
+
+        self.assertEqual(0, len(results))
+
+    def test_migration_get_in_progress_by_instance_not_live_migration(self):
+        values = self._create(migration_type="resize")
+
+        results = db.migration_get_in_progress_by_instance(
+                self.ctxt, values["instance_uuid"], "live-migration")
+        self.assertEqual(0, len(results))
+
+        results = db.migration_get_in_progress_by_instance(
+                self.ctxt, values["instance_uuid"])
+        self.assertEqual(0, len(results))
 
     def test_migration_update_not_found(self):
         self.assertRaises(exception.MigrationNotFound,

@@ -511,6 +511,13 @@ def migration_get_all_by_filters(context, filters):
     return IMPL.migration_get_all_by_filters(context, filters)
 
 
+def migration_get_in_progress_by_instance(context, instance_uuid,
+                                          migration_type=None):
+    """Finds all migrations of an instance in progress."""
+    return IMPL.migration_get_in_progress_by_instance(context, instance_uuid,
+                                                      migration_type)
+
+
 ####################
 
 

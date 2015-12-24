@@ -1151,7 +1151,7 @@ object_data = {
     'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
     'Migration': '1.4-17979b9f2ae7f28d97043a220b2a8350',
     'MigrationContext': '1.0-d8c2f10069e410f639c49082b5932c92',
-    'MigrationList': '1.2-02c0ec0c50b75ca86a2a74c5e8c911cc',
+    'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',

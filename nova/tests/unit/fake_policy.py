@@ -126,6 +126,8 @@ policy_data = """
     "os_compute_api:servers:stop": "",
     "os_compute_api:servers:trigger_crash_dump": "",
     "os_compute_api:servers:migrations:force_complete": "",
+    "os_compute_api:servers:migrations:index": "rule:admin_api",
+    "os_compute_api:servers:migrations:show": "rule:admin_api",
     "os_compute_api:os-access-ips": "",
     "compute_extension:accounts": "",
     "compute_extension:admin_actions:pause": "",
