@@ -58,9 +58,6 @@ QUOTAS = quota.QUOTAS
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 
-XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
-
-
 _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',
