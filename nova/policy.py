@@ -15,9 +15,8 @@
 
 """Policy Engine For Nova."""
 
-import logging
-
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_policy import policy
 from oslo_utils import excutils
 
