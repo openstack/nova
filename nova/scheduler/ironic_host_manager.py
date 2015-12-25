@@ -21,15 +21,11 @@ This host manager will consume all cpu's, disk space, and
 ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
-from oslo_log import log as logging
-
 from nova.compute import hv_type
 import nova.conf
 from nova.scheduler import host_manager
 
 CONF = nova.conf.CONF
-
-LOG = logging.getLogger(__name__)
 
 
 class IronicNodeState(host_manager.HostState):

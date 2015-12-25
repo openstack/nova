@@ -15,7 +15,6 @@
 #    under the License.
 
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import exception
@@ -31,8 +30,6 @@ pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',
             ]
 CONF = cfg.CONF
 CONF.register_opts(pci_opts)
-
-LOG = logging.getLogger(__name__)
 
 
 class Whitelist(object):

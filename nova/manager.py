@@ -52,7 +52,6 @@ This module provides Manager, a base class for managers.
 """
 
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_service import periodic_task
 
 from nova.db import base
@@ -61,7 +60,6 @@ from nova import rpc
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
-LOG = logging.getLogger(__name__)
 
 
 class PeriodicTasks(periodic_task.PeriodicTasks):

@@ -12,16 +12,12 @@
 
 
 import mock
-from oslo_log import log as logging
 
 from nova import exception
 from nova import objects
 from nova import test
 from nova import utils
 from nova.virt.libvirt.storage import rbd_utils
-
-
-LOG = logging.getLogger(__name__)
 
 
 CEPH_MON_DUMP = """dumped monmap epoch 1

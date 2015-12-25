@@ -19,7 +19,6 @@
 Scheduler Service
 """
 
-from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
@@ -30,8 +29,6 @@ from nova import exception
 from nova import manager
 from nova import quota
 
-
-LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 

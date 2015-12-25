@@ -30,7 +30,6 @@ CONF = cfg.CONF
 config_files = ['/etc/nova/api-paste.ini', '/etc/nova/nova.conf']
 config.parse_args([], default_config_files=config_files)
 
-LOG = logging.getLogger(__name__)
 logging.setup(CONF, "nova")
 utils.monkey_patch()
 objects.register_all()

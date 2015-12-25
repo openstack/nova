@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
@@ -24,8 +23,6 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.virt import hardware
-
-LOG = logging.getLogger(__name__)
 
 
 @base.NovaObjectRegistry.register

@@ -40,7 +40,6 @@ import copy
 
 import jsonschema
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
@@ -70,8 +69,6 @@ PCI_NET_TAG = 'physical_network'
 
 CONF = cfg.CONF
 CONF.register_opts(pci_alias_opts)
-
-LOG = logging.getLogger(__name__)
 
 
 _ALIAS_DEV_TYPE = ['NIC', 'ACCEL', 'GPU']

@@ -20,7 +20,6 @@ import functools
 import traceback
 
 import netaddr
-from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
@@ -31,9 +30,6 @@ from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import utils
-
-
-LOG = logging.getLogger('object')
 
 
 def get_attrname(name):
