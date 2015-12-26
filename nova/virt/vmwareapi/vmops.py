@@ -613,7 +613,7 @@ class VMwareVMOps(object):
                                                   size, at, path)
 
         # There may be block devices defined but no ephemerals. In this case
-        # we need to allocate a ephemeral disk if required
+        # we need to allocate an ephemeral disk if required
         if not ephemerals and instance.ephemeral_gb:
             size = instance.ephemeral_gb * units.Mi
             filename = vm_util.get_ephemeral_name(0)

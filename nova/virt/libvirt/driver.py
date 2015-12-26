@@ -804,7 +804,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise loopingcall.LoopingCallDone()
 
             # NOTE(wangpan): If the instance was booted again after destroy,
-            #                this may be a endless loop, so check the id of
+            #                this may be an endless loop, so check the id of
             #                domain here, if it changed and the instance is
             #                still running, we should destroy it again.
             # see https://bugs.launchpad.net/nova/+bug/1111213 for more details
