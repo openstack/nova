@@ -11280,8 +11280,6 @@ class EvacuateHostTestCase(BaseTestCase):
                  send_node=False):
         network_api = self.compute.network_api
         ctxt = context.get_admin_context()
-        mock_context = mock.Mock()
-        mock_context.elevated.return_value = ctxt
 
         node = limits = None
         if send_node:
@@ -11290,7 +11288,8 @@ class EvacuateHostTestCase(BaseTestCase):
 
         @mock.patch.object(network_api, 'setup_networks_on_host')
         @mock.patch.object(network_api, 'setup_instance_network_on_host')
-        def _test_rebuild(mock_setup_instance_network_on_host,
+        @mock.patch('nova.context.RequestContext.elevated', return_value=ctxt)
+        def _test_rebuild(mock_context, mock_setup_instance_network_on_host,
                           mock_setup_networks_on_host):
             orig_image_ref = None
             image_ref = None
@@ -11298,7 +11297,7 @@ class EvacuateHostTestCase(BaseTestCase):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, self.inst.uuid)
             self.compute.rebuild_instance(
-                mock_context, self.inst, orig_image_ref,
+                ctxt, self.inst, orig_image_ref,
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
                 on_shared_storage=on_shared_storage, migration=migration,
                 scheduled_node=node, limits=limits)

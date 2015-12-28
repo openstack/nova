@@ -233,6 +233,7 @@ class Controller(wsgi.Controller):
             instance_list = objects.InstanceList()
 
         if is_detail:
+            instance_list._context = context
             instance_list.fill_faults()
             response = self._view_builder.detail(req, instance_list)
         else:
