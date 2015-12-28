@@ -5451,11 +5451,10 @@ def s3_image_create(context, image_uuid):
 
 
 def _aggregate_get_query(context, model_class, id_field=None, id=None,
-                         session=None, read_deleted=None):
+                         read_deleted=None):
     columns_to_join = {models.Aggregate: ['_hosts', '_metadata']}
 
-    query = model_query(context, model_class, session=session,
-                        read_deleted=read_deleted)
+    query = model_query(context, model_class, read_deleted=read_deleted)
 
     for c in columns_to_join.get(model_class, []):
         query = query.options(joinedload(c))
@@ -5466,19 +5465,18 @@ def _aggregate_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
+@main_context_manager.writer
 def aggregate_create(context, values, metadata=None):
-    session = get_session()
     query = _aggregate_get_query(context,
                                  models.Aggregate,
                                  models.Aggregate.name,
                                  values['name'],
-                                 session=session,
                                  read_deleted='no')
     aggregate = query.first()
     if not aggregate:
         aggregate = models.Aggregate()
         aggregate.update(values)
-        aggregate.save(session=session)
+        aggregate.save(context.session)
         # We don't want these to be lazy loaded later.  We know there is
         # nothing here since we just created this aggregate.
         aggregate._hosts = []
@@ -5487,9 +5485,16 @@ def aggregate_create(context, values, metadata=None):
         raise exception.AggregateNameExists(aggregate_name=values['name'])
     if metadata:
         aggregate_metadata_add(context, aggregate.id, metadata)
-    return aggregate_get(context, aggregate.id)
+        # NOTE(pkholkin): '_metadata' attribute was updated during
+        # 'aggregate_metadata_add' method, so it should be expired and
+        # read from db
+        context.session.expire(aggregate, ['_metadata'])
+        aggregate._metadata
+
+    return aggregate
 
 
+@main_context_manager.writer
 def aggregate_get(context, aggregate_id):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5503,6 +5508,7 @@ def aggregate_get(context, aggregate_id):
     return aggregate
 
 
+@main_context_manager.reader
 def aggregate_get_by_host(context, host, key=None):
     """Return rows that match host (mandatory) and metadata key (optional).
 
@@ -5521,6 +5527,7 @@ def aggregate_get_by_host(context, host, key=None):
     return query.all()
 
 
+@main_context_manager.reader
 def aggregate_metadata_get_by_host(context, host, key=None):
     query = model_query(context, models.Aggregate)
     query = query.join("_hosts")
@@ -5539,6 +5546,7 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return dict(metadata)
 
 
+@main_context_manager.reader
 def aggregate_get_by_metadata_key(context, key):
     """Return rows that match metadata key.
 
@@ -5552,15 +5560,13 @@ def aggregate_get_by_metadata_key(context, key):
     return query.all()
 
 
+@main_context_manager.writer
 def aggregate_update(context, aggregate_id, values):
-    session = get_session()
-
     if "name" in values:
         aggregate_by_name = (_aggregate_get_query(context,
                                                   models.Aggregate,
                                                   models.Aggregate.name,
                                                   values['name'],
-                                                  session=session,
                                                   read_deleted='no').first())
         if aggregate_by_name and aggregate_by_name.id != aggregate_id:
             # there is another aggregate with the new name
@@ -5569,8 +5575,7 @@ def aggregate_update(context, aggregate_id, values):
     aggregate = (_aggregate_get_query(context,
                                      models.Aggregate,
                                      models.Aggregate.id,
-                                     aggregate_id,
-                                     session=session).first())
+                                     aggregate_id).first())
 
     set_delete = True
     if aggregate:
@@ -5589,45 +5594,42 @@ def aggregate_update(context, aggregate_id, values):
                                    set_delete=set_delete)
 
         aggregate.update(values)
-        aggregate.save(session=session)
+        aggregate.save(context.session)
         return aggregate_get(context, aggregate.id)
     else:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
 
+@main_context_manager.writer
 def aggregate_delete(context, aggregate_id):
-    session = get_session()
-    with session.begin():
-        count = _aggregate_get_query(context,
-                                     models.Aggregate,
-                                     models.Aggregate.id,
-                                     aggregate_id,
-                                     session=session).\
-                    soft_delete()
-        if count == 0:
-            raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+    count = _aggregate_get_query(context,
+                                 models.Aggregate,
+                                 models.Aggregate.id,
+                                 aggregate_id).\
+                soft_delete()
+    if count == 0:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
-        # Delete Metadata
-        model_query(context,
-                    models.AggregateMetadata, session=session).\
-                    filter_by(aggregate_id=aggregate_id).\
-                    soft_delete()
+    # Delete Metadata
+    model_query(context, models.AggregateMetadata).\
+                filter_by(aggregate_id=aggregate_id).\
+                soft_delete()
 
 
+@main_context_manager.reader
 def aggregate_get_all(context):
     return _aggregate_get_query(context, models.Aggregate).all()
 
 
-def _aggregate_metadata_get_query(context, aggregate_id, session=None,
-                                  read_deleted="yes"):
+def _aggregate_metadata_get_query(context, aggregate_id, read_deleted="yes"):
     return model_query(context,
                        models.AggregateMetadata,
-                       read_deleted=read_deleted,
-                       session=session).\
+                       read_deleted=read_deleted).\
                 filter_by(aggregate_id=aggregate_id)
 
 
 @require_aggregate_exists
+@main_context_manager.reader
 def aggregate_metadata_get(context, aggregate_id):
     rows = model_query(context,
                        models.AggregateMetadata).\
@@ -5637,6 +5639,7 @@ def aggregate_metadata_get(context, aggregate_id):
 
 
 @require_aggregate_exists
+@main_context_manager.writer
 def aggregate_metadata_delete(context, aggregate_id, key):
     count = _aggregate_get_query(context,
                                  models.AggregateMetadata,
@@ -5650,40 +5653,38 @@ def aggregate_metadata_delete(context, aggregate_id, key):
 
 
 @require_aggregate_exists
+@main_context_manager.writer
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                            max_retries=10):
     all_keys = metadata.keys()
     for attempt in range(max_retries):
         try:
-            session = get_session()
-            with session.begin():
-                query = _aggregate_metadata_get_query(context, aggregate_id,
-                                                      read_deleted='no',
-                                                      session=session)
-                if set_delete:
-                    query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
-                        soft_delete(synchronize_session=False)
+            query = _aggregate_metadata_get_query(context, aggregate_id,
+                                                  read_deleted='no')
+            if set_delete:
+                query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
+                    soft_delete(synchronize_session=False)
 
-                already_existing_keys = set()
-                if all_keys:
-                    query = query.filter(
-                        models.AggregateMetadata.key.in_(all_keys))
-                    for meta_ref in query.all():
-                        key = meta_ref.key
-                        meta_ref.update({"value": metadata[key]})
-                        already_existing_keys.add(key)
+            already_existing_keys = set()
+            if all_keys:
+                query = query.filter(
+                    models.AggregateMetadata.key.in_(all_keys))
+                for meta_ref in query.all():
+                    key = meta_ref.key
+                    meta_ref.update({"value": metadata[key]})
+                    already_existing_keys.add(key)
 
-                new_entries = []
-                for key, value in metadata.items():
-                    if key in already_existing_keys:
-                        continue
-                    new_entries.append({"key": key,
-                                        "value": value,
-                                        "aggregate_id": aggregate_id})
-                if new_entries:
-                    session.execute(
-                        models.AggregateMetadata.__table__.insert(),
-                        new_entries)
+            new_entries = []
+            for key, value in metadata.items():
+                if key in already_existing_keys:
+                    continue
+                new_entries.append({"key": key,
+                                    "value": value,
+                                    "aggregate_id": aggregate_id})
+            if new_entries:
+                context.session.execute(
+                    models.AggregateMetadata.__table__.insert(),
+                    new_entries)
 
             return metadata
         except db_exc.DBDuplicateEntry:
@@ -5700,6 +5701,7 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
 
 
 @require_aggregate_exists
+@main_context_manager.reader
 def aggregate_host_get_all(context, aggregate_id):
     rows = model_query(context,
                        models.AggregateHost).\
@@ -5709,6 +5711,7 @@ def aggregate_host_get_all(context, aggregate_id):
 
 
 @require_aggregate_exists
+@main_context_manager.writer
 def aggregate_host_delete(context, aggregate_id, host):
     count = _aggregate_get_query(context,
                                  models.AggregateHost,
@@ -5722,11 +5725,12 @@ def aggregate_host_delete(context, aggregate_id, host):
 
 
 @require_aggregate_exists
+@main_context_manager.writer
 def aggregate_host_add(context, aggregate_id, host):
     host_ref = models.AggregateHost()
     host_ref.update({"host": host, "aggregate_id": aggregate_id})
     try:
-        host_ref.save()
+        host_ref.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.AggregateHostExists(host=host,
                                             aggregate_id=aggregate_id)
