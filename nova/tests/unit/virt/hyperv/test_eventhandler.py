@@ -15,12 +15,12 @@
 
 import eventlet
 import mock
+from os_win import constants
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
 
 from nova.tests.unit.virt.hyperv import test_base
 from nova import utils
-from nova.virt.hyperv import constants
 from nova.virt.hyperv import eventhandler
 
 

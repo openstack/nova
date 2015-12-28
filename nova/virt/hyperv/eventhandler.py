@@ -20,6 +20,7 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from os_win import constants
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
 from oslo_config import cfg
@@ -28,7 +29,6 @@ from oslo_log import log as logging
 from nova.i18n import _LW
 from nova import utils
 from nova.virt import event as virtevent
-from nova.virt.hyperv import constants
 
 LOG = logging.getLogger(__name__)
 
