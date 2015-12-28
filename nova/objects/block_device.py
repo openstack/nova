@@ -322,17 +322,31 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_dict_of_lists(
                 context, cls, bdms, 'instance_uuid')
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_block_device_mapping_get_all_by_instance_uuids(
+            context, instance_uuids, use_slave=False):
+        return db.block_device_mapping_get_all_by_instance_uuids(
+                context, instance_uuids)
+
     @base.remotable_classmethod
     def get_by_instance_uuids(cls, context, instance_uuids, use_slave=False):
-        db_bdms = db.block_device_mapping_get_all_by_instance_uuids(
-                context, instance_uuids, use_slave=use_slave)
+        db_bdms = cls._db_block_device_mapping_get_all_by_instance_uuids(
+            context, instance_uuids, use_slave=use_slave)
         return base.obj_make_list(
                 context, cls(), objects.BlockDeviceMapping, db_bdms or [])
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_block_device_mapping_get_all_by_instance(
+            context, instance_uuid, use_slave=False):
+        return db.block_device_mapping_get_all_by_instance(
+            context, instance_uuid)
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
-        db_bdms = db.block_device_mapping_get_all_by_instance(
-                context, instance_uuid, use_slave=use_slave)
+        db_bdms = cls._db_block_device_mapping_get_all_by_instance(
+            context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(
                 context, cls(), objects.BlockDeviceMapping, db_bdms or [])
 

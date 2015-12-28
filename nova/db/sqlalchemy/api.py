@@ -3915,13 +3915,11 @@ def ec2_snapshot_get_by_uuid(context, snapshot_uuid):
 ###################
 
 
-def _block_device_mapping_get_query(context, session=None,
-        columns_to_join=None, use_slave=False):
+def _block_device_mapping_get_query(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = []
 
-    query = model_query(context, models.BlockDeviceMapping,
-                        session=session, use_slave=use_slave)
+    query = model_query(context, models.BlockDeviceMapping)
 
     for column in columns_to_join:
         query = query.options(joinedload(column))
@@ -3949,6 +3947,7 @@ def _from_legacy_values(values, legacy, allow_updates=False):
 
 
 @require_context
+@main_context_manager.writer
 def block_device_mapping_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy)
@@ -3956,11 +3955,12 @@ def block_device_mapping_create(context, values, legacy=True):
 
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
-    bdm_ref.save()
+    bdm_ref.save(context.session)
     return bdm_ref
 
 
 @require_context
+@main_context_manager.writer
 def block_device_mapping_update(context, bdm_id, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
@@ -3971,62 +3971,59 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
     return query.first()
 
 
+@main_context_manager.writer
 def block_device_mapping_update_or_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
     convert_objects_related_datetimes(values)
 
-    session = get_session()
-    with session.begin():
-        result = None
-        # NOTE(xqueralt): Only update a BDM when device_name was provided. We
-        # allow empty device names so they will be set later by the manager.
-        if values['device_name']:
-            query = _block_device_mapping_get_query(context, session=session)
-            result = query.filter_by(instance_uuid=values['instance_uuid'],
-                                     device_name=values['device_name']).first()
+    result = None
+    # NOTE(xqueralt): Only update a BDM when device_name was provided. We
+    # allow empty device names so they will be set later by the manager.
+    if values['device_name']:
+        query = _block_device_mapping_get_query(context)
+        result = query.filter_by(instance_uuid=values['instance_uuid'],
+                                 device_name=values['device_name']).first()
 
-        if result:
-            result.update(values)
-        else:
-            # Either the device_name doesn't exist in the database yet, or no
-            # device_name was provided. Both cases mean creating a new BDM.
-            result = models.BlockDeviceMapping(**values)
-            result.save(session=session)
+    if result:
+        result.update(values)
+    else:
+        # Either the device_name doesn't exist in the database yet, or no
+        # device_name was provided. Both cases mean creating a new BDM.
+        result = models.BlockDeviceMapping(**values)
+        result.save(context.session)
 
-        # NOTE(xqueralt): Prevent from having multiple swap devices for the
-        # same instance. This will delete all the existing ones.
-        if block_device.new_format_is_swap(values):
-            query = _block_device_mapping_get_query(context, session=session)
-            query = query.filter_by(instance_uuid=values['instance_uuid'],
-                                    source_type='blank', guest_format='swap')
-            query = query.filter(models.BlockDeviceMapping.id != result.id)
-            query.soft_delete()
+    # NOTE(xqueralt): Prevent from having multiple swap devices for the
+    # same instance. This will delete all the existing ones.
+    if block_device.new_format_is_swap(values):
+        query = _block_device_mapping_get_query(context)
+        query = query.filter_by(instance_uuid=values['instance_uuid'],
+                                source_type='blank', guest_format='swap')
+        query = query.filter(models.BlockDeviceMapping.id != result.id)
+        query.soft_delete()
 
-        return result
+    return result
 
 
 @require_context
-def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids,
-                                                   use_slave=False):
+@main_context_manager.reader.allow_async
+def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids):
     if not instance_uuids:
         return []
-    return _block_device_mapping_get_query(
-        context, use_slave=use_slave
-    ).filter(
-        models.BlockDeviceMapping.instance_uuid.in_(instance_uuids)
-    ).all()
+    return _block_device_mapping_get_query(context).filter(
+        models.BlockDeviceMapping.instance_uuid.in_(instance_uuids)).all()
 
 
 @require_context
-def block_device_mapping_get_all_by_instance(context, instance_uuid,
-                                             use_slave=False):
-    return _block_device_mapping_get_query(context, use_slave=use_slave).\
+@main_context_manager.reader.allow_async
+def block_device_mapping_get_all_by_instance(context, instance_uuid):
+    return _block_device_mapping_get_query(context).\
                  filter_by(instance_uuid=instance_uuid).\
                  all()
 
 
 @require_context
+@main_context_manager.reader
 def block_device_mapping_get_all_by_volume_id(context, volume_id,
         columns_to_join=None):
     return _block_device_mapping_get_query(context,
@@ -4036,6 +4033,7 @@ def block_device_mapping_get_all_by_volume_id(context, volume_id,
 
 
 @require_context
+@main_context_manager.reader
 def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
                                                        instance_uuid,
                                                        columns_to_join=None):
@@ -4047,6 +4045,7 @@ def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
 
 
 @require_context
+@main_context_manager.writer
 def block_device_mapping_destroy(context, bdm_id):
     _block_device_mapping_get_query(context).\
             filter_by(id=bdm_id).\
@@ -4054,6 +4053,7 @@ def block_device_mapping_destroy(context, bdm_id):
 
 
 @require_context
+@main_context_manager.writer
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
     _block_device_mapping_get_query(context).\
@@ -4063,6 +4063,7 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
 
 
 @require_context
+@main_context_manager.writer
 def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
                                                         device_name):
     _block_device_mapping_get_query(context).\

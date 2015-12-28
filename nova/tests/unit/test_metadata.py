@@ -208,7 +208,6 @@ class MetadataTestCase(test.TestCase):
 
     def test_format_instance_mapping(self):
         # Make sure that _format_instance_mappings works.
-        ctxt = None
         instance_ref0 = objects.Instance(**{'id': 0,
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                          'root_device_name': None,
@@ -220,7 +219,7 @@ class MetadataTestCase(test.TestCase):
                          'default_ephemeral_device': None,
                          'default_swap_device': None})
 
-        def fake_bdm_get(ctxt, uuid, use_slave=False):
+        def fake_bdm_get(ctxt, uuid):
             return [fake_block_device.FakeDbBlockDeviceDict(
                     {'volume_id': 87654321,
                      'snapshot_id': None,
@@ -259,9 +258,9 @@ class MetadataTestCase(test.TestCase):
 
         conductor_api.LocalAPI()
 
-        self.assertEqual(base._format_instance_mapping(ctxt,
+        self.assertEqual(base._format_instance_mapping(self.context,
                          instance_ref0), block_device._DEFAULT_MAPPINGS)
-        self.assertEqual(base._format_instance_mapping(ctxt,
+        self.assertEqual(base._format_instance_mapping(self.context,
                          instance_ref1), expected)
 
     def test_pubkey(self):

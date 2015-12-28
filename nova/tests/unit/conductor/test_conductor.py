@@ -431,7 +431,7 @@ class _BaseTaskTestCase(object):
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         db.block_device_mapping_get_all_by_instance(self.context,
-                instances[0].uuid, use_slave=False).AndReturn([])
+                instances[0].uuid).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context,
                 instance=mox.IgnoreArg(),
@@ -452,7 +452,7 @@ class _BaseTaskTestCase(object):
                 block_device_mapping=mox.IgnoreArg(),
                 node='node1', limits=[])
         db.block_device_mapping_get_all_by_instance(self.context,
-                instances[1].uuid, use_slave=False).AndReturn([])
+                instances[1].uuid).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context,
                 instance=mox.IgnoreArg(),
