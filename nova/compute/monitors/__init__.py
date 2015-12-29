@@ -26,7 +26,6 @@ from nova.i18n import _LW
 compute_monitors_opts = [
     cfg.MultiStrOpt('compute_available_monitors',
                     deprecated_for_removal=True,
-                    default=None,
                     help='Monitor classes available to the compute which may '
                          'be specified more than once. This option is '
                          'DEPRECATED and no longer used. Use setuptools entry '
