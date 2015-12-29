@@ -20,7 +20,7 @@ os-testr>=0.4.1
 testrepository>=0.0.18
 testresources>=0.2.4
 testtools>=1.4.0
-tempest-lib>=0.11.0
+tempest-lib>=0.12.0
 bandit>=0.13.2
 openstackdocstheme>=1.0.3
 
