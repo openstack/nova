@@ -113,7 +113,7 @@ class ServersController(wsgi.Controller):
                 else:
                     if ext.obj.alias in whitelist:
                         if ext.obj.alias in blacklist:
-                            LOG.warn(
+                            LOG.warning(
                                 _LW(
                                     "Extension %s is both in whitelist and "
                                     "blacklist, blacklisting takes precedence"

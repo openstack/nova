@@ -606,12 +606,12 @@ class NetworkManager(manager.Manager):
         for fixed_ip in fixed_ips:
             vif = fixed_ip.virtual_interface
             if not vif:
-                LOG.warn(_LW('No VirtualInterface for FixedIP: %s'),
+                LOG.warning(_LW('No VirtualInterface for FixedIP: %s'),
                          str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
             if not fixed_ip.network:
-                LOG.warn(_LW('No Network for FixedIP: %s'),
+                LOG.warning(_LW('No Network for FixedIP: %s'),
                          str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
@@ -1236,7 +1236,7 @@ class NetworkManager(manager.Manager):
                     oversize_msg = _LW(
                         'Subnet(s) too large, defaulting to /%s.'
                         '  To override, specify network_size flag.') % subnet
-                    LOG.warn(oversize_msg)
+                    LOG.warning(oversize_msg)
                     kwargs["network_size"] = CONF.network_size
                 else:
                     kwargs["network_size"] = fixnet.size
