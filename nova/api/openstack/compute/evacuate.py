@@ -43,11 +43,10 @@ class EvacuateController(wsgi.Controller):
         self.host_api = compute.HostAPI()
 
     def _get_on_shared_storage(self, req, evacuate_body):
-        if (req.api_version_request <
-                api_version_request.APIVersionRequest("2.14")):
-            return strutils.bool_from_string(evacuate_body["onSharedStorage"])
-        else:
+        if api_version_request.is_supported(req, min_version='2.14'):
             return None
+        else:
+            return strutils.bool_from_string(evacuate_body["onSharedStorage"])
 
     def _get_password(self, req, evacuate_body, on_shared_storage):
         password = None
@@ -91,12 +90,11 @@ class EvacuateController(wsgi.Controller):
 
         on_shared_storage = self._get_on_shared_storage(req, evacuate_body)
 
-        if (req.api_version_request <
-                api_version_request.APIVersionRequest("2.14")):
+        if api_version_request.is_supported(req, min_version='2.14'):
+            password = self._get_password_v214(req, evacuate_body)
+        else:
             password = self._get_password(req, evacuate_body,
                                           on_shared_storage)
-        else:
-            password = self._get_password_v214(req, evacuate_body)
 
         if host is not None:
             try:
@@ -121,8 +119,7 @@ class EvacuateController(wsgi.Controller):
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        if (req.api_version_request <
-                api_version_request.APIVersionRequest("2.14") and
+        if (not api_version_request.is_supported(req, min_version='2.14') and
                 CONF.enable_instance_password):
             return {'adminPass': password}
         else:
