@@ -17,6 +17,7 @@
 import glob
 import os
 
+import fixtures
 import mock
 from six.moves import builtins
 
@@ -147,6 +148,60 @@ class GetIfnameByPciAddressTestCase(test.NoDBTestCase):
             utils.get_ifname_by_pci_address,
             self.pci_address
         )
+
+
+class GetMacByPciAddressTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(GetMacByPciAddressTestCase, self).setUp()
+        self.pci_address = '0000:07:00.1'
+        self.if_name = 'enp7s0f1'
+        self.tmpdir = self.useFixture(fixtures.TempDir())
+        self.fake_file = os.path.join(self.tmpdir.path, "address")
+        with open(self.fake_file, "w") as f:
+            f.write("a0:36:9f:72:00:00\n")
+
+    @mock.patch.object(os, 'listdir')
+    @mock.patch.object(os.path, 'join')
+    def test_get_mac(self, mock_join, mock_listdir):
+        mock_listdir.return_value = [self.if_name]
+        mock_join.return_value = self.fake_file
+        mac = utils.get_mac_by_pci_address(self.pci_address)
+        mock_join.assert_called_once_with(
+            "/sys/bus/pci/devices/%s/net" % self.pci_address, self.if_name,
+            "address")
+        self.assertEqual("a0:36:9f:72:00:00", mac)
+
+    @mock.patch.object(os, 'listdir')
+    @mock.patch.object(os.path, 'join')
+    def test_get_mac_fails(self, mock_join, mock_listdir):
+        os.unlink(self.fake_file)
+        mock_listdir.return_value = [self.if_name]
+        mock_join.return_value = self.fake_file
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            utils.get_mac_by_pci_address, self.pci_address)
+
+    @mock.patch.object(os, 'listdir')
+    @mock.patch.object(os.path, 'join')
+    def test_get_mac_fails_empty(self, mock_join, mock_listdir):
+        with open(self.fake_file, "w") as f:
+            f.truncate(0)
+        mock_listdir.return_value = [self.if_name]
+        mock_join.return_value = self.fake_file
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            utils.get_mac_by_pci_address, self.pci_address)
+
+    @mock.patch.object(os, 'listdir')
+    @mock.patch.object(os.path, 'join')
+    def test_get_physical_function_mac(self, mock_join, mock_listdir):
+        mock_listdir.return_value = [self.if_name]
+        mock_join.return_value = self.fake_file
+        mac = utils.get_mac_by_pci_address(self.pci_address, pf_interface=True)
+        mock_join.assert_called_once_with(
+            "/sys/bus/pci/devices/%s/physfn/net" % self.pci_address,
+            self.if_name, "address")
+        self.assertEqual("a0:36:9f:72:00:00", mac)
 
 
 class GetVfNumByPciAddressTestCase(test.NoDBTestCase):

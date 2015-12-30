@@ -23,6 +23,7 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
+from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -105,20 +106,48 @@ def is_physical_function(domain, bus, slot, function):
     return False
 
 
+def _get_sysfs_netdev_path(pci_addr, pf_interface):
+    """Get the sysfs path based on the PCI address of the device.
+
+    Assumes a networking device - will not check for the existence of the path.
+    """
+    if pf_interface:
+        return "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
+    return "/sys/bus/pci/devices/%s/net" % (pci_addr)
+
+
 def get_ifname_by_pci_address(pci_addr, pf_interface=False):
     """Get the interface name based on a VF's pci address
 
     The returned interface name is either the parent PF's or that of the VF
     itself based on the argument of pf_interface.
     """
-    if pf_interface:
-        dev_path = "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
-    else:
-        dev_path = "/sys/bus/pci/devices/%s/net" % (pci_addr)
+    dev_path = _get_sysfs_netdev_path(pci_addr, pf_interface)
     try:
         dev_info = os.listdir(dev_path)
         return dev_info.pop()
     except Exception:
+        raise exception.PciDeviceNotFoundById(id=pci_addr)
+
+
+def get_mac_by_pci_address(pci_addr, pf_interface=False):
+    """Get the MAC address of the nic based on it's PCI address
+
+    Raises PciDeviceNotFoundById in case the pci device is not a NIC
+    """
+    dev_path = _get_sysfs_netdev_path(pci_addr, pf_interface)
+    if_name = get_ifname_by_pci_address(pci_addr, pf_interface)
+    addr_file = os.path.join(dev_path, if_name, 'address')
+
+    try:
+        with open(addr_file) as f:
+            mac = next(f).strip()
+            return mac
+    except (IOError, StopIteration) as e:
+        LOG.warning(_LW("Could not find the expected sysfs file for "
+                        "determining the MAC address of the PCI device "
+                        "%(addr)s. May not be a NIC. Error: %(e)s"),
+                    {'addr': pci_addr, 'e': e})
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 
 
