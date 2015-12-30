@@ -1069,9 +1069,13 @@ class API(base_api.NetworkAPI):
                     context, neutron, request_net.port_id)
             pci_request_id = None
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                spec = {pci_request.PCI_NET_TAG: phynet_name}
+                dev_type = pci_request.DEVICE_TYPE_FOR_VNIC_TYPE.get(vnic_type)
+                if dev_type:
+                    spec[pci_request.PCI_DEVICE_TYPE_TAG] = dev_type
                 request = objects.InstancePCIRequest(
                     count=1,
-                    spec=[{pci_request.PCI_NET_TAG: phynet_name}],
+                    spec=[spec],
                     request_id=str(uuid.uuid4()))
                 pci_requests.requests.append(request)
                 pci_request_id = request.request_id

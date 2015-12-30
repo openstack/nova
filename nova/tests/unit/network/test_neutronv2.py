@@ -2926,20 +2926,24 @@ class TestNeutronv2(TestNeutronv2Base):
                 objects.NetworkRequest(network_id='net1'),
                 objects.NetworkRequest(port_id='my_portid2'),
                 objects.NetworkRequest(port_id='my_portid3'),
-                objects.NetworkRequest(port_id='my_portid4')])
+                objects.NetworkRequest(port_id='my_portid4'),
+                objects.NetworkRequest(port_id='my_portid5')])
         pci_requests = objects.InstancePCIRequests(requests=[])
         mock_get_port_vnic_info.side_effect = [
                 (model.VNIC_TYPE_DIRECT, 'phynet1'),
                 (model.VNIC_TYPE_NORMAL, ''),
                 (model.VNIC_TYPE_MACVTAP, 'phynet1'),
-                (model.VNIC_TYPE_MACVTAP, 'phynet2')
+                (model.VNIC_TYPE_MACVTAP, 'phynet2'),
+                (model.VNIC_TYPE_DIRECT_PHYSICAL, 'phynet3')
             ]
         api.create_pci_requests_for_sriov_ports(
             None, pci_requests, requested_networks)
-        self.assertEqual(3, len(pci_requests.requests))
+        self.assertEqual(4, len(pci_requests.requests))
         has_pci_request_id = [net.pci_request_id is not None for net in
                               requested_networks.objects]
-        expected_results = [True, False, False, True, True]
+        self.assertEqual(pci_requests.requests[3].spec[0]["dev_type"],
+                         "type-PF")
+        expected_results = [True, False, False, True, True, True]
         self.assertEqual(expected_results, has_pci_request_id)
 
 
