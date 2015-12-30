@@ -1739,7 +1739,7 @@ class PciDeviceInvalidOwner(Invalid):
 
 class PciDeviceRequestFailed(NovaException):
     msg_fmt = _(
-        "PCI device request (%requests)s failed")
+        "PCI device request %(requests)s failed")
 
 
 class PciDevicePoolEmpty(NovaException):

@@ -71,7 +71,7 @@ def get_pci_address_fields(pci_addr):
 
 
 def get_function_by_ifname(ifname):
-    """Given the device name, returns the PCI address of a an device
+    """Given the device name, returns the PCI address of a device
     and returns True if the address in a physical function.
     """
     try:
