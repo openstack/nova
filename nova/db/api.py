@@ -1329,6 +1329,11 @@ def security_group_rule_get_by_security_group(context, security_group_id,
         context, security_group_id, columns_to_join=columns_to_join)
 
 
+def security_group_rule_get_by_instance(context, instance_uuid):
+    """Get all rules for a given instance."""
+    return IMPL.security_group_rule_get_by_instance(context, instance_uuid)
+
+
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule."""
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)

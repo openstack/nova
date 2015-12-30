@@ -1182,7 +1182,7 @@ object_data = {
     'SecurityGroup': '1.1-0e1b9ba42fe85c13c1437f8b74bdb976',
     'SecurityGroupList': '1.0-dc8bbea01ba09a2edb6e5233eae85cbc',
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
-    'SecurityGroupRuleList': '1.1-674b323c9ccea02e93b1b40e7fd2091a',
+    'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
     'Service': '1.19-8914320cbeb4ec29f252d72ce55d07e1',
     'ServiceList': '1.17-b767102cba7cbed290e396114c3f86b3',
     'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',

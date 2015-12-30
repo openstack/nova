@@ -85,7 +85,7 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
-    VERSION = '1.1'
+    VERSION = '1.2'
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, secgroup_id):
@@ -98,3 +98,15 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_by_security_group(cls, context, security_group):
         return cls.get_by_security_group_id(context, security_group.id)
+
+    @base.remotable_classmethod
+    def get_by_instance_uuid(cls, context, instance_uuid):
+        db_rules = db.security_group_rule_get_by_instance(context,
+                                                          instance_uuid)
+        return base.obj_make_list(context, cls(context),
+                                  objects.SecurityGroupRule, db_rules,
+                                  expected_attrs=['grantee_group'])
+
+    @classmethod
+    def get_by_instance(cls, context, instance):
+        return cls.get_by_instance_uuid(context, instance.uuid)
