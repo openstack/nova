@@ -139,6 +139,12 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_base_hostdev_pci_config(self, vif):
+        conf = vconfig.LibvirtConfigGuestHostdevPCI()
+        pci_slot = vif['profile']['pci_slot']
+        designer.set_vif_host_backend_hostdev_pci_config(conf, pci_slot)
+        return conf
+
     def _get_virtio_mq_settings(self, image_meta, flavor):
         """A methods to set the number of virtio queues,
            if it has been requested in extra specs.
@@ -322,6 +328,10 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_hostdev_physical(self, instance, vif, image_meta,
+                                    inst_type, virt_type, host):
+        return self.get_base_hostdev_pci_config(vif)
+
     def get_config_macvtap(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -412,10 +422,7 @@ class LibvirtGenericVIFDriver(object):
 
     def get_config_ib_hostdev(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
-        conf = vconfig.LibvirtConfigGuestHostdevPCI()
-        pci_slot = vif['profile']['pci_slot']
-        designer.set_vif_host_backend_ib_hostdev_config(conf, pci_slot)
-        return conf
+        return self.get_base_hostdev_pci_config(vif)
 
     def get_config_vrouter(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
@@ -584,6 +591,9 @@ class LibvirtGenericVIFDriver(object):
                 vif['profile']['pci_slot'],
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
+
+    def plug_hostdev_physical(self, instance, vif):
+        pass
 
     def plug_macvtap(self, instance, vif):
         vif_details = vif['details']
@@ -852,6 +862,9 @@ class LibvirtGenericVIFDriver(object):
             # the same VF will not be affected by the existing MAC.
             linux_net.set_vf_interface_vlan(vif['profile']['pci_slot'],
                                             mac_addr=vif['address'])
+
+    def unplug_hostdev_physical(self, instance, vif):
+        pass
 
     def unplug_macvtap(self, instance, vif):
         pass

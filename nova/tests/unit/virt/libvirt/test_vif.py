@@ -203,6 +203,17 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                             'pci_slot': '0000:0a:00.1',
                                             'physical_network': 'phynet1'})
 
+    vif_hostdev_physical = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                   address='ca:fe:de:ad:be:ef',
+                                   network=network_8021,
+                                   type=network_model.VIF_TYPE_HOSTDEV,
+                                   vnic_type=
+                                       network_model.VNIC_TYPE_DIRECT_PHYSICAL,
+                                   ovs_interfaceid=None,
+                                   profile={'pci_vendor_info': '1137:0043',
+                                            'pci_slot': '0000:0a:00.1',
+                                            'physical_network': 'phynet1'})
+
     vif_hw_veb_macvtap = network_model.VIF(id='vif-xxx-yyy-zzz',
                                     address='ca:fe:de:ad:be:ef',
                                     network=network_8021,
@@ -1126,6 +1137,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         vlan = node.find("vlan").find("tag").get("id")
         vlan_want = self.vif_hw_veb["details"]["vlan"]
         self.assertEqual(vlan, vlan_want)
+
+    def test_hostdev_physical_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_hostdev_physical)
+        doc = etree.fromstring(xml)
+        node = doc.findall('./devices/hostdev')[0]
+        self.assertEqual(1, len(node))
+        self._assertPciEqual(node, self.vif_hostdev_physical)
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                        return_value='eth1')

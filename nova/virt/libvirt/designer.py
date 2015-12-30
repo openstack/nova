@@ -133,10 +133,9 @@ def set_vif_host_backend_hw_veb(conf, net_type, devname, vlan,
         conf.target_dev = tapname
 
 
-def set_vif_host_backend_ib_hostdev_config(conf, pci_slot):
-    """Populate a LibvirtConfigGuestInterface instance
-    with hostdev Interface.
-    """
+def set_vif_host_backend_hostdev_pci_config(conf, pci_slot):
+    """Populate a LibvirtConfigGuestHostdev instance with pci address data."""
+
     conf.domain, conf.bus, conf.slot, conf.function = (
         pci_utils.get_pci_address_fields(pci_slot))
 
