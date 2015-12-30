@@ -6029,7 +6029,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             block_migration=True,
             disk_over_commit=False,
             disk_available_mb=100)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.MigrationPreCheckError,
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data,
