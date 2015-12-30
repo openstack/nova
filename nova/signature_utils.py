@@ -47,27 +47,18 @@ HASH_METHODS = {
 # Currently supported signature key types
 # RSA Options
 RSA_PSS = 'RSA-PSS'
-# ECC Options -- note that only those with key sizes >=384 are included
-ECC_SECT571K1 = 'ECC_SECT571K1'
-ECC_SECT409K1 = 'ECC_SECT409K1'
-ECC_SECT571R1 = 'ECC_SECT571R1'
-ECC_SECT409R1 = 'ECC_SECT409R1'
-ECC_SECP521R1 = 'ECC_SECP521R1'
-ECC_SECP384R1 = 'ECC_SECP384R1'
 # DSA Options
 DSA = 'DSA'
 
-# This includes the supported public key type for the signature key type
-SIGNATURE_KEY_TYPES = {
-    RSA_PSS: rsa.RSAPublicKey,
-    ECC_SECT571K1: ec.EllipticCurvePublicKey,
-    ECC_SECT409K1: ec.EllipticCurvePublicKey,
-    ECC_SECT571R1: ec.EllipticCurvePublicKey,
-    ECC_SECT409R1: ec.EllipticCurvePublicKey,
-    ECC_SECP521R1: ec.EllipticCurvePublicKey,
-    ECC_SECP384R1: ec.EllipticCurvePublicKey,
-    DSA: dsa.DSAPublicKey,
-}
+# ECC curves -- note that only those with key sizes >=384 are included
+ECC_CURVES = (
+    ec.SECT571K1(),
+    ec.SECT409K1(),
+    ec.SECT571R1(),
+    ec.SECT409R1(),
+    ec.SECP521R1(),
+    ec.SECP384R1(),
+)
 
 # These are the currently supported certificate formats
 X_509 = 'X.509'
@@ -86,6 +77,41 @@ SIGNATURE = 'img_signature'
 HASH_METHOD = 'img_signature_hash_method'
 KEY_TYPE = 'img_signature_key_type'
 CERT_UUID = 'img_signature_certificate_uuid'
+
+
+class SignatureKeyType(object):
+
+    _REGISTERED_TYPES = {}
+
+    def __init__(self, name, public_key_type, create_verifier):
+        self.name = name
+        self.public_key_type = public_key_type
+        self.create_verifier = create_verifier
+
+    @classmethod
+    def register(cls, name, public_key_type, create_verifier):
+        """Register a signature key type.
+
+        :param name: the name of the signature key type
+        :param public_key_type: e.g. RSAPublicKey, DSAPublicKey, etc.
+        :param create_verifier: a function to create a verifier for this type
+        """
+        cls._REGISTERED_TYPES[name] = cls(name,
+                                          public_key_type,
+                                          create_verifier)
+
+    @classmethod
+    def lookup(cls, name):
+        """Look up the signature key type.
+
+        :param name: the name of the signature key type
+        :returns: the SignatureKeyType object
+        :raises: SignatureVerificationError if signature key type is invalid
+        """
+        if name not in cls._REGISTERED_TYPES:
+            raise exception.SignatureVerificationError(
+                reason=_('Invalid signature key type: %s') % name)
+        return cls._REGISTERED_TYPES[name]
 
 
 # each key type will require its own verifier
@@ -148,17 +174,14 @@ def create_verifier_for_dsa(signature, hash_method, public_key,
         hash_method
     )
 
-# map the key type to the verifier function to use
-KEY_TYPE_METHODS = {
-    RSA_PSS: create_verifier_for_pss,
-    ECC_SECT571K1: create_verifier_for_ecc,
-    ECC_SECT409K1: create_verifier_for_ecc,
-    ECC_SECT571R1: create_verifier_for_ecc,
-    ECC_SECT409R1: create_verifier_for_ecc,
-    ECC_SECP521R1: create_verifier_for_ecc,
-    ECC_SECP384R1: create_verifier_for_ecc,
-    DSA: create_verifier_for_dsa,
-}
+
+SignatureKeyType.register(RSA_PSS, rsa.RSAPublicKey, create_verifier_for_pss)
+SignatureKeyType.register(DSA, dsa.DSAPublicKey, create_verifier_for_dsa)
+
+for curve in ECC_CURVES:
+    SignatureKeyType.register('ECC_' + curve.name.upper(),
+                              ec.EllipticCurvePublicKey,
+                              create_verifier_for_ecc)
 
 
 def should_verify_signature(image_properties):
@@ -193,18 +216,16 @@ def get_verifier(context, image_properties):
 
     signature = get_signature(image_properties[SIGNATURE])
     hash_method = get_hash_method(image_properties[HASH_METHOD])
-    signature_key_type = get_signature_key_type(
-        image_properties[KEY_TYPE])
+    signature_key_type = SignatureKeyType.lookup(image_properties[KEY_TYPE])
     public_key = get_public_key(context,
                                 image_properties[CERT_UUID],
                                 signature_key_type)
 
     # create the verifier based on the signature key type
-    verifier = KEY_TYPE_METHODS[signature_key_type](signature,
-                                                    hash_method,
-                                                    public_key,
-                                                    image_properties)
-
+    verifier = signature_key_type.create_verifier(signature,
+                                                  hash_method,
+                                                  public_key,
+                                                  image_properties)
     if verifier:
         return verifier
     else:
@@ -244,27 +265,13 @@ def get_hash_method(hash_method_name):
     return HASH_METHODS[hash_method_name]
 
 
-def get_signature_key_type(signature_key_type):
-    """Verify the signature key type.
-
-    :param signature_key_type: the key type of the signature
-    :returns: the validated signature key type
-    :raises: SignatureVerificationError if the signature key type is invalid
-    """
-    if signature_key_type not in SIGNATURE_KEY_TYPES:
-        raise exception.SignatureVerificationError(
-            reason=_('Invalid signature key type: %s') % signature_key_type)
-
-    return signature_key_type
-
-
 def get_public_key(context, signature_certificate_uuid, signature_key_type):
     """Create the public key object from a retrieved certificate.
 
     :param context: the user context for authentication
     :param signature_certificate_uuid: the uuid to use to retrieve the
                                        certificate
-    :param signature_key_type: the key type of the signature
+    :param signature_key_type: a SignatureKeyType object
     :returns: the public key cryptography object
     :raises: SignatureVerificationError if public key format is invalid
     """
@@ -275,10 +282,10 @@ def get_public_key(context, signature_certificate_uuid, signature_key_type):
     public_key = certificate.public_key()
 
     # Confirm the type is of the type expected based on the signature key type
-    if not isinstance(public_key, SIGNATURE_KEY_TYPES[signature_key_type]):
+    if not isinstance(public_key, signature_key_type.public_key_type):
         raise exception.SignatureVerificationError(
             reason=_('Invalid public key type for signature key type: %s')
-            % signature_key_type)
+            % signature_key_type.name)
 
     return public_key
 
