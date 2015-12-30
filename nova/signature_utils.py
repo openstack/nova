@@ -51,6 +51,7 @@ RSA_PSS = 'RSA-PSS'
 DSA = 'DSA'
 
 # ECC curves -- note that only those with key sizes >=384 are included
+# Note also that some of these may not be supported by the cryptography backend
 ECC_CURVES = (
     ec.SECT571K1(),
     ec.SECT409K1(),
@@ -178,10 +179,12 @@ def create_verifier_for_dsa(signature, hash_method, public_key,
 SignatureKeyType.register(RSA_PSS, rsa.RSAPublicKey, create_verifier_for_pss)
 SignatureKeyType.register(DSA, dsa.DSAPublicKey, create_verifier_for_dsa)
 
+# Register the elliptic curves which are supported by the backend
 for curve in ECC_CURVES:
-    SignatureKeyType.register('ECC_' + curve.name.upper(),
-                              ec.EllipticCurvePublicKey,
-                              create_verifier_for_ecc)
+    if default_backend().elliptic_curve_supported(curve):
+        SignatureKeyType.register('ECC_' + curve.name.upper(),
+                                  ec.EllipticCurvePublicKey,
+                                  create_verifier_for_ecc)
 
 
 def should_verify_signature(image_properties):
