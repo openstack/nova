@@ -9917,8 +9917,24 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         network_info = _fake_network_info(self, 1)
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+        # some more adjustments for the fake network_info so that
+        # the correct get_config function will be executed (vif's
+        # get_config_hw_veb - which is according to the real SRIOV vif)
+        # and most importantly the pci_slot which is translated to
+        # cfg.source_dev, then to PciDevice.address and sent to
+        # _detach_pci_devices
+        network_info[0]['profile'] = dict(pci_slot="0000:00:00.0")
+        network_info[0]['type'] = "hw_veb"
+        network_info[0]['details'] = dict(vlan="2145")
         instance.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
+        # fill the pci_devices of the instance so that
+        # pci_manager.get_instance_pci_devs will not return an empty list
+        # which will eventually fail the assertion for detachDeviceFlags
+        instance.pci_devices = objects.PciDeviceList()
+        instance.pci_devices.objects = [
+            objects.PciDevice(address='0000:00:00.0', request_id=None)
+        ]
 
         domain = FakeVirtDomain()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9928,6 +9944,61 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_get_image_metadata.assert_called_once_with(
             instance.system_metadata)
         self.assertTrue(mock_detachDeviceFlags.called)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
+    def test_detach_duplicate_mac_sriov_ports(self,
+                                              mock_detachDeviceFlags,
+                                              mock_has_min_version):
+        instance = objects.Instance(**self.test_instance)
+
+        network_info = _fake_network_info(self, 2)
+
+        for network_info_inst in network_info:
+            network_info_inst['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+            network_info_inst['type'] = "hw_veb"
+            network_info_inst['details'] = dict(vlan="2145")
+            network_info_inst['address'] = "fa:16:3e:96:2a:48"
+
+        network_info[0]['profile'] = dict(pci_slot="0000:00:00.0")
+        network_info[1]['profile'] = dict(pci_slot="0000:00:00.1")
+
+        instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_info)
+        # fill the pci_devices of the instance so that
+        # pci_manager.get_instance_pci_devs will not return an empty list
+        # which will eventually fail the assertion for detachDeviceFlags
+        instance.pci_devices = objects.PciDeviceList()
+        instance.pci_devices.objects = [
+            objects.PciDevice(address='0000:00:00.0', request_id=None),
+            objects.PciDevice(address='0000:00:00.1', request_id=None)
+        ]
+
+        domain = FakeVirtDomain()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        guest = libvirt_guest.Guest(domain)
+
+        drvr._detach_sriov_ports(self.context, instance, guest)
+
+        expected_xml = [
+            ('<hostdev mode="subsystem" type="pci" managed="yes">\n'
+             '  <source>\n'
+             '    <address bus="0x00" domain="0x0000" \
+                   function="0x0" slot="0x00"/>\n'
+             '  </source>\n'
+             '</hostdev>\n'),
+            ('<hostdev mode="subsystem" type="pci" managed="yes">\n'
+             '  <source>\n'
+             '    <address bus="0x00" domain="0x0000" \
+                   function="0x1" slot="0x00"/>\n'
+             '  </source>\n'
+             '</hostdev>\n')
+        ]
+
+        mock_detachDeviceFlags.has_calls([
+            mock.call(expected_xml[0], flags=1),
+            mock.call(expected_xml[1], flags=1)
+        ])
 
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
