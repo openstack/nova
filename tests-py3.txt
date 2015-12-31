@@ -203,6 +203,7 @@ nova.tests.unit.virt.xenapi.test_agent.FileInjectionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.UnplugVbdTestCase
+nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.GetConsoleOutputTestCase
 nova.tests.unit.virt.xenapi.test_volume_utils.ParseVolumeInfoTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.HypervisorPoolTestCase
