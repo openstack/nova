@@ -1179,7 +1179,7 @@ def _create_kernel_image(context, session, instance, name_label, image_id,
     Returns: A list of dictionaries that describe VDIs
     """
     filename = ""
-    if CONF.xenserver.cache_images:
+    if CONF.xenserver.cache_images != 'none':
         args = {}
         args['cached-image'] = image_id
         args['new-image-uuid'] = str(uuid.uuid4())
@@ -1569,7 +1569,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
 
             # Let the plugin copy the correct number of bytes.
             args['image-size'] = str(vdi_size)
-            if CONF.xenserver.cache_images:
+            if CONF.xenserver.cache_images != 'none':
                 args['cached-image'] = image_id
             filename = session.call_plugin('kernel', 'copy_vdi', args)
 

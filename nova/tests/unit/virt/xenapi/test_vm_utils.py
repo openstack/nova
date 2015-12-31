@@ -1455,6 +1455,46 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
                     self.session, self.instance, self.name_label)
         self.assertEqual(("k", None), result)
 
+    def _test_create_kernel_image(self, cache_images):
+        kernel_id = "kernel"
+        self.instance["kernel_id"] = kernel_id
+
+        args_kernel = {}
+        args_kernel['cached-image'] = kernel_id
+        args_kernel['new-image-uuid'] = "fake_uuid1"
+        self.flags(cache_images=cache_images, group='xenserver')
+
+        if cache_images == 'all':
+            uuid.uuid4().AndReturn("fake_uuid1")
+            self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+                                     args_kernel).AndReturn("cached_image")
+        else:
+            kernel = {"kernel": {"file": "new_image", "uuid": None}}
+            vm_utils._fetch_disk_image(self.context, self.session,
+                                       self.instance, self.name_label,
+                                       kernel_id, 0).AndReturn(kernel)
+
+        self.mox.ReplayAll()
+
+        result = vm_utils._create_kernel_image(self.context,
+                                               self.session,
+                                               self.instance,
+                                               self.name_label,
+                                               kernel_id, 0)
+
+        if cache_images == 'all':
+            self.assertEqual(result, {"kernel":
+                                      {"file": "cached_image", "uuid": None}})
+        else:
+            self.assertEqual(result, {"kernel":
+                                      {"file": "new_image", "uuid": None}})
+
+    def test_create_kernel_image_cached_config(self):
+        self._test_create_kernel_image('all')
+
+    def test_create_kernel_image_uncached_config(self):
+        self._test_create_kernel_image('none')
+
 
 class ScanSrTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, "_scan_sr")
