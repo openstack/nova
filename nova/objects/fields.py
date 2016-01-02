@@ -223,6 +223,18 @@ class DiskBus(Enum):
             valid_values=DiskBus.ALL)
 
 
+class FirmwareType(Enum):
+
+    UEFI = "uefi"
+    BIOS = "bios"
+
+    ALL = (UEFI, BIOS)
+
+    def __init__(self):
+        super(FirmwareType, self).__init__(
+            valid_values=FirmwareType.ALL)
+
+
 class HVType(Enum):
     # TODO(berrange): move all constants out of 'nova.compute.hv_type'
     # into fields on this class
@@ -638,6 +650,10 @@ class CPUFeaturePolicyField(BaseEnumField):
 
 class DiskBusField(BaseEnumField):
     AUTO_TYPE = DiskBus()
+
+
+class FirmwareTypeField(BaseEnumField):
+    AUTO_TYPE = FirmwareType()
 
 
 class HVTypeField(BaseEnumField):
