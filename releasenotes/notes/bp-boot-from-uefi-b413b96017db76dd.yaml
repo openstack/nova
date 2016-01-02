@@ -1,0 +1,3 @@
+---
+features:
+  - Add support for enabling uefi boot with libvirt.

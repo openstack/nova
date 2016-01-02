@@ -2632,6 +2632,56 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestConsole)
 
+    def test_has_uefi_support_with_invalid_version(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(drvr._host,
+                               'has_min_version', return_value=False):
+            self.assertFalse(drvr._has_uefi_support())
+
+    def test_has_uefi_support_not_supported_arch(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "alpha"
+        self.assertFalse(drvr._has_uefi_support())
+
+    @mock.patch('os.path.exists', return_value=False)
+    def test_has_uefi_support_with_no_loader_existed(self, mock_exist):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertFalse(drvr._has_uefi_support())
+
+    @mock.patch('os.path.exists', return_value=True)
+    def test_has_uefi_support(self, mock_has_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+
+        with mock.patch.object(drvr._host,
+                               'has_min_version', return_value=True):
+            self.assertTrue(drvr._has_uefi_support())
+
+    def test_get_guest_config_with_uefi(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_firmware_type": "uefi"}})
+        instance_ref = objects.Instance(**self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        with test.nested(
+                mock.patch.object(drvr, "_has_uefi_support",
+                                  return_value=True)):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                         image_meta, disk_info)
+            self.assertEqual(cfg.os_loader_type, "pflash")
+
     def test_get_guest_config_with_block_device(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
