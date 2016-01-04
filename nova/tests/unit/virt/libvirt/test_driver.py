@@ -832,33 +832,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
-    @mock.patch('nova.virt.libvirt.driver.LOG')
-    def test_init_host_migration_flags(self, mock_log):
-        '''Test if the driver logs a warning if the live_migration_flag
-        and/or block_migration_flag config option uses a value which can
-        cause potential damage.
-        '''
-        # should NOT have VIR_MIGRATE_NON_SHARED_INC
-        self.flags(live_migration_flag="VIR_MIGRATE_UNDEFINE_SOURCE, "
-                                       "VIR_MIGRATE_PEER2PEER, "
-                                       "VIR_MIGRATE_LIVE, "
-                                       "VIR_MIGRATE_TUNNELLED, "
-                                       "VIR_MIGRATE_NON_SHARED_INC",
-                   group='libvirt')
-        # should have VIR_MIGRATE_NON_SHARED_INC
-        self.flags(block_migration_flag="VIR_MIGRATE_UNDEFINE_SOURCE, "
-                                        "VIR_MIGRATE_PEER2PEER, "
-                                        "VIR_MIGRATE_LIVE, "
-                                        "VIR_MIGRATE_TUNNELLED",
-                   group='libvirt')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        drvr.init_host("dummyhost")
-
-        msg = mock_log.warning.call_args_list[0]
-        self.assertIn('Running Nova with a live_migration_flag', msg[0][0])
-        msg = mock_log.warning.call_args_list[1]
-        self.assertIn('Running Nova with a block_migration_flag', msg[0][0])
-
     def _do_test_parse_migration_flags(self, lm_config=None, lm_expected=None,
                                        bm_config=None, bm_expected=None):
         if lm_config is not None:
@@ -934,6 +907,37 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIn("unknown libvirt live migration flag", msg[0][0])
         msg = mock_log.warning.call_args_list[1]
         self.assertIn("unknown libvirt live migration flag", msg[0][0])
+
+    @mock.patch('nova.virt.libvirt.driver.LOG')
+    def test_parse_migration_flags_unsafe_block(self, mock_log):
+        '''Test if the driver logs a warning if the live_migration_flag
+        and/or block_migration_flag config option uses a value which can
+        cause potential damage.
+        '''
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            bm_config=('VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
+
+        msg = mock_log.warning.call_args_list[0]
+        self.assertIn('Removing the VIR_MIGRATE_NON_SHARED_INC', msg[0][0])
+        msg = mock_log.warning.call_args_list[1]
+        self.assertIn('Adding the VIR_MIGRATE_NON_SHARED_INC', msg[0][0])
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,

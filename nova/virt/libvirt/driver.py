@@ -643,19 +643,20 @@ class LibvirtDriver(driver.ComputeDriver):
     def _check_block_migration_flags(self, live_migration_flags,
                                      block_migration_flags):
         if (live_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) != 0:
-            LOG.warning(_LW('Running Nova with a live_migration_flag config '
-                            'option which contains VIR_MIGRATE_NON_SHARED_INC '
-                            'will cause all live-migrations to be block-'
-                            'migrations instead. This setting should only be '
-                            'on the block_migration_flag instead.'))
+            LOG.warning(_LW('Removing the VIR_MIGRATE_NON_SHARED_INC flag '
+                            'from the live_migration_flag config option '
+                            'because it will cause all live-migrations to be '
+                            'block-migrations instead.'))
+            live_migration_flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
 
         if (block_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) == 0:
-            LOG.warning(_LW('Running Nova with a block_migration_flag config '
-                            'option which does not contain '
-                            'VIR_MIGRATE_NON_SHARED_INC '
-                            'will cause all block-migrations to be live-'
-                            'migrations instead. This setting should be '
-                            'on the block_migration_flag.'))
+            LOG.warning(_LW('Adding the VIR_MIGRATE_NON_SHARED_INC flag to '
+                            'the block_migration_flag config option, '
+                            'otherwise all block-migrations will be '
+                            'live-migrations instead.'))
+            block_migration_flags |= libvirt.VIR_MIGRATE_NON_SHARED_INC
+
+        return (live_migration_flags, block_migration_flags)
 
     def _parse_migration_flags(self):
         def str2sum(str_val):
@@ -671,8 +672,9 @@ class LibvirtDriver(driver.ComputeDriver):
         live_migration_flags = str2sum(CONF.libvirt.live_migration_flag)
         block_migration_flags = str2sum(CONF.libvirt.block_migration_flag)
 
-        self._check_block_migration_flags(live_migration_flags,
-                                          block_migration_flags)
+        (live_migration_flags,
+         block_migration_flags) = self._check_block_migration_flags(
+             live_migration_flags, block_migration_flags)
 
         self._live_migration_flags = live_migration_flags
         self._block_migration_flags = block_migration_flags
