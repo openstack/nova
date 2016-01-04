@@ -342,10 +342,8 @@ class OSAPIFixture(fixtures.Fixture):
         # in order to run these in tests we need to bind only to local
         # host, and dynamically allocate ports
         conf_overrides = {
-            'ec2_listen': '127.0.0.1',
             'osapi_compute_listen': '127.0.0.1',
             'metadata_listen': '127.0.0.1',
-            'ec2_listen_port': 0,
             'osapi_compute_listen_port': 0,
             'metadata_listen_port': 0,
             'verbose': True,

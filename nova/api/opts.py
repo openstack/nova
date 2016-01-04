@@ -13,8 +13,6 @@
 import itertools
 
 import nova.api.auth
-import nova.api.ec2
-import nova.api.ec2.cloud
 import nova.api.metadata.base
 import nova.api.metadata.handler
 import nova.api.metadata.vendordata_json
@@ -68,7 +66,6 @@ import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
 import nova.image.glance
-import nova.image.s3
 import nova.ipv6.api
 import nova.keymgr
 import nova.keymgr.barbican
@@ -85,7 +82,6 @@ import nova.network.rpcapi
 import nova.network.security_group.openstack_driver
 import nova.notifications
 import nova.objects.network
-import nova.objectstore.s3server
 import nova.paths
 import nova.pci.request
 import nova.pci.whitelist
@@ -129,8 +125,6 @@ def list_opts():
              [nova.api.metadata.vendordata_json.file_opt],
              [nova.api.openstack.compute.allow_instance_snapshots_opt],
              nova.api.auth.auth_opts,
-             nova.api.ec2.cloud.ec2_opts,
-             nova.api.ec2.ec2_opts,
              nova.api.metadata.base.metadata_opts,
              nova.api.metadata.handler.metadata_opts,
              nova.api.openstack.common.osapi_opts,

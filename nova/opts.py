@@ -38,7 +38,6 @@ import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
 import nova.image.glance
-import nova.image.s3
 import nova.ipv6.api
 import nova.keymgr
 import nova.keymgr.barbican
@@ -46,7 +45,6 @@ import nova.keymgr.conf_key_mgr
 import nova.netconf
 import nova.notifications
 import nova.objects.network
-import nova.objectstore.s3server
 import nova.paths
 import nova.pci.request
 import nova.pci.whitelist
@@ -87,11 +85,9 @@ def list_opts():
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,
-             nova.image.s3.s3_opts,
              nova.netconf.netconf_opts,
              nova.notifications.notify_opts,
              nova.objects.network.network_opts,
-             nova.objectstore.s3server.s3_opts,
              nova.paths.path_opts,
              nova.pci.request.pci_alias_opts,
              nova.pci.whitelist.pci_opts,

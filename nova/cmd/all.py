@@ -32,7 +32,6 @@ from oslo_log import log as logging
 from nova import config
 from nova.i18n import _LE
 from nova import objects
-from nova.objectstore import s3server
 from nova import service
 from nova import utils
 from nova.vnc import xvp_proxy
@@ -62,7 +61,7 @@ def main():
         except (Exception, SystemExit):
             LOG.exception(_LE('Failed to load %s-api'), api)
 
-    for mod in [s3server, xvp_proxy]:
+    for mod in [xvp_proxy]:
         try:
             launcher.launch_service(mod.get_wsgi_server())
         except (Exception, SystemExit):
