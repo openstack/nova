@@ -28,9 +28,16 @@ _hints = {
             # uuids where a new server is scheduled on a different host.
             # A user can specify one server as string parameter and should
             # specify multiple servers as array parameter instead.
-            'type': ['string', 'array'],
-            'format': 'uuid',
-            'items': parameter_types.server_id
+            'oneOf': [
+                {
+                    'type': 'string',
+                    'format': 'uuid'
+                },
+                {
+                    'type': 'array',
+                    'items': parameter_types.server_id
+                }
+            ]
         },
         'same_host': {
             # NOTE: The value of 'different_host' is the set of server
