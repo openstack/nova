@@ -235,15 +235,30 @@ on compute hosts rather than servers.
 
 -  **Hypervisors**
 
-   TODO
+   A hypervisor, or virtual machine monitor (VMM), is a piece of computer
+   software, firmware or hardware that creates and runs virtual machines.
+
+   In nova, each Host (see `Hosts`) runs a hypervisor. Administrators are able
+   to query the hypervisor for information, such as all the virtual servers
+   currently running, as well as detailed info about the hypervisor, such as
+   CPU, memory, or disk related configuration.
+
+   Currently nova-compute also support Ironic and LXC, but they don't have
+   a hypervisor running.
 
 -  **Aggregates**
 
-   TODO
+   Please see :doc:`aggregates.rst`
 
 -  **Migrations**
 
-   TODO
+   Migrations are the process where a virtual server is moved from one host to
+   another. Please see :doc:`server_concepts` for details about
+   moving servers.
+
+   Administrators are able to query the records in database for information
+   about migrations. For example, they can determine the source and
+   destination hosts, type of migration, or changes in the server's flavor.
 
 -  **Certificates**
 
