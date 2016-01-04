@@ -2,7 +2,7 @@
 Key Compute API Concepts
 =========================
 
-The OpenStack Compute API is defined as a ReSTful HTTP service. The API
+The OpenStack Compute API is defined as a RESTful HTTP service. The API
 takes advantage of all aspects of the HTTP protocol (methods, URIs,
 media types, response codes, etc.) and providers are free to use
 existing features of the protocol such as caching, persistent

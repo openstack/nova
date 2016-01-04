@@ -17,7 +17,7 @@
 Compute API
 ===========
 
-The nova project has a ReSTful HTTP service called the OpenStack Compute API.
+The nova project has a RESTful HTTP service called the OpenStack Compute API.
 Through this API, the service provides massively scalable, on demand,
 self-service access to compute resources. Depending on the deployment those
 compute resources might be Virtual Machines, Physical Machines or Containers.
@@ -39,7 +39,7 @@ access to your own deployment, and you should also be familiar with the
 following concepts:
 
 *  OpenStack Compute service
-*  ReSTful HTTP services
+*  RESTful HTTP services
 *  HTTP/1.1
 *  JSON data serialization formats
 
