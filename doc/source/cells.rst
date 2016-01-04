@@ -11,26 +11,61 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+=======
+ Cells
+=======
+
+
+Cells V1
+========
+
+Historically, Nova has depended on a single logical database and message queue
+that all nodes depend on for communication and data persistence. This becomes
+an issue for deployers as scaling and providing fault tolerance for these
+systems is difficult.
+
+We have an experimental feature in Nova called "cells", hereafter referred to
+as "cells v1", which is used by some large deployments to partition compute
+nodes into smaller groups, coupled with a database and queue. This seems to be
+a well-liked and easy-to-understand arrangement of resources, but the
+implementation of it has issues for maintenance and correctness.
+See `Comparison with Cells V1`_ for more detail.
+
+Status
+~~~~~~
+
+Cells v1 is considered experimental and receives much less testing than the
+rest of Nova. For example, there is no job for testing cells v1 with Neutron.
+
+The priority for the core team is implementation of and migration to cells v2.
+Because of this, there are a few restrictions placed on cells v1:
+
+#. Cells v1 is in feature freeze. This means no new feature proposals for cells
+   v1 will be accepted by the core team, which includes but is not limited to
+   API parity, e.g. supporting virtual interface attach/detach with Neutron.
+#. Latent bugs caused by the cells v1 design will not be fixed, e.g.
+   `bug 1489581 <https://bugs.launchpad.net/nova/+bug/1489581>`_. So if new
+   tests are added to Tempest which trigger a latent bug in cells v1 it may not
+   be fixed. However, regressions in working function should be tracked with
+   bugs and fixed.
+
+**Suffice it to say, new deployments of cells v1 are not encouraged.**
+
+The restrictions above are basically meant to prioritize effort and focus on
+getting cells v2 completed, and feature requests and hard to fix latent bugs
+detract from that effort. Further discussion on this can be found in the
+`2015/11/12 Nova meeting minutes
+<http://eavesdrop.openstack.org/meetings/nova/2015/nova.2015-11-12-14.00.log.html>`_.
+
+There are no plans to remove Cells V1 until V2 is usable by existing
+deployments and there is a migration path.
+
 
 Cells V2
 ========
 
 Manifesto
 ~~~~~~~~~
-
-Problem
--------
-
-Nova currently depends on a single logical database and message queue that all
-nodes depend on for communication and data persistence. This becomes an issue
-for deployers as scaling and providing fault tolerance for these systems is
-difficult.
-
-We have an experimental feature in Nova called "cells" which is used by some
-large deployments to partition compute nodes into smaller groups, coupled with
-a database and queue. This seems to be a well-liked and easy-to-understand
-arrangement of resources, but the implementation of it has issues for
-maintenance and correctness.
 
 Proposal
 --------
@@ -106,8 +141,8 @@ The benefits of this new organization are:
 * Adding new sets of hosts as a new "cell" allows them to be plugged into a
   deployment and tested before allowing builds to be scheduled to them.
 
-Comparison with current cells
------------------------------
+Comparison with Cells V1
+------------------------
 
 In reality, the proposed organization is nearly the same as what we currently
 have in cells today. A cell mostly consists of a database, queue, and set of
