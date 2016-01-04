@@ -1022,6 +1022,53 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         msg = mock_log.warning.call_args_list[3]
         self.assertIn('Removing the VIR_MIGRATE_PERSIST_DEST flag', msg[0][0])
 
+    @mock.patch('nova.virt.libvirt.driver.LOG')
+    def test_live_migration_tunnelled_true(self, mock_log):
+        self.flags(live_migration_tunnelled=True, group='libvirt')
+
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_LIVE'),
+            bm_config=('VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_LIVE, VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED))
+
+        msg = mock_log.warning.call_args_list[0]
+        self.assertIn('does not contain the VIR_MIGRATE_TUNNELLED', msg[0][0])
+        msg = mock_log.warning.call_args_list[1]
+        self.assertIn('does not contain the VIR_MIGRATE_TUNNELLED', msg[0][0])
+
+    @mock.patch('nova.virt.libvirt.driver.LOG')
+    def test_live_migration_tunnelled_false(self, mock_log):
+        self.flags(live_migration_tunnelled=False, group='libvirt')
+
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_LIVE, VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_UNDEFINE_SOURCE, '
+                       'VIR_MIGRATE_LIVE, VIR_MIGRATE_NON_SHARED_INC, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
+
+        msg = mock_log.warning.call_args_list[0]
+        self.assertIn('contains the VIR_MIGRATE_TUNNELLED flag', msg[0][0])
+        msg = mock_log.warning.call_args_list[1]
+        self.assertIn('contains the VIR_MIGRATE_TUNNELLED flag', msg[0][0])
+
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)

@@ -168,6 +168,16 @@ libvirt_opts = [
                        'VIR_MIGRATE_LIVE, VIR_MIGRATE_TUNNELLED, '
                        'VIR_MIGRATE_NON_SHARED_INC',
                help='Migration flags to be set for block migration'),
+    cfg.BoolOpt('live_migration_tunnelled',
+                help='Whether to use tunnelled migration, where migration '
+                     'data is transported over the libvirtd connection. If '
+                     'True, we use the VIR_MIGRATE_TUNNELLED migration flag, '
+                     'avoiding the need to configure the network to allow '
+                     'direct hypervisor to hypervisor communication. If '
+                     'False, use the native transport. If not set, Nova '
+                     'will choose a sensible default based on, for example '
+                     'the availability of native encryption support in the '
+                     'hypervisor.'),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
                help='Maximum bandwidth(in MiB/s) to be used during migration. '
@@ -693,6 +703,31 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return (live_migration_flags, block_migration_flags)
 
+    def _handle_live_migration_tunnelled(self, migration_flags, config_name):
+        if CONF.libvirt.live_migration_tunnelled is None:
+            return migration_flags
+
+        if CONF.libvirt.live_migration_tunnelled:
+            if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED) == 0:
+                LOG.warning(_LW('The %(config_name)s config option does not '
+                                'contain the VIR_MIGRATE_TUNNELLED flag but '
+                                'the live_migration_tunnelled is set to True '
+                                'which causes VIR_MIGRATE_TUNNELLED to be '
+                                'set'),
+                            {'config_name': config_name})
+            migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
+        else:
+            if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED) != 0:
+                LOG.warning(_LW('The %(config_name)s config option contains '
+                                'the VIR_MIGRATE_TUNNELLED flag but the '
+                                'live_migration_tunnelled is set to False '
+                                'which causes VIR_MIGRATE_TUNNELLED to be '
+                                'unset'),
+                            {'config_name': config_name})
+            migration_flags &= ~libvirt.VIR_MIGRATE_TUNNELLED
+
+        return migration_flags
+
     def _parse_migration_flags(self):
         def str2sum(str_val):
             logical_sum = 0
@@ -718,6 +753,11 @@ class LibvirtDriver(driver.ComputeDriver):
         (live_migration_flags,
          block_migration_flags) = self._check_block_migration_flags(
              live_migration_flags, block_migration_flags)
+
+        live_migration_flags = self._handle_live_migration_tunnelled(
+            live_migration_flags, live_config_name)
+        block_migration_flags = self._handle_live_migration_tunnelled(
+            block_migration_flags, block_config_name)
 
         self._live_migration_flags = live_migration_flags
         self._block_migration_flags = block_migration_flags
