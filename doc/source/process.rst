@@ -35,4 +35,4 @@ Nova Process
 This documentation is still a work in progress.
 There is some draft information available on the wiki:
 
-* https://wiki.openstack.org/wiki/Nova/Liberty_Release_Schedule
+* https://wiki.openstack.org/wiki/Nova/Mitaka_Release_Schedule
