@@ -56,7 +56,7 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.4'},
     # Version 2: Changes to rebuild_instance signature in the compute_rpc
     {'compute_rpc': '4.5'},
-    # Version 3: Changes to trigger_crash_dump signature in the compute_rpc
+    # Version 3: Add trigger_crash_dump method to compute rpc api
     {'compute_rpc': '4.6'},
 )
 
