@@ -157,6 +157,7 @@ Open Development.
    block_device_mapping
    addmethod.openstackapi
    conductor
+   notifications
 
 Architecture Evolution Plans
 -----------------------------
