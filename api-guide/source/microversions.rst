@@ -15,24 +15,35 @@
 Microversions
 =============
 
-API v2.1 supports Microversions: small, documented changes to the API. A user
-can use Microversions to discover the latest API version supported in their
-cloud. A cloud that is upgraded to support newer versions will still support
-all older versions to maintain the backward compatibility for those users who
-depend on older versions. Users can also discover new features easily with
-Microversions, so that they can benefit from all the advantages and
-improvements of the current cloud.
+API v2.1 supports microversions: small, documented changes to the API. A user
+can use microversions to discover the latest API microversion supported in
+their cloud. A cloud that is upgraded to support newer microversions will still
+support all older microversions to maintain the backward compatibility for
+those users who depend on older microversions. Users can also discover new
+features easily with microversions, so that they can benefit from all the
+advantages and improvements of the current cloud.
 
-There are multiple cases which you can resolve with Microversions:
+There are multiple cases which you can resolve with microversions:
 
-Legacy v2 API user with new cloud
-=================================
+Older clients with new cloud
+============================
 
-The minimum version of Microversions is `2.1`, which is a version compatible
-with the legacy v2 API. The legacy v2 API user doesn't need to worry that their
-older client software will be broken when their cloud is upgraded with new
-versions. And the cloud operator doesn't need to worry that upgrading their
-cloud to newer versions will break any user with older clients that don't
-expect these changes.
+Before using an old client to talk to a newer cloud, the old client can check
+the minimum version of microversions to verify whether the cloud is compatible
+with the old API. This prevents the old client from breaking with backwards
+incompatible API changes.
 
-TODO: add more use-cases for Microversions
+Currently the minimum version of microversions is `2.1`, which is a
+microversion compatible with the legacy v2 API. That means the legacy v2 API
+user doesn't need to worry that their older client software will be broken when
+their cloud is upgraded with new versions. And the cloud operator doesn't need
+to worry that upgrading their cloud to newer versions will break any user with
+older clients that don't expect these changes.
+
+User discovery of available features between clouds
+===================================================
+
+The new features can be discovered by microversions. The user client should
+check the microversions firstly, and new features are only enabled when clouds
+support. In this way, the user client can work with clouds that have deployed
+different microversions simultaneously.
