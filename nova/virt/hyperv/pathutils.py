@@ -17,13 +17,10 @@ import os
 
 from os_win.utils import pathutils
 from oslo_config import cfg
-from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _
 from nova.virt.hyperv import constants
-
-LOG = logging.getLogger(__name__)
 
 hyperv_opts = [
     cfg.StrOpt('instances_path_share',

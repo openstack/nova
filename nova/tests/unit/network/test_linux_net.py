@@ -23,7 +23,6 @@ from mox3 import mox
 import netifaces
 from oslo_concurrency import processutils
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import fileutils
 from oslo_utils import timeutils
@@ -37,7 +36,6 @@ from nova import objects
 from nova import test
 from nova import utils
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('share_dhcp_address', 'nova.objects.network')
 CONF.import_opt('network_device_mtu', 'nova.objects.network')

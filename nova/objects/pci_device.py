@@ -15,7 +15,6 @@
 
 import copy
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
@@ -24,9 +23,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-
-
-LOG = logging.getLogger(__name__)
 
 
 def compare_pci_device_attributes(obj_a, obj_b):

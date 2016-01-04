@@ -13,11 +13,7 @@
 # under the License.
 """Support for mounting block device based images directly."""
 
-from oslo_log import log as logging
-
 from nova.virt.disk.mount import api
-
-LOG = logging.getLogger(__name__)
 
 
 class BlockMount(api.Mount):

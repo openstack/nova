@@ -12,13 +12,10 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from oslo_log import log as logging
-
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'server_usage')
 
 

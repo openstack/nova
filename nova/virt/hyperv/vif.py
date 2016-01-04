@@ -18,7 +18,6 @@ import abc
 
 from os_win import utilsfactory
 from oslo_config import cfg
-from oslo_log import log as logging
 
 hyperv_opts = [
     cfg.StrOpt('vswitch_name',
@@ -29,8 +28,6 @@ hyperv_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
-
-LOG = logging.getLogger(__name__)
 
 
 class HyperVBaseVIFDriver(object):

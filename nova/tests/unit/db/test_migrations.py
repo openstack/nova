@@ -60,9 +60,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 
 
-LOG = logging.getLogger(__name__)
-
-
 class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                              test_migrations.WalkVersionsMixin):
     """Test sqlalchemy-migrate migrations."""

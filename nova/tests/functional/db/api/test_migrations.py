@@ -48,7 +48,6 @@ from nova import test
 
 
 CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):

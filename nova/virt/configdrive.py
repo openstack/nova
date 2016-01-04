@@ -19,7 +19,6 @@ import os
 import shutil
 
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_utils import fileutils
 from oslo_utils import units
 
@@ -28,8 +27,6 @@ from nova import objects
 from nova.objects import fields
 from nova import utils
 from nova import version
-
-LOG = logging.getLogger(__name__)
 
 configdrive_opts = [
     cfg.StrOpt('config_drive_format',
