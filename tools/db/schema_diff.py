@@ -277,9 +277,9 @@ def main():
     db_url, orig_branch, orig_version, new_branch, new_version = options
 
     # Since we're going to be switching branches, ensure user doesn't have any
-    # uncommited changes
+    # uncommitted changes
     if git_has_uncommited_changes():
-        die("You have uncommited changes. Please commit them before running "
+        die("You have uncommitted changes. Please commit them before running "
             "this command.")
 
     db_driver = _get_db_driver_class(db_url)()
