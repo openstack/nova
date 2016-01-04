@@ -73,12 +73,6 @@ MASK_GEN_ALGORITHMS = {
     'MGF1': padding.MGF1,
 }
 
-# Required image property names
-SIGNATURE = 'img_signature'
-HASH_METHOD = 'img_signature_hash_method'
-KEY_TYPE = 'img_signature_key_type'
-CERT_UUID = 'img_signature_certificate_uuid'
-
 
 class SignatureKeyType(object):
 
@@ -116,17 +110,15 @@ class SignatureKeyType(object):
 
 
 # each key type will require its own verifier
-def create_verifier_for_pss(signature, hash_method, public_key,
-                            image_properties):
+def create_verifier_for_pss(signature, hash_method, public_key):
     """Create the verifier to use when the key type is RSA-PSS.
 
     :param signature: the decoded signature to use
     :param hash_method: the hash method to use, as a cryptography object
     :param public_key: the public key to use, as a cryptography object
-    :param image_properties: the key-value properties about the image
-    :returns: the verifier to use to verify the signature for RSA-PSS
     :raises: SignatureVerificationError if the RSA-PSS specific properties
                                         are invalid
+    :returns: the verifier to use to verify the signature for RSA-PSS
     """
     # default to MGF1
     mgf = padding.MGF1(hash_method)
@@ -142,14 +134,12 @@ def create_verifier_for_pss(signature, hash_method, public_key,
     )
 
 
-def create_verifier_for_ecc(signature, hash_method, public_key,
-                            image_properties):
+def create_verifier_for_ecc(signature, hash_method, public_key):
     """Create the verifier to use when the key type is ECC_*.
 
     :param signature: the decoded signature to use
     :param hash_method: the hash method to use, as a cryptography object
     :param public_key: the public key to use, as a cryptography object
-    :param image_properties: the key-value properties about the image
     :returns: the verifier to use to verify the signature for ECC_*.
     """
     # return the verifier
@@ -159,14 +149,12 @@ def create_verifier_for_ecc(signature, hash_method, public_key,
     )
 
 
-def create_verifier_for_dsa(signature, hash_method, public_key,
-                            image_properties):
+def create_verifier_for_dsa(signature, hash_method, public_key):
     """Create the verifier to use when the key type is DSA
 
     :param signature: the decoded signature to use
     :param hash_method: the hash method to use, as a cryptography object
     :param public_key: the public key to use, as a cryptography object
-    :param image_properties: the key-value properties about the image
     :returns: the verifier to use to verify the signature for DSA
     """
     # return the verifier
@@ -187,48 +175,45 @@ for curve in ECC_CURVES:
                                   create_verifier_for_ecc)
 
 
-def should_verify_signature(image_properties):
-    """Determine whether a signature should be verified.
-
-    Using the image properties, determine whether existing properties indicate
-    that signature verification should be done.
-
-    :param image_properties: the key-value properties about the image
-    :returns: True, if signature metadata properties exist, False otherwise
-    """
-    return (image_properties is not None and
-            CERT_UUID in image_properties and
-            HASH_METHOD in image_properties and
-            SIGNATURE in image_properties and
-            KEY_TYPE in image_properties)
-
-
-def get_verifier(context, image_properties):
-    """Retrieve the image properties and use them to create a verifier.
+def get_verifier(context, img_signature_certificate_uuid,
+                 img_signature_hash_method, img_signature,
+                 img_signature_key_type):
+    """Instantiate signature properties and use them to create a verifier.
 
     :param context: the user context for authentication
-    :param image_properties: the key-value properties about the image
+    :param img_signature_certificate_uuid:
+    uuid of signing certificate stored in key manager
+    :param img_signature_hash_method:
+    string denoting hash method used to compute signature
+    :param img_signature: string of base64 encoding of signature
+    :param img_signature_key_type:
+    string denoting type of keypair used to compute signature
     :returns: instance of
     cryptography.hazmat.primitives.asymmetric.AsymmetricVerificationContext
     :raises: SignatureVerificationError if we fail to build the verifier
     """
-    if not should_verify_signature(image_properties):
-        raise exception.SignatureVerificationError(
-            reason=_('Required image properties for signature verification'
-                     ' do not exist. Cannot verify signature.'))
+    image_meta_props = {'img_signature_uuid': img_signature_certificate_uuid,
+                        'img_signature_hash_method': img_signature_hash_method,
+                        'img_signature': img_signature,
+                        'img_signature_key_type': img_signature_key_type}
+    for key in image_meta_props.keys():
+        if image_meta_props[key] is None:
+            raise exception.SignatureVerificationError(
+                reason=_('Required image properties for signature verification'
+                         ' do not exist. Cannot verify signature. Missing'
+                         ' property: %s') % key)
 
-    signature = get_signature(image_properties[SIGNATURE])
-    hash_method = get_hash_method(image_properties[HASH_METHOD])
-    signature_key_type = SignatureKeyType.lookup(image_properties[KEY_TYPE])
+    signature = get_signature(img_signature)
+    hash_method = get_hash_method(img_signature_hash_method)
+    signature_key_type = SignatureKeyType.lookup(img_signature_key_type)
     public_key = get_public_key(context,
-                                image_properties[CERT_UUID],
+                                img_signature_certificate_uuid,
                                 signature_key_type)
 
     # create the verifier based on the signature key type
     verifier = signature_key_type.create_verifier(signature,
                                                   hash_method,
-                                                  public_key,
-                                                  image_properties)
+                                                  public_key)
     if verifier:
         return verifier
     else:
