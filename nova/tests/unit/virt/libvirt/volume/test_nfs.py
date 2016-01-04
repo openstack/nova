@@ -69,6 +69,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde")
         self.assertTrue(mock_LOG_debug.called)
         mock_utils_exe.side_effect = processutils.ProcessExecutionError(
+            None, None, None, 'umount', 'umount: not mounted.')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertTrue(mock_LOG_debug.called)
+        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: Other error.')
         libvirt_driver.disconnect_volume(connection_info, "vde")
         self.assertTrue(mock_LOG_exception.called)
