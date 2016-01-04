@@ -175,7 +175,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
 
-        LOG.debug("Lazy-loading `%(attr)s' on %(name)s id %(id)s",
+        LOG.debug("Lazy-loading '%(attr)s' on %(name)s id %(id)s",
                   {'attr': attrname,
                    'name': self.obj_name(),
                    'id': self.id,
