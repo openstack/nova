@@ -27,6 +27,7 @@ import six
 
 from nova.compute import manager
 from nova.console import type as ctype
+from nova import context
 from nova import exception
 from nova import objects
 from nova import test
@@ -658,8 +659,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_live_migration(self):
         instance_ref, network_info = self._get_running_instance()
+        fake_context = context.RequestContext('fake', 'fake')
+        migration = objects.Migration(context=fake_context, id=1)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            migration=migration)
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
-                                       lambda *a: None, lambda *a: None)
+                                       lambda *a: None, lambda *a: None,
+                                       migrate_data=migrate_data)
 
     @catch_notimplementederror
     def test_live_migration_force_complete(self):

@@ -7625,6 +7625,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        side_effect=lambda x: eventlet.sleep(0))
     @mock.patch.object(host.DomainJobInfo, "for_domain")
     @mock.patch.object(objects.Instance, "save")
+    @mock.patch.object(objects.Migration, "save")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")
     def _test_live_migration_monitoring(self,
@@ -7634,6 +7635,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         mock_abort,
                                         mock_running,
                                         mock_save,
+                                        mock_mig_save,
                                         mock_job_info,
                                         mock_sleep,
                                         mock_time):
@@ -7671,7 +7673,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_time.side_effect = fake_time
 
         dest = mock.sentinel.migrate_dest
-        migrate_data = mock.sentinel.migrate_data
+        migration = objects.Migration(context=self.context, id=1)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            migration=migration)
 
         fake_post_method = mock.MagicMock()
         fake_recover_method = mock.MagicMock()
@@ -7684,6 +7688,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      dom,
                                      finish_event,
                                      [])
+
+        mock_mig_save.assert_called_with()
 
         if expect_result == self.EXPECT_SUCCESS:
             self.assertFalse(fake_recover_method.called,
