@@ -631,7 +631,7 @@ def _extract_attributes(image, include_locations=False):
             output[attr] = getattr(image, attr) or 0
         else:
             # NOTE(xarses): Anything that is caught with the default value
-            # will result in a additional lookup to glance for said attr.
+            # will result in an additional lookup to glance for said attr.
             # Notable attributes that could have this issue:
             # disk_format, container_format, name, deleted, checksum
             output[attr] = getattr(image, attr, None)

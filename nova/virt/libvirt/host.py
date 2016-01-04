@@ -385,7 +385,7 @@ class Host(object):
         """Emit events - possibly delayed."""
         def event_cleanup(gt, *args, **kwargs):
             """Callback function for greenthread. Called
-            to cleanup the _events_delayed dictionary when a event
+            to cleanup the _events_delayed dictionary when an event
             was called.
             """
             event = args[0]
@@ -599,7 +599,7 @@ class Host(object):
         corresponding to the Nova instance, based on
         its name. If not found it will raise an
         exception.InstanceNotFound exception. On other
-        errors, it will raise a exception.NovaException
+        errors, it will raise an exception.NovaException
         exception.
 
         :returns: a libvirt.Domain object

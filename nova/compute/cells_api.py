@@ -247,7 +247,7 @@ class ComputeCellsAPI(compute_api.API):
                                     method_name)
             except exception.InstanceNotFound:
                 # NOTE(melwitt): We can get here if anything tries to
-                # lookup the instance after a instance_destroy_at_top hits.
+                # lookup the instance after an instance_destroy_at_top hits.
                 pass
             return
 

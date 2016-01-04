@@ -32,7 +32,7 @@ If an image is used then the timestamps will be deleted.
 When accessing a timestamp we make use of locking. This ensure that aging
 will not delete an image during the spawn operation. When spawning
 the timestamp folder will be locked  and the timestamps will be purged.
-This will ensure that a image is not deleted during the spawn.
+This will ensure that an image is not deleted during the spawn.
 """
 
 from oslo_concurrency import lockutils
@@ -85,7 +85,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # is going to be used now.
         path = self.timestamp_folder_get(cache_root_folder, image_id)
 
-        # Lock to ensure that the spawn will not try and access a image
+        # Lock to ensure that the spawn will not try and access an image
         # that is currently being deleted on the datastore.
         with lockutils.lock(str(path), lock_file_prefix='nova-vmware-ts',
                             external=True):
@@ -148,7 +148,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         ds_browser = self._get_ds_browser(datastore.ref)
         for image in unused_images:
             path = self.timestamp_folder_get(ds_path, image)
-            # Lock to ensure that the spawn will not try and access a image
+            # Lock to ensure that the spawn will not try and access an image
             # that is currently being deleted on the datastore.
             with lockutils.lock(str(path), lock_file_prefix='nova-vmware-ts',
                                 external=True):
