@@ -734,7 +734,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(live_migration_flag="VIR_MIGRATE_UNDEFINE_SOURCE, "
                                        "VIR_MIGRATE_PEER2PEER, "
                                        "VIR_MIGRATE_LIVE, "
-                                       "VIR_MIGRATE_TUNNELLED"
+                                       "VIR_MIGRATE_TUNNELLED, "
                                        "VIR_MIGRATE_NON_SHARED_INC",
                    group='libvirt')
         # should have VIR_MIGRATE_NON_SHARED_INC
