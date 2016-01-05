@@ -18,11 +18,17 @@ log_dir="/var/log/xen/guest"
 kb=1024
 max_size_bytes=$(($kb*$kb))
 truncated_size_bytes=$((5*$kb))
+syslog_tag='rotate_xen_guest_logs'
 
 log_file_base="${log_dir}/console."
 
 # Ensure logging is setup correctly for all domains
 xenstore-write /local/logconsole/@ "${log_file_base}%d"
+
+# Grab the list of logs now to prevent a race where the domain is
+# started after we get the valid last_dom_ids, but before the logs are
+# deleted.  Add spaces to ensure we can do containment tests below
+current_logs=$(find "$log_dir" -type f)
 
 # Ensure the last_dom_id is set + updated for all running VMs
 for vm in $(xe vm-list power-state=running --minimal | tr ',' ' '); do
@@ -31,19 +37,27 @@ done
 
 # Get the last_dom_id for all VMs
 valid_last_dom_ids=$(xe vm-list params=other-config --minimal | tr ';,' '\n\n' | grep last_dom_id | sed -e 's/last_dom_id: //g' | xargs)
+echo "Valid dom IDs: $valid_last_dom_ids" | /usr/bin/logger -t $syslog_tag
 
 # Remove console files that do not correspond to valid last_dom_id's
 allowed_consoles=".*console.\(${valid_last_dom_ids// /\\|}\)$"
-find $log_dir -type f -not -regex $allowed_consoles -delete
+delete_logs=`find "$log_dir" -type f -not -regex "$allowed_consoles"`
+for log in $delete_logs; do
+    if echo "$current_logs" | grep -q -w "$log"; then
+        echo "Deleting: $log" | /usr/bin/logger -t $syslog_tag
+        rm $log
+    fi
+done
 
 # Truncate all remaining logs
-for log in `find $log_dir -type f -regex '.*console.*' -size +${max_size_bytes}c`; do
+for log in `find "$log_dir" -type f -regex '.*console.*' -size +${max_size_bytes}c`; do
+    echo "Truncating log: $log" | /usr/bin/logger -t $syslog_tag
     tmp="$log.tmp"
-    tail -c $truncated_size_bytes $log > $tmp
-    mv -f $tmp $log
+    tail -c $truncated_size_bytes "$log" > "$tmp"
+    mv -f "$tmp" "$log"
 
     # Notify xen that it needs to reload the file
-    domid=${log##*.}
-    xenstore-write /local/logconsole/$domid $log
+    domid="${log##*.}"
+    xenstore-write /local/logconsole/$domid "$log"
     xenstore-rm /local/logconsole/$domid
 done
