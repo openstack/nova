@@ -87,6 +87,7 @@ from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit import utils as test_utils
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event
@@ -10956,7 +10957,8 @@ class ComputePolicyTestCase(BaseTestCase):
                  "network:validate_networks": []}
         self.policy.set_rules(rules)
 
-        self.compute_api.create(self.context, None, '1',
+        self.compute_api.create(self.context, None,
+                                image_href=uuids.host_instance,
                                 availability_zone='1:1')
 
 
