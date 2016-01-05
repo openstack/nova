@@ -614,6 +614,8 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
 
     connection_info = Column(MediumText())
 
+    tag = Column(String(255))
+
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
@@ -834,6 +836,7 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     network_id = Column(Integer)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     uuid = Column(String(36))
+    tag = Column(String(255))
 
 
 # TODO(vish): can these both come from the same baseclass?

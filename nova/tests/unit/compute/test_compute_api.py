@@ -2314,7 +2314,8 @@ class _ComputeAPIUnitTestMixIn(object):
         bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'no_device': False, 'volume_id': '1', 'boot_index': 0,
                  'connection_info': 'inf', 'device_name': '/dev/vda',
-                 'source_type': 'volume', 'destination_type': 'volume'})
+                 'source_type': 'volume', 'destination_type': 'volume',
+                 'tag': None})
         instance_bdms.append(bdm)
 
         expect_meta['properties']['bdm_v2'] = True
@@ -2325,7 +2326,8 @@ class _ComputeAPIUnitTestMixIn(object):
              'volume_size': None, 'source_type': 'snapshot',
              'device_type': None, 'snapshot_id': '1-snapshot',
              'device_name': '/dev/vda',
-             'destination_type': 'volume', 'delete_on_termination': False})
+             'destination_type': 'volume', 'delete_on_termination': False,
+             'tag': None})
 
         # All the db_only fields and the volume ones are removed
         self.compute_api.snapshot_volume_backed(
@@ -2352,7 +2354,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 {'no_device': False, 'volume_id': None, 'boot_index': -1,
                  'connection_info': 'inf', 'device_name': '/dev/vdh',
                  'source_type': 'blank', 'destination_type': 'local',
-                 'guest_format': 'swap', 'delete_on_termination': True})
+                 'guest_format': 'swap', 'delete_on_termination': True,
+                 'tag': None})
         instance_bdms.append(bdm)
         expect_meta['properties']['block_device_mapping'].append(
             {'guest_format': 'swap', 'boot_index': -1, 'no_device': False,
@@ -2360,7 +2363,8 @@ class _ComputeAPIUnitTestMixIn(object):
              'volume_size': None, 'source_type': 'blank',
              'device_type': None, 'snapshot_id': None,
              'device_name': '/dev/vdh',
-             'destination_type': 'local', 'delete_on_termination': True})
+             'destination_type': 'local', 'delete_on_termination': True,
+             'tag': None})
 
         quiesced = [False, False]
 

@@ -362,6 +362,14 @@ class _TestBlockDeviceMappingObject(object):
                                          destination_type='local')
         self.assertFalse(bdm.is_volume)
 
+    def test_obj_make_compatible_pre_1_17(self):
+        values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
+                  'destination_type': 'volume',
+                  'instance_uuid': 'fake-instance'}
+        bdm = objects.BlockDeviceMapping(context=self.context, **values)
+        primitive = bdm.obj_to_primitive(target_version='1.16')
+        self.assertNotIn('tag', primitive)
+
 
 class TestBlockDeviceMappingObject(test_objects._LocalTest,
                                    _TestBlockDeviceMappingObject):

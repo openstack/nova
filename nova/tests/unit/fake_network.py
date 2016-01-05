@@ -60,7 +60,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
                  'instance_uuid': uuids.instance_1,
                  'network_id': 1,
                  'uuid': uuids.vifs_1,
-                 'address': 'DC:AD:BE:FF:EF:01'},
+                 'address': 'DC:AD:BE:FF:EF:01',
+                 'tag': 'fake-tag1'},
                 {'id': 1,
                  'created_at': None,
                  'updated_at': None,
@@ -69,7 +70,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
                  'instance_uuid': uuids.instance_2,
                  'network_id': 21,
                  'uuid': uuids.vifs_2,
-                 'address': 'DC:AD:BE:FF:EF:02'},
+                 'address': 'DC:AD:BE:FF:EF:02',
+                 'tag': 'fake-tag2'},
                 {'id': 2,
                  'created_at': None,
                  'updated_at': None,
@@ -78,7 +80,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
                  'instance_uuid': uuids.instance_1,
                  'network_id': 31,
                  'uuid': uuids.vifs_3,
-                 'address': 'DC:AD:BE:FF:EF:03'}]
+                 'address': 'DC:AD:BE:FF:EF:03',
+                 'tag': None}]
 
         floating_ips = [dict(address='172.16.1.1',
                              fixed_ip_id=100),
@@ -223,7 +226,8 @@ def fake_vif(x):
            'address': 'DE:AD:BE:EF:00:%02x' % x,
            'uuid': getattr(uuids, 'vif%i' % x),
            'network_id': x,
-           'instance_uuid': uuids.vifs_1}
+           'instance_uuid': uuids.vifs_1,
+           'tag': 'fake-tag'}
 
 
 def floating_ip_ids():

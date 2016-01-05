@@ -29,6 +29,7 @@ fake_vif = {
     'network_id': 123,
     'instance_uuid': 'fake-uuid',
     'uuid': 'fake-uuid-2',
+    'tag': 'fake-tag',
 }
 
 
@@ -72,6 +73,7 @@ class _TestVirtualInterface(object):
         vif.network_id = 123
         vif.instance_uuid = 'fake-uuid'
         vif.uuid = 'fake-uuid-2'
+        vif.tag = 'fake-tag'
 
         with mock.patch.object(db, 'virtual_interface_create') as create:
             create.return_value = fake_vif
@@ -87,6 +89,17 @@ class _TestVirtualInterface(object):
             vif_obj.VirtualInterface.delete_by_instance_uuid(self.context,
                                                              'fake-uuid')
             delete.assert_called_with(self.context, 'fake-uuid')
+
+    def test_obj_make_compatible_pre_1_1(self):
+        vif = vif_obj.VirtualInterface(context=self.context)
+        vif.address = '00:00:00:00:00:00'
+        vif.network_id = 123
+        vif.instance_uuid = 'fake-uuid'
+        vif.uuid = 'fake-uuid-2'
+        vif.tag = 'fake-tag'
+
+        primitive = vif.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('tag', primitive)
 
 
 class TestVirtualInterfaceObject(test_objects._LocalTest,
