@@ -1545,6 +1545,12 @@ def pci_device_get_all_by_instance_uuid(context, instance_uuid):
     return IMPL.pci_device_get_all_by_instance_uuid(context, instance_uuid)
 
 
+def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
+    """Get all PCI devices by parent address."""
+    return IMPL.pci_device_get_all_by_parent_addr(context, node_id,
+                                                  parent_addr)
+
+
 def pci_device_destroy(context, node_id, address):
     """Delete a PCI device record."""
     return IMPL.pci_device_destroy(context, node_id, address)

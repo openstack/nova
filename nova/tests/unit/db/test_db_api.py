@@ -8900,6 +8900,18 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.pci_device_get_by_addr, self.admin_context,
                           1, '0000:0f:08:09')
 
+    def test_pci_device_get_all_by_parent_addr(self):
+        v1, v2 = self._create_fake_pci_devs()
+        results = db.pci_device_get_all_by_parent_addr(self.admin_context, 1,
+                                                      '0000:0f:00.1')
+        self._assertEqualListsOfObjects([v1], results, self.ignored_keys)
+
+    def test_pci_device_get_all_by_parent_addr_empty(self):
+        v1, v2 = self._create_fake_pci_devs()
+        results = db.pci_device_get_all_by_parent_addr(self.admin_context, 1,
+                                                      '0000:0f:01.6')
+        self.assertEqual(len(results), 0)
+
     def test_pci_device_get_by_id(self):
         v1, v2 = self._create_fake_pci_devs()
         result = db.pci_device_get_by_id(self.admin_context, 3353)
