@@ -2284,17 +2284,17 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         def fake_call_method(module, method, *args, **kwargs):
             expected_method = expected_methods.pop(0)
             self.assertEqual(expected_method, method)
-            if (expected_method == 'get_object_properties_dict'):
+            if expected_method == 'get_object_properties_dict':
                 return query
-            elif (expected_method == 'ResetVM_Task'):
+            elif expected_method == 'ResetVM_Task':
                 return 'fake-task'
 
         with test.nested(
-                mock.patch.object(vm_util, "get_vm_ref",
-                                  return_value='fake-vm-ref'),
-                mock.patch.object(self._session, "_call_method",
-                                  fake_call_method),
-                mock.patch.object(self._session, "_wait_for_task")
+            mock.patch.object(vm_util, "get_vm_ref",
+                              return_value='fake-vm-ref'),
+            mock.patch.object(self._session, "_call_method",
+                              fake_call_method),
+            mock.patch.object(self._session, "_wait_for_task")
         ) as (_get_vm_ref, fake_call_method, _wait_for_task):
             self._vmops.reboot(self._instance, self.network_info, reboot_type)
             _get_vm_ref.assert_called_once_with(self._session,
