@@ -526,17 +526,19 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             'swap': None,
             'ephemerals': [],
             'block_device_mapping': driver_block_device.convert_volumes([
-                fake_block_device.FakeDbBlockDeviceDict(
-                       {'id': 1, 'instance_uuid': instance_ref['uuid'],
-                        'device_name': '/dev/sda',
-                        'source_type': 'volume',
-                        'destination_type': 'volume',
-                        'delete_on_termination': False,
-                        'snapshot_id': None,
-                        'volume_id': 'abcdedf',
-                        'volume_size': None,
-                        'no_device': None
-                        }),
+                objects.BlockDeviceMapping(
+                    self.ctxt,
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 1, 'instance_uuid': instance_ref['uuid'],
+                         'device_name': '/dev/sda',
+                         'source_type': 'volume',
+                         'destination_type': 'volume',
+                         'delete_on_termination': False,
+                         'snapshot_id': None,
+                         'volume_id': 'abcdedf',
+                         'volume_size': None,
+                         'no_device': None
+                         })),
                 ])
         }
         bdm['block_device_mapping'][0]['connection_info'] = (

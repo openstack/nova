@@ -63,6 +63,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
@@ -2512,16 +2513,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         conn_info = {'driver_volume_type': 'fake'}
-        info = {'block_device_mapping': driver_block_device.convert_volumes([
-                    fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 1,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'device_name': '/dev/vdc'}),
-                    fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 2,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'device_name': '/dev/vdd'}),
-                ])}
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdc'}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdd'}),
+            ]
+        )
+        info = {'block_device_mapping': driver_block_device.convert_volumes(
+            bdms
+        )}
         info['block_device_mapping'][0]['connection_info'] = conn_info
         info['block_device_mapping'][1]['connection_info'] = conn_info
 
@@ -2550,20 +2556,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         conn_info = {'driver_volume_type': 'fake'}
-        info = {'block_device_mapping': driver_block_device.convert_volumes([
-                  fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 1,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'boot_index': 0}),
-                  fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 2,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                        }),
-                  fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 3,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                        }),
-               ])}
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+              fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'boot_index': 0}),
+              fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                    }),
+              fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 3,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                    }),
+           ]
+        )
+        info = {'block_device_mapping': driver_block_device.convert_volumes(
+            bdms
+        )}
 
         info['block_device_mapping'][0]['connection_info'] = conn_info
         info['block_device_mapping'][1]['connection_info'] = conn_info
@@ -2646,17 +2657,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "properties": {"hw_scsi_model": "virtio-scsi"}})
         instance_ref = objects.Instance(**self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdc', 'disk_bus': 'scsi'}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdd', 'disk_bus': 'scsi'}),
+                ]
+        )
         bd_info = {
-            'block_device_mapping': driver_block_device.convert_volumes([
-                    fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 1,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'device_name': '/dev/sdc', 'disk_bus': 'scsi'}),
-                    fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 2,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'device_name': '/dev/sdd', 'disk_bus': 'scsi'}),
-                ])}
+            'block_device_mapping': driver_block_device.convert_volumes(bdms)}
         bd_info['block_device_mapping'][0]['connection_info'] = conn_info
         bd_info['block_device_mapping'][1]['connection_info'] = conn_info
 
@@ -11812,18 +11826,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(host.Host,
                        'get_domain',
                        fake_get_domain)
+        bdm = objects.BlockDeviceMapping(
+            self.context,
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 1, 'guest_format': None,
+                 'boot_index': 0,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'disk_bus': 'virtio',
+                 'device_type': 'disk',
+                 'delete_on_termination': False}))
         block_device_info = {'block_device_mapping':
-                driver_block_device.convert_volumes([
-                    fake_block_device.FakeDbBlockDeviceDict(
-                              {'id': 1, 'guest_format': None,
-                               'boot_index': 0,
-                               'source_type': 'volume',
-                               'destination_type': 'volume',
-                               'device_name': '/dev/vda',
-                               'disk_bus': 'virtio',
-                               'device_type': 'disk',
-                               'delete_on_termination': False}),
-                    ])}
+                driver_block_device.convert_volumes([bdm])}
         block_device_info['block_device_mapping'][0]['connection_info'] = (
                 {'driver_volume_type': 'iscsi'})
         with test.nested(
@@ -12072,14 +12087,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = instance.get_flavor()
         conn_info = {'driver_volume_type': 'fake', 'data': {}}
+        bdm = objects.BlockDeviceMapping(
+            self.context,
+            **fake_block_device.FakeDbBlockDeviceDict({
+                   'id': 1,
+                   'source_type': 'volume',
+                   'destination_type': 'volume',
+                   'device_name': '/dev/vdc'}))
         bdi = {'block_device_mapping':
-               driver_block_device.convert_volumes([
-                   fake_block_device.FakeDbBlockDeviceDict({
-                       'id': 1,
-                       'source_type': 'volume',
-                       'destination_type': 'volume',
-                       'device_name': '/dev/vdc'})
-                ])}
+               driver_block_device.convert_volumes([bdm])}
         bdm = bdi['block_device_mapping'][0]
         bdm['connection_info'] = conn_info
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -12512,12 +12528,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         conn_info = {'driver_volume_type': 'fake'}
-        info = {'block_device_mapping': driver_block_device.convert_volumes([
-                    fake_block_device.FakeDbBlockDeviceDict(
-                        {'id': 0,
-                         'source_type': 'volume', 'destination_type': 'volume',
-                         'device_name': '/dev/sda'}),
-                ])}
+        bdm = objects.BlockDeviceMapping(
+            self.context,
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 0,
+                 'source_type': 'volume', 'destination_type': 'volume',
+                 'device_name': '/dev/sda'}))
+        info = {'block_device_mapping': driver_block_device.convert_volumes(
+                [bdm])}
         info['block_device_mapping'][0]['connection_info'] = conn_info
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -14671,6 +14689,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             'destination_type': 'volume',
             'volume_id': 'fake-volume-id-1',
             'connection_info': '{"fake": "connection_info"}'})
+        fake_bdm = objects.BlockDeviceMapping(self.c, **fake_bdm)
         mock_get_by_volume_id.return_value = fake_bdm
 
         self.drvr._volume_refresh_connection_info(self.c, self.inst,
