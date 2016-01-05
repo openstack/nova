@@ -23,7 +23,6 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
-from nova.i18n import _LE
 
 LOG = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ _PCI_ADDRESS_PATTERN = ("^(hex{4}):(hex{2}):(hex{2}).(oct{1})$".
                                              replace("oct", "[0-7]"))
 _PCI_ADDRESS_REGEX = re.compile(_PCI_ADDRESS_PATTERN)
 
-_VIRTFN_RE = re.compile("virtfn\d+")
+_SRIOV_TOTALVFS = "sriov_totalvfs"
 
 
 def pci_device_prop_match(pci_dev, specs):
@@ -74,33 +73,32 @@ def get_function_by_ifname(ifname):
     """Given the device name, returns the PCI address of a device
     and returns True if the address in a physical function.
     """
-    try:
-        dev_path = "/sys/class/net/%s/device" % ifname
-        dev_info = os.listdir(dev_path)
-        for dev_file in dev_info:
-            if _VIRTFN_RE.match(dev_file):
-                return os.readlink(dev_path).strip("./"), True
-        else:
+    dev_path = "/sys/class/net/%s/device" % ifname
+    sriov_totalvfs = 0
+    if os.path.isdir(dev_path):
+        try:
+            # sriov_totalvfs contains the maximum possible VFs for this PF
+            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+                sriov_totalvfs = int(fd.read())
+                return (os.readlink(dev_path).strip("./"),
+                        sriov_totalvfs > 0)
+        except (IOError, ValueError):
             return os.readlink(dev_path).strip("./"), False
-    except Exception:
-        LOG.error(_LE("PCI device %s not found") % ifname)
-        return None, False
+    return None, False
 
 
-def is_physical_function(pci_addr):
+def is_physical_function(domain, bus, slot, function):
     dev_path = "/sys/bus/pci/devices/%(d)s:%(b)s:%(s)s.%(f)s/" % {
-        "d": pci_addr.domain, "b": pci_addr.bus,
-        "s": pci_addr.slot, "f": pci_addr.func}
-    try:
-        dev_info = os.listdir(dev_path)
-        for dev_file in dev_info:
-            if _VIRTFN_RE.match(dev_file):
-                return True
-        else:
-            return False
-    except Exception:
-        LOG.error(_LE("PCI device %s not found") % dev_path)
-        return False
+        "d": domain, "b": bus, "s": slot, "f": function}
+    if os.path.isdir(dev_path):
+        sriov_totalvfs = 0
+        try:
+            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+                sriov_totalvfs = int(fd.read())
+                return sriov_totalvfs > 0
+        except (IOError, ValueError):
+            pass
+    return False
 
 
 def get_ifname_by_pci_address(pci_addr, pf_interface=False):

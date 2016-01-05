@@ -67,7 +67,8 @@ class PciAddress(object):
     def _check_physical_function(self):
         if ANY in (self.domain, self.bus, self.slot, self.func):
             return
-        self.is_physical_function = utils.is_physical_function(self)
+        self.is_physical_function = utils.is_physical_function(
+            self.domain, self.bus, self.slot, self.func)
 
     def _init_address_fields(self, pci_addr):
         if self.is_physical_function:

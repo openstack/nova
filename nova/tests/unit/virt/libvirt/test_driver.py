@@ -65,6 +65,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
 from nova.pci import manager as pci_manager
+from nova.pci import utils as pci_utils
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
@@ -180,7 +181,94 @@ _fake_NodeDevXml = \
           <capability type='virt_functions'>
           </capability>
         </capability>
-    </device>"""}
+    </device>""",
+    "pci_0000_04_00_1": """
+    <device>
+      <name>pci_0000_04_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:04:00.1</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <domain>0</domain>
+        <bus>4</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    # libvirt  >= 1.3.0 nodedev-dumpxml
+    "pci_0000_03_00_0": """
+    <device>
+        <name>pci_0000_03_00_0</name>
+        <path>/sys/devices/pci0000:00/0000:00:02.0/0000:03:00.0</path>
+        <parent>pci_0000_00_02_0</parent>
+        <driver>
+        <name>mlx5_core</name>
+        </driver>
+        <capability type='pci'>
+        <domain>0</domain>
+        <bus>3</bus>
+        <slot>0</slot>
+        <function>0</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='virt_functions' maxCount='16'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x2'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x3'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x4'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x5'/>
+        </capability>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    "pci_0000_03_00_1": """
+    <device>
+      <name>pci_0000_03_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:03:00.1</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <domain>0</domain>
+        <bus>3</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='virt_functions' maxCount='16'/>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    }
 
 _fake_cpu_info = {
     "arch": "test_arch",
@@ -9867,43 +9955,108 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         host.Host.device_lookup_by_name = fake_nodeDeviceLookupByName
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
-        expect_vf = {
-            "dev_id": "pci_0000_04_00_3",
-            "address": "0000:04:00.3",
-            "product_id": '1521',
-            "numa_node": None,
-            "vendor_id": '8086',
-            "label": 'label_8086_1521',
-            "dev_type": fields.PciDeviceType.SRIOV_PF,
-            }
+        with mock.patch.object(
+            fakelibvirt.Connection, 'getLibVersion') as mock_lib_version:
+            mock_lib_version.return_value = (
+                versionutils.convert_version_to_int(
+                libvirt_driver.MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION) - 1)
 
-        self.assertEqual(expect_vf, actualvf)
-        actualvf = drvr._get_pcidev_info("pci_0000_04_10_7")
-        expect_vf = {
-            "dev_id": "pci_0000_04_10_7",
-            "address": "0000:04:10.7",
-            "product_id": '1520',
-            "numa_node": None,
-            "vendor_id": '8086',
-            "label": 'label_8086_1520',
-            "dev_type": fields.PciDeviceType.SRIOV_VF,
-            "phys_function": '0000:04:00.3',
-            }
-        self.assertEqual(expect_vf, actualvf)
-        actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
-        expect_vf = {
-            "dev_id": "pci_0000_04_11_7",
-            "address": "0000:04:11.7",
-            "product_id": '1520',
-            "vendor_id": '8086',
-            "numa_node": 0,
-            "label": 'label_8086_1520',
-            "dev_type": fields.PciDeviceType.SRIOV_VF,
-            "phys_function": '0000:04:00.3',
-            }
+            actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
+            expect_vf = {
+                "dev_id": "pci_0000_04_00_3",
+                "address": "0000:04:00.3",
+                "product_id": '1521',
+                "numa_node": None,
+                "vendor_id": '8086',
+                "label": 'label_8086_1521',
+                "dev_type": fields.PciDeviceType.SRIOV_PF,
+                }
 
-        self.assertEqual(expect_vf, actualvf)
+            self.assertEqual(expect_vf, actualvf)
+            actualvf = drvr._get_pcidev_info("pci_0000_04_10_7")
+            expect_vf = {
+                "dev_id": "pci_0000_04_10_7",
+                "address": "0000:04:10.7",
+                "product_id": '1520',
+                "numa_node": None,
+                "vendor_id": '8086',
+                "label": 'label_8086_1520',
+                "dev_type": fields.PciDeviceType.SRIOV_VF,
+                "phys_function": '0000:04:00.3',
+                }
+            self.assertEqual(expect_vf, actualvf)
+
+            actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
+            expect_vf = {
+                "dev_id": "pci_0000_04_11_7",
+                "address": "0000:04:11.7",
+                "product_id": '1520',
+                "vendor_id": '8086',
+                "numa_node": 0,
+                "label": 'label_8086_1520',
+                "dev_type": fields.PciDeviceType.SRIOV_VF,
+                "phys_function": '0000:04:00.3',
+                }
+
+            self.assertEqual(expect_vf, actualvf)
+
+            with mock.patch.object(
+                pci_utils, 'is_physical_function', return_value=True):
+                actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
+                expect_vf = {
+                    "dev_id": "pci_0000_04_00_1",
+                    "address": "0000:04:00.1",
+                    "product_id": '1013',
+                    "numa_node": 0,
+                    "vendor_id": '15b3',
+                    "label": 'label_15b3_1013',
+                    "dev_type": fields.PciDeviceType.SRIOV_PF,
+                    }
+                self.assertEqual(expect_vf, actualvf)
+
+            with mock.patch.object(
+                pci_utils, 'is_physical_function', return_value=False):
+                actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
+                expect_vf = {
+                    "dev_id": "pci_0000_04_00_1",
+                    "address": "0000:04:00.1",
+                    "product_id": '1013',
+                    "numa_node": 0,
+                    "vendor_id": '15b3',
+                    "label": 'label_15b3_1013',
+                    "dev_type": fields.PciDeviceType.STANDARD,
+                    }
+                self.assertEqual(expect_vf, actualvf)
+
+        with mock.patch.object(
+            fakelibvirt.Connection, 'getLibVersion') as mock_lib_version:
+            mock_lib_version.return_value = (
+                versionutils.convert_version_to_int(
+                libvirt_driver.MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION))
+            actualvf = drvr._get_pcidev_info("pci_0000_03_00_0")
+            expect_vf = {
+                "dev_id": "pci_0000_03_00_0",
+                "address": "0000:03:00.0",
+                "product_id": '1013',
+                "numa_node": 0,
+                "vendor_id": '15b3',
+                "label": 'label_15b3_1013',
+                "dev_type": fields.PciDeviceType.SRIOV_PF,
+                }
+            self.assertEqual(expect_vf, actualvf)
+
+            actualvf = drvr._get_pcidev_info("pci_0000_03_00_1")
+            expect_vf = {
+                "dev_id": "pci_0000_03_00_1",
+                "address": "0000:03:00.1",
+                "product_id": '1013',
+                "numa_node": 0,
+                "vendor_id": '15b3',
+                "label": 'label_15b3_1013',
+                "dev_type": fields.PciDeviceType.SRIOV_PF,
+                }
+
+            self.assertEqual(expect_vf, actualvf)
 
     def test_list_devices_not_supported(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
