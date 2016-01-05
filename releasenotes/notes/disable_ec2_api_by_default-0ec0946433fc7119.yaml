@@ -1,0 +1,6 @@
+---
+upgrade:
+  - As of Kilo the in tree EC2 API is marked as deprecated.
+    The in tree EC2 API is now disabled by default. You have
+    to add ``ec2`` to the ``enabled_apis`` configuration parameter
+    if you stil want to use it.
