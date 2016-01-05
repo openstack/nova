@@ -2,9 +2,9 @@
 Efficient polling with the Changes-Since parameter
 ==================================================
 
-The ReST API allows you to poll for the status of certain operations by
+The REST API allows you to poll for the status of certain operations by
 performing a **GET** on various elements. Rather than re-downloading and
-re-parsing the full status at each polling interval, your ReST client
+re-parsing the full status at each polling interval, your REST client
 may use the *``changes-since``* parameter to check for changes since a
 previous request. The *``changes-since``* time is specified as an `ISO
 8601 <http://en.wikipedia.org/wiki/ISO_8601>`__ dateTime
