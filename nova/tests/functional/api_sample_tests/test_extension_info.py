@@ -52,15 +52,17 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "extension-info"
-    extra_extensions_to_load = ["os-create-backup"]
-    # NOTE (gmann): run this tests for v21. and v2.1 compatible mode only
-    # as there is no 'extensions/*' API in v2.
-    scenarios = [('v2_1', {'_test': 'v2.1'}),
-                 ('v2_1_compatible', {'_test': 'v2.1_compatible'})]
+    all_extensions = True
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_get_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
-        response = self._do_get('extensions/os-create-backup')
+        response = self._do_get('extensions/os-agents')
         subs = self._get_regexes()
-        self._verify_response('extensions-get-resp', subs, response, 200)
+        # The extension details info are different between legacy v2 and v2.1
+        # stack. namespace link and updated date are different. So keep both
+        # version for testing and default to v2.1
+        template = 'extensions-get-resp'
+        if self._legacy_v2_code:
+            template = 'extensions-get-resp-v2'
+        self._verify_response(template, subs, response, 200)
