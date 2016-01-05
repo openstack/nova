@@ -83,7 +83,6 @@ def wsgi_app(inner_app_v2=None, fake_auth_context=None,
 
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v2
-    mapper['/v1.1'] = api_v2
     mapper['/'] = openstack_api.FaultWrapper(versions.Versions())
     return mapper
 

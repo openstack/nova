@@ -31,37 +31,6 @@ class UrlmapTest(test.NoDBTestCase):
         super(UrlmapTest, self).tearDown()
         nova.tests.unit.image.fake.FakeImageService_reset()
 
-    def test_path_version_v1_1(self):
-        # Test URL path specifying v1.1 returns v2 content.
-        req = webob.Request.blank('/v1.1/')
-        req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
-        self.assertEqual(200, res.status_int)
-        self.assertEqual("application/json", res.content_type)
-        body = jsonutils.loads(res.body)
-        self.assertEqual('v2.0', body['version']['id'])
-
-    def test_content_type_version_v1_1(self):
-        # Test Content-Type specifying v1.1 returns v2 content.
-        req = webob.Request.blank('/')
-        req.content_type = "application/json;version=1.1"
-        req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
-        self.assertEqual(200, res.status_int)
-        self.assertEqual("application/json", res.content_type)
-        body = jsonutils.loads(res.body)
-        self.assertEqual('v2.0', body['version']['id'])
-
-    def test_accept_version_v1_1(self):
-        # Test Accept header specifying v1.1 returns v2 content.
-        req = webob.Request.blank('/')
-        req.accept = "application/json;version=1.1"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
-        self.assertEqual(200, res.status_int)
-        self.assertEqual("application/json", res.content_type)
-        body = jsonutils.loads(res.body)
-        self.assertEqual('v2.0', body['version']['id'])
-
     def test_path_version_v2(self):
         # Test URL path specifying v2 returns v2 content.
         req = webob.Request.blank('/v2/')
