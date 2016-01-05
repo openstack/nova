@@ -203,7 +203,6 @@ multipath: CommandFilter, multipath, root
 # multipathd show status
 multipathd: CommandFilter, multipathd, root
 systool: CommandFilter, systool, root
-sginfo: CommandFilter, sginfo, root
 vgc-cluster: CommandFilter, vgc-cluster, root
 # os_brick/initiator/connector.py
 drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, root, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid
