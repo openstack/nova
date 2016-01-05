@@ -14,7 +14,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova import compute
 
 
 ALIAS = "os-server-usage"
@@ -24,9 +23,6 @@ resp_topic = "OS-SRV-USG"
 
 
 class ServerUsageController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ServerUsageController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
 
     def _extend_server(self, server, instance):
         for k in ['launched_at', 'terminated_at']:
