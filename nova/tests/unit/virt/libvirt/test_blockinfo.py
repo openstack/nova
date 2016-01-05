@@ -131,6 +131,22 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         dev = blockinfo.find_disk_dev_for_disk_bus(mapping, 'fdc')
         self.assertEqual('fda', dev)
 
+    @mock.patch('nova.virt.libvirt.blockinfo.has_disk_dev', return_value=True)
+    def test_find_disk_dev_for_disk_bus_no_free_error(self, has_disk_dev_mock):
+        # Tests that an exception is raised when all devices for a given prefix
+        # are already reserved.
+        mapping = {
+            'disk': {
+                'bus': 'ide',
+                'dev': 'hda',
+                'type': 'cdrom',
+                'boot_index': '1',
+            }
+        }
+        self.assertRaises(exception.NovaException,
+                          blockinfo.find_disk_dev_for_disk_bus,
+                          mapping, 'ide')
+
     def test_get_next_disk_dev(self):
         mapping = {}
         mapping['disk.local'] = blockinfo.get_next_disk_info(mapping,

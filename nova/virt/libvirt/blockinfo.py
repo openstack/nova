@@ -197,7 +197,7 @@ def find_disk_dev_for_disk_bus(mapping, bus,
                 return disk_dev
 
     raise exception.NovaException(
-        _("No free disk device names for prefix '%s'"),
+        _("No free disk device names for prefix '%s'") %
         dev_prefix)
 
 
