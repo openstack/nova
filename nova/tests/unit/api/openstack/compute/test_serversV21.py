@@ -3975,9 +3975,9 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(servers.ServersController, '_get_server')
     def test_create_vol_backed_img_snapshotting_policy_blocks_project(self,
-                                                         mock_is_vol_back,
+                                                         mock_get_server,
                                                          mock_get_uuidi,
-                                                         mock_get_server):
+                                                         mock_is_vol_back):
         """Don't permit a snapshot of a volume backed instance if configured
         not to based on project
         """
@@ -4000,9 +4000,9 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(servers.ServersController, '_get_server')
     def test_create_vol_backed_img_snapshotting_policy_blocks_role(self,
-                                                         mock_is_vol_back,
+                                                         mock_get_server,
                                                          mock_get_uuidi,
-                                                         mock_get_server):
+                                                         mock_is_vol_back):
         """Don't permit a snapshot of a volume backed instance if configured
         not to based on role
         """
