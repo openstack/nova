@@ -92,7 +92,7 @@ class PciAddress(object):
             dbs_fields = dbs.split(':')
             if len(dbs_fields) > 3:
                 raise exception.PciDeviceWrongAddressFormat(address=pci_addr)
-            # If we got a partial address like ":00.", we need to to turn this
+            # If we got a partial address like ":00.", we need to turn this
             # into a domain of ANY, a bus of ANY, and a slot of 00. This code
             # allows the address bus and/or domain to be left off
             dbs_all = [ANY for x in range(3 - len(dbs_fields))]
