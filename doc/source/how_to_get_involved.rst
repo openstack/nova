@@ -38,5 +38,5 @@ to get more involved. Please see the drafts that are available here:
   https://wiki.openstack.org/wiki/Nova/Mentoring
 * Info on process, with a focus on how you can go from an idea
   to getting code merged Nova:
-  https://wiki.openstack.org/wiki/Nova/Liberty_Release_Schedule
+  https://wiki.openstack.org/wiki/Nova/Mitaka_Release_Schedule
 
