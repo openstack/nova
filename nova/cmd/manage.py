@@ -98,6 +98,8 @@ CONF.import_opt('public_interface', 'nova.network.linux_net')
 
 QUOTAS = quota.QUOTAS
 
+_DEFAULT_LOG_LEVELS = config._DEFAULT_LOG_LEVELS + ['oslo_db=INFO']
+
 
 # Decorators for actions
 def args(*args, **kwargs):
@@ -1388,6 +1390,7 @@ def main():
     CONF.register_cli_opt(category_opt)
     try:
         config.parse_args(sys.argv)
+        logging.set_defaults(default_log_levels=_DEFAULT_LOG_LEVELS)
         logging.setup(CONF, "nova")
     except cfg.ConfigFilesNotFoundError:
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
