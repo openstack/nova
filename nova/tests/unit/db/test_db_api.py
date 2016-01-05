@@ -2496,9 +2496,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst2 = self.create_instance_with_args()
         inst3 = self.create_instance_with_args()
 
-        t1 = 'tag1'
-        t2 = 'tag2'
-        t3 = 'tag3'
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
 
         db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t3])
@@ -2514,10 +2514,10 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst1 = self.create_instance_with_args()
         inst2 = self.create_instance_with_args()
 
-        t1 = 'tag1'
-        t2 = 'tag2'
-        t3 = 'tag3'
-        t4 = 'tag4'
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
+        t4 = u'tag4'
 
         db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
@@ -2531,9 +2531,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst2 = self.create_instance_with_args()
         inst3 = self.create_instance_with_args()
 
-        t1 = 'tag1'
-        t2 = 'tag2'
-        t3 = 'tag3'
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
 
         db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t3])
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
@@ -2549,9 +2549,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst1 = self.create_instance_with_args()
         inst2 = self.create_instance_with_args()
 
-        t1 = 'tag1'
-        t2 = 'tag2'
-        t3 = 'tag3'
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
 
         db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
@@ -2565,10 +2565,10 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst2 = self.create_instance_with_args()
         inst3 = self.create_instance_with_args()
 
-        t1 = 'tag1'
-        t2 = 'tag2'
-        t3 = 'tag3'
-        t4 = 'tag4'
+        t1 = u'tag1'
+        t2 = u'tag2'
+        t3 = u'tag3'
+        t4 = u'tag4'
 
         db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t2])
         db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t4])
@@ -3114,7 +3114,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'system_metadata': {'key': 'value'}
         }
         inst_uuid = self.create_instance_with_args(**values)['uuid']
-        db.instance_tag_set(ctxt, inst_uuid, ['tag1', 'tag2'])
+        db.instance_tag_set(ctxt, inst_uuid, [u'tag1', u'tag2'])
         db.instance_destroy(ctxt, inst_uuid)
 
         self.assertRaises(exception.InstanceNotFound,
@@ -9083,7 +9083,7 @@ class TestDBInstanceTags(test.TestCase):
     def test_instance_tag_add(self):
         uuid = self._create_instance()
 
-        tag = 'tag'
+        tag = u'tag'
         tag_ref = db.instance_tag_add(self.context, uuid, tag)
         self.assertEqual(uuid, tag_ref.resource_id)
         self.assertEqual(tag, tag_ref.tag)
@@ -9096,7 +9096,7 @@ class TestDBInstanceTags(test.TestCase):
 
     def test_instance_tag_add_duplication(self):
         uuid = self._create_instance()
-        tag = 'tag'
+        tag = u'tag'
 
         for x in range(5):
             db.instance_tag_add(self.context, uuid, tag)
@@ -9110,10 +9110,10 @@ class TestDBInstanceTags(test.TestCase):
     def test_instance_tag_set(self):
         uuid = self._create_instance()
 
-        tag1 = 'tag1'
-        tag2 = 'tag2'
-        tag3 = 'tag3'
-        tag4 = 'tag4'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
+        tag3 = u'tag3'
+        tag4 = u'tag4'
 
         # Set tags to the instance
         db.instance_tag_set(self.context, uuid, [tag1, tag2])
@@ -9137,8 +9137,8 @@ class TestDBInstanceTags(test.TestCase):
                 return_value=models.Tag.__table__.insert())
     def test_instance_tag_set_empty_add(self, mock_insert):
         uuid = self._create_instance()
-        tag1 = 'tag1'
-        tag2 = 'tag2'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
 
         db.instance_tag_set(self.context, uuid, [tag1, tag2])
 
@@ -9154,12 +9154,12 @@ class TestDBInstanceTags(test.TestCase):
     @mock.patch('sqlalchemy.orm.query.Query.delete')
     def test_instance_tag_set_empty_delete(self, mock_delete):
         uuid = self._create_instance()
-        db.instance_tag_set(self.context, uuid, ['tag1', 'tag2'])
+        db.instance_tag_set(self.context, uuid, [u'tag1', u'tag2'])
 
         # Check delete() wasn't called because there are no tags for deletion
         mock_delete.assert_not_called()
 
-        db.instance_tag_set(self.context, uuid, ['tag1', 'tag3'])
+        db.instance_tag_set(self.context, uuid, [u'tag1', u'tag3'])
 
         # Check delete() was called to delete 'tag2'
         mock_delete.assert_called_once_with(synchronize_session=False)
@@ -9168,9 +9168,9 @@ class TestDBInstanceTags(test.TestCase):
         uuid1 = self._create_instance()
         uuid2 = self._create_instance()
 
-        tag1 = 'tag1'
-        tag2 = 'tag2'
-        tag3 = 'tag3'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
+        tag3 = u'tag3'
 
         db.instance_tag_add(self.context, uuid1, tag1)
         db.instance_tag_add(self.context, uuid2, tag1)
@@ -9198,8 +9198,8 @@ class TestDBInstanceTags(test.TestCase):
 
     def test_instance_tag_delete(self):
         uuid = self._create_instance()
-        tag1 = 'tag1'
-        tag2 = 'tag2'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
 
         db.instance_tag_add(self.context, uuid, tag1)
         db.instance_tag_add(self.context, uuid, tag2)
@@ -9221,12 +9221,12 @@ class TestDBInstanceTags(test.TestCase):
     def test_instance_tag_delete_non_existent(self):
         uuid = self._create_instance()
         self.assertRaises(exception.InstanceTagNotFound,
-                          db.instance_tag_delete, self.context, uuid, 'tag')
+                          db.instance_tag_delete, self.context, uuid, u'tag')
 
     def test_instance_tag_delete_all(self):
         uuid = self._create_instance()
-        tag1 = 'tag1'
-        tag2 = 'tag2'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
 
         db.instance_tag_add(self.context, uuid, tag1)
         db.instance_tag_add(self.context, uuid, tag2)
@@ -9246,8 +9246,8 @@ class TestDBInstanceTags(test.TestCase):
 
     def test_instance_tag_exists(self):
         uuid = self._create_instance()
-        tag1 = 'tag1'
-        tag2 = 'tag2'
+        tag1 = u'tag1'
+        tag2 = u'tag2'
 
         db.instance_tag_add(self.context, uuid, tag1)
 
