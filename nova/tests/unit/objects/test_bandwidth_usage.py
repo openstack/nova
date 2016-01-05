@@ -44,7 +44,7 @@ class _TestBandwidthUsage(test.TestCase):
             obj_field = field
             if obj_field == 'uuid':
                 obj_field = 'instance_uuid'
-            test.assertEqual(db[field], obj[obj_field],
+            test.assertEqual(db[field], getattr(obj, obj_field),
                     'Field %s is not equal' % field)
 
     @staticmethod
