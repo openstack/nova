@@ -47,14 +47,14 @@ class TestLoaderNothingExists(test.NoDBTestCase):
         self.stub_out('os.path.exists', lambda _: False)
 
     def test_relpath_config_not_found(self):
-        self.flags(api_paste_config='api-paste.ini')
+        self.flags(api_paste_config='api-paste.ini', group='wsgi')
         self.assertRaises(
             nova.exception.ConfigNotFound,
             nova.wsgi.Loader,
         )
 
     def test_asbpath_config_not_found(self):
-        self.flags(api_paste_config='/etc/nova/api-paste.ini')
+        self.flags(api_paste_config='/etc/nova/api-paste.ini', group='wsgi')
         self.assertRaises(
             nova.exception.ConfigNotFound,
             nova.wsgi.Loader,
@@ -105,9 +105,10 @@ class TestWSGIServer(test.NoDBTestCase):
         self.assertEqual("test_app", server.name)
 
     def test_custom_max_header_line(self):
-        self.flags(max_header_line=4096)  # Default value is 16384.
+        self.flags(max_header_line=4096, group='wsgi')  # Default is 16384
         nova.wsgi.Server("test_custom_max_header_line", None)
-        self.assertEqual(CONF.max_header_line, eventlet.wsgi.MAX_HEADER_LINE)
+        self.assertEqual(CONF.wsgi.max_header_line,
+                         eventlet.wsgi.MAX_HEADER_LINE)
 
     def test_start_random_port(self):
         server = nova.wsgi.Server("test_random_port", None,
@@ -132,7 +133,7 @@ class TestWSGIServer(test.NoDBTestCase):
                                             '1436895 and 1467145')
     def test_socket_options_for_simple_server(self):
         # test normal socket options has set properly
-        self.flags(tcp_keepidle=500)
+        self.flags(tcp_keepidle=500, group='wsgi')
         server = nova.wsgi.Server("test_socket_options", None,
                                   host="127.0.0.1", port=0)
         server.start()
@@ -142,7 +143,7 @@ class TestWSGIServer(test.NoDBTestCase):
         self.assertEqual(1, sock.getsockopt(socket.SOL_SOCKET,
                                             socket.SO_KEEPALIVE))
         if hasattr(socket, 'TCP_KEEPIDLE'):
-            self.assertEqual(CONF.tcp_keepidle,
+            self.assertEqual(CONF.wsgi.tcp_keepidle,
                              sock.getsockopt(socket.IPPROTO_TCP,
                                              socket.TCP_KEEPIDLE))
         server.stop()
@@ -190,10 +191,10 @@ class TestWSGIServer(test.NoDBTestCase):
         # Resetting pool size to default
         server.reset()
         server.start()
-        self.assertEqual(server._pool.size, CONF.wsgi_default_pool_size)
+        self.assertEqual(server._pool.size, CONF.wsgi.wsgi_default_pool_size)
 
     def test_client_socket_timeout(self):
-        self.flags(client_socket_timeout=5)
+        self.flags(client_socket_timeout=5, group='wsgi')
 
         # mocking eventlet spawn method to check it is called with
         # configured 'client_socket_timeout' value.
@@ -203,12 +204,12 @@ class TestWSGIServer(test.NoDBTestCase):
                                       host="127.0.0.1", port=0)
             server.start()
             _, kwargs = mock_spawn.call_args
-            self.assertEqual(CONF.client_socket_timeout,
+            self.assertEqual(CONF.wsgi.client_socket_timeout,
                              kwargs['socket_timeout'])
             server.stop()
 
     def test_wsgi_keep_alive(self):
-        self.flags(wsgi_keep_alive=False)
+        self.flags(wsgi_keep_alive=False, group='wsgi')
 
         # mocking eventlet spawn method to check it is called with
         # configured 'wsgi_keep_alive' value.
@@ -218,7 +219,7 @@ class TestWSGIServer(test.NoDBTestCase):
                                       host="127.0.0.1", port=0)
             server.start()
             _, kwargs = mock_spawn.call_args
-            self.assertEqual(CONF.wsgi_keep_alive,
+            self.assertEqual(CONF.wsgi.wsgi_keep_alive,
                              kwargs['keepalive'])
             server.stop()
 
@@ -228,9 +229,11 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
 
     def setUp(self):
         super(TestWSGIServerWithSSL, self).setUp()
-        self.flags(enabled_ssl_apis=['fake_ssl'],
+        self.flags(enabled_ssl_apis=['fake_ssl'])
+        self.flags(
                 ssl_cert_file=os.path.join(SSL_CERT_DIR, 'certificate.crt'),
-                ssl_key_file=os.path.join(SSL_CERT_DIR, 'privatekey.key'))
+                ssl_key_file=os.path.join(SSL_CERT_DIR, 'privatekey.key'),
+                group='wsgi')
 
     def test_ssl_server(self):
 
@@ -287,7 +290,7 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
                                             '1436895 and 1467145')
     def test_socket_options_for_ssl_server(self):
         # test normal socket options has set properly
-        self.flags(tcp_keepidle=500)
+        self.flags(tcp_keepidle=500, group='wsgi')
         server = nova.wsgi.Server("test_socket_options", None,
                                   host="127.0.0.1", port=0,
                                   use_ssl=True)
@@ -298,7 +301,7 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         self.assertEqual(1, sock.getsockopt(socket.SOL_SOCKET,
                                             socket.SO_KEEPALIVE))
         if hasattr(socket, 'TCP_KEEPIDLE'):
-            self.assertEqual(CONF.tcp_keepidle,
+            self.assertEqual(CONF.wsgi.tcp_keepidle,
                              sock.getsockopt(socket.IPPROTO_TCP,
                                              socket.TCP_KEEPIDLE))
         server.stop()

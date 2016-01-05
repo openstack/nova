@@ -38,7 +38,8 @@ class ConfFixture(config_fixture.Config):
     def setUp(self):
         super(ConfFixture, self).setUp()
         self.conf.set_default('api_paste_config',
-                              paths.state_path_def('etc/nova/api-paste.ini'))
+                              paths.state_path_def('etc/nova/api-paste.ini'),
+                              group='wsgi')
         self.conf.set_default('host', 'fake-mini')
         self.conf.set_default('compute_driver',
                               'nova.virt.fake.SmallFakeDriver')

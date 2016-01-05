@@ -34,15 +34,17 @@ class ApiPasteV21Fixture(fixtures.Fixture):
     def setUp(self):
         super(ApiPasteV21Fixture, self).setUp()
         CONF.set_default('api_paste_config',
-                         paths.state_path_def('etc/nova/api-paste.ini'))
+                         paths.state_path_def('etc/nova/api-paste.ini'),
+                         group='wsgi')
         tmp_api_paste_dir = self.useFixture(fixtures.TempDir())
         tmp_api_paste_file_name = os.path.join(tmp_api_paste_dir.path,
                                                'fake_api_paste.ini')
-        with open(CONF.api_paste_config, 'r') as orig_api_paste:
+        with open(CONF.wsgi.api_paste_config, 'r') as orig_api_paste:
             with open(tmp_api_paste_file_name, 'w') as tmp_file:
                 for line in orig_api_paste:
                     self._replace_line(tmp_file, line)
-        CONF.set_override('api_paste_config', tmp_api_paste_file_name)
+        CONF.set_override('api_paste_config', tmp_api_paste_file_name,
+                          group='wsgi')
 
 
 class ApiPasteLegacyV2Fixture(ApiPasteV21Fixture):
