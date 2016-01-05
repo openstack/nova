@@ -2037,7 +2037,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(self.node_name, stats['hypervisor_hostname'])
         self.assertIsNone(stats['cpu_info'])
         self.assertEqual(
-                '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]',
+                [("i686", "vmware", "hvm"), ("x86_64", "vmware", "hvm")],
                 stats['supported_instances'])
 
     def test_invalid_datastore_regex(self):
