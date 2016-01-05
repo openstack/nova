@@ -12,6 +12,7 @@
 
 import itertools
 
+import nova.conf
 import nova.virt.configdrive
 import nova.virt.disk.api
 import nova.virt.disk.mount.nbd
@@ -25,7 +26,6 @@ import nova.virt.hyperv.vmops
 import nova.virt.hyperv.volumeops
 import nova.virt.imagecache
 import nova.virt.images
-import nova.virt.ironic.driver
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
@@ -73,7 +73,7 @@ def list_opts():
              nova.virt.hyperv.vmops.hyperv_opts,
              nova.virt.hyperv.volumeops.hyper_volumeops_opts,
          )),
-        ('ironic', nova.virt.ironic.driver.opts),
+        nova.conf.ironic.list_opts(),
         ('libvirt',
          itertools.chain(
              nova.virt.libvirt.driver.libvirt_opts,
