@@ -2955,11 +2955,6 @@ class API(base.Base):
         instance.save()
 
     @wrap_check_policy
-    def get_lock(self, context, instance):
-        """Return the boolean state of given instance's lock."""
-        return self.get(context, instance.uuid)['locked']
-
-    @wrap_check_policy
     @check_instance_lock
     @check_instance_cell
     def reset_network(self, context, instance):
