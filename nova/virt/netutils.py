@@ -250,7 +250,8 @@ def _get_eth_link(vif, ifc_num):
     :param vif: Neutron VIF
     :param ifc_num: Interface index for generating name if the VIF's
         'devname' isn't defined.
-    :return:
+    :return: A dict with 'id', 'vif_id', 'type', 'mtu' and
+        'ethernet_mac_address' as keys
     """
     link_id = vif.get('devname')
     if not link_id:
