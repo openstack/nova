@@ -138,12 +138,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.6: Added 'lxc' and 'uml' enum types to DiskBusField
     # Version 1.7: added img_config_drive field
     # Version 1.8: Added 'lxd' to hypervisor types
-    VERSION = '1.8'
+    # Version 1.9: added hw_cpu_thread_policy field
+    VERSION = '1.9'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 9):
+            primitive.pop('hw_cpu_thread_policy', None)
         if target_version < (1, 7):
             primitive.pop('img_config_drive', None)
         if target_version < (1, 5):
@@ -200,8 +203,11 @@ class ImageMetaProps(base.NovaObject):
         # maximum number of CPU threads per core
         'hw_cpu_max_threads': fields.IntegerField(),
 
-        # CPU thread allocation policy
+        # CPU allocation policy
         'hw_cpu_policy': fields.CPUAllocationPolicyField(),
+
+        # CPU thread allocation policy
+        'hw_cpu_thread_policy': fields.CPUThreadAllocationPolicyField(),
 
         # preferred number of CPU threads per core
         'hw_cpu_threads': fields.IntegerField(),

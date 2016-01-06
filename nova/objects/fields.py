@@ -156,6 +156,30 @@ class CPUAllocationPolicy(Enum):
             valid_values=CPUAllocationPolicy.ALL)
 
 
+class CPUThreadAllocationPolicy(Enum):
+
+    # prefer (default): The host may or may not have hyperthreads. This
+    #  retains the legacy behavior, whereby siblings are prefered when
+    #  available. This is the default if no policy is specified.
+    PREFER = "prefer"
+    # isolate: The host may or many not have hyperthreads. If hyperthreads are
+    #  present, each vCPU will be placed on a different core and no vCPUs from
+    #  other guests will be able to be placed on the same core, i.e. one
+    #  thread sibling is guaranteed to always be unused. If hyperthreads are
+    #  not present, each vCPU will still be placed on a different core and
+    #  there are no thread siblings to be concerned with.
+    ISOLATE = "isolate"
+    # require: The host must have hyperthreads. Each vCPU will be allocated on
+    #   thread siblings.
+    REQUIRE = "require"
+
+    ALL = (PREFER, ISOLATE, REQUIRE)
+
+    def __init__(self):
+        super(CPUThreadAllocationPolicy, self).__init__(
+            valid_values=CPUThreadAllocationPolicy.ALL)
+
+
 class CPUMode(Enum):
     # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
     # into fields on this class
@@ -594,6 +618,10 @@ class ConfigDrivePolicyField(BaseEnumField):
 
 class CPUAllocationPolicyField(BaseEnumField):
     AUTO_TYPE = CPUAllocationPolicy()
+
+
+class CPUThreadAllocationPolicyField(BaseEnumField):
+    AUTO_TYPE = CPUThreadAllocationPolicy()
 
 
 class CPUModeField(BaseEnumField):
