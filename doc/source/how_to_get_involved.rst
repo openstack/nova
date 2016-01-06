@@ -48,19 +48,21 @@ What should I work on?
 So you are starting out your Nova journey, where is a good place to
 start?
 
-Bugs are a great way to cut your Nova teeth:
-https://bugs.launchpad.net/nova/+bugs?field.tag=low-hanging-fruit
+If you'd like to learn how Nova works before changing anything (good idea!), we
+recommend looking for reviews with -1s and -2s and seeing why they got
+downvoted. There is also the :ref:`code-review`. Once you have some
+understanding, start reviewing patches. It's OK to ask people to explain things
+you don't understand. It's also OK to see some potential problems but put a +0.
 
-Also, we guess that you probably want to understand how Nova works
-before changing anything ? Good news, we have a solution for you! Code
-reviews are usually the best way for ramping up on a project and get and
-compare feedback on what's bad or what's cool. For that, you can help
-us. We have a list of trivial bugs that are waiting reviews :
-https://etherpad.openstack.org/p/mitaka-nova-priorities-tracking L56 and
-below
+Another way is to look for a subteam you'd like to get involved with and review
+their patches. See:
+https://etherpad.openstack.org/p/mitaka-nova-priorities-tracking
 
-We also have a list of low hanging fruit work available:
-https://etherpad.openstack.org/p/nova-low-hanging-fruit
+Once you're ready to write code, take a look at some of the work already marked
+as low-hanging fruit:
+
+* https://bugs.launchpad.net/nova/+bugs?field.tag=low-hanging-fruit
+* https://etherpad.openstack.org/p/nova-low-hanging-fruit
 
 How do I get my feature in?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

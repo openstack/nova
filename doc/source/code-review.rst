@@ -1,3 +1,5 @@
+.. _code-review:
+
 ==========================
 Code Review Guide for Nova
 ==========================
