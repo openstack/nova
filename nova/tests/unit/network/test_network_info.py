@@ -743,6 +743,52 @@ iface eth0 inet6 static
         template = self._setup_injected_network_scenario(use_ipv4=False)
         self.assertEqual(expected, template)
 
+    def test_injection_ipv6_only(self):
+        expected = '''\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
+    address 1234:567::2
+    netmask 48
+    gateway 1234:567::1
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
+'''
+        template = self._setup_injected_network_scenario(use_ipv4=False,
+                                                         use_ipv6=True)
+        self.assertEqual(expected, template)
+
+    def test_injection_ipv6_only_no_gateway(self):
+        expected = '''\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
+    address 1234:567::2
+    netmask 48
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
+'''
+        template = self._setup_injected_network_scenario(use_ipv4=False,
+                                                         use_ipv6=True,
+                                                         gateway=False)
+        self.assertEqual(expected, template)
+
     def test_injection_ipv6_two_interfaces(self):
         expected = """\
 # Injected by Nova on instance boot
