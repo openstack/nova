@@ -57,7 +57,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             try:
                 libvirt = importutils.import_module('libvirt')
             except ImportError:
-                LOG.warn(_LW("Libvirt module could not be loaded. "
+                LOG.warning(_LW("Libvirt module could not be loaded. "
                              "NWFilterFirewall will not work correctly."))
         self._host = host
         self.static_filters_configured = False

@@ -132,7 +132,7 @@ class ContextTestCase(test.NoDBTestCase):
                 a = a[0]
             warns.append(str(msg) % a)
 
-        self.stub_out('nova.context.LOG.warn', stub_warn)
+        self.stub_out('nova.context.LOG.warning', stub_warn)
 
         ctxt = context.RequestContext('111',
                                       '222',

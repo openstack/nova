@@ -118,7 +118,7 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         def fake_warn(msg):
             warnings.append(msg)
 
-        self.stubs.Set(bittorrent.LOG, 'warn', fake_warn)
+        self.stubs.Set(bittorrent.LOG, 'warning', fake_warn)
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('fakeimageid.torrent',

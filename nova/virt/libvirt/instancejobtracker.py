@@ -90,7 +90,7 @@ class InstanceJobTracker(object):
                               instance=instance)
             else:
                 # The process is still around
-                LOG.warn(_LW("Failed to kill a long running process "
+                LOG.warning(_LW("Failed to kill a long running process "
                              "%(pid)s related to the instance when "
                              "deleting it."), {'pid': pid},
                          instance=instance)

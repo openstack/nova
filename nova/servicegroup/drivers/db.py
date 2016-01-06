@@ -99,7 +99,7 @@ class DbDriver(base.Driver):
             # as nova-conductor is restarted, so only log this error once.
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.warn(_LW('Lost connection to nova-conductor '
+                LOG.warning(_LW('Lost connection to nova-conductor '
                              'for reporting service status.'))
         except Exception:
             # NOTE(rpodolyaka): we'd like to avoid catching of all possible

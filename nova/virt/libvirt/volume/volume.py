@@ -85,7 +85,7 @@ class LibvirtBaseVolumeDriver(object):
                         new_key = 'disk_' + k
                         setattr(conf, new_key, v)
             else:
-                LOG.warn(_LW('Unknown content in connection_info/'
+                LOG.warning(_LW('Unknown content in connection_info/'
                              'qos_specs: %s'), specs)
 
         # Extract access_mode control parameters

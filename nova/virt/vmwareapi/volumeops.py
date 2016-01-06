@@ -479,7 +479,7 @@ class VMwareVolumeOps(object):
         except oslo_vmw_exceptions.FileNotFoundException:
             # Volume's vmdk was moved; remove the device so that we can
             # relocate the volume.
-            LOG.warn(_LW("Virtual disk: %s of volume's backing not found."),
+            LOG.warning(_LW("Virtual disk: %s of volume's backing not found."),
                      original_device_path, exc_info=True)
             LOG.debug("Removing disk device of volume's backing and "
                       "reattempting relocate.")

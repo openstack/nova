@@ -983,7 +983,7 @@ def try_auto_configure_disk(session, vdi_ref, new_gb):
         _auto_configure_disk(session, vdi_ref, new_gb)
     except exception.CannotResizeDisk as e:
         msg = _LW('Attempted auto_configure_disk failed because: %s')
-        LOG.warn(msg % e)
+        LOG.warning(msg % e)
 
 
 def _make_partition(session, dev, partition_start, partition_end):

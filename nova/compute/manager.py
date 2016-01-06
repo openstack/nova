@@ -3202,7 +3202,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save()
             msg = _LW("Image not found during snapshot")
-            LOG.warn(msg, instance=instance)
+            LOG.warning(msg, instance=instance)
 
     def _post_interrupted_snapshot_cleanup(self, context, instance):
         self.driver.post_interrupted_snapshot_cleanup(context, instance)
@@ -5040,7 +5040,7 @@ class ComputeManager(manager.Manager):
             self.driver.attach_interface(instance, image_meta, network_info[0])
         except exception.NovaException as ex:
             port_id = network_info[0].get('id')
-            LOG.warn(_LW("attach interface failed , try to deallocate "
+            LOG.warning(_LW("attach interface failed , try to deallocate "
                          "port %(port_id)s, reason: %(msg)s"),
                      {'port_id': port_id, 'msg': ex},
                      instance=instance)
@@ -5048,7 +5048,7 @@ class ComputeManager(manager.Manager):
                 self.network_api.deallocate_port_for_instance(
                     context, instance, port_id)
             except Exception:
-                LOG.warn(_LW("deallocate port %(port_id)s failed"),
+                LOG.warning(_LW("deallocate port %(port_id)s failed"),
                              {'port_id': port_id}, instance=instance)
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)
@@ -6534,7 +6534,7 @@ class ComputeManager(manager.Manager):
                         self.driver.power_off(instance)
                     except Exception:
                         msg = _LW("Failed to power off instance")
-                        LOG.warn(msg, instance=instance, exc_info=True)
+                        LOG.warning(msg, instance=instance, exc_info=True)
 
                 elif action == 'reap':
                     LOG.info(_LI("Destroying instance with name label "

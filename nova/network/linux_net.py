@@ -814,7 +814,7 @@ def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
     if num_rules:
         msg = _LW('Removed %(num)d duplicate rules for floating IP %(float)s')
-        LOG.warn(msg, {'num': num_rules, 'float': floating_ip})
+        LOG.warning(msg, {'num': num_rules, 'float': floating_ip})
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()

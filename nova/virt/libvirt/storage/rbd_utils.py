@@ -287,7 +287,7 @@ class RBDDriver(object):
             try:
                 rbd.RBD().remove(client.ioctx, name)
             except rbd.ImageNotFound:
-                LOG.warn(_LW('image %(volume)s in pool %(pool)s can not be '
+                LOG.warning(_LW('image %(volume)s in pool %(pool)s can not be '
                              'found, failed to remove'),
                             {'volume': name, 'pool': self.pool})
             except rbd.ImageHasSnapshots:
@@ -323,7 +323,7 @@ class RBDDriver(object):
                 self.remove_snap(volume, libvirt_utils.RESIZE_SNAPSHOT_NAME,
                                  ignore_errors=True)
             except (rbd.ImageBusy, rbd.ImageHasSnapshots):
-                LOG.warn(_LW('rbd remove %(volume)s in pool %(pool)s '
+                LOG.warning(_LW('rbd remove %(volume)s in pool %(pool)s '
                              'failed'),
                          {'volume': volume, 'pool': self.pool})
             retryctx['retries'] -= 1

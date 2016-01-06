@@ -319,9 +319,10 @@ class MoveClaim(Claim):
 
     def create_migration_context(self):
         if not self.migration:
-            LOG.warn(_LW("Can't create a migration_context record without a "
-                         "migration object specified."),
-                     instance=self.instance)
+            LOG.warning(
+                _LW("Can't create a migration_context record without a "
+                    "migration object specified."),
+                instance=self.instance)
             return
 
         mig_context = objects.MigrationContext(

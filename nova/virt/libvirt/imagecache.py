@@ -329,7 +329,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                             inuse_images.append(backing_path)
 
                         if backing_path in self.unexplained_images:
-                            LOG.warn(_LW('Instance %(instance)s is using a '
+                            LOG.warning(_LW('Instance %(instance)s is using a '
                                          'backing file %(backing)s which '
                                          'does not appear in the image '
                                          'service'),
@@ -550,7 +550,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 self.active_base_files.append(base_file)
 
                 if not base_file:
-                    LOG.warn(_LW('image %(id)s at (%(base_file)s): warning '
+                    LOG.warning(_LW('image %(id)s at (%(base_file)s): warning '
                                  '-- an absent base file is in use! '
                                  'instances: %(instance_list)s'),
                                 {'id': img_id,
@@ -588,7 +588,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         error_images = self.used_swap_images - self.back_swap_images
         for error_image in error_images:
-            LOG.warn(_LW('%s swap image was used by instance'
+            LOG.warning(_LW('%s swap image was used by instance'
                          ' but no back files existing!'), error_image)
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
@@ -614,7 +614,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         # Anything left is an unknown base image
         for img in self.unexplained_images:
-            LOG.warn(_LW('Unknown base file: %s'), img)
+            LOG.warning(_LW('Unknown base file: %s'), img)
             self.removable_base_files.append(img)
 
         # Dump these lists
