@@ -54,7 +54,7 @@ def acquire_port(host):
             ALLOCATED_PORTS.add((host, port))
             return port
         except exception.SocketPortInUseException as e:
-            LOG.warn(e.format_message())
+            LOG.warning(e.format_message())
 
     raise exception.SocketPortRangeExhaustedException(host=host)
 

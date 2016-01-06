@@ -754,7 +754,7 @@ def floating_ip_get(context, id):
             raise exception.FloatingIpNotFound(id=id)
     except db_exc.DBError:
         msg = _LW("Invalid floating IP ID %s in request") % id
-        LOG.warn(msg)
+        LOG.warning(msg)
         raise exception.InvalidID(id=id)
     return result
 
@@ -1018,7 +1018,7 @@ def _floating_ip_get_by_address(context, address, session=None):
             raise exception.FloatingIpNotFoundForAddress(address=address)
     except db_exc.DBError:
         msg = _("Invalid floating IP %s in request") % address
-        LOG.warn(msg)
+        LOG.warning(msg)
         raise exception.InvalidIpAddressError(msg)
 
     # If the floating IP has a project ID set, check to make sure
@@ -1334,7 +1334,7 @@ def _fixed_ip_get_by_address(context, address, session=None,
                 raise exception.FixedIpNotFoundForAddress(address=address)
         except db_exc.DBError:
             msg = _("Invalid fixed IP Address %s in request") % address
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.FixedIpInvalid(msg)
 
         # NOTE(sirp): shouldn't we just use project_only here to restrict the
@@ -1490,7 +1490,7 @@ def virtual_interface_get_by_address(context, address):
                           first()
     except db_exc.DBError:
         msg = _("Invalid virtual interface address %s in request") % address
-        LOG.warn(msg)
+        LOG.warning(msg)
         raise exception.InvalidIpAddressError(msg)
     return vif_ref
 
@@ -1586,7 +1586,7 @@ def _validate_unique_server_name(context, session, name):
         msg = _('Unknown osapi_compute_unique_server_name_scope value: %s'
                 ' Flag must be empty, "global" or'
                 ' "project"') % CONF.osapi_compute_unique_server_name_scope
-        LOG.warn(msg)
+        LOG.warning(msg)
         return
 
     if instance_with_same_name > 0:
@@ -1775,7 +1775,7 @@ def instance_get(context, instance_id, columns_to_join=None):
         # NOTE(sdague): catch all in case the db engine chokes on the
         # id because it's too long of an int to store.
         msg = _("Invalid instance id %s in request") % instance_id
-        LOG.warn(msg)
+        LOG.warning(msg)
         raise exception.InvalidID(id=instance_id)
 
 
@@ -5696,7 +5696,7 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                     msg = _("Add metadata failed for aggregate %(id)s after "
                             "%(retries)s retries") % {"id": aggregate_id,
                                                       "retries": max_retries}
-                    LOG.warn(msg)
+                    LOG.warning(msg)
 
 
 @require_aggregate_exists
@@ -6087,7 +6087,7 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.
-        LOG.warn(_LW("IntegrityError detected when archiving table "
+        LOG.warning(_LW("IntegrityError detected when archiving table "
                      "%(tablename)s: %(error)s"),
                  {'tablename': tablename, 'error': six.text_type(ex)})
         return rows_archived

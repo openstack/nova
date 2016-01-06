@@ -1292,7 +1292,7 @@ class ComputeManager(manager.Manager):
             # NOTE(mriedem): If the _sync_power_states periodic task is
             # disabled we should emit a warning in the logs.
             if CONF.sync_power_state_interval < 0:
-                LOG.warn(_LW('Instance lifecycle events from the compute '
+                LOG.warning(_LW('Instance lifecycle events from the compute '
                              'driver have been disabled. Note that lifecycle '
                              'changes to an instance outside of the compute '
                              'service will not be synchronized '
@@ -1749,7 +1749,7 @@ class ComputeManager(manager.Manager):
         except exception.OverQuota:
             msg = _LW('Failed to create block device for instance due to '
                       'being over volume resource quota')
-            LOG.warn(msg, instance=instance)
+            LOG.warning(msg, instance=instance)
             raise exception.VolumeLimitExceeded()
 
         except Exception:
