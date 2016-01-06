@@ -104,6 +104,7 @@ actually does, and why.
    :maxdepth: 1
 
    how_to_get_involved
+   process
    architecture
    project_scope
    development.environment
@@ -229,4 +230,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
