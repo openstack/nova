@@ -536,3 +536,70 @@ class TestNotificationAction(TestField):
 
     def test_stringify_invalid(self):
         self.assertRaises(ValueError, self.field.stringify, 'magic')
+
+
+class TestPCIAddress(TestField):
+    def setUp(self):
+        super(TestPCIAddress, self).setUp()
+        self.field = fields.Field(fields.PCIAddressField())
+        self.coerce_good_values = [('0000:00:02.0', '0000:00:02.0')]
+        self.coerce_bad_values = [
+            '000:00:02.0',
+            '0000:0:02.0',
+            '0000:00:2.0',
+            '0000:00:02.',
+            '-000:00:02.0',
+            '0000:0-:02.0',
+            '0000:00:-2.0',
+            '0000:00:02.-',
+            '000000:02.0',
+            '0000:0:02.0',
+            '0000:00:020',
+        ]
+        self.to_primitive_values = self.coerce_good_values
+        self.from_primitive_values = self.coerce_good_values
+
+
+class TestUSBAddress(TestField):
+    def setUp(self):
+        super(TestUSBAddress, self).setUp()
+        self.field = fields.Field(fields.USBAddressField())
+        self.coerce_good_values = [('0:0', '0:0')]
+        self.coerce_bad_values = [
+            '00',
+            '0:',
+            '0.0',
+            '-.0',
+        ]
+        self.to_primitive_values = self.coerce_good_values
+        self.from_primitive_values = self.coerce_good_values
+
+
+class TestSCSIAddress(TestField):
+    def setUp(self):
+        super(TestSCSIAddress, self).setUp()
+        self.field = fields.Field(fields.SCSIAddressField())
+        self.coerce_good_values = [('1:0:2:0', '1:0:2:0')]
+        self.coerce_bad_values = [
+                '1:0:2',
+                '-:0:2:0',
+                '1:-:2:0',
+                '1:0:-:0',
+                '1:0:2:-',
+        ]
+        self.to_primitive_values = self.coerce_good_values
+        self.from_primitive_values = self.coerce_good_values
+
+
+class TestIDEAddress(TestField):
+    def setUp(self):
+        super(TestIDEAddress, self).setUp()
+        self.field = fields.Field(fields.IDEAddressField())
+        self.coerce_good_values = [('0:0', '0:0')]
+        self.coerce_bad_values = [
+            '0:2',
+            '00',
+            '0',
+        ]
+        self.to_primitive_values = self.coerce_good_values
+        self.from_primitive_values = self.coerce_good_values
