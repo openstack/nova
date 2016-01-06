@@ -101,7 +101,7 @@ class EC2ValidateTestCase(test.TestCase):
             image['name'] = kwargs.get('name')
             return [image]
 
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
 

@@ -172,7 +172,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         stubs.set_stubs(self.stubs)
         vmwareapi_fake.reset()
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
         self.conn = driver.VMwareVCDriver(None, False)
         self._set_exception_vars()
         self.node_name = self.conn._nodename
@@ -193,7 +193,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             'size': int(metadata['size']),
         }
         self.fake_image_uuid = self.image['id']
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
         self.vnc_host = 'ha-host'
 
     def tearDown(self):

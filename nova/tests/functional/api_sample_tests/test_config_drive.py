@@ -45,7 +45,7 @@ class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
         super(ConfigDriveSampleJsonTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
 
     def test_config_drive_show(self):
         uuid = self._post_server(use_common_server_api_samples=False)

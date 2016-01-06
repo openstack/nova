@@ -25,7 +25,6 @@ from oslo_log import log as logging
 
 from nova.compute import arch
 from nova import exception
-import nova.image.glance
 
 CONF = cfg.CONF
 CONF.import_opt('null_kernel', 'nova.compute.api')
@@ -249,10 +248,15 @@ def get_valid_image_id():
     return AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
 
 
-def stub_out_image_service(stubs):
+def stub_out_image_service(test):
+    """Stubs out the image service for the test with the FakeImageService
+
+    :param test: instance of nova.test.TestCase
+    :returns: The stubbed out FakeImageService object
+    """
     image_service = FakeImageService()
-    stubs.Set(nova.image.glance, 'get_remote_image_service',
-              lambda x, y: (image_service, y))
-    stubs.Set(nova.image.glance, 'get_default_image_service',
-              lambda: image_service)
+    test.stub_out('nova.image.glance.get_remote_image_service',
+                  lambda x, y: (image_service, y))
+    test.stub_out('nova.image.glance.get_default_image_service',
+                  lambda: image_service)
     return image_service

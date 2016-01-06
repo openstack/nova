@@ -170,7 +170,7 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
             pass
 
         self._set_up_controller()
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
         self.stubs.Set(instance_obj.Instance, 'save', fake_save)
         self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)

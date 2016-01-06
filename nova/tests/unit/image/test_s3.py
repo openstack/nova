@@ -94,7 +94,7 @@ class TestS3ImageService(test.TestCase):
         db.s3_image_create(self.context,
                            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.image_service = s3.S3ImageService()
         ec2utils.reset_cache()
 

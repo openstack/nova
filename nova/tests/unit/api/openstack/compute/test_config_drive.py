@@ -48,7 +48,7 @@ class ConfigDriveTestV21(test.TestCase):
         super(ConfigDriveTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self._setup_wsgi()
 
     def test_show(self):
@@ -142,7 +142,7 @@ class ServersControllerCreateTestV21(test.TestCase):
 
             return instance
 
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.stubs.Set(db, 'instance_create', instance_create)
 
     def _test_create_extra(self, params, override_controller):

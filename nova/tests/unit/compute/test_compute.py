@@ -231,7 +231,7 @@ class BaseTestCase(test.TestCase):
             else:
                 raise exception.ImageNotFound(image_id=id)
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
         fake_taskapi = FakeComputeTaskAPI()
@@ -2042,7 +2042,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_delete(self_, ctxt, image_id):
             self.deleted_image_id = image_id
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         instance = self._create_fake_instance_obj()
@@ -3107,7 +3107,7 @@ class ComputeTestCase(BaseTestCase):
                 raise Exception()
 
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
@@ -3169,7 +3169,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
 
         inst_obj = self._get_snapshotting_instance()
 
@@ -11234,7 +11234,7 @@ class ComputeInactiveImageTestCase(BaseTestCase):
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
         self.compute_api = compute.API()
 
