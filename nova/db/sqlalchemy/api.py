@@ -6215,7 +6215,7 @@ def instance_group_get_by_instance(context, instance_uuid):
 
 
 def instance_group_update(context, group_uuid, values):
-    """Update the attributes of an group.
+    """Update the attributes of a group.
 
     If values contains a metadata key, it updates the aggregate metadata
     too. Similarly for the policies and members.
@@ -6254,7 +6254,7 @@ def instance_group_update(context, group_uuid, values):
 
 
 def instance_group_delete(context, group_uuid):
-    """Delete an group."""
+    """Delete a group."""
     session = get_session()
     with session.begin():
         group_id = _instance_group_id(context, group_uuid, session=session)
