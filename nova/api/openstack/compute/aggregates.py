@@ -199,12 +199,19 @@ class AggregateController(wsgi.Controller):
 
     def _marshall_aggregate(self, aggregate):
         _aggregate = {}
-        for key, value in aggregate.items():
+        for key, value in self._build_aggregate_items(aggregate):
             # NOTE(danms): The original API specified non-TZ-aware timestamps
             if isinstance(value, datetime.datetime):
                 value = value.replace(tzinfo=None)
             _aggregate[key] = value
         return {"aggregate": _aggregate}
+
+    def _build_aggregate_items(self, aggregate):
+        keys = aggregate.obj_fields
+        for key in keys:
+            if (aggregate.obj_attr_is_set(key)
+                    or key in aggregate.obj_extra_fields):
+                yield key, getattr(aggregate, key)
 
 
 class Aggregates(extensions.V21APIExtensionBase):

@@ -20,10 +20,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class Aggregate(base.NovaPersistentObject, base.NovaObject,
-                base.NovaObjectDictCompat):
+class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -44,7 +42,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
                 db_key = 'metadetails'
             else:
                 db_key = key
-            aggregate[key] = db_aggregate[db_key]
+            setattr(aggregate, key, db_aggregate[db_key])
         aggregate._context = context
         aggregate.obj_reset_changes()
         return aggregate

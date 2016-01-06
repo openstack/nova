@@ -3059,7 +3059,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup()
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate['id'])
+        result = db.aggregate_get(self.context, aggregate.id)
         self.assertTrue(fake_init_pool.called)
         self.assertThat(self.fake_metadata,
                         matchers.DictMatches(result['metadetails']))
@@ -3138,7 +3138,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup(metadata=self.fake_metadata)
         self.conn._pool.remove_from_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate['id'])
+        result = db.aggregate_get(self.context, aggregate.id)
         self.assertTrue(fake_clear_pool.called)
         self.assertThat({'availability_zone': 'fake_zone',
                 pool_states.POOL_FLAG: 'XenAPI',
@@ -3210,16 +3210,16 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         # let's mock the fact that the aggregate is ready!
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
-        db.aggregate_metadata_add(self.context, aggr['id'], metadata)
+        db.aggregate_metadata_add(self.context, aggr.id, metadata)
         for aggregate_host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
-                                                  aggr['id'], aggregate_host)
+                                                  aggr.id, aggregate_host)
         # let's mock the fact that the aggregate is in error!
         expected = self.api.remove_host_from_aggregate(self.context,
-                                                       aggr['id'],
+                                                       aggr.id,
                                                        values[fake_zone][0])
-        self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
-        self.assertEqual(expected['metadata'][pool_states.KEY],
+        self.assertEqual(len(aggr.hosts) - 1, len(expected.hosts))
+        self.assertEqual(expected.metadata[pool_states.KEY],
                          pool_states.ACTIVE)
 
     def test_remove_host_from_aggregate_invalid_dismissed_status(self):
@@ -3309,10 +3309,11 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
         'hosts': [],
         'metadata': {
             'master_compute': 'master',
-            pool_states.POOL_FLAG: {},
-            pool_states.KEY: {}
+            pool_states.POOL_FLAG: '',
+            pool_states.KEY: ''
             }
         }
+    fake_aggregate = objects.Aggregate(**fake_aggregate)
 
     def test_slave_asks_master_to_add_slave_to_pool(self):
         slave = ResourcePoolWithStubs()

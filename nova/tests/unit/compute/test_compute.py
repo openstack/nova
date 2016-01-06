@@ -344,7 +344,7 @@ class BaseTestCase(test.TestCase):
     def _init_aggregate_with_host(self, aggr, aggr_name, zone, host):
         if not aggr:
             aggr = self.api.create_aggregate(self.context, aggr_name, zone)
-        aggr = self.api.add_host_to_aggregate(self.context, aggr['id'], host)
+        aggr = self.api.add_host_to_aggregate(self.context, aggr.id, host)
         return aggr
 
 
@@ -10247,11 +10247,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # Ensure we can create an aggregate without an availability  zone
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          None)
-        self.api.delete_aggregate(self.context, aggr['id'])
+        self.api.delete_aggregate(self.context, aggr.id)
         db.aggregate_get(self.context.elevated(read_deleted='yes'),
-                         aggr['id'])
+                         aggr.id)
         self.assertRaises(exception.AggregateNotFound,
-                          self.api.delete_aggregate, self.context, aggr['id'])
+                          self.api.delete_aggregate, self.context, aggr.id)
 
     def test_check_az_for_aggregate(self):
         # Ensure all conflict hosts can be returned
@@ -10268,14 +10268,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         metadata = {'availability_zone': 'another_zone'}
         self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
-                          self.context, aggr2['id'], metadata)
+                          self.context, aggr2.id, metadata)
 
     def test_update_aggregate(self):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         fake_notifier.NOTIFICATIONS = []
-        self.api.update_aggregate(self.context, aggr['id'],
+        self.api.update_aggregate(self.context, aggr.id,
                                          {'name': 'new_fake_aggregate'})
         self.assertIsNone(availability_zones._get_cache().get('cache'))
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
@@ -10299,7 +10299,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                fake_host)
         metadata = {'name': 'new_fake_aggregate'}
         fake_notifier.NOTIFICATIONS = []
-        self.api.update_aggregate(self.context, aggr2['id'], metadata)
+        self.api.update_aggregate(self.context, aggr2.id, metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10321,7 +10321,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                        fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
-        self.api.update_aggregate(self.context, aggr1['id'], metadata)
+        self.api.update_aggregate(self.context, aggr1.id, metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10344,12 +10344,12 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         metadata = {'availability_zone': 'another_zone'}
         self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
-                          self.context, aggr2['id'], metadata)
+                          self.context, aggr2.id, metadata)
         fake_host2 = values[0][1][1]
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host2)
         metadata = {'availability_zone': fake_zone}
-        self.api.update_aggregate(self.context, aggr3['id'], metadata)
+        self.api.update_aggregate(self.context, aggr3.id, metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
         msg = fake_notifier.NOTIFICATIONS[13]
         self.assertEqual(msg.event_type,
@@ -10372,7 +10372,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         metadata = {'availability_zone': 'another_zone'}
         self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
-                          self.context, aggr2['id'], metadata)
+                          self.context, aggr2.id, metadata)
 
     def test_update_aggregate_metadata(self):
         # Ensure metadata can be updated.
@@ -10383,7 +10383,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                     'availability_zone': 'fake_zone'}
         fake_notifier.NOTIFICATIONS = []
         availability_zones._get_cache().add('fake_key', 'fake_value')
-        aggr = self.api.update_aggregate_metadata(self.context, aggr['id'],
+        aggr = self.api.update_aggregate_metadata(self.context, aggr.id,
                                                   metadata)
         self.assertIsNone(availability_zones._get_cache().get('fake_key'))
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
@@ -10399,7 +10399,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                       'foo_key2': 'foo_value2',
                                       'availability_zone': 'fake_zone'}
         expected = self.api.update_aggregate_metadata(self.context,
-                                             aggr['id'], metadata)
+                                             aggr.id, metadata)
         self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual('aggregate.updatemetadata.start', msg.event_type)
@@ -10407,7 +10407,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual('aggregate.updatemetadata.end', msg.event_type)
         self.assertEqual(expected_payload_meta_data, msg.payload['meta_data'])
-        self.assertThat(expected['metadata'],
+        self.assertThat(expected.metadata,
                         matchers.DictMatches({'availability_zone': 'fake_zone',
                         'foo_key2': 'foo_value2'}))
 
@@ -10424,7 +10424,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                fake_host)
         metadata = {'foo_key2': 'foo_value3'}
         fake_notifier.NOTIFICATIONS = []
-        aggr2 = self.api.update_aggregate_metadata(self.context, aggr2['id'],
+        aggr2 = self.api.update_aggregate_metadata(self.context, aggr2.id,
                                                   metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -10433,7 +10433,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
-        self.assertThat(aggr2['metadata'],
+        self.assertThat(aggr2.metadata,
                         matchers.DictMatches({'foo_key2': 'foo_value3'}))
 
     def test_update_aggregate_metadata_az_change(self):
@@ -10449,7 +10449,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                        fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
-        self.api.update_aggregate_metadata(self.context, aggr1['id'], metadata)
+        self.api.update_aggregate_metadata(self.context, aggr1.id, metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10465,13 +10465,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_zone')
         metadata = {'foo_key1': 'foo_value1'}
         aggr = self.api.update_aggregate_metadata(self.context,
-                                                  aggr['id'],
+                                                  aggr.id,
                                                   metadata)
         metadata = {'availability_zone': 'new_fake_zone'}
         aggr = self.api.update_aggregate(self.context,
-                                         aggr['id'],
+                                         aggr.id,
                                          metadata)
-        self.assertThat(aggr['metadata'], matchers.DictMatches(
+        self.assertThat(aggr.metadata, matchers.DictMatches(
             {'availability_zone': 'new_fake_zone', 'foo_key1': 'foo_value1'}))
 
     def test_update_aggregate_metadata_az_fails(self):
@@ -10488,11 +10488,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         metadata = {'availability_zone': 'another_zone'}
         self.assertRaises(exception.InvalidAggregateActionUpdateMeta,
                           self.api.update_aggregate_metadata,
-                          self.context, aggr2['id'], metadata)
+                          self.context, aggr2.id, metadata)
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host)
         metadata = {'availability_zone': fake_zone}
-        self.api.update_aggregate_metadata(self.context, aggr3['id'], metadata)
+        self.api.update_aggregate_metadata(self.context, aggr3.id, metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
         msg = fake_notifier.NOTIFICATIONS[13]
         self.assertEqual(msg.event_type,
@@ -10514,7 +10514,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.create.end')
         fake_notifier.NOTIFICATIONS = []
-        self.api.delete_aggregate(self.context, aggr['id'])
+        self.api.delete_aggregate(self.context, aggr.id)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10523,9 +10523,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.delete.end')
         db.aggregate_get(self.context.elevated(read_deleted='yes'),
-                         aggr['id'])
+                         aggr.id)
         self.assertRaises(exception.AggregateNotFound,
-                          self.api.delete_aggregate, self.context, aggr['id'])
+                          self.api.delete_aggregate, self.context, aggr.id)
 
     def test_delete_non_empty_aggregate(self):
         # Ensure InvalidAggregateAction is raised when non empty aggregate.
@@ -10533,9 +10533,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                 [['fake_availability_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_availability_zone')
-        self.api.add_host_to_aggregate(self.context, aggr['id'], 'fake_host')
+        self.api.add_host_to_aggregate(self.context, aggr.id, 'fake_host')
         self.assertRaises(exception.InvalidAggregateActionDelete,
-                          self.api.delete_aggregate, self.context, aggr['id'])
+                          self.api.delete_aggregate, self.context, aggr.id)
 
     def test_add_host_to_aggregate(self):
         # Ensure we can add a host to an aggregate.
@@ -10546,7 +10546,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_aggregate', fake_zone)
 
         def fake_add_aggregate_host(*args, **kwargs):
-            hosts = kwargs["aggregate"]["hosts"]
+            hosts = kwargs["aggregate"].hosts
             self.assertIn(fake_host, hosts)
 
         self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
@@ -10561,7 +10561,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
-                                              aggr['id'], fake_host)
+                                              aggr.id, fake_host)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10569,7 +10569,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.addhost.end')
-        self.assertEqual(len(aggr['hosts']), 1)
+        self.assertEqual(len(aggr.hosts), 1)
 
     def test_add_host_to_aggr_with_no_az(self):
         values = _create_service_entries(self.context)
@@ -10577,15 +10577,15 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
-        aggr = self.api.add_host_to_aggregate(self.context, aggr['id'],
+        aggr = self.api.add_host_to_aggregate(self.context, aggr.id,
                                               fake_host)
         aggr_no_az = self.api.create_aggregate(self.context, 'fake_aggregate2',
                                                None)
         aggr_no_az = self.api.add_host_to_aggregate(self.context,
-                                                    aggr_no_az['id'],
+                                                    aggr_no_az.id,
                                                     fake_host)
-        self.assertIn(fake_host, aggr['hosts'])
-        self.assertIn(fake_host, aggr_no_az['hosts'])
+        self.assertIn(fake_host, aggr.hosts)
+        self.assertIn(fake_host, aggr_no_az.hosts)
 
     def test_add_host_to_multi_az(self):
         # Ensure we can't add a host to different availability zone
@@ -10595,14 +10595,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
-                                              aggr['id'], fake_host)
-        self.assertEqual(len(aggr['hosts']), 1)
+                                              aggr.id, fake_host)
+        self.assertEqual(len(aggr.hosts), 1)
         fake_zone2 = "another_zone"
         aggr2 = self.api.create_aggregate(self.context,
                                          'fake_aggregate2', fake_zone2)
         self.assertRaises(exception.InvalidAggregateActionAdd,
                           self.api.add_host_to_aggregate,
-                          self.context, aggr2['id'], fake_host)
+                          self.context, aggr2.id, fake_host)
 
     def test_add_host_to_multi_az_with_nova_agg(self):
         # Ensure we can't add a host if already existing in an agg with AZ set
@@ -10613,14 +10613,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_aggregate',
                                          CONF.default_availability_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
-                                              aggr['id'], fake_host)
-        self.assertEqual(len(aggr['hosts']), 1)
+                                              aggr.id, fake_host)
+        self.assertEqual(len(aggr.hosts), 1)
         fake_zone2 = "another_zone"
         aggr2 = self.api.create_aggregate(self.context,
                                          'fake_aggregate2', fake_zone2)
         self.assertRaises(exception.InvalidAggregateActionAdd,
                           self.api.add_host_to_aggregate,
-                          self.context, aggr2['id'], fake_host)
+                          self.context, aggr2.id, fake_host)
 
     def test_add_host_to_aggregate_multiple(self):
         # Ensure we can add multiple hosts to an aggregate.
@@ -10630,8 +10630,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_aggregate', fake_zone)
         for host in values[0][1]:
             aggr = self.api.add_host_to_aggregate(self.context,
-                                                  aggr['id'], host)
-        self.assertEqual(len(aggr['hosts']), len(values[0][1]))
+                                                  aggr.id, host)
+        self.assertEqual(len(aggr.hosts), len(values[0][1]))
 
     def test_add_host_to_aggregate_raise_not_found(self):
         # Ensure ComputeHostNotFound is raised when adding invalid host.
@@ -10640,7 +10640,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         self.assertRaises(exception.ComputeHostNotFound,
                           self.api.add_host_to_aggregate,
-                          self.context, aggr['id'], 'invalid_host')
+                          self.context, aggr.id, 'invalid_host')
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
                          'compute.fake-mini')
@@ -10653,11 +10653,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_aggregate', fake_zone)
         for host in values[0][1]:
             aggr = self.api.add_host_to_aggregate(self.context,
-                                                  aggr['id'], host)
+                                                  aggr.id, host)
         host_to_remove = values[0][1][0]
 
         def fake_remove_aggregate_host(*args, **kwargs):
-            hosts = kwargs["aggregate"]["hosts"]
+            hosts = kwargs["aggregate"].hosts
             self.assertNotIn(host_to_remove, hosts)
 
         self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
@@ -10671,7 +10671,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         fake_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,
-                                                       aggr['id'],
+                                                       aggr.id,
                                                        host_to_remove)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -10680,7 +10680,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.removehost.end')
-        self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
+        self.assertEqual(len(aggr.hosts) - 1, len(expected.hosts))
 
     def test_remove_host_from_aggregate_raise_not_found(self):
         # Ensure ComputeHostNotFound is raised when removing invalid host.
@@ -10689,7 +10689,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_zone')
         self.assertRaises(exception.ComputeHostNotFound,
                           self.api.remove_host_from_aggregate,
-                          self.context, aggr['id'], 'invalid_host')
+                          self.context, aggr.id, 'invalid_host')
 
     def test_aggregate_list(self):
         aggregate = self.api.create_aggregate(self.context,
@@ -10700,28 +10700,26 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         meta_aggregate = self.api.create_aggregate(self.context,
                                                    'fake_aggregate2',
                                                    'fake_zone2')
-        self.api.update_aggregate_metadata(self.context, meta_aggregate['id'],
+        self.api.update_aggregate_metadata(self.context, meta_aggregate.id,
                                            metadata)
         aggregate_list = self.api.get_aggregate_list(self.context)
-        self.assertIn(aggregate['id'],
-                      map(lambda x: x['id'], aggregate_list))
-        self.assertIn(meta_aggregate['id'],
-                      map(lambda x: x['id'], aggregate_list))
+        self.assertIn(aggregate.id,
+                      map(lambda x: x.id, aggregate_list))
+        self.assertIn(meta_aggregate.id,
+                      map(lambda x: x.id, aggregate_list))
         self.assertIn('fake_aggregate',
-                      map(lambda x: x['name'], aggregate_list))
+                      map(lambda x: x.name, aggregate_list))
         self.assertIn('fake_aggregate2',
-                      map(lambda x: x['name'], aggregate_list))
+                      map(lambda x: x.name, aggregate_list))
         self.assertIn('fake_zone',
-                      map(lambda x: x['availability_zone'], aggregate_list))
+                      map(lambda x: x.availability_zone, aggregate_list))
         self.assertIn('fake_zone2',
-                      map(lambda x: x['availability_zone'], aggregate_list))
-        test_meta_aggregate = aggregate_list[1]
-        self.assertIn('foo_key1', test_meta_aggregate.get('metadata'))
-        self.assertIn('foo_key2', test_meta_aggregate.get('metadata'))
-        self.assertEqual('foo_value1',
-                         test_meta_aggregate.get('metadata')['foo_key1'])
-        self.assertEqual('foo_value2',
-                         test_meta_aggregate.get('metadata')['foo_key2'])
+                      map(lambda x: x.availability_zone, aggregate_list))
+        test_agg_meta = getattr(aggregate_list[1], 'metadata', None)
+        self.assertIn('foo_key1', test_agg_meta)
+        self.assertIn('foo_key2', test_agg_meta)
+        self.assertEqual('foo_value1', test_agg_meta['foo_key1'])
+        self.assertEqual('foo_value2', test_agg_meta['foo_key2'])
 
     def test_aggregate_list_with_hosts(self):
         values = _create_service_entries(self.context)
@@ -10729,11 +10727,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         host_aggregate = self.api.create_aggregate(self.context,
                                                    'fake_aggregate',
                                                    fake_zone)
-        self.api.add_host_to_aggregate(self.context, host_aggregate['id'],
+        self.api.add_host_to_aggregate(self.context, host_aggregate.id,
                                        values[0][1][0])
         aggregate_list = self.api.get_aggregate_list(self.context)
         aggregate = aggregate_list[0]
-        self.assertIn(values[0][1][0], aggregate.get('hosts'))
+        self.assertIn(values[0][1][0], getattr(aggregate, 'hosts', None))
 
 
 class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
