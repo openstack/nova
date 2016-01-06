@@ -84,7 +84,6 @@ nova.tests.unit.compute.test_compute.ComputeTestCase.test_finish_resize_with_vol
 nova.tests.unit.compute.test_compute.ComputeVolumeTestCase
 nova.tests.unit.compute.test_compute_api.SecurityGroupAPITest
 nova.tests.unit.compute.test_compute_cells.CellsComputeAPITestCase
-nova.tests.unit.compute.test_compute_mgr.ComputeManagerUnitTestCase
 nova.tests.unit.compute.test_host_api.ComputeHostAPICellsTestCase
 nova.tests.unit.compute.test_resources.BaseTestCase
 nova.tests.unit.compute.test_tracker.TestMoveClaim
@@ -203,7 +202,6 @@ nova.tests.unit.virt.xenapi.test_agent.FileInjectionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ResizeFunctionTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.ScanSrTestCase
 nova.tests.unit.virt.xenapi.test_vm_utils.UnplugVbdTestCase
-nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.GetConsoleOutputTestCase
 nova.tests.unit.virt.xenapi.test_volume_utils.ParseVolumeInfoTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.HypervisorPoolTestCase
@@ -213,3 +211,12 @@ nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVMTestCase
 nova.tests.unit.volume.encryptors.test_cryptsetup.CryptsetupEncryptorTestCase
 nova.tests.unit.volume.encryptors.test_luks.LuksEncryptorTestCase
 nova.tests.unit.volume.test_cinder.CinderApiTestCase
+
+##########################################################################
+# NOTE(dims): The following tests randomly fail in the gate. Please be
+# careful before you re-enable them
+##########################################################################
+nova.tests.unit.compute.test_compute_mgr.ComputeManagerUnitTestCase
+nova.tests.unit.network.test_neutronv2.TestNeutronv2
+nova.tests.unit.virt.test_virt_drivers.AbstractDriverTestCase
+nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
