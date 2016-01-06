@@ -256,6 +256,18 @@ class TestCase(testtools.TestCase):
             if key != 'id':
                 del self.__dict__[key]
 
+    def stub_out(self, old, new):
+        """Replace a function for the duration of the test.
+
+        Use the monkey patch fixture to replace a function for the
+        duration of a test. Useful when you want to provide fake
+        methods instead of mocks during testing.
+
+        This should be used instead of self.stubs.Set (which is based
+        on mox) going forward.
+        """
+        self.useFixture(fixtures.MonkeyPatch(old, new))
+
     def flags(self, **kw):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
