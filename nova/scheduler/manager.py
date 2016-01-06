@@ -27,6 +27,7 @@ from oslo_utils import importutils
 import nova.conf
 from nova import exception
 from nova import manager
+from nova import objects
 from nova import quota
 
 
@@ -38,7 +39,9 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='4.2')
+    target = messaging.Target(version='4.3')
+
+    _sentinel = object()
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -57,15 +60,22 @@ class SchedulerManager(manager.Manager):
         self.driver.run_periodic_tasks(context)
 
     @messaging.expected_exceptions(exception.NoValidHost)
-    def select_destinations(self, context, request_spec, filter_properties):
-        """Returns destinations(s) best suited for this request_spec and
-        filter_properties.
+    def select_destinations(self, ctxt,
+                            request_spec=None, filter_properties=None,
+                            spec_obj=_sentinel):
+        """Returns destinations(s) best suited for this RequestSpec.
 
         The result should be a list of dicts with 'host', 'nodename' and
         'limits' as keys.
         """
-        dests = self.driver.select_destinations(context, request_spec,
-            filter_properties)
+
+        # TODO(sbauza): Change the method signature to only accept a spec_obj
+        # argument once API v5 is provided.
+        if spec_obj is self._sentinel:
+            spec_obj = objects.RequestSpec.from_primitives(ctxt,
+                                                           request_spec,
+                                                           filter_properties)
+        dests = self.driver.select_destinations(ctxt, spec_obj)
         return jsonutils.to_primitive(dests)
 
     def update_aggregates(self, ctxt, aggregates):

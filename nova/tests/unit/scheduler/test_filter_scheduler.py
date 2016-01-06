@@ -272,20 +272,20 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(weights.HostWeightHandler,
             'get_weighed_objects', _fake_weigh_objects)
 
-        request_spec = {'instance_type': objects.Flavor(memory_mb=512,
-                                                        root_gb=512,
-                                                        ephemeral_gb=0,
-                                                        vcpus=1),
-                        'instance_properties': {'project_id': 1,
-                                                'root_gb': 512,
-                                                'memory_mb': 512,
-                                                'ephemeral_gb': 0,
-                                                'vcpus': 1,
-                                                'os_type': 'Linux',
-                                                'uuid': 'fake-uuid'},
-                        'num_instances': 1}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  vcpus=1),
+            project_id=1,
+            os_type='Linux',
+            instance_uuid='fake-uuid',
+            num_instances=1,
+            pci_requests=None,
+            numa_topology=None,
+            instance_group=None)
         self.mox.ReplayAll()
-        dests = self.driver.select_destinations(self.context, request_spec, {})
+        dests = self.driver.select_destinations(self.context, spec_obj)
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
@@ -295,29 +295,20 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = [mock.Mock()]
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
-            request_spec = {'num_instances': 1,
-                            'instance_properties': {'project_id': '1',
-                                                    'root_gb': 512,
-                                                    'memory_mb': 512,
-                                                    'ephemeral_gb': 0,
-                                                    'vcpus': 1,
-                                                    'uuid': '1',
-                                                    'pci_requests': None,
-                                                    'availability_zone': None,
-                                                    'numa_topology': None},
-                            'instance_type': objects.Flavor(memory_mb=512,
-                                                            root_gb=512,
-                                                            ephemeral_gb=0,
-                                                            vcpus=1),
-                            'image': {'properties': {}}}
+            expected = {'num_instances': 1,
+                        'instance_properties': {'uuid': 'uuid1'},
+                        'instance_type': {},
+                        'image': {}}
+            spec_obj = objects.RequestSpec(num_instances=1,
+                                           instance_uuid='uuid1')
 
-            self.driver.select_destinations(self.context, request_spec, {})
+            self.driver.select_destinations(self.context, spec_obj)
 
             expected = [
                 mock.call(self.context, 'scheduler.select_destinations.start',
-                 dict(request_spec=request_spec)),
+                 dict(request_spec=expected)),
                 mock.call(self.context, 'scheduler.select_destinations.end',
-                 dict(request_spec=request_spec))]
+                 dict(request_spec=expected))]
             self.assertEqual(expected, mock_info.call_args_list)
 
     def test_select_destinations_no_valid_host(self):
@@ -328,7 +319,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver, '_schedule', _return_no_host)
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations, self.context,
-                {'num_instances': 1}, {})
+                objects.RequestSpec(num_instances=1))
 
     def test_select_destinations_no_valid_host_not_enough(self):
         # Tests that we have fewer hosts available than number of instances
@@ -338,7 +329,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                return_value=consumed_hosts):
             try:
                 self.driver.select_destinations(
-                    self.context, {'num_instances': 3}, {})
+                    self.context, objects.RequestSpec(num_instances=3))
                 self.fail('Expected NoValidHost to be raised.')
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.

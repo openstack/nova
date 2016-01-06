@@ -55,10 +55,22 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.assertIsInstance(manager.driver, self.driver_cls)
 
     def test_select_destination(self):
+        fake_spec = objects.RequestSpec()
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
-            self.manager.select_destinations(None, None, {})
-            select_destinations.assert_called_once_with(None, None, {})
+            self.manager.select_destinations(None, spec_obj=fake_spec)
+            select_destinations.assert_called_once_with(None, fake_spec)
+
+    # TODO(sbauza): Remove that test once the API v4 is removed
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
+    def test_select_destination_with_old_client(self, from_primitives):
+        fake_spec = objects.RequestSpec()
+        from_primitives.return_value = fake_spec
+        with mock.patch.object(self.manager.driver, 'select_destinations'
+                ) as select_destinations:
+            self.manager.select_destinations(None, request_spec='fake_spec',
+                                             filter_properties='fake_props')
+            select_destinations.assert_called_once_with(None, fake_spec)
 
     def test_update_aggregates(self):
         with mock.patch.object(self.manager.driver.host_manager,

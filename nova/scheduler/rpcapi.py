@@ -85,6 +85,9 @@ class SchedulerAPI(object):
         done such that they can handle the version_cap being set to
         4.2.
 
+        * 4.3 - Modify select_destinations() signature by providing a
+                RequestSpec obj
+
     '''
 
     VERSION_ALIASES = {
@@ -105,10 +108,17 @@ class SchedulerAPI(object):
         self.client = rpc.get_client(target, version_cap=version_cap,
                                      serializer=serializer)
 
-    def select_destinations(self, ctxt, request_spec, filter_properties):
-        cctxt = self.client.prepare(version='4.0')
-        return cctxt.call(ctxt, 'select_destinations',
-            request_spec=request_spec, filter_properties=filter_properties)
+    def select_destinations(self, ctxt, spec_obj):
+        version = '4.3'
+        msg_args = {'spec_obj': spec_obj}
+        if not self.client.can_send_version(version):
+            del msg_args['spec_obj']
+            msg_args['request_spec'] = spec_obj.to_legacy_request_spec_dict()
+            msg_args['filter_properties'
+                     ] = spec_obj.to_legacy_filter_properties_dict()
+            version = '4.0'
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'select_destinations', **msg_args)
 
     def update_aggregates(self, ctxt, aggregates):
         # NOTE(sbauza): Yes, it's a fanout, we need to update all schedulers
