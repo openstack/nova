@@ -98,3 +98,45 @@ microversion to access the endpoint.
 You can also obtain specific endpoint version information by performing a GET
 on the base version URL (e.g., `http://openstack.example.com/v2.1/`). You can
 get more information about the version API at :doc:`versions`.
+
+Client Interaction
+==================
+
+A client specifies the microversion of the API they want by using the following
+HTTP header::
+
+  X-OpenStack-Nova-API-Version: 2.4
+
+This acts conceptually like the "Accept" header. Semantically this means:
+
+* If `X-OpenStack-Nova-API-Version` is not provided, act as if the minimum
+  supported microversion was specified.
+
+* If `X-OpenStack-Nova-API-Version` is provided, respond with the API at
+  that microversion. If that's outside of the range of microversions supported,
+  return 406 Not Acceptable.
+
+* If `X-OpenStack-Nova-API-Version` is ``latest`` (special keyword), act as
+  if maximum was specified.
+
+.. warning:: The ``latest`` value is mostly meant for integration testing and
+  would be dangerous to rely on in client code since microversions are not
+  following semver and therefore backward compability is not guaranteed.
+  Clients should always require a specific microversion but limit what is
+  acceptable to the microversion range that it understands at the time.
+
+This means that out of the box, an old client without any knowledge of
+microversions can work with an Openstack installation with microversions
+support.
+
+Two extra headers are always returned in the response:
+
+* X-OpenStack-Nova-API-Version: microversion_number
+* Vary: X-OpenStack-Nova-API-Version
+
+The first header specifies the microversion number of the API which was
+executed.
+
+The second header is used as a hint to caching proxies that the response
+is also dependent on the X-OpenStack-Nova-API-Version and not just
+the body and query parameters. See :rfc:`2616` section 14.44 for details.
