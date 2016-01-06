@@ -27,7 +27,7 @@ To run a subset of any of these tests:
 
 Additional tox targets are available in tox.ini. For more information
 see:
-http://docs.openstack.org/infra/manual/python.html#running-python-unit-tests
+http://docs.openstack.org/project-team-guide/project-setup/python.html
 
 NOTE: if you really really don't want to use tox to run tests, you
 can instead use:
