@@ -1,24 +1,13 @@
 # Spanish translations for nova.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the nova project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
-# Translators:
-# Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
-# Alberto Molina Coballes <alb.molina@gmail.com>, 2012-2014
-# Ying Chun Guo <daisy.ycguo@gmail.com>, 2013
-# David Martinez Morata, 2014
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
-# Jose Ramirez Garcia <jose.ramirez.rk@gmail.com>, 2014
-# Edgar Carballo <karvayoEdgar@gmail.com>, 2013
-# Pablo Sanchez <furybeat@gmail.com>, 2015
-# Marian Tort <marian.tort@gmail.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev32\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-06 06:10+0000\n"
 "PO-Revision-Date: 2015-09-29 06:56+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language: es\n"
@@ -27,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."

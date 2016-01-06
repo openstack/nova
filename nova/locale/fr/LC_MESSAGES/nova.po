@@ -1,36 +1,13 @@
 # French translations for nova.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the nova project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
-# Translators:
-# ariivarua <lchevouline@sgc-ingenierie.com>, 2013
-# Fabien B. <fabien.bavent@gmail.com>, 2013
-# Corina Roe <croe@redhat.com>, 2014
-# CryLegend <crylegend95@gmail.com>, 2013
-# EVEILLARD <stephane.eveillard@gmail.com>, 2013
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
-# Frédéric <frosmont@free.fr>, 2014
-# GuiTsi <g-tsilefski@hotmail.fr>, 2013
-# Jonathan Dupart <jonathan+transifex@dupart.org>, 2014
-# Kodoku <kevintibi@hotmail.com>, 2013
-# Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
-# Eric Marques <marques94@free.fr>, 2013
-# Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
-# Andrew Melim <nokostya.translation@gmail.com>, 2014
-# Olivier Buisson <obuisson1976@gmail.com>, 2012
-# Patrice LACHANCE <patlachance@gmail.com>, 2013
-# Vincent JOBARD <vinzjobard@gmail.com>, 2013
-# Benjamin Godard <ben@hacktopie.net>, 2013
-# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
-# Gael Rehault <gael01@gmail.com>, 2015. #zanata
-# Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev32\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-06 06:10+0000\n"
 "PO-Revision-Date: 2015-10-27 11:28+0000\n"
 "Last-Translator: Gael Rehault <gael01@gmail.com>\n"
 "Language: fr\n"
@@ -39,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."

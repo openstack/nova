@@ -9,9 +9,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev32\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-06 06:11+0000\n"
 "PO-Revision-Date: 2015-10-03 03:02+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language-Team: German\n"
@@ -844,11 +844,6 @@ msgstr "Zurücknahme der gelöschten Instanz"
 msgid "Recovered connection to memcache server for reporting service status."
 msgstr ""
 "Wiederhergestellte Verbindung zu Memcache-Server für Bericht zum "
-"Dienstestatus."
-
-msgid "Recovered connection to nova-conductor for reporting service status."
-msgstr ""
-"Wiederhergestellte Verbindung zu Nova-Conductor für Bericht zum "
 "Dienstestatus."
 
 #, python-format

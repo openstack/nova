@@ -1,22 +1,13 @@
 # Russian translations for nova.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the nova project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
-# Translators:
-# Ilya Alekseyev <ilyaalekseyev@acm.org>, 2013
-# Aleksandr Brezhnev <abrezhnev@gmail.com>, 2013
-# Alexei Rudenko <alexei.rudenko@gmail.com>, 2013
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
-# lykoz <woof@stopme.net>, 2012
-# Stanislav Hanzhin <hanzhin.stas@gmail.com>, 2013
-# dvy <vasily.dubinin@gmail.com>, 2014
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev32\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-06 06:10+0000\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language: ru\n"
@@ -27,7 +18,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."

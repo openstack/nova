@@ -8,9 +8,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev32\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-06 06:11+0000\n"
 "PO-Revision-Date: 2015-09-21 08:44+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
@@ -840,10 +840,6 @@ msgid "Recovered connection to memcache server for reporting service status."
 msgstr ""
 "Připojení k serveru memcache obnoveno a stav služby může být znovu "
 "kontrolován."
-
-msgid "Recovered connection to nova-conductor for reporting service status."
-msgstr ""
-"Připojení k nová-conductor obnoveno a stav služby může být znovu kontrolován."
 
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
