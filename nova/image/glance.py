@@ -23,6 +23,7 @@ import random
 import sys
 import time
 
+import cryptography
 import glanceclient
 from glanceclient.common import http
 import glanceclient.exc
@@ -40,6 +41,8 @@ import six.moves.urllib.parse as urlparse
 from nova import exception
 from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
+from nova import objects
+from nova import signature_utils
 
 
 glance_opts = [
@@ -81,6 +84,10 @@ should be fully qualified urls of the form
                 help='A list of url scheme that can be downloaded directly '
                      'via the direct_url.  Currently supported schemes: '
                      '[file].'),
+    cfg.BoolOpt('verify_glance_signatures',
+                default=False,
+                help='Require Nova to perform signature verification on '
+                     'each image downloaded from Glance.'),
     ]
 
 LOG = logging.getLogger(__name__)
@@ -366,17 +373,70 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
+        # Retrieve properties for verification of Glance image signature
+        verifier = None
+        if CONF.glance.verify_glance_signatures:
+            image_meta_dict = self.show(context, image_id,
+                                        include_locations=False)
+            image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+            img_signature = image_meta.properties.get('img_signature')
+            img_sig_hash_method = image_meta.properties.get(
+                'img_signature_hash_method'
+            )
+            img_sig_cert_uuid = image_meta.properties.get(
+                'img_signature_certificate_uuid'
+            )
+            img_sig_key_type = image_meta.properties.get(
+                'img_signature_key_type'
+            )
+            try:
+                verifier = signature_utils.get_verifier(context,
+                                                        img_sig_cert_uuid,
+                                                        img_sig_hash_method,
+                                                        img_signature,
+                                                        img_sig_key_type)
+            except exception.SignatureVerificationError:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE('Image signature verification failed '
+                                  'for image: %s'), image_id)
+
         close_file = False
         if data is None and dst_path:
             data = open(dst_path, 'wb')
             close_file = True
 
         if data is None:
+
+            # Perform image signature verification
+            if verifier:
+                try:
+                    for chunk in image_chunks:
+                        verifier.update(chunk)
+                    verifier.verify()
+
+                    LOG.info(_LI('Image signature verification succeeded '
+                                 'for image: %s'), image_id)
+
+                except cryptography.exceptions.InvalidSignature:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE('Image signature verification failed '
+                                      'for image: %s'), image_id)
             return image_chunks
         else:
             try:
                 for chunk in image_chunks:
+                    if verifier:
+                        verifier.update(chunk)
                     data.write(chunk)
+                if verifier:
+                    verifier.verify()
+                    LOG.info(_LI('Image signature verification succeeded '
+                                 'for image %s'), image_id)
+            except cryptography.exceptions.InvalidSignature:
+                data.truncate(0)
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE('Image signature verification failed '
+                                  'for image: %s'), image_id)
             except Exception as ex:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE("Error writing to %(path)s: %(exception)s"),

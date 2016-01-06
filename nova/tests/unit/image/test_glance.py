@@ -17,6 +17,7 @@
 import datetime
 from six.moves import StringIO
 
+import cryptography
 import glanceclient.exc
 import mock
 from oslo_config import cfg
@@ -671,6 +672,147 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
         writer.close.assert_called_once_with()
+
+
+class TestDownloadSignatureVerification(test.NoDBTestCase):
+
+    class MockVerifier(object):
+        def update(self, data):
+            return
+
+        def verify(self):
+            return True
+
+    class BadVerifier(object):
+        def update(self, data):
+            return
+
+        def verify(self):
+            raise cryptography.exceptions.InvalidSignature(
+                'Invalid signature.'
+            )
+
+    def setUp(self):
+        super(TestDownloadSignatureVerification, self).setUp()
+        self.flags(verify_glance_signatures=True, group='glance')
+        self.fake_img_props = {
+            'properties': {
+                'img_signature': 'signature',
+                'img_signature_hash_method': 'SHA-224',
+                'img_signature_certificate_uuid': 'uuid',
+                'img_signature_key_type': 'RSA-PSS',
+            }
+        }
+        self.fake_img_data = ['A' * 256, 'B' * 256]
+        client = mock.MagicMock()
+        client.call.return_value = self.fake_img_data
+        self.service = glance.GlanceImageService(client)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_signature_verification(self,
+                                                  mock_get_verifier,
+                                                  mock_show,
+                                                  mock_log):
+        mock_get_verifier.return_value = self.MockVerifier()
+        mock_show.return_value = self.fake_img_props
+        res = self.service.download(context=None, image_id=None,
+                                    data=None, dst_path=None)
+        self.assertEqual(self.fake_img_data, res)
+        mock_get_verifier.assert_called_once_with(None, 'uuid', 'SHA-224',
+                                                  'signature', 'RSA-PSS')
+        mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_dst_path_signature_verification(self,
+                                                      mock_get_verifier,
+                                                      mock_show,
+                                                      mock_log,
+                                                      mock_open):
+        mock_get_verifier.return_value = self.MockVerifier()
+        mock_show.return_value = self.fake_img_props
+        mock_dest = mock.MagicMock()
+        fake_path = 'FAKE_PATH'
+        mock_open.return_value = mock_dest
+        self.service.download(context=None, image_id=None,
+                              data=None, dst_path=fake_path)
+        mock_get_verifier.assert_called_once_with(None, 'uuid', 'SHA-224',
+                                                  'signature', 'RSA-PSS')
+        mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
+        self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)
+        self.assertTrue(mock_dest.close.called)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_get_verifier_failure(self,
+                                                mock_get_verifier,
+                                                mock_show,
+                                                mock_log):
+        mock_get_verifier.side_effect = exception.SignatureVerificationError(
+                                            reason='Signature verification '
+                                                   'failed.'
+                                        )
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(exception.SignatureVerificationError,
+                          self.service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=None)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_invalid_signature(self,
+                                             mock_get_verifier,
+                                             mock_show,
+                                             mock_log):
+        mock_get_verifier.return_value = self.BadVerifier()
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(cryptography.exceptions.InvalidSignature,
+                          self.service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=None)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_missing_signature_metadata(self,
+                                                 mock_show,
+                                                 mock_log):
+        mock_show.return_value = {'properties': {}}
+        self.assertRaisesRegex(exception.SignatureVerificationError,
+                               'Required image properties for signature '
+                               'verification do not exist. Cannot verify '
+                               'signature. Missing property: .*',
+                               self.service.download,
+                               context=None, image_id=None,
+                               data=None, dst_path=None)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_dst_path_signature_fail(self, mock_show,
+                                              mock_log, mock_get_verifier,
+                                              mock_open):
+        mock_get_verifier.return_value = self.BadVerifier()
+        mock_dest = mock.MagicMock()
+        fake_path = 'FAKE_PATH'
+        mock_open.return_value = mock_dest
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(cryptography.exceptions.InvalidSignature,
+                          self.service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=fake_path)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+        mock_open.assert_called_once_with(fake_path, 'wb')
+        mock_dest.truncate.assert_called_once_with(0)
+        self.assertTrue(mock_dest.close.called)
 
 
 class TestIsImageAvailable(test.NoDBTestCase):

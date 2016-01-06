@@ -1133,7 +1133,7 @@ object_data = {
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HVSpec': '1.2-db672e73304da86139086d003f3977e7',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
-    'ImageMetaProps': '1.11-96aa14a8ba226701bbd22e63557a63ea',
+    'ImageMetaProps': '1.12-6a132dee47931447bf86c03c7006d96c',
     'Instance': '2.1-416fdd0dfc33dfa12ff2cfdd8cc32e17',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
