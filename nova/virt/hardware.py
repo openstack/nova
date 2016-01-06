@@ -1034,6 +1034,13 @@ def is_realtime_enabled(flavor):
     return strutils.bool_from_string(flavor_rt)
 
 
+def _get_realtime_mask(flavor, image):
+    """Returns realtime mask based on flavor/image meta"""
+    flavor_mask = flavor.get('extra_specs', {}).get("hw:cpu_realtime_mask")
+    image_mask = image.properties.get("hw_cpu_realtime_mask")
+    return image_mask or flavor_mask
+
+
 def vcpus_realtime_topology(vcpus_set, flavor, image):
     """Partitions vcpus used for realtime and 'normal' vcpus.
 
@@ -1041,10 +1048,7 @@ def vcpus_realtime_topology(vcpus_set, flavor, image):
     vcpus configured for realtime scheduler and set running as a
     'normal' vcpus.
     """
-    flavor_mask = flavor.get('extra_specs', {}).get("hw:cpu_realtime_mask")
-    image_mask = image.properties.get("hw_cpu_realtime_mask")
-
-    mask = image_mask or flavor_mask
+    mask = _get_realtime_mask(flavor, image)
     if not mask:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
@@ -1089,9 +1093,11 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     else:
         cpu_policy = fields.CPUAllocationPolicy.SHARED
 
-    if (is_realtime_enabled(flavor) and
-        cpu_policy != fields.CPUAllocationPolicy.DEDICATED):
+    rt = is_realtime_enabled(flavor)
+    if (rt and cpu_policy != fields.CPUAllocationPolicy.DEDICATED):
         raise exception.RealtimeConfigurationInvalid()
+    elif rt and not _get_realtime_mask(flavor, image_meta):
+        raise exception.RealtimeMaskNotFoundOrInvalid()
 
     flavor_thread_policy = flavor.get('extra_specs', {}).get(
         'hw:cpu_thread_policy')
