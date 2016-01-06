@@ -265,7 +265,6 @@ CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
 CONF.register_opts(instance_cleaning_opts)
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('enabled', 'nova.spice', group='spice')
 
 LOG = logging.getLogger(__name__)
 

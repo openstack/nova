@@ -30,7 +30,6 @@ import nova.image.download.file
 import nova.netconf
 import nova.paths
 import nova.servicegroup.api
-import nova.spice
 import nova.volume
 import nova.volume.cinder
 
@@ -52,9 +51,4 @@ def list_opts():
         ('cinder', nova.volume.cinder.cinder_opts),
         ('api_database', nova.db.sqlalchemy.api.api_db_opts),
         ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
-        ('spice',
-         itertools.chain(
-             nova.cmd.spicehtml5proxy.opts,
-             nova.spice.spice_opts,
-         ))
     ]
