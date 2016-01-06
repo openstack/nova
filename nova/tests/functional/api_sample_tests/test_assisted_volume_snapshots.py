@@ -49,7 +49,6 @@ class AssistedVolumeSnapshotsJsonTests(test_servers.ServersSampleBase):
         response = self._do_post("os-assisted-volume-snapshots",
                                  "snapshot-create-assisted-req",
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response("snapshot-create-assisted-resp",
                               subs, response, 200)
 

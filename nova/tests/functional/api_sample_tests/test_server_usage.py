@@ -46,7 +46,7 @@ class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
 
     def test_show(self):
         response = self._do_get('servers/%s' % self.uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['id'] = self.uuid
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'
@@ -55,7 +55,7 @@ class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
 
     def test_details(self):
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['id'] = self.uuid
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = '1.2.3.4'

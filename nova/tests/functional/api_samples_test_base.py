@@ -257,6 +257,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _verify_response(self, name, subs, response, exp_code,
                          update_links=True):
+        # Always also include the laundry list of base regular
+        # expressions for possible key values in our templates. Test
+        # specific patterns (the value of ``subs``) can override
+        # these.
+        regexes = self._get_regexes()
+        regexes.update(subs)
+        subs = regexes
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
         response_data = pretty_data(response_data)
@@ -291,6 +298,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             vanilla_regexes = self._get_regexes()
             subs['compute_host'] = vanilla_regexes['host_name']
             subs['id'] = vanilla_regexes['id']
+            subs['uuid'] = vanilla_regexes['uuid']
+            subs['image_id'] = vanilla_regexes['uuid']
             subs = self.generalize_subs(subs, vanilla_regexes)
             sample_data = objectify(sample_data)
             self._compare_result(subs, template_data, sample_data, "Sample")

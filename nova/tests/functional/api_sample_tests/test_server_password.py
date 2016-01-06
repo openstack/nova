@@ -47,8 +47,7 @@ class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
         mock_extract_password.return_value = password
         uuid = self._post_server()
         response = self._do_get('servers/%s/os-server-password' % uuid)
-        subs = self._get_regexes()
-        subs['encrypted_password'] = password.replace('+', '\\+')
+        subs = {'encrypted_password': password.replace('+', '\\+')}
         self._verify_response('get-password-resp', subs, response, 200)
 
     def test_reset_password(self):

@@ -39,7 +39,6 @@ class AccessIPsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return f
 
     def _servers_post(self, subs):
-        subs.update(self._get_regexes())
         response = self._do_post('servers', 'server-post-req', subs)
         return self._verify_response('server-post-resp', subs, response, 202)
 

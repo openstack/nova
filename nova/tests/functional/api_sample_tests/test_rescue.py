@@ -63,7 +63,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
 
         # Do a server get to make sure that the 'RESCUE' state is set
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'RESCUE'
@@ -84,7 +84,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
 
         # Do a server get to make sure that the 'RESCUE' state is set
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'RESCUE'
@@ -100,7 +100,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
 
         # Do a server get to make sure that the 'ACTIVE' state is back
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['status'] = 'ACTIVE'

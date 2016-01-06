@@ -165,7 +165,6 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/os-interface'
                                  % instance_uuid,
                                  'attach-interfaces-create-req', subs)
-        subs.update(self._get_regexes())
         self._verify_response('attach-interfaces-create-resp', subs,
                               response, 200)
 

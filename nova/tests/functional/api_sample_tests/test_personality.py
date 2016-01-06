@@ -35,6 +35,5 @@ class PersonalitySampleJsonTest(test_servers.ServersSampleBase):
                                  'server-action-rebuild-req', subs)
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
-        subs.update(self._get_regexes())
         self._verify_response('server-action-rebuild-resp',
                               subs, response, 202)

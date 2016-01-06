@@ -67,7 +67,6 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def test_snapshots_create(self):
         response = self._create_snapshot()
-        self.create_subs.update(self._get_regexes())
         self._verify_response("snapshot-create-resp",
                               self.create_subs, response, 200)
 
@@ -81,13 +80,11 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def test_snapshots_detail(self):
         response = self._do_get('os-snapshots/detail')
-        subs = self._get_regexes()
-        self._verify_response('snapshots-detail-resp', subs, response, 200)
+        self._verify_response('snapshots-detail-resp', {}, response, 200)
 
     def test_snapshots_list(self):
         response = self._do_get('os-snapshots')
-        subs = self._get_regexes()
-        self._verify_response('snapshots-list-resp', subs, response, 200)
+        self._verify_response('snapshots-list-resp', {}, response, 200)
 
     def test_snapshots_show(self):
         response = self._do_get('os-snapshots/100')
@@ -95,7 +92,6 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             'snapshot_name': 'Default name',
             'description': 'Default description'
         }
-        subs.update(self._get_regexes())
         self._verify_response('snapshots-show-resp', subs, response, 200)
 
 
@@ -166,9 +162,7 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         self.stubs.Set(cinder.API, "create", self._stub_volume_create)
         response = self._do_post('os-volumes', 'os-volumes-post-req',
                                  subs_req)
-        subs = self._get_regexes()
-        subs.update(subs_req)
-        self._verify_response('os-volumes-post-resp', subs, response, 200)
+        self._verify_response('os-volumes-post-resp', subs_req, response, 200)
 
     def test_volumes_show(self):
         subs = {
@@ -177,7 +171,6 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         }
         vol_id = self._get_volume_id()
         response = self._do_get('os-volumes/%s' % vol_id)
-        subs.update(self._get_regexes())
         self._verify_response('os-volumes-get-resp', subs, response, 200)
 
     def test_volumes_index(self):
@@ -186,7 +179,6 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
                 'volume_desc': "Volume Description",
         }
         response = self._do_get('os-volumes')
-        subs.update(self._get_regexes())
         self._verify_response('os-volumes-index-resp', subs, response, 200)
 
     def test_volumes_detail(self):
@@ -197,7 +189,6 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
                 'volume_desc': "Volume Description",
         }
         response = self._do_get('os-volumes/detail')
-        subs.update(self._get_regexes())
         self._verify_response('os-volumes-detail-resp', subs, response, 200)
 
     def test_volumes_create(self):
@@ -211,7 +202,9 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         self.assertEqual('', response.content)
 
 
-class VolumeAttachmentsSampleBase(test_servers.ServersSampleBase):
+class VolumeAttachmentsSample(test_servers.ServersSampleBase):
+    extension_name = "os-volumes"
+
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 
         def fake_bdms_get_all_by_instance(context, instance_uuid,
@@ -243,12 +236,8 @@ class VolumeAttachmentsSampleBase(test_servers.ServersSampleBase):
 
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
 
-
-class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
-    extension_name = "os-volumes"
-
     def _get_flags(self):
-        f = super(VolumeAttachmentsSampleJsonTest, self)._get_flags()
+        f = super(VolumeAttachmentsSample, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         f['osapi_compute_extension'].append(
             'nova.api.openstack.compute.contrib.volumes.Volumes')
@@ -284,19 +273,16 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
                                  % server_id,
                                  'attach-volume-to-server-req', subs)
 
-        subs.update(self._get_regexes())
         self._verify_response('attach-volume-to-server-resp', subs,
                               response, 200)
 
     def test_list_volume_attachments(self):
         server_id = self._post_server()
-
         self._stub_db_bdms_get_all_by_instance(server_id)
 
         response = self._do_get('servers/%s/os-volume_attachments'
                                 % server_id)
-        subs = self._get_regexes()
-        self._verify_response('list-volume-attachments-resp', subs,
+        self._verify_response('list-volume-attachments-resp', {},
                               response, 200)
 
     def test_volume_attachment_detail(self):
@@ -306,8 +292,7 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
         self._stub_compute_api_get()
         response = self._do_get('servers/%s/os-volume_attachments/%s'
                                 % (server_id, attach_id))
-        subs = self._get_regexes()
-        self._verify_response('volume-attachment-detail-resp', subs,
+        self._verify_response('volume-attachment-detail-resp', {},
                               response, 200)
 
     def test_volume_attachment_delete(self):

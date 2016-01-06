@@ -45,7 +45,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
     def test_list_servers_detail(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
@@ -55,7 +55,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
     def test_get_server(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
@@ -65,7 +65,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_put('servers/%s' % uuid,
                                 'server-update-put-req', {})
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
@@ -89,7 +89,6 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-rebuild-req', subs)
-        subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''

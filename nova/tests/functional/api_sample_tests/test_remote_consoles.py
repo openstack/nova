@@ -44,9 +44,8 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-vnc-console-post-req',
                                 {'action': 'os-getVNCConsole'})
-        subs = self._get_regexes()
-        subs["url"] = \
-            "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+        subs = {"url":
+                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
         self._verify_response('get-vnc-console-post-resp', subs, response, 200)
 
     def test_get_spice_console(self):
@@ -54,9 +53,8 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-spice-console-post-req',
                                 {'action': 'os-getSPICEConsole'})
-        subs = self._get_regexes()
-        subs["url"] = \
-            "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+        subs = {"url":
+                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
         self._verify_response('get-spice-console-post-resp', subs,
                               response, 200)
 
@@ -65,9 +63,8 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-rdp-console-post-req',
                                 {'action': 'os-getRDPConsole'})
-        subs = self._get_regexes()
-        subs["url"] = \
-            "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+        subs = {"url":
+                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
         self._verify_response('get-rdp-console-post-resp', subs,
                               response, 200)
 
@@ -76,9 +73,8 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-serial-console-post-req',
                                 {'action': 'os-getSerialConsole'})
-        subs = self._get_regexes()
-        subs["url"] = \
-            "((ws?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+        subs = {"url":
+                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
         self._verify_response('get-serial-console-post-resp', subs,
                               response, 200)
 
@@ -102,8 +98,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/remote-consoles' % uuid,
                                  'create-vnc-console-req', body,
                                  api_version='2.6')
-        subs = self._get_regexes()
-        subs["url"] = self.http_regex
+        subs = {"url": self.http_regex}
         self._verify_response('create-vnc-console-resp', subs, response, 200)
 
 
@@ -124,6 +119,5 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/remote-consoles' % uuid,
                                  'create-mks-console-req', body,
                                  api_version='2.8')
-        subs = self._get_regexes()
-        subs["url"] = self.http_regex
+        subs = {"url": self.http_regex}
         self._verify_response('create-mks-console-resp', subs, response, 200)

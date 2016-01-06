@@ -44,7 +44,7 @@ class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
 
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
@@ -57,7 +57,7 @@ class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
 
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'

@@ -46,8 +46,7 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         self._create_consoles(uuid)
         response = self._do_get('servers/%s/consoles/1' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('consoles-get-resp', subs, response, 200)
+        self._verify_response('consoles-get-resp', {}, response, 200)
 
     def test_console_delete(self):
         uuid = self._post_server()

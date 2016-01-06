@@ -71,8 +71,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  server_req, req_subs)
         if server_resp:
-            subs = self._get_regexes()
-            self._verify_response(server_resp, subs, response,
+            self._verify_response(server_resp, {}, response,
                                   expected_resp_code)
         else:
             # NOTE(gibi): no server_resp means we expect empty body as

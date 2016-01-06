@@ -42,7 +42,6 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
             'max_count': "3"
         }
         response = self._do_post('servers', 'multiple-create-post-req', subs)
-        subs.update(self._get_regexes())
         self._verify_response('multiple-create-post-resp', subs, response, 202)
 
     def test_multiple_create_without_reservation_id(self):
@@ -54,6 +53,5 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers', 'multiple-create-no-resv-post-req',
                                   subs)
-        subs.update(self._get_regexes())
         self._verify_response('multiple-create-no-resv-post-resp', subs,
                               response, 202)

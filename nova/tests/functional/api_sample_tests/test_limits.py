@@ -44,5 +44,4 @@ class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_limits_get(self):
         response = self._do_get('limits')
-        subs = self._get_regexes()
-        self._verify_response(self.template, subs, response, 200)
+        self._verify_response(self.template, {}, response, 200)

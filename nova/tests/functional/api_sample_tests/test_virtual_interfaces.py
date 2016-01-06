@@ -47,8 +47,7 @@ class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
 
         response = self._do_get('servers/%s/os-virtual-interfaces' % uuid)
 
-        subs = self._get_regexes()
-        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+        subs = {'mac_addr': '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'}
         self._verify_response(self.template, subs, response, 200)
 
 
