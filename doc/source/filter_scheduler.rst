@@ -364,11 +364,12 @@ easily. Therefore the final weight for the object will be::
 
     weight = w1_multiplier * norm(w1) + w2_multiplier * norm(w2) + ...
 
-A weigher should be a subclass of ``weights.BaseHostWeigher`` and they must
-implement the ``weight_multiplier`` and ``weight_objects`` methods. If the
-``weight_objects`` method is overridden it just return a list of weights, and not
-modify the weight of the object directly, since final weights are normalized and
-computed by ``weight.BaseWeightHandler``.
+A weigher should be a subclass of ``weights.BaseHostWeigher`` and they can implement
+both the ``weight_multiplier`` and ``_weight_object`` methods or just implement the
+``weight_objects`` method. ``weight_objects`` method is overridden only if you need
+access to all objects in order to calculate weights, and it just return a list of weights,
+and not modify the weight of the object directly, since final weights are normalized
+and computed by ``weight.BaseWeightHandler``.
 
 The Filter Scheduler weighs hosts based on the config option
 `scheduler_weight_classes`, this defaults to
