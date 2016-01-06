@@ -159,6 +159,10 @@ class HostState(object):
 
         @utils.synchronized(self._lock_name)
         def _locked_update(self, compute, service, aggregates, inst_dict):
+            # Scheduler API is inherently multi-threaded as every incoming RPC
+            # message will be dispatched in it's own green thread. So the
+            # shared host state should be updated in a consistent way to make
+            # sure its data is valid under concurrent write operations.
             if compute is not None:
                 LOG.debug("Update host state from compute node: %s", compute)
                 self._update_from_compute_node(compute)
@@ -238,9 +242,21 @@ class HostState(object):
         self.cpu_allocation_ratio = compute.cpu_allocation_ratio
         self.ram_allocation_ratio = compute.ram_allocation_ratio
 
-    @set_update_time_on_success
     def consume_from_request(self, spec_obj):
         """Incrementally update host state from an RequestSpec object."""
+
+        @utils.synchronized(self._lock_name)
+        @set_update_time_on_success
+        def _locked(self, spec_obj):
+            # Scheduler API is inherently multi-threaded as every incoming RPC
+            # message will be dispatched in it's own green thread. So the
+            # shared host state should be consumed in a consistent way to make
+            # sure its data is valid under concurrent write operations.
+            self._locked_consume_from_request(spec_obj)
+
+        return _locked(self, spec_obj)
+
+    def _locked_consume_from_request(self, spec_obj):
         disk_mb = (spec_obj.root_gb +
                    spec_obj.ephemeral_gb) * 1024
         ram_mb = spec_obj.memory_mb
