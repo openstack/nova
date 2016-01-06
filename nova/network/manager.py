@@ -407,7 +407,7 @@ class NetworkManager(manager.Manager):
 
         try:
             self._allocate_mac_addresses(admin_context, instance_uuid,
-                                         networks, macs)
+                                         networks, macs, requested_networks)
         except Exception:
             with excutils.save_and_reraise_exception():
                 # If we fail to allocate any one mac address, clean up all
@@ -663,26 +663,38 @@ class NetworkManager(manager.Manager):
 
         return subnets
 
-    def _allocate_mac_addresses(self, context, instance_uuid, networks, macs):
+    def _allocate_mac_addresses(self, context, instance_uuid, networks, macs,
+                                requested_networks):
         """Generates mac addresses and creates vif rows in db for them."""
         # make a copy we can mutate
         if macs is not None:
             available_macs = set(macs)
 
+        if requested_networks:
+            tags_by_network = {
+                network.network_id: network.tag if 'tag' in network else None
+                for network in requested_networks}
+        else:
+            tags_by_network = {}
+
         for network in networks:
             if macs is None:
-                self._add_virtual_interface(context, instance_uuid,
-                                           network['id'])
+                self._add_virtual_interface(
+                    context, instance_uuid,
+                    network['id'],
+                    tag=tags_by_network.get(network['uuid']))
             else:
                 try:
                     mac = available_macs.pop()
                 except KeyError:
                     raise exception.VirtualInterfaceCreateException()
-                self._add_virtual_interface(context, instance_uuid,
-                                           network['id'], mac)
+                self._add_virtual_interface(
+                    context, instance_uuid,
+                    network['id'], mac,
+                    tag=tags_by_network.get(network['uuid']))
 
     def _add_virtual_interface(self, context, instance_uuid, network_id,
-                              mac=None):
+                               mac=None, tag=None):
         attempts = 1 if mac else CONF.create_unique_mac_address_attempts
         for i in range(attempts):
             try:
@@ -691,6 +703,7 @@ class NetworkManager(manager.Manager):
                 vif.instance_uuid = instance_uuid
                 vif.network_id = network_id
                 vif.uuid = str(uuid.uuid4())
+                vif.tag = tag
                 vif.create()
                 return vif
             except exception.VirtualInterfaceCreateException:

@@ -192,7 +192,7 @@ class API(base_api.NetworkAPI):
         :param fixed_ip: Optional fixed IP to use from the given network.
         :param security_group_ids: Optional list of security group IDs to
             apply to the port.
-        :returns: ID of the created port.
+        :returns: The created port.
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
         :raises NoMoreFixedIps: If neutron fails with
             IpAddressGenerationFailure error.
@@ -220,7 +220,7 @@ class API(base_api.NetworkAPI):
 
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
-            return port_id
+            return port
         except neutron_client_exc.InvalidIpForNetworkClient:
             LOG.warning(_LW('Neutron error: %(ip)s is not a valid IP address '
                             'for network %(network_id)s.'),
@@ -629,6 +629,10 @@ class API(base_api.NetworkAPI):
         ports_in_requested_order = []
         nets_in_requested_order = []
         for request in ordered_networks:
+            vifobj = objects.VirtualInterface(context)
+            vifobj.instance_uuid = instance.uuid
+            vifobj.tag = request.tag if 'tag' in request else None
+
             # Network lookup for available network_id
             network = None
             for net in nets:
@@ -665,23 +669,31 @@ class API(base_api.NetworkAPI):
                     bind_host_id=bind_host_id)
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
-                self._populate_mac_address(
+                updated_mac = self._populate_mac_address(
                     instance, port_req_body, available_macs)
                 if dhcp_opts is not None:
                     port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
 
                 if not request.port_id:
-                    created_port_id = self._create_port(
+                    created_port = self._create_port(
                             port_client, instance, request.network_id,
                             port_req_body, request.address,
                             security_group_ids)
+                    created_port_id = created_port['id']
                     created_port_ids.append(created_port_id)
                     ports_in_requested_order.append(created_port_id)
+                    vifobj.uuid = created_port_id
+                    vifobj.address = created_port['mac_address']
                 else:
                     self._update_port(
                         port_client, instance, request.port_id, port_req_body)
                     preexisting_port_ids.append(request.port_id)
                     ports_in_requested_order.append(request.port_id)
+                    vifobj.uuid = request.port_id
+                    vifobj.address = (updated_mac or
+                                      ports[request.port_id]['mac_address'])
+
+                vifobj.create()
 
                 self._update_port_dns_name(context, instance, network,
                                            ports_in_requested_order[-1],

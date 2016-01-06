@@ -45,6 +45,7 @@ from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
+from nova.objects import network_request as net_req_obj
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
@@ -265,6 +266,87 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         ):
             instance.info_cache = None
             self.compute._delete_instance(self.context, instance, [], quotas)
+
+    def test_check_device_tagging_no_tagging(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       instance_uuid=uuids.instance)])
+        net_req = net_req_obj.NetworkRequest(tag=None)
+        net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=False):
+            self.compute._check_device_tagging(net_req_list, bdms)
+
+    def test_check_device_tagging_no_networks(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       instance_uuid=uuids.instance)])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=False):
+            self.compute._check_device_tagging(None, bdms)
+
+    def test_check_device_tagging_tagged_net_req_no_virt_support(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       instance_uuid=uuids.instance)])
+        net_req = net_req_obj.NetworkRequest(port_id='bar', tag='foo')
+        net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=False):
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._check_device_tagging,
+                              net_req_list, bdms)
+
+    def test_check_device_tagging_tagged_bdm_no_driver_support(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       tag='foo',
+                                       instance_uuid=uuids.instance)])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=False):
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._check_device_tagging,
+                              None, bdms)
+
+    def test_check_device_tagging_tagged_bdm_no_driver_support_declared(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       tag='foo',
+                                       instance_uuid=uuids.instance)])
+        with mock.patch.dict(self.compute.driver.capabilities):
+            self.compute.driver.capabilities.pop('supports_device_tagging',
+                                                 None)
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._check_device_tagging,
+                              None, bdms)
+
+    def test_check_device_tagging_tagged_bdm_with_driver_support(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       tag='foo',
+                                       instance_uuid=uuids.instance)])
+        net_req = net_req_obj.NetworkRequest(network_id='bar')
+        net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=True):
+            self.compute._check_device_tagging(net_req_list, bdms)
+
+    def test_check_device_tagging_tagged_net_req_with_driver_support(self):
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(source_type='volume',
+                                       destination_type='volume',
+                                       instance_uuid=uuids.instance)])
+        net_req = net_req_obj.NetworkRequest(network_id='bar', tag='foo')
+        net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_device_tagging=True):
+            self.compute._check_device_tagging(net_req_list, bdms)
 
     @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(objects.Instance, 'save')

@@ -1704,6 +1704,24 @@ class ComputeManager(manager.Manager):
                       requested_networks, security_groups,
                       block_device_mapping, node, limits)
 
+    def _check_device_tagging(self, requested_networks, block_device_mapping):
+        tagging_requested = False
+        if requested_networks:
+            for net in requested_networks:
+                if 'tag' in net and net.tag is not None:
+                    tagging_requested = True
+                    break
+        if block_device_mapping and not tagging_requested:
+            for bdm in block_device_mapping:
+                if 'tag' in bdm and bdm.tag is not None:
+                    tagging_requested = True
+                    break
+        if (tagging_requested and
+                not self.driver.capabilities.get('supports_device_tagging')):
+            raise exception.BuildAbortException('Attempt to boot guest with '
+                                                'tagged devices on host that '
+                                                'does not support tagging.')
+
     @hooks.add_hook('build_instance')
     @wrap_exception()
     @reverts_task_state
@@ -1856,6 +1874,9 @@ class ComputeManager(manager.Manager):
         image_name = image.get('name')
         self._notify_about_instance_usage(context, instance, 'create.start',
                 extra_usage_info={'image_name': image_name})
+
+        self._check_device_tagging(requested_networks, block_device_mapping)
+
         try:
             rt = self._get_resource_tracker(node)
             with rt.instance_claim(context, instance, limits):
