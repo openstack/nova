@@ -20,6 +20,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 class StatsTestCase(test.NoDBTestCase):
@@ -37,7 +38,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": None,
             "vm_state": vm_states.BUILDING,
             "vcpus": 1,
-            "uuid": "12-34-56-78-90",
+            "uuid": uuids.stats_linux_instance_1,
         }
         if values:
             instance.update(values)
@@ -79,7 +80,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": None,
             "vm_state": vm_states.BUILDING,
             "vcpus": 3,
-            "uuid": "12-34-56-78-90",
+            "uuid": uuids.stats_linux_instance_1,
         }
         self.stats.update_stats_for_instance(self._fake_object(instance))
 
@@ -89,7 +90,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": task_states.SCHEDULING,
             "vm_state": None,
             "vcpus": 1,
-            "uuid": "23-45-67-89-01",
+            "uuid": uuids.stats_freebsd_instance,
         }
         self.stats.update_stats_for_instance(self._fake_object(instance))
 
@@ -99,7 +100,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": task_states.SCHEDULING,
             "vm_state": vm_states.BUILDING,
             "vcpus": 2,
-            "uuid": "34-56-78-90-12",
+            "uuid": uuids.stats_linux_instance_2,
         }
 
         self.stats.update_stats_for_instance(self._fake_object(instance))
@@ -110,7 +111,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": task_states.RESCUING,
             "vm_state": vm_states.ACTIVE,
             "vcpus": 2,
-            "uuid": "34-56-78-90-13",
+            "uuid": uuids.stats_linux_instance_3,
         }
 
         self.stats.update_stats_for_instance(self._fake_object(instance))
@@ -121,7 +122,7 @@ class StatsTestCase(test.NoDBTestCase):
             "task_state": task_states.UNSHELVING,
             "vm_state": vm_states.ACTIVE,
             "vcpus": 2,
-            "uuid": "34-56-78-90-14",
+            "uuid": uuids.stats_linux_instance_4,
         }
 
         self.stats.update_stats_for_instance(self._fake_object(instance))
