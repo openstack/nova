@@ -25,7 +25,6 @@ from nova import exception
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-import nova.virt.fake
 
 
 LOG = logging.getLogger(__name__)
@@ -111,7 +110,7 @@ class ServersTest(ServersTestBase):
             raise exception.BuildAbortException(reason='',
                     instance_uuid='fake')
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'spawn', throw_error)
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
 
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})

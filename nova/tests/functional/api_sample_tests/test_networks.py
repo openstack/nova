@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 
-from nova.network import api as network_api
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_networks
 
@@ -40,18 +39,14 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def setUp(self):
         super(NetworksJsonTests, self).setUp()
         fake_network_api = test_networks.FakeNetworkAPI()
-        self.stubs.Set(network_api.API, "get_all",
-                       fake_network_api.get_all)
-        self.stubs.Set(network_api.API, "get",
-                       fake_network_api.get)
-        self.stubs.Set(network_api.API, "associate",
-                       fake_network_api.associate)
-        self.stubs.Set(network_api.API, "delete",
-                       fake_network_api.delete)
-        self.stubs.Set(network_api.API, "create",
-                       fake_network_api.create)
-        self.stubs.Set(network_api.API, "add_network_to_project",
-                       fake_network_api.add_network_to_project)
+        self.stub_out("nova.network.api.API.get_all", fake_network_api.get_all)
+        self.stub_out("nova.network.api.API.get", fake_network_api.get)
+        self.stub_out("nova.network.api.API.associate",
+                      fake_network_api.associate)
+        self.stub_out("nova.network.api.API.delete", fake_network_api.delete)
+        self.stub_out("nova.network.api.API.create", fake_network_api.create)
+        self.stub_out("nova.network.api.API.add_network_to_project",
+                      fake_network_api.add_network_to_project)
 
     def test_network_list(self):
         response = self._do_get('os-networks')

@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 
-from nova.network.security_group import neutron_driver
 from nova.tests.functional.api_sample_tests import test_servers
 
 CONF = cfg.CONF
@@ -84,25 +83,17 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     def setUp(self):
         self.flags(security_group_api=('neutron'))
         super(SecurityGroupsJsonTest, self).setUp()
-        self.stubs.Set(neutron_driver.SecurityGroupAPI, 'get', fake_get)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'get_instances_security_groups_bindings',
-                       fake_get_instances_security_groups_bindings)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'add_to_instance',
-                       fake_add_to_instance)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'remove_from_instance',
-                       fake_remove_from_instance)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'list',
-                       fake_list)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'get_instance_security_groups',
-                       fake_get_instance_security_groups)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'create_security_group',
-                       fake_create_security_group)
+        path = 'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+        self.stub_out(path + 'get', fake_get)
+        self.stub_out(path + 'get_instances_security_groups_bindings',
+                      fake_get_instances_security_groups_bindings)
+        self.stub_out(path + 'add_to_instance', fake_add_to_instance)
+        self.stub_out(path + 'remove_from_instance', fake_remove_from_instance)
+        self.stub_out(path + 'list', fake_list)
+        self.stub_out(path + 'get_instance_security_groups',
+                      fake_get_instance_security_groups)
+        self.stub_out(path + 'create_security_group',
+                      fake_create_security_group)
 
     def test_server_create(self):
         self._post_server(use_common_server_api_samples=False)

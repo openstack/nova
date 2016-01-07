@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 
-from nova import crypto
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_crypto
 
@@ -36,12 +35,11 @@ class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(CertificatesSamplesJsonTest, self).setUp()
-        self.stubs.Set(crypto, 'ensure_ca_filesystem',
-                       fake_crypto.ensure_ca_filesystem)
-        self.stubs.Set(crypto, 'fetch_ca',
-                       fake_crypto.fetch_ca)
-        self.stubs.Set(crypto, 'generate_x509_cert',
-                       fake_crypto.generate_x509_cert)
+        self.stub_out('nova.crypto.ensure_ca_filesystem',
+                      fake_crypto.ensure_ca_filesystem)
+        self.stub_out('nova.crypto.fetch_ca', fake_crypto.fetch_ca)
+        self.stub_out('nova.crypto.generate_x509_cert',
+                      fake_crypto.generate_x509_cert)
         self.cert = self.start_service('cert')
 
     def test_create_certificates(self):

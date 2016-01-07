@@ -16,9 +16,7 @@
 from oslo_config import cfg
 from six.moves import range
 
-from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import state
-from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -70,8 +68,8 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                          'is_parent': our_id % 2 == 0})
             self.cell_list.append(cell)
 
-        self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', _fake_cell_get)
+        self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
+        self.stub_out('nova.cells.rpcapi.CellsAPI.cell_get', _fake_cell_get)
 
     def test_cells_empty_list(self):
         # Override this
