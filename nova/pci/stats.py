@@ -16,6 +16,7 @@
 
 import copy
 
+from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
@@ -28,6 +29,7 @@ from nova.pci import utils
 from nova.pci import whitelist
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -57,12 +59,14 @@ class PciDeviceStats(object):
 
     pool_keys = ['product_id', 'vendor_id', 'numa_node', 'dev_type']
 
-    def __init__(self, stats=None):
+    def __init__(self, stats=None, dev_filter=None):
         super(PciDeviceStats, self).__init__()
         # NOTE(sbauza): Stats are a PCIDevicePoolList object
         self.pools = [pci_pool.to_dict()
                       for pci_pool in stats] if stats else []
         self.pools.sort(key=lambda item: len(item))
+        self.dev_filter = dev_filter or whitelist.Whitelist(
+            CONF.pci_passthrough_whitelist)
 
     def _equal_properties(self, dev, entry, matching_keys):
         return all(dev.get(prop) == entry.get(prop)
@@ -86,7 +90,7 @@ class PciDeviceStats(object):
         """
         # Don't add a device that doesn't have a matching device spec.
         # This can happen during initial sync up with the controller
-        devspec = whitelist.get_pci_device_devspec(dev)
+        devspec = self.dev_filter.get_devspec(dev)
         if not devspec:
             return
         tags = devspec.get_tags()

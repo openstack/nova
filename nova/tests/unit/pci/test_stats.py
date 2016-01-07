@@ -16,12 +16,17 @@
 import mock
 import six
 
+from oslo_config import cfg
+
 from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.pci import stats
+from nova.pci import whitelist
 from nova import test
 from nova.tests.unit.pci import fakes
+
+CONF = cfg.CONF
 fake_pci_1 = {
     'compute_node_id': 1,
     'address': '0000:00:00.1',
@@ -202,6 +207,16 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(set(['v3']),
                          set([dev.vendor_id for dev in devs]))
 
+    @mock.patch(
+        'nova.pci.whitelist.Whitelist._parse_white_list_from_config')
+    def test_white_list_parsing(self, mock_whitelist_parse):
+        white_list = '{"product_id":"0001", "vendor_id":"8086"}'
+        CONF.set_override('pci_passthrough_whitelist', white_list)
+        pci_stats = stats.PciDeviceStats()
+        pci_stats.add_device(self.fake_dev_2)
+        pci_stats.remove_device(self.fake_dev_2)
+        self.assertEqual(1, mock_whitelist_parse.call_count)
+
 
 class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
 
@@ -211,7 +226,8 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                         '"address":"*:0a:00.*","physical_network":"physnet1"}',
                        '{"vendor_id":"1137","product_id":"0072"}']
         self.flags(pci_passthrough_whitelist=white_list)
-        self.pci_stats = stats.PciDeviceStats()
+        dev_filter = whitelist.Whitelist(white_list)
+        self.pci_stats = stats.PciDeviceStats(dev_filter=dev_filter)
 
     def _create_pci_devices(self):
         self.pci_tagged_devices = []

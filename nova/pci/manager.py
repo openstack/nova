@@ -55,8 +55,8 @@ class PciDevTracker(object):
         super(PciDevTracker, self).__init__()
         self.stale = {}
         self.node_id = node_id
-        self.stats = stats.PciDeviceStats()
         self.dev_filter = whitelist.Whitelist(CONF.pci_passthrough_whitelist)
+        self.stats = stats.PciDeviceStats(dev_filter=self.dev_filter)
         self._context = context
         if node_id:
             self.pci_devs = objects.PciDeviceList.get_by_compute_node(
