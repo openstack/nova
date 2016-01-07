@@ -5828,12 +5828,12 @@ class LibvirtDriver(driver.ComputeDriver):
             disks.append(dev.source_path)
         return disks
 
-    def _live_migration_data_gb(self, instance, guest, block_migration):
+    def _live_migration_data_gb(self, instance, disk_paths):
         '''Calculate total amount of data to be transferred
 
         :param instance: the nova.objects.Instance being migrated
-        :param guest: the Guest being migrated
-        :param block_migration: true if block migration is requested
+        :param disk_paths: list of disk paths that are being migrated
+        with instance
 
         Calculates the total amount of data that needs to be
         transferred during the live migration. The actual
@@ -5849,12 +5849,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if ram_gb < 2:
             ram_gb = 2
 
-        if not block_migration:
-            return ram_gb
-
-        paths = self._live_migration_copy_disk_paths(guest)
         disk_gb = 0
-        for path in paths:
+        for path in disk_paths:
             try:
                 size = os.stat(path).st_size
                 size_gb = (size / units.Gi)
@@ -5872,9 +5868,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def _live_migration_monitor(self, context, instance, guest,
                                 dest, post_method,
                                 recover_method, block_migration,
-                                migrate_data, dom, finish_event):
-        data_gb = self._live_migration_data_gb(instance, guest,
-                                               block_migration)
+                                migrate_data, dom, finish_event,
+                                disk_paths):
+        data_gb = self._live_migration_data_gb(instance, disk_paths)
         downtime_steps = list(self._migration_downtime_steps(data_gb))
         completion_timeout = int(
             CONF.libvirt.live_migration_completion_timeout * data_gb)
@@ -6087,6 +6083,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         guest = self._host.get_guest(instance)
 
+        disk_paths = []
+        if block_migration:
+            disk_paths = self._live_migration_copy_disk_paths(
+                context, instance, guest)
+
         # TODO(sahid): We are converting all calls from a
         # virDomain object to use nova.virt.libvirt.Guest.
         # We should be able to remove dom at the end.
@@ -6114,7 +6115,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._live_migration_monitor(context, instance, guest, dest,
                                          post_method, recover_method,
                                          block_migration, migrate_data,
-                                         dom, finish_event)
+                                         dom, finish_event, disk_paths)
         except Exception as ex:
             LOG.warn(_LW("Error monitoring migration: %(ex)s"),
                      {"ex": ex}, instance=instance, exc_info=True)

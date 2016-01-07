@@ -6869,20 +6869,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        "_live_migration_copy_disk_paths")
     def test_live_migration_data_gb_plain(self, mock_paths):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
-        guest = libvirt_guest.Guest(dom)
         instance = objects.Instance(**self.test_instance)
 
-        data_gb = drvr._live_migration_data_gb(instance, guest, False)
+        data_gb = drvr._live_migration_data_gb(instance, [])
         self.assertEqual(2, data_gb)
         self.assertEqual(0, mock_paths.call_count)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_live_migration_copy_disk_paths")
-    def test_live_migration_data_gb_block(self, mock_paths):
+    def test_live_migration_data_gb_block(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
-        guest = libvirt_guest.Guest(dom)
         instance = objects.Instance(**self.test_instance)
 
         def fake_stat(path):
@@ -6901,15 +6895,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             else:
                 raise Exception("Should not be reached")
 
-        mock_paths.return_value = ["/var/lib/nova/instance/123/disk.root",
-                                   "/dev/mapper/somevol"]
+        disk_paths = ["/var/lib/nova/instance/123/disk.root",
+                      "/dev/mapper/somevol"]
         with mock.patch.object(os, "stat") as mock_stat:
             mock_stat.side_effect = fake_stat
-            data_gb = drvr._live_migration_data_gb(instance, guest, True)
+            data_gb = drvr._live_migration_data_gb(instance, disk_paths)
             # Expecting 2 GB for RAM, plus 10 GB for disk.root
             # and 1.5 GB rounded to 2 GB for somevol, so 14 GB
             self.assertEqual(14, data_gb)
-            self.assertEqual(1, mock_paths.call_count)
 
     EXPECT_SUCCESS = 1
     EXPECT_FAILURE = 2
@@ -6977,7 +6970,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      False,
                                      migrate_data,
                                      dom,
-                                     finish_event)
+                                     finish_event,
+                                     [])
 
         if expect_result == self.EXPECT_SUCCESS:
             self.assertFalse(fake_recover_method.called,
@@ -7238,14 +7232,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
-    def test_live_migration_main(self, mock_running, mock_guest,
-                                 mock_monitor, mock_thread):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_live_migration_copy_disk_paths")
+    def test_live_migration_main(self, mock_copy_disk_path, mock_running,
+                                 mock_guest, mock_monitor, mock_thread):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         dom = fakelibvirt.Domain(drvr._get_connection(),
                                  "<domain><name>demo</name></domain>", True)
         guest = libvirt_guest.Guest(dom)
         migrate_data = {}
+        disk_paths = ['/dev/vda', '/dev/vdb']
+        mock_copy_disk_path.return_value = disk_paths
 
         mock_guest.return_value = guest
 
@@ -7256,7 +7254,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             pass
 
         drvr._live_migration(self.context, instance, "fakehost",
-                             fake_post, fake_recover, False,
+                             fake_post, fake_recover, True,
                              migrate_data)
 
         class AnyEventletEvent(object):
@@ -7265,12 +7263,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         mock_thread.assert_called_once_with(
             drvr._live_migration_operation,
-            self.context, instance, "fakehost", False,
+            self.context, instance, "fakehost", True,
             migrate_data, dom)
         mock_monitor.assert_called_once_with(
             self.context, instance, guest, "fakehost",
-            fake_post, fake_recover, False,
-            migrate_data, dom, AnyEventletEvent())
+            fake_post, fake_recover, True,
+            migrate_data, dom, AnyEventletEvent(), disk_paths)
 
     def _do_test_create_images_and_backing(self, disk_type):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
