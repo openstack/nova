@@ -115,7 +115,7 @@ class Image(object):
         pass
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-                     extra_specs, hypervisor_version):
+                     extra_specs, hypervisor_version, boot_order=None):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -124,6 +124,7 @@ class Image(object):
         :cache_mode: Caching mode for this image
         :extra_specs: Instance type extra specs dict.
         :hypervisor_version: the hypervisor version
+        :boot_order: Disk device boot order
         """
         info = vconfig.LibvirtConfigGuestDisk()
         info.source_type = self.source_type
@@ -138,6 +139,7 @@ class Image(object):
                                                           self.is_block_dev)
         info.driver_name = driver_name
         info.source_path = self.path
+        info.boot_order = boot_order
 
         self.disk_qos(info, extra_specs)
 
@@ -783,7 +785,7 @@ class Rbd(Image):
             self.path += ':conf=' + self.ceph_conf
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-            extra_specs, hypervisor_version):
+            extra_specs, hypervisor_version, boot_order=None):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -791,6 +793,8 @@ class Rbd(Image):
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
         :extra_specs: Instance type extra specs dict.
+        :hypervisor_version: the hypervisor version
+        :boot_order: Disk device boot order
         """
         info = vconfig.LibvirtConfigGuestDisk()
 
@@ -806,6 +810,7 @@ class Rbd(Image):
         info.source_name = '%s/%s' % (self.pool, self.rbd_name)
         info.source_hosts = hosts
         info.source_ports = ports
+        info.boot_order = boot_order
         auth_enabled = (CONF.libvirt.rbd_user is not None)
         if CONF.libvirt.rbd_secret_uuid:
             info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid

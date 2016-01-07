@@ -169,13 +169,15 @@ class _ImageTestCase(object):
                                   device_type="cdrom",
                                   cache_mode="none",
                                   extra_specs=extra_specs,
-                                  hypervisor_version=4004001)
+                                  hypervisor_version=4004001,
+                                  boot_order="1")
 
         self.assertIsInstance(disk, vconfig.LibvirtConfigGuestDisk)
         self.assertEqual("/dev/vda", disk.target_dev)
         self.assertEqual("virtio", disk.target_bus)
         self.assertEqual("none", disk.driver_cache)
         self.assertEqual("cdrom", disk.source_device)
+        self.assertEqual("1", disk.boot_order)
 
         self.assertEqual(10 * units.Mi, disk.disk_read_bytes_sec)
         self.assertEqual(1 * units.Ki, disk.disk_read_iops_sec)
