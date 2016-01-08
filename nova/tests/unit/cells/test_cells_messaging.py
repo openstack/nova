@@ -884,10 +884,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                 'fake_host', binary, params_to_update)
         result = response.value_or_raise()
         self.assertIsInstance(result, objects.Service)
-        # NOTE(sbauza): As NovaObjects can't be comparated directly, we need to
-        # check the fields by primitiving them first
-        self.assertEqual(jsonutils.to_primitive(fake_service),
-                         jsonutils.to_primitive(result))
+        self.assertTrue(objects_base.obj_equal_prims(fake_service, result))
 
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'

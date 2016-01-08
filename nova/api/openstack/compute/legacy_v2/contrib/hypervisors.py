@@ -61,7 +61,7 @@ class HypervisorsController(object):
             if ext_loaded:
                 fields += ('host_ip',)
             for field in fields:
-                hyp_dict[field] = hypervisor[field]
+                hyp_dict[field] = getattr(hypervisor, field)
 
             hyp_dict['service'] = {
                 'id': service.id,

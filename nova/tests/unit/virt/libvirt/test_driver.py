@@ -4593,7 +4593,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                label='fake',
                                status=fields.PciDeviceStatus.ALLOCATED,
                                address='0000:00:00.1',
-                               compute_id=compute_ref['id'],
+                               compute_id=compute_ref.id,
                                instance_uuid=instance.uuid,
                                request_id=None,
                                extra_info={})
@@ -4636,7 +4636,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                label='fake',
                                status=fields.PciDeviceStatus.ALLOCATED,
                                address='0000:00:00.2',
-                               compute_id=compute_ref['id'],
+                               compute_id=compute_ref.id,
                                instance_uuid=instance.uuid,
                                request_id=None,
                                extra_info={})

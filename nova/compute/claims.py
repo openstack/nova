@@ -161,8 +161,8 @@ class Claim(NopClaim):
     def _test_memory(self, resources, limit):
         type_ = _("memory")
         unit = "MB"
-        total = resources['memory_mb']
-        used = resources['memory_mb_used']
+        total = resources.memory_mb
+        used = resources.memory_mb_used
         requested = self.memory_mb
 
         return self._test(type_, unit, total, used, requested, limit)
@@ -170,8 +170,8 @@ class Claim(NopClaim):
     def _test_disk(self, resources, limit):
         type_ = _("disk")
         unit = "GB"
-        total = resources['local_gb']
-        used = resources['local_gb_used']
+        total = resources.local_gb
+        used = resources.local_gb_used
         requested = self.disk_gb
 
         return self._test(type_, unit, total, used, requested, limit)
@@ -179,8 +179,8 @@ class Claim(NopClaim):
     def _test_vcpus(self, resources, limit):
         type_ = _("vcpu")
         unit = "VCPU"
-        total = resources['vcpus']
-        used = resources['vcpus_used']
+        total = resources.vcpus
+        used = resources.vcpus_used
         requested = self.vcpus
 
         return self._test(type_, unit, total, used, requested, limit)
@@ -199,7 +199,8 @@ class Claim(NopClaim):
             self.instance, limits)
 
     def _test_numa_topology(self, resources, limit):
-        host_topology = resources.get('numa_topology')
+        host_topology = (resources.numa_topology
+                         if 'numa_topology' in resources else None)
         requested_topology = self.numa_topology
         if host_topology:
             host_topology = objects.NUMATopology.obj_from_db_obj(

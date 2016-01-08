@@ -548,7 +548,7 @@ class ResourceTracker(object):
         if 'pci_passthrough_devices' in resources:
             # TODO(jaypipes): Move this into _init_compute_node()
             if not self.pci_tracker:
-                n_id = self.compute_node['id'] if self.compute_node else None
+                n_id = self.compute_node.id if self.compute_node else None
                 self.pci_tracker = pci_manager.PciDevTracker(context,
                                                              node_id=n_id)
             dev_json = resources.pop('pci_passthrough_devices')

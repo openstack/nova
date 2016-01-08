@@ -275,11 +275,11 @@ class CellStateManager(base.Base):
                     continue
 
                 chost = compute_hosts[host]
-                chost['free_ram_mb'] += compute['free_ram_mb']
-                free_disk = compute['free_disk_gb'] * 1024
+                chost['free_ram_mb'] += compute.free_ram_mb
+                free_disk = compute.free_disk_gb * 1024
                 chost['free_disk_mb'] += free_disk
-                chost['total_ram_mb'] += compute['memory_mb']
-                total_disk = compute['local_gb'] * 1024
+                chost['total_ram_mb'] += compute.memory_mb
+                total_disk = compute.local_gb * 1024
                 chost['total_disk_mb'] += total_disk
 
         _get_compute_hosts()

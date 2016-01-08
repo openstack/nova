@@ -39,7 +39,7 @@ def _fake_resources():
         'vcpus': 2,
         'vcpus_used': 0
     }
-    return resources
+    return objects.ComputeNode(**resources)
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
