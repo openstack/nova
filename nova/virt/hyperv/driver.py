@@ -19,6 +19,7 @@ A Hyper-V Nova Compute driver.
 
 import functools
 import platform
+import sys
 
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
@@ -56,7 +57,13 @@ def convert_exceptions(function, exception_map):
                         raised_exception = exception_map[expected]
                         break
 
-            raise raised_exception(six.text_type(ex))
+            exc_info = sys.exc_info()
+            # NOTE(claudiub): Python 3 raises the exception object given as
+            # the second argument in six.reraise.
+            # The original message will be maintained by passing the original
+            # exception.
+            exc = raised_exception(six.text_type(exc_info[1]))
+            six.reraise(raised_exception, exc, exc_info[2])
     return wrapper
 
 
