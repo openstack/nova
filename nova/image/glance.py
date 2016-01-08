@@ -45,21 +45,29 @@ import nova.image.download as image_xfers
 glance_opts = [
     cfg.StrOpt('host',
                default='$my_ip',
-               help='Default glance hostname or IP address'),
+               # TODO(sdague): remove in N
+               deprecated_for_removal=True,
+               help='Glance server hostname or IP address'),
     cfg.IntOpt('port',
                default=9292,
                min=1,
                max=65535,
-               help='Default glance port'),
+               # TODO(sdague): remove in N
+               deprecated_for_removal=True,
+               help='Glance server port'),
     cfg.StrOpt('protocol',
                 default='http',
                 choices=('http', 'https'),
-                help='Default protocol to use when connecting to glance. '
+                # TODO(sdague): remove in N
+                deprecated_for_removal=True,
+                help='Protocol to use when connecting to glance. '
                      'Set to https for SSL.'),
     cfg.ListOpt('api_servers',
-                help='A list of the glance api servers available to nova. '
-                     'Prefix with https:// for ssl-based glance api servers. '
-                     '([hostname|ip]:port)'),
+                help='''
+A list of the glance api servers endpoints available to nova. These
+should be fully qualified urls of the form
+"scheme://hostname:port[/path]" (i.e. "http://10.0.1.0:9292" or
+"https://my.glance.server/image")'''),
     cfg.BoolOpt('api_insecure',
                 default=False,
                 help='Allow to perform insecure SSL (https) requests to '
