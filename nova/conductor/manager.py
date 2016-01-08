@@ -131,6 +131,9 @@ class ConductorManager(manager.Manager):
         return objinst.obj_to_primitive(target_version=target,
                                         version_manifest=object_versions)
 
+    def reset(self):
+        objects.Service.clear_min_version_cache()
+
 
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.

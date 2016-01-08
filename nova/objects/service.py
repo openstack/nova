@@ -102,6 +102,9 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         'version': fields.IntegerField(),
     }
 
+    _MIN_VERSION_CACHE = {}
+    _SERVICE_VERSION_CACHING = False
+
     def __init__(self, *args, **kwargs):
         # NOTE(danms): We're going against the rules here and overriding
         # init. The reason is that we want to *ensure* that we're always
@@ -279,6 +282,15 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def destroy(self):
         db.service_destroy(self._context, self.id)
 
+    @classmethod
+    def enable_min_version_cache(cls):
+        cls.clear_min_version_cache()
+        cls._SERVICE_VERSION_CACHING = True
+
+    @classmethod
+    def clear_min_version_cache(cls):
+        cls._MIN_VERSION_CACHE = {}
+
     @base.remotable_classmethod
     def get_minimum_version(cls, context, binary, use_slave=False):
         if not binary.startswith('nova-'):
@@ -286,13 +298,21 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                             'binary `%s\''), binary)
             raise exception.ObjectActionError(action='get_minimum_version',
                                               reason='Invalid binary prefix')
+
+        if cls._SERVICE_VERSION_CACHING:
+            cached_version = cls._MIN_VERSION_CACHE.get(binary)
+            if cached_version:
+                return cached_version
         version = db.service_get_minimum_version(context, binary,
                                                  use_slave=use_slave)
         if version is None:
             return 0
         # NOTE(danms): Since our return value is not controlled by object
         # schema, be explicit here.
-        return int(version)
+        version = int(version)
+        cls._MIN_VERSION_CACHE[binary] = version
+
+        return version
 
 
 @base.NovaObjectRegistry.register
