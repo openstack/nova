@@ -494,7 +494,7 @@ class Raw(Image):
         disk.extend(image, size)
 
     def snapshot_extract(self, target, out_format):
-        images.convert_image(self.path, target, out_format)
+        images.convert_image(self.path, target, self.driver_format, out_format)
 
     @staticmethod
     def is_file_in_instance_path():
@@ -652,7 +652,16 @@ class Lvm(Image):
                                          size, sparse=self.sparse)
             if self.ephemeral_key_uuid is not None:
                 encrypt_lvm_image()
-            images.convert_image(base, self.path, 'raw', run_as_root=True)
+            # NOTE: by calling convert_image_unsafe here we're
+            # telling qemu-img convert to do format detection on the input,
+            # because we don't know what the format is. For example,
+            # we might have downloaded a qcow2 image, or created an
+            # ephemeral filesystem locally, we just don't know here. Having
+            # audited this, all current sources have been sanity checked,
+            # either because they're locally generated, or because they have
+            # come from images.fetch_to_raw. However, this is major code smell.
+            images.convert_image_unsafe(base, self.path, self.driver_format,
+                                        run_as_root=True)
             if resize:
                 disk.resize2fs(self.path, run_as_root=True)
 
@@ -704,8 +713,8 @@ class Lvm(Image):
                     lvm.remove_volumes([self.lv_path])
 
     def snapshot_extract(self, target, out_format):
-        images.convert_image(self.path, target, out_format,
-                             run_as_root=True)
+        images.convert_image(self.path, target, self.driver_format,
+                             out_format, run_as_root=True)
 
     def get_model(self, connection):
         return imgmodel.LocalBlockImage(self.path)
@@ -815,7 +824,7 @@ class Rbd(Image):
         self.driver.resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
-        images.convert_image(self.path, target, out_format)
+        images.convert_image(self.path, target, 'raw', out_format)
 
     @staticmethod
     def is_shared_block_storage():
