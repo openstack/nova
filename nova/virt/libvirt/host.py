@@ -855,9 +855,10 @@ class Host(object):
 
         :param xml: XML domain definition of the guest.
 
-        :returns: a virDomain instance
+        :returns: an instance of Guest
         """
-        return self.get_connection().defineXML(xml)
+        domain = self.get_connection().defineXML(xml)
+        return libvirt_guest.Guest(domain)
 
     def device_lookup_by_name(self, name):
         """Lookup a node device by its name.
