@@ -208,6 +208,23 @@ scheduler_max_att_opt = cfg.IntOpt("scheduler_max_attempts",
             default=3,
             help="Maximum number of attempts to schedule an instance")
 
+soft_affinity_weight_opt = cfg.FloatOpt('soft_affinity_weight_multiplier',
+            default=1.0,
+            help='Multiplier used for weighing hosts '
+                 'for group soft-affinity. Only a '
+                 'positive value is meaningful. Negative '
+                 'means that the behavior will change to '
+                 'the opposite, which is soft-anti-affinity.')
+
+soft_anti_affinity_weight_opt = cfg.FloatOpt(
+    'soft_anti_affinity_weight_multiplier',
+                 default=1.0,
+                 help='Multiplier used for weighing hosts '
+                      'for group soft-anti-affinity. Only a '
+                      'positive value is meaningful. Negative '
+                      'means that the behavior will change to '
+                      'the opposite, which is soft-affinity.')
+
 
 SIMPLE_OPTS = [host_subset_size_opt,
                bm_default_filter_opt,
@@ -232,6 +249,8 @@ SIMPLE_OPTS = [host_subset_size_opt,
                ram_weight_mult_opt,
                io_ops_weight_mult_opt,
                scheduler_max_att_opt,
+               soft_affinity_weight_opt,
+               soft_anti_affinity_weight_opt,
               ]
 
 ALL_OPTS = itertools.chain(

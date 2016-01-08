@@ -17,6 +17,7 @@ Tests For Scheduler weights.
 """
 
 from nova.scheduler import weights
+from nova.scheduler.weights import affinity
 from nova.scheduler.weights import io_ops
 from nova.scheduler.weights import metrics
 from nova.scheduler.weights import ram
@@ -38,3 +39,5 @@ class TestWeighedHost(test.NoDBTestCase):
         self.assertIn(ram.RAMWeigher, classes)
         self.assertIn(metrics.MetricsWeigher, classes)
         self.assertIn(io_ops.IoOpsWeigher, classes)
+        self.assertIn(affinity.ServerGroupSoftAffinityWeigher, classes)
+        self.assertIn(affinity.ServerGroupSoftAntiAffinityWeigher, classes)
