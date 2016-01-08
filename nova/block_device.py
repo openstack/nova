@@ -581,7 +581,7 @@ def volume_in_mapping(mount_device, block_device_info):
                           driver.block_device_info_get_ephemerals(
                           block_device_info)]
 
-    LOG.debug("block_device_list %s", block_device_list)
+    LOG.debug("block_device_list %s", sorted(filter(None, block_device_list)))
     return strip_dev(mount_device) in block_device_list
 
 
