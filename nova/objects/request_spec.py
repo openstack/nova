@@ -159,8 +159,10 @@ class RequestSpec(base.NovaObject):
             # NOTE(sbauza): Can be dropped once select_destinations is removed
             policies = list(filter_properties.get('group_policies'))
             hosts = list(filter_properties.get('group_hosts'))
+            members = list(filter_properties.get('group_members'))
             self.instance_group = objects.InstanceGroup(policies=policies,
-                                                        hosts=hosts)
+                                                        hosts=hosts,
+                                                        members=members)
             # hosts has to be not part of the updates for saving the object
             self.instance_group.obj_reset_changes(['hosts'])
         else:
