@@ -2021,3 +2021,7 @@ class RequestSpecNotFound(NotFound):
 
 class NMINotSupported(Invalid):
     msg_fmt = _("Injecting NMI is not supported")
+
+
+class UnsupportedHostCPUControlPolicy(Invalid):
+    msg_fmt = _("Requested CPU control policy not supported by host")

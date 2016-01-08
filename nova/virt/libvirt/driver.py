@@ -3548,19 +3548,29 @@ class LibvirtDriver(driver.ComputeDriver):
         return id_maps
 
     def _update_guest_cputune(self, guest, flavor, virt_type):
-        if virt_type in ('lxc', 'kvm', 'qemu'):
-            if guest.cputune is None:
-                guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
+        is_able = self._host.is_cpu_control_policy_capable()
+
+        cputuning = ['shares', 'period', 'quota']
+        wants_cputune = any([k for k in cputuning
+            if "quota:cpu_" + k in flavor.extra_specs.keys()])
+
+        if wants_cputune and not is_able:
+            raise exception.UnsupportedHostCPUControlPolicy()
+
+        if not is_able or virt_type not in ('lxc', 'kvm', 'qemu'):
+            return
+
+        if guest.cputune is None:
+            guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
             # Setting the default cpu.shares value to be a value
             # dependent on the number of vcpus
-            guest.cputune.shares = 1024 * guest.vcpus
+        guest.cputune.shares = 1024 * guest.vcpus
 
-            cputuning = ['shares', 'period', 'quota']
-            for name in cputuning:
-                key = "quota:cpu_" + name
-                if key in flavor.extra_specs:
-                    setattr(guest.cputune, name,
-                            int(flavor.extra_specs[key]))
+        for name in cputuning:
+            key = "quota:cpu_" + name
+            if key in flavor.extra_specs:
+                setattr(guest.cputune, name,
+                        int(flavor.extra_specs[key]))
 
     def _get_cpu_numa_config_from_instance(self, instance_numa_topology,
                                            wants_hugepages):
