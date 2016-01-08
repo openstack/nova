@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-09-13 01:37+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language-Team: French\n"
@@ -233,14 +233,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "L'allocation d'unité a échoué après des tentatives répétées."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"Disque non trouvé sur le contrôleur \"%(controller_path)s\" avec l'adresse "
-"\"%(address)s\""
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr ""
 "Le domaine |%(domain)s| existe déjà, définition de projet sur |%(project)s|."
@@ -255,11 +247,6 @@ msgstr "L'instance a disparu lord de l'opération detach_interface."
 
 msgid "During detach_volume, instance disappeared."
 msgstr "Pendant l'opération detach_volume, l'instance a disparu."
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr ""
-"Erreur lors du nettoyage de l'allocation des IP fixe. Un nettoyage manuel "
-"peut êter requis "
 
 #, python-format
 msgid ""
@@ -363,10 +350,6 @@ msgid "Failed to resume instance"
 msgstr "Echec de la reprise de l'instance"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "Échec à diminuer le quota pour désallouer une ip fixe : %s"
-
-#, python-format
 msgid "Failed to shutdown appliance %s"
 msgstr "Echec de l'arrêt du dispositif %s"
 
@@ -386,20 +369,8 @@ msgstr ""
 "L'indicateur sr_matching_filter '%s' ne respecte pas la convention de mise "
 "en forme"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "Flavor %d non trouvée"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "Version introuvable, migration ignorée."
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr ""
-"L'IP flottante |%(address)s| n’appartiens plus a l'instance "
-"%(instance_uuid)s. Elle ne sera pas migré."
 
 #, python-format
 msgid ""
@@ -552,10 +523,6 @@ msgstr ""
 "disque %(disk_type)s."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "IP flottante invalide d'ID: %s dans la requete "
-
-#, python-format
 msgid "Invalid value for id mapping %s"
 msgstr "Valeur invalide pour la configuration d'id %s"
 
@@ -647,14 +614,6 @@ msgstr "Aucun réseau ou adresse IP fixes ne peuvent être alloués"
 msgid "No valid host found for rebuild"
 msgstr "Hôte valide non trouvée pour la regénération."
 
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "Pas de chargement de %s car il est la liste noire"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "Pas de chargement de %s car il n'est pas dans la liste blanche"
-
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
 "removed in the next release. Use updated property name \"hw:watchdog_action"
@@ -742,10 +701,6 @@ msgstr ""
 
 msgid "Rejecting snapshot request, snapshots currently disabled"
 msgstr "Rejet de la demande d'instantané, instantanés actuellement désactivés"
-
-#, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr "%(num)d règles en double supprimées pour l'IP flottante %(float)s"
 
 #, python-format
 msgid ""

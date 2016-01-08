@@ -1,19 +1,13 @@
 # Korean (South Korea) translations for nova.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the nova project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
-# Translators:
-# Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
-# Sungjin Kang <potopro@gmail.com>, 2013
-# Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:31+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
 "Language: ko_KR\n"
@@ -22,15 +16,11 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr "%(address)s는 v4/6주소에 맞지 않은 IP입니다."
-
-#, python-format
-msgid "%(address)s is not a valid ip address."
-msgstr "%(address)s이(가) 올바른 IP 주소가 아닙니다."
 
 #, python-format
 msgid "%(address)s is not within %(cidr)s."
@@ -41,10 +31,6 @@ msgid ""
 "%(binary)s attempted direct database access which is not allowed by policy"
 msgstr ""
 "%(binary)s에서 정책적으로 허용되지 않는 직접 데이터베이스 액세스를 시도함"
-
-#, python-format
-msgid "%(cidr)s is not a valid ip network."
-msgstr "%(cidr)s이(가) 올바른 ip 네트워크가 아닙니다."
 
 #, python-format
 msgid "%(err)s"
@@ -127,10 +113,6 @@ msgstr "%s 형식이 지원되지 않음"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s이(가) 문자열 또는 Unicode가 아님"
-
-#, python-format
-msgid "%s is not a valid ip network"
-msgstr "%s이(가) 올바른 ip 네트워크가 아님"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
@@ -279,10 +261,6 @@ msgstr "%(host)s 호스트에 대한 집합을 찾을 수 없습니다. "
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "집합에서 %s 작업을 할 수 없습니다"
-
-#, python-format
-msgid "An error has occurred when calling the iscsi initiator: %s"
-msgstr "iSCSI 개시자를 호출할 때 오류가 발생했음: %s"
 
 msgid "An unexpected error has occurred."
 msgstr "예상치 않은 오류가 발생함．"
@@ -542,9 +520,6 @@ msgstr "맵핑된 볼륨으로 마이그레이션 인스턴스 %s을(를) 차단
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
 
-msgid "Cannot disassociate auto assigned floating ip"
-msgstr "자동 지정된 부동 IP를 연관 해제할 수 없음"
-
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr "/sbin/mount.sofs를 실행할 수 없음"
 
@@ -554,24 +529,8 @@ msgstr "컨텐츠 유형 ISO의 SR을 찾을 수 없음"
 msgid "Cannot find SR to read/write VDI."
 msgstr "VDI를 읽기/쓰기할 SR을 찾을 수 없습니다. "
 
-#, python-format
-msgid "Cannot find boot VHD file for instance: %s"
-msgstr "인스턴스에 대한 부트 VHD 파일을 찾을 수 없음: %s"
-
 msgid "Cannot find image for rebuild"
 msgstr "다시 빌드할 이미지를 찾을 수 없음"
-
-#, python-format
-msgid "Cannot get VM summary data for: %s"
-msgstr "VM 요약 데이터를 가져올 수 없음: %s"
-
-#, python-format
-msgid ""
-"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
-"method: %(auth_method)s."
-msgstr ""
-"대상 %(target_iqn)s을(를) 로그인할 수 없습니다. 지원되지 않는 iSCSI 인증 메소"
-"드: %(auth_method)s."
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "스케일 SOFS를 마운트할 수 없음. syslog에서 오류 확인"
@@ -602,33 +561,6 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "volume-backed 인스턴스를 구조할 수 없음"
-
-msgid "Cannot resize a VHD to a smaller size"
-msgstr "VHD를 더 작은 크기로 조정할 수 없음"
-
-#, python-format
-msgid ""
-"Cannot resize a VHD to a smaller size, the original size is %(old_size)s, "
-"the newer size is %(new_size)s"
-msgstr ""
-"VHD를 더 작은 크기로 조정할 수 없음. 원래 크기는 %(old_size)s이고 새 크기는 "
-"%(new_size)s임"
-
-#, python-format
-msgid ""
-"Cannot resize the image to a size smaller than the VHD max. internal size: "
-"%(vhd_size)s. Requested disk size: %(root_vhd_size)s"
-msgstr ""
-"VHD 최대값 미만으로 이미지의 크기를 조정할 수 없습니다: %(vhd_size)s. 요청된 "
-"디스크 크기: %(root_vhd_size)s"
-
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB"
-msgstr ""
-"루트 디스크를 더 적은 크기로 조정할 수 없음. 현재 크기: %(curr_root_gb)sGB. "
-"요청된 크기: %(new_root_gb)sGB"
 
 msgid "Cannot run any more instances of this type."
 msgstr "이 유형의 인스턴스를 추가로 실행할 수 없습니다. "
@@ -727,10 +659,6 @@ msgstr "%(host)s Compute 서비스를 사용하고 있습니다."
 msgid "Compute service of %(host)s is unavailable at this time."
 msgstr "%(host)s Compute 서비스를 지금 사용할 수 없습니다."
 
-#, python-format
-msgid "Config drive is required by instance: %s, but it does not exist."
-msgstr "%s 인스턴스에 구성 드라이브가 필요하지만 존재하지 않습니다."
-
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr "구성이 사용자 정의 CPU 모델을 요청했지만 모델 이름을 제공하지 않았음"
 
@@ -748,10 +676,6 @@ msgstr "구성된 정책이 충돌함!"
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
 msgstr "Cinder 호스트 연결하지 못했습니다: %(reason)s"
-
-#, python-format
-msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
-msgstr "Glance 호스트 %(host)s:%(port)s에 연결하지 못했습니다: %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -838,10 +762,6 @@ msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "VM이 사용하는 데이터 저장소 참조를 찾을 수 없습니다. "
 
 #, python-format
-msgid "Could not get instance console log. Error: %s"
-msgstr "인스턴스 콘솔 로그를 가져올 수 없습니다. 오류: %s"
-
-#, python-format
 msgid "Could not load line %(line)s, got error %(error)s"
 msgstr "%(line)s 행을 로드할 수 없음. %(error)s 오류가 발생했음"
 
@@ -862,10 +782,6 @@ msgstr "요청의 imageRef를 구문 분석할 수 없습니다. "
 #, python-format
 msgid "Could not read %s. Re-running with sudo"
 msgstr "%s을(를) 읽을 수 없음. sudo로 다시 실행합니다. "
-
-#, python-format
-msgid "Could not unmount share: %s"
-msgstr "공유를 마운트 해제할 수 없음: %s"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -907,9 +823,6 @@ msgstr "Datetime이 올바르지 않은 형식임"
 
 msgid "Default PBM policy is required if PBM is enabled."
 msgstr "PBM을 사용하는 경우 기본 PBM 정책이 필요합니다."
-
-msgid "Default rule. Enforced when a requested rule is not found."
-msgstr "기본 룰입니다. 요청된 룰이 없을 때, 이 값으로 강제 설정됩니다."
 
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
@@ -957,17 +870,6 @@ msgstr ""
 "%(table)s.%(column)s 및 새도우 테이블에서 서로 다른 유형: %(c_type)s "
 "%(shadow_c_type)s"
 
-msgid ""
-"Directories where policy configuration files are stored. They can be "
-"relative to any directory in the search path defined by the config_dir "
-"option, or absolute paths. The file defined by policy_file must exist for "
-"these directories to be searched.  Missing or empty directories are ignored."
-msgstr ""
-"정책 구성 파일을 저장하는 디렉토리입니다. 이러한 디렉토리는 config_dir 옵션에"
-"서 정의하는 검색 경로의 디렉토리에 대해 상대적이거나 절대 경로일 수 있습니"
-"다. 이러한 디렉토리를 검색하려면 policy_file에서 정의하는 파일이 있어야 합니"
-"다. 누락되거나 비어 있는 디렉토리는 무시됩니다. "
-
 msgid "Disassociate host is not implemented by the configured Network API"
 msgstr "구성된 네트워크 API에서 호스트 연관 해제가 구현되지 않음"
 
@@ -999,10 +901,6 @@ msgstr "인스턴스에 접속된 ID가 %s인 디스크를 찾을 수 없습니�
 #, python-format
 msgid "Driver Error: %s"
 msgstr "드라이버 오류: %s"
-
-#, python-format
-msgid "Duplicate VM name found: %s"
-msgstr "중복 VM 이름 발견: %s"
 
 #, python-format
 msgid "Duplicate networks (%s) are not allowed"
@@ -1117,9 +1015,6 @@ msgstr ""
 "인스턴스에 대한 최대 스케줄링 재시도 %(max_retries)d을(를) 초과"
 "함%(instance_uuid)s"
 
-msgid "Exceeded the maximum number of slots"
-msgstr "최대 슬롯 수를 초과함"
-
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "uuid를 예상했지만 %(uuid)s을(를) 수신했습니다. "
@@ -1184,10 +1079,6 @@ msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에 접속하는 데 실패함"
 
 #, python-format
-msgid "Failed to create vswitch port %(port_name)s on switch %(vswitch_path)s"
-msgstr "%(vswitch_path)s 스위치에 vswitch 포트 %(port_name)s 작성 실패"
-
-#, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
 msgstr "%(image_file)s 이미지 파일을 복호화하지 못했음: %(err)s"
 
@@ -1222,10 +1113,6 @@ msgstr "텍스트를 암호화하지 못했습니다: %(reason)s"
 #, python-format
 msgid "Failed to launch instances: %(reason)s"
 msgstr "인스턴스 실행 실패: %(reason)s"
-
-#, python-format
-msgid "Failed to login target %s"
-msgstr "%s 대상 로그인 실패"
 
 #, python-format
 msgid "Failed to map partitions: %s"
@@ -1265,14 +1152,6 @@ msgstr "디스크 정보 파일을 읽거나 쓰지 못함: %(reason)s"
 #, python-format
 msgid "Failed to reboot instance: %(reason)s"
 msgstr "인스턴스 재부팅 실패: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to reconnect image %(child_vhd_path)s to parent %(parent_vhd_path)s. "
-"The child image has no parent path property."
-msgstr ""
-"이미지 %(child_vhd_path)s을(를) 상위 %(parent_vhd_path)s에 다시 연결하지 못했"
-"습니다. 하위 이미지에 상위 경로 특성이 없습니다."
 
 #, python-format
 msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
@@ -1385,14 +1264,6 @@ msgid "Fixed IP associate failed for network: %(net)s."
 msgstr "네트워크에 대한 고정 IP 연관 실패: %(net)s."
 
 #, python-format
-msgid "Fixed ip %(address)s already exists."
-msgstr "고정 IP %(address)s이(가) 이미 존재합니다. "
-
-#, python-format
-msgid "Fixed ip not found for address %(address)s."
-msgstr "주소 %(address)s에 대한 고정 IP를 찾을 수 없습니다. "
-
-#, python-format
 msgid "Flavor %(flavor_id)s could not be found."
 msgstr "%(flavor_id)s 플레이버를 찾을 수 없습니다. "
 
@@ -1463,52 +1334,8 @@ msgstr "플레이버의 메모리가 요청된 이미지에 대해 너무 작습
 msgid "Floating IP allocate failed."
 msgstr "부동 IP 할당에 실패했습니다."
 
-#, python-format
-msgid "Floating ip %(address)s already exists."
-msgstr "부동 IP %(address)s이(가) 이미 존재합니다. "
-
-#, python-format
-msgid "Floating ip %(address)s is associated."
-msgstr "부동 IP %(address)s이(가) 연관되어 있습니다. "
-
-#, python-format
-msgid "Floating ip %(address)s is not associated with instance %(id)s."
-msgstr "부동 IP %(address)s이(가) %(id)s 인스턴스와 연관되지 않았습니다."
-
-#, python-format
-msgid "Floating ip %(address)s is not associated."
-msgstr "부동 IP %(address)s이(가) 연관되지 않습니다. "
-
-msgid "Floating ip is not associated"
-msgstr "부동 IP가 연관되지 않음"
-
 msgid "Floating ip is not associated."
 msgstr "부동 IP가 연관되지 않았습니다. "
-
-#, python-format
-msgid "Floating ip not found for address %(address)s."
-msgstr "주소 %(address)s에 대한 부동 IP를 찾을 수 없습니다. "
-
-#, python-format
-msgid "Floating ip not found for host %(host)s."
-msgstr "%(host)s 호스트에 대한 부동 IP를 찾을 수 없습니다. "
-
-#, python-format
-msgid "Floating ip not found for id %(id)s."
-msgstr "ID %(id)s에 대한 부동 IP를 찾을 수 없습니다. "
-
-#, python-format
-msgid "Floating ip not found for id %s"
-msgstr "ID %s에 대한 부동 IP를 찾을 수 없음"
-
-msgid "Floating ip pool not found."
-msgstr "부동 IP 풀을 찾을 수 없습니다. "
-
-msgid ""
-"For \"noauth\" authentication strategy, the endpoint must be specified conf."
-"neutron.url"
-msgstr ""
-"\"noauth\" 인증 전략에서는 엔드포인트가 conf.neutron.url로 지정되어야 함"
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1559,10 +1386,6 @@ msgstr "호스트"
 
 msgid "Host"
 msgstr "호스트"
-
-#, python-format
-msgid "Host %(action)s is not supported by the Hyper-V driver"
-msgstr "Hyper-V 드라이버에서 호스트 %(action)s을(를) 지원하지 않음"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -1791,14 +1614,6 @@ msgstr "%(instance_id)s 인스턴스는 허용할 수 없음: %(reason)s"
 #, python-format
 msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
 msgstr "인스턴스 %(instance_uuid)s이(가) NUMA 토폴로지를 지정하지 않음"
-
-#, python-format
-msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
-msgstr "%(instance_uuid)s 인스턴스에 고정 IP '%(ip)s'이(가) 없습니다. "
-
-#, python-format
-msgid "Instance %(instance_uuid)s has zero fixed ips."
-msgstr "%(instance_uuid)s 인스턴스는 0개의 고정 IP를 갖고 있습니다. "
 
 #, python-format
 msgid ""
@@ -2335,22 +2150,8 @@ msgid ""
 msgstr ""
 "이 파일의 image_file_url:<list entry name> 섹션에서 구성된 파일 시스템 목록"
 
-#, python-format
-msgid "Live migration failed: %s"
-msgstr "라이브 마이그레이션 실패: %s"
-
-msgid "Live migration is not enabled on this host"
-msgstr "이 호스트에서 라이브 마이그레이션을 사용할 수 없음"
-
-#, python-format
-msgid "Live migration is not supported on target host \"%s\""
-msgstr "대상 호스트 \"%s\"에서 라이브 마이그레이션이 지원되지 않음"
-
 msgid "Live migration is supported starting with Hyper-V Server 2012"
 msgstr "Hyper-V Server 2012부터 라이브 마이그레이션이 지원됨 "
-
-msgid "Live migration networks are not configured on this host"
-msgstr "이 호스트에서 라이브 마이그레이션 네트워크가 구성되지 않음"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2404,12 +2205,6 @@ msgstr "%(marker)s 마커를 찾을 수 없습니다. "
 msgid "Maximum allowed length for 'label' is 255."
 msgstr "'레이블'의 최대 허용 길이는 255입니다. "
 
-msgid "Maximum number of fixed ips exceeded"
-msgstr "고정 IP의 최대 수를 초과함"
-
-msgid "Maximum number of floating ips exceeded"
-msgstr "부동 IP의 최대 수 초과"
-
 msgid "Maximum number of key pairs exceeded"
 msgstr "키 쌍의 최대 수 초과"
 
@@ -2442,9 +2237,6 @@ msgid ""
 msgstr ""
 "메트릭 %(name)s을(를) 계산 호스트 노드 %(host)s.%(node)s.에서 찾을 수 없습니"
 "다."
-
-msgid "Metrics collection is not supported on this version of Hyper-V"
-msgstr "이 버전의 Hyper-V에서는 메트릭 콜렉션이 지원되지 않음"
 
 msgid "Migrate Receive failed"
 msgstr "마이그레이션 수신 실패"
@@ -2520,12 +2312,6 @@ msgstr "매개변수 사전 누락"
 msgid "Missing tenant parameter"
 msgstr "테넌트 매개변수 누락"
 
-#, python-format
-msgid ""
-"More than one instance is associated with fixed ip address '%(address)s'."
-msgstr ""
-"둘 이상의 인스턴스가 고정 IP 주소 '%(address)s'과(와) 연관되어 있습니다. "
-
 msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
 "one(s) to connect to."
@@ -2549,10 +2335,6 @@ msgstr "요청 내에 다중 ltiple X-Tenant-ID 헤더가 있습니다."
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "'%s' 이름에 대해 다중 부동 IP 풀 일치가 발견됨"
-
-#, python-format
-msgid "Multiple floating ips are found for address %(address)s."
-msgstr "주소 %(address)s에 대한 복수 부동 IP를 찾았습니다. "
 
 msgid ""
 "Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
@@ -2645,12 +2427,6 @@ msgstr "cidr %(cidr)s에 대한 네트워크를 찾을 수 없습니다. "
 msgid "Network driver does not support this function."
 msgstr "네트워크 드라이버가 이 기능을 지원하지 않습니다."
 
-#, python-format
-msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
-msgstr ""
-"%(host)s 네트워크 호스트는 %(network_id)s 네트워크에서 0개의 고정 IP를 갖고 "
-"있습니다. "
-
 msgid "Network label is required"
 msgstr "네트워크 레이블 필수"
 
@@ -2734,9 +2510,6 @@ msgstr "%(location)s에 디스크가 없음"
 msgid "No errors in logfiles!"
 msgstr "로그 파일에 오류가 없습니다!"
 
-msgid "No external vswitch found"
-msgstr "외부 vswitch를 찾을 수 없음"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "네트워크에 사용 가능한 고정 IP 주소가 없음: %(net)s"
@@ -2747,9 +2520,6 @@ msgstr "ID %(id)s과(와) 연관된 고정 IP가 없습니다. "
 
 msgid "No fixed IP found."
 msgstr "고정 IP를 찾을 수 없음."
-
-msgid "No fixed ips associated to instance"
-msgstr "인스턴스와 연관된 고정 IP가 없음"
 
 msgid "No floating IP addresses have been defined."
 msgstr "정의된 부동 IP 주소가 없습니다. "
@@ -2784,13 +2554,6 @@ msgstr "%s URL에 대해 일치하는 ID를 찾을 수 없습니다."
 
 msgid "No more available networks."
 msgstr "더 이상 사용 가능한 네트워크가 없습니다."
-
-msgid "No more floating ips available."
-msgstr "추가 부동 IP를 사용할 수 없습니다. "
-
-#, python-format
-msgid "No more floating ips in pool %s."
-msgstr "%s 풀에 추가 부동 IP가 없습니다. "
 
 msgid "No networks defined."
 msgstr "정의된 네트워크가 없습니다. "
@@ -2939,10 +2702,6 @@ msgstr "루트 인증서만 검색할 수 있습니다. "
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL 오류: %s"
 
-#, python-format
-msgid "Operation failed with return value: %s"
-msgstr "오퍼레이션 실패. 리턴값: %s"
-
 msgid "Origin header does not match this host."
 msgstr "원본 헤더가 이 호스트와 일치하지 않습니다."
 
@@ -2979,10 +2738,6 @@ msgstr ""
 #, python-format
 msgid "PCI device %(id)s not found"
 msgstr "PCI 디바이스 %(id)s을(를) 찾을 수 없음"
-
-#, python-format
-msgid "PCI device request (%requests)s failed"
-msgstr "PCI 디바이스 요청(%requests)이 실패함"
 
 #, python-format
 msgid ""
@@ -3063,10 +2818,6 @@ msgstr "플러그인 버전 불일치(예상: %(exp)s, 결과: %(got)s)"
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
 msgstr "%(action)s 정책이 수행되도록 허용되지 않았습니다."
-
-#, python-format
-msgid "Policy doesn't allow %s to be performed."
-msgstr "정책에서 수행해야 할 %s을(를) 허용하지 않습니다."
 
 #, python-format
 msgid "Port %(port_id)s is still in use."
@@ -3213,14 +2964,6 @@ msgstr ""
 "습니다. "
 
 #, python-format
-msgid "Requested VM Generation %s is not supported on this OS."
-msgstr "이 OS는 요청된 VM 생성 %s을(를) 지원하지 않습니다."
-
-#, python-format
-msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
-msgstr "VM 생성 %s을(를) 요청했지만 VHDX 대신 VHD를 제공했습니다."
-
-#, python-format
 msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
 msgstr "요청된 cidr(%(cidr)s)이 기존 cidr(%(other)s)과 충돌함"
 
@@ -3301,11 +3044,6 @@ msgstr "규칙(%s)을 찾을 수 없음"
 #, python-format
 msgid "Rule already exists in group: %(rule)s"
 msgstr "그룹에 규칙이 이미 존재함: %(rule)s"
-
-#, python-format
-msgid "Rules must be an instance of dict or Rules, got %s instead"
-msgstr ""
-"규칙은 사전의 인스턴스이거나 규칙 그 자체여야 하지만 %s을(를) 가져왔습니다"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3562,10 +3300,6 @@ msgid "Swap only supports host devices"
 msgstr "지원되는 호스트 디바이스만 스왑합니다."
 
 #, python-format
-msgid "Target live migration host \"%s\" is unreachable"
-msgstr "대상 라이브 마이그레이션 호스트 \"%s\"에 도달할 수 없음"
-
-#, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
 msgstr "%(task_name)s 태스크가 이미 %(host)s 호스트에서 실행 중임"
 
@@ -3592,19 +3326,9 @@ msgstr "DNS 항목 %(name)s이(가) 이미 %(domain)s 도메인에 존재합니�
 msgid "The ID %(id)s is unknown."
 msgstr "ID %(id)s을(를) 알 수 없습니다."
 
-msgid "The JSON file that defines policies."
-msgstr "JSON 파일로 정책을 정의합니다."
-
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI 주소 %(address)s에 올바르지 않은 형식이 있습니다."
-
-msgid ""
-"The Windows account running nova-compute on this Hyper-V host doesn't have "
-"the required permissions to create or operate the virtual machine."
-msgstr ""
-"이 Hyper-V 호스트에서 nova-compute를 실행하는 Windows 계정에 가상 머신을 작성"
-"하거나 운영할 수 있는 필요한 권한이 없습니다."
 
 msgid ""
 "The above error may show that the database has not been created.\n"
@@ -3624,10 +3348,6 @@ msgstr "현재 드라이버는 임시 파티션 유지를 지원하지 않습니
 
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "백엔드에 기본 PBM 정책이 없습니다."
-
-#, python-format
-msgid "The file copy from %(src)s to %(dest)s failed"
-msgstr "%(src)s에서 %(dest)s(으)로의 파일 복사에 실패함"
 
 #, python-format
 msgid "The firewall filter for %s does not exist"
@@ -3871,18 +3591,6 @@ msgstr "Neutron 네트워크를 삭제하기 위해 UUID가 필요합니다. "
 msgid "Unable to associate IP Address, no fixed_ips."
 msgstr "IP 주소를 연관시킬 수 없습니다. fixed_ips가 없습니다. "
 
-#, python-format
-msgid ""
-"Unable to associate floating ip %(address)s to fixed ip %(fixed_address)s "
-"for instance %(id)s. Error: %(error)s"
-msgstr ""
-"부동 ip %(address)s을(를) 인스턴스 %(id)s의 고정 ip %(fixed_address)s에 연관"
-"할 수 없습니다. 오류: %(error)s"
-
-#, python-format
-msgid "Unable to attach volume to instance %s"
-msgstr "%s 인스턴스에 볼륨을 첨부할 수 없음"
-
 msgid "Unable to authenticate Ironic client."
 msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
 
@@ -4069,20 +3777,6 @@ msgstr ""
 "다. "
 
 #, python-format
-msgid "Unable to mount SMBFS share: %(smbfs_share)s WMI exception: %(wmi_exc)s"
-msgstr "SMBFS 공유를 마운트할 수 없음: %(smbfs_share)s WMI 예외: %(wmi_exc)s"
-
-#, python-format
-msgid "Unable to obtain block size from VHD %(vhd_path)s"
-msgstr "VHD %(vhd_path)s에서 블록 크기를 얻을 수 없음"
-
-#, python-format
-msgid ""
-"Unable to obtain internal size from VHDX: %(vhd_path)s. Exception: %(ex)s"
-msgstr ""
-"VHDX: %(vhd_path)s(으)로부터 내부 크기를 가져올 수 없습니다. 예외: %(ex)s"
-
-#, python-format
 msgid "Unable to obtain target information %s"
 msgstr "대상 정보 %s을(를) 얻을 수 없음"
 
@@ -4165,10 +3859,6 @@ msgid "Unknown argument: port"
 msgstr "알 수 없는 인수: 포트"
 
 #, python-format
-msgid "Unknown auth strategy: %s"
-msgstr "알 수 없는 인증 전략: %s"
-
-#, python-format
 msgid "Unknown chain: %r"
 msgstr "알 수 없는 체인: %r"
 
@@ -4232,13 +3922,6 @@ msgstr "언쉘브를 시도했으나 %s 이미지를 찾을 수 없습니다."
 
 msgid "Unsupported Content-Type"
 msgstr "지원되지 않는 Content-Type"
-
-#, python-format
-msgid "Unsupported disk format: %s"
-msgstr "지원되지 않는 디스크 포맷: %s"
-
-msgid "Unsupported virtual disk format"
-msgstr "지원되지 않는 가상 디스크 형식"
 
 msgid "Updated_At"
 msgstr "업데이트 시간"
@@ -4320,10 +4003,6 @@ msgid ""
 msgstr ""
 "VLAN 태그가 포트 그룹 %(bridge)s에 적합하지 않습니다. 예상 VLAN 태그는 "
 "%(tag)s이지만 포트 그룹과 연관된 태그는 %(pgroup)s입니다."
-
-#, python-format
-msgid "VM not found: %s"
-msgstr "VM을 찾을 수 없음: %s"
 
 #, python-format
 msgid ""
@@ -4430,26 +4109,6 @@ msgstr ""
 "%(qemu)s 이상이 필요합니다."
 
 #, python-format
-msgid "WARNING: fixed ip %s allocated to missing instance"
-msgstr "경고: 고정 ip %s이(가) 누락 인스턴스에 할당됨"
-
-#, python-format
-msgid ""
-"WMI job failed with status %(job_state)d. Error details: %(err_sum_desc)s - "
-"%(err_desc)s - Error code: %(err_code)d"
-msgstr ""
-"WMI 작업이 %(job_state)d 상태로 실패했습니다. 오류 세부사항: "
-"%(err_sum_desc)s - %(err_desc)s - 오류 코드: %(err_code)d"
-
-#, python-format
-msgid "WMI job failed with status %(job_state)d. Error details: %(error)s"
-msgstr "WMI 작업이 %(job_state)d 상태로 실패했습니다. 오류 세부사항: %(error)s"
-
-#, python-format
-msgid "WMI job failed with status %d. No error description available"
-msgstr "WMI 작업이 %d 상태로 실패했습니다. 오류 설명이 없습니다"
-
-#, python-format
 msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
@@ -4519,15 +4178,6 @@ msgstr ""
 "션이 제대로 작동하려면 그래픽(VNC 및/또는 SPICE) 청취 주소를 catch-all 주소"
 "(0.0.0.0 또는 ::) 또는 로컬 주소(127.0.0.1 또는 ::1)가 되도록 구성해야 합니"
 "다."
-
-msgid "Zero fixed ips could be found."
-msgstr "0개의 고정 IP를 찾을 수 있습니다. "
-
-msgid "Zero floating ips available."
-msgstr "0개의 부동 IP가 사용 가능합니다. "
-
-msgid "Zero floating ips exist."
-msgstr "0개의 부동 IP가 존재합니다. "
 
 msgid "Zone"
 msgstr "존"
@@ -4633,12 +4283,6 @@ msgstr "Fingerprint를 생성하지 못했습니다"
 msgid "filename cannot be None"
 msgstr "파일 이름은 None일 수 없음"
 
-msgid "floating ip is already associated"
-msgstr "부동 IP가 이미 연관되었음"
-
-msgid "floating ip not found"
-msgstr "부동 IP를 찾을 수 없음"
-
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s 백업: %(backing_file)s"
@@ -4725,9 +4369,6 @@ msgstr "커널"
 
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key가 정의되지 않음"
-
-msgid "l3driver call to add floating ip failed"
-msgstr "부동 IP를 추가하려는 l3driver 호출이 실패했음"
 
 msgid "launched"
 msgstr "시작됨"
@@ -4971,10 +4612,6 @@ msgstr "volumeId가 지정되어야 합니다."
 #, python-format
 msgid "volume_id not found: %s"
 msgstr "volume_id를 찾을 수 없음: %s"
-
-#, python-format
-msgid "vswitch \"%s\" not found"
-msgstr "vswitch \"%s\"을(를) 찾을 수 없음"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

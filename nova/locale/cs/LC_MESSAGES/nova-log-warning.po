@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-11-24 04:00+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
+"PO-Revision-Date: 2015-12-18 02:33+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -298,14 +298,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "Přidělení zařízení selhalo po několika pokusech."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"Disk nebyl nalezen na kontroléru \"%(controller_path)s\" s adresou "
-"\"%(address)s\""
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "Doména |%(domain)s| již existuje, změna projektu na |%(project)s|."
 
@@ -323,9 +315,9 @@ msgstr "Instance zmizela během odpojování rozhraní."
 msgid "During detach_volume, instance disappeared."
 msgstr "Instance zmizela během odpojování svazku."
 
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
+msgid "Error cleaning up fixed IP allocation. Manual cleanup may be required."
 msgstr ""
-"Chyba při čistění přidělení pevných ip adres. Bude zapotřebí je vyčistit "
+"Chyba při čistění přidělení pevných IP adres. Bude zapotřebí je vyčistit "
 "ručně."
 
 #, python-format
@@ -378,6 +370,14 @@ msgid ""
 "resource"
 msgstr ""
 "Rozšíření %(ext_name)s: nelze rozšířit %(collection)s: Žádný takový zdroj"
+
+#, python-format
+msgid ""
+"Extension %s is both in whitelist and blacklist, blacklisting takes "
+"precedence"
+msgstr ""
+"Rozšíření %s je jak v seznamu povolených tak i zakázaných, zakázání má "
+"přednost"
 
 #, python-format
 msgid "Extensions in both blacklist and whitelist: %s"
@@ -469,8 +469,8 @@ msgid "Failed to revert task state for instance. Error: %s"
 msgstr "Nelze vrátit stav úkolu instance. Chyba: %s"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "Nelze vrátit zpět kvótu pro zrušení přidělení pevných ip adres: %s"
+msgid "Failed to rollback quota for deallocate fixed IP: %s"
+msgstr "Nelze vrátit zpět kvótu pro zrušení přidělení pevných IP adres: %s"
 
 #, python-format
 msgid "Failed to shutdown appliance %s"
@@ -494,16 +494,12 @@ msgstr "Vkládání souboru do zavedení z instance svazku není podporováno"
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "Příznak sr_matching_filter '%s' se neřídí pravidly formátování"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "Konfigurace %d nenalezena."
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "Konfigurace nenalezena, přesunutí přeskočeno."
 
 #, python-format
 msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
+"Floating IP address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will not migrate it "
 msgstr ""
 "Plovoucí IP adresa |%(address)s| již nepatří instanci %(instance_uuid)s. "
@@ -511,7 +507,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
+"Floating IP address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will not setup it."
 msgstr ""
 "Plovoucí IP adresa |%(address)s| již nepatří instanci %(instance_uuid)s. "
@@ -812,8 +808,8 @@ msgstr ""
 "%(disk_type)s."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "Neplatné id plovoucí ip adresy %s v žádosti"
+msgid "Invalid floating IP ID %s in request"
+msgstr "Neplatné ID plovoucí IP adresy %s v žádosti"
 
 #, python-format
 msgid "Invalid value '%d' for image_compression_level"
@@ -892,8 +888,8 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr "Chyba Neutron: %(ip)s není platnou ip adresou pro síť %(network_id)s."
+"Neutron error: %(ip)s is not a valid IP address for network %(network_id)s."
+msgstr "Chyba Neutron: %(ip)s není platnou IP adresou pro síť %(network_id)s."
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -951,6 +947,14 @@ msgstr "Žádná shoda při pokusu o aktualizaci BDM: %(bdm)s"
 msgid "No more network or fixed IP to be allocated"
 msgstr "Žádné další sítě nebo pevné IP adresy k přidělení"
 
+#, python-format
+msgid ""
+"No protocol specified in for api_server '%s', please update [glance] "
+"api_servers with fully qualified url including scheme (http / https)"
+msgstr ""
+"U api serveru '%s' nebyl zadán žádný protokol, prosím změňte URL u [glance] "
+"api serverů na úplnou URL včetně schématu (http / https)"
+
 msgid "No valid host found for rebuild"
 msgstr "Nenalezen žádný platný hostitel pro znovu sestavení"
 
@@ -978,14 +982,6 @@ msgstr ""
 #, python-format
 msgid "Not deleting key %s"
 msgstr "Klíč %s nebude smazán"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "%s se nebude načítat, protože je na seznamu zakázaných"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "%s se nebude načítat, protože není na seznamu povolených"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -1096,9 +1092,9 @@ msgstr ""
 "použití starého chování."
 
 #, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
+msgid "Removed %(num)d duplicate rules for floating IP %(float)s"
 msgstr ""
-"Odstraněno %(num)d duplicitních pravidel pro plovoucí ip adresy %(float)s"
+"Odstraněno %(num)d duplicitních pravidel pro plovoucí IP adresy %(float)s"
 
 #, python-format
 msgid ""

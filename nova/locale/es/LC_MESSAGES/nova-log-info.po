@@ -9,9 +9,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-09-29 04:25+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish\n"
@@ -736,10 +736,6 @@ msgid "NBD mount error: %s"
 msgstr "Error de montaje de NBD: %s"
 
 #, python-format
-msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Red desasignada para instancia (ips fija: '%s' )"
-
-#, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr ""
@@ -981,11 +977,6 @@ msgstr "Cambiando volumen %(old_volume)s por %(new_volume)s"
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr "Tarea posiblemente preapropiada: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr ""
-"No se puede encontrar el nombre de iniciador ISCSI. Eligiendo el "
-"predeterminado"
 
 msgid "The imported VM was unregistered"
 msgstr "La VM importada no estaba registrada"

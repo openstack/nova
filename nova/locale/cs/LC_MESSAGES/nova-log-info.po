@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-11-30 03:50+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
+"PO-Revision-Date: 2015-12-16 03:45+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -141,8 +141,21 @@ msgid "Beginning live snapshot process"
 msgstr "Zahajování procesu snímkování za provozu"
 
 #, python-format
+msgid "Booting with blank volume at %(mountpoint)s"
+msgstr "Zavádění pomocí prázdného svazku ve %(mountpoint)s"
+
+#, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr "Zavádění pomocí svazku %(volume_id)s ve %(mountpoint)s"
+
+#, python-format
+msgid "Booting with volume snapshot %(snapshot_id)s at %(mountpoint)s"
+msgstr "Zavádění pomocí snímku svazku %(snapshot_id)s ve %(mountpoint)s"
+
+#, python-format
+msgid "Booting with volume-backed-image %(image_id)s at %(mountpoint)s"
+msgstr ""
+"Zavádění pomocí obrazu %(image_id)s zálohovaném na svazku ve %(mountpoint)s"
 
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "Voláno základní nastavení filtrování v nwfilter"
@@ -760,8 +773,8 @@ msgid "NBD mount error: %s"
 msgstr "Chyba připojení NBD: %s"
 
 #, python-format
-msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Přidělení sítě zrušeno pro instanci (pevné ip adresy: '%s')"
+msgid "Network deallocated for instance (fixed IPs: '%s')"
+msgstr "Přidělení sítě zrušeno pro instanci (pevné IP adresy: '%s')"
 
 #, python-format
 msgid ""
@@ -863,6 +876,9 @@ msgstr ""
 "Připojení k serveru memcache obnoveno a stav služby může být znovu "
 "kontrolován."
 
+msgid "Recovered from being unable to report status."
+msgstr "Nemožnost hlásit stav byla opravena."
+
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
 msgstr "Obraz %(image_location)s registrován s id %(image_id)s"
@@ -870,6 +886,9 @@ msgstr "Obraz %(image_location)s registrován s id %(image_id)s"
 #, python-format
 msgid "Release address %s"
 msgstr "Uvolnit adresu %s"
+
+msgid "Reloading compute RPC API"
+msgstr "Znovu načítání výpočtové API RPC"
 
 #, python-format
 msgid "Removable base files: %s"
@@ -1017,9 +1036,6 @@ msgstr "Vyměňování svazku %(old_volume)s za %(new_volume)s"
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr "Úkol možná prošel preempcí: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "Název iniciátoru ISCSI nelze nalézt. Zvolen výchozí."
 
 msgid "The imported VM was unregistered"
 msgstr "Importovaná VM nebyla registrována"

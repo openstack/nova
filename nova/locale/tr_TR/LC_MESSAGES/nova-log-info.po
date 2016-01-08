@@ -6,9 +6,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev41\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-27 06:29+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-08-30 12:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey)\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.1\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -698,10 +698,6 @@ msgid "NBD mount error: %s"
 msgstr "NBD bağlama hatası: %s"
 
 #, python-format
-msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Sunucu için ayrılan ağ bırakıldı (sabit ip: '%s')"
-
-#, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
 msgstr ""
@@ -935,9 +931,6 @@ msgstr "%(old_volume)s mantıksal sürücüsü %(new_volume)s ile değiştiriliy
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr "Görev muhtemelen etkisizleştirildi: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "ISCSI başlatıcısı ismi bulunamadı. Varsayılan seçiliyor"
 
 msgid "The imported VM was unregistered"
 msgstr "İçe aktarılan VM'nin kaydı silinmişti"

@@ -11,9 +11,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China)\n"
@@ -686,10 +686,6 @@ msgid "NBD mount error: %s"
 msgstr "发生 NBD 安装错误：%s"
 
 #, python-format
-msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "为实例(固定 ips: '%s') 释放网络"
-
-#, python-format
 msgid ""
 "Neutron deleted interface %(intf)s; detaching it from the instance and "
 "deleting it from the info cache"
@@ -922,9 +918,6 @@ msgstr "为%(new_volume)s 交换卷%(old_volume)s"
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr "任务可能被打断：%s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "找不到 ISCSI 发起方名称。正在选择缺省的名称"
 
 msgid "The imported VM was unregistered"
 msgstr "导入的虚拟机VM没有注册"

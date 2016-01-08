@@ -9,9 +9,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-10-03 03:02+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language-Team: German\n"
@@ -732,10 +732,6 @@ msgid "NBD mount error: %s"
 msgstr "NBD-Einhängefehler: %s"
 
 #, python-format
-msgid "Network deallocated for instance (fixed ips: '%s')"
-msgstr "Netwerk freigegeben für Instanz (feste IPs: '%s')"
-
-#, python-format
 msgid ""
 "Neutron deleted interface %(intf)s; detaching it from the instance and "
 "deleting it from the info cache"
@@ -988,10 +984,6 @@ msgstr "Tausche Datenträger %(old_volume)s für %(new_volume)s"
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr "Aufgabe möglicherweise beendet: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr ""
-"Der ISCSI Initiatorname kann nicht gefunden werden. Benutze den Standardnamen"
 
 msgid "The imported VM was unregistered"
 msgstr "Die importierte VM war nicht registriert"
