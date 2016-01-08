@@ -202,7 +202,8 @@ class SimpleTenantUsageTestV21(test.TestCase):
                     x for x in range(SERVERS)]
         for j in range(SERVERS):
             delta = STOP - START
-            uptime = delta.days * 24 * 3600 + delta.seconds
+            # NOTE(javeme): cast seconds from float to int for clarity
+            uptime = int(delta.total_seconds())
             self.assertEqual(uptime, int(servers[j]['uptime']))
             self.assertEqual(HOURS, int(servers[j]['hours']))
             self.assertIn(servers[j]['instance_id'], uuids)
