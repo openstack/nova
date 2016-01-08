@@ -196,7 +196,6 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         ctx = context.RequestContext('fake', 'fake', auth_token=auth_token)
 
         expected_endpoint = 'http://host4:9295'
-        endpoint = glance.GlanceEndpoint(url=expected_endpoint)
         expected_params = {
             'identity_headers': {
                 'X-Auth-Token': 'token',
@@ -206,7 +205,7 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Identity-Status': 'Confirmed'
             }
         }
-        glance._glanceclient_from_endpoint(ctx, endpoint)
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint)
         init_mock.assert_called_once_with('1', expected_endpoint,
                                           **expected_params)
 
@@ -224,7 +223,7 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                 'X-Identity-Status': 'Confirmed'
             }
         }
-        glance._glanceclient_from_endpoint(ctx, endpoint, version=2)
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint, version=2)
         init_mock.assert_called_once_with('2', expected_endpoint,
                                           **expected_params)
 
@@ -235,8 +234,7 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         ipv6_mock.return_value = True
 
         expected_endpoint = 'http://[host4]:9295'
-        endpoint = glance.GlanceEndpoint(url=expected_endpoint)
-        glance._glanceclient_from_endpoint(ctx, endpoint)
+        glance._glanceclient_from_endpoint(ctx, expected_endpoint)
         init_mock.assert_called_once_with('1', expected_endpoint,
                                           **expected_params)
 
@@ -388,8 +386,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
         ctxt = mock.sentinel.ctx
-        endpoint = glance.GlanceEndpoint(url='https://host4:9295')
-        glance._glanceclient_from_endpoint(ctxt, endpoint)
+        glance._glanceclient_from_endpoint(ctxt, 'https://host4:9295')
         client_mock.assert_called_once_with(
             '1', 'https://host4:9295', insecure=False, ssl_compression=False,
             cert_file='bar.cert', key_file='wut.key', cacert='foo.cert',
@@ -1213,32 +1210,19 @@ class TestGlanceUrl(test.NoDBTestCase):
 
 class TestGlanceApiServers(test.NoDBTestCase):
 
-    def test_get_ipv4_api_servers(self):
-        self.flags(api_servers=['10.0.1.1:9292',
-                                'https://10.0.0.1:9293',
-                                'http://10.0.2.2:9294'], group='glance')
-        glance_host = ['10.0.1.1', '10.0.0.1',
-                        '10.0.2.2']
+    def test_get_api_servers(self):
+        glance_servers = ['10.0.1.1:9292',
+                          'https://10.0.0.1:9293',
+                          'http://10.0.2.2:9294']
+        expected_servers = ['http://10.0.1.1:9292',
+                          'https://10.0.0.1:9293',
+                          'http://10.0.2.2:9294']
+        self.flags(api_servers=glance_servers, group='glance')
         api_servers = glance.get_api_servers()
         i = 0
         for server in api_servers:
             i += 1
-            self.assertIn(server.host, glance_host)
-            if i > 2:
-                break
-
-    def test_get_ipv6_api_servers(self):
-        self.flags(api_servers=['[2001:2012:1:f101::1]:9292',
-                                'https://[2010:2013:1:f122::1]:9293',
-                                'http://[2001:2011:1:f111::1]:9294'],
-                   group='glance')
-        glance_host = ['2001:2012:1:f101::1', '2010:2013:1:f122::1',
-                        '2001:2011:1:f111::1']
-        api_servers = glance.get_api_servers()
-        i = 0
-        for server in api_servers:
-            i += 1
-            self.assertIn(server.host, glance_host)
+            self.assertIn(server, expected_servers)
             if i > 2:
                 break
 
@@ -1249,21 +1233,21 @@ class TestGlanceNoApiServers(test.NoDBTestCase):
                    host="10.0.0.1",
                    port=9292)
         api_servers = glance.get_api_servers()
-        self.assertEqual("http://10.0.0.1:9292", str(next(api_servers)))
+        self.assertEqual("http://10.0.0.1:9292", next(api_servers))
 
         self.flags(group='glance',
                    host="10.0.0.1",
                    protocol="https",
                    port=9292)
         api_servers = glance.get_api_servers()
-        self.assertEqual("https://10.0.0.1:9292", str(next(api_servers)))
+        self.assertEqual("https://10.0.0.1:9292", next(api_servers))
 
         self.flags(group='glance',
                    host="f000::c0de",
                    protocol="https",
                    port=9292)
         api_servers = glance.get_api_servers()
-        self.assertEqual("https://[f000::c0de]:9292", str(next(api_servers)))
+        self.assertEqual("https://[f000::c0de]:9292", next(api_servers))
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):

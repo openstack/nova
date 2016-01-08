@@ -37,9 +37,9 @@ class GlanceStore(object):
 
         def pick_glance(kwargs):
             server = next(glance_api_servers)
-            kwargs['endpoint'] = server.url
+            kwargs['endpoint'] = server
             # NOTE(sdague): is the return significant here at all?
-            return server.host
+            return server
 
         def retry_cb(context, instance, exc=None):
             if exc:
