@@ -393,6 +393,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
                                   db_services)
 
 
+@notification.notification_sample('service-update.json')
 @base.NovaObjectRegistry.register
 class ServiceStatusNotification(notification.NotificationBase):
     # Version 1.0: Initial version
