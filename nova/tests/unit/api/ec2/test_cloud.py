@@ -166,7 +166,7 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
 
         def dumb(*args, **kwargs):
             pass

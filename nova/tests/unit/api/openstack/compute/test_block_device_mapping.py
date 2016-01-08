@@ -53,7 +53,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()
         self._setup_controller()
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
 
         self.bdm = [{
             'no_device': None,

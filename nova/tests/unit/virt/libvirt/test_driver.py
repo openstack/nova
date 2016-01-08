@@ -629,7 +629,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "disk_format": "raw",
         }
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
-                self.stubs)
+                self)
         self.device_xml_tmpl = """
         <domain type='kvm'>
           <devices>
@@ -15499,7 +15499,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
             fake_libvirt_utils))
 
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
-                self.stubs)
+                self)
 
         self.mock_update_task_state = mock.Mock()
 

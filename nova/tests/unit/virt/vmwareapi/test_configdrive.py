@@ -50,7 +50,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(enabled=False, group='vnc')
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         self.network_info = utils.get_test_network_info()
         self.node_name = self.conn._nodename

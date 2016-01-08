@@ -63,7 +63,7 @@ class ServerGroupTestBase(test.TestCase):
         self.admin_api = api_fixture.admin_api
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor', manager=CONF.conductor.manager)
         self.start_service('scheduler')

@@ -56,7 +56,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                               self.project_id,
                                               is_admin=True)
 
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.compute_api = compute.API()
 

@@ -25,7 +25,7 @@ class UrlmapTest(test.NoDBTestCase):
     def setUp(self):
         super(UrlmapTest, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
 
     def tearDown(self):
         super(UrlmapTest, self).tearDown()

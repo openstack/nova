@@ -54,7 +54,7 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
         self.api = api_fixture.api
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
 
     # TODO(sdague): refactor this method into the API client, we're
     # going to use it a lot

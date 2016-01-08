@@ -140,7 +140,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
     def _setup_fake_image_service(self):
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
-                self.stubs)
+                self)
         timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
         image = {'id': '88580842-f50a-11e2-8d3a-f23c91aec05e',
                  'name': 'fakeimage7',

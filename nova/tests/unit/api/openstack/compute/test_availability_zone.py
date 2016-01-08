@@ -230,7 +230,7 @@ class ServersControllerCreateTestV21(test.TestCase):
 
             return instance
 
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.stubs.Set(db, 'instance_create', instance_create)
 
         self.req = fakes.HTTPRequest.blank('')

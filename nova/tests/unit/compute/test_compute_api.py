@@ -2383,7 +2383,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         def fake_show(obj, context, image_id, **kwargs):
             return self.fake_image
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
         return self.fake_image['id']
 

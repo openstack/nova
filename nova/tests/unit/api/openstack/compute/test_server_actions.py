@@ -94,7 +94,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.flags(allow_instance_snapshots=True,
                    enable_instance_password=True)
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
