@@ -150,7 +150,7 @@ VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 # Libvirt version
-FAKE_LIBVIRT_VERSION = 9011
+FAKE_LIBVIRT_VERSION = 10002
 
 
 class HostInfo(object):
@@ -790,7 +790,7 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri=None, readonly=False, version=9011,
+    def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
                  hv_version=1001000, host_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
