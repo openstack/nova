@@ -122,7 +122,7 @@ class FlavorsTestV21(test.TestCase):
     def setUp(self):
         super(FlavorsTestV21, self).setUp()
         self.flags(osapi_compute_extension=[])
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)

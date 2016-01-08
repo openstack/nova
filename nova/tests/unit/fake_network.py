@@ -22,7 +22,6 @@ from nova.compute import manager as compute_manager
 import nova.context
 from nova import db
 from nova import exception
-from nova.network import api as network_api
 from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
@@ -285,9 +284,9 @@ def ipv4_like(ip, match_string):
     return True
 
 
-def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
+def fake_get_instance_nw_info(test, num_networks=1, ips_per_vif=2,
                               floating_ips_per_fixed_ip=0):
-    # stubs is the self.stubs from the test
+    # test is an instance of nova.test.TestCase
     # ips_per_vif is the number of ips each vif will have
     # num_floating_ips is number of float ips for each fixed ip
     network = network_manager.FlatManager(host=HOST)
@@ -318,8 +317,8 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
             }
         return fake_info_cache
 
-    stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
-    stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
+    test.stub_out('nova.db.fixed_ip_get_by_instance', fixed_ips_fake)
+    test.stub_out('nova.db.instance_info_cache_update', update_cache_fake)
 
     class FakeContext(nova.context.RequestContext):
         def is_admin(self):
@@ -331,30 +330,30 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     return nw_model
 
 
-def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
+def stub_out_nw_api_get_instance_nw_info(test, func=None,
                                          num_networks=1,
                                          ips_per_vif=1,
                                          floating_ips_per_fixed_ip=0):
 
     def get_instance_nw_info(self, context, instance, conductor_api=None):
-        return fake_get_instance_nw_info(stubs, num_networks=num_networks,
+        return fake_get_instance_nw_info(test, num_networks=num_networks,
                         ips_per_vif=ips_per_vif,
                         floating_ips_per_fixed_ip=floating_ips_per_fixed_ip)
 
     if func is None:
         func = get_instance_nw_info
-    stubs.Set(network_api.API, 'get_instance_nw_info', func)
+    test.stub_out('nova.network.api.API.get_instance_nw_info', func)
 
 
-def stub_out_network_cleanup(stubs):
-    stubs.Set(network_api.API, 'deallocate_for_instance',
+def stub_out_network_cleanup(test):
+    test.stub_out('nova.network.api.API.deallocate_for_instance',
               lambda *args, **kwargs: None)
 
 
 _real_functions = {}
 
 
-def set_stub_network_methods(stubs):
+def set_stub_network_methods(test):
     global _real_functions
     cm = compute_manager.ComputeManager
     if not _real_functions:
@@ -368,16 +367,18 @@ def set_stub_network_methods(stubs):
     def fake_async_networkinfo(*args, **kwargs):
         return network_model.NetworkInfoAsyncWrapper(fake_networkinfo)
 
-    stubs.Set(cm, '_allocate_network', fake_async_networkinfo)
-    stubs.Set(cm, '_deallocate_network', lambda *args, **kwargs: None)
+    test.stub_out('nova.compute.manager.ComputeManager._allocate_network',
+                  fake_async_networkinfo)
+    test.stub_out('nova.compute.manager.ComputeManager._deallocate_network',
+                  lambda *args, **kwargs: None)
 
 
-def unset_stub_network_methods(stubs):
+def unset_stub_network_methods(test):
     global _real_functions
     if _real_functions:
-        cm = compute_manager.ComputeManager
         for name in _real_functions:
-            stubs.Set(cm, name, _real_functions[name])
+            test.stub_out('nova.compute.manager.ComputeManager.' + name,
+                          _real_functions[name])
 
 
 def stub_compute_with_ips(stubs):

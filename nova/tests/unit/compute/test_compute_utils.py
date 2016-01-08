@@ -401,7 +401,7 @@ class UsageInfoTestCase(test.TestCase):
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+            return fake_network.fake_get_instance_nw_info(self, 1, 1)
 
         super(UsageInfoTestCase, self).setUp()
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
@@ -423,7 +423,7 @@ class UsageInfoTestCase(test.TestCase):
 
         self.stubs.Set(nova.tests.unit.image.fake._FakeImageService,
                        'show', fake_show)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self.stubs)
 
     def test_notify_usage_exists(self):

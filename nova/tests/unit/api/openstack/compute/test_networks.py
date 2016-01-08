@@ -248,7 +248,7 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
     def setUp(self):
         super(NetworkCreateExceptionsTestV21, self).setUp()
         self._setup()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
 
@@ -333,7 +333,7 @@ class NetworksTestV21(test.NoDBTestCase):
         super(NetworksTestV21, self).setUp()
         self.fake_network_api = FakeNetworkAPI()
         self._setup()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
         self.non_admin_req = fakes.HTTPRequest.blank('')
@@ -549,7 +549,7 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         super(NetworksAssociateTestV21, self).setUp()
         self.fake_network_api = FakeNetworkAPI()
         self._setup()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
 

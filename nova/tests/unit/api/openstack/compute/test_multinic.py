@@ -60,7 +60,7 @@ class FixedIpTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FixedIpTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
                        compute_api_add_fixed_ip)

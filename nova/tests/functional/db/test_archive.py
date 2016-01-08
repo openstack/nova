@@ -53,7 +53,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         """
         # TODO(mriedem): We should pull this up into the parent class so we
         # don't have so much copy/paste in these functional tests.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create a server
         server = self._build_minimal_create_server_request()

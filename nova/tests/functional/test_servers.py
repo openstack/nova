@@ -105,7 +105,7 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_error(self):
         # Create a server which will enter error state.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         def throw_error(*args, **kwargs):
             raise exception.BuildAbortException(reason='',
@@ -127,7 +127,7 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         # Build the server data gradually, checking errors along the way
@@ -204,7 +204,7 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete(self):
         # Creates, deletes and waits for server to be reclaimed.
         self.flags(reclaim_instance_interval=1)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -240,7 +240,7 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_restore(self):
         # Creates, deletes and restores a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -273,7 +273,7 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_force(self):
         # Creates, deletes and force deletes a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -305,7 +305,7 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Build the server data gradually, checking errors along the way
         server = self._build_minimal_create_server_request()
@@ -347,7 +347,7 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_rebuild_server(self):
         # Rebuild a server with metadata.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -413,7 +413,7 @@ class ServersTest(ServersTestBase):
 
     def test_rename_server(self):
         # Test building and renaming a server.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create a server
         server = self._build_minimal_create_server_request()
@@ -470,7 +470,7 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_injected_files(self):
         # Creates a server with injected_files.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
         personality = []
 
         # Inject a text file

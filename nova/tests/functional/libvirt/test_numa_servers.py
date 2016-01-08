@@ -88,7 +88,7 @@ class NUMAServersTest(ServersTestBase):
     def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
 
         self.compute = self.start_service('compute', host='test_compute0')
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         good_server = self._build_server(flavor_id)

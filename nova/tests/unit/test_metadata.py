@@ -161,7 +161,7 @@ class MetadataTestCase(test.TestCase):
         self.flags(use_local=True, group='conductor')
         self.keypair = fake_keypair_obj(self.instance.key_name,
                                         self.instance.key_data)
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
     def test_can_pickle_metadata(self):
         # Make sure that InstanceMetadata is possible to pickle. This is
@@ -350,7 +350,7 @@ class MetadataTestCase(test.TestCase):
         base.InstanceMetadata(fake_inst_obj(self.context))
 
     def test_local_ipv4(self):
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+        nw_info = fake_network.fake_get_instance_nw_info(self,
                                                           num_networks=2)
         expected_local = "192.168.1.100"
         md = fake_InstanceMetadata(self.stubs, self.instance,
@@ -359,7 +359,7 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(expected_local, data['meta-data']['local-ipv4'])
 
     def test_local_ipv4_from_nw_info(self):
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+        nw_info = fake_network.fake_get_instance_nw_info(self,
                                                          num_networks=2)
         expected_local = "192.168.1.100"
         md = fake_InstanceMetadata(self.stubs, self.instance,
@@ -444,7 +444,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.flags(use_local=True, group='conductor')
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json
@@ -717,7 +717,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def setUp(self):
         super(MetadataHandlerTestCase, self).setUp()
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.flags(use_local=True, group='conductor')
@@ -1187,7 +1187,7 @@ class MetadataHandlerTestCase(test.TestCase):
 class MetadataPasswordTestCase(test.TestCase):
     def setUp(self):
         super(MetadataPasswordTestCase, self).setUp()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.flags(use_local=True, group='conductor')

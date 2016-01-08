@@ -100,9 +100,9 @@ def fake_instance_get(context, instance_id):
         "project_id": '123'})
 
 
-def stub_nw_info(stubs):
+def stub_nw_info(test):
     def get_nw_info_for_instance(instance):
-        return fake_network.fake_get_instance_nw_info(stubs)
+        return fake_network.fake_get_instance_nw_info(test)
     return get_nw_info_for_instance
 
 
@@ -213,9 +213,9 @@ class FloatingIpTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
                        get_instance_by_floating_ip_addr)
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
-                       stub_nw_info(self.stubs))
+                       stub_nw_info(self))
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 
@@ -788,9 +788,9 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
                        get_instance_by_floating_ip_addr)
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
-                       stub_nw_info(self.stubs))
+                       stub_nw_info(self))
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 

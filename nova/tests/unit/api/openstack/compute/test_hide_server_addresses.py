@@ -49,7 +49,7 @@ class HideServerAddressesTestV21(test.TestCase):
 
     def setUp(self):
         super(HideServerAddressesTestV21, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         return_server = fakes.fake_instance_get()
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
         self._setup_wsgi()

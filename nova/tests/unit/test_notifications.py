@@ -45,7 +45,7 @@ class NotificationsTestCase(test.TestCase):
         super(NotificationsTestCase, self).setUp()
         self.fixture = self.useFixture(o_fixture.ClearRequestContext())
 
-        self.net_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
+        self.net_info = fake_network.fake_get_instance_nw_info(self, 1,
                                                                1)
 
         def fake_get_nw_info(cls, ctxt, instance):
@@ -54,7 +54,7 @@ class NotificationsTestCase(test.TestCase):
 
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                 fake_get_nw_info)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         fake_notifier.stub_notifier(self.stubs)
         self.addCleanup(fake_notifier.reset)

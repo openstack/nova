@@ -30,7 +30,7 @@ class TestNoAuthMiddlewareV21(test.NoDBTestCase):
     def setUp(self):
         super(TestNoAuthMiddlewareV21, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         self.wsgi_app = fakes.wsgi_app_v21(use_no_auth=True)
         self.req_url = '/v2'
         self.expected_url = "http://localhost/v2/user1_project"

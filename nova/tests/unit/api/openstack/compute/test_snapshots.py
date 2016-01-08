@@ -32,7 +32,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(SnapshotApiTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(cinder.API, "create_snapshot",
                        fakes.stub_snapshot_create)

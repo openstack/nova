@@ -124,7 +124,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self)
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
         self.stubs.Set(db, 'instance_add_security_group',
                        return_security_group)
@@ -519,7 +519,7 @@ class MultiCreateExtensionTestV2(MultiCreateExtensionTestV21):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         self.ext_mgr = extensions_v20.ExtensionManager()
         self.ext_mgr.extensions = {

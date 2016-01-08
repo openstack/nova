@@ -41,7 +41,7 @@ class ServerPasswordTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ServerPasswordTestV21, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(
             compute.api.API, 'get',
             lambda self, ctxt, *a, **kw:

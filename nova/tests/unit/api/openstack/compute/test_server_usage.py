@@ -63,7 +63,7 @@ class ServerUsageTestV21(test.TestCase):
 
     def setUp(self):
         super(ServerUsageTestV21, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.flags(

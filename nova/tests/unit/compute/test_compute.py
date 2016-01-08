@@ -237,7 +237,7 @@ class BaseTestCase(test.TestCase):
         fake_taskapi = FakeComputeTaskAPI()
         self.stubs.Set(self.compute, 'compute_task_api', fake_taskapi)
 
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self.stubs)
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
@@ -248,7 +248,7 @@ class BaseTestCase(test.TestCase):
 
         def fake_allocate_for_instance(cls, ctxt, instance, *args, **kwargs):
             self.assertFalse(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+            return fake_network.fake_get_instance_nw_info(self, 1, 1)
 
         self.stubs.Set(network_api.API, 'allocate_for_instance',
                        fake_allocate_for_instance)
@@ -1654,7 +1654,7 @@ class ComputeTestCase(BaseTestCase):
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_default_access_ip(self):
         self.flags(default_access_ip_network_name='test1')
-        fake_network.unset_stub_network_methods(self.stubs)
+        fake_network.unset_stub_network_methods(self)
         instance = self._create_fake_instance_obj()
 
         orig_update = self.compute._instance_update
@@ -2693,7 +2693,7 @@ class ComputeTestCase(BaseTestCase):
                                    task_states.REBOOT_STARTED_HARD))
 
         # This is a true unit test, so we don't need the network stubs.
-        fake_network.unset_stub_network_methods(self.stubs)
+        fake_network.unset_stub_network_methods(self)
 
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
@@ -3970,7 +3970,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_queries_macs(self):
         # run_instance should ask the driver for node mac addresses and pass
         # that to the network_api in use.
-        fake_network.unset_stub_network_methods(self.stubs)
+        fake_network.unset_stub_network_methods(self)
         instance = self._create_fake_instance_obj()
 
         macs = set(['01:23:45:67:89:ab'])
@@ -3982,7 +3982,7 @@ class ComputeTestCase(BaseTestCase):
             requested_networks=None,
             vpn=False, macs=macs,
             security_groups=[], dhcp_options=None).AndReturn(
-                fake_network.fake_get_instance_nw_info(self.stubs, 1, 1))
+                fake_network.fake_get_instance_nw_info(self, 1, 1))
 
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
         self.compute.driver.macs_for_instance(
@@ -4034,7 +4034,7 @@ class ComputeTestCase(BaseTestCase):
                 mox.IgnoreArg(),
                 requested_networks=None).MultipleTimes()
 
-        fake_network.unset_stub_network_methods(self.stubs)
+        fake_network.unset_stub_network_methods(self)
 
         self.mox.ReplayAll()
 
@@ -5466,14 +5466,14 @@ class ComputeTestCase(BaseTestCase):
     def test_pre_live_migration_works_correctly(self):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
-            return fake_network.fake_get_instance_nw_info(self.stubs)
+            return fake_network.fake_get_instance_nw_info(self)
         self.stubs.Set(self.compute.network_api,
                        'get_instance_nw_info', stupid)
 
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
+        nw_info = fake_network.fake_get_instance_nw_info(self)
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
@@ -7420,7 +7420,7 @@ class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+            return fake_network.fake_get_instance_nw_info(self, 1, 1)
 
         super(ComputeAPITestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())

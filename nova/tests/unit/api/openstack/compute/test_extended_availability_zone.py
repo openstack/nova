@@ -80,7 +80,7 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedAvailabilityZoneTestV21, self).setUp()
         availability_zones.reset_cache()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(availability_zones, 'get_host_availability_zone',

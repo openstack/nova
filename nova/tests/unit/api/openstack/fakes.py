@@ -17,7 +17,6 @@ import datetime
 import uuid
 
 from oslo_serialization import jsonutils
-from oslo_utils import netutils
 from oslo_utils import timeutils
 import routes
 import six
@@ -42,7 +41,6 @@ from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.netconf
-from nova.network import api as network_api
 from nova import objects
 from nova.objects import base
 from nova import quota
@@ -145,7 +143,7 @@ def stub_out_rate_limiting(stubs):
     stubs.Set(v2_limits.RateLimitingMiddleware, '__call__', fake_wsgi)
 
 
-def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
+def stub_out_instance_quota(test, allowed, quota, resource='instances'):
     def fake_reserve(context, **deltas):
         requested = deltas.pop(resource, 0)
         if requested > allowed:
@@ -158,13 +156,13 @@ def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
             usages[resource]['reserved'] = quotas[resource] // 10
             raise exc.OverQuota(overs=[resource], quotas=quotas,
                                 usages=usages)
-    stubs.Set(QUOTAS, 'reserve', fake_reserve)
+    test.stub_out('nova.quota.QUOTAS.reserve', fake_reserve)
 
 
-def stub_out_networking(stubs):
+def stub_out_networking(test):
     def get_my_ip():
         return '127.0.0.1'
-    stubs.Set(netutils, 'get_my_ipv4', get_my_ip)
+    test.stub_out('oslo_utils.netutils.get_my_ipv4', get_my_ip)
 
 
 def stub_out_compute_api_snapshot(stubs):
@@ -195,11 +193,11 @@ class stub_out_compute_api_backup(object):
         return dict(id='123', status='ACTIVE', name=name, properties=props)
 
 
-def stub_out_nw_api_get_instance_nw_info(stubs, num_networks=1, func=None):
-    fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
+def stub_out_nw_api_get_instance_nw_info(test, num_networks=1, func=None):
+    fake_network.stub_out_nw_api_get_instance_nw_info(test)
 
 
-def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
+def stub_out_nw_api(test, cls=None, private=None, publics=None):
     if not private:
         private = '192.168.0.3'
     if not publics:
@@ -225,8 +223,8 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
 
     if cls is None:
         cls = Fake
-    stubs.Set(network_api, 'API', cls)
-    fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
+    test.stub_out('nova.network.api.API', cls)
+    fake_network.stub_out_nw_api_get_instance_nw_info(test)
 
 
 class FakeToken(object):

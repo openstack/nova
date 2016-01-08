@@ -73,7 +73,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
 
     def setUp(self):
         super(ExtendedServerAttributesTestV21, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
