@@ -73,10 +73,10 @@ class SchedulerHintsTestCaseV21(test.TestCase):
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
-    def test_create_server_with_hints(self):
+    def _test_create_server_with_hint(self, hint):
 
         def fake_create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {'group': 'foo'})
+            self.assertEqual(kwargs['scheduler_hints'], hint)
             return ([self.fake_instance], '')
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
@@ -90,12 +90,23 @@ class SchedulerHintsTestCaseV21(test.TestCase):
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavorRef': '1',
             },
-            'os:scheduler_hints': {'group': 'foo'},
+            'os:scheduler_hints': hint,
         }
 
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
+
+    def test_create_server_with_group_hint(self):
+        self._test_create_server_with_hint({'group': 'foo'})
+
+    def test_create_server_with_different_host_hint(self):
+        self._test_create_server_with_hint(
+            {'different_host': '9c47bf55-e9d8-42da-94ab-7f9e80cd1857'})
+
+        self._test_create_server_with_hint(
+            {'different_host': ['9c47bf55-e9d8-42da-94ab-7f9e80cd1857',
+                                '82412fa6-0365-43a9-95e4-d8b20e00c0de']})
 
     def _create_server_with_scheduler_hints_bad_request(self, param):
         req = self._get_request()
@@ -120,6 +131,13 @@ class SchedulerHintsTestCaseV21(test.TestCase):
         param = {'group': 'a' * 256}
         self._create_server_with_scheduler_hints_bad_request(param)
 
+    def test_create_server_with_bad_different_host_hint(self):
+        param = {'different_host': 'non-server-id'}
+        self._create_server_with_scheduler_hints_bad_request(param)
+
+        param = {'different_host': ['non-server-id01', 'non-server-id02']}
+        self._create_server_with_scheduler_hints_bad_request(param)
+
 
 class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
 
@@ -134,6 +152,11 @@ class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
         return fakes.HTTPRequest.blank('/fake/servers')
 
     def test_create_server_bad_hints_long_group(self):
+        # NOTE: v2.0 API cannot handle this bad request case now.
+        # We skip this test for v2.0.
+        pass
+
+    def test_create_server_with_bad_different_host_hint(self):
         # NOTE: v2.0 API cannot handle this bad request case now.
         # We skip this test for v2.0.
         pass
