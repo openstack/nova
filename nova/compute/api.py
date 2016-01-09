@@ -3271,13 +3271,12 @@ class API(base.Base):
         return bdms.root_bdm()
 
     def is_volume_backed_instance(self, context, instance, bdms=None):
-        if not instance.image_ref:
-            return True
-
         root_bdm = self._get_root_bdm(context, instance, bdms)
-        if not root_bdm:
-            return False
-        return root_bdm.is_volume
+        if root_bdm is not None:
+            return root_bdm.is_volume
+        # in case we hit a very old instance without root bdm, we _assume_ that
+        # instance is backed by a volume, if and only if image_ref is not set
+        return not instance.image_ref
 
     @check_instance_lock
     @check_instance_cell
