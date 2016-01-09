@@ -5666,7 +5666,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 flaglist = CONF.libvirt.block_migration_flag.split(',')
             else:
                 flaglist = CONF.libvirt.live_migration_flag.split(',')
-            flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+
+            def getflag(s):
+                try:
+                    return getattr(libvirt, s)
+                except AttributeError:
+                    msg = _("Unknown libvirt live migration flag '%s'") % s
+                    raise exception.Invalid(msg)
+
+            flagvals = [getflag(x.strip()) for x in flaglist]
             logical_sum = six.moves.reduce(lambda x, y: x | y, flagvals)
 
             pre_live_migrate_data = (migrate_data or {}).get(

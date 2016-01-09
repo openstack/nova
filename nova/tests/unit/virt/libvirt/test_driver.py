@@ -6643,6 +6643,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance_ref, 'dest',
                           False, None, dom)
 
+    def test_live_migration_fails_with_invalid_live_migration_flag(self):
+        self.flags(live_migration_flag="VIR_MIGRATE_UNDEFINE_SOURCE, "
+                                       "VIR_MIGRATE_PEER2PEER, "
+                                       "VIR_MIGRATE_LIVE, "
+                                       "VIR_MIGRATE_TUNNELLED, "
+                                       "VIR_MIGRATE_FOO_BAR",
+                   group='libvirt')
+        instance_ref = self.test_instance
+        dom = fakelibvirt.virDomain
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.Invalid,
+                          drvr._live_migration_operation,
+                          self.context, instance_ref, 'dest',
+                          False, None, dom)
+
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
     def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
