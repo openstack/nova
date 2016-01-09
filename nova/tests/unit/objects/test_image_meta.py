@@ -113,7 +113,7 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual('windows', virtprops.os_type)
         self.assertEqual('vga', virtprops.hw_video_model)
         self.assertEqual(512, virtprops.hw_video_ram)
-        self.assertEqual(True, virtprops.hw_qemu_guest_agent)
+        self.assertTrue(virtprops.hw_qemu_guest_agent)
 
     def test_default_props(self):
         props = {}

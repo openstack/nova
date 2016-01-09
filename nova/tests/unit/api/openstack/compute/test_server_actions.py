@@ -667,7 +667,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.controller._action_resize(self.req, FAKE_UUID, body=body)
 
-        self.assertEqual(self.resize_called, True)
+        self.assertTrue(self.resize_called)
 
     def test_resize_server_no_flavor(self):
         body = dict(resize=dict())
@@ -822,7 +822,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.controller._action_confirm_resize(self.req, FAKE_UUID, body=body)
 
-        self.assertEqual(self.confirm_resize_called, True)
+        self.assertTrue(self.confirm_resize_called)
 
     def test_confirm_resize_migration_not_found(self):
         body = dict(confirmResize=None)
@@ -889,7 +889,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = self.controller._action_revert_resize(self.req, FAKE_UUID,
                                                      body=body)
 
-        self.assertEqual(self.revert_resize_called, True)
+        self.assertTrue(self.revert_resize_called)
 
     def test_revert_resize_raises_conflict_on_invalid_state(self):
         body = dict(revertResize=None)
@@ -1010,7 +1010,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(properties['kernel_id'], _fake_id('b'))
         self.assertEqual(properties['ramdisk_id'], _fake_id('c'))
         self.assertEqual(properties['root_device_name'], '/dev/vda')
-        self.assertEqual(properties['bdm_v2'], True)
+        self.assertTrue(properties['bdm_v2'])
         bdms = properties['block_device_mapping']
         self.assertEqual(len(bdms), 1)
         self.assertEqual(bdms[0]['boot_index'], 0)

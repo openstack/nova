@@ -247,7 +247,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.stubs.Set(timeutils, 'utcnow', utcnow)
 
         self.cells_manager._heal_instances(fake_context)
-        self.assertEqual(True, call_info['shuffle'])
+        self.assertTrue(call_info['shuffle'])
         self.assertIsNone(call_info['project_id'])
         self.assertEqual(updated_since, call_info['updated_since'])
         self.assertEqual(1, call_info['get_instances'])
@@ -256,7 +256,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
         call_info['sync_instances'] = []
         self.cells_manager._heal_instances(fake_context)
-        self.assertEqual(True, call_info['shuffle'])
+        self.assertTrue(call_info['shuffle'])
         self.assertIsNone(call_info['project_id'])
         self.assertEqual(updated_since, call_info['updated_since'])
         self.assertEqual(2, call_info['get_instances'])

@@ -388,6 +388,6 @@ class PciGetInstanceDevs(test.TestCase):
 
         self.load_attr_called = False
         manager.get_instance_pci_devs(inst)
-        self.assertEqual(self.load_attr_called, True)
+        self.assertTrue(self.load_attr_called)
         mock_instance_get.assert_called_with(self.fake_context, '1',
                 columns_to_join=[])

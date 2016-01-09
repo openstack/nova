@@ -388,7 +388,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
         def create(*args, **kwargs):
             self.assertIn('auto_disk_config', kwargs)
-            self.assertEqual(True, kwargs['auto_disk_config'])
+            self.assertTrue(kwargs['auto_disk_config'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -410,7 +410,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
         def rebuild(*args, **kwargs):
             self.assertIn('auto_disk_config', kwargs)
-            self.assertEqual(True, kwargs['auto_disk_config'])
+            self.assertTrue(kwargs['auto_disk_config'])
 
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
@@ -431,7 +431,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
         def resize(*args, **kwargs):
             self.assertIn('auto_disk_config', kwargs)
-            self.assertEqual(True, kwargs['auto_disk_config'])
+            self.assertTrue(kwargs['auto_disk_config'])
 
         self.stubs.Set(compute_api.API, 'resize', resize)
 

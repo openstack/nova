@@ -204,7 +204,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.status = fields.PciDeviceStatus.DELETED
         self.called = False
         self.pci_device.save()
-        self.assertEqual(self.called, False)
+        self.assertFalse(self.called)
 
     def test_update_numa_node(self):
         self.pci_device = pci_device.PciDevice.create(dev_dict)

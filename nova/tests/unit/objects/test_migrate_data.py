@@ -26,14 +26,14 @@ class _TestLiveMigrateData(object):
     def test_from_legacy_dict(self):
         obj = migrate_data.LiveMigrateData()
         obj.from_legacy_dict({'is_volume_backed': False, 'ignore': 'foo'})
-        self.assertEqual(False, obj.is_volume_backed)
+        self.assertFalse(obj.is_volume_backed)
 
     def test_from_legacy_dict_migration(self):
         migration = objects.Migration()
         obj = migrate_data.LiveMigrateData()
         obj.from_legacy_dict({'is_volume_backed': False, 'ignore': 'foo',
                               'migration': migration})
-        self.assertEqual(False, obj.is_volume_backed)
+        self.assertFalse(obj.is_volume_backed)
         self.assertIsInstance(obj.migration, objects.Migration)
 
     def test_legacy_with_pre_live_migration_result(self):

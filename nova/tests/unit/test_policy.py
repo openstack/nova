@@ -92,12 +92,12 @@ class PolicyTestCase(test.NoDBTestCase):
     def test_enforce_bad_action_noraise(self):
         action = "example:denied"
         result = policy.enforce(self.context, action, self.target, False)
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_enforce_good_action(self):
         action = "example:allowed"
         result = policy.enforce(self.context, action, self.target)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     @requests_mock.mock()
     def test_enforce_http_true(self, req_mock):
@@ -106,7 +106,7 @@ class PolicyTestCase(test.NoDBTestCase):
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     @requests_mock.mock()
     def test_enforce_http_false(self, req_mock):
@@ -188,14 +188,14 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
 
         self.assertEqual(check.kind, 'is_admin')
         self.assertEqual(check.match, 'True')
-        self.assertEqual(check.expected, True)
+        self.assertTrue(check.expected)
 
     def test_init_false(self):
         check = policy.IsAdminCheck('is_admin', 'nottrue')
 
         self.assertEqual(check.kind, 'is_admin')
         self.assertEqual(check.match, 'False')
-        self.assertEqual(check.expected, False)
+        self.assertFalse(check.expected)
 
     def test_call_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')

@@ -9395,7 +9395,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             conn.suspend(self.context, instance)
 
             mock_managedSave.assert_called_once_with(0)
-            self.assertEqual(mock_get_instance_disk_info.called, False)
+            self.assertFalse(mock_get_instance_disk_info.called)
             mock_delete_volume.assert_has_calls([mock.call(disk['path'])
                 for disk in mock_get_instance_disk_info.return_value], False)
 
@@ -14592,7 +14592,7 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
 
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         c = driver._get_connection()
-        self.assertEqual(True, c.is_expected)
+        self.assertTrue(c.is_expected)
 
 
 class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):

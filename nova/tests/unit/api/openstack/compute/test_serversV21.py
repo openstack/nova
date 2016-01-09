@@ -1490,7 +1490,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
         # even if reclaim_instance_interval has been set.
-        self.assertEqual(self.server_delete_called, True)
+        self.assertTrue(self.server_delete_called)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):

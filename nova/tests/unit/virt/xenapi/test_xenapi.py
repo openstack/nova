@@ -1780,11 +1780,11 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               dict(base_copy=base_uuid, cow=cow_uuid),
                               network_info, image_meta, resize_instance=True,
                               block_device_info=None, power_on=power_on)
-        self.assertEqual(self.called, True)
+        self.assertTrue(self.called)
         self.assertEqual(self.fake_vm_start_called, power_on)
 
         conn.finish_revert_migration(context, instance, network_info)
-        self.assertEqual(self.fake_finish_revert_migration_called, True)
+        self.assertTrue(self.fake_finish_revert_migration_called)
 
     def test_revert_migrate_power_on(self):
         self._test_revert_migrate(True)
@@ -1818,7 +1818,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=True,
                               block_device_info=None, power_on=power_on)
-        self.assertEqual(self.called, True)
+        self.assertTrue(self.called)
         self.assertEqual(self.fake_vm_start_called, power_on)
 
     def test_finish_migrate_power_on(self):
@@ -2182,7 +2182,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                                         True, 'enabled')
         service = db.service_get_by_host_and_binary(self.context, 'fake-mini',
                                                     'nova-compute')
-        self.assertEqual(service.disabled, False)
+        self.assertFalse(service.disabled)
 
     def test_set_enable_host_disable(self):
         _create_service_entries(self.context, values={'nova': ['fake-mini']})
@@ -2190,7 +2190,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                                         False, 'disabled')
         service = db.service_get_by_host_and_binary(self.context, 'fake-mini',
                                                     'nova-compute')
-        self.assertEqual(service.disabled, True)
+        self.assertTrue(service.disabled)
 
     def test_get_host_uptime(self):
         result = self.conn.get_host_uptime()

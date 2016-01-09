@@ -288,7 +288,7 @@ class _TestRequestSpecObject(object):
         mock_limits.assert_called_once_with({})
         # Make sure that all fields are set using that helper method
         for field in [f for f in spec.obj_fields if f != 'id']:
-            self.assertEqual(True, spec.obj_attr_is_set(field),
+            self.assertTrue(spec.obj_attr_is_set(field),
                              'Field: %s is not set' % field)
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)

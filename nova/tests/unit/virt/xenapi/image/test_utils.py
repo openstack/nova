@@ -50,7 +50,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         mocked.get.return_value = {}
 
         image = self._get_image()
-        self.assertEqual(False, image.is_raw_tgz())
+        self.assertFalse(image.is_raw_tgz())
 
     def test_is_raw_tgz_for_raw_tgz(self, mocked):
         mocked.get.return_value = {
@@ -59,7 +59,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         }
 
         image = self._get_image()
-        self.assertEqual(True, image.is_raw_tgz())
+        self.assertTrue(image.is_raw_tgz())
 
     def test_data(self, mocked):
         mocked.download.return_value = mock.sentinel.image
