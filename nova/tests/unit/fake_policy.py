@@ -39,7 +39,6 @@ policy_data = """
     "compute:get_diagnostics": "",
     "compute:get_instance_diagnostics": "",
 
-    "compute:get_lock": "",
     "compute:lock": "",
     "compute:unlock": "",
     "compute:unlock_override": "is_admin:True",

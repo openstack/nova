@@ -9893,12 +9893,6 @@ class ComputeAPITestCase(BaseTestCase):
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
 
-    def test_get_lock(self):
-        instance = self._create_fake_instance_obj()
-        self.assertFalse(self.compute_api.get_lock(self.context, instance))
-        db.instance_update(self.context, instance['uuid'], {'locked': True})
-        self.assertTrue(self.compute_api.get_lock(self.context, instance))
-
     def test_add_remove_security_group(self):
         instance = self._create_fake_instance_obj()
 
