@@ -64,12 +64,6 @@ class ValidatorTestCase(test.NoDBTestCase):
         self.assertFalse(validator.validate_int(4)(5))
         self.assertFalse(validator.validate_int()(None))
 
-    def test_validate_ec2_id(self):
-        self.assertFalse(validator.validate_ec2_id('foobar'))
-        self.assertFalse(validator.validate_ec2_id(''))
-        self.assertFalse(validator.validate_ec2_id(1234))
-        self.assertTrue(validator.validate_ec2_id('i-284f3a41'))
-
     def test_validate_url_path(self):
         self.assertTrue(validator.validate_url_path('/path/to/file'))
         self.assertFalse(validator.validate_url_path('path/to/file'))
@@ -89,15 +83,3 @@ class ValidatorTestCase(test.NoDBTestCase):
         self.assertTrue(validator.validate_user_data(fixture))
         self.assertFalse(validator.validate_user_data(False))
         self.assertFalse(validator.validate_user_data('hello, world!'))
-
-    def test_default_validator(self):
-        expect_pass = {
-            'attribute': 'foobar'
-        }
-        self.assertTrue(validator.validate(expect_pass,
-                                           validator.DEFAULT_VALIDATOR))
-        expect_fail = {
-            'attribute': 0
-        }
-        self.assertFalse(validator.validate(expect_fail,
-                                            validator.DEFAULT_VALIDATOR))

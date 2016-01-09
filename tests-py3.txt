@@ -1,12 +1,3 @@
-nova.tests.unit.api.ec2.test_api.ApiEc2TestCase
-nova.tests.unit.api.ec2.test_apirequest.APIRequestTestCase
-nova.tests.unit.api.ec2.test_cinder_cloud.CinderCloudTestCase
-nova.tests.unit.api.ec2.test_cloud.CloudTestCase
-nova.tests.unit.api.ec2.test_cloud.CloudTestCaseNeutronProxy
-nova.tests.unit.api.ec2.test_ec2_validate.EC2ValidateTestCase
-nova.tests.unit.api.ec2.test_error_response.Ec2ErrorResponseTestCase
-nova.tests.unit.api.ec2.test_middleware.ExecutorTestCase
-nova.tests.unit.api.ec2.test_middleware.KeystoneAuthTestCase
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ActionExtensionTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ControllerExtensionTest
 nova.tests.unit.api.openstack.compute.legacy_v2.test_extensions.ExtensionControllerIdFormatTest
@@ -97,7 +88,6 @@ nova.tests.unit.db.test_migrations.TestNovaMigrationsMySQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsPostgreSQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsSQLite
 nova.tests.unit.image.test_fake.FakeImageServiceTestCase
-nova.tests.unit.image.test_s3.TestS3ImageService
 nova.tests.unit.keymgr.test_barbican.BarbicanKeyManagerTestCase
 nova.tests.unit.keymgr.test_conf_key_mgr.ConfKeyManagerTestCase
 nova.tests.unit.keymgr.test_key.SymmetricKeyTestCase
@@ -126,7 +116,6 @@ nova.tests.unit.test_metadata.MetadataPasswordTestCase
 nova.tests.unit.test_metadata.MetadataTestCase
 nova.tests.unit.test_metadata.OpenStackMetadataTestCase
 nova.tests.unit.test_nova_manage.CellCommandsTestCase
-nova.tests.unit.test_objectstore.S3APITestCase
 nova.tests.unit.test_pipelib.PipelibTest
 nova.tests.unit.test_policy.AdminRolePolicyTestCase
 nova.tests.unit.test_quota.QuotaIntegrationTestCase

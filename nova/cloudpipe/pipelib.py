@@ -74,13 +74,9 @@ def _load_boot_script():
     with open(CONF.boot_script_template, "r") as shellfile:
         s = string.Template(shellfile.read())
 
-    CONF.import_opt('ec2_dmz_host', 'nova.api.ec2.cloud')
-    CONF.import_opt('ec2_port', 'nova.api.ec2.cloud')
     CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
 
-    return s.substitute(cc_dmz=CONF.ec2_dmz_host,
-                        cc_port=CONF.ec2_port,
-                        dmz_net=CONF.dmz_net,
+    return s.substitute(dmz_net=CONF.dmz_net,
                         dmz_mask=CONF.dmz_mask,
                         num_vpn=CONF.cnt_vpn_clients)
 

@@ -111,8 +111,6 @@ modindex_common_prefix = ['nova.']
 man_pages = [
     ('man/nova-all', 'nova-all', u'Cloud controller fabric',
      [u'OpenStack'], 1),
-    ('man/nova-api-ec2', 'nova-api-ec2', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
     ('man/nova-api-metadata', 'nova-api-metadata', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-api-os-compute', 'nova-api-os-compute',
@@ -142,8 +140,6 @@ man_pages = [
     ('man/nova-spicehtml5proxy', 'nova-spicehtml5proxy', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-serialproxy', 'nova-serialproxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-objectstore', 'nova-objectstore', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-rootwrap', 'nova-rootwrap', u'Cloud controller fabric',
      [u'OpenStack'], 1),

@@ -67,7 +67,6 @@ monkey_patch_opts = [
                 help='Whether to apply monkey patching'),
     cfg.ListOpt('monkey_patch_modules',
                 default=[
-                  'nova.api.ec2.cloud:%s' % (notify_decorator),
                   'nova.compute.api:%s' % (notify_decorator)
                   ],
                 help='List of modules/decorators to monkey patch'),

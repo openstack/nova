@@ -20,6 +20,7 @@ from six.moves import StringIO
 import glanceclient.exc
 import mock
 from oslo_config import cfg
+from oslo_service import sslutils
 from oslo_utils import netutils
 import six
 import testtools
@@ -383,6 +384,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
     @mock.patch('glanceclient.Client')
     def test_create_glance_client_with_ssl(self, client_mock,
                                            ssl_enable_mock):
+        sslutils.register_opts(CONF)
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
         ctxt = mock.sentinel.ctx
