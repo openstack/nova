@@ -217,31 +217,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                          {"name": "test",
                                           "availability_zone": "  nova1  "}})
 
-    def test_create_with_null_availability_zone(self):
-        aggregate = {"name": "aggregate1",
-                     "id": "1",
-                     "availability_zone": None,
-                     "metadata": {},
-                     "hosts": []}
-
-        formatted_aggregate = {"name": "aggregate1",
-                     "id": "1",
-                     "availability_zone": None}
-
-        def stub_create_aggregate(context, name, az_name):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("aggregate1", name, "name")
-            self.assertIsNone(az_name, "availability_zone")
-            return aggregate
-        self.stubs.Set(self.controller.api, 'create_aggregate',
-                       stub_create_aggregate)
-
-        result = self.controller.create(self.req,
-                                        body={"aggregate":
-                                         {"name": "aggregate1",
-                                          "availability_zone": None}})
-        self.assertEqual(formatted_aggregate, result["aggregate"])
-
     def test_create_with_empty_availability_zone(self):
         self.assertRaises(self.bad_request, self.controller.create,
                           self.req, body={"aggregate":
@@ -360,24 +335,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         test_metadata = {"aggregate": {"availability_zone": ""}}
         self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
-
-    def test_update_with_null_availability_zone(self):
-        body = {"aggregate": {"availability_zone": None}}
-        aggre = {"name": "aggregate1",
-                     "id": "1",
-                     "availability_zone": None}
-
-        def stub_update_aggregate(context, aggregate, values):
-            self.assertEqual(context, self.context, "context")
-            self.assertEqual("1", aggregate, "aggregate")
-            self.assertIsNone(values["availability_zone"], "availability_zone")
-            return aggre
-        self.stubs.Set(self.controller.api, "update_aggregate",
-                       stub_update_aggregate)
-
-        result = self.controller.update(self.req, "1", body=body)
-
-        self.assertEqual(aggre, result["aggregate"])
 
     def test_update_with_bad_aggregate(self):
         test_metadata = {"aggregate": {"name": "test_name"}}
