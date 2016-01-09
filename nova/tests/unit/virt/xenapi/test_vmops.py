@@ -15,6 +15,7 @@
 
 from eventlet import greenthread
 import mock
+import uuid
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -740,13 +741,35 @@ class DestroyTestCase(VMOpsTestBase):
     @mock.patch.object(vm_utils, 'hard_shutdown_vm')
     @mock.patch.object(volume_utils, 'find_sr_by_uuid', return_value='sr_ref')
     @mock.patch.object(volume_utils, 'forget_sr')
-    def test_no_vm_orphaned_volume(self, forget_sr, find_sr_by_uuid,
+    def test_no_vm_orphaned_volume_old_sr(self, forget_sr, find_sr_by_uuid,
             hard_shutdown_vm, lookup):
         self.vmops.destroy(self.instance, 'network_info',
                 {'block_device_mapping': [{'connection_info':
                     {'data': {'volume_id': 'fake-uuid'}}}]})
         find_sr_by_uuid.assert_called_once_with(self.vmops._session,
                 'FA15E-D15C-fake-uuid')
+        forget_sr.assert_called_once_with(self.vmops._session, 'sr_ref')
+        self.assertEqual(0, hard_shutdown_vm.call_count)
+
+    @mock.patch.object(vm_utils, 'lookup', side_effect=[None, None])
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    @mock.patch.object(volume_utils, 'find_sr_by_uuid',
+                       side_effect=[None, 'sr_ref'])
+    @mock.patch.object(volume_utils, 'forget_sr')
+    @mock.patch.object(uuid, 'uuid5', return_value='fake-uuid')
+    def test_no_vm_orphaned_volume(self, uuid5, forget_sr,
+            find_sr_by_uuid, hard_shutdown_vm, lookup):
+        fake_data = {'volume_id': 'fake-uuid',
+                     'target_portal': 'host:port',
+                     'target_iqn': 'iqn'}
+        self.vmops.destroy(self.instance, 'network_info',
+                {'block_device_mapping': [{'connection_info':
+                                           {'data': fake_data}}]})
+        call1 = mock.call(self.vmops._session, 'FA15E-D15C-fake-uuid')
+        call2 = mock.call(self.vmops._session, 'fake-uuid')
+        uuid5.assert_called_once_with(volume_utils.SR_NAMESPACE,
+                                      'host/port/iqn')
+        find_sr_by_uuid.assert_has_calls([call1, call2])
         forget_sr.assert_called_once_with(self.vmops._session, 'sr_ref')
         self.assertEqual(0, hard_shutdown_vm.call_count)
 
