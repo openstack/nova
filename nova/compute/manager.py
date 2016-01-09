@@ -2406,6 +2406,22 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(instance.uuid)
         def do_terminate_instance(instance, bdms):
+            # NOTE(mriedem): If we are deleting the instance while it was
+            # booting from volume, we could be racing with a database update of
+            # the BDM volume_id. Since the compute API passes the BDMs over RPC
+            # to compute here, the BDMs may be stale at this point. So check
+            # for any volume BDMs that don't have volume_id set and if we
+            # detect that, we need to refresh the BDM list before proceeding.
+            # TODO(mriedem): Move this into _delete_instance and make the bdms
+            # parameter optional.
+            for bdm in list(bdms):
+                if bdm.is_volume and not bdm.volume_id:
+                    LOG.debug('There are potentially stale BDMs during '
+                              'delete, refreshing the BlockDeviceMappingList.',
+                              instance=instance)
+                    bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid)
+                    break
             try:
                 self._delete_instance(context, instance, bdms, quotas)
             except exception.InstanceNotFound:
