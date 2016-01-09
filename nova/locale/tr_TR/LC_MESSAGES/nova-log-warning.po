@@ -6,9 +6,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-09-08 05:38+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Turkish (Turkey)\n"
@@ -253,14 +253,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "Bir çok denemeden sonra aygıt ayırma başarısız."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"Disk \"%(address)s\" adresine sahip \"%(controller_path)s\" denetmeni "
-"üzerinde bulunamadı"
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr ""
 "Alan |%(domain)s| zaten mevcut, proje |%(project)s| olarak değiştiriliyor."
@@ -275,9 +267,6 @@ msgstr "detach_interface sırasında, sunucu ortadan kayboldu."
 
 msgid "During detach_volume, instance disappeared."
 msgstr "detach_volume sırasındai sunucu ortadan kayboldu."
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr "Ayrılan sabit ip temizlenirken hata. Elle temizlik gerekebilir."
 
 #, python-format
 msgid ""
@@ -393,10 +382,6 @@ msgid "Failed to revert task state for instance. Error: %s"
 msgstr "Sunucu için görev durumunu tersine çevirme başarısız. Hata: %s"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "Ayrılmamış sabit ip için kota geri alınamadı: %s"
-
-#, python-format
 msgid "Failed to shutdown appliance %s"
 msgstr "%s cihazını kapatma başarısız"
 
@@ -422,28 +407,8 @@ msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr ""
 "Bayrak sr_matching_filter '%s' biçimlendirme kurallarına saygı göstermiyor"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "Nitelik %d bulunamadı"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "Nitelik bulunamadı, göç atlanıyor."
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr ""
-"Değişken ip adres |%(address)s| artık %(instance_uuid)s sunucusuna ait "
-"değil. Göç ettirilmeyecek "
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not setup it."
-msgstr ""
-"Değişken ip adres |%(address)s| artık %(instance_uuid)s sunucusuna ait "
-"değil. Kurulmayacak."
 
 #, python-format
 msgid ""
@@ -671,10 +636,6 @@ msgstr ""
 "%(disk_type)s disk türü için geçersiz zula kipi %(cache_mode)s belirtilmiş."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "İstekte geçersiz değişken ip id'si %s"
-
-#, python-format
 msgid "Invalid value '%d' for image_compression_level"
 msgstr "image_compression_level için geçersiz değer '%d'"
 
@@ -728,12 +689,6 @@ msgid ""
 msgstr ""
 "Ağ %(id)s kiracıların ağıyla eşleşmedi! Bağlantı noktaları kiracısı "
 "%(tenant_id)s kullanılacak."
-
-#, python-format
-msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr ""
-"Neutron hatası: %(ip)s %(network_id)s ağı için geçerli bir ip adresi değil."
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -809,14 +764,6 @@ msgstr "Kaynaklar talep edilmeden sunucuda düğüm alanı ayarlanmamalı"
 #, python-format
 msgid "Not deleting key %s"
 msgstr "%s anahtarı silinmiyor"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "Karalistede olduğundan %s yüklenmiyor"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "Beyaz listede olmadığından %s yüklenmiyor"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -917,10 +864,6 @@ msgid ""
 "Relative blockrebase support was not detected. Continuing with old behaviour."
 msgstr ""
 "Göreli blockrebase desteği algılanmadı. Eski davranışla devam ediliyor."
-
-#, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr "Değişken ip %(float)s için %(num)d kopya kural kaldırıldı"
 
 #, python-format
 msgid ""

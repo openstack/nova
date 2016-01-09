@@ -8,10 +8,10 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-11-19 08:53+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
+"PO-Revision-Date: 2015-12-21 12:12+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -63,8 +63,8 @@ msgid "An error occurred while refreshing the network cache."
 msgstr "Při obnově mezipaměti sítě došlo k chybě."
 
 #, python-format
-msgid "Attach volume failed: %s"
-msgstr "Připojení svazku selhalo: %s"
+msgid "Attach volume failed to %(instance_name)s: %(exn)s"
+msgstr "Připojení svazku k %(instance_name)s selhalo: %(exn)s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
@@ -80,6 +80,14 @@ msgstr "Nelze blokově přesunout instanci %s s namapovanými svazky"
 
 msgid "Cannot cleanup migration files"
 msgstr "Nelze vyčistit soubory přesunu"
+
+#, python-format
+msgid ""
+"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
+"method: %(auth_method)s."
+msgstr ""
+"Nelze se přihlásit v cíli %(target_iqn)s. Nepodporovaný způsob věření ISCSI: "
+"%(auth_method)s."
 
 #, python-format
 msgid "Cannot reboot instance: %s"
@@ -230,10 +238,9 @@ msgstr "Prostředí: %s"
 
 #, python-format
 msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
+"Error contacting glance server '%(server)s' for '%(method)s', %(extra)s."
 msgstr ""
-"Chyba při kontaktování serveru glance '%(host)s:%(port)s' pro '%(method)s', "
+"Chyba při kontaktování serveru glance '%(server)s' pro '%(method)s', "
 "%(extra)s."
 
 #, python-format
@@ -290,6 +297,14 @@ msgstr "Chyba od libvirt během rušení určení. Kód=%(errcode)s Chyba=%(e)s"
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr "Chyba od libvirt během rušení filtru. Kód=%(errcode)s Chyba=%(e)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while injecting an NMI to %(instance_uuid)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"Chyba od libvirt při vkládání NMI do %(instance_uuid)s: [Kód chyby "
+"%(error_code)s] %(ex)s"
 
 #, python-format
 msgid "Error getting key: %s"
@@ -392,10 +407,6 @@ msgstr "Chyba při pokusu o vyčištění obrazu %s"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "Chyba při zápisu do %(path)s: %(exception)s"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr "Chyba při zápisu záznamu konzole vm z roury sériové konzole. Chyba: %s"
 
 #, python-format
 msgid "Error: %s"
@@ -578,12 +589,12 @@ msgstr ""
 "%(provider)s, sítě %(networks)s, žadatel %(requester)s. Chyba: %(error)s"
 
 #, python-format
-msgid "Failed to get metadata for instance id: %s"
-msgstr "Nelze získat popisná data pro id instance: %s"
+msgid "Failed to get metadata for IP: %s"
+msgstr "Nelze získat popisná data pro Ip adresu: %s"
 
 #, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Nelze získat popisná data pro ip: %s"
+msgid "Failed to get metadata for instance id: %s"
+msgstr "Nelze získat popisná data pro id instance: %s"
 
 msgid "Failed to get nw_info"
 msgstr "Nelze získat informace o síti"
@@ -694,10 +705,6 @@ msgstr "Nelze strhnout souborový systém kontejneru"
 msgid "Failed to umount container filesystem"
 msgstr "Nelze odpojit souborový systém kontejneru"
 
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Nelze pochopit pravidlo %s"
-
 msgid "Failed to unpause instance"
 msgstr "Nelze zrušit pozastavení iínstance"
 
@@ -758,9 +765,6 @@ msgstr "Závažná výjimka při spuštění %(name)s %(type)s-hák: %(obj)s"
 
 msgid "FaultWrapper error"
 msgstr "Chyba ve FaultWrapper"
-
-msgid "Get version 2 connection error"
-msgstr "Chyba připojení Get verze 2"
 
 msgid "Guest does not have a console available"
 msgstr "Host nemá konzoli k dispozici"
@@ -922,19 +926,11 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "Nova-network nemá povolen přístup k db: %s"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Žádná obslužná rutina pro shody druhu %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Žádná obslužná rutina pro uložení %s"
 
 msgid "Not all properties needed are implemented in the compute driver"
 msgstr "Ne všechny potřebné vlastnosti jsou ovladačem výpočtu zavedeny"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "PCI zařízení %s nenalezeno"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -1009,8 +1005,7 @@ msgid "The Quobyte volume at %s is still in use."
 msgstr "Svazek Quobyte na %s se stále používá."
 
 #, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
+msgid "The agent call to %(method)s returned an error: %(ret)r. args=%(args)r"
 msgstr "Volání agenta %(method)s vrátilo chybu: %(ret)r. argumenty=%(args)r"
 
 #, python-format
@@ -1130,6 +1125,10 @@ msgid "Unable to preallocate image at path: %(path)s"
 msgstr "Nelze předpřidělit obraz na cestě: %(path)s"
 
 #, python-format
+msgid "Unable to retrieve certificate with ID %(id)s: %(e)s"
+msgstr "Nelze získat certifikát s ID %(id)s: %(e)s"
+
+#, python-format
 msgid "Unable to retrieve storage policy with name %s"
 msgstr "Nelze získat zásady úložiště s názvem %s"
 
@@ -1158,6 +1157,9 @@ msgstr "Neočekávané selhání sestavení, nebude znovu naplánováno."
 #, python-format
 msgid "Unexpected error while checking process %(pid)s."
 msgstr "Neočekávaná chyba při kontrole procesu %(pid)s."
+
+msgid "Unexpected error while reporting service status"
+msgstr "Při hlášení stavu služby se objevila nečekaná chyba."
 
 msgid "Unexpected exception in API method"
 msgstr "Neočekávaná výjimka v metodě API"

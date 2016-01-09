@@ -10,9 +10,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
 "Language-Team: Spanish\n"
@@ -272,14 +272,6 @@ msgstr ""
 "Ha fallado la asignación de dispositivo después de repetidos reintentos."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"No se encontró disco en controlador \"%(controller_path)s\" con dirección "
-"\"%(address)s\""
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr ""
 "El dominio |%(domain)s| ya existe, cambiando el proyecto a |%(project)s."
@@ -293,11 +285,6 @@ msgstr "Durante detach_interface, la instancia ha desaparecido."
 
 msgid "During detach_volume, instance disappeared."
 msgstr "Durante detach_volume, la instancia ha desaparecido."
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr ""
-"Error al limpiar la asignación de IP fija. Es posible que se requiera una "
-"limpieza manual."
 
 #, python-format
 msgid ""
@@ -415,10 +402,6 @@ msgid "Failed to revert task state for instance. Error: %s"
 msgstr "Error al volver al estado de tarea para instancia. Error: %s"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "No se pudo restaurar la capacidad para desasignar IP fija: %s"
-
-#, python-format
 msgid "Failed to shutdown appliance %s"
 msgstr "No se ha podido concluir el dispositivo %s"
 
@@ -445,28 +428,8 @@ msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr ""
 "El distintivo sr_matching_filter '%s' no respeta el convenio de formato"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "El sabor %d no ha sido encontrado"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "El sabor no puede ser encontrado, omitiendo migración."
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr ""
-"La dirección IP flotante | %(address)s | ya no pertentece a la instancia "
-"%(instance_uuid)s. No será migrada"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not setup it."
-msgstr ""
-"La dirección IP flotante |%(address)s| ya no pertenece a la instancia "
-"%(instance_uuid)s. No se configurará."
 
 #, python-format
 msgid ""
@@ -718,10 +681,6 @@ msgstr ""
 "disco %(disk_type)s."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "Identificador de dirección IP flotante inválida %s en solicitud"
-
-#, python-format
 msgid "Invalid value '%d' for image_compression_level"
 msgstr "Valor inválido '%d' para image_compression_level"
 
@@ -776,13 +735,6 @@ msgid ""
 msgstr ""
 "La red %(id)s no coincide con las redes de los inquilinos! El puerto del "
 "inquilino %(tenant_id)s será utilizado."
-
-#, python-format
-msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr ""
-"Error de Neutron: %(ip)s no es una direccion ip valida para la red "
-"%(network_id)s."
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -864,14 +816,6 @@ msgstr ""
 #, python-format
 msgid "Not deleting key %s"
 msgstr "Sin eliminar la clave %s"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "No se ha cargado %s porque está en la lista negra"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "No se ha cargado %s porque no está en la lista blanca"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -976,11 +920,6 @@ msgid ""
 msgstr ""
 "El soporte relativo a blockRebase no fue detectado. Continuando con el "
 "antiguo comportamiento."
-
-#, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr ""
-"Se han eliminado %(num)d reglas duplicadas para la IP flotante %(float)s"
 
 #, python-format
 msgid ""

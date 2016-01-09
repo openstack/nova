@@ -1,23 +1,13 @@
 # Japanese translations for nova.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the nova project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
-# Translators:
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
-# Sasuke(Kyohei MORIYAMA) <>, 2015
-# *pokotan-in-the-sky*  <>, 2012
-# Tom Fifield <tom@openstack.org>, 2013
-# Tomoyuki KATO <tomo@dream.daynight.jp>, 2013
-# Akihiro Motoki <amotoki@gmail.com>, 2015. #zanata
-# KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>, 2015. #zanata
-# Mie Yamamoto <myamamot@redhat.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Yuko Katabami <yukokatabami@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:31+0000\n"
+"POT-Creation-Date: 2016-01-08 06:11+0000\n"
 "PO-Revision-Date: 2015-10-08 04:20+0000\n"
 "Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
 "Language: ja\n"
@@ -26,15 +16,11 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr "%(address)s が有効な IP v4/6 アドレスではありません。"
-
-#, python-format
-msgid "%(address)s is not a valid ip address."
-msgstr "%(address)s は有効な IP アドレスではありません。"
 
 #, python-format
 msgid "%(address)s is not within %(cidr)s."
@@ -46,10 +32,6 @@ msgid ""
 msgstr ""
 "%(binary)s が直接データベースへアクセスしようとしましたが、これはポリシーで許"
 "可されていません"
-
-#, python-format
-msgid "%(cidr)s is not a valid ip network."
-msgstr "%(cidr)s は有効な IP ネットワークではありません。"
 
 #, python-format
 msgid "%(err)s"
@@ -136,10 +118,6 @@ msgstr "%s 形式はサポートされていません"
 #, fuzzy, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s がストリングでもユニコードでもありません"
-
-#, python-format
-msgid "%s is not a valid ip network"
-msgstr "%s は有効な IP ネットワークではありません"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
@@ -294,10 +272,6 @@ msgstr "ホスト %(host)s カウントの総計が見つかりません。"
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "アグリゲートにはアクション %s はありません"
-
-#, python-format
-msgid "An error has occurred when calling the iscsi initiator: %s"
-msgstr "iSCSI イニシエーターの呼び出し中にエラーが発生しました: %s"
 
 msgid "An unexpected error has occurred."
 msgstr "想定しないエラーが発生しました。"
@@ -570,9 +544,6 @@ msgstr ""
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "孤立 %(objtype)s オブジェクトで %(method)s を呼び出すことはできません"
 
-msgid "Cannot disassociate auto assigned floating ip"
-msgstr "自動割り当て済み Floating IP の関連付けは解除できません"
-
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr "/sbin/mount.sofs を実行できません"
 
@@ -582,24 +553,8 @@ msgstr "コンテンツタイプが ISO の SR が見つかりません"
 msgid "Cannot find SR to read/write VDI."
 msgstr "VDI の読み取り/書き込み用の SR が見つかりません。"
 
-#, python-format
-msgid "Cannot find boot VHD file for instance: %s"
-msgstr "インスタンス %s のブート用 VHD ファイルが見つかりません"
-
 msgid "Cannot find image for rebuild"
 msgstr "再作成用のイメージが見つかりません"
-
-#, python-format
-msgid "Cannot get VM summary data for: %s"
-msgstr "%s の VM サマリーデータを取得できません"
-
-#, python-format
-msgid ""
-"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
-"method: %(auth_method)s."
-msgstr ""
-"ターゲット %(target_iqn)s にログインできません。iSCSI 認証方式 "
-"%(auth_method)s はサポートされていません。"
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "Scality SOFS をマウントできません。syslog でエラーを確認してください"
@@ -630,33 +585,6 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "ボリュームを使ったインスタンスはレスキューできません"
-
-msgid "Cannot resize a VHD to a smaller size"
-msgstr "VHD のサイズを縮小することはできません"
-
-#, python-format
-msgid ""
-"Cannot resize a VHD to a smaller size, the original size is %(old_size)s, "
-"the newer size is %(new_size)s"
-msgstr ""
-"VHD のサイズを縮小することはできません。元のサイズは %(old_size)s で、新しい"
-"サイズは %(new_size)s です"
-
-#, python-format
-msgid ""
-"Cannot resize the image to a size smaller than the VHD max. internal size: "
-"%(vhd_size)s. Requested disk size: %(root_vhd_size)s"
-msgstr ""
-"VHD の最大値より小さいサイズにイメージをサイズ変更することはできません。内部"
-"サイズ: %(vhd_size)s。要求されたディスクサイズ: %(root_vhd_size)s"
-
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB"
-msgstr ""
-"ルートディスクのサイズを小さくすることはできません。現在のサイズ: "
-"%(curr_root_gb)s GB。要求されたサイズ: %(new_root_gb)s GB"
 
 msgid "Cannot run any more instances of this type."
 msgstr "このタイプのインスタンスをこれ以上実行することはできません。"
@@ -758,10 +686,6 @@ msgstr "%(host)s のコンピュートサービスが依然として使用され
 msgid "Compute service of %(host)s is unavailable at this time."
 msgstr "この時点では %(host)s のコンピュートサービスを使用できません。"
 
-#, python-format
-msgid "Config drive is required by instance: %s, but it does not exist."
-msgstr "コンフィグドライブがインスタンス: %s で必要ですが、存在しません。"
-
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 "設定でカスタム CPU モデルが要求されましたが、モデル名が指定されませんでした"
@@ -780,10 +704,6 @@ msgstr "競合するポリシーが設定されています"
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
 msgstr "cinder ホストへの接続に失敗しました: %(reason)s"
-
-#, python-format
-msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
-msgstr "glance ホスト %(host)s:%(port)s との接続に失敗しました: %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -872,10 +792,6 @@ msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "VM が使用するデータストア参照が見つかりませんでした。"
 
 #, python-format
-msgid "Could not get instance console log. Error: %s"
-msgstr "インスタンスのコンソールログを取得できませんでした。エラー: %s"
-
-#, python-format
 msgid "Could not load line %(line)s, got error %(error)s"
 msgstr ""
 "行 %(line)s をロードできませんでした。エラー %(error)s を受け取りました"
@@ -898,10 +814,6 @@ msgstr "リクエストから imageRef を解析できませんでした。"
 #, python-format
 msgid "Could not read %s. Re-running with sudo"
 msgstr "%s を読み取ることができませんでした。sudo で再実行します"
-
-#, python-format
-msgid "Could not unmount share: %s"
-msgstr "共有 %s をアンマウントできませんでした"
 
 #, python-format
 msgid "Could not upload image %(image_id)s"
@@ -943,9 +855,6 @@ msgstr "日時が無効な形式です"
 
 msgid "Default PBM policy is required if PBM is enabled."
 msgstr "PBM が有効になっている場合、デフォルト PBM ポリシーは必須です。"
-
-msgid "Default rule. Enforced when a requested rule is not found."
-msgstr "デフォルトルール。要求されたルールが見つからない場合に適用されます。"
 
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
@@ -998,18 +907,6 @@ msgstr ""
 "%(table)s.%(column)s とシャドーテーブル内のタイプが異なります: %(c_type)s "
 "%(shadow_c_type)s"
 
-msgid ""
-"Directories where policy configuration files are stored. They can be "
-"relative to any directory in the search path defined by the config_dir "
-"option, or absolute paths. The file defined by policy_file must exist for "
-"these directories to be searched.  Missing or empty directories are ignored."
-msgstr ""
-"ポリシー設定ファイルが格納されるディレクトリー。これらは、config_dir オプショ"
-"ンで指定された検索パスに含まれるいずれかのディレクトリーに対する相対パスもし"
-"くは、絶対パスで指定します。policy_file は、検索対象のこれらのディレクトリー"
-"に存在している必要があります。欠落した、または空のディレクトリーは無視されま"
-"す。"
-
 msgid "Disassociate host is not implemented by the configured Network API"
 msgstr ""
 "ホストの関連付け解除は設定されたネットワーク API では実装されていません"
@@ -1044,10 +941,6 @@ msgstr "ID が %s のインスタンスに接続されたディスクが見つ�
 #, python-format
 msgid "Driver Error: %s"
 msgstr "ドライバーエラー: %s"
-
-#, python-format
-msgid "Duplicate VM name found: %s"
-msgstr "重複する VM 名が検出されました: %s"
 
 #, python-format
 msgid "Duplicate networks (%s) are not allowed"
@@ -1165,9 +1058,6 @@ msgstr ""
 "ライブマイグレーション時にインスタンス %(instance_uuid)s の最大スケジューリン"
 "グ再試行回数 %(max_retries)d を超えました"
 
-msgid "Exceeded the maximum number of slots"
-msgstr "スロットの最大数を超えました"
-
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "UUID が必要ですが、%(uuid)s を受け取りました。"
@@ -1238,12 +1128,6 @@ msgstr ""
 "ネットワークアダプターデバイスを %(instance_uuid)s に接続できませんでした"
 
 #, python-format
-msgid "Failed to create vswitch port %(port_name)s on switch %(vswitch_path)s"
-msgstr ""
-"スイッチ %(vswitch_path)s の vswitch ポート %(port_name)s の作成に失敗しまし"
-"た"
-
-#, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
 msgstr "イメージファイル %(image_file)s の復号に失敗しました: %(err)s"
 
@@ -1280,10 +1164,6 @@ msgstr "テキストの暗号化に失敗しました: %(reason)s"
 #, python-format
 msgid "Failed to launch instances: %(reason)s"
 msgstr "インスタンスを起動できませんでした: %(reason)s"
-
-#, python-format
-msgid "Failed to login target %s"
-msgstr "ターゲット %s にログインできませんでした"
 
 #, fuzzy, python-format
 msgid "Failed to map partitions: %s"
@@ -1323,14 +1203,6 @@ msgstr "ディスク情報ファイルの読み取りまたは書き込みに失
 #, python-format
 msgid "Failed to reboot instance: %(reason)s"
 msgstr "インスタンスをリブートできませんでした: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to reconnect image %(child_vhd_path)s to parent %(parent_vhd_path)s. "
-"The child image has no parent path property."
-msgstr ""
-"イメージ %(child_vhd_path)s を親 %(parent_vhd_path)s に再接続できませんでし"
-"た。子イメージに親パスプロパティーがありません。"
 
 #, python-format
 msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
@@ -1447,14 +1319,6 @@ msgid "Fixed IP associate failed for network: %(net)s."
 msgstr "ネットワーク %(net)s に対する Fixed IP の関連付けが失敗しました。"
 
 #, python-format
-msgid "Fixed ip %(address)s already exists."
-msgstr "Fixed IP %(address)s は既に存在します。"
-
-#, python-format
-msgid "Fixed ip not found for address %(address)s."
-msgstr "アドレスが %(address)s の Fixed IP が見つかりません。"
-
-#, python-format
 msgid "Flavor %(flavor_id)s could not be found."
 msgstr "フレーバー %(flavor_id)s が見つかりませんでした。"
 
@@ -1526,55 +1390,8 @@ msgstr "フレーバーのメモリーは要求されたイメージに対して
 msgid "Floating IP allocate failed."
 msgstr "Floating IP の確保に失敗しました。"
 
-#, python-format
-msgid "Floating ip %(address)s already exists."
-msgstr "Floating IP %(address)s は既に存在します。"
-
-#, python-format
-msgid "Floating ip %(address)s is associated."
-msgstr "Floating IP %(address)s は関連付けられています。"
-
-#, fuzzy, python-format
-msgid "Floating ip %(address)s is not associated with instance %(id)s."
-msgstr ""
-"Floating IP %(address)s がインスタンス %(id)s と関連付けられていません。"
-
-#, python-format
-msgid "Floating ip %(address)s is not associated."
-msgstr "Floating IP %(address)s は関連付けられていません。"
-
-#, fuzzy
-msgid "Floating ip is not associated"
-msgstr "Floating IP が関連付けられていません"
-
 msgid "Floating ip is not associated."
 msgstr "Floating IP が関連付けられていません。"
-
-#, python-format
-msgid "Floating ip not found for address %(address)s."
-msgstr "アドレス %(address)s の Floating IP が見つかりません。"
-
-#, python-format
-msgid "Floating ip not found for host %(host)s."
-msgstr "ホスト %(host)s の Floating IP が見つかりません。"
-
-#, python-format
-msgid "Floating ip not found for id %(id)s."
-msgstr "ID %(id)s の Floating IP が見つかりません。"
-
-#, python-format
-msgid "Floating ip not found for id %s"
-msgstr "ID %s の Floating IP が見つかりません"
-
-msgid "Floating ip pool not found."
-msgstr "Floating IP プールが見つかりません。"
-
-msgid ""
-"For \"noauth\" authentication strategy, the endpoint must be specified conf."
-"neutron.url"
-msgstr ""
-"認証方法が \"noauth\" の場合、エンドポイントには conf.neutron.url を指定する"
-"必要があります"
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1626,10 +1443,6 @@ msgstr "ホスト"
 
 msgid "Host"
 msgstr "ホスト"
-
-#, python-format
-msgid "Host %(action)s is not supported by the Hyper-V driver"
-msgstr "ホスト %(action)s は Hyper-V ドライバーではサポートされていません"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -1867,14 +1680,6 @@ msgstr "インスタンス %(instance_id)s は受け付けられません: %(rea
 #, python-format
 msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
 msgstr "インスタンス %(instance_uuid)s で NUMA トポロジーが指定されていません"
-
-#, python-format
-msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
-msgstr "インスタンス %(instance_uuid)s にFixed IP '%(ip)s' がありません。"
-
-#, python-format
-msgid "Instance %(instance_uuid)s has zero fixed ips."
-msgstr "インスタンス %(instance_uuid)s には Fixed IP がありません。"
 
 #, python-format
 msgid ""
@@ -2426,24 +2231,9 @@ msgstr ""
 "このファイルの image_file_url:<list entry name> セクションで設定されている"
 "ファイルシステムのリスト"
 
-#, python-format
-msgid "Live migration failed: %s"
-msgstr "ライブマイグレーションが失敗しました: %s"
-
-msgid "Live migration is not enabled on this host"
-msgstr "ライブマイグレーションはこのホストでは使用できません"
-
-#, python-format
-msgid "Live migration is not supported on target host \"%s\""
-msgstr "ライブマイグレーションは宛先ホスト \"%s\" でサポートされていません"
-
 msgid "Live migration is supported starting with Hyper-V Server 2012"
 msgstr ""
 "ライブマイグレーションは Hyper-V Server 2012 以降でサポートされています"
-
-msgid "Live migration networks are not configured on this host"
-msgstr ""
-"ライブマイグレーション用のネットワークが、このホスト上で設定されていません"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2504,12 +2294,6 @@ msgstr "マーカー %(marker)s が見つかりませんでした。"
 msgid "Maximum allowed length for 'label' is 255."
 msgstr "'label' の許容最大長は 255 です。"
 
-msgid "Maximum number of fixed ips exceeded"
-msgstr "Fixed IP の最大数を超えました"
-
-msgid "Maximum number of floating ips exceeded"
-msgstr "Floating IP の最大数を超えました"
-
 msgid "Maximum number of key pairs exceeded"
 msgstr "キーペアの最大数を超えました"
 
@@ -2542,9 +2326,6 @@ msgid ""
 msgstr ""
 "コンピュートホストノード %(host)s.%(node)s では、メトリック %(name)s は見つか"
 "りませんでした。"
-
-msgid "Metrics collection is not supported on this version of Hyper-V"
-msgstr "このバージョンの Hyper-V ではメトリックの収集はサポートされていません"
 
 msgid "Migrate Receive failed"
 msgstr "マイグレーションの受け取りが失敗しました"
@@ -2622,12 +2403,6 @@ msgstr "パラメーター dict が指定されていません"
 msgid "Missing tenant parameter"
 msgstr "テナントパラメーターがありません"
 
-#, python-format
-msgid ""
-"More than one instance is associated with fixed ip address '%(address)s'."
-msgstr ""
-"Fixed IP アドレス '%(address)s' に複数のインスタンスが関連付けられています。"
-
 msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
 "one(s) to connect to."
@@ -2651,10 +2426,6 @@ msgstr "リクエストに複数の X-Tenant-ID ヘッダーが検出されま�
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "名前が '%s' の Floating IP プールが複数見つかりました"
-
-#, python-format
-msgid "Multiple floating ips are found for address %(address)s."
-msgstr "アドレス %(address)s に対して複数の Floating IP が見つかりました。"
 
 msgid ""
 "Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
@@ -2751,12 +2522,6 @@ msgstr "CIDR が %(cidr)s のネットワークが見つかりませんでした
 msgid "Network driver does not support this function."
 msgstr "ネットワークドライバーではこの関数はサポートされません。"
 
-#, python-format
-msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
-msgstr ""
-"ネットワークホスト %(host)s はネットワーク %(network_id)s 内で Fixed IP を"
-"持っていません。"
-
 msgid "Network label is required"
 msgstr "ネットワークラベルが必要です"
 
@@ -2843,9 +2608,6 @@ msgstr "%(location)s にディスクがありません"
 msgid "No errors in logfiles!"
 msgstr "ログファイル内にエラーはありません。"
 
-msgid "No external vswitch found"
-msgstr "外部 vswitch が見つかりません"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "ネットワーク %(net)s で使用可能な Fixed IP アドレスがありません。"
@@ -2856,9 +2618,6 @@ msgstr "ID %(id)s に関連付けられた Fixed IP がありません。"
 
 msgid "No fixed IP found."
 msgstr "Fixed IP が見つかりません。"
-
-msgid "No fixed ips associated to instance"
-msgstr "インスタンスに関連付けられた Fixed IP がありません"
 
 msgid "No floating IP addresses have been defined."
 msgstr "Floating IP アドレスが定義されていません。"
@@ -2893,13 +2652,6 @@ msgstr "URL %s に一致する ID が見つかりませんでした。"
 
 msgid "No more available networks."
 msgstr "使用可能なネットワークはこれ以上ありません。"
-
-msgid "No more floating ips available."
-msgstr "使用可能な Floating IP はこれ以上ありません。"
-
-#, python-format
-msgid "No more floating ips in pool %s."
-msgstr "プール %s 内に Floating IP はこれ以上ありません。"
 
 msgid "No networks defined."
 msgstr "ネットワークが定義されていません。"
@@ -3048,10 +2800,6 @@ msgstr "ルート証明書のみが取得可能です。"
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL エラー: %s"
 
-#, python-format
-msgid "Operation failed with return value: %s"
-msgstr "操作が返り値 %s で失敗しました"
-
 #, fuzzy
 msgid "Origin header does not match this host."
 msgstr "起点ヘッダーがこのホストに一致しません。"
@@ -3091,10 +2839,6 @@ msgstr ""
 #, python-format
 msgid "PCI device %(id)s not found"
 msgstr "PCI デバイス %(id)s が見つかりません"
-
-#, python-format
-msgid "PCI device request (%requests)s failed"
-msgstr "PCI デバイス要求 %requests)s が失敗しました"
 
 #, python-format
 msgid ""
@@ -3179,10 +2923,6 @@ msgstr ""
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
 msgstr "ポリシーにより %(action)s の実行が許可されていません"
-
-#, python-format
-msgid "Policy doesn't allow %s to be performed."
-msgstr "ポリシーは %s の実行を許可していません。"
 
 #, python-format
 msgid "Port %(port_id)s is still in use."
@@ -3330,15 +3070,6 @@ msgstr ""
 "リクエストにはタイムスタンプまたは有効期限のいずれかを含める必要があります"
 "が、両方を含めることはできません"
 
-#, fuzzy, python-format
-msgid "Requested VM Generation %s is not supported on this OS."
-msgstr "要求された VM Generation %s はこの OS ではサポートされていません。"
-
-#, fuzzy, python-format
-msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
-msgstr ""
-"VM Generation %s が要求されましたが、VHDX ではなく VHD が指定されました。"
-
 #, python-format
 msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
 msgstr ""
@@ -3429,12 +3160,6 @@ msgstr "ルール (%s) が見つかりません"
 #, python-format
 msgid "Rule already exists in group: %(rule)s"
 msgstr "ルールがグループにはすでに存在します: %(rule)s"
-
-#, python-format
-msgid "Rules must be an instance of dict or Rules, got %s instead"
-msgstr ""
-"ルールは辞書型または Rules のインスタンスでなければいけませんが、%s が渡され"
-"ました。"
 
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
@@ -3706,10 +3431,6 @@ msgid "Swap only supports host devices"
 msgstr "スワップでサポートされるのはホストデバイスのみです"
 
 #, python-format
-msgid "Target live migration host \"%s\" is unreachable"
-msgstr "ライブマイグレーションの宛先ホスト \"%s\" が到達不能です"
-
-#, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
 msgstr "タスク %(task_name)s はホスト %(host)s 上で既に実行中です"
 
@@ -3736,19 +3457,9 @@ msgstr "DNS エントリー %(name)s はドメイン %(domain)s 内に既に存�
 msgid "The ID %(id)s is unknown."
 msgstr "ID %(id)s は不明です。"
 
-msgid "The JSON file that defines policies."
-msgstr "ポリシーを定義した JSON ファイル。"
-
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI アドレス %(address)s の形式が正しくありません。"
-
-msgid ""
-"The Windows account running nova-compute on this Hyper-V host doesn't have "
-"the required permissions to create or operate the virtual machine."
-msgstr ""
-"この Hyper-V ホスト上で nova-compute を実行している Windows アカウントには、"
-"仮想マシンを作成したり操作したりするために必要な許可がありません。"
 
 msgid ""
 "The above error may show that the database has not been created.\n"
@@ -3770,10 +3481,6 @@ msgstr "現行ドライバーは、一時パーティションの保持をサポ
 
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "デフォルト PBM ポリシーがバックエンドに存在しません。"
-
-#, python-format
-msgid "The file copy from %(src)s to %(dest)s failed"
-msgstr "%(src)s から %(dest)s へのファイルコピーに失敗しました"
 
 #, python-format
 msgid "The firewall filter for %s does not exist"
@@ -4030,18 +3737,6 @@ msgstr "Neutron ネットワークを削除するには、UUID が必要です"
 msgid "Unable to associate IP Address, no fixed_ips."
 msgstr "IP アドレスを関連付けることができません。fixed_ips がありません。"
 
-#, python-format
-msgid ""
-"Unable to associate floating ip %(address)s to fixed ip %(fixed_address)s "
-"for instance %(id)s. Error: %(error)s"
-msgstr ""
-"インスタンス %(id)s において Floating IP %(address)s を Fixed IP "
-"%(fixed_address)s に関連付けることはできませんでした。エラー: %(error)s"
-
-#, python-format
-msgid "Unable to attach volume to instance %s"
-msgstr "インスタンス %s にボリュームを接続できません。"
-
 msgid "Unable to authenticate Ironic client."
 msgstr "Ironic クライアントを認証できません。"
 
@@ -4230,19 +3925,6 @@ msgstr ""
 "ンすることはできません。"
 
 #, python-format
-msgid "Unable to mount SMBFS share: %(smbfs_share)s WMI exception: %(wmi_exc)s"
-msgstr "SMBFS 共有 %(smbfs_share)s をマウントできません: WMI 例外: %(wmi_exc)s"
-
-#, python-format
-msgid "Unable to obtain block size from VHD %(vhd_path)s"
-msgstr "VHD %(vhd_path)s からブロックサイズを取得できません"
-
-#, python-format
-msgid ""
-"Unable to obtain internal size from VHDX: %(vhd_path)s. Exception: %(ex)s"
-msgstr "VHDX %(vhd_path)s から内部サイズを取得できません。例外: %(ex)s"
-
-#, python-format
 msgid "Unable to obtain target information %s"
 msgstr "ターゲットの情報 %s を取得できません"
 
@@ -4328,10 +4010,6 @@ msgid "Unknown argument: port"
 msgstr "不明な引数: port"
 
 #, python-format
-msgid "Unknown auth strategy: %s"
-msgstr "不明な認証方法: %s"
-
-#, python-format
 msgid "Unknown chain: %r"
 msgstr "不明なチェーン: %r"
 
@@ -4395,13 +4073,6 @@ msgstr "アンシェルブが試行されましたが、イメージ %s が見�
 
 msgid "Unsupported Content-Type"
 msgstr "サポートされない Content-Type"
-
-#, python-format
-msgid "Unsupported disk format: %s"
-msgstr "サポートされていないディスク形式 %s です"
-
-msgid "Unsupported virtual disk format"
-msgstr "仮想ディスク形式がサポートされていません"
 
 msgid "Updated_At"
 msgstr "最終更新"
@@ -4482,10 +4153,6 @@ msgid ""
 msgstr ""
 "ポートグループ %(bridge)s の VLAN タグが適切ではありません。必要な VLAN タグ"
 "は %(tag)s ですが、ポートグループに関連付けられているのは %(pgroup)s です。"
-
-#, python-format
-msgid "VM not found: %s"
-msgstr "VM が見つかりません: %s"
 
 #, python-format
 msgid ""
@@ -4579,26 +4246,6 @@ msgstr ""
 "よび qemu %(qemu)s 以降が必要です。"
 
 #, python-format
-msgid "WARNING: fixed ip %s allocated to missing instance"
-msgstr "警告: Fixed IP %s が、存在しないインスタンスに割り振られています"
-
-#, python-format
-msgid ""
-"WMI job failed with status %(job_state)d. Error details: %(err_sum_desc)s - "
-"%(err_desc)s - Error code: %(err_code)d"
-msgstr ""
-"WMI ジョブが状況 %(job_state)d で失敗しました。エラー詳細: %(err_sum_desc)s "
-"- %(err_desc)s - エラーコード: %(err_code)d"
-
-#, python-format
-msgid "WMI job failed with status %(job_state)d. Error details: %(error)s"
-msgstr "WMI ジョブが状態 %(job_state)d で失敗しました。エラー詳細: %(error)s"
-
-#, python-format
-msgid "WMI job failed with status %d. No error description available"
-msgstr "WMI ジョブがステータス %d で失敗しました。エラーの詳細はありません。"
-
-#, python-format
 msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
@@ -4676,15 +4323,6 @@ msgstr ""
 "SPICE またはそのいずれか) listen アドレスを、 catch-all アドレス (0.0.0.0 ま"
 "たは ::) またはローカルアドレス (127.0.0.1 または ::1) のいずれかに設定する必"
 "要があります。"
-
-msgid "Zero fixed ips could be found."
-msgstr "Fixed IP が見つかりませんでした。"
-
-msgid "Zero floating ips available."
-msgstr "使用可能な Floating IP はありません。"
-
-msgid "Zero floating ips exist."
-msgstr "Floating IP が存在しません。"
 
 msgid "Zone"
 msgstr "ゾーン"
@@ -4790,12 +4428,6 @@ msgstr "フィンガープリントの生成に失敗しました"
 msgid "filename cannot be None"
 msgstr "ファイル名を None にすることはできません"
 
-msgid "floating ip is already associated"
-msgstr "Floating IP は既に関連付けられています"
-
-msgid "floating ip not found"
-msgstr "Floating IP が見つかりません"
-
 #, fuzzy, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s の基盤: %(backing_file)s"
@@ -4884,9 +4516,6 @@ msgstr "カーネル"
 
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key が定義されていません"
-
-msgid "l3driver call to add floating ip failed"
-msgstr "Floating IP を追加するための l3driver 呼び出しが失敗しました"
 
 #, fuzzy
 msgid "launched"
@@ -5140,10 +4769,6 @@ msgstr "ボリューム ID を指定する必要があります。"
 #, python-format
 msgid "volume_id not found: %s"
 msgstr "volume_id が見つかりません: %s"
-
-#, python-format
-msgid "vswitch \"%s\" not found"
-msgstr "vswitch \"%s\" が見つかりません"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

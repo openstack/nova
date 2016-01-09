@@ -10,9 +10,9 @@
 # Reik Keutterling <spielkind@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-10-01 06:49+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language-Team: German\n"
@@ -61,10 +61,6 @@ msgstr ""
 msgid "An error occurred while refreshing the network cache."
 msgstr ""
 "Ein Fehler ist während des Aktualisierens des Netzwerk Caches aufgetreten."
-
-#, python-format
-msgid "Attach volume failed: %s"
-msgstr "Anhängen Datenträger fehlgeschlagen: %s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
@@ -218,14 +214,6 @@ msgstr "Umgebungsvariable 'NETWORK_ID' muss gesetzt sein."
 #, python-format
 msgid "Environment: %s"
 msgstr "Umgebung: %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"Fehler beim Verbinden zum Glance Server '%(host)s:%(port)s' für "
-"'%(method)s', %(extra)s."
 
 #, python-format
 msgid "Error copying key: %s"
@@ -384,12 +372,6 @@ msgstr "Fehler beim Versuch das Abbild %s zu löschen"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "Fehler beim Schreiben zu %(path)s: %(exception)s"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Fehler beim Schreiben VM Konsole-Log von der seriellen Konsole-Leitung. "
-"Fehler: %s"
 
 #, python-format
 msgid "Error: %s"
@@ -564,10 +546,6 @@ msgstr ""
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Fehler beim Abruf der Metadaten für Instanz-ID: %s"
 
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Fehler beim Auslesen der Metatdaten für IP: %s"
-
 msgid "Failed to get nw_info"
 msgstr "Fehler beim Abruf von nw_info"
 
@@ -690,10 +668,6 @@ msgstr "Fehler beim Einreissen des Container-Dateisystems"
 msgid "Failed to umount container filesystem"
 msgstr "Fehler beim Aushängen des Container-Dateisystems"
 
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Regel %s konnte nicht verstanden werden"
-
 msgid "Failed to unpause instance"
 msgstr "Aufheben des Pausierens fehlgeschlagen."
 
@@ -758,9 +732,6 @@ msgstr "Schwere Ausnahme beim Lauf %(name)s %(type)s-hook: %(obj)s"
 
 msgid "FaultWrapper error"
 msgstr "Fehler FaultWrapper"
-
-msgid "Get version 2 connection error"
-msgstr "Bekomme Version-2-Verbindungsfehler"
 
 msgid "Guest does not have a console available"
 msgstr "Gast hat keine Konsole verfügbar"
@@ -913,20 +884,12 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "Kein Datenbankzugriff erlaubt  in nova-network: %s"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Kein Handler für Übereinstimmungen des Typs %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Keine sichere Steuerung für %s"
 
 msgid "Not all properties needed are implemented in the compute driver"
 msgstr ""
 "Nicht alle Eigenschaften brauchen in den Compute Treiber implementiert werden"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "PCI-Gerät %s nicht gefunden"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -999,12 +962,6 @@ msgstr "Temporäres Verzeichnis ist ungültig: %s"
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
 msgstr "Das Quobyte Abbild auf %s ist weiter in Benutzung."
-
-#, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr ""
-"Der Agentenaufruf %(method)s gab einen Fehler zurück: %(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""

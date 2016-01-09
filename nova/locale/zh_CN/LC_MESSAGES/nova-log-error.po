@@ -10,9 +10,9 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China)\n"
@@ -52,10 +52,6 @@ msgstr "聚集 %(aggregate_id)s：在 %(host)s 上执行操作期间，处于不
 
 msgid "An error occurred while refreshing the network cache."
 msgstr "刷新网络缓存时发生错误。"
-
-#, python-format
-msgid "Attach volume failed: %s"
-msgstr "连接卷失败：%s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
@@ -202,13 +198,6 @@ msgstr "必须设置环境变量'NETWORK_ID'。"
 #, python-format
 msgid "Environment: %s"
 msgstr "Environment: %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"针对“%(method)s”与 Glance 服务器“%(host)s:%(port)s”联系时出错，%(extra)s。"
 
 #, python-format
 msgid "Error copying key: %s"
@@ -358,10 +347,6 @@ msgstr "尝试清除镜像%s时出错"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "写入 %(path)s: %(exception)s 出错"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr "从串口终端管道输入到虚拟机终端日志文件时发生错误。Error：%s"
 
 #, python-format
 msgid "Error: %s"
@@ -526,10 +511,6 @@ msgstr ""
 msgid "Failed to get metadata for instance id: %s"
 msgstr "未能针对实例标识获取元数据：%s"
 
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "为ip： %s获取元数据失败"
-
 msgid "Failed to get nw_info"
 msgstr "未能获取 nw_info"
 
@@ -635,10 +616,6 @@ msgstr "未能卸载容器文件系统"
 msgid "Failed to umount container filesystem"
 msgstr "未能取消挂载容器文件系统"
 
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "未能理解规则 %s"
-
 msgid "Failed to unpause instance"
 msgstr "无法取消暂停实例"
 
@@ -698,9 +675,6 @@ msgstr "运行%(name)s %(type)s-hook: %(obj)s时发生致命错误"
 
 msgid "FaultWrapper error"
 msgstr "FaultWrapper错误"
-
-msgid "Get version 2 connection error"
-msgstr "获取版本2连接出错"
 
 msgid "Guest does not have a console available"
 msgstr "Guest 没有控制台可用"
@@ -842,19 +816,11 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "nova-network: %s中不允许访问数据库"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "对于类型为 %s 的匹配项，不存在任何处理程序"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "未保存对 %s 的处理"
 
 msgid "Not all properties needed are implemented in the compute driver"
 msgstr "在计算驱动程序中未实现所有必须的属性"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "未找到PCI设备 %s"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -921,11 +887,6 @@ msgstr "临时目录无效：%s"
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
 msgstr "在%s 的Quobyte 卷仍然在用。"
-
-#, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr "代理调用%(method)s，返回一个错误：%(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""

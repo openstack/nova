@@ -12,9 +12,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-11-27 05:04+0000\n"
 "Last-Translator: Maxime Coquerel <max.coquerel@gmail.com>\n"
 "Language-Team: French\n"
@@ -62,10 +62,6 @@ msgstr ""
 
 msgid "An error occurred while refreshing the network cache."
 msgstr "Une erreur est survenue pendant le rafraîchissement du cache réseau."
-
-#, python-format
-msgid "Attach volume failed: %s"
-msgstr "Echec de la connexion du volume : %s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
@@ -208,14 +204,6 @@ msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
 #, python-format
 msgid "Environment: %s"
 msgstr "Environnement : %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"Erreur lors du contact du serveur glance '%(host)s:%(port)s' pour "
-"'%(method)s', %(extra)s."
 
 #, python-format
 msgid "Error copying key: %s"
@@ -382,12 +370,6 @@ msgstr "Erreur en tentant de nettoyer l'image %s"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "Erreur lors de l'écriture sur %(path)s: %(exception)s"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Erreur lors de l'écriture du fichier journal de la console de la vm depuis "
-"la sortie de la console en série. Erreur : %s"
 
 #, python-format
 msgid "Error: %s"
@@ -562,10 +544,6 @@ msgstr ""
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Echec d'obtention des métadonnées pour l'ID instance : %s"
 
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Impossible de récupérer les méta-donnérs pour l'IP : %s"
-
 msgid "Failed to get nw_info"
 msgstr "Echec d'obtention de nw_info"
 
@@ -685,10 +663,6 @@ msgstr "Échec à démonter le conteneur de système de fichiers"
 msgid "Failed to umount container filesystem"
 msgstr "Echec du démontage du système de fichiers conteneur"
 
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Règle %s incompréhensible"
-
 msgid "Failed to unpause instance"
 msgstr "Echec de la reprise de l'instance"
 
@@ -756,9 +730,6 @@ msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
 
 msgid "FaultWrapper error"
 msgstr "Erreur FaultWrapper"
-
-msgid "Get version 2 connection error"
-msgstr "Impossible de recevoir la version 2, erreur de connexion"
 
 msgid "Guest does not have a console available"
 msgstr "Aucune console n'est disponible pour l'invité"
@@ -914,10 +885,6 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "Pas d'accès db autorisé dans nova-network : %s"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Aucun gestionnaire pour les correspondances de type %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Pas de gestionnaire de sauvegarde pour %s"
 
@@ -925,10 +892,6 @@ msgid "Not all properties needed are implemented in the compute driver"
 msgstr ""
 "Toute les propriétés requises ne sont pas implémentées par le pilote de "
 "calcul"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "Périphérique PCI %s non trouvé"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -1006,12 +969,6 @@ msgstr "Le répertoire temporaire n'est pas valide : %s"
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
 msgstr "Le volume Quobyte %s est en cours d'utilisation."
-
-#, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr ""
-"L'agent appelant %(method)s a retourné une erreur : %(ret)r.args=%(args)r "
 
 #, python-format
 msgid ""

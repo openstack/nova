@@ -10,9 +10,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-10-07 05:40+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language-Team: Chinese (China)\n"
@@ -270,12 +270,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "在反复重试之后，设备分配失败。"
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr "在地址为\"%(address)s\" 的控制器\"%(controller_path)s\" 上找不到磁盘"
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "域 |%(domain)s| 已经存在，把项目改变为 |%(project)s|。"
 
@@ -292,9 +286,6 @@ msgstr "在 detach_interface 期间，实例消失。"
 
 msgid "During detach_volume, instance disappeared."
 msgstr "在 detach_volume 期间，实例消失。"
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr "清除固定IP 分配失败。可能需要手动清除。"
 
 #, python-format
 msgid ""
@@ -430,10 +421,6 @@ msgid "Failed to revert task state for instance. Error: %s"
 msgstr "还原实例的任务状态失败。错误：%s"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "为取消分配的固定IP：%s 回归配额失败"
-
-#, python-format
 msgid "Failed to shutdown appliance %s"
 msgstr "未能关闭设备 %s"
 
@@ -455,24 +442,8 @@ msgstr "不支持向从卷启动的实例进行文件注入"
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "标记sr_matching_filter '%s' 没有遵循格式要求"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "找不到云主机类型%d"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "没有找到云主机类型，跳过迁移。"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr "浮动ip 地址 |%(address)s| 不再属于实例 %(instance_uuid)s。不迁移它"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not setup it."
-msgstr "浮动ip 地址 |%(address)s| 不再属于实例 %(instance_uuid)s。不建立它"
 
 #, python-format
 msgid ""
@@ -733,10 +704,6 @@ msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr "为磁盘类型 %(disk_type)s 指定的高速缓存方式 %(cache_mode)s 无效。"
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "请求中有无效浮动ip id %s"
-
-#, python-format
 msgid "Invalid value '%d' for image_compression_level"
 msgstr "无效镜像压缩级别 image_compression_level的值'%d'"
 
@@ -802,11 +769,6 @@ msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
 "%(tenant_id)s will be used."
 msgstr "网络 %(id)s 与租户网络不匹配！将使用端口租户 %(tenant_id)s 。"
-
-#, python-format
-msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr "Neutron 错误：%(ip)s 不是网络%(network_id)s 中的一个有效ip地址。"
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -890,14 +852,6 @@ msgstr "直到已请求资源，才应该对实例设置主机字段.。"
 #, python-format
 msgid "Not deleting key %s"
 msgstr "不删除秘钥 %s"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "由于 %s 在黑名单中所以未能载入"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "由于 %s 不在白名单中所以未能载入"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -989,10 +943,6 @@ msgstr "拒绝快照请求，快照当前未被激活"
 msgid ""
 "Relative blockrebase support was not detected. Continuing with old behaviour."
 msgstr "相对块重新基线blockrebase支持没有检测到。以老的方式继续。"
-
-#, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr "已为浮动 IP %(float)s 除去 %(num)d 重复规则"
 
 #, python-format
 msgid ""

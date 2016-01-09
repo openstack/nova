@@ -7,9 +7,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
+"POT-Creation-Date: 2016-01-08 06:12+0000\n"
 "PO-Revision-Date: 2015-08-30 12:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian\n"
@@ -54,10 +54,6 @@ msgstr ""
 
 msgid "An error occurred while refreshing the network cache."
 msgstr "Si è verificato un errore durante l'aggiornamento della cache di rete."
-
-#, python-format
-msgid "Attach volume failed: %s"
-msgstr "Collegamento volume non riuscito: %s"
 
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
@@ -161,14 +157,6 @@ msgid "Environment: %s"
 msgstr "Ambiente: %s"
 
 #, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"Errore durante il tentativo di contattare il server glance '%(host)s:"
-"%(port)s' per '%(method)s', %(extra)s."
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Errore nella definizione di un dominio tramite XML: %s"
 
@@ -270,12 +258,6 @@ msgstr "Errore durante tentativo di eseguire una nuova pianificazione"
 #, python-format
 msgid "Error while trying to clean up image %s"
 msgstr "Errore durante il tentativo di pulitura dell'immagine %s"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Errore durante la scrittura del file log di console vm proveniente dalla "
-"pipe della console seriale. Errore: %s"
 
 #, python-format
 msgid "Error: %s"
@@ -428,10 +410,6 @@ msgstr "Impossibile ottenere le reti predefinite"
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Impossibile ottenere i metadati per l'id dell'istanza: %s"
 
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Impossibile ottenere i metadati per ip: %s"
-
 msgid "Failed to get nw_info"
 msgstr "Impossibile ottenere nw_info"
 
@@ -530,10 +508,6 @@ msgstr "Impossibile fermare l'istanza"
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr ""
 "Impossibile fare lo swap del volume %(old_volume_id)s per %(new_volume_id)s"
-
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Impossibile comprendere la regola %s"
 
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
@@ -730,16 +704,8 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "Nessun accesso db consentito in nova-network: %s"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Nessun gestore per le corrispondenze di tipo %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Nessun handler di salvataggio per %s"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "Dispositivo PCI %s non trovato"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -790,13 +756,6 @@ msgstr "TIMEOUT: timeout della chiamata a %(method)s. args=%(args)r"
 #, python-format
 msgid "Temporary directory is invalid: %s"
 msgstr "La directory temporanea non è valida: %s"
-
-#, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr ""
-"La chiamata dell'agente verso %(method)s ha restituito un errore: %(ret)r. "
-"args=%(args)r"
 
 #, python-format
 msgid ""
