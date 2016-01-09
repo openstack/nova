@@ -892,6 +892,10 @@ cg /cgroup/memory cg opt1,opt2 0 0
                 "six.moves.builtins.open", m, create=True):
             self.assertFalse(self.host.is_cpu_control_policy_capable())
 
+    @mock.patch('six.moves.builtins.open', side_effect=IOError)
+    def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
+        self.assertFalse(self.host.is_cpu_control_policy_capable())
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 
