@@ -131,8 +131,10 @@ class ServerGroupController(wsgi.Controller):
                   for group in limited_list]
         return {'server_groups': result}
 
+    @wsgi.Controller.api_version("2.1")
     @extensions.expected_errors((400, 403))
-    @validation.schema(schema.create)
+    @validation.schema(schema.create, "2.1", "2.14")
+    @validation.schema(schema.create_v215, "2.15")
     def create(self, req, body):
         """Creates a new server group."""
         context = _authorize_context(req)
