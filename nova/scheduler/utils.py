@@ -139,7 +139,7 @@ def populate_filter_properties(filter_properties, host_state):
 
 
 def populate_retry(filter_properties, instance_uuid):
-    max_attempts = _max_attempts()
+    max_attempts = CONF.scheduler_max_attempts
     force_hosts = filter_properties.get('force_hosts', [])
     force_nodes = filter_properties.get('force_nodes', [])
 
@@ -191,14 +191,6 @@ def _log_compute_error(instance_uuid, retry):
                'last_node': last_node,
                'exc': exc},
               instance_uuid=instance_uuid)
-
-
-def _max_attempts():
-    max_attempts = CONF.scheduler_max_attempts
-    if max_attempts < 1:
-        raise exception.NovaException(_("Invalid value for "
-            "'scheduler_max_attempts', must be >= 1"))
-    return max_attempts
 
 
 def _add_retry_host(filter_properties, host, node):
@@ -377,4 +369,4 @@ def retry_on_timeout(retries=1):
         return wrapped
     return outer
 
-retry_select_destinations = retry_on_timeout(_max_attempts() - 1)
+retry_select_destinations = retry_on_timeout(CONF.scheduler_max_attempts - 1)

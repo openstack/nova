@@ -206,6 +206,7 @@ metrics_weight_opts = [
 
 scheduler_max_att_opt = cfg.IntOpt("scheduler_max_attempts",
             default=3,
+            min=1,
             help="Maximum number of attempts to schedule an instance")
 
 soft_affinity_weight_opt = cfg.FloatOpt('soft_affinity_weight_multiplier',

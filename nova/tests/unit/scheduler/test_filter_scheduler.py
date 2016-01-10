@@ -82,15 +82,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         for weighed_host in weighed_hosts:
             self.assertIsNotNone(weighed_host.obj)
 
-    def test_max_attempts(self):
-        self.flags(scheduler_max_attempts=4)
-        self.assertEqual(4, scheduler_utils._max_attempts())
-
-    def test_invalid_max_attempts(self):
-        self.flags(scheduler_max_attempts=0)
-        self.assertRaises(exception.NovaException,
-                          scheduler_utils._max_attempts)
-
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
         filter_properties = dict(retry=retry)
