@@ -1,7 +1,7 @@
-OpenStack Nova README
-=====================
+OpenStack Nova
+==============
 
-OpenStack Nova provides a cloud computing fabric controller,
+OpenStack Nova provides a **cloud computing fabric controller**,
 supporting a wide variety of virtualization technologies,
 including KVM, Xen, LXC, VMware, and more. In addition to
 its native API, it includes compatibility with the commonly
@@ -19,43 +19,41 @@ capabilities.
 To keep updated with new developments in the OpenStack project
 follow `@openstack <http://twitter.com/openstack>`_ on Twitter.
 
-To learn how to deploy OpenStack Nova, consult the documentation
-available online at:
+Deployment
+----------
 
-   http://docs.openstack.org
+To learn how to deploy OpenStack Nova, consult the documentation
+available online at: http://docs.openstack.org
+
+Supported drivers
+-----------------
 
 For information about the different compute (hypervisor) drivers
-supported by Nova, read this page on the wiki:
+supported by Nova, read this page on the wiki: https://wiki.openstack.org/wiki/HypervisorSupportMatrix
 
-   https://wiki.openstack.org/wiki/HypervisorSupportMatrix
+Bug report
+----------
 
 In the unfortunate event that bugs are discovered, they should
 be reported to the appropriate bug tracker. If you obtained
 the software from a 3rd party operating system vendor, it is
 often wise to use their own bug tracker for reporting problems.
 In all other cases use the master OpenStack bug tracker,
-available at:
+available at: http://bugs.launchpad.net/nova
 
-   http://bugs.launchpad.net/nova
+Contributing
+------------
 
 Developers wishing to work on the OpenStack Nova project should
 always base their work on the latest Nova code, available from
-the master GIT repository at:
-
-   https://git.openstack.org/cgit/openstack/nova
+the master GIT repository at: https://git.openstack.org/cgit/openstack/nova
 
 Developers should also join the discussion on the mailing list,
-at:
-
-   http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-dev
+at: http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-dev
 
 Any new code must follow the development guidelines detailed
 in the HACKING.rst file, and pass all unit tests. Further
-developer focused documentation is available at:
-
-   http://docs.openstack.org/developer/nova/
+developer focused documentation is available at: http://docs.openstack.org/developer/nova/
 
 For information on how to contribute to Nova, please see the
 contents of the CONTRIBUTING.rst file.
-
--- End of broadcast
