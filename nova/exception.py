@@ -1974,6 +1974,11 @@ class ImageCPUPinningForbidden(Forbidden):
                 "CPU pinning policy set against the flavor")
 
 
+class ImageCPUThreadPolicyForbidden(Forbidden):
+    msg_fmt = _("Image property 'hw_cpu_thread_policy' is not permitted to "
+                "override CPU thread pinning policy set against the flavor")
+
+
 class UnsupportedPolicyException(Invalid):
     msg_fmt = _("ServerGroup policy is not supported: %(reason)s")
 
@@ -2012,6 +2017,11 @@ class HostMappingNotFound(Invalid):
 
 class RealtimeConfigurationInvalid(Invalid):
     msg_fmt = _("Cannot set realtime policy in a non dedicated "
+                "cpu pinning policy")
+
+
+class CPUThreadPolicyConfigurationInvalid(Invalid):
+    msg_fmt = _("Cannot set cpu thread pinning policy in a non dedicated "
                 "cpu pinning policy")
 
 

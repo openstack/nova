@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova import exception
@@ -28,7 +29,16 @@ class InstanceNUMACell(base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: Add pagesize field
     # Version 1.2: Add cpu_pinning_raw and topology fields
-    VERSION = '1.2'
+    # Version 1.3: Add cpu_policy and cpu_thread_policy fields
+    VERSION = '1.3'
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(InstanceNUMACell, self).obj_make_compatible(primitive,
+                                                        target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3):
+            primitive.pop('cpu_policy', None)
+            primitive.pop('cpu_thread_policy', None)
 
     fields = {
         'id': obj_fields.IntegerField(),
@@ -37,8 +47,11 @@ class InstanceNUMACell(base.NovaObject,
         'pagesize': obj_fields.IntegerField(nullable=True),
         'cpu_topology': obj_fields.ObjectField('VirtCPUTopology',
                                                nullable=True),
-        'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True)
-        }
+        'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True),
+        'cpu_policy': obj_fields.CPUAllocationPolicyField(nullable=True),
+        'cpu_thread_policy': obj_fields.CPUThreadAllocationPolicyField(
+            nullable=True),
+    }
 
     cpu_pinning = obj_fields.DictProxyField('cpu_pinning_raw')
 
@@ -53,6 +66,12 @@ class InstanceNUMACell(base.NovaObject,
         if 'cpu_pinning' not in kwargs:
             self.cpu_pinning = None
             self.obj_reset_changes(['cpu_pinning_raw'])
+        if 'cpu_policy' not in kwargs:
+            self.cpu_policy = None
+            self.obj_reset_changes(['cpu_policy'])
+        if 'cpu_thread_policy' not in kwargs:
+            self.cpu_thread_policy = None
+            self.obj_reset_changes(['cpu_thread_policy'])
 
     def __len__(self):
         return len(self.cpuset)

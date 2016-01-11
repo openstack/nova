@@ -23,6 +23,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
+from nova.objects import fields
 from nova.pci import stats
 from nova import test
 from nova.virt import hardware as hw
@@ -1103,6 +1104,37 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.RealtimeConfigurationInvalid,
             },
+            {
+                # Invalid CPU thread pinning override
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:numa_nodes": 2, "hw:cpu_policy": "dedicated",
+                         "hw:cpu_thread_policy":
+                             fields.CPUThreadAllocationPolicy.ISOLATE,
+                 }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated",
+                        "hw_cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.REQUIRE,
+                        }
+                },
+                "expect": exception.ImageCPUThreadPolicyForbidden,
+            },
+            {
+                # Invalid CPU pinning policy with CPU thread pinning
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:cpu_policy": "shared",
+                         "hw:cpu_thread_policy":
+                             fields.CPUThreadAllocationPolicy.ISOLATE,
+                         }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.CPUThreadPolicyConfigurationInvalid,
+            },
+
         ]
 
         for testitem in testdata:

@@ -27,6 +27,7 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import fields
 from nova.objects import instance as obj_instance
 
 
@@ -1018,21 +1019,38 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     if rt and pi != "dedicated":
         raise exception.RealtimeConfigurationInvalid()
 
+    flavor_thread_policy = flavor.get('extra_specs', {}).get(
+        'hw:cpu_thread_policy')
+    image_thread_policy = image_meta.properties.get('hw_cpu_thread_policy')
+
     if not requested:
+        if flavor_thread_policy or image_thread_policy:
+            raise exception.CPUThreadPolicyConfigurationInvalid()
         return numa_topology
+
+    if flavor_thread_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
+        cpu_thread_policy = image_thread_policy
+    elif image_thread_policy and image_thread_policy != flavor_thread_policy:
+        raise exception.ImageCPUThreadPolicyForbidden()
+    else:
+        cpu_thread_policy = flavor_thread_policy
 
     if numa_topology:
         # NOTE(ndipanov) Setting the cpu_pinning attribute to a non-None value
         # means CPU pinning was requested
+        # TODO(sfinucan) Instead of using the "magic" described above, make use
+        # of the 'InstanceNUMACell.cpu_policy' parameter
         for cell in numa_topology.cells:
             cell.cpu_pinning = {}
+            cell.cpu_thread_policy = cpu_thread_policy
         return numa_topology
     else:
         single_cell = objects.InstanceNUMACell(
                 id=0,
                 cpuset=set(range(flavor.vcpus)),
                 memory=flavor.memory_mb,
-                cpu_pinning={})
+                cpu_pinning={},
+                cpu_thread_policy=cpu_thread_policy)
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
         return numa_topology
 
@@ -1254,7 +1272,8 @@ def instance_topology_from_instance(instance):
                     cpuset=set(cell['cpuset']),
                     memory=cell['memory'],
                     pagesize=cell.get('pagesize'),
-                    cpu_pinning=cell.get('cpu_pinning_raw'))
+                    cpu_pinning=cell.get('cpu_pinning_raw'),
+                    cpu_thread_policy=cell.get('cpu_thread_policy'))
                          for cell in dict_cells]
                 instance_numa_topology = objects.InstanceNUMATopology(
                     cells=cells)
