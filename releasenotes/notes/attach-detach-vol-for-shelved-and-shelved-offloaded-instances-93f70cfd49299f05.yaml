@@ -1,0 +1,8 @@
+---
+features:
+  - It is possible to call attach and detach volume API operations for
+    instances which are in shelved and shelved_offloaded state.
+    For an instance in shelved_offloaded state Nova will set to None the value
+    for the device_name field, the right value for that field will be set once
+    the instance will be unshelved as it will be managed by a specific compute
+    manager.

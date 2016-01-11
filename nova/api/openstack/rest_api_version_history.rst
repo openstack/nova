@@ -173,3 +173,9 @@ user documentation.
   Allow the user to set and get the server description.
   The user will be able to set the description when creating, rebuilding,
   or updating a server, and get the description as part of the server details.
+
+2.20
+----
+
+  From this version of the API user can call detach and attach volumes for
+  instances which are in shelved and shelved_offloaded state.

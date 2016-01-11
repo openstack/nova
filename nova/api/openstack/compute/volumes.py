@@ -18,12 +18,14 @@
 from oslo_utils import strutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import volumes as volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -224,6 +226,19 @@ def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
     return d
 
 
+def _check_request_version(req, min_version, method, server_id, server_state):
+    if not api_version_request.is_supported(req, min_version=min_version):
+        exc_inv = exception.InstanceInvalidState(
+                attr='vm_state',
+                instance_uuid=server_id,
+                state=server_state,
+                method=method)
+        common.raise_http_conflict_for_instance_invalid_state(
+                exc_inv,
+                method,
+                server_id)
+
+
 class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
@@ -290,6 +305,12 @@ class VolumeAttachmentController(wsgi.Controller):
         device = body['volumeAttachment'].get('device')
 
         instance = common.get_instance(self.compute_api, context, server_id)
+
+        if instance.vm_state in (vm_states.SHELVED,
+                                 vm_states.SHELVED_OFFLOADED):
+            _check_request_version(req, '2.20', 'attach_volume',
+                                   server_id, instance.vm_state)
+
         try:
             device = self.compute_api.attach_volume(context, instance,
                                                     volume_id, device)
@@ -383,7 +404,10 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = id
 
         instance = common.get_instance(self.compute_api, context, server_id)
-
+        if instance.vm_state in (vm_states.SHELVED,
+                                 vm_states.SHELVED_OFFLOADED):
+            _check_request_version(req, '2.20', 'detach_volume',
+                                   server_id, instance.vm_state)
         try:
             volume = self.volume_api.get(context, volume_id)
         except exception.VolumeNotFound as e:
