@@ -1183,6 +1183,54 @@ class MetadataHandlerTestCase(test.TestCase):
                      'X-Metadata-Provider-Signature': signature})
         self.assertEqual(403, response.status_int)
 
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(network_api, 'API')
+    def test_get_metadata_by_address(self, mock_net_api, mock_get_context):
+        mock_get_context.return_value = 'CONTEXT'
+        api = mock.Mock()
+        fixed_ip = objects.FixedIP(
+            instance_uuid='2bfd8d71-6b69-410c-a2f5-dbca18d02966')
+        api.get_fixed_ip_by_address.return_value = fixed_ip
+        mock_net_api.return_value = api
+
+        with mock.patch.object(base, 'get_metadata_by_instance_id') as gmd:
+            base.get_metadata_by_address('foo')
+
+        api.get_fixed_ip_by_address.assert_called_once_with(
+            'CONTEXT', 'foo')
+        gmd.assert_called_once_with(fixed_ip.instance_uuid, 'foo', 'CONTEXT')
+
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_metadata_by_instance_id(self, mock_uuid, mock_context):
+        inst = objects.Instance()
+        mock_uuid.return_value = inst
+
+        with mock.patch.object(base, 'InstanceMetadata') as imd:
+            base.get_metadata_by_instance_id('foo', 'bar', ctxt='CONTEXT')
+
+        self.assertFalse(mock_context.called, "get_admin_context() should not"
+                         "have been called, the context was given")
+        mock_uuid.assert_called_once_with('CONTEXT', 'foo',
+            expected_attrs=['ec2_ids', 'flavor', 'info_cache'])
+        imd.assert_called_once_with(inst, 'bar')
+
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_metadata_by_instance_id_null_context(self,
+            mock_uuid, mock_context):
+        inst = objects.Instance()
+        mock_uuid.return_value = inst
+        mock_context.return_value = 'CONTEXT'
+
+        with mock.patch.object(base, 'InstanceMetadata') as imd:
+            base.get_metadata_by_instance_id('foo', 'bar')
+
+        mock_context.assert_called_once_with()
+        mock_uuid.assert_called_once_with('CONTEXT', 'foo',
+            expected_attrs=['ec2_ids', 'flavor', 'info_cache'])
+        imd.assert_called_once_with(inst, 'bar')
+
 
 class MetadataPasswordTestCase(test.TestCase):
     def setUp(self):
