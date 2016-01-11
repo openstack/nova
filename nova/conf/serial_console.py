@@ -200,4 +200,4 @@ def list_opts():
     # As soon as this bug is fixed is oslo.config and Nova uses the
     # version which contains this fix, we can pass in the OptGroup instead
     # of its name. This allows the generation of the group help too.
-    return (serial_opt_group.name, ALL_OPTS)
+    return {serial_opt_group.name: ALL_OPTS}

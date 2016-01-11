@@ -24,7 +24,6 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             nova.conf.compute.compute_opts,
              nova.compute.flavors.flavor_opts,
              nova.compute.manager.compute_opts,
              nova.compute.manager.instance_cleaning_opts,
@@ -36,8 +35,6 @@ def list_opts():
              nova.compute.resource_tracker.allocation_ratio_opts,
              nova.compute.rpcapi.rpcapi_opts,
          )),
-        ('ephemeral_storage_encryption',
-         nova.conf.ephemeral_storage.ephemeral_storage_encryption_opts),
         ('upgrade_levels',
          itertools.chain(
              [nova.compute.rpcapi.rpcapi_cap_opt],

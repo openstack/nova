@@ -112,7 +112,6 @@ def list_opts():
              nova.keymgr.keymgr_opts,
          )),
         ('rdp', nova.rdp.rdp_opts),
-        nova.conf.serial_console.list_opts(),
         ('spice',
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
