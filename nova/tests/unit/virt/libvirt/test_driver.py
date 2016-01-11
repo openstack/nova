@@ -7395,6 +7395,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._live_migration(self.context, instance, "fakehost",
                              fake_post, fake_recover, True,
                              migrate_data)
+        mock_copy_disk_path.assert_called_once_with(guest)
 
         class AnyEventletEvent(object):
             def __eq__(self, other):
