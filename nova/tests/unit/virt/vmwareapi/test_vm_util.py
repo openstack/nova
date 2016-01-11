@@ -44,7 +44,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMUtilTestCase, self).setUp()
         fake.reset()
-        stubs.set_stubs(self.stubs)
+        stubs.set_stubs(self)
         vm_util.vm_refs_cache_reset()
         self._instance = fake_instance.fake_instance_obj(
             None,

@@ -20,9 +20,6 @@ Stubouts for the test suite
 from oslo_vmware import exceptions as vexc
 
 from nova.tests.unit.virt.vmwareapi import fake
-from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import images
-from nova.virt.vmwareapi import network_util
 
 
 def fake_get_vim_object(arg):
@@ -65,12 +62,16 @@ def fake_session_permission_exception():
     raise vexc.VimFaultException(fault_list, fault_string, details=details)
 
 
-def set_stubs(stubs):
+def set_stubs(test):
     """Set the stubs."""
-    stubs.Set(network_util, 'get_network_with_the_name',
-              fake.fake_get_network)
-    stubs.Set(images, 'upload_image_stream_optimized', fake.fake_upload_image)
-    stubs.Set(images, 'fetch_image', fake.fake_fetch_image)
-    stubs.Set(driver.VMwareAPISession, "vim", fake_vim_prop)
-    stubs.Set(driver.VMwareAPISession, "_is_vim_object",
-              fake_is_vim_object)
+
+    test.stub_out('nova.virt.vmwareapi.network_util.get_network_with_the_name',
+                  fake.fake_get_network)
+    test.stub_out('nova.virt.vmwareapi.images.upload_image_stream_optimized',
+                  fake.fake_upload_image)
+    test.stub_out('nova.virt.vmwareapi.images.fetch_image',
+                  fake.fake_fetch_image)
+    test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession.vim',
+                  fake_vim_prop)
+    test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession._is_vim_object',
+                  fake_is_vim_object)
