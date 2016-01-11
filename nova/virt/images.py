@@ -21,6 +21,7 @@ Handling of VM disk images.
 
 import os
 
+from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
@@ -59,7 +60,13 @@ def qemu_img_info(path, format=None):
     cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
     if format is not None:
         cmd = cmd + ('-f', format)
-    out, err = utils.execute(*cmd)
+    try:
+        out, err = utils.execute(*cmd)
+    except processutils.ProcessExecutionError as exp:
+        msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
+                {'path': path, 'exp': exp})
+        raise exception.InvalidDiskInfo(reason=msg)
+
     if not out:
         msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
                {'path': path, 'error': err})
@@ -93,7 +100,12 @@ def _convert_image(source, dest, in_format, out_format, run_as_root):
     cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
     if in_format is not None:
         cmd = cmd + ('-f', in_format)
-    utils.execute(*cmd, run_as_root=run_as_root)
+    try:
+        utils.execute(*cmd, run_as_root=run_as_root)
+    except processutils.ProcessExecutionError as exp:
+        msg = (_("Unable to convert image to %(format)s: %(exp)s") %
+               {'format': out_format, 'exp': exp})
+        raise exception.ImageUnacceptable(image_id=source, reason=msg)
 
 
 def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
@@ -147,7 +159,14 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
             with fileutils.remove_path_on_error(staged):
-                convert_image(path_tmp, staged, fmt, 'raw')
+                try:
+                    convert_image(path_tmp, staged, fmt, 'raw')
+                except exception.ImageUnacceptable as exp:
+                    # re-raise to include image_href
+                    raise exception.ImageUnacceptable(image_id=image_href,
+                        reason=_("Unable to convert image to raw: %(exp)s")
+                        % {'exp': exp})
+
                 os.unlink(path_tmp)
 
                 data = qemu_img_info(staged)
