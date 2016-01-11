@@ -189,6 +189,12 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             m.return_value.obj_to_primitive.assert_called_once_with(
                 target_version='1.2', version_manifest=versions)
 
+    def test_reset(self):
+        with mock.patch.object(objects.Service, 'clear_min_version_cache'
+                               ) as mock_clear_cache:
+            self.conductor.reset()
+            mock_clear_cache.assert_called_once_with()
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""

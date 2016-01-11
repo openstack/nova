@@ -296,6 +296,23 @@ class _TestServiceObject(object):
                           'compute')
         self.assertTrue(mock_log.warning.called)
 
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_minimum_version_with_caching(self, mock_get):
+        objects.Service.enable_min_version_cache()
+        mock_get.return_value = 123
+        self.assertEqual(123,
+                         objects.Service.get_minimum_version(self.context,
+                                                             'nova-compute'))
+        self.assertEqual({"nova-compute": 123},
+                         objects.Service._MIN_VERSION_CACHE)
+        self.assertEqual(123,
+                         objects.Service.get_minimum_version(self.context,
+                                                             'nova-compute'))
+        mock_get.assert_called_once_with(self.context, 'nova-compute',
+                                         use_slave=False)
+        objects.Service._SERVICE_VERSION_CACHING = False
+        objects.Service.clear_min_version_cache()
+
     @mock.patch('nova.db.service_get_minimum_version', return_value=2)
     def test_create_above_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
