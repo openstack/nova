@@ -382,3 +382,16 @@ Block migration
 
      - Block migration works only with EXT local storage storage repositories,
        and the server must not have any volumes attached.
+
+VMware
+~~~~~~
+
+.. :ref:`_configuring-migrations-vmware`
+
+.. _configuring-migrations-vmware:
+
+vSphere configuration
+---------------------
+
+Enable vMotion on all ESX hosts which are managed by Nova by following the
+instructions in `this <https://kb.vmware.com/s/article/2054994>`_ KB article.

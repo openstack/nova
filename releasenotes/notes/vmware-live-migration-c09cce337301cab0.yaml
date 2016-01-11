@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The VMware compute driver now supports live migration. Each compute node
+    must be managing a cluster in the same vCenter and ESX hosts must have
+    vMotion enabled.

@@ -181,6 +181,67 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertEqual(expected, result)
 
+    def test_update_vif_spec_opaque_net(self):
+        fake_factory = fake.FakeFactory()
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'OpaqueNetwork',
+                            'network-id': 'fake-network-id',
+                            'network-type': 'fake-net',
+                            'use-external-id': False},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        device = fake_factory.create('ns0:VirtualDevice')
+        actual = vm_util.update_vif_spec(fake_factory, vif_info, device)
+        spec = fake_factory.create('ns0:VirtualDeviceConfigSpec')
+        spec.device = fake_factory.create('ns0:VirtualDevice')
+        spec.device.backing = fake_factory.create(
+            'ns0:VirtualEthernetCardOpaqueNetworkBackingInfo')
+        spec.device.backing.opaqueNetworkType = 'fake-net'
+        spec.device.backing.opaqueNetworkId = 'fake-network-id'
+        spec.operation = 'edit'
+        self.assertEqual(spec, actual)
+
+    def test_update_vif_spec_dvpg(self):
+        fake_factory = fake.FakeFactory()
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id',
+                            'dvpg': 'fake-group'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        device = fake_factory.create('ns0:VirtualDevice')
+        actual = vm_util.update_vif_spec(fake_factory, vif_info, device)
+        spec = fake_factory.create('ns0:VirtualDeviceConfigSpec')
+        spec.device = fake_factory.create('ns0:VirtualDevice')
+        spec.device.backing = fake_factory.create(
+            'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo')
+        spec.device.backing.port = fake_factory.create(
+            'ns0:DistributedVirtualSwitchPortConnection')
+        spec.device.backing.port.portgroupKey = 'fake-group'
+        spec.device.backing.port.switchUuid = 'fake-network-id'
+        spec.operation = 'edit'
+        self.assertEqual(spec, actual)
+
+    def test_update_vif_spec_network(self):
+        fake_factory = fake.FakeFactory()
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'Network',
+                            'name': 'net1'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        device = fake_factory.create('ns0:VirtualDevice')
+        actual = vm_util.update_vif_spec(fake_factory, vif_info, device)
+        spec = fake_factory.create('ns0:VirtualDeviceConfigSpec')
+        spec.device = fake_factory.create('ns0:VirtualDevice')
+        spec.device.backing = fake_factory.create(
+            'ns0:VirtualEthernetCardNetworkBackingInfo')
+        spec.device.backing.deviceName = 'br100'
+        spec.operation = 'edit'
+        self.assertEqual(spec, actual)
+
     def test_get_cdrom_attach_config_spec(self):
         fake_factory = fake.FakeFactory()
         datastore = fake.Datastore()

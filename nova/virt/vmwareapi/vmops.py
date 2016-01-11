@@ -21,6 +21,7 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 
 import collections
 import os
+import re
 import time
 
 import decorator
@@ -1551,6 +1552,103 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=6,
                                        total_steps=RESIZE_TOTAL_STEPS)
+
+    def _find_esx_host(self, cluster_ref, ds_ref):
+        """Find ESX host in the specified cluster which is also connected to
+        the specified datastore.
+        """
+        cluster_hosts = self._session._call_method(vutil,
+                                                   'get_object_property',
+                                                   cluster_ref, 'host')
+        ds_hosts = self._session._call_method(vutil, 'get_object_property',
+                                              ds_ref, 'host')
+        for ds_host in ds_hosts.DatastoreHostMount:
+            for cluster_host in cluster_hosts.ManagedObjectReference:
+                if ds_host.key.value == cluster_host.value:
+                    return cluster_host
+
+    def _find_datastore_for_migration(self, instance, vm_ref, cluster_ref,
+                                      datastore_regex):
+        """Find datastore in the specified cluster where the instance will be
+        migrated to. Return the current datastore if it is already connected to
+        the specified cluster.
+        """
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, uuid=instance.uuid)
+        ds_ref = vmdk.device.backing.datastore
+        cluster_datastores = self._session._call_method(vutil,
+                                                        'get_object_property',
+                                                        cluster_ref,
+                                                        'datastore')
+        if not cluster_datastores:
+            LOG.warning('No datastores found in the destination cluster')
+            return None
+        # check if the current datastore is connected to the destination
+        # cluster
+        for datastore in cluster_datastores.ManagedObjectReference:
+            if datastore.value == ds_ref.value:
+                ds = ds_obj.get_datastore_by_ref(self._session, ds_ref)
+                if (datastore_regex is None or
+                        datastore_regex.match(ds.name)):
+                    LOG.debug('Datastore "%s" is connected to the '
+                              'destination cluster', ds.name)
+                    return ds
+        # find the most suitable datastore on the destination cluster
+        return ds_util.get_datastore(self._session, cluster_ref,
+                                     datastore_regex)
+
+    def live_migration(self, context, instance, dest,
+                       post_method, recover_method, block_migration,
+                       migrate_data):
+        LOG.debug("Live migration data %s", migrate_data, instance=instance)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        cluster_name = migrate_data.cluster_name
+        cluster_ref = vm_util.get_cluster_ref_by_name(self._session,
+                                                      cluster_name)
+        datastore_regex = re.compile(migrate_data.datastore_regex)
+        res_pool_ref = vm_util.get_res_pool_ref(self._session, cluster_ref)
+        # find a datastore where the instance will be migrated to
+        ds = self._find_datastore_for_migration(instance, vm_ref, cluster_ref,
+                                                datastore_regex)
+        if ds is None:
+            LOG.error("Cannot find datastore", instance=instance)
+            raise exception.HostNotFound(host=dest)
+        LOG.debug("Migrating instance to datastore %s", ds.name,
+                  instance=instance)
+        # find ESX host in the destination cluster which is connected to the
+        # target datastore
+        esx_host = self._find_esx_host(cluster_ref, ds.ref)
+        if esx_host is None:
+            LOG.error("Cannot find ESX host for live migration, cluster: %s, "
+                      "datastore: %s", migrate_data.cluster_name, ds.name,
+                      instance=instance)
+            raise exception.HostNotFound(host=dest)
+        # Update networking backings
+        network_info = instance.get_network_info()
+        client_factory = self._session.vim.client.factory
+        devices = []
+        hardware_devices = self._session._call_method(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        vif_model = instance.image_meta.properties.get('hw_vif_model',
+            constants.DEFAULT_VIF_MODEL)
+        for vif in network_info:
+            vif_info = vmwarevif.get_vif_dict(
+                self._session, cluster_ref, vif_model, utils.is_neutron(), vif)
+            device = vmwarevif.get_network_device(hardware_devices,
+                                                  vif['address'])
+            devices.append(vm_util.update_vif_spec(client_factory, vif_info,
+                                                   device))
+
+        LOG.debug("Migrating instance to cluster '%s', datastore '%s' and "
+                  "ESX host '%s'", cluster_name, ds.name, esx_host,
+                  instance=instance)
+        try:
+            vm_util.relocate_vm(self._session, vm_ref, res_pool_ref,
+                                ds.ref, esx_host, devices=devices)
+            LOG.info("Migrated instance to host %s", dest, instance=instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                recover_method(context, instance, dest, migrate_data)
+        post_method(context, instance, dest, block_migration, migrate_data)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
