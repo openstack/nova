@@ -139,7 +139,8 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.7: added img_config_drive field
     # Version 1.8: Added 'lxd' to hypervisor types
     # Version 1.9: added hw_cpu_thread_policy field
-    VERSION = '1.9'
+    # Version 1.10: added hw_cpu_realtime_mask field
+    VERSION = '1.10'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
@@ -208,6 +209,11 @@ class ImageMetaProps(base.NovaObject):
 
         # CPU thread allocation policy
         'hw_cpu_thread_policy': fields.CPUThreadAllocationPolicyField(),
+
+        # CPU mask indicates which vCPUs will have realtime enable,
+        # example ^0-1 means that all vCPUs except 0 and 1 will have a
+        # realtime policy.
+        'hw_cpu_realtime_mask': fields.StringField(),
 
         # preferred number of CPU threads per core
         'hw_cpu_threads': fields.IntegerField(),

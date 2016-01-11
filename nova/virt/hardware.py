@@ -984,6 +984,29 @@ def is_realtime_enabled(flavor):
     return strutils.bool_from_string(flavor_rt)
 
 
+def vcpus_realtime_topology(vcpus_set, flavor, image):
+    """Partitions vcpus used for realtime and 'normal' vcpus.
+
+    According to a mask specified from flavor or image, returns set of
+    vcpus configured for realtime scheduler and set running as a
+    'normal' vcpus.
+    """
+    flavor_mask = flavor.get('extra_specs', {}).get("hw:cpu_realtime_mask")
+    image_mask = image.properties.get("hw_cpu_realtime_mask")
+
+    mask = image_mask or flavor_mask
+    if not mask:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    vcpus_spec = format_cpu_spec(vcpus_set)
+    vcpus_rt = parse_cpu_spec(vcpus_spec + ", " + mask)
+    vcpus_em = vcpus_set - vcpus_rt
+    if len(vcpus_rt) < 1 or len(vcpus_em) < 1:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    return vcpus_rt, vcpus_em
+
+
 def _numa_get_constraints_auto(nodes, flavor):
     if ((flavor.vcpus % nodes) > 0 or
         (flavor.memory_mb % nodes) > 0):
