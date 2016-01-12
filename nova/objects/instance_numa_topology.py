@@ -110,7 +110,7 @@ class InstanceNUMACell(base.NovaObject,
 
     @property
     def cpu_pinning_requested(self):
-        return self.cpu_pinning is not None
+        return self.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED
 
     def pin(self, vcpu, pcpu):
         if vcpu not in self.cpuset:
