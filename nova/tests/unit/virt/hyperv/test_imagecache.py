@@ -21,16 +21,16 @@ from oslo_utils import units
 
 from nova import exception
 from nova import objects
-from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
+from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 
 CONF = cfg.CONF
 
 
-class ImageCacheTestCase(test.NoDBTestCase):
+class ImageCacheTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V ImageCache class."""
 
     FAKE_BASE_DIR = 'fake/base/dir'
