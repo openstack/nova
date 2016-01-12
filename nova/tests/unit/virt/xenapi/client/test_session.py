@@ -34,7 +34,7 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
         create_session.return_value = sess
         mock_version.return_value = ('version', 'brand')
 
-        session.XenAPISession('url', 'username', 'password')
+        session.XenAPISession('http://someserver', 'username', 'password')
 
         expected_version = '%s %s %s' % (version.vendor_string(),
                                          version.product_string(),
@@ -54,7 +54,7 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
         create_session.return_value = sess
         mock_version.return_value = ('version', 'brand')
 
-        session.XenAPISession('url', 'username', 'password')
+        session.XenAPISession('http://someserver', 'username', 'password')
         self.assertEqual(2, sess.login_with_password.call_count)
         self.assertEqual(2, mock_timeout.call_count)
 
@@ -77,7 +77,7 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
                 XenAPI.Failure(['HOST_IS_SLAVE', 'master']), None, None]
         mock_version.return_value = ('version', 'brand')
 
-        session.XenAPISession('url', 'username', 'password')
+        session.XenAPISession('http://slave', 'username', 'password')
         self.assertEqual(3, sess.login_with_password.call_count)
         self.assertEqual(3, mock_timeout.call_count)
 
