@@ -6157,8 +6157,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_paths = []
         if block_migration:
-            disk_paths = self._live_migration_copy_disk_paths(
-                context, instance, guest)
+            disk_paths = self._live_migration_copy_disk_paths(guest)
 
         # TODO(sahid): We are converting all calls from a
         # virDomain object to use nova.virt.libvirt.Guest.
