@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 3
+SERVICE_VERSION = 4
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -57,6 +57,8 @@ SERVICE_VERSION_HISTORY = (
     # Version 2: Changes to rebuild_instance signature in the compute_rpc
     {'compute_rpc': '4.5'},
     # Version 3: Add trigger_crash_dump method to compute rpc api
+    {'compute_rpc': '4.6'},
+    # Version 4: Add PciDevice.parent_addr (data migration needed)
     {'compute_rpc': '4.6'},
 )
 

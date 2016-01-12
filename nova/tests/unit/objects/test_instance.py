@@ -764,6 +764,7 @@ class _TestInstanceObject(object):
              'label': 'l',
              'instance_uuid': fake_uuid,
              'request_id': None,
+             'parent_addr': None,
              'extra_info': '{}'},
             {
              'created_at': None,
@@ -782,6 +783,7 @@ class _TestInstanceObject(object):
              'label': 'l',
              'instance_uuid': fake_uuid,
              'request_id': None,
+             'parent_addr': 'a1',
              'extra_info': '{}'},
             ]
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')

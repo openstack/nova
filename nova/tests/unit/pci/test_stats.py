@@ -218,6 +218,8 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                        'product_id': '0071',
                        'status': 'available',
                        'request_id': None,
+                       'dev_type': 'type-PCI',
+                       'parent_addr': None,
                        'numa_node': 0}
             self.pci_tagged_devices.append(objects.PciDevice.create(pci_dev))
 
@@ -229,6 +231,8 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                        'product_id': '0072',
                        'status': 'available',
                        'request_id': None,
+                       'dev_type': 'type-PCI',
+                       'parent_addr': None,
                        'numa_node': 0}
             self.pci_untagged_devices.append(objects.PciDevice.create(pci_dev))
 
@@ -286,6 +290,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                    'vendor_id': '2345',
                    'product_id': '0172',
                    'status': 'available',
+                   'parent_addr': None,
                    'request_id': None}
         pci_dev_obj = objects.PciDevice.create(pci_dev)
         self.pci_stats.add_device(pci_dev_obj)
@@ -301,6 +306,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                    'vendor_id': '2345',
                    'product_id': '0172',
                    'status': 'available',
+                   'parent_addr': None,
                    'request_id': None}
         pci_dev_obj = objects.PciDevice.create(pci_dev)
         self.pci_stats.remove_device(pci_dev_obj)

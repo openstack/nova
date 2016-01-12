@@ -10133,7 +10133,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "vendor_id": '8086',
                 "label": 'label_8086_1520',
                 "dev_type": fields.PciDeviceType.SRIOV_VF,
-                "phys_function": '0000:04:00.3',
+                "parent_addr": '0000:04:00.3',
                 }
             self.assertEqual(expect_vf, actualvf)
 
@@ -10146,7 +10146,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "numa_node": 0,
                 "label": 'label_8086_1520',
                 "dev_type": fields.PciDeviceType.SRIOV_VF,
-                "phys_function": '0000:04:00.3',
+                "parent_addr": '0000:04:00.3',
                 }
 
             self.assertEqual(expect_vf, actualvf)
