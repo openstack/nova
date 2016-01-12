@@ -23,6 +23,7 @@ from mox3 import mox
 import netaddr
 from oslo_config import cfg
 import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
@@ -2199,6 +2200,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         bdm.device_name = 'vdb'
         bdm_get.return_value = bdm
 
+        detach.return_value = {}
+
         with mock.patch.object(self.compute, 'volume_api') as volume_api:
             with mock.patch.object(self.compute, 'driver') as driver:
                 connector_sentinel = mock.sentinel.connector
@@ -2225,6 +2228,93 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     bdm.destroy.assert_called_once_with()
                 else:
                     self.assertFalse(bdm.destroy.called)
+
+    def test_detach_volume_evacuate(self):
+        """For evacuate, terminate_connection is called with original host."""
+        expected_connector = {'host': 'evacuated-host'}
+        conn_info_str = '{"connector": {"host": "evacuated-host"}}'
+        self._test_detach_volume_evacuate(conn_info_str,
+                                          expected=expected_connector)
+
+    def test_detach_volume_evacuate_legacy(self):
+        """Test coverage for evacuate with legacy attachments.
+
+        In this case, legacy means the volume was attached to the instance
+        before nova stashed the connector in connection_info. The connector
+        sent to terminate_connection will still be for the local host in this
+        case because nova does not have the info to get the connector for the
+        original (evacuated) host.
+        """
+        conn_info_str = '{"foo": "bar"}'  # Has no 'connector'.
+        self._test_detach_volume_evacuate(conn_info_str)
+
+    def test_detach_volume_evacuate_mismatch(self):
+        """Test coverage for evacuate with connector mismatch.
+
+        For evacuate, if the stashed connector also has the wrong host,
+        then log it and stay with the local connector.
+        """
+        conn_info_str = '{"connector": {"host": "other-host"}}'
+        self._test_detach_volume_evacuate(conn_info_str)
+
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    def _test_detach_volume_evacuate(self, conn_info_str, notify_inst_usage,
+                                     bdm_get, expected=None):
+        """Re-usable code for detach volume evacuate test cases.
+
+        :param conn_info_str: String form of the stashed connector.
+        :param expected: Dict of the connector that is expected in the
+                         terminate call (optional). Default is to expect the
+                         local connector to be used.
+        """
+        volume_id = 'vol_id'
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   host='evacuated-host')
+        bdm = mock.Mock()
+        bdm.connection_info = conn_info_str
+        bdm_get.return_value = bdm
+
+        local_connector = {'host': 'local-connector-host'}
+        expected_connector = local_connector if not expected else expected
+
+        with mock.patch.object(self.compute, 'volume_api') as volume_api:
+            with mock.patch.object(self.compute, 'driver') as driver:
+                driver.get_volume_connector.return_value = local_connector
+
+                self.compute._detach_volume(self.context,
+                                            volume_id,
+                                            instance,
+                                            destroy_bdm=False)
+
+                driver.get_volume_connector.assert_called_once_with(instance)
+                volume_api.terminate_connection.assert_called_once_with(
+                    self.context, volume_id, expected_connector)
+                volume_api.detach.assert_called_once_with(mock.ANY,
+                                                          volume_id,
+                                                          instance.uuid,
+                                                          None)
+                notify_inst_usage.assert_called_once_with(
+                    self.context, instance, "volume.detach",
+                    extra_usage_info={'volume_id': volume_id}
+                )
+
+    def test__driver_detach_volume_return(self):
+        """_driver_detach_volume returns the connection_info from loads()."""
+        with mock.patch.object(jsonutils, 'loads') as loads:
+            conn_info_str = 'test-expected-loads-param'
+            bdm = mock.Mock()
+            bdm.connection_info = conn_info_str
+            loads.return_value = {'test-loads-key': 'test loads return value'}
+            instance = fake_instance.fake_instance_obj(self.context)
+
+            ret = self.compute._driver_detach_volume(self.context,
+                                                     instance,
+                                                     bdm)
+
+            self.assertEqual(loads.return_value, ret)
+            loads.assert_called_once_with(conn_info_str)
 
     def _test_rescue(self, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
