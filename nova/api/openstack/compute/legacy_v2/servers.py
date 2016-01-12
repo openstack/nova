@@ -608,6 +608,8 @@ class Controller(wsgi.Controller):
         scheduler_hints = {}
         if self.ext_mgr.is_loaded('OS-SCH-HNT'):
             scheduler_hints = server_dict.get('scheduler_hints', {})
+        parse_az = self.compute_api.parse_availability_zone
+        availability_zone, host, node = parse_az(context, availability_zone)
 
         check_server_group_quota = self.ext_mgr.is_loaded(
                 'os-server-group-quotas')
@@ -633,6 +635,7 @@ class Controller(wsgi.Controller):
                         security_group=sg_names,
                         user_data=user_data,
                         availability_zone=availability_zone,
+                        forced_host=host, forced_node=node,
                         config_drive=config_drive,
                         block_device_mapping=block_device_mapping,
                         auto_disk_config=auto_disk_config,

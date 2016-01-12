@@ -493,7 +493,7 @@ class API(base.Base):
         return kernel_id, ramdisk_id
 
     @staticmethod
-    def _handle_availability_zone(context, availability_zone):
+    def parse_availability_zone(context, availability_zone):
         # NOTE(vish): We have a legacy hack to allow admins to specify hosts
         #             via az using az:host:node. It might be nice to expose an
         #             api to specify specific hosts to force onto, but for
@@ -797,23 +797,14 @@ class API(base.Base):
                                          kernel_id, ramdisk_id, display_name,
                                          display_description, key_name,
                                          key_data, security_groups,
-                                         availability_zone, forced_host,
-                                         user_data, metadata,
-                                         access_ip_v4, access_ip_v6,
+                                         availability_zone, user_data,
+                                         metadata, access_ip_v4, access_ip_v6,
                                          requested_networks, config_drive,
                                          auto_disk_config, reservation_id,
                                          max_count):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed.
         """
-        if availability_zone:
-            available_zones = availability_zones.\
-                get_availability_zones(context.elevated(), True)
-            if forced_host is None and availability_zone not in \
-                    available_zones:
-                msg = _('The requested availability zone is not available')
-                raise exception.InvalidRequest(msg)
-
         if instance_type['disabled']:
             raise exception.FlavorNotFound(flavor_id=instance_type['id'])
 
@@ -1047,8 +1038,8 @@ class API(base.Base):
                min_count, max_count,
                display_name, display_description,
                key_name, key_data, security_groups,
-               availability_zone, user_data, metadata,
-               injected_files, admin_password,
+               availability_zone, forced_host, forced_node, user_data,
+               metadata, injected_files, admin_password,
                access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config,
@@ -1080,21 +1071,13 @@ class API(base.Base):
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
-        handle_az = self._handle_availability_zone
-        availability_zone, forced_host, forced_node = handle_az(context,
-                                                            availability_zone)
-
-        if not self.skip_policy_check and (forced_host or forced_node):
-            check_policy(context, 'create:forced_host', {})
-
         base_options, max_net_count = self._validate_and_build_base_options(
-                context,
-                instance_type, boot_meta, image_href, image_id, kernel_id,
-                ramdisk_id, display_name, display_description,
+                context, instance_type, boot_meta, image_href, image_id,
+                kernel_id, ramdisk_id, display_name, display_description,
                 key_name, key_data, security_groups, availability_zone,
-                forced_host, user_data, metadata, access_ip_v4,
-                access_ip_v6, requested_networks, config_drive,
-                auto_disk_config, reservation_id, max_count)
+                user_data, metadata, access_ip_v4, access_ip_v6,
+                requested_networks, config_drive, auto_disk_config,
+                reservation_id, max_count)
 
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
@@ -1427,7 +1410,8 @@ class API(base.Base):
         return instance
 
     def _check_create_policies(self, context, availability_zone,
-            requested_networks, block_device_mapping):
+            requested_networks, block_device_mapping, forced_host,
+            forced_node):
         """Check policies for create()."""
         target = {'project_id': context.project_id,
                   'user_id': context.user_id,
@@ -1440,6 +1424,9 @@ class API(base.Base):
 
             if block_device_mapping:
                 check_policy(context, 'create:attach_volume', target)
+
+            if forced_host or forced_node:
+                check_policy(context, 'create:forced_host', {})
 
     def _check_multiple_instances_neutron_ports(self, requested_networks):
         """Check whether multiple instances are created from port id(s)."""
@@ -1465,21 +1452,23 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name=None, display_description=None,
                key_name=None, key_data=None, security_group=None,
-               availability_zone=None, user_data=None, metadata=None,
-               injected_files=None, admin_password=None,
-               block_device_mapping=None, access_ip_v4=None,
-               access_ip_v6=None, requested_networks=None, config_drive=None,
-               auto_disk_config=None, scheduler_hints=None, legacy_bdm=True,
-               shutdown_terminate=False, check_server_group_quota=False):
+               availability_zone=None, forced_host=None, forced_node=None,
+               user_data=None, metadata=None, injected_files=None,
+               admin_password=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None, requested_networks=None,
+               config_drive=None, auto_disk_config=None, scheduler_hints=None,
+               legacy_bdm=True, shutdown_terminate=False,
+               check_server_group_quota=False):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
 
         Returns a tuple of (instances, reservation_id)
         """
-
+        # Check policies up front to fail before performing more expensive work
         self._check_create_policies(context, availability_zone,
-                requested_networks, block_device_mapping)
+                requested_networks, block_device_mapping, forced_host,
+                forced_node)
 
         if requested_networks and max_count > 1:
             self._check_multiple_instances_and_specified_ip(requested_networks)
@@ -1487,13 +1476,22 @@ class API(base.Base):
                 self._check_multiple_instances_neutron_ports(
                     requested_networks)
 
+        if availability_zone:
+            available_zones = availability_zones.\
+                get_availability_zones(context.elevated(), True)
+            if forced_host is None and availability_zone not in \
+                    available_zones:
+                msg = _('The requested availability zone is not available')
+                raise exception.InvalidRequest(msg)
+
         return self._create_instance(
                        context, instance_type,
                        image_href, kernel_id, ramdisk_id,
                        min_count, max_count,
                        display_name, display_description,
                        key_name, key_data, security_group,
-                       availability_zone, user_data, metadata,
+                       availability_zone, forced_host, forced_node,
+                       user_data, metadata,
                        injected_files, admin_password,
                        access_ip_v4, access_ip_v6,
                        requested_networks, config_drive,

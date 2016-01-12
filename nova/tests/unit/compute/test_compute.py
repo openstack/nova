@@ -10966,7 +10966,7 @@ class ComputePolicyTestCase(BaseTestCase):
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.create, self.context, None, '1',
-                          availability_zone='1:1')
+                          availability_zone='1', forced_host='1')
 
     def test_force_host_pass(self):
         rules = {"compute:create": [],
@@ -10976,7 +10976,7 @@ class ComputePolicyTestCase(BaseTestCase):
 
         self.compute_api.create(self.context, None,
                                 image_href=uuids.host_instance,
-                                availability_zone='1:1')
+                                availability_zone='1', forced_host='1')
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):
