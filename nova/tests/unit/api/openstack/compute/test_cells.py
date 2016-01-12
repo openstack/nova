@@ -658,19 +658,19 @@ class CellsTestV21(BaseCellsTest):
         self.controller.sync_instances(req, body=body)
         self.assertIsNone(call_info['project_id'])
         self.assertIsNone(call_info['updated_since'])
-        self.assertEqual(call_info['deleted'], False)
+        self.assertFalse(call_info['deleted'])
 
         body = {'deleted': 'False'}
         self.controller.sync_instances(req, body=body)
         self.assertIsNone(call_info['project_id'])
         self.assertIsNone(call_info['updated_since'])
-        self.assertEqual(call_info['deleted'], False)
+        self.assertFalse(call_info['deleted'])
 
         body = {'deleted': 'True'}
         self.controller.sync_instances(req, body=body)
         self.assertIsNone(call_info['project_id'])
         self.assertIsNone(call_info['updated_since'])
-        self.assertEqual(call_info['deleted'], True)
+        self.assertTrue(call_info['deleted'])
 
         body = {'deleted': 'foo'}
         self.assertRaises(self.bad_request,

@@ -1608,7 +1608,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
         # even if reclaim_instance_interval has been set.
-        self.assertEqual(True, self.server_delete_called)
+        self.assertTrue(self.server_delete_called)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
@@ -2543,7 +2543,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(False, kwargs['auto_disk_config'])
+            self.assertFalse(kwargs['auto_disk_config'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)

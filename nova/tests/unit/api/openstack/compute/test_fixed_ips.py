@@ -181,7 +181,7 @@ class FixedIpTestV21(test.NoDBTestCase):
         result = action(req, "192.168.1.1", body=body)
 
         self._assert_equal(result or action, 202)
-        self.assertEqual(fake_fixed_ips[0]['reserved'], True)
+        self.assertTrue(fake_fixed_ips[0]['reserved'])
 
     def test_fixed_ip_reserve_bad_ip(self):
         body = {'reserve': None}
@@ -215,7 +215,7 @@ class FixedIpTestV21(test.NoDBTestCase):
         result = action(req, "192.168.1.1", body=body)
 
         self._assert_equal(result or action, 202)
-        self.assertEqual(fake_fixed_ips[0]['reserved'], False)
+        self.assertFalse(fake_fixed_ips[0]['reserved'])
 
     def test_fixed_ip_unreserve_bad_ip(self):
         body = {'unreserve': None}

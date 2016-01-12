@@ -5692,7 +5692,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._post_live_migration(c, instance, dest,
                                           migrate_data=migrate_data)
         self.assertIn('cleanup', result)
-        self.assertEqual(result['cleanup'], True)
+        self.assertTrue(result['cleanup'])
 
     def test_post_live_migration_working_correctly(self):
         # Confirm post_live_migration() works as expected correctly.

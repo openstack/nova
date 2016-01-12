@@ -43,7 +43,7 @@ class FixedIpCommandsTestCase(test.TestCase):
         self.commands.reserve('192.168.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
                                              '192.168.0.100')
-        self.assertEqual(address['reserved'], True)
+        self.assertTrue(address['reserved'])
 
     def test_reserve_nonexistent_address(self):
         self.assertEqual(2, self.commands.reserve('55.55.55.55'))
@@ -52,7 +52,7 @@ class FixedIpCommandsTestCase(test.TestCase):
         self.commands.unreserve('192.168.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
                                              '192.168.0.100')
-        self.assertEqual(address['reserved'], False)
+        self.assertFalse(address['reserved'])
 
     def test_unreserve_nonexistent_address(self):
         self.assertEqual(2, self.commands.unreserve('55.55.55.55'))
@@ -172,7 +172,7 @@ class NetworkCommandsTestCase(test.TestCase):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(kwargs['label'], 'Test')
             self.assertEqual(kwargs['cidr'], '10.2.0.0/24')
-            self.assertEqual(kwargs['multi_host'], False)
+            self.assertFalse(kwargs['multi_host'])
             self.assertEqual(kwargs['num_networks'], 1)
             self.assertEqual(kwargs['network_size'], 256)
             self.assertEqual(kwargs['vlan'], 200)

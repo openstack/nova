@@ -6459,8 +6459,8 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
                   'instance_uuid': instance['uuid'],
                   'virtual_interface_id': vif['id']}
         db.fixed_ip_create(self.ctxt, values)
-        self.assertEqual(db.network_in_use_on_host(self.ctxt, 1, 'foo'), True)
-        self.assertEqual(db.network_in_use_on_host(self.ctxt, 1, 'bar'), False)
+        self.assertTrue(db.network_in_use_on_host(self.ctxt, 1, 'foo'))
+        self.assertFalse(db.network_in_use_on_host(self.ctxt, 1, 'bar'))
 
     def test_network_update_nonexistent(self):
         self.assertRaises(exception.NetworkNotFound,
@@ -9252,9 +9252,9 @@ class TestDBInstanceTags(test.TestCase):
         db.instance_tag_add(self.context, uuid, tag1)
 
         # NOTE(snikitin): Make sure it's actually a bool
-        self.assertEqual(True, db.instance_tag_exists(self.context, uuid,
+        self.assertTrue(db.instance_tag_exists(self.context, uuid,
                                                         tag1))
-        self.assertEqual(False, db.instance_tag_exists(self.context, uuid,
+        self.assertFalse(db.instance_tag_exists(self.context, uuid,
                                                          tag2))
 
     def test_instance_tag_add_to_non_existing_instance(self):

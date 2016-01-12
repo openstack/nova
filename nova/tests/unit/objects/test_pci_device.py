@@ -237,7 +237,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.status = fields.PciDeviceStatus.DELETED
         self.called = False
         self.pci_device.save()
-        self.assertEqual(self.called, False)
+        self.assertFalse(self.called)
 
     @mock.patch.object(objects.Service, 'get_minimum_version', return_value=4)
     def test_save_migrate_parent_addr(self, get_min_ver_mock):

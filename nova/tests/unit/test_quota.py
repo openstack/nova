@@ -2339,7 +2339,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         elevated = calls[0][1]
         self.assertEqual(elevated.project_id, ctx.project_id)
         self.assertEqual(elevated.quota_class, ctx.quota_class)
-        self.assertEqual(elevated.is_admin, True)
+        self.assertTrue(elevated.is_admin)
 
         # Now check that all the expected calls were made
         exemplar = [('quota_usage_update', elevated, 'test_project',
