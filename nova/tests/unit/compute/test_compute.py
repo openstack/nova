@@ -10974,9 +10974,11 @@ class ComputePolicyTestCase(BaseTestCase):
                  "network:validate_networks": []}
         self.policy.set_rules(rules)
 
-        self.compute_api.create(self.context, None,
-                                image_href=uuids.host_instance,
-                                availability_zone='1', forced_host='1')
+        self.compute_api.create(self.context,
+                objects.Flavor(id=1, disabled=False, memory_mb=256, vcpus=1,
+                    root_gb=1, ephemeral_gb=1, swap=0),
+                image_href=uuids.host_instance, availability_zone='1',
+                forced_host='1')
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):
