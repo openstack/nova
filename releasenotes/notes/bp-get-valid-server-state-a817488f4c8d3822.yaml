@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    A new host_status attribute for servers/detail and servers/{server_id}.
+    In order to use this new feature, user have to contain the header of
+    request microversion v2.16 in the API request. A new policy
+    ``os_compute_api:servers:show:host_status`` added to enable the feature.
+    By default, this is only exposed to cloud administrators.

@@ -1,0 +1,58 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-09-03T04:01:32Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "92154fab69d5883ba2c8622b7e65f745dd33257221c07af363c51b29",
+        "id": "0e44cc9c-e052-415d-afbf-469b0d384170",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "key_name": null,
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "host_status": "UP",
+        "tenant_id": "openstack",
+        "updated": "2013-09-03T04:01:33Z",
+        "user_id": "fake"
+    }
+}

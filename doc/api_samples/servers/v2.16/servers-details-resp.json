@@ -1,0 +1,60 @@
+{
+    "servers": [
+        {
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
+            "addresses": {
+                "private": [
+                    {
+                        "addr": "192.168.0.3",
+                        "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "OS-EXT-IPS:type": "fixed",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2013-09-03T04:01:32Z",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "hostId": "bcf92836fc9ed4203a75cb0337afc7f917d2be504164b995c2334b25",
+            "id": "f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/openstack/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/openstack/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+                    "rel": "bookmark"
+                }
+            ],
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "progress": 0,
+            "status": "ACTIVE",
+            "host_status": "UP",
+            "tenant_id": "openstack",
+            "updated": "2013-09-03T04:01:32Z",
+            "user_id": "fake"
+        }
+    ]
+}

@@ -299,6 +299,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:create:forced_host",
 "os_compute_api:servers:detail:get_all_tenants",
 "os_compute_api:servers:index:get_all_tenants",
+"os_compute_api:servers:show:host_status",
 "network:attach_external_network",
 "os_compute_api:os-admin-actions",
 "os_compute_api:os-admin-actions:reset_network",

@@ -1,0 +1,69 @@
+{
+    "server": {
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-09-16T02:55:07Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "3bf189131c61d0e71b0a8686a897a0f50d1693b48c47b721fe77155b",
+        "id": "c278163e-36f9-4cf2-b1ac-80db4c63f7a8",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "key_name": null,
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/c278163e-36f9-4cf2-b1ac-80db4c63f7a8",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/c278163e-36f9-4cf2-b1ac-80db4c63f7a8",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "OS-EXT-SRV-ATTR:host": "c5f474bf81474f9dbbc404d5b2e4e9b3",
+        "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
+        "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+        "OS-EXT-SRV-ATTR:hostname": "new-server-test",
+        "OS-EXT-SRV-ATTR:launch_index": 0,
+        "OS-EXT-SRV-ATTR:reservation_id": "r-12345678",
+        "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
+        "OS-EXT-SRV-ATTR:kernel_id": null,
+        "OS-EXT-SRV-ATTR:ramdisk_id": null,
+        "OS-EXT-SRV-ATTR:user_data": null,
+        "locked": false,
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "progress": 0,
+        "status": "ACTIVE",
+        "host_status": "UP",
+        "tenant_id": "openstack",
+        "updated": "2013-09-16T02:55:08Z",
+        "user_id": "fake"
+    }
+}

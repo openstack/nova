@@ -67,6 +67,7 @@ from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import fields as fields_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
@@ -3303,6 +3304,40 @@ class API(base.Base):
             # will not prevent processing events on other hosts
             self.compute_rpcapi.external_instance_event(
                 context, instances_by_host[host], events_by_host[host])
+
+    def get_instance_host_status(self, instance):
+        if instance.host:
+            try:
+                service = [service for service in instance.services if
+                           service.binary == 'nova-compute'][0]
+                if service.forced_down:
+                    host_status = fields_obj.HostStatus.DOWN
+                elif service.disabled:
+                    host_status = fields_obj.HostStatus.MAINTENANCE
+                else:
+                    alive = self.servicegroup_api.service_is_up(service)
+                    host_status = ((alive and fields_obj.HostStatus.UP) or
+                                   fields_obj.HostStatus.UNKNOWN)
+            except IndexError:
+                host_status = fields_obj.HostStatus.NONE
+        else:
+            host_status = fields_obj.HostStatus.NONE
+        return host_status
+
+    def get_instances_host_statuses(self, instance_list):
+        host_status_dict = dict()
+        host_statuses = dict()
+        for instance in instance_list:
+            if instance.host:
+                if instance.host not in host_status_dict:
+                    host_status = self.get_instance_host_status(instance)
+                    host_status_dict[instance.host] = host_status
+                else:
+                    host_status = host_status_dict[instance.host]
+            else:
+                host_status = fields_obj.HostStatus.NONE
+            host_statuses[instance.uuid] = host_status
+        return host_statuses
 
 
 class HostAPI(base.Base):
