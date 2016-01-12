@@ -47,6 +47,7 @@ CONF.register_opts(notification_opts)
 
 TRANSPORT = None
 LEGACY_NOTIFIER = None
+NOTIFICATION_TRANSPORT = None
 NOTIFIER = None
 
 ALLOWED_EXMODS = [
@@ -68,34 +69,43 @@ TRANSPORT_ALIASES = {
 
 
 def init(conf):
-    global TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
+    global TRANSPORT, NOTIFICATION_TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     exmods = get_allowed_exmods()
     TRANSPORT = messaging.get_transport(conf,
                                         allowed_remote_exmods=exmods,
                                         aliases=TRANSPORT_ALIASES)
+    NOTIFICATION_TRANSPORT = messaging.get_notification_transport(
+        conf, allowed_remote_exmods=exmods, aliases=TRANSPORT_ALIASES)
     serializer = RequestContextSerializer(JsonPayloadSerializer())
     if conf.notification_format == 'unversioned':
-        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer)
-        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
-                                      driver='noop')
+        LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                             serializer=serializer)
+        NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                      serializer=serializer, driver='noop')
     elif conf.notification_format == 'both':
-        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer)
-        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+        LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                             serializer=serializer)
+        NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                      serializer=serializer,
                                       topic='versioned_notifications')
     else:
-        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+        LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                             serializer=serializer,
                                              driver='noop')
-        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+        NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
+                                      serializer=serializer,
                                       topic='versioned_notifications')
 
 
 def cleanup():
-    global TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
+    global TRANSPORT, NOTIFICATION_TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     assert TRANSPORT is not None
+    assert NOTIFICATION_TRANSPORT is not None
     assert LEGACY_NOTIFIER is not None
     assert NOTIFIER is not None
     TRANSPORT.cleanup()
-    TRANSPORT = LEGACY_NOTIFIER = NOTIFIER = None
+    NOTIFICATION_TRANSPORT.cleanup()
+    TRANSPORT = NOTIFICATION_TRANSPORT = LEGACY_NOTIFIER = NOTIFIER = None
 
 
 def set_defaults(control_exchange):

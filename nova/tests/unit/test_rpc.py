@@ -28,6 +28,7 @@ from nova import test
 class RPCResetFixture(fixtures.Fixture):
     def _setUp(self):
         self.trans = copy.copy(rpc.TRANSPORT)
+        self.noti_trans = copy.copy(rpc.NOTIFICATION_TRANSPORT)
         self.noti = copy.copy(rpc.NOTIFIER)
         self.all_mods = copy.copy(rpc.ALLOWED_EXMODS)
         self.ext_mods = copy.copy(rpc.EXTRA_EXMODS)
@@ -35,6 +36,7 @@ class RPCResetFixture(fixtures.Fixture):
 
     def _reset_everything(self):
         rpc.TRANSPORT = self.trans
+        rpc.NOTIFICATION_TRANSPORT = self.noti_trans
         rpc.NOTIFIER = self.noti
         rpc.ALLOWED_EXMODS = self.all_mods
         rpc.EXTRA_EXMODS = self.ext_mods
@@ -50,60 +52,76 @@ class TestRPC(testtools.TestCase):
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'get_transport')
+    @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_unversioned(self, mock_notif, mock_trans, mock_ser,
-                              mock_exmods):
+    def test_init_unversioned(self, mock_notif, mock_noti_trans, mock_trans,
+                              mock_ser, mock_exmods):
         # The expected call to get the legacy notifier will require no new
         # kwargs, and we expect the new notifier will need the noop driver
         expected = [{}, {'driver': 'noop'}]
-        self._test_init(mock_notif, mock_trans, mock_ser, mock_exmods,
-                        'unversioned', expected)
+        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+                        mock_exmods, 'unversioned', expected)
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'get_transport')
+    @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_both(self, mock_notif, mock_trans, mock_ser, mock_exmods):
+    def test_init_both(self, mock_notif, mock_noti_trans, mock_trans,
+                       mock_ser, mock_exmods):
         expected = [{}, {'topic': 'versioned_notifications'}]
-        self._test_init(mock_notif, mock_trans, mock_ser, mock_exmods,
-                        'both', expected)
+        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+                        mock_exmods, 'both', expected)
 
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'get_transport')
+    @mock.patch.object(messaging, 'get_notification_transport')
     @mock.patch.object(messaging, 'Notifier')
-    def test_init_versioned(self, mock_notif, mock_trans, mock_ser,
-                            mock_exmods):
+    def test_init_versioned(self, mock_notif, mock_noti_trans, mock_trans,
+                            mock_ser, mock_exmods):
         expected = [{'driver': 'noop'}, {'topic': 'versioned_notifications'}]
-        self._test_init(mock_notif, mock_trans, mock_ser, mock_exmods,
-                        'versioned', expected)
+        self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
+                        mock_exmods, 'versioned', expected)
 
     def test_cleanup_transport_null(self):
+        rpc.NOTIFICATION_TRANSPORT = mock.Mock()
         rpc.LEGACY_NOTIFIER = mock.Mock()
+        rpc.NOTIFIER = mock.Mock()
+        self.assertRaises(AssertionError, rpc.cleanup)
+
+    def test_cleanup_notification_transport_null(self):
+        rpc.TRANSPORT = mock.Mock()
         rpc.NOTIFIER = mock.Mock()
         self.assertRaises(AssertionError, rpc.cleanup)
 
     def test_cleanup_legacy_notifier_null(self):
         rpc.TRANSPORT = mock.Mock()
+        rpc.NOTIFICATION_TRANSPORT = mock.Mock()
         rpc.NOTIFIER = mock.Mock()
-        self.assertRaises(AssertionError, rpc.cleanup)
 
     def test_cleanup_notifier_null(self):
         rpc.TRANSPORT = mock.Mock()
         rpc.LEGACY_NOTIFIER = mock.Mock()
+        rpc.NOTIFICATION_TRANSPORT = mock.Mock()
         self.assertRaises(AssertionError, rpc.cleanup)
 
     def test_cleanup(self):
         rpc.LEGACY_NOTIFIER = mock.Mock()
         rpc.NOTIFIER = mock.Mock()
+        rpc.NOTIFICATION_TRANSPORT = mock.Mock()
         rpc.TRANSPORT = mock.Mock()
         trans_cleanup = mock.Mock()
+        not_trans_cleanup = mock.Mock()
         rpc.TRANSPORT.cleanup = trans_cleanup
+        rpc.NOTIFICATION_TRANSPORT.cleanup = not_trans_cleanup
 
         rpc.cleanup()
 
         trans_cleanup.assert_called_once_with()
+        not_trans_cleanup.assert_called_once_with()
         self.assertIsNone(rpc.TRANSPORT)
+        self.assertIsNone(rpc.NOTIFICATION_TRANSPORT)
         self.assertIsNone(rpc.LEGACY_NOTIFIER)
         self.assertIsNone(rpc.NOTIFIER)
 
@@ -228,10 +246,11 @@ class TestRPC(testtools.TestCase):
         mock_prep.assert_called_once_with(publisher_id='service.foo')
         self.assertEqual('notifier', notifier)
 
-    def _test_init(self, mock_notif, mock_trans, mock_ser, mock_exmods,
-                   notif_format, expected_driver_topic_kwargs):
+    def _test_init(self, mock_notif, mock_noti_trans, mock_trans, mock_ser,
+                   mock_exmods, notif_format, expected_driver_topic_kwargs):
         legacy_notifier = mock.Mock()
         notifier = mock.Mock()
+        notif_transport = mock.Mock()
         transport = mock.Mock()
         serializer = mock.Mock()
         conf = mock.Mock()
@@ -239,6 +258,7 @@ class TestRPC(testtools.TestCase):
         conf.notification_format = notif_format
         mock_exmods.return_value = ['foo']
         mock_trans.return_value = transport
+        mock_noti_trans.return_value = notif_transport
         mock_ser.return_value = serializer
         mock_notif.side_effect = [legacy_notifier, notifier]
 
@@ -258,7 +278,7 @@ class TestRPC(testtools.TestCase):
         for kwargs in expected_driver_topic_kwargs:
             expected_kwargs = {'serializer': serializer}
             expected_kwargs.update(kwargs)
-            expected_calls.append(((transport,), expected_kwargs))
+            expected_calls.append(((notif_transport,), expected_kwargs))
 
         self.assertEqual(expected_calls, mock_notif.call_args_list,
                          "The calls to messaging.Notifier() did not create "
