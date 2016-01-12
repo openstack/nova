@@ -169,6 +169,8 @@ class ImageMetaProps(base.NovaObject):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 11):
             primitive.pop('hw_firmware_type', None)
+        if target_version < (1, 10):
+            primitive.pop('hw_cpu_realtime_mask', None)
         if target_version < (1, 9):
             primitive.pop('hw_cpu_thread_policy', None)
         if target_version < (1, 7):
