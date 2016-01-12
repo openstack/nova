@@ -180,6 +180,17 @@ class _TestPciDeviceObject(object):
         self.assertEqual('blah', dev.parent_addr)
         self.assertEqual({'phys_function': 'blah'}, dev.extra_info)
 
+    def test_save_empty_parent_addr(self):
+        ctxt = context.get_admin_context()
+        dev = pci_device.PciDevice._from_db_object(
+            ctxt, pci_device.PciDevice(), fake_db_dev)
+        dev.parent_addr = None
+        with mock.patch.object(db, 'pci_device_update',
+                               return_value=fake_db_dev):
+            dev.save()
+            self.assertIsNone(dev.parent_addr)
+            self.assertEqual({}, dev.extra_info)
+
     def test_save(self):
         ctxt = context.get_admin_context()
         self._create_fake_pci_device(ctxt=ctxt)
