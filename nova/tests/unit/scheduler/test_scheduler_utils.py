@@ -187,9 +187,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self._test_populate_filter_props(force_nodes=['force-node1',
                                                       'force-node2'])
 
-    @mock.patch.object(scheduler_utils, '_max_attempts')
-    def test_populate_retry_exception_at_max_attempts(self, _max_attempts):
-        _max_attempts.return_value = 2
+    def test_populate_retry_exception_at_max_attempts(self):
+        self.flags(scheduler_max_attempts=2)
         msg = 'The exception text was preserved!'
         filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
                                             exc_reason=[msg]))
