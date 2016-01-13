@@ -3625,7 +3625,7 @@ class AggregateAPI(base.Base):
         # NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
-        aggregate_payload.update({'name': aggregate['name']})
+        aggregate_payload.update({'name': aggregate.name})
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
                                                     aggregate_payload)

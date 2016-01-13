@@ -24,24 +24,60 @@ from nova.api.openstack.compute.legacy_v2.contrib import aggregates \
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
 
+
+def _make_agg_obj(agg_dict):
+    return objects.Aggregate(**agg_dict)
+
+
+def _make_agg_list(agg_list):
+    return objects.AggregateList(objects=[_make_agg_obj(a) for a in agg_list])
+
+
+def _transform_aggregate_az(agg_dict):
+    # the Aggregate object looks for availability_zone within metadata,
+    # so if availability_zone is in the top-level dict, move it down into
+    # metadata. We also have to delete the key from the top-level dict because
+    # availability_zone is a read-only property on the Aggregate object
+    md = agg_dict.get('metadata', {})
+    if 'availability_zone' in agg_dict:
+        md['availability_zone'] = agg_dict['availability_zone']
+        del agg_dict['availability_zone']
+        agg_dict['metadata'] = md
+    return agg_dict
+
+
+def _transform_aggregate_list_azs(agg_list):
+    for agg_dict in agg_list:
+        yield _transform_aggregate_az(agg_dict)
+
+
 AGGREGATE_LIST = [
-        {"name": "aggregate1", "id": "1", "availability_zone": "nova1"},
-        {"name": "aggregate2", "id": "2", "availability_zone": "nova1"},
-        {"name": "aggregate3", "id": "3", "availability_zone": "nova2"},
-        {"name": "aggregate1", "id": "4", "availability_zone": "nova1"}]
+        {"name": "aggregate1", "id": "1",
+            "metadata": {"availability_zone": "nova1"}},
+        {"name": "aggregate2", "id": "2",
+            "metadata": {"availability_zone": "nova1"}},
+        {"name": "aggregate3", "id": "3",
+            "metadata": {"availability_zone": "nova2"}},
+        {"name": "aggregate1", "id": "4",
+            "metadata": {"availability_zone": "nova1"}}]
+AGGREGATE_LIST = _make_agg_list(AGGREGATE_LIST)
+
 AGGREGATE = {"name": "aggregate1",
                   "id": "1",
-                  "availability_zone": "nova1",
-                  "metadata": {"foo": "bar"},
-                  "hosts": ["host1, host2"]}
+                  "metadata": {"foo": "bar",
+                               "availability_zone": "nova1"},
+                  "hosts": ["host1", "host2"]}
+AGGREGATE = _make_agg_obj(AGGREGATE)
 
 FORMATTED_AGGREGATE = {"name": "aggregate1",
                   "id": "1",
-                  "availability_zone": "nova1"}
+                  "metadata": {"availability_zone": "nova1"}}
+FORMATTED_AGGREGATE = _make_agg_obj(FORMATTED_AGGREGATE)
 
 
 class FakeRequest(object):
@@ -76,8 +112,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                        stub_list_aggregates)
 
         result = self.controller.index(self.req)
-
-        self.assertEqual(AGGREGATE_LIST, result["aggregates"])
+        result = _transform_aggregate_list_azs(result['aggregates'])
+        self._assert_agg_data(AGGREGATE_LIST, _make_agg_list(result))
 
     def test_index_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -96,7 +132,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         result = self.controller.create(self.req, body={"aggregate":
                                           {"name": "test",
                                            "availability_zone": "nova1"}})
-        self.assertEqual(FORMATTED_AGGREGATE, result["aggregate"])
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
 
     def test_create_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -175,7 +212,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
         result = self.controller.create(self.req,
                                         body={"aggregate": {"name": "test"}})
-        self.assertEqual(FORMATTED_AGGREGATE, result["aggregate"])
+
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
 
     def test_create_with_null_name(self):
         self.assertRaises(self.bad_request, self.controller.create,
@@ -238,8 +277,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                        stub_get_aggregate)
 
         aggregate = self.controller.show(self.req, "1")
-
-        self.assertEqual(AGGREGATE, aggregate["aggregate"])
+        aggregate = _transform_aggregate_az(aggregate['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
 
     def test_show_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -270,7 +309,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
         result = self.controller.update(self.req, "1", body=body)
 
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
 
     def test_update_no_admin(self):
         body = {"aggregate": {"availability_zone": "nova"}}
@@ -288,7 +328,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
         result = self.controller.update(self.req, "1", body=body)
 
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
 
     def test_update_with_only_availability_zone(self):
         body = {"aggregate": {"availability_zone": "nova1"}}
@@ -298,7 +339,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "update_aggregate",
                        stub_update_aggregate)
         result = self.controller.update(self.req, "1", body=body)
-        self.assertEqual(AGGREGATE, result["aggregate"])
+
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
 
     def test_update_with_no_updates(self):
         test_metadata = {"aggregate": {}}
@@ -384,7 +427,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                         body={"add_host": {"host":
                                                            "host1"}})
 
-        self.assertEqual(aggregate["aggregate"], AGGREGATE)
+        aggregate = _transform_aggregate_az(aggregate['aggregate'])
+        self._assert_agg_data(AGGREGATE, aggregate)
 
     def test_add_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -458,7 +502,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self.assertEqual("1", aggregate, "aggregate")
             self.assertEqual("host1", host, "host")
             stub_remove_host_from_aggregate.called = True
-            return {}
+            # at minimum, metadata is always set to {} in the api
+            return _make_agg_obj({'metadata': {}})
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
@@ -545,7 +590,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
         result = eval(self.set_metadata)(self.req, "1", body=body)
 
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
 
     def test_set_metadata_delete(self):
         body = {"set_metadata": {"metadata": {"foo": None}}}
@@ -555,7 +601,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             mocked.return_value = AGGREGATE
             result = eval(self.set_metadata)(self.req, "1", body=body)
 
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        result = _transform_aggregate_az(result['aggregate'])
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
         mocked.assert_called_once_with(self.context, "1",
                                        body["set_metadata"]["metadata"])
 
@@ -645,6 +692,28 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self.assertRaises(exc.HTTPBadRequest,
                               self.controller.delete,
                               self.req, "agg1")
+
+    def test_marshall_aggregate(self):
+        # _marshall_aggregate() just basically turns the aggregate returned
+        # from the AggregateAPI into a dict, so this tests that transform.
+        # We would expect the dictionary that comes out is the same one
+        # that we pump into the aggregate object in the first place
+        agg = {'name': 'aggregate1',
+               'id': 1,
+               'metadata': {'foo': 'bar', 'availability_zone': 'nova'},
+               'hosts': ['host1', 'host2']}
+        agg_obj = _make_agg_obj(agg)
+        marshalled_agg = self.controller._marshall_aggregate(agg_obj)
+
+        # _marshall_aggregate() puts all fields and obj_extra_fields in the
+        # top-level dict, so we need to put availability_zone at the top also
+        agg['availability_zone'] = 'nova'
+        self.assertEqual(agg, marshalled_agg['aggregate'])
+
+    def _assert_agg_data(self, expected, actual):
+        expected_data = expected.obj_to_primitive()['nova_object.data']
+        actual_data = expected.obj_to_primitive()['nova_object.data']
+        self.assertEqual(expected_data, actual_data)
 
 
 class AggregateTestCaseV2(AggregateTestCaseV21):
