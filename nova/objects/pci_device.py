@@ -218,7 +218,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 # NOTE(ndipanov): If we are not migrating data yet, make sure
                 # that any changes to parent_addr are also in the old location
                 # in extra_info
-                if 'parent_addr' in updates:
+                if 'parent_addr' in updates and updates['parent_addr']:
                     extra_update = updates.get('extra_info', {})
                     if not extra_update and self.obj_attr_is_set('extra_info'):
                         extra_update = self.extra_info
