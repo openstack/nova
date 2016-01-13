@@ -330,6 +330,7 @@ class API(base_api.NetworkAPI):
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             if port_binding:
                 port_req_body['port']['binding:host_id'] = None
+                port_req_body['port']['binding:profile'] = {}
             try:
                 port_client.update_port(port_id, port_req_body)
             except Exception:

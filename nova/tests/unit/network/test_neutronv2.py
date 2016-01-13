@@ -3365,6 +3365,7 @@ class TestNeutronv2WithMock(test.TestCase):
         body = {'port': {'device_id': '', 'device_owner': ''}}
         if has_ext:
             body['port']['binding:host_id'] = None
+            body['port']['binding:profile'] = {}
         update_port_calls = []
         for p in ports:
             update_port_calls.append(mock.call(p, body))
