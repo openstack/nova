@@ -670,31 +670,27 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
     topology, making sure that hyperthreads of the instance match up with
     those of the host when the pinning takes effect.
 
-    Currently the strategy for packing is to prefer siblings and try use
-    cores evenly, by using emptier cores first. This is achieved by the way we
-    order cores in the can_pack structure, and the order in which we iterate
+    Currently the strategy for packing is to prefer siblings and try use cores
+    evenly, by using emptier cores first. This is achieved by the way we order
+    cores in the sibling_sets structure, and the order in which we iterate
     through it.
 
-    The main packing loop that iterates over the can_pack dictionary will not
-    currently try to look for a fit that maximizes number of siblings, but will
-    simply rely on the iteration ordering and picking the first viable
+    The main packing loop that iterates over the sibling_sets dictionary will
+    not currently try to look for a fit that maximizes number of siblings, but
+    will simply rely on the iteration ordering and picking the first viable
     placement.
     """
 
-    # We build up a data structure 'can_pack' that answers the question:
-    # 'Given the number of threads I want to pack, give me a list of all
-    # the available sibling sets that can accommodate it'
-    can_pack = collections.defaultdict(list)
+    # We build up a data structure that answers the question: 'Given the
+    # number of threads I want to pack, give me a list of all the available
+    # sibling sets (or groups thereof) that can accommodate it'
+    sibling_sets = collections.defaultdict(list)
     for sib in available_siblings:
         for threads_no in range(1, len(sib) + 1):
-            can_pack[threads_no].append(sib)
+            sibling_sets[threads_no].append(sib)
 
-    def _can_pack_instance_cell(instance_cell, threads_per_core, cores_list):
-        """Determines if instance cell can fit an avail set of cores."""
-
-        if threads_per_core * len(cores_list) < len(instance_cell):
-            return False
-        return True
+    pinning = None
+    threads_no = 1
 
     def _orphans(instance_cell, threads_per_core):
         """Number of instance CPUs which will not fill up a host core.
@@ -702,7 +698,7 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
         Best explained by an example: consider set of free host cores as such:
             [(0, 1), (3, 5), (6, 7, 8)]
         This would be a case of 2 threads_per_core AKA an entry for 2 in the
-        can_pack structure.
+        sibling_sets structure.
 
         If we attempt to pack a 5 core instance on it - due to the fact that we
         iterate the list in order, we will end up with a single core of the
@@ -733,25 +729,59 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
         return fractions.gcd(threads_per_core, _orphans(instance_cell,
                                                         threads_per_core))
 
-    # We iterate over the can_pack dict in descending order of cores that
-    # can be packed - an attempt to get even distribution over time
-    for cores_per_sib, sib_list in sorted(
-            (t for t in can_pack.items()), reverse=True):
-        if _can_pack_instance_cell(instance_cell,
-                                   cores_per_sib, sib_list):
-            sliced_sibs = map(lambda s: list(s)[:cores_per_sib], sib_list)
-            pinning = zip(sorted(instance_cell.cpuset),
-                          itertools.chain(*sliced_sibs))
+    if (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.REQUIRE):
+        LOG.debug("Requested 'require' thread policy for %d cores",
+                  len(instance_cell))
+    elif (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.PREFER):
+        LOG.debug("Request 'prefer' thread policy for %d cores",
+                  len(instance_cell))
+    elif (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.ISOLATE):
+        LOG.debug("Requested 'isolate' thread policy for %d cores",
+                  len(instance_cell))
+        raise NotImplementedError("The 'isolate' policy is not supported.")
+    else:
+        LOG.debug("User did not specify a thread policy. Using default "
+                  "for %d cores", len(instance_cell))
 
-            threads = _threads(instance_cell, cores_per_sib)
-            cores = len(instance_cell) / threads
-            topology = objects.VirtCPUTopology(sockets=1,
-                                               cores=cores,
-                                               threads=threads)
-            instance_cell.pin_vcpus(*pinning)
-            instance_cell.cpu_topology = topology
-            instance_cell.id = host_cell_id
-            return instance_cell
+    # NOTE(ndipanov): We iterate over the sibling sets in descending order
+    # of cores that can be packed. This is an attempt to evenly distribute
+    # instances among physical cores
+    for threads_no, sibling_set in sorted(
+            (t for t in sibling_sets.items()), reverse=True):
+        if threads_no * len(sibling_set) < len(instance_cell):
+            continue
+
+        usable_cores = map(lambda s: list(s)[:threads_no], sibling_set)
+
+        threads_no = _threads(instance_cell, threads_no)
+
+        # NOTE(sfinucan): The key difference between the require and
+        # prefer policies is that require will not settle for non-siblings
+        # if this is all that is available. Enforce this by ensuring we're
+        # using sibling sets that contain at least one sibling
+        if (instance_cell.cpu_thread_policy ==
+                fields.CPUThreadAllocationPolicy.REQUIRE):
+            if threads_no <= 1:
+                continue
+
+        pinning = zip(sorted(instance_cell.cpuset),
+                      itertools.chain(*usable_cores))
+
+        break
+
+    if not pinning:
+        return
+
+    topology = objects.VirtCPUTopology(sockets=1,
+                                       cores=len(pinning) / threads_no,
+                                       threads=threads_no)
+    instance_cell.pin_vcpus(*pinning)
+    instance_cell.cpu_topology = topology
+    instance_cell.id = host_cell_id
+    return instance_cell
 
 
 def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
@@ -1063,7 +1093,6 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
         for cell in numa_topology.cells:
             cell.cpu_policy = cpu_policy
             cell.cpu_thread_policy = cpu_thread_policy
-        return numa_topology
     else:
         single_cell = objects.InstanceNUMACell(
                 id=0,
@@ -1072,7 +1101,8 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
                 cpu_policy=cpu_policy,
                 cpu_thread_policy=cpu_thread_policy)
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
-        return numa_topology
+
+    return numa_topology
 
 
 # TODO(sahid): Move numa related to hardward/numa.py
