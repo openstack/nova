@@ -182,14 +182,14 @@ def get_verifier(context, img_signature_certificate_uuid,
 
     :param context: the user context for authentication
     :param img_signature_certificate_uuid:
-    uuid of signing certificate stored in key manager
+           uuid of signing certificate stored in key manager
     :param img_signature_hash_method:
-    string denoting hash method used to compute signature
+           string denoting hash method used to compute signature
     :param img_signature: string of base64 encoding of signature
     :param img_signature_key_type:
-    string denoting type of keypair used to compute signature
+           string denoting type of keypair used to compute signature
     :returns: instance of
-    cryptography.hazmat.primitives.asymmetric.AsymmetricVerificationContext
+       cryptography.hazmat.primitives.asymmetric.AsymmetricVerificationContext
     :raises: SignatureVerificationError if we fail to build the verifier
     """
     image_meta_props = {'img_signature_uuid': img_signature_certificate_uuid,
