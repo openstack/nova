@@ -63,7 +63,7 @@ LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
-native_Queue = patcher.original("queue" if six.PY3 else "Queue")
+native_Queue = patcher.original("Queue" if six.PY2 else "queue")
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')

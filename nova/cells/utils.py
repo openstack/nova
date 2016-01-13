@@ -105,10 +105,10 @@ class _CellProxy(object):
                 else:
                     yield name, getattr(self._obj, name)
 
-    if six.PY3:
-        items = _iteritems
-    else:
+    if six.PY2:
         iteritems = _iteritems
+    else:
+        items = _iteritems
 
     def __getattr__(self, key):
         return getattr(self._obj, key)
