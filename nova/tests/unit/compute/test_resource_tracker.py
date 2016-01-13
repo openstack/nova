@@ -105,7 +105,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'vendor_id': '8086',
                 'status': 'available',
                 'extra_k1': 'v1',
-                'numa_node': 1
+                'numa_node': 1,
+                'parent_addr': '0000:00:01.0',
             },
             {
                 'label': 'label_8086_0443',
@@ -116,7 +117,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'vendor_id': '8086',
                 'status': 'available',
                 'extra_k1': 'v1',
-                'numa_node': 1
+                'numa_node': 1,
+                'parent_addr': '0000:00:01.0',
             },
             {
                 'label': 'label_8086_0443',
@@ -127,7 +129,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'vendor_id': '8086',
                 'status': 'available',
                 'extra_k1': 'v1',
-                'numa_node': 1
+                'numa_node': 1,
+                'parent_addr': None,
             },
             {
                 'label': 'label_8086_0123',
@@ -138,7 +141,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'vendor_id': '8086',
                 'status': 'available',
                 'extra_k1': 'v1',
-                'numa_node': 1
+                'numa_node': 1,
+                'parent_addr': None,
             },
             {
                 'label': 'label_8086_7891',
@@ -149,12 +153,13 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'vendor_id': '8086',
                 'status': 'available',
                 'extra_k1': 'v1',
-                'numa_node': None
+                'numa_node': None,
+                'parent_addr': '0000:08:01.0',
             },
         ] if self.pci_support else []
         self.pci_stats = [
             {
-                'count': 2,
+                'count': 3,
                 'vendor_id': '8086',
                 'product_id': '0443',
                 'numa_node': 1

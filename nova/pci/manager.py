@@ -112,9 +112,6 @@ class PciDevTracker(object):
 
         devices = []
         for dev in jsonutils.loads(devices_json):
-            if dev.get('dev_type') == fields.PciDeviceType.SRIOV_PF:
-                continue
-
             if self.dev_filter.device_assignable(dev):
                 devices.append(dev)
         self._set_hvdevs(devices)
