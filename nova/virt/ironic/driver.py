@@ -74,6 +74,10 @@ _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
                        ironic_states.ERROR, ironic_states.DEPLOYWAIT,
                        ironic_states.DEPLOYING)
 
+_NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
+                'target_provision_state', 'last_error', 'maintenance',
+                'properties', 'instance_uuid')
+
 
 def map_power_state(state):
     try:
@@ -90,7 +94,8 @@ def _validate_instance_and_node(ironicclient, instance):
     node, and return the node.
     """
     try:
-        return ironicclient.call("node.get_by_instance_uuid", instance.uuid)
+        return ironicclient.call('node.get_by_instance_uuid', instance.uuid,
+                                 fields=_NODE_FIELDS)
     except ironic.exc.NotFound:
         raise exception.InstanceNotFound(instance_id=instance.uuid)
 
@@ -158,6 +163,11 @@ class IronicDriver(virt_driver.ComputeDriver):
             logger.setLevel(level)
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
+
+    def _get_node(self, node_uuid):
+        """Get a node by its UUID."""
+        return self.ironicclient.call('node.get', node_uuid,
+                                      fields=_NODE_FIELDS)
 
     def _node_resources_unavailable(self, node_obj):
         """Determine whether the node's resources are in an acceptable state.
@@ -446,7 +456,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def _get_hypervisor_version(self):
         """Returns the version of the Ironic API service endpoint."""
-        return CONF.ironic.api_version
+        return client_wrapper.IRONIC_API_VERSION[0]
 
     def instance_exists(self, instance):
         """Checks the existence of an instance.
@@ -525,7 +535,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # NOTE(comstud): Fallback and check Ironic. This case should be
         # rare.
         try:
-            self.ironicclient.call("node.get", nodename)
+            self._get_node(nodename)
             return True
         except ironic.exc.NotFound:
             return False
@@ -585,7 +595,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         else:
             LOG.debug("Node %(node)s not found in cache, age: %(age)s",
                       {'node': nodename, 'age': cache_age})
-            node = self.ironicclient.call("node.get", nodename)
+            node = self._get_node(nodename)
         return self._node_resource(node)
 
     def get_info(self, instance):
@@ -643,7 +653,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             MAC addresses'.
         """
         try:
-            node = self.ironicclient.call("node.get", instance.node)
+            node = self._get_node(instance.node)
         except ironic.exc.NotFound:
             return None
         ports = self.ironicclient.call("node.list_ports", node.uuid)
@@ -712,7 +722,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 _("Ironic node uuid not supplied to "
                   "driver for instance %s.") % instance.uuid)
 
-        node = self.ironicclient.call("node.get", node_uuid)
+        node = self._get_node(node_uuid)
         flavor = instance.flavor
 
         self._add_driver_fields(node, instance, image_meta, flavor)
@@ -1071,7 +1081,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
 
         """
-        node = self.ironicclient.call("node.get", instance.node)
+        node = self._get_node(instance.node)
         self._plug_vifs(node, instance, network_info)
 
     def unplug_vifs(self, instance, network_info):
@@ -1081,7 +1091,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
 
         """
-        node = self.ironicclient.call("node.get", instance.node)
+        node = self._get_node(instance.node)
         self._unplug_vifs(node, instance, network_info)
 
     def rebuild(self, context, instance, image_meta, injected_files,
@@ -1133,7 +1143,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         instance.save(expected_task_state=[task_states.REBUILDING])
 
         node_uuid = instance.node
-        node = self.ironicclient.call("node.get", node_uuid)
+        node = self._get_node(node_uuid)
 
         self._add_driver_fields(node, instance, image_meta, instance.flavor,
                                 preserve_ephemeral)
@@ -1174,7 +1184,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :returns: a string representing the host ID
         """
 
-        node = self.ironicclient.call("node.get", instance.node)
+        node = self._get_node(instance.node)
         if getattr(node, 'network_provider', 'none') == 'none':
             # flat network, go ahead and allow the port to be bound
             return super(IronicDriver, self).network_binding_host_id(

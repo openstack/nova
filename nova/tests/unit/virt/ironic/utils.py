@@ -92,10 +92,10 @@ class FakeNodeClient(object):
     def list(self, detail=False):
         return []
 
-    def get(self, node_uuid):
+    def get(self, node_uuid, fields=None):
         pass
 
-    def get_by_instance_uuid(self, instance_uuid):
+    def get_by_instance_uuid(self, instance_uuid, fields=None):
         pass
 
     def list_ports(self, node_uuid):
