@@ -34,7 +34,7 @@ class _TestEC2InstanceMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         imap = ec2_obj.EC2InstanceMapping(context=self.context)
@@ -75,7 +75,7 @@ class _TestEC2VolumeMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         vmap = ec2_obj.EC2VolumeMapping(context=self.context)
@@ -116,7 +116,7 @@ class _TestEC2SnapshotMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         smap = ec2_obj.EC2SnapshotMapping(context=self.context)
