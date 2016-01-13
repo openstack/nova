@@ -5308,7 +5308,7 @@ class LibvirtDriver(driver.ComputeDriver):
         source = CONF.host
 
         if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
-            md_obj = migrate_data_obj.LibvirtLiveMigrateData()
+            md_obj = objects.LibvirtLiveMigrateData()
             md_obj.from_legacy_dict(dest_check_data)
             dest_check_data = md_obj
 

@@ -5184,8 +5184,8 @@ class ComputeManager(manager.Manager):
                 context, instance,
                 block_migration, disk, dest, migrate_data)
             migrate_data['pre_live_migration_result'] = pre_migration_data
-            migrate_data_obj = self._get_migrate_data_obj()
-            migrate_data_obj.from_legacy_dict(migrate_data)
+            migrate_data_object = self._get_migrate_data_obj()
+            migrate_data_object.from_legacy_dict(migrate_data)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Pre live migration failed at %s'),
@@ -5196,12 +5196,12 @@ class ComputeManager(manager.Manager):
 
         self._set_migration_status(migration, 'running')
 
-        migrate_data_obj.migration = migration
+        migrate_data_object.migration = migration
         try:
             self.driver.live_migration(context, instance, dest,
                                        self._post_live_migration,
                                        self._rollback_live_migration,
-                                       block_migration, migrate_data_obj)
+                                       block_migration, migrate_data_object)
         except Exception:
             # Executing live migration
             # live_migration might raises exceptions, but
@@ -5258,7 +5258,7 @@ class ComputeManager(manager.Manager):
         #                 block storage or instance path were shared
         is_shared_block_storage = not block_migration
         is_shared_instance_path = not block_migration
-        if isinstance(migrate_data, objects.LibvirtLiveMigrateData):
+        if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
             is_shared_block_storage = migrate_data.is_shared_block_storage
             is_shared_instance_path = migrate_data.is_shared_instance_path
 

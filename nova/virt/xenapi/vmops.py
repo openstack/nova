@@ -2144,7 +2144,7 @@ class VMOps(object):
         :param disk_over_commit: if true, allow disk over commit
 
         """
-        dest_check_data = migrate_data_obj.XenapiLiveMigrateData()
+        dest_check_data = objects.XenapiLiveMigrateData()
         if block_migration:
             dest_check_data.block_migration = True
             dest_check_data.migrate_send_data = self._migrate_receive(ctxt)
@@ -2191,7 +2191,7 @@ class VMOps(object):
                                 'relax-xsm-sr-check=true required'))
 
         if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
-            obj = migrate_data_obj.XenapiLiveMigrateData()
+            obj = objects.XenapiLiveMigrateData()
             obj.from_legacy_dict(dest_check_data)
             dest_check_data = obj
 
