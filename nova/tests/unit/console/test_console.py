@@ -22,7 +22,6 @@ from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.console import api as console_api
-from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import db
 from nova import exception
@@ -148,12 +147,12 @@ class ConsoleAPITestCase(test.TestCase):
 
         def _fake_db_console_get(_ctxt, _console_uuid, _instance_uuid):
             return self.fake_console
-        self.stubs.Set(db, 'console_get', _fake_db_console_get)
+        self.stub_out('nova.db.console_get', _fake_db_console_get)
 
         def _fake_db_console_get_all_by_instance(_ctxt, _instance_uuid,
                                                  columns_to_join):
             return [self.fake_console]
-        self.stubs.Set(db, 'console_get_all_by_instance',
+        self.stub_out('nova.db.console_get_all_by_instance',
                        _fake_db_console_get_all_by_instance)
 
     def test_get_consoles(self):
@@ -165,15 +164,11 @@ class ConsoleAPITestCase(test.TestCase):
                                                'fake_id')
         self.assertEqual(console, self.fake_console)
 
-    def test_delete_console(self):
-        self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI, 'remove_console')
-
-        console_rpcapi.ConsoleAPI.remove_console(self.context, 'fake_id')
-
-        self.mox.ReplayAll()
-
+    @mock.patch('nova.console.rpcapi.ConsoleAPI.remove_console')
+    def test_delete_console(self, mock_remove):
         self.console_api.delete_console(self.context, self.fake_uuid,
                                         'fake_id')
+        mock_remove.assert_called_once_with(self.context, 'fake_id')
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_topic',
                        return_value='compute.fake_host')
