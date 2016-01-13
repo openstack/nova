@@ -68,10 +68,7 @@ class SimpleTenantUsageController(object):
                 # instance is still running, so charge them up to current time
                 stop = period_stop
             dt = stop - start
-            seconds = (dt.days * 3600 * 24 + dt.seconds +
-                       dt.microseconds / 100000.0)
-
-            return seconds / 3600.0
+            return dt.total_seconds() / 3600.0
         else:
             # instance hasn't launched, so no charge
             return 0
@@ -151,7 +148,7 @@ class SimpleTenantUsageController(object):
             else:
                 delta = now - info['started_at']
 
-            info['uptime'] = delta.days * 24 * 3600 + delta.seconds
+            info['uptime'] = int(delta.total_seconds())
 
             if info['tenant_id'] not in rval:
                 summary = {}
