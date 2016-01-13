@@ -208,6 +208,7 @@ nova.tests.unit.volume.test_cinder.CinderApiTestCase
 nova.tests.unit.compute.test_compute_mgr.ComputeManagerUnitTestCase
 nova.tests.unit.network.test_neutronv2.TestNeutronv2
 nova.tests.unit.virt.test_virt_drivers.AbstractDriverTestCase
+nova.tests.unit.virt.vmwareapi.test_configdrive.ConfigDriveTestCase
 nova.tests.unit.virt.vmwareapi.test_driver_api.VMwareAPIVMTestCase
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.SpawnTestCase
