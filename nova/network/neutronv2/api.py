@@ -796,8 +796,8 @@ class API(base_api.NetworkAPI):
     def show_port(self, context, port_id):
         """Return the port for the client given the port id.
 
-        :param context - Request context.
-        :param port_id - The id of port to be queried.
+        :param context: Request context.
+        :param port_id: The id of port to be queried.
         :returns: A dict containing port data keyed by 'port', e.g.
 
         ::
@@ -810,10 +810,10 @@ class API(base_api.NetworkAPI):
     def _show_port(self, context, port_id, neutron_client=None, fields=None):
         """Return the port for the client given the port id.
 
-        :param context - Request context.
-        :param port_id - The id of port to be queried.
-        :param neutron_client - A neutron client.
-        :param fields - The condition fields to query port data.
+        :param context: Request context.
+        :param port_id: The id of port to be queried.
+        :param neutron_client: A neutron client.
+        :param fields: The condition fields to query port data.
         :returns: A dict of port data.
                   e.g. {'port_id': 'abcd', 'fixed_ip_address': '1.2.3.4'}
         """
@@ -1578,20 +1578,21 @@ class API(base_api.NetworkAPI):
                                   preexisting_port_ids=None):
         """Return list of ordered VIFs attached to instance.
 
-        :param context - request context.
-        :param instance - instance we are returning network info for.
-        :param networks - List of networks being attached to an instance.
-                          If value is None this value will be populated
-                          from the existing cached value.
-        :param port_ids - List of port_ids that are being attached to an
-                          instance in order of attachment. If value is None
-                          this value will be populated from the existing
-                          cached value.
-        :param admin_client - a neutron client for the admin context.
-        :param preexisting_port_ids - List of port_ids that nova didn't
-        allocate and there shouldn't be deleted when an instance is
-        de-allocated. Supplied list will be added to the cached list of
-        preexisting port IDs for this instance.
+        :param context: Request context.
+        :param instance: Instance we are returning network info for.
+        :param networks: List of networks being attached to an instance.
+                         If value is None this value will be populated
+                         from the existing cached value.
+        :param port_ids: List of port_ids that are being attached to an
+                         instance in order of attachment. If value is None
+                         this value will be populated from the existing
+                         cached value.
+        :param admin_client: A neutron client for the admin context.
+        :param preexisting_port_ids: List of port_ids that nova didn't
+                        allocate and there shouldn't be deleted when
+                        an instance is de-allocated. Supplied list will
+                        be added to the cached list of preexisting port
+                        IDs for this instance.
         """
 
         search_opts = {'tenant_id': instance.project_id,
