@@ -5472,11 +5472,9 @@ class LibvirtDriver(driver.ComputeDriver):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a LibvirtLiveMigrateData object
         """
-        disk_available_mb = None
-        if block_migration:
-            disk_available_gb = dst_compute_info['disk_available_least']
-            disk_available_mb = \
-                    (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb
+        disk_available_gb = dst_compute_info['disk_available_least']
+        disk_available_mb = (
+            (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb)
 
         # Compare CPU
         if not instance.vcpu_model or not instance.vcpu_model.model:
@@ -5491,8 +5489,12 @@ class LibvirtDriver(driver.ComputeDriver):
         data = objects.LibvirtLiveMigrateData()
         data.filename = filename
         data.image_type = CONF.libvirt.images_type
-        data.block_migration = block_migration
-        data.disk_over_commit = disk_over_commit
+        # Notes(eliqiao): block_migration and disk_over_commit are not
+        # nullable, so just don't set them if they are None
+        if block_migration is not None:
+            data.block_migration = block_migration
+        if disk_over_commit is not None:
+            data.disk_over_commit = disk_over_commit
         data.disk_available_mb = disk_available_mb
         return data
 
@@ -5542,16 +5544,22 @@ class LibvirtDriver(driver.ComputeDriver):
                                                          disk_info_text)
         has_local_disk = self._has_local_disk(instance, disk_info_text)
 
+        if 'block_migration' not in dest_check_data:
+            dest_check_data.block_migration = (
+                not dest_check_data.is_on_shared_storage())
+
         if dest_check_data.block_migration:
-            if (dest_check_data.is_shared_block_storage or
-                    dest_check_data.is_shared_instance_path):
+            # TODO(eliqiao): Once block_migration flag is removed from the API
+            # we can safely remove the if condition
+            if dest_check_data.is_on_shared_storage():
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
-            self._assert_dest_node_has_enough_disk(context, instance,
-                                    dest_check_data.disk_available_mb,
-                                    dest_check_data.disk_over_commit,
-                                    block_device_info)
+            if 'disk_over_commit' in dest_check_data:
+                self._assert_dest_node_has_enough_disk(context, instance,
+                                        dest_check_data.disk_available_mb,
+                                        dest_check_data.disk_over_commit,
+                                        block_device_info)
             if block_device_info:
                 bdm = block_device_info.get('block_device_mapping')
                 # NOTE(pkoniszewski): libvirt from version 1.2.17 upwards
