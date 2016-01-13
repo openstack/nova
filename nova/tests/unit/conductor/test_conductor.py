@@ -45,6 +45,7 @@ from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_instance
@@ -298,6 +299,8 @@ class _BaseTaskTestCase(object):
         self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
                        fake_deserialize_context)
 
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
     def _prepare_rebuild_args(self, update_args=None):
         # Args that don't get passed in to the method but do get passed to RPC
         migration = update_args and update_args.pop('migration', None)
@@ -401,9 +404,7 @@ class _BaseTaskTestCase(object):
         self._test_cold_migrate(clean_shutdown=False)
 
     @mock.patch('nova.objects.Instance.refresh')
-    @mock.patch('nova.utils.spawn_n')
-    def test_build_instances(self, mock_spawn, mock_refresh):
-        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+    def test_build_instances(self, mock_refresh):
         instance_type = flavors.get_default_flavor()
         instances = [objects.Instance(context=self.context,
                                       id=i,
@@ -532,12 +533,7 @@ class _BaseTaskTestCase(object):
 
         @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
         @mock.patch.object(scheduler_utils, 'populate_retry')
-        @mock.patch('nova.utils.spawn_n')
-        def _test(spawn_mock, populate_retry, set_vm_state_and_notify):
-            # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that
-            # makes mocking hard so use direct call instead.
-            spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
-
+        def _test(populate_retry, set_vm_state_and_notify):
             # build_instances() is a cast, we need to wait for it to
             # complete
             self.useFixture(cast_as_call.CastAsCall(self.stubs))
@@ -566,23 +562,18 @@ class _BaseTaskTestCase(object):
 
         _test()
 
-    @mock.patch('nova.utils.spawn_n')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     def test_build_instances_scheduler_group_failure(self, state_mock,
-                                                     sig_mock, bs_mock,
-                                                     spawn_mock):
+                                                     sig_mock, bs_mock):
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
 
-        # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that makes mocking
-        # hard so use direct call instead.
-        spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
         bs_mock.return_value = spec
         exception = exc.UnsupportedPolicyException(reason='fake-reason')
         sig_mock.side_effect = exception
@@ -883,7 +874,6 @@ class _BaseTaskTestCase(object):
             select_dest_mock.assert_called_once_with(self.context, fake_spec)
             self.assertFalse(rebuild_mock.called)
 
-    @mock.patch('nova.utils.spawn_n')
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
                        'rebuild_instance')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -897,16 +887,11 @@ class _BaseTaskTestCase(object):
                                                            bs_mock,
                                                            select_dest_mock,
                                                            sig_mock,
-                                                           rebuild_mock,
-                                                           spawn_mock):
+                                                           rebuild_mock):
         inst_obj = self._create_fake_instance_obj()
         rebuild_args, _ = self._prepare_rebuild_args({'host': None})
         request_spec = {}
         bs_mock.return_value = request_spec
-
-        # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that makes mocking
-        # hard so use direct call instead.
-        spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
 
         exception = exc.UnsupportedPolicyException(reason='')
         sig_mock.side_effect = exception
