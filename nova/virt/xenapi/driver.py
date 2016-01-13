@@ -565,10 +565,10 @@ class XenAPIDriver(driver.ComputeDriver):
             at compute manager.
         """
         # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
-        pre_live_migration_result = {}
-        pre_live_migration_result['sr_uuid_map'] = \
-                 self._vmops.connect_block_device_volumes(block_device_info)
-        return pre_live_migration_result
+        result = objects.XenapiLiveMigrateData()
+        result.sr_uuid_map = self._vmops.connect_block_device_volumes(
+            block_device_info)
+        return result
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):

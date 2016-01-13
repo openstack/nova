@@ -821,7 +821,7 @@ class SessionBase(object):
         pass
 
     def host_migrate_receive(self, session, destref, nwref, options):
-        return "fake_migrate_data"
+        return {"value": "fake_migrate_data"}
 
     def VM_assert_can_migrate(self, session, vmref, migrate_data, live,
                               vdi_map, vif_map, options):

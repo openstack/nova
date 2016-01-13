@@ -46,6 +46,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
+from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
@@ -2143,15 +2144,14 @@ class VMOps(object):
         :param disk_over_commit: if true, allow disk over commit
 
         """
-        dest_check_data = {}
+        dest_check_data = migrate_data_obj.XenapiLiveMigrateData()
         if block_migration:
-            migrate_send_data = self._migrate_receive(ctxt)
-            destination_sr_ref = vm_utils.safe_find_sr(self._session)
-            dest_check_data.update(
-                {"block_migration": block_migration,
-                 "migrate_data": {"migrate_send_data": migrate_send_data,
-                                  "destination_sr_ref": destination_sr_ref}})
+            dest_check_data.block_migration = True
+            dest_check_data.migrate_send_data = self._migrate_receive(ctxt)
+            dest_check_data.destination_sr_ref = vm_utils.safe_find_sr(
+                self._session)
         else:
+            dest_check_data.block_migration = False
             src = instance_ref['host']
             self._ensure_host_in_aggregate(ctxt, src)
             # TODO(johngarbutt) we currently assume
@@ -2190,9 +2190,18 @@ class VMOps(object):
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
 
-        if 'migrate_data' in dest_check_data:
+        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
+            obj = migrate_data_obj.XenapiLiveMigrateData()
+            obj.from_legacy_dict(dest_check_data)
+            dest_check_data = obj
+
+        if ('block_migration' in dest_check_data and
+                dest_check_data.block_migration):
             vm_ref = self._get_vm_opaque_ref(instance_ref)
-            migrate_data = dest_check_data['migrate_data']
+            migrate_data = {
+                'destination_sr_ref': dest_check_data.destination_sr_ref,
+                'migrate_send_data': dest_check_data.migrate_send_data,
+            }
             try:
                 self._call_live_migrate_command(
                     "VM.assert_can_migrate", vm_ref, migrate_data)

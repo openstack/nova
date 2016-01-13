@@ -189,3 +189,89 @@ class TestLibvirtLiveMigrateData(test_objects._LocalTest,
 class TestRemoteLibvirtLiveMigrateData(test_objects._RemoteTest,
                                        _TestLibvirtLiveMigrateData):
     pass
+
+
+class _TestXenapiLiveMigrateData(object):
+    def test_to_legacy_dict(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            block_migration=False,
+            destination_sr_ref='foo',
+            migrate_send_data={'key': 'val'},
+            sr_uuid_map={'apple': 'banana'})
+        expected = {
+            'is_volume_backed': False,
+            'block_migration': False,
+            'migrate_data': {
+                'destination_sr_ref': 'foo',
+                'migrate_send_data': {'key': 'val'},
+            }
+        }
+        self.assertEqual(expected, obj.to_legacy_dict())
+
+    def test_from_legacy_dict(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            block_migration=False,
+            destination_sr_ref='foo',
+            migrate_send_data={'key': 'val'},
+            sr_uuid_map={'apple': 'banana'})
+        legacy = obj.to_legacy_dict()
+        legacy['ignore_this_thing'] = True
+        obj2 = migrate_data.XenapiLiveMigrateData()
+        obj2.from_legacy_dict(legacy)
+        self.assertEqual(obj.destination_sr_ref, obj2.destination_sr_ref)
+
+    def test_to_legacy_dict_missing_attrs(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            destination_sr_ref='foo',
+            sr_uuid_map={'apple': 'banana'})
+        expected = {
+            'is_volume_backed': False,
+        }
+        self.assertEqual(expected, obj.to_legacy_dict())
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            destination_sr_ref='foo')
+        expected = {
+            'is_volume_backed': False,
+            'pre_live_migration_result': {
+                'sr_uuid_map': {},
+            },
+        }
+        self.assertEqual(expected, obj.to_legacy_dict(True))
+
+    def test_from_legacy_dict_missing_attrs(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            is_volume_backed=False,
+            destination_sr_ref='foo',
+            sr_uuid_map={'apple': 'banana'})
+        legacy = obj.to_legacy_dict()
+        obj2 = migrate_data.XenapiLiveMigrateData()
+        obj2.from_legacy_dict(legacy)
+        self.assertFalse(obj2.block_migration)
+        self.assertNotIn('migrate_send_data', obj2)
+        self.assertNotIn('sr_uuid_map', obj2)
+
+    def test_to_legacy_with_pre_result(self):
+        obj = migrate_data.XenapiLiveMigrateData(
+            sr_uuid_map={'a': 'b'})
+        self.assertNotIn('sr_uuid_map', obj.to_legacy_dict())
+        legacy = obj.to_legacy_dict(True)
+        self.assertEqual(
+            {'a': 'b'},
+            legacy['pre_live_migration_result']['sr_uuid_map'])
+        obj2 = migrate_data.XenapiLiveMigrateData()
+        obj2.from_legacy_dict(legacy)
+        self.assertEqual({'a': 'b'}, obj2.sr_uuid_map)
+
+
+class TestXenapiLiveMigrateData(test_objects._LocalTest,
+                                _TestXenapiLiveMigrateData):
+    pass
+
+
+class TestRemoteXenapiLiveMigrateData(test_objects._RemoteTest,
+                                      _TestXenapiLiveMigrateData):
+    pass

@@ -176,3 +176,49 @@ class LibvirtLiveMigrateData(LiveMigrateData):
                 self.serial_listen_addr = pre_result['serial_listen_addr']
             self._bdms_from_legacy(pre_result)
         LOG.debug('Converted object: %s' % self)
+
+
+@obj_base.NovaObjectRegistry.register
+class XenapiLiveMigrateData(LiveMigrateData):
+    VERSION = '1.0'
+
+    fields = {
+        'block_migration': fields.BooleanField(nullable=True),
+        'destination_sr_ref': fields.StringField(nullable=True),
+        'migrate_send_data': fields.DictOfStringsField(nullable=True),
+        'sr_uuid_map': fields.DictOfStringsField(),
+        'kernel_file': fields.StringField(),
+        'ramdisk_file': fields.StringField(),
+    }
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(XenapiLiveMigrateData, self).to_legacy_dict()
+        if self.obj_attr_is_set('block_migration'):
+            legacy['block_migration'] = self.block_migration
+        if self.obj_attr_is_set('migrate_send_data'):
+            legacy['migrate_data'] = {
+                'migrate_send_data': self.migrate_send_data,
+                'destination_sr_ref': self.destination_sr_ref,
+            }
+        live_result = {
+            'sr_uuid_map': ('sr_uuid_map' in self and self.sr_uuid_map
+                            or {}),
+        }
+        if pre_migration_result:
+            legacy['pre_live_migration_result'] = live_result
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(XenapiLiveMigrateData, self).from_legacy_dict(legacy)
+        if 'block_migration' in legacy:
+            self.block_migration = legacy['block_migration']
+        else:
+            self.block_migration = False
+        if 'migrate_data' in legacy:
+            self.migrate_send_data = \
+                legacy['migrate_data']['migrate_send_data']
+            self.destination_sr_ref = \
+                legacy['migrate_data']['destination_sr_ref']
+        if 'pre_live_migration_result' in legacy:
+            self.sr_uuid_map = \
+                legacy['pre_live_migration_result']['sr_uuid_map']
