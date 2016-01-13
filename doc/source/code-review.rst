@@ -100,6 +100,7 @@ very long. So here are some key points:
 
     * ``project`` should be used in the REST API instead of ``tenant``.
     * ``server`` should be used in the REST API instead of ``instance``.
+    * ``compute`` should be used in the REST API instead of ``nova``.
 
 * `Naming Conventions <https://specs.openstack.org/openstack/api-wg/guidelines/naming.html>`_
 
