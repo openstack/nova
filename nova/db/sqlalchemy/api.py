@@ -4027,11 +4027,22 @@ def block_device_mapping_get_all_by_instance(context, instance_uuid,
 
 
 @require_context
-def block_device_mapping_get_by_volume_id(context, volume_id,
+def block_device_mapping_get_all_by_volume_id(context, volume_id,
         columns_to_join=None):
     return _block_device_mapping_get_query(context,
             columns_to_join=columns_to_join).\
                  filter_by(volume_id=volume_id).\
+                 all()
+
+
+@require_context
+def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
+                                                       instance_uuid,
+                                                       columns_to_join=None):
+    return _block_device_mapping_get_query(context,
+            columns_to_join=columns_to_join).\
+                 filter_by(volume_id=volume_id).\
+                 filter_by(instance_uuid=instance_uuid).\
                  first()
 
 
