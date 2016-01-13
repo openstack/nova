@@ -1002,10 +1002,13 @@ class Host(object):
         CONFIG_CGROUP_SCHED may be disabled in some kernel configs to
         improve scheduler latency.
         """
-        with open("/proc/self/mounts", "r") as fd:
-            for line in fd.readlines():
-                # mount options and split options
-                bits = line.split()[3].split(",")
-                if "cpu" in bits:
-                    return True
+        try:
+            with open("/proc/self/mounts", "r") as fd:
+                for line in fd.readlines():
+                    # mount options and split options
+                    bits = line.split()[3].split(",")
+                    if "cpu" in bits:
+                        return True
+                return False
+        except IOError:
             return False
