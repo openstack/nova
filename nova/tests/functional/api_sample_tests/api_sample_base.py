@@ -58,7 +58,7 @@ CONF = cfg.CONF
 # microversions, then replace the ``scenarios`` class variable in that
 # test class with something like:
 #
-# [("v2_11", {'api_major_version': 'v2.1', 'microversion', '2.11'})]
+# [("v2_11", {'api_major_version': 'v2.1', 'microversion': '2.11'})]
 
 
 class ApiSampleTestBaseV21(testscenarios.WithScenarios,
