@@ -14,7 +14,6 @@ import itertools
 
 import nova.availability_zones
 import nova.baserpc
-import nova.cert.rpcapi
 import nova.cloudpipe.pipelib
 import nova.cmd.novnc
 import nova.cmd.novncproxy
@@ -72,7 +71,6 @@ def list_opts():
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
              nova.availability_zones.availability_zone_opts,
-             nova.cert.rpcapi.rpcapi_opts,
              nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
              nova.cmd.novncproxy.opts,
@@ -120,7 +118,6 @@ def list_opts():
         ('upgrade_levels',
          itertools.chain(
              [nova.baserpc.rpcapi_cap_opt],
-             [nova.cert.rpcapi.rpcapi_cap_opt],
              [nova.conductor.rpcapi.rpcapi_cap_opt],
              [nova.console.rpcapi.rpcapi_cap_opt],
              [nova.consoleauth.rpcapi.rpcapi_cap_opt],

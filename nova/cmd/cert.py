@@ -16,18 +16,17 @@
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
+import nova.conf
 from nova import config
 from nova import objects
 from nova import service
 from nova import utils
 from nova import version
 
-CONF = cfg.CONF
-CONF.import_opt('cert_topic', 'nova.cert.rpcapi')
+CONF = nova.conf.CONF
 
 
 def main():

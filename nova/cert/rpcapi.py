@@ -16,23 +16,12 @@
 Client side of the cert manager RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 
+import nova.conf
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('cert_topic',
-               default='cert',
-               help='The topic cert nodes listen on'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('cert',
-        help='Set a version cap for messages sent to cert services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class CertAPI(object):
