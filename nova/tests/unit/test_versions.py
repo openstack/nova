@@ -26,9 +26,9 @@ class VersionTestCase(test.NoDBTestCase):
     def test_version_string_with_package_is_good(self):
         """Ensure uninstalled code get version string."""
 
-        self.stubs.Set(version.version_info, 'version_string',
+        self.stub_out('nova.version.version_info.version_string',
                 lambda: '5.5.5.5')
-        self.stubs.Set(version, 'NOVA_PACKAGE', 'g9ec3421')
+        self.stub_out('nova.version.NOVA_PACKAGE', 'g9ec3421')
         self.assertEqual("5.5.5.5-g9ec3421",
                          version.version_string_with_package())
 
@@ -52,8 +52,8 @@ package = 1337"""
 
             return real_open(path, *args, **kwargs)
 
-        self.stubs.Set(builtins, 'open', fake_open)
-        self.stubs.Set(cfg.ConfigOpts, 'find_file', fake_find_file)
+        self.stub_out('six.moves.builtins.open', fake_open)
+        self.stub_out('oslo_config.cfg.ConfigOpts.find_file', fake_find_file)
 
         self.assertEqual(version.vendor_string(), "ACME Corporation")
         self.assertEqual(version.product_string(), "ACME Nova")

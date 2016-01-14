@@ -44,7 +44,7 @@ class TestLoaderNothingExists(test.NoDBTestCase):
 
     def setUp(self):
         super(TestLoaderNothingExists, self).setUp()
-        self.stubs.Set(os.path, 'exists', lambda _: False)
+        self.stub_out('os.path.exists', lambda _: False)
 
     def test_relpath_config_not_found(self):
         self.flags(api_paste_config='api-paste.ini')
