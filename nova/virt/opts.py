@@ -29,7 +29,6 @@ import nova.virt.libvirt.storage.lvm
 import nova.virt.libvirt.utils
 import nova.virt.libvirt.vif
 import nova.virt.libvirt.volume.volume
-import nova.virt.netutils
 import nova.virt.vmwareapi.driver
 import nova.virt.vmwareapi.images
 import nova.virt.vmwareapi.vif
@@ -55,7 +54,6 @@ def list_opts():
              nova.virt.disk.api.disk_opts,
              nova.virt.disk.mount.nbd.nbd_opts,
              nova.virt.imagecache.imagecache_opts,
-             nova.virt.netutils.netutils_opts,
          )),
         ('guestfs', nova.virt.disk.vfs.guestfs.guestfs_opts),
         ('hyperv',
