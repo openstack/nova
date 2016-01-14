@@ -4636,7 +4636,7 @@ class ComputeManager(manager.Manager):
                     context=context,
                     source_type='volume', destination_type='volume',
                     instance_uuid=instance.uuid, boot_index=None,
-                    volume_id=volume_id or 'reserved',
+                    volume_id=volume_id,
                     device_name=device, guest_format=None,
                     disk_bus=disk_bus, device_type=device_type)
 
