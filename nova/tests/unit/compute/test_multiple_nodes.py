@@ -14,18 +14,17 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
+import nova.conf
 from nova import context
 from nova import objects
 from nova import test
 from nova.virt import fake
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
 class BaseTestCase(test.TestCase):

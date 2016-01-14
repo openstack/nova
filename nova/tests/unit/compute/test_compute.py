@@ -29,7 +29,6 @@ from eventlet import greenthread
 import mock
 from mox3 import mox
 from neutronclient.common import exceptions as neutron_exceptions
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -56,6 +55,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
+import nova.conf
 from nova.console import type as ctype
 from nova import context
 from nova import db
@@ -98,11 +98,10 @@ from nova.volume import cinder
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 
 FAKE_IMAGE_REF = uuids.image_ref

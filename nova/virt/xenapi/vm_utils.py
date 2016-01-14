@@ -45,6 +45,7 @@ from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
@@ -118,10 +119,8 @@ xenapi_vm_utils_opts = [
                     'ISO image creation'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(xenapi_vm_utils_opts, 'xenserver')
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 XENAPI_POWER_STATE = {

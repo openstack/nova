@@ -15,12 +15,12 @@
 
 """The bare-metal admin extension with Ironic Proxy."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+import nova.conf
 from nova.i18n import _
 
 ironic_client = importutils.try_import('ironicclient.client')
@@ -35,8 +35,7 @@ node_ext_fields = ['uuid', 'task_state', 'updated_at', 'pxe_config_path']
 
 interface_fields = ['id', 'address', 'datapath_id', 'port_no']
 
-CONF = cfg.CONF
-
+CONF = nova.conf.CONF
 CONF.import_opt('api_version',
                 'nova.virt.ironic.driver',
                 group='ironic')
@@ -52,7 +51,6 @@ CONF.import_opt('admin_password',
 CONF.import_opt('admin_tenant_name',
                 'nova.virt.ironic.driver',
                 group='ironic')
-CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
 def _check_ironic_client_enabled():

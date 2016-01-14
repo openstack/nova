@@ -12,10 +12,10 @@
 
 """Tests for expectations of behaviour from the Xen driver."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
 from nova.compute import power_state
+import nova.conf
 from nova import context
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -24,9 +24,8 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import vm_utils
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
 class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):

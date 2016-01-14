@@ -35,6 +35,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -72,9 +73,8 @@ disk_opts = [
                      'the nbd driver (for qcow and raw), or loop (for raw).'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(disk_opts)
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None

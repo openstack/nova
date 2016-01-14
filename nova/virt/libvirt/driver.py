@@ -66,6 +66,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
+import nova.conf
 from nova.console import serial as serial_console
 from nova.console import type as ctype
 from nova import context as nova_context
@@ -310,11 +311,10 @@ libvirt_opts = [
                'kernel (usually 1-99)')
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(libvirt_opts, 'libvirt')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('enabled', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
 CONF.import_opt('cipher', 'nova.compute.api',
@@ -325,8 +325,6 @@ CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('vcpu_pin_set', 'nova.conf.virt')
-CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
-CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
 CONF.import_group('workarounds', 'nova.utils')

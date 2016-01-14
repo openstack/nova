@@ -19,10 +19,10 @@ Management class for live migration VM operations.
 import functools
 
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+import nova.conf
 from nova.i18n import _
 from nova.objects import migrate_data as migrate_data_obj
 from nova.virt.hyperv import imagecache
@@ -31,8 +31,7 @@ from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
+CONF = nova.conf.CONF
 
 
 def check_os_version_requirement(function):

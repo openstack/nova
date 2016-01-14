@@ -17,16 +17,15 @@
 CPU monitor based on virt driver to retrieve CPU information
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova.compute.monitors import base
+import nova.conf
 from nova import exception
 from nova.i18n import _LE
 
-CONF = cfg.CONF
-CONF.import_opt('compute_driver', 'nova.virt.driver')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
