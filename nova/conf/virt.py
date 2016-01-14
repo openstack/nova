@@ -182,6 +182,16 @@ Interdependencies to other options:
 * None
 """)
 
+firewall_driver = cfg.StrOpt(
+    'firewall_driver',
+    help='Firewall driver '
+         '(defaults to hypervisor specific iptables driver)')
+
+allow_same_net_traffic = cfg.BoolOpt(
+    'allow_same_net_traffic',
+    default=True,
+    help='Whether to allow network traffic from same network')
+
 force_raw_images = cfg.BoolOpt(
     'force_raw_images',
     default=True,
@@ -208,6 +218,8 @@ ALL_OPTS = [vcpu_pin_set,
             use_cow_images,
             vif_plugging_is_fatal,
             vif_plugging_timeout,
+            firewall_driver,
+            allow_same_net_traffic,
             force_raw_images]
 
 

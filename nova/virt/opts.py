@@ -17,7 +17,6 @@ import nova.virt.configdrive
 import nova.virt.disk.api
 import nova.virt.disk.mount.nbd
 import nova.virt.disk.vfs.guestfs
-import nova.virt.firewall
 import nova.virt.hyperv.pathutils
 import nova.virt.hyperv.vif
 import nova.virt.hyperv.vmops
@@ -55,7 +54,6 @@ def list_opts():
              nova.virt.configdrive.configdrive_opts,
              nova.virt.disk.api.disk_opts,
              nova.virt.disk.mount.nbd.nbd_opts,
-             nova.virt.firewall.firewall_opts,
              nova.virt.imagecache.imagecache_opts,
              nova.virt.netutils.netutils_opts,
          )),
