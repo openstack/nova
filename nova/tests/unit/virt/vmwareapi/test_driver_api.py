@@ -25,7 +25,6 @@ import datetime
 from eventlet import greenthread
 import mock
 from mox3 import mox
-from oslo_config import cfg
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -39,6 +38,7 @@ from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -66,10 +66,8 @@ from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('remove_unused_original_minimum_age_seconds',
-                'nova.virt.imagecache')
 
 
 def _fake_create_session(inst):

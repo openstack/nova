@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova import block_device
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -23,7 +22,7 @@ from nova import test
 from nova.tests.unit import fake_instance
 from nova.virt import imagecache
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 swap_bdm_128 = [block_device.BlockDeviceDict(
         {'id': 1, 'instance_uuid': 'fake-instance',

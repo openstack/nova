@@ -49,8 +49,6 @@ from nova.virt.vmwareapi import ds_util
 LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
-CONF.import_opt('remove_unused_original_minimum_age_seconds',
-                'nova.virt.imagecache')
 
 TIMESTAMP_PREFIX = 'ts-'
 TIMESTAMP_FORMAT = '%Y-%m-%d-%H-%M-%S'

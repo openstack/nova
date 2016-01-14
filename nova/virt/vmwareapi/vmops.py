@@ -74,9 +74,6 @@ vmops_opts = [
 
 CONF = nova.conf.CONF
 CONF.register_opts(vmops_opts, 'vmware')
-
-CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
-CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
