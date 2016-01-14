@@ -134,9 +134,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             if '_return_value' in kwargs:
                 rpc_mock.return_value = kwargs.pop('_return_value')
                 del expected_kwargs['_return_value']
-            elif 'return_bdm_object' in kwargs:
-                del kwargs['return_bdm_object']
-                rpc_mock.return_value = objects_block_dev.BlockDeviceMapping()
             elif rpc_method == 'call':
                 rpc_mock.return_value = 'foo'
             else:
