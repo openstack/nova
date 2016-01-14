@@ -22,10 +22,10 @@ Handling of VM disk images.
 import os
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE
 from nova import image
@@ -34,14 +34,7 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-image_opts = [
-    cfg.BoolOpt('force_raw_images',
-                default=True,
-                help='Force backing images to raw format'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(image_opts)
+CONF = nova.conf.CONF
 IMAGE_API = image.API()
 
 
