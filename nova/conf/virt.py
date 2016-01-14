@@ -185,7 +185,21 @@ Interdependencies to other options:
 force_raw_images = cfg.BoolOpt(
     'force_raw_images',
     default=True,
-    help='Force backing images to raw format')
+    help="""Force conversion of backing images to raw format.
+
+Possible values:
+
+* True: Backing image files will be converted to raw image format
+* False: Backing image files will not be converted
+
+Services which consume this:
+
+* nova-compute
+
+Interdependencies to other options:
+
+* ``compute_driver``: Only the libvirt driver uses this option.
+""")
 
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
