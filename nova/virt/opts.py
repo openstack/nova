@@ -14,8 +14,6 @@ import itertools
 
 import nova.conf
 import nova.virt.configdrive
-import nova.virt.disk.api
-import nova.virt.disk.mount.nbd
 import nova.virt.disk.vfs.guestfs
 import nova.virt.hyperv.pathutils
 import nova.virt.hyperv.vif
@@ -51,8 +49,6 @@ def list_opts():
         ('DEFAULT',
          itertools.chain(
              nova.virt.configdrive.configdrive_opts,
-             nova.virt.disk.api.disk_opts,
-             nova.virt.disk.mount.nbd.nbd_opts,
              nova.virt.imagecache.imagecache_opts,
          )),
         ('guestfs', nova.virt.disk.vfs.guestfs.guestfs_opts),
