@@ -3517,6 +3517,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             exception.ImageUnacceptable(image_id=self.image.get('id'),
                                         reason=""))
 
+    def test_build_and_run_invalid_disk_info_exception(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.InvalidDiskInfo(reason=""))
+
     def _test_build_and_run_spawn_exceptions(self, exc):
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',

@@ -2068,7 +2068,8 @@ class ComputeManager(manager.Manager):
         except (exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.ImageNotActive,
-                exception.ImageUnacceptable) as e:
+                exception.ImageUnacceptable,
+                exception.InvalidDiskInfo) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
