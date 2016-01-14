@@ -16,8 +16,6 @@ import uuid as uuid_lib
 
 from oslo_config import cfg
 
-from nova.cloudpipe import pipelib
-from nova.network import api as network_api
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
 
@@ -53,9 +51,10 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
             return {'vpn_public_address': '127.0.0.1',
                     'vpn_public_port': 22}
 
-        self.stubs.Set(pipelib.CloudPipe, 'get_encoded_zip', get_user_data)
-        self.stubs.Set(network_api.API, "get",
-                       network_api_get)
+        self.stub_out('nova.cloudpipe.pipelib.CloudPipe.get_encoded_zip',
+                      get_user_data)
+        self.stub_out('nova.network.api.API.get',
+                      network_api_get)
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['project_id'] = '[0-9a-f-]+'

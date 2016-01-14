@@ -14,7 +14,6 @@
 
 from oslo_config import cfg
 
-from nova import db
 from nova import exception
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.objects import test_network
@@ -89,9 +88,9 @@ class FixedIpTest(test_servers.ServersSampleBase):
                 for key in values:
                     fixed_ip[key] = values[key]
 
-        self.stubs.Set(db, "fixed_ip_get_by_address",
-                       fake_fixed_ip_get_by_address)
-        self.stubs.Set(db, "fixed_ip_update", fake_fixed_ip_update)
+        self.stub_out("nova.db.fixed_ip_get_by_address",
+                      fake_fixed_ip_get_by_address)
+        self.stub_out("nova.db.fixed_ip_update", fake_fixed_ip_update)
 
     def test_fixed_ip_reserve(self):
         # Reserve a Fixed IP.

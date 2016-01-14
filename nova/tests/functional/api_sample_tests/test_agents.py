@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 
-from nova import db
 from nova.db.sqlalchemy import models
 from nova.tests.functional.api_sample_tests import api_sample_base
 
@@ -68,14 +67,10 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
         def fake_agent_build_destroy(context, agent_update_id):
             pass
 
-        self.stubs.Set(db, "agent_build_create",
-                       fake_agent_build_create)
-        self.stubs.Set(db, "agent_build_get_all",
-                       fake_agent_build_get_all)
-        self.stubs.Set(db, "agent_build_update",
-                       fake_agent_build_update)
-        self.stubs.Set(db, "agent_build_destroy",
-                       fake_agent_build_destroy)
+        self.stub_out("nova.db.agent_build_create", fake_agent_build_create)
+        self.stub_out("nova.db.agent_build_get_all", fake_agent_build_get_all)
+        self.stub_out("nova.db.agent_build_update", fake_agent_build_update)
+        self.stub_out("nova.db.agent_build_destroy", fake_agent_build_destroy)
 
     def test_agent_create(self):
         # Creates a new agent build.

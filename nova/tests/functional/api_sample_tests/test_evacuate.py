@@ -16,9 +16,6 @@
 import mock
 from oslo_config import cfg
 
-from nova.compute import api as compute_api
-from nova.compute import manager as compute_manager
-from nova.servicegroup import api as service_group_api
 from nova.tests.functional.api_sample_tests import test_servers
 
 CONF = cfg.CONF
@@ -60,13 +57,15 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
             """Simulate validation of instance does not exist."""
             return False
 
-        self.stubs.Set(service_group_api.API, 'service_is_up',
-                       fake_service_is_up)
-        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
-        self.stubs.Set(compute_manager.ComputeManager,
-                       '_check_instance_exists',
-                       fake_check_instance_exists)
+        self.stub_out(
+            'nova.servicegroup.api.API.service_is_up',
+            fake_service_is_up)
+        self.stub_out(
+            'nova.compute.api.HostAPI.service_get_by_compute_host',
+            fake_service_get_by_compute_host)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager._check_instance_exists',
+            fake_check_instance_exists)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  server_req, req_subs)

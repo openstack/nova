@@ -15,11 +15,8 @@
 
 from oslo_config import cfg
 
-from nova.api.openstack.compute import fping
-from nova.api.openstack.compute.legacy_v2.contrib import fping as fping_v2
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack.compute import test_fping
-from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
@@ -41,11 +38,13 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
 
         def fake_check_fping(self):
             pass
-        self.stubs.Set(utils, "execute", test_fping.execute)
-        self.stubs.Set(fping.FpingController, "check_fping",
-                       fake_check_fping)
-        self.stubs.Set(fping_v2.FpingController, "check_fping",
-                       fake_check_fping)
+        self.stub_out("nova.utils.execute", test_fping.execute)
+        self.stub_out("nova.api.openstack.compute.fping."
+                      "FpingController.check_fping",
+                      fake_check_fping)
+        self.stub_out("nova.api.openstack.compute.legacy_v2.contrib.fping."
+                      "FpingController.check_fping",
+                      fake_check_fping)
 
     def test_get_fping(self):
         self._post_server()

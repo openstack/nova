@@ -18,8 +18,6 @@ import copy
 from oslo_config import cfg
 import six
 
-from nova.compute import api as compute_api
-from nova import db
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
@@ -65,13 +63,14 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
             return fake_instance.fake_instance_obj(
                 None, **{'uuid': instance_uuid})
 
-        self.stubs.Set(db, 'action_get_by_request_id',
-                       fake_instance_action_get_by_request_id)
-        self.stubs.Set(db, 'actions_get', fake_server_actions_get)
-        self.stubs.Set(db, 'action_events_get',
-                       fake_instance_action_events_get)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stub_out('nova.db.action_get_by_request_id',
+                      fake_instance_action_get_by_request_id)
+        self.stub_out('nova.db.actions_get', fake_server_actions_get)
+        self.stub_out('nova.db.action_events_get',
+                      fake_instance_action_events_get)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
+        self.stub_out('nova.compute.api.API.get', fake_get)
 
     def test_instance_action_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID

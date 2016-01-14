@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 
-from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api
 from nova.tests.functional.api_sample_tests import test_servers
@@ -97,12 +96,12 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         def fake_detach_interface(self, context, instance, port_id):
             pass
 
-        self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
-        self.stubs.Set(network_api.API, 'show_port', fake_show_port)
-        self.stubs.Set(compute_api.API, 'attach_interface',
-                       fake_attach_interface)
-        self.stubs.Set(compute_api.API, 'detach_interface',
-                       fake_detach_interface)
+        self.stub_out('nova.network.api.API.list_ports', fake_list_ports)
+        self.stub_out('nova.network.api.API.show_port', fake_show_port)
+        self.stub_out('nova.compute.api.API.attach_interface',
+                      fake_attach_interface)
+        self.stub_out('nova.compute.api.API.detach_interface',
+                      fake_detach_interface)
         self.flags(timeout=30, group='neutron')
 
     def generalize_subs(self, subs, vanilla_regexes):
@@ -131,7 +130,8 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
     def _stub_show_for_instance(self, instance_uuid, port_id):
         show_port = network_api.API().show_port(None, port_id)
         show_port['port']['device_id'] = instance_uuid
-        self.stubs.Set(network_api.API, 'show_port', lambda *a, **k: show_port)
+        self.stub_out('nova.network.api.API.show_port',
+                      lambda *a, **k: show_port)
 
     def test_show_interfaces(self):
         instance_uuid = self._post_server()
