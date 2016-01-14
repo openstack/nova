@@ -3537,16 +3537,16 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(self.conn._vmops, "_make_plugin_call",
                        fake_make_plugin_call)
 
-        dest_check_data = {'block_migration': True,
-                           'is_volume_backed': True,
-                           'migrate_data': {
-                            'destination_sr_ref': None,
-                            'migrate_send_data': None
-                           }}
+        dest_check_data = objects.XenapiLiveMigrateData(
+            block_migration=True,
+            is_volume_backed=True,
+            destination_sr_ref=None,
+            migrate_send_data=None)
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
                                                          dest_check_data)
-        self.assertEqual(dest_check_data, result.to_legacy_dict())
+        self.assertEqual(dest_check_data.to_legacy_dict(),
+                         result.to_legacy_dict())
 
     def test_check_can_live_migrate_source_with_block_iscsi_fails(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3677,8 +3677,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             post_method.called = True
 
         # pass block_migration = True and migrate data
-        migrate_data = {"destination_sr_ref": "foo",
-                        "migrate_send_data": "bar"}
+        migrate_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref="foo",
+            migrate_send_data={"bar": "baz"})
         self.conn.live_migration(self.conn, None, None, post_method, None,
                                  True, migrate_data)
         self.assertTrue(post_method.called, "post_method.called")
@@ -3703,8 +3704,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                         block_migration, migrate_data):
             post_method.called = True
 
-        migrate_data = {"destination_sr_ref": "foo",
-                        "migrate_send_data": "bar"}
+        migrate_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref="foo",
+            migrate_send_data={"bar": "baz"})
         self.conn.live_migration(self.conn, None, None, post_method, None,
                                  True, migrate_data)
 
@@ -3737,7 +3739,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                            block_migration):
             recover_method.called = True
         # pass block_migration = True and migrate data
-        migrate_data = dict(destination_sr_ref='foo', migrate_send_data='bar')
+        migrate_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref='foo',
+            migrate_send_data={'bar': 'baz'})
         self.assertRaises(exception.MigrationError,
                           self.conn.live_migration, self.conn,
                           None, None, None, recover_method, True, migrate_data)
@@ -3750,7 +3754,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         class Session(xenapi_fake.SessionBase):
             def VM_migrate_send(self_, session, vmref, migrate_data, islive,
                                 vdi_map, vif_map, options):
-                self.assertEqual('SOMEDATA', migrate_data)
+                self.assertEqual({'SOMEDATA': 'SOMEVAL'}, migrate_data)
                 self.assertEqual(fake_vdi_map, vdi_map)
 
         stubs.stubout_session(self.stubs, Session)
@@ -3768,12 +3772,14 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def dummy_callback(*args, **kwargs):
             pass
 
+        migrate_data = objects.XenapiLiveMigrateData(
+            migrate_send_data={'SOMEDATA': 'SOMEVAL'},
+            destination_sr_ref='TARGET_SR_OPAQUE_REF')
         conn.live_migration(
             self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
             block_migration="SOMEDATA",
-            migrate_data=dict(migrate_send_data='SOMEDATA',
-                              destination_sr_ref="TARGET_SR_OPAQUE_REF"))
+            migrate_data=migrate_data)
 
     def test_live_migrate_pool_migration_xapi_call_parameters(self):
 
@@ -3796,10 +3802,13 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def dummy_callback(*args, **kwargs):
             pass
 
+        migrate_data = objects.XenapiLiveMigrateData(
+            migrate_send_data={'foo': 'bar'},
+            destination_sr_ref='foo')
         self.assertRaises(IOError, conn.live_migration,
             self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
-            block_migration=False, migrate_data={})
+            block_migration=False, migrate_data=migrate_data)
 
     def test_generate_vdi_map(self):
         stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)

@@ -176,9 +176,10 @@ class _TestLibvirtLiveMigrateData(object):
             serial_listen_addr='127.0.0.1',
             bdms=[test_bdmi])
         obj2 = migrate_data.LibvirtLiveMigrateData()
-        obj2.from_legacy_dict(obj.to_legacy_dict())
+        obj2.from_legacy_dict(obj.to_legacy_dict(pre_migration_result=True))
         self.assertEqual(obj.to_legacy_dict(),
                          obj2.to_legacy_dict())
+        self.assertEqual(obj.bdms[0].serial, obj2.bdms[0].serial)
 
 
 class TestLibvirtLiveMigrateData(test_objects._LocalTest,

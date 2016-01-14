@@ -68,6 +68,7 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
+from nova.objects import migrate_data as migrate_data_obj
 from nova import policy
 from nova import quota
 from nova.scheduler import client as scheduler_client
@@ -5625,11 +5626,13 @@ class ComputeTestCase(BaseTestCase):
 
         migration = objects.Migration()
 
-        ret = self.compute.live_migration(c, dest=dest,
-                                          instance=instance,
-                                          block_migration=False,
-                                          migration=migration,
-                                          migrate_data=migrate_data)
+        with mock.patch.object(self.compute, '_get_migrate_data_obj') as gmdo:
+            gmdo.return_value = migrate_data_obj.LiveMigrateData()
+            ret = self.compute.live_migration(c, dest=dest,
+                                              instance=instance,
+                                              block_migration=False,
+                                              migration=migration,
+                                              migrate_data=migrate_data)
 
         self.assertIsNone(ret)
         event_mock.assert_called_with(
@@ -5688,7 +5691,10 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        migrate_data = {'is_shared_instance_path': False}
+        migrate_data = objects.LibvirtLiveMigrateData(
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            block_migration=False)
         self.compute._post_live_migration(c, instance, dest,
                                           migrate_data=migrate_data)
         self.assertIn('cleanup', result)
@@ -5711,7 +5717,9 @@ class ComputeTestCase(BaseTestCase):
                         'power_state': power_state.PAUSED})
         instance.save()
 
-        migrate_data = {'migration': mock.MagicMock()}
+        migration_obj = objects.Migration()
+        migrate_data = migrate_data_obj.LiveMigrateData(
+            migration=migration_obj)
 
         # creating mocks
         with test.nested(
@@ -5727,12 +5735,13 @@ class ComputeTestCase(BaseTestCase):
                               'setup_networks_on_host'),
             mock.patch.object(self.compute.instance_events,
                               'clear_events_for_instance'),
-            mock.patch.object(self.compute, 'update_available_resource')
+            mock.patch.object(self.compute, 'update_available_resource'),
+            mock.patch.object(migration_obj, 'save'),
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events, update_available_resource
+            clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
@@ -5753,8 +5762,8 @@ class ComputeTestCase(BaseTestCase):
                 [mock.call(c, instance, [])])
             clear_events.assert_called_once_with(instance)
             update_available_resource.assert_has_calls([mock.call(c)])
-            self.assertEqual('completed', migrate_data['migration'].status)
-            migrate_data['migration'].save.assert_called_once_with()
+            self.assertEqual('completed', migration_obj.status)
+            mig_save.assert_called_once_with()
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
