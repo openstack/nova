@@ -29,6 +29,7 @@ from nova import db
 from nova import exception
 from nova import network
 from nova import objects
+from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
@@ -262,10 +263,15 @@ class FloatingIpTestV21(test.TestCase):
                                                     floating_ip_address)
         # NOTE(vish): network_get uses the id not the address
         floating_ip = db.floating_ip_get(self.context, floating_ip['id'])
-        view = self.floating_ips._translate_floating_ip_view(floating_ip)
+        floating_obj = objects.FloatingIP()
+        objects.FloatingIP._from_db_object(self.context, floating_obj,
+                                           floating_ip)
+
+        view = self.floating_ips._translate_floating_ip_view(floating_obj)
+
         self.assertIn('floating_ip', view)
         self.assertTrue(view['floating_ip']['id'])
-        self.assertEqual(view['floating_ip']['ip'], self.floating_ip)
+        self.assertEqual(view['floating_ip']['ip'], floating_obj.address)
         self.assertIsNone(view['floating_ip']['fixed_ip'])
         self.assertIsNone(view['floating_ip']['instance_id'])
 
@@ -283,6 +289,83 @@ class FloatingIpTestV21(test.TestCase):
                        'fixed_ip': None}
         view = self.floating_ips._translate_floating_ip_view(floating_ip)
         self.assertIn('floating_ip', view)
+
+    def test_translate_floating_ip_view_obj(self):
+        fip = objects.FixedIP(address='192.168.1.2', instance_uuid=FAKE_UUID)
+        floater = self._build_floating_ip('10.0.0.2', fip)
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, fip.address,
+                                        fip.instance_uuid)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ip_bad_address(self):
+        fip = objects.FixedIP(instance_uuid=FAKE_UUID)
+        floater = self._build_floating_ip('10.0.0.2', fip)
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, None, fip.instance_uuid)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ip_bad_instance_id(self):
+        fip = objects.FixedIP(address='192.168.1.2')
+        floater = self._build_floating_ip('10.0.0.2', fip)
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, fip.address, None)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ip_bad_instance_and_address(self):
+        fip = objects.FixedIP()
+        floater = self._build_floating_ip('10.0.0.2', fip)
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, None, None)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ip_null_fixed(self):
+        floater = self._build_floating_ip('10.0.0.2', None)
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, None, None)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ip_unset_fixed(self):
+        floater = objects.FloatingIP(id=1, address='10.0.0.2', pool='foo')
+
+        result = self.floating_ips._translate_floating_ip_view(floater)
+
+        expected = self._build_expected(floater, None, None)
+        self._test_result(expected, result)
+
+    def test_translate_floating_ips_view(self):
+        mock_trans = mock.Mock()
+        mock_trans.return_value = {'floating_ip': 'foo'}
+        self.floating_ips._translate_floating_ip_view = mock_trans
+        fip1 = objects.FixedIP(address='192.168.1.2', instance_uuid=FAKE_UUID)
+        fip2 = objects.FixedIP(address='192.168.1.3', instance_uuid=FAKE_UUID)
+
+        floaters = [self._build_floating_ip('10.0.0.2', fip1),
+                    self._build_floating_ip('10.0.0.3', fip2)]
+
+        result = self.floating_ips._translate_floating_ips_view(floaters)
+
+        called_floaters = [call[0][0] for call in mock_trans.call_args_list]
+        self.assertTrue(any(obj_base.obj_equal_prims(floaters[0], f)
+                            for f in called_floaters),
+                        "_translate_floating_ip_view was not called with all "
+                        "floating ips")
+        self.assertTrue(any(obj_base.obj_equal_prims(floaters[1], f)
+                            for f in called_floaters),
+                        "_translate_floating_ip_view was not called with all "
+                        "floating ips")
+        expected_result = {'floating_ips': ['foo', 'foo']}
+        self.assertEqual(expected_result, result)
 
     def test_floating_ips_list(self):
         res_dict = self.controller.index(self.fake_req)
@@ -717,6 +800,24 @@ class FloatingIpTestV21(test.TestCase):
         self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, self.fake_req,
                           TEST_INST, body=body)
+
+    def _build_floating_ip(self, address, fixed_ip):
+        floating = objects.FloatingIP(id=1, address=address, pool='foo',
+                                      fixed_ip=fixed_ip)
+        return floating
+
+    def _build_expected(self, floating_ip, fixed_ip, instance_id):
+        return {'floating_ip': {'id': floating_ip.id,
+                                'ip': floating_ip.address,
+                                'pool': floating_ip.pool,
+                                'fixed_ip': fixed_ip,
+                                'instance_id': instance_id}}
+
+    def _test_result(self, expected, actual):
+        expected_fl = expected['floating_ip']
+        actual_fl = actual['floating_ip']
+
+        self.assertEqual(expected_fl, actual_fl)
 
 
 class ExtendedFloatingIpTestV21(test.TestCase):
