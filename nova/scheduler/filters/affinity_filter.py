@@ -49,10 +49,10 @@ class SameHostFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, spec_obj):
         affinity_uuids = spec_obj.get_scheduler_hint('same_host')
-        if affinity_uuids and host_state.instances:
+        if affinity_uuids:
             overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
             return overlap
-        # With no same_host key or no instances
+        # With no same_host key
         return True
 
 
