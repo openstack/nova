@@ -37,8 +37,8 @@ user documentation.
 
   Fixes status code for ``os-keypairs`` delete method from 202 to 204
 
-2.3
----
+2.3 (Maximum in Kilo)
+---------------------
 
   Exposed additional attributes in ``os-extended-server-attributes``:
   ``reservation_id``, ``launch_index``, ``ramdisk_id``, ``kernel_id``, ``hostname``,
@@ -124,8 +124,8 @@ user documentation.
   Exposed attribute ``forced_down`` for ``os-services``.
   Added ability to change the ``forced_down`` attribute by calling an update.
 
-2.12
-----
+2.12 (Maximum in Liberty)
+-------------------------
 
   Exposes VIF ``net-id`` attribute in ``os-virtual-interfaces``.
   User will be able to get Virtual Interfaces ``net-id`` in Virtual Interfaces
