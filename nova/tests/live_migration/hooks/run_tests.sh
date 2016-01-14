@@ -35,9 +35,9 @@ elif is_fedora; then
             -a "name=nfs-kernel-server state=present"
 fi
 
-$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=/etc/idmapd.conf regexp='^Nobody-User = nobody' replace='Nobody-User = nova'"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=/etc/idmapd.conf section=Mapping option=Nobody-User value=nova"
 
-$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=/etc/idmapd.conf regexp='^Nobody-Group = nogroup' replace='Nobody-Group = nova'"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=/etc/idmapd.conf section=Mapping option=Nobody-Group value=nova"
 
 SUBNODES=$(cat /etc/nodepool/sub_nodes_private)
 for SUBNODE in $SUBNODES ; do
@@ -52,11 +52,11 @@ $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A 
 $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p tcp --dport 2049 -j ACCEPT"
 $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p udp --dport 2049 -j ACCEPT"
 primary_node=$(cat /etc/nodepool/primary_node_private)
-$ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "mount -t nfs4 -o proto=tcp,port=2049 $primary_node:/ /opt/stack/data/nova/instances/"
+$ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "mount -t nfs4 -o proto\=tcp,port\=2049 $primary_node:/ /opt/stack/data/nova/instances/"
 $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m file -a "path=/opt/stack/data/nova/instances/test_file state=touch"
 echo "check whether NFS shared storage works or not:"
 ls -la /opt/stack/data/nova/instances
 SCREEN_NAME=${SCREEN_NAME:-stack}
-$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m replace -a "dest=$BASE/new/tempest/etc/tempest.conf regexp='^block_migration_for_live_migration = True' replace='block_migration_for_live_migration = False'"
+$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=$BASE/new/tempest/etc/tempest.conf section=compute-feature-enabled option=block_migration_for_live_migration value=False"
 
 sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY live_migration
