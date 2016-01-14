@@ -4738,8 +4738,8 @@ class ComputeManager(manager.Manager):
 
         """
 
-        bdm = objects.BlockDeviceMapping.get_by_volume_id(
-                context, volume_id)
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
         if CONF.volume_usage_poll_interval > 0:
             vol_stats = []
             mp = bdm.device_name
@@ -4867,8 +4867,8 @@ class ComputeManager(manager.Manager):
         """Swap volume for an instance."""
         context = context.elevated()
 
-        bdm = objects.BlockDeviceMapping.get_by_volume_id(
-                context, old_volume_id, instance_uuid=instance.uuid)
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, old_volume_id, instance.uuid)
         connector = self.driver.get_volume_connector(instance)
 
         resize_to = 0
@@ -4917,8 +4917,8 @@ class ComputeManager(manager.Manager):
         #             connection from this host.
 
         try:
-            bdm = objects.BlockDeviceMapping.get_by_volume_id(
-                    context, volume_id)
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                    context, volume_id, instance.uuid)
             self._driver_detach_volume(context, instance, bdm)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
