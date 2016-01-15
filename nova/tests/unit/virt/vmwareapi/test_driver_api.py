@@ -1121,8 +1121,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             self._check_vm_info(info, power_state.RUNNING)
             self.assertTrue(self.exception)
 
-    @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
-                '_relocate_vmdk_volume')
+    @mock.patch.object(vm_util, 'relocate_vm')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
                 'attach_volume')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
@@ -1133,7 +1132,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                   mock_volume_in_mapping,
                                   mock_get_res_pool_of_vm,
                                   mock_attach_volume,
-                                  mock_relocate_vmdk_volume,
+                                  mock_relocate_vm,
                                   set_image_ref=True):
         self._create_instance(set_image_ref=set_image_ref)
 
@@ -1152,7 +1151,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
         mock_get_res_pool_of_vm.assert_called_once_with(mock.ANY)
-        mock_relocate_vmdk_volume.assert_called_once_with(mock.ANY,
+        mock_relocate_vm.assert_called_once_with(mock.ANY, mock.ANY,
             'fake_res_pool', mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,
             self.instance, constants.DEFAULT_ADAPTER_TYPE)
