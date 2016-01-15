@@ -297,7 +297,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
-        db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_instance_api(self)
         xenapi_fake.create_network('fake', 'fake_br1')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
@@ -933,7 +933,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_spawn_netinject_file(self):
         self.flags(flat_injected=True)
-        db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
+        db_fakes.stub_out_db_instance_api(self, injected=True)
 
         self._tee_executed = False
 
@@ -984,7 +984,7 @@ iface eth0 inet6 static
     @testtools.skipIf(test_utils.is_osx(),
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_spawn_netinject_xenstore(self):
-        db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
+        db_fakes.stub_out_db_instance_api(self, injected=True)
 
         self._tee_executed = False
 
@@ -1440,8 +1440,8 @@ iface eth0 inet6 static
                 return [test_aggregate.fake_aggregate]
             else:
                 return []
-        self.stubs.Set(db, 'aggregate_get_by_host',
-                       fake_aggregate_get)
+        self.stub_out('nova.db.aggregate_get_by_host',
+                      fake_aggregate_get)
 
         def fake_host_find(context, session, src, dst):
             if find_host:
@@ -1494,7 +1494,7 @@ iface eth0 inet6 static
         def fake_aggregate_get_by_host(self, *args, **kwargs):
             was['called'] = True
             raise test.TestingException()
-        self.stubs.Set(db, "aggregate_get_by_host",
+        self.stub_out("nova.db.aggregate_get_by_host",
                        fake_aggregate_get_by_host)
 
         self.stubs.Set(self.conn._session, "is_slave", True)
@@ -1508,8 +1508,8 @@ iface eth0 inet6 static
             agg = copy.copy(test_aggregate.fake_aggregate)
             agg['metadetails'][CONF.host] = 'this_should_be_metadata'
             return [agg]
-        self.stubs.Set(db, 'aggregate_get_by_host',
-                       fake_aggregate_get)
+        self.stub_out('nova.db.aggregate_get_by_host',
+                      fake_aggregate_get)
 
         self.stubs.Set(self.conn._session, "is_slave", True)
 
@@ -1653,7 +1653,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_instance_api(self)
         xenapi_fake.create_network('fake', 'fake_br1')
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -2410,7 +2410,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_instance_api(self)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         self.user_id = 'fake'
@@ -3378,7 +3378,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host')
-        db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_instance_api(self)
         self.context = context.get_admin_context()
 
     def test_live_migration_calls_vmops(self):
@@ -3607,7 +3607,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             return [dict(test_aggregate.fake_aggregate,
                          metadetails={"host": "test_host_uuid"})]
 
-        self.stubs.Set(db, "aggregate_get_by_host",
+        self.stub_out("nova.db.aggregate_get_by_host",
                 fake_aggregate_get_by_host)
         self.conn.check_can_live_migrate_destination(self.context,
                 {'host': 'host'}, False, False)
@@ -3621,7 +3621,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             return [dict(test_aggregate.fake_aggregate,
                          metadetails={"dest_other": "test_host_uuid"})]
 
-        self.stubs.Set(db, "aggregate_get_by_host",
+        self.stub_out("nova.db.aggregate_get_by_host",
                       fake_aggregate_get_by_host)
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_destination,

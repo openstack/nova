@@ -33,7 +33,6 @@ from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
@@ -366,8 +365,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     def setUp(self):
         super(VolumeAttachTestsV21, self).setUp()
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fake_bdms_get_all_by_instance)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      fake_bdms_get_all_by_instance)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.context = context.get_admin_context()

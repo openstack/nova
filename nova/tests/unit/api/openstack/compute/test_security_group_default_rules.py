@@ -284,10 +284,10 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
             self.assertEqual(sgr['id'], id)
             return security_group_default_rule_db(sgr)
 
-        self.stubs.Set(nova.db, 'security_group_default_rule_destroy',
-                       security_group_default_rule_destroy)
-        self.stubs.Set(nova.db, 'security_group_default_rule_get',
-                       return_security_group_default_rule)
+        self.stub_out('nova.db.security_group_default_rule_destroy',
+                      security_group_default_rule_destroy)
+        self.stub_out('nova.db.security_group_default_rule_get',
+                      return_security_group_default_rule)
 
         self.controller.delete(self.req, '1')
 

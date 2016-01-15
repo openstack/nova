@@ -21,7 +21,6 @@ from nova.api.openstack.compute import instance_usage_audit_log as v21_ial
 from nova.api.openstack.compute.legacy_v2.contrib \
         import instance_usage_audit_log as ial
 from nova import context
-from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -126,10 +125,8 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
 
         self.stubs.Set(utils, 'last_completed_audit_period',
                             fake_last_completed_audit_period)
-        self.stubs.Set(db, 'service_get_all',
-                       fake_service_get_all)
-        self.stubs.Set(db, 'task_log_get_all',
-                       fake_task_log_get_all)
+        self.stub_out('nova.db.service_get_all', fake_service_get_all)
+        self.stub_out('nova.db.task_log_get_all', fake_task_log_get_all)
 
         self.req = fakes.HTTPRequest.blank('')
 

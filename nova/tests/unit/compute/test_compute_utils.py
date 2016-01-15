@@ -31,7 +31,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova import context
-from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
@@ -103,8 +102,8 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
 
         self.data = []
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: self.data)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      lambda context, instance: self.data)
 
     def _validate_device(self, device=None):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(

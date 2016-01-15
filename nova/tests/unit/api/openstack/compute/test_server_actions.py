@@ -29,7 +29,6 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
@@ -86,11 +85,11 @@ class ServerActionsControllerTestV21(test.TestCase):
         super(ServerActionsControllerTestV21, self).setUp()
 
         CONF.set_override('host', 'localhost', group='glance')
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                                host='fake_host'))
-        self.stubs.Set(db, 'instance_update_and_get_original',
-                       instance_update_and_get_original)
+        self.stub_out('nova.db.instance_update_and_get_original',
+                      instance_update_and_get_original)
 
         fakes.stub_out_nw_api(self)
         fakes.stub_out_compute_api_snapshot(self.stubs)
@@ -220,8 +219,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.req, FAKE_UUID, body=body)
 
     def test_reboot_not_found(self):
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       return_server_not_found)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      return_server_not_found)
 
         body = dict(reboot=dict(type="HARD"))
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -244,8 +243,8 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     def test_reboot_soft_with_soft_in_progress_raises_conflict(self):
         body = dict(reboot=dict(type="SOFT"))
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                             task_state=task_states.REBOOTING))
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_reboot,
@@ -253,22 +252,22 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     def test_reboot_hard_with_soft_in_progress_does_not_raise(self):
         body = dict(reboot=dict(type="HARD"))
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
     def test_reboot_hard_with_hard_in_progress(self):
         body = dict(reboot=dict(type="HARD"))
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING_HARD))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
     def test_reboot_soft_with_hard_in_progress_raises_conflict(self):
         body = dict(reboot=dict(type="SOFT"))
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING_HARD))
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_reboot,
@@ -279,7 +278,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         return_server = fakes.fake_instance_get(image_ref='2',
                                                 vm_state=vm_states.ACTIVE,
                                                 host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -309,7 +308,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
 
         body = {
@@ -333,7 +332,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         def rebuild(self2, context, instance, image_href, *args, **kwargs):
             info['image_href_in_call'] = image_href
 
-        self.stubs.Set(db, 'instance_get',
+        self.stub_out('nova.db.instance_get',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
@@ -353,7 +352,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         def rebuild(self2, context, instance, image_href, *args, **kwargs):
             info['image_href_in_call'] = image_href
 
-        self.stubs.Set(db, 'instance_get',
+        self.stub_out('nova.db.instance_get',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
@@ -374,7 +373,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
 
         body = {
@@ -414,7 +413,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(metadata=metadata,
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -468,7 +467,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_admin_pass(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -490,7 +489,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -509,7 +508,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         def server_not_found(self, instance_id,
                              columns_to_join=None, use_slave=False):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stubs.Set(db, 'instance_get_by_uuid', server_not_found)
+        self.stub_out('nova.db.instance_get_by_uuid', server_not_found)
 
         body = {
             "rebuild": {
@@ -963,8 +962,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fake_block_device_mapping_get_all_by_instance)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      fake_block_device_mapping_get_all_by_instance)
 
         system_metadata = dict(image_kernel_id=_fake_id('b'),
                                image_ramdisk_id=_fake_id('c'),
@@ -975,7 +974,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                                            vm_state=vm_states.ACTIVE,
                                            root_device_name='/dev/vda',
                                            system_metadata=system_metadata)
-        self.stubs.Set(db, 'instance_get_by_uuid', instance)
+        self.stub_out('nova.db.instance_get_by_uuid', instance)
 
         self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
                                  'quiesce_instance')
@@ -1055,8 +1054,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fake_block_device_mapping_get_all_by_instance)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      fake_block_device_mapping_get_all_by_instance)
 
         instance = fakes.fake_instance_get(
             image_ref='',
@@ -1064,7 +1063,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             root_device_name='/dev/vda',
             system_metadata={'image_test_key1': 'test_value1',
                              'image_test_key2': 'test_value2'})
-        self.stubs.Set(db, 'instance_get_by_uuid', instance)
+        self.stub_out('nova.db.instance_get_by_uuid', instance)
 
         self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
                                  'quiesce_instance')
@@ -1297,7 +1296,7 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         return_server = fakes.fake_instance_get(image_ref='2',
                                                 vm_state=vm_states.ACTIVE,
                                                 host='fake_host')
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {

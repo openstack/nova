@@ -28,7 +28,6 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors
-from nova import db
 from nova import exception
 from nova.network import manager
 from nova import test
@@ -126,17 +125,15 @@ class MultiCreateExtensionTestV21(test.TestCase):
         fake.stub_out_image_service(self)
         fakes.stub_out_nw_api(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_security_group)
-        self.stubs.Set(db, 'project_get_networks',
-                       project_get_networks)
-        self.stubs.Set(db, 'instance_create', instance_create)
-        self.stubs.Set(db, 'instance_system_metadata_update',
-                       fake_method)
-        self.stubs.Set(db, 'instance_get', instance_get)
-        self.stubs.Set(db, 'instance_update', instance_update)
-        self.stubs.Set(db, 'instance_update_and_get_original',
-                       server_update)
+        self.stub_out('nova.db.instance_add_security_group',
+                      return_security_group)
+        self.stub_out('nova.db.project_get_networks', project_get_networks)
+        self.stub_out('nova.db.instance_create', instance_create)
+        self.stub_out('nova.db.instance_system_metadata_update', fake_method)
+        self.stub_out('nova.db.instance_get', instance_get)
+        self.stub_out('nova.db.instance_update', instance_update)
+        self.stub_out('nova.db.instance_update_and_get_original',
+                      server_update)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
         self.stub_out('nova.objects.RequestSpec.create', fake_method)
@@ -579,8 +576,8 @@ class MultiCreateExtensionTestV2(MultiCreateExtensionTestV21):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
-        self.stubs.Set(db, 'instance_create', instance_create)
-        self.stubs.Set(db, 'instance_get', instance_get)
+        self.stub_out('nova.db.instance_create', instance_create)
+        self.stub_out('nova.db.instance_get', instance_get)
 
     def _check_multiple_create_extension_disabled(self, **kwargs):
         self.assertEqual(kwargs['min_count'], 1)

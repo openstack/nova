@@ -25,7 +25,6 @@ from nova.api.openstack.compute import consoles as consoles_v21
 from nova.api.openstack.compute.legacy_v2 import consoles as consoles_v2
 from nova.compute import vm_states
 from nova import console
-from nova import db
 from nova import exception
 from nova import policy
 from nova import test
@@ -128,10 +127,10 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
         super(ConsolesControllerTestV21, self).setUp()
         self.flags(verbose=True)
         self.instance_db = FakeInstanceDB()
-        self.stubs.Set(db, 'instance_get',
-                       self.instance_db.return_server_by_id)
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       self.instance_db.return_server_by_uuid)
+        self.stub_out('nova.db.instance_get',
+                      self.instance_db.return_server_by_id)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      self.instance_db.return_server_by_uuid)
         self.uuid = str(stdlib_uuid.uuid4())
         self.url = '/v2/fake/servers/%s/consoles' % self.uuid
         self._set_up_controller()

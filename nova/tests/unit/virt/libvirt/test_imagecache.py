@@ -30,7 +30,6 @@ from six.moves import cStringIO
 
 from nova import conductor
 from nova import context
-from nova import db
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
@@ -836,8 +835,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
-            self.stubs.Set(db, 'instance_get_all_by_filters',
-                           fake_get_all_by_filters)
+            self.stub_out('nova.db.instance_get_all_by_filters',
+                          fake_get_all_by_filters)
             compute = importutils.import_object(CONF.compute_manager)
             self.flags(use_local=True, group='conductor')
             compute.conductor_api = conductor.API()

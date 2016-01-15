@@ -20,7 +20,6 @@ import six
 
 from nova.compute import api as compute_api
 from nova import context
-from nova import db
 from nova import exception
 from nova.objects import keypair as keypair_obj
 from nova import quota
@@ -76,14 +75,11 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
             else:
                 raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stubs.Set(db, "key_pair_get_all_by_user",
+        self.stub_out("nova.db.key_pair_get_all_by_user",
                        db_key_pair_get_all_by_user)
-        self.stubs.Set(db, "key_pair_create",
-                       db_key_pair_create)
-        self.stubs.Set(db, "key_pair_destroy",
-                       db_key_pair_destroy)
-        self.stubs.Set(db, "key_pair_get",
-                       db_key_pair_get)
+        self.stub_out("nova.db.key_pair_create", db_key_pair_create)
+        self.stub_out("nova.db.key_pair_destroy", db_key_pair_destroy)
+        self.stub_out("nova.db.key_pair_get", db_key_pair_get)
 
     def _check_notifications(self, action='create', key_name='foo'):
         self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
@@ -146,7 +142,7 @@ class CreateImportSharedTestMixIn(object):
         def db_key_pair_create_duplicate(context, keypair):
             raise exception.KeyPairExists(key_name=keypair.get('name', ''))
 
-        self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
+        self.stub_out("nova.db.key_pair_create", db_key_pair_create_duplicate)
 
         msg = ("Key pair '%(key_name)s' already exists." %
                {'key_name': self.existing_key_name})

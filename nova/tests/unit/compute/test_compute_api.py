@@ -2128,8 +2128,8 @@ class _ComputeAPIUnitTestMixIn(object):
         def fake_unquiesce_instance(context, instance, mapping=None):
             quiesced[1] = True
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fake_get_all_by_instance)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      fake_get_all_by_instance)
         self.stubs.Set(self.compute_api.image_api, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',

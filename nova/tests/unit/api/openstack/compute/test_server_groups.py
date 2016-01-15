@@ -395,10 +395,10 @@ class ServerGroupTestV21(test.TestCase):
             self.assertEqual(sg['id'], group_id)
             return server_group_db(sg)
 
-        self.stubs.Set(nova.db, 'instance_group_delete',
-                       server_group_delete)
-        self.stubs.Set(nova.db, 'instance_group_get',
-                       return_server_group)
+        self.stub_out('nova.db.instance_group_delete',
+                      server_group_delete)
+        self.stub_out('nova.db.instance_group_get',
+                      return_server_group)
 
         resp = self.controller.delete(self.req, '123')
         self.assertTrue(self.called)

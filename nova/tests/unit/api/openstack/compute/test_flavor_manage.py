@@ -27,7 +27,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
 from nova.api.openstack.compute.legacy_v2.contrib import flavormanage \
         as flavormanage_v2
 from nova.compute import flavors
-from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -104,7 +103,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                        "get_flavor_by_flavor_id",
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
-        self.stubs.Set(db, "flavor_create", fake_create)
+        self.stub_out("nova.db.flavor_create", fake_create)
         self.app = self._setup_app()
 
         self.request_body = {

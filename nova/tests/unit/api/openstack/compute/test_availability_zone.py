@@ -101,7 +101,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
     def setUp(self):
         super(AvailabilityZoneApiTestV21, self).setUp()
         availability_zones.reset_cache()
-        self.stubs.Set(db, 'service_get_all', fake_service_get_all)
+        self.stub_out('nova.db.service_get_all', fake_service_get_all)
         self.stubs.Set(availability_zones, 'set_availability_zones',
                        fake_set_availability_zones)
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
@@ -231,7 +231,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             return instance
 
         fake.stub_out_image_service(self)
-        self.stubs.Set(db, 'instance_create', instance_create)
+        self.stub_out('nova.db.instance_create', instance_create)
 
         self.req = fakes.HTTPRequest.blank('')
 

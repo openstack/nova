@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
@@ -85,7 +84,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_compute_get)
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)

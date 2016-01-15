@@ -216,8 +216,8 @@ class FloatingIpTestV21(test.TestCase):
                        stub_nw_info(self))
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
-        self.stubs.Set(db, 'instance_get',
-                       fake_instance_get)
+        self.stub_out('nova.db.instance_get',
+                      fake_instance_get)
 
         self.context = context.get_admin_context()
         self._create_floating_ips()
@@ -791,8 +791,8 @@ class ExtendedFloatingIpTestV21(test.TestCase):
                        stub_nw_info(self))
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
-        self.stubs.Set(db, 'instance_get',
-                       fake_instance_get)
+        self.stub_out('nova.db.instance_get',
+                      fake_instance_get)
 
         self.context = context.get_admin_context()
         self._create_floating_ips()

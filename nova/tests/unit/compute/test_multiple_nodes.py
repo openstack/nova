@@ -18,7 +18,6 @@ from oslo_config import cfg
 from oslo_utils import importutils
 
 from nova import context
-from nova import db
 from nova import objects
 from nova import test
 from nova.virt import fake
@@ -110,7 +109,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
     def test_update_available_resource_add_remove_node(self):
@@ -152,7 +151,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(ctx)

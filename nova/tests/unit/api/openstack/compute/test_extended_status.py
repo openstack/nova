@@ -17,7 +17,6 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova import compute
-from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -73,7 +72,7 @@ class ExtendedStatusTestV21(test.TestCase):
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self._set_flags()
         return_server = fakes.fake_instance_get()
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
     def _get_server(self, body):
         return jsonutils.loads(body).get('server')

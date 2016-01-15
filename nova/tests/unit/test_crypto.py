@@ -107,7 +107,7 @@ class RevokeCertsTest(test.TestCase):
                                           "file_name": file_name}]
 
         self.stub_out('nova.db.certificate_get_all_by_user_and_project',
-                       mock_certificate_get_all_by_user_and_project)
+                      mock_certificate_get_all_by_user_and_project)
 
         crypto.revoke_certs_by_user_and_project(user_id, project_id)
 
@@ -125,7 +125,7 @@ class RevokeCertsTest(test.TestCase):
                                           "file_name": file_name}]
 
         self.stub_out('nova.db.certificate_get_all_by_user',
-                       mock_certificate_get_all_by_user)
+                      mock_certificate_get_all_by_user)
 
         crypto.revoke_certs_by_user(user_id)
         mock_revoke.assert_called_once_with(project_id, mock.ANY)
@@ -142,7 +142,7 @@ class RevokeCertsTest(test.TestCase):
                                           "file_name": file_name}]
 
         self.stub_out('nova.db.certificate_get_all_by_project',
-                       mock_certificate_get_all_by_project)
+                      mock_certificate_get_all_by_project)
 
         crypto.revoke_certs_by_project(project_id)
         mock_revoke.assert_called_once_with(project_id, mock.ANY)
