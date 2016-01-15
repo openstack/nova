@@ -96,7 +96,7 @@ class RealTimeServersTest(ServersTestBase):
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',
                         return_value=fake_connection):
             self.compute = self.start_service('compute', host='test_compute0')
-            fake_network.set_stub_network_methods(self.stubs)
+            fake_network.set_stub_network_methods(self)
 
             flavor = self._create_flavor(extra_spec={
                 'hw:cpu_realtime': 'yes', 'hw:cpu_policy': 'dedicated'})
@@ -121,7 +121,7 @@ class RealTimeServersTest(ServersTestBase):
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',
                         return_value=fake_connection):
             self.compute = self.start_service('compute', host='test_compute0')
-            fake_network.set_stub_network_methods(self.stubs)
+            fake_network.set_stub_network_methods(self)
 
             flavor = self._create_flavor(extra_spec={
                 'hw:cpu_realtime': 'yes',

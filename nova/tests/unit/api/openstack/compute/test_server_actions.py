@@ -92,7 +92,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update_and_get_original)
 
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fake.stub_out_image_service(self)
         self.flags(allow_instance_snapshots=True,

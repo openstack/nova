@@ -25,7 +25,7 @@ class TestNoAuthMiddleware(test.NoDBTestCase):
     def setUp(self):
         super(TestNoAuthMiddleware, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
 
     def test_authorize_user(self):
         req = webob.Request.blank('/v2')

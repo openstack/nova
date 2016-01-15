@@ -79,7 +79,7 @@ class KeypairsTestV21(test.TestCase):
 
     def setUp(self):
         super(KeypairsTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
 
         self.stubs.Set(db, "key_pair_get_all_by_user",

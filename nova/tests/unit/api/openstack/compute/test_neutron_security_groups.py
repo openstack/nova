@@ -484,7 +484,7 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
 
     def setUp(self):
         super(TestNeutronSecurityGroupsOutputTest, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.controller = security_groups.SecurityGroupController()
         self.stubs.Set(compute.api.API, 'get',
                        test_security_groups.fake_compute_get)

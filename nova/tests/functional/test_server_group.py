@@ -178,7 +178,7 @@ class ServerGroupTestV2(ServerGroupTestBase):
         self.compute2 = self.start_service('compute', host='host2')
         self.addCleanup(self.compute.kill)
         self.addCleanup(self.compute2.kill)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
     def test_get_no_groups(self):
         groups = self.api.get_server_groups()

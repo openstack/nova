@@ -43,7 +43,7 @@ class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConfigDriveSampleJsonTest, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         fake.stub_out_image_service(self)
 

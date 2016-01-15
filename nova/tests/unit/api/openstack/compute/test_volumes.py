@@ -129,7 +129,7 @@ class BootFromVolumeTest(test.TestCase):
         super(BootFromVolumeTest, self).setUp()
         self.stubs.Set(compute_api.API, 'create',
                        self._get_fake_compute_api_create())
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self._block_device_mapping_seen = None
         self._legacy_bdm_seen = True
         self.flags(
@@ -224,7 +224,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(VolumeApiTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
 
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)

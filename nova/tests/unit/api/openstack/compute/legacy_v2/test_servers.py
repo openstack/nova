@@ -188,7 +188,7 @@ class ControllerTest(test.TestCase):
         self.ips_controller = ips.Controller()
         policy.reset()
         policy.init()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
 
 class ServersControllerTest(ControllerTest):
@@ -1498,7 +1498,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.stubs.Set(compute_api.API, 'delete', fake_delete)
 
     def _create_delete_request(self, uuid):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        fakes.stub_out_instance_quota(self, 0, 10)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         req.method = 'DELETE'
         return req
@@ -1531,7 +1531,7 @@ class ServersControllerDeleteTest(ControllerTest):
                           req, FAKE_UUID)
 
     def test_delete_server_instance_while_building(self):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        fakes.stub_out_instance_quota(self, 0, 10)
         request = self._create_delete_request(FAKE_UUID)
         self.controller.delete(request, FAKE_UUID)
 
@@ -1557,7 +1557,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.controller.delete(req, FAKE_UUID)
 
     def test_delete_server_instance_while_deleting_host_down(self):
-        fake_network.stub_out_network_cleanup(self.stubs)
+        fake_network.stub_out_network_cleanup(self)
         req = self._create_delete_request(FAKE_UUID)
         self.stubs.Set(db, 'instance_get_by_uuid',
             fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
@@ -1771,7 +1771,7 @@ class ServerStatusTest(test.TestCase):
 
     def setUp(self):
         super(ServerStatusTest, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
@@ -1870,7 +1870,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
@@ -2851,7 +2851,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
-        fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
+        fakes.stub_out_instance_quota(self, allowed, quota, resource)
         self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dump_as_bytes(self.body)
         try:
@@ -3068,7 +3068,7 @@ class ServersViewBuilderTest(test.TestCase):
                     (None, {'label': 'private',
                             'ips': [dict(ip=ip) for ip in privates]})]
 
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
+        fakes.stub_out_nw_api_get_instance_nw_info(self, nw_info)
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilder()

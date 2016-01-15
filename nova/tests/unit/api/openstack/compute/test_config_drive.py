@@ -46,7 +46,7 @@ class ConfigDriveTestV21(test.TestCase):
 
     def setUp(self):
         super(ConfigDriveTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         fake.stub_out_image_service(self)
         self._setup_wsgi()

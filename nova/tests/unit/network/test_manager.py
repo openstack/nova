@@ -196,10 +196,10 @@ class FlatNetworkTestCase(test.TestCase):
     def test_get_instance_nw_info_fake(self):
         fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
 
-        nw_info = fake_get_instance_nw_info(self.stubs, 0, 2)
+        nw_info = fake_get_instance_nw_info(self, 0, 2)
         self.assertFalse(nw_info)
 
-        nw_info = fake_get_instance_nw_info(self.stubs, 1, 2)
+        nw_info = fake_get_instance_nw_info(self, 1, 2)
 
         for i, vif in enumerate(nw_info):
             nid = i + 1

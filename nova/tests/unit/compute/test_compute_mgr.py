@@ -3965,8 +3965,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 return_value=({}, instance))
         @mock.patch.object(self.compute.driver, 'spawn')
         @mock.patch.object(self.compute, '_build_networks_for_instance',
-                return_value=fake_network.fake_get_instance_nw_info(
-                    self.stubs))
+                return_value=fake_network.fake_get_instance_nw_info(self))
         @mock.patch.object(db, 'instance_extra_update_by_uuid')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         def _check_access_ip(mock_notify, mock_extra, mock_networks,

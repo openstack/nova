@@ -47,7 +47,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self._set_up_app()
         self._setup_fake_image_service()
 
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         FAKE_INSTANCES = [
             fakes.stub_instance(1,

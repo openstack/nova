@@ -67,7 +67,7 @@ class FlavorSwapTestV21(test.NoDBTestCase):
         ext = ('nova.api.openstack.compute.contrib'
               '.flavor_swap.Flavor_swap')
         self.flags(osapi_compute_extension=[ext])
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)
         self.stubs.Set(flavors,

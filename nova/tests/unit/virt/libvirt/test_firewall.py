@@ -251,7 +251,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                     self.out6_rules = lines
                 return '', ''
 
-        network_model = _fake_network_info(self.stubs, 1)
+        network_model = _fake_network_info(self, 1)
 
         linux_net.iptables_manager.execute = fake_iptables_execute
 
@@ -315,14 +315,14 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEqual(len(rulesv4), 2)
         self.assertEqual(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEqual(len(rulesv4), 2)
         self.assertEqual(len(rulesv6), 0)
@@ -338,7 +338,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         networks_count = 5
         instance_ref = self._create_instance_ref()
         instance_ref.security_groups = objects.SecurityGroupList()
-        network_info = _fake_network_info(self.stubs, networks_count,
+        network_info = _fake_network_info(self, networks_count,
                                 ipv4_addr_per_network)
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
@@ -421,7 +421,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         mock_secrule.return_value = objects.SecurityGroupRuleList()
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
@@ -445,7 +445,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         # create a firewall via setup_basic_filtering like libvirt_conn.spawn
         # should have a chain with 0 rules
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.assertIn('provider', self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
@@ -588,7 +588,7 @@ class NWFilterTestCase(test.NoDBTestCase):
                                  self.recursive_depends[instance_filter],
                                  "Instance filter includes %s" % required_not)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         # since there is one (network_info) there is one vif
         # pass this vif's mac to _ensure_all_called()
         # to set the instance_filter properly
@@ -616,7 +616,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         instance_ref = self._create_instance()
         self._create_security_group(instance_ref)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance_ref, network_info)
@@ -635,7 +635,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         mock_lookup.return_value = fakefilter
 
         instance_ref = self._create_instance()
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
 
         self.assertRaises(fakelibvirt.libvirtError, self.fw.unfilter_instance,
                           instance_ref, network_info)
@@ -656,7 +656,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         mock_lookup.return_value = fakefilter
 
         instance_ref = self._create_instance()
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
 
         self.fw.unfilter_instance(instance_ref, network_info)
         self.assertEqual(2, mock_lookup.call_count)
@@ -675,7 +675,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         mock_lookup.return_value = fakefilter
 
         instance_ref = self._create_instance()
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
 
         self.fw.unfilter_instance(instance_ref, network_info)
         self.assertEqual(2, mock_lookup.call_count)
@@ -690,7 +690,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         instance_ref = self._create_instance()
         self._create_security_group(instance_ref)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.setup_basic_filtering(instance_ref, network_info)
 
@@ -706,7 +706,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         instance_ref = self._create_instance()
         self._create_security_group(instance_ref)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
 
         vif = network_info[0]
@@ -761,7 +761,7 @@ class NWFilterTestCase(test.NoDBTestCase):
         instance_ref = self._create_instance()
         self._create_security_group(instance_ref)
 
-        network_info = _fake_network_info(self.stubs, 2)
+        network_info = _fake_network_info(self, 2)
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
 

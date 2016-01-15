@@ -207,7 +207,7 @@ class ControllerTest(test.TestCase):
         self.ips_controller = ips.IPsController()
         policy.reset()
         policy.init()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
 
 class ServersControllerTest(ControllerTest):
@@ -1423,7 +1423,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.stubs.Set(compute_api.API, 'delete', fake_delete)
 
     def _create_delete_request(self, uuid):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        fakes.stub_out_instance_quota(self, 0, 10)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s' % uuid)
         req.method = 'DELETE'
         return req
@@ -1941,7 +1941,7 @@ class ServerStatusTest(test.TestCase):
 
     def setUp(self):
         super(ServerStatusTest, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
@@ -2052,7 +2052,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
 
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
@@ -2772,7 +2772,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
-        fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
+        fakes.stub_out_instance_quota(self, allowed, quota, resource)
         self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dump_as_bytes(self.body)
         try:
@@ -3128,7 +3128,7 @@ class ServersViewBuilderTest(test.TestCase):
                     (None, {'label': 'private',
                             'ips': [dict(ip=ip) for ip in privates]})]
 
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
+        fakes.stub_out_nw_api_get_instance_nw_info(self, nw_info)
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilderV21()
