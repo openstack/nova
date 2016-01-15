@@ -82,7 +82,8 @@ v21_to_v2_extension_list_mapping = {
 v2_extension_suppress_list = ['servers', 'images', 'versions', 'flavors',
                               'os-block-device-mapping-v1', 'os-consoles',
                               'extensions', 'image-metadata', 'ips', 'limits',
-                              'server-metadata', 'server-migrations'
+                              'server-metadata', 'server-migrations',
+                              'os-server-tags'
                             ]
 
 # v2.1 plugins which should appear under a different name in v2

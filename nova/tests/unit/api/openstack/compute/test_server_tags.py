@@ -32,6 +32,8 @@ NON_EXISTING_UUID = '123'
 
 
 class ServerTagsTest(test.TestCase):
+    api_version = '2.26'
+
     def setUp(self):
         super(ServerTagsTest, self).setUp()
         self.controller = server_tags.ServerTagsController()
@@ -43,7 +45,7 @@ class ServerTagsTest(test.TestCase):
         return tag
 
     def _get_request(self, url, method):
-        request = fakes.HTTPRequest.blank(url)
+        request = fakes.HTTPRequest.blank(url, version=self.api_version)
         request.method = method
         return request
 
