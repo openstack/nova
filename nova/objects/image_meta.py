@@ -140,12 +140,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.8: Added 'lxd' to hypervisor types
     # Version 1.9: added hw_cpu_thread_policy field
     # Version 1.10: added hw_cpu_realtime_mask field
-    VERSION = '1.10'
+    # Version 1.11: Added hw_firmware_type field
+    VERSION = '1.11'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 11):
+            primitive.pop('hw_firmware_type', None)
         if target_version < (1, 9):
             primitive.pop('hw_cpu_thread_policy', None)
         if target_version < (1, 7):
@@ -230,6 +233,9 @@ class ImageMetaProps(base.NovaObject):
 
         # name of the floppy disk bus to use eg fd, scsi, ide
         'hw_floppy_bus': fields.DiskBusField(),
+
+        # This indicates the guest needs UEFI firmware
+        'hw_firmware_type': fields.FirmwareTypeField(),
 
         # boolean - used to trigger code to inject networking when booting a CD
         # image with a network boot image
