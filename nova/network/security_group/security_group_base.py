@@ -110,8 +110,9 @@ class SecurityGroupBase(object):
             if (ip_protocol.upper() in ['TCP', 'UDP'] and
                     (from_port < 1 or to_port > 65535)):
                 raise exception.InvalidPortRange(from_port=from_port,
-                      to_port=to_port, msg="Valid TCP ports should"
-                                           " be between 1-65535")
+                      to_port=to_port, msg="Valid %s ports should"
+                                           " be between 1-65535"
+                                           % ip_protocol.upper())
 
             # Verify ICMP type and code
             if (ip_protocol.upper() == "ICMP" and
