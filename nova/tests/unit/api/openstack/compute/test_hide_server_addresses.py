@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import itertools
-
 from oslo_serialization import jsonutils
+import six
 import webob
 
 from nova import compute
@@ -125,7 +124,7 @@ class HideServerAddressesTestV21(test.TestCase):
 
         self.assertEqual(len(servers), len(instances))
 
-        for instance, server in itertools.izip(instances, servers):
+        for instance, server in six.moves.zip(instances, servers):
             addresses = self._get_addresses(server)
             exists = (instance['vm_state'] == vm_states.ACTIVE)
             self._check_addresses(addresses, exists=exists)

@@ -15,7 +15,6 @@
 """Handles database requests from other nova services."""
 
 import copy
-import itertools
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -372,7 +371,7 @@ class ComputeTaskManager(base.Base):
                     exc, request_spec)
             return
 
-        for (instance, host) in itertools.izip(instances, hosts):
+        for (instance, host) in six.moves.zip(instances, hosts):
             try:
                 instance.refresh()
             except (exception.InstanceNotFound,
