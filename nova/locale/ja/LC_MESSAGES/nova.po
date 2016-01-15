@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev32\n"
+"Project-Id-Version: nova 12.0.1.dev59\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-06 06:10+0000\n"
-"PO-Revision-Date: 2015-10-30 12:48+0000\n"
+"POT-Creation-Date: 2016-01-14 07:12+0000\n"
+"PO-Revision-Date: 2016-01-14 02:46+0000\n"
 "Last-Translator: Yuta Hono <yuta.hono@ntt.com>\n"
 "Language: ja\n"
 "Language-Team: Japanese\n"
@@ -1175,6 +1175,10 @@ msgstr ""
 "ライブマイグレーション時にインスタンス %(instance_uuid)s の最大スケジューリン"
 "グ再試行回数 %(max_retries)d を超えました"
 
+#, python-format
+msgid "Exceeded maximum number of retries. %(reason)s"
+msgstr "リトライの最大数を超えました。 %(reason)s"
+
 msgid "Exceeded the maximum number of slots"
 msgstr "スロットの最大数を超えました"
 
@@ -1530,8 +1534,20 @@ msgstr "名前が %(flavor_name)s のフレーバーが見つかりませんで�
 msgid "Flavor with name %(name)s already exists."
 msgstr "名前が %(name)s のフレーバーは既に存在します。"
 
+#, python-format
+msgid ""
+"Flavor's disk is too small for requested image. Flavor disk is "
+"%(flavor_size)i bytes, image is %(image_size)i bytes."
+msgstr ""
+"フレーバーのディスクはリクエストされたイメージに対し小さすぎます。フレーバー"
+"ディスクは %(flavor_size)i バイト、イメージは %(image_size)i バイトです。"
+
 msgid "Flavor's memory is too small for requested image."
 msgstr "フレーバーのメモリーは要求されたイメージに対して小さすぎます。"
+
+#, python-format
+msgid "Floating IP %(address)s association has failed."
+msgstr "Floating IP %(address)s の関連付けに失敗しました。"
 
 msgid "Floating IP allocate failed."
 msgstr "Floating IP の確保に失敗しました。"
@@ -2819,6 +2835,10 @@ msgstr "スワップを行うには、新規ボリュームを切断する必要
 msgid "New volume must be the same size or larger."
 msgstr "新規ボリュームは同じサイズか、それ以上でなければなりません。"
 
+#, python-format
+msgid "No Block Device Mapping with id %(id)s."
+msgstr "id %(id)s と関連づいたブロックデバイスマッピングがありません。"
+
 msgid "No CIDR requested"
 msgstr "CIDR は要求されていません"
 
@@ -3256,6 +3276,14 @@ msgstr "クォータクラス %(class_name)s が見つかりませんでした�
 
 msgid "Quota could not be found"
 msgstr "クォータが見つかりませんでした"
+
+#, python-format
+msgid ""
+"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)s "
+"of %(allowed)s %(overs)s"
+msgstr ""
+"クオータを超えました %(overs)s: %(req)s をリクエストされましたが、すでに "
+"%(allowed)s のうち %(used)s を利用しています  %(overs)s 。"
 
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
@@ -3708,6 +3736,11 @@ msgid "Storage policy %s did not match any datastores"
 msgstr "ストレージポリシー %s がどのデータストアにも一致しませんでした"
 
 #, python-format
+msgid "Subject for certificate for projects, %s for project, timestamp"
+msgstr ""
+"プロジェクトの証明書のサブジェクト、%s はプロジェクト、およびタイムスタンプ"
+
+#, python-format
 msgid "Subject for certificate for users, %s for project, user, timestamp"
 msgstr ""
 "ユーザーの証明書のサブジェクト、%s はプロジェクト、ユーザー、タイムスタンプ"
@@ -3796,6 +3829,9 @@ msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr ""
 "コンソール用のポート範囲 %(min_port)d-%(max_port)d を使い切られています。"
 
+msgid "The created instance's disk would be too small."
+msgstr "作成されたインスタンスのディスクが小さすぎます。"
+
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "現行ドライバーは、一時パーティションの保持をサポートしていません。"
 
@@ -3809,6 +3845,9 @@ msgstr "%(src)s から %(dest)s へのファイルコピーに失敗しました
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr "%s のファイアウォールフィルターが存在しません"
+
+msgid "The floating IP request failed with a BadRequest"
+msgstr "Floating IP リクエストが不正なリクエストにより失敗しました。"
 
 #, fuzzy
 msgid "The input is not a string or unicode"
@@ -4584,6 +4623,13 @@ msgstr "ボリューム %(volume_id)s はどこにも接続されていません
 
 msgid "Volume does not belong to the requested instance."
 msgstr "ボリュームが要求されたインスタンスに属していません。"
+
+#, python-format
+msgid ""
+"Volume encryption is not supported for %(volume_type)s volume %(volume_id)s"
+msgstr ""
+"%(volume_type)s の ボリューム %(volume_id)s  へのボリュームの暗号化はサポート"
+"されていません"
 
 msgid "Volume must be attached in order to detach."
 msgstr "ボリュームを切り離すにはボリュームを接続されていなければいけません。"
