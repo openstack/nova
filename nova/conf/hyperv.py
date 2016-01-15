@@ -19,46 +19,107 @@ from oslo_config import cfg
 hyperv_opt_group = cfg.OptGroup("hyperv",
                 title="The Hyper-V feature",
                 help="""
-The hyperv feature allows you to configure
-the Hyper-V hypervisor driver.""")
+The hyperv feature allows you to configure the Hyper-V hypervisor
+driver to be used within an OpenStack deployment.
+""")
 
 
 dynamic_memory_ratio_opt = cfg.FloatOpt('dynamic_memory_ratio',
                 default=1.0,
                 help="""
-Enables dynamic memory allocation (ballooning) when
-set to a value greater than 1. The value expresses
-the ratio between the total RAM assigned to an
-instance and its startup RAM amount. For example a
-ratio of 2.0 for an instance with 1024MB of RAM
-implies 512MB of RAM allocated at startup
+Dynamic memory ratio
+
+Enables dynamic memory allocation (ballooning) when set to a value
+greater than 1. The value expresses the ratio between the total RAM
+assigned to an instance and its startup RAM amount. For example a
+ratio of 2.0 for an instance with 1024MB of RAM implies 512MB of
+RAM allocated at startup.
+
+Possible values:
+
+* 1.0: Disables dynamic memory allocation (Default).
+* Float values greater than 1.0: Enables allocation of total implied
+  RAM divided by this value for startup.
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 enable_instance_metrics_collection_opt = cfg.BoolOpt(
                 'enable_instance_metrics_collection',
                 default=False,
                 help="""
-Enables metrics collections for an instance by using
-Hyper-V's metric APIs. Collected data can by retrieved
-by other apps and services, e.g.: Ceilometer.
-Requires Hyper-V / Windows Server 2012 and above
+Enable instance metrics collection
+
+Enables metrics collections for an instance by using Hyper-V's
+metric APIs. Collected data can by retrieved by other apps and
+services, e.g.: Ceilometer.
+
+Possible values:
+
+* True: Enables metrics collection.
+* False: Disables metric collection (Default).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 instances_path_share_opt = cfg.StrOpt('instances_path_share',
                 default="",
                 help="""
-The name of a Windows share name mapped to the
-"instances_path" dir and used by the resize feature
-to copy files to the target host. If left blank, an
-administrative share will be used, looking for the same
-"instances_path" used locally
+Instances path share
+
+The name of a Windows share mapped to the "instances_path" dir
+and used by the resize feature to copy files to the target host.
+If left blank, an administrative share (hidden network share) will
+be used, looking for the same "instances_path" used locally.
+
+Possible values:
+
+* "": An administrative share will be used (Default).
+* Name of a Windows share.
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* "instances_path": The directory which will be used if this option
+  here is left blank.
 """)
 
 limit_cpu_features_opt = cfg.BoolOpt('limit_cpu_features',
                 default=False,
                 help="""
-Required for live migration among
-hosts with different CPU features
+Limit CPU features
+
+This flag is needed to support live migration to hosts with
+different CPU features and checked during instance creation
+in order to limit the CPU features used by the instance.
+
+Possible values:
+
+* True: Limit processor-specific features.
+* False: Do not limit processor-specific features (Default).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 mounted_disk_query_retry_count_opt = cfg.IntOpt(
