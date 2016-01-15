@@ -2222,6 +2222,65 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
+    def test_get_pinning_isolate_policy_too_few_fully_free_cores(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])],
+                                    mempages=[], pinned_cpus=set([1]))
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_isolate_policy_no_fully_free_cores(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])],
+                                    mempages=[], pinned_cpus=set([1, 2]))
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_isolate_policy_fits(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])],
+                                    mempages=[], pinned_cpus=set([]))
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
+        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_isolate_policy_fits_w_usage(self):
+        host_pin = objects.NUMACell(
+                id=0,
+                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                memory=4096, memory_usage=0,
+                pinned_cpus=set([0, 1]),
+                siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
+                mempages=[])
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
+        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
 
 class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_host_numa_fit_instance_to_host_single_cell(self):
@@ -2430,6 +2489,48 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertRaises(exception.CPUPinningInvalid,
                 hw.numa_usage_from_instances, host_pin,
                 [inst_pin_1, inst_pin_2])
+
+    def test_host_usage_from_instances_isolate(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=0,
+                                        memory_usage=0,
+                                        siblings=[set([0, 2]), set([1, 3])],
+                                        mempages=[], pinned_cpus=set([]))])
+        inst_pin_1 = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=2048, id=0,
+                    cpu_pinning={0: 0, 1: 1},
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                    )])
+
+        new_cell = hw.numa_usage_from_instances(host_pin, [inst_pin_1])
+        self.assertEqual(host_pin.cells[0].cpuset,
+                         new_cell.cells[0].pinned_cpus)
+        self.assertEqual(new_cell.cells[0].cpu_usage, 4)
+
+    def test_host_usage_from_instances_isolate_free(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=4,
+                                        memory_usage=0,
+                                        siblings=[set([0, 2]), set([1, 3])],
+                                        mempages=[],
+                                        pinned_cpus=set([0, 1, 2, 3]))])
+        inst_pin_1 = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=2048, id=0,
+                    cpu_pinning={0: 0, 1: 1},
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                    )])
+
+        new_cell = hw.numa_usage_from_instances(host_pin,
+                                                [inst_pin_1],
+                                                free=True)
+        self.assertEqual(set([]), new_cell.cells[0].pinned_cpus)
+        self.assertEqual(new_cell.cells[0].cpu_usage, 0)
 
 
 class CPURealtimeTestCase(test.NoDBTestCase):

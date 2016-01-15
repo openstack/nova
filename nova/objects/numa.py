@@ -93,6 +93,20 @@ class NUMACell(base.NovaObject):
                                               pinned=list(self.pinned_cpus))
         self.pinned_cpus -= cpus
 
+    def pin_cpus_with_siblings(self, cpus):
+        pin_siblings = set()
+        for sib in self.siblings:
+            if cpus & sib:
+                pin_siblings.update(sib)
+        self.pin_cpus(pin_siblings)
+
+    def unpin_cpus_with_siblings(self, cpus):
+        pin_siblings = set()
+        for sib in self.siblings:
+            if cpus & sib:
+                pin_siblings.update(sib)
+        self.unpin_cpus(pin_siblings)
+
     def _to_dict(self):
         return {
             'id': self.id,
