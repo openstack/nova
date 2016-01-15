@@ -250,9 +250,19 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _update_links(self, sample_data):
         """Process sample data and update version specific links."""
-        url_re = self._get_host() + "/v(2\.1|2)"
+        # replace version urls
+        url_re = self._get_host() + "/v(2|2\.1)/openstack"
         new_url = self._get_host() + "/" + self.api_major_version
+        if self._project_id:
+            new_url += "/openstack"
         updated_data = re.sub(url_re, new_url, sample_data)
+
+        # replace unversioned urls
+        url_re = self._get_host() + "/openstack"
+        new_url = self._get_host()
+        if self._project_id:
+            new_url += "/openstack"
+        updated_data = re.sub(url_re, new_url, updated_data)
         return updated_data
 
     def _verify_response(self, name, subs, response, exp_code,
@@ -360,13 +370,19 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _get_compute_endpoint(self):
         # NOTE(sdague): "openstack" is stand in for project_id, it
         # should be more generic in future.
-        return '%s/%s' % (self._get_host(), 'openstack')
+        if self._project_id:
+            return '%s/%s' % (self._get_host(), 'openstack')
+        else:
+            return self._get_host()
 
     def _get_vers_compute_endpoint(self):
         # NOTE(sdague): "openstack" is stand in for project_id, it
         # should be more generic in future.
-        return '%s/%s/%s' % (self._get_host(), self.api_major_version,
-                             'openstack')
+        if self._project_id:
+            return '%s/%s/%s' % (self._get_host(), self.api_major_version,
+                                 'openstack')
+        else:
+            return '%s/%s' % (self._get_host(), self.api_major_version)
 
     def _get_response(self, url, method, body=None, strip_version=False,
                       api_version=None, headers=None):

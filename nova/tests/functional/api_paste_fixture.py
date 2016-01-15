@@ -54,3 +54,14 @@ class ApiPasteLegacyV2Fixture(ApiPasteV21Fixture):
             "/v2: openstack_compute_api_v21_legacy_v2_compatible",
             "/v2: openstack_compute_api_legacy_v2")
         target_file.write(line)
+
+
+class ApiPasteNoProjectId(ApiPasteV21Fixture):
+
+    def _replace_line(self, target_file, line):
+        line = line.replace(
+            "paste.filter_factory = nova.api.openstack.auth:"
+            "NoAuthMiddleware.factory",
+            "paste.filter_factory = nova.api.openstack.auth:"
+            "NoAuthMiddlewareV2_17.factory")
+        target_file.write(line)

@@ -163,3 +163,7 @@ user documentation.
 
   Add a new API for triggering crash dump in an instance. Different operation
   systems in instance may need different configurations to trigger crash dump.
+
+2.18
+----
+  Establishes a set of routes that makes project_id an optional construct in v2.1.

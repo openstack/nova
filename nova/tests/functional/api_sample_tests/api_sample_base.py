@@ -69,6 +69,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     sample_dir = None
     extra_extensions_to_load = None
     _legacy_v2_code = False
+    _project_id = True
 
     scenarios = [
         # test v2 with the v2.1 compatibility stack
@@ -82,7 +83,13 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
             'api_major_version': 'v2',
             '_legacy_v2_code': True,
             '_additional_fixtures': [
-                api_paste_fixture.ApiPasteLegacyV2Fixture]})
+                api_paste_fixture.ApiPasteLegacyV2Fixture]}),
+        # test v2.16 code without project id
+        ('v2_1_noproject_id', {
+            'api_major_version': 'v2.1',
+            '_project_id': False,
+            '_additional_fixtures': [
+                api_paste_fixture.ApiPasteNoProjectId]})
     ]
 
     def setUp(self):
