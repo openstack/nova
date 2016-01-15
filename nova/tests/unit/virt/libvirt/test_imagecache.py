@@ -66,7 +66,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                                          'banana-42-hamster'])
 
     def test_read_stored_checksum_missing(self):
-        self.stubs.Set(os.path, 'exists', lambda x: False)
+        self.stub_out('os.path.exists', lambda x: False)
         csum = imagecache.read_stored_checksum('/tmp/foo', timestamped=False)
         self.assertIsNone(csum)
 
@@ -139,8 +139,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                   '17d1b00b81642842e514494a78e804e9a511637c_10737418240']
         listing.extend(images)
 
-        self.stubs.Set(os, 'listdir', lambda x: listing)
-        self.stubs.Set(os.path, 'isfile', lambda x: True)
+        self.stub_out('os.listdir', lambda x: listing)
+        self.stub_out('os.path.isfile', lambda x: True)
 
         base_dir = '/var/lib/nova/instances/_base'
         self.flags(instances_path='/var/lib/nova/instances')
@@ -184,10 +184,10 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertIn('swap_1000', image_cache_manager.back_swap_images)
 
     def test_list_backing_images_small(self):
-        self.stubs.Set(os, 'listdir',
+        self.stub_out('os.listdir',
                        lambda x: ['_base', 'instance-00000001',
                                   'instance-00000002', 'instance-00000003'])
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.path.exists',
                        lambda x: x.find('instance-') != -1)
         self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
@@ -206,10 +206,10 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(image_cache_manager.unexplained_images), 0)
 
     def test_list_backing_images_resized(self):
-        self.stubs.Set(os, 'listdir',
+        self.stub_out('os.listdir',
                        lambda x: ['_base', 'instance-00000001',
                                   'instance-00000002', 'instance-00000003'])
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.path.exists',
                        lambda x: x.find('instance-') != -1)
         self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
                        lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
@@ -230,9 +230,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(image_cache_manager.unexplained_images), 0)
 
     def test_list_backing_images_instancename(self):
-        self.stubs.Set(os, 'listdir',
+        self.stub_out('os.listdir',
                        lambda x: ['_base', 'banana-42-hamster'])
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.path.exists',
                        lambda x: x.find('banana-42-hamster') != -1)
         self.stubs.Set(libvirt_utils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
@@ -251,9 +251,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(image_cache_manager.unexplained_images), 0)
 
     def test_list_backing_images_disk_notexist(self):
-        self.stubs.Set(os, 'listdir',
+        self.stub_out('os.listdir',
                        lambda x: ['_base', 'banana-42-hamster'])
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.path.exists',
                        lambda x: x.find('banana-42-hamster') != -1)
 
         def fake_get_disk(disk_path):
@@ -269,7 +269,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                           image_cache_manager._list_backing_images)
 
     def test_find_base_file_nothing(self):
-        self.stubs.Set(os.path, 'exists', lambda x: False)
+        self.stub_out('os.path.exists', lambda x: False)
 
         base_dir = '/var/lib/nova/instances/_base'
         fingerprint = '549867354867'
@@ -280,7 +280,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_find_base_file_small(self):
         fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.path.exists',
                        lambda x: x.endswith('%s_sm' % fingerprint))
 
         base_dir = '/var/lib/nova/instances/_base'
@@ -297,10 +297,10 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                    '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a_10737418240',
                    '00000004']
 
-        self.stubs.Set(os, 'listdir', lambda x: listing)
-        self.stubs.Set(os.path, 'exists',
+        self.stub_out('os.listdir', lambda x: listing)
+        self.stub_out('os.path.exists',
                        lambda x: x.endswith('%s_10737418240' % fingerprint))
-        self.stubs.Set(os.path, 'isfile', lambda x: True)
+        self.stub_out('os.path.isfile', lambda x: True)
 
         base_dir = '/var/lib/nova/instances/_base'
         image_cache_manager = imagecache.ImageCacheManager()
@@ -318,9 +318,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                    '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a_10737418240',
                    '00000004']
 
-        self.stubs.Set(os, 'listdir', lambda x: listing)
-        self.stubs.Set(os.path, 'exists', lambda x: True)
-        self.stubs.Set(os.path, 'isfile', lambda x: True)
+        self.stub_out('os.listdir', lambda x: listing)
+        self.stub_out('os.path.exists', lambda x: True)
+        self.stub_out('os.path.isfile', lambda x: True)
 
         base_dir = '/var/lib/nova/instances/_base'
         image_cache_manager = imagecache.ImageCacheManager()
@@ -606,12 +606,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.fail('Unexpected path existence check: %s' % path)
 
-        self.stubs.Set(os.path, 'exists', lambda x: exists(x))
+        self.stub_out('os.path.exists', lambda x: exists(x))
 
         self.stubs.Set(libvirt_utils, 'chown', lambda x, y: None)
 
         # We need to stub utime as well
-        self.stubs.Set(os, 'utime', lambda x, y: None)
+        self.stub_out('os.utime', lambda x, y: None)
 
         # Fake up some instances in the instances directory
         orig_listdir = os.listdir
@@ -629,7 +629,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.fail('Unexpected directory listed: %s' % path)
 
-        self.stubs.Set(os, 'listdir', lambda x: listdir(x))
+        self.stub_out('os.listdir', lambda x: listdir(x))
 
         # Fake isfile for these faked images in _base
         orig_isfile = os.path.isfile
@@ -645,7 +645,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.fail('Unexpected isfile call: %s' % path)
 
-        self.stubs.Set(os.path, 'isfile', lambda x: isfile(x))
+        self.stub_out('os.path.isfile', lambda x: isfile(x))
 
         # Fake the database call which lists running instances
         instances = [{'image_ref': '1',
@@ -689,7 +689,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             return 1000000
 
-        self.stubs.Set(os.path, 'getmtime', lambda x: getmtime(x))
+        self.stub_out('os.path.getmtime', lambda x: getmtime(x))
 
         # Make sure we don't accidentally remove a real file
         orig_remove = os.remove
@@ -701,7 +701,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             # Don't try to remove fake files
             return
 
-        self.stubs.Set(os, 'remove', lambda x: remove(x))
+        self.stub_out('os.remove', lambda x: remove(x))
 
         self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
                    'get_by_instance_uuid')

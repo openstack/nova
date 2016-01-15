@@ -748,7 +748,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(linux_net, '_add_dhcp_mangle_rule',
                        fake_add_dhcp_mangle_rule)
 
-        self.stubs.Set(os, 'chmod', lambda *a, **kw: None)
+        self.stub_out('os.chmod', lambda *a, **kw: None)
         self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
         self.stubs.Set(linux_net, '_dnsmasq_pid_for', lambda *a, **kw: None)
         dev = 'br100'

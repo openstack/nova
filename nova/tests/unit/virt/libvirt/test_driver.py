@@ -404,7 +404,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         def fake_extend(image, size, use_cow=False):
             pass
 
-        self.stubs.Set(os.path, 'exists', fake_exists)
+        self.stub_out('os.path.exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(imagebackend.disk, 'extend', fake_extend)
         self.useFixture(fixtures.MonkeyPatch(
@@ -5589,7 +5589,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 flags &= ~os.O_DIRECT
             return os_open(path, flags, *args, **kwargs)
 
-        self.stubs.Set(os, 'open', os_open_stub)
+        self.stub_out('os.open', os_open_stub)
 
         @staticmethod
         def connection_supports_direct_io_stub(dirpath):
@@ -7482,7 +7482,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             fallback_from_host=None)
         self.mox.ReplayAll()
 
-        self.stubs.Set(os.path, 'exists', lambda *args: False)
+        self.stub_out('os.path.exists', lambda *args: False)
         drvr._create_images_and_backing(self.context, self.test_instance,
                                         "/fake/instance/dir", [disk_info])
 
@@ -12984,7 +12984,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(self.drvr, '_is_storage_shared_with',
                        fake_is_storage_shared)
         self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        self.stub_out('os.path.exists', fake_os_path_exists)
 
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
@@ -13668,7 +13668,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_os_path_exists(path):
             return True
 
-        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        self.stub_out('os.path.exists', fake_os_path_exists)
 
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(utils, 'execute')
@@ -13699,7 +13699,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_unfilter_instance(instance, network_info):
             pass
 
-        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        self.stub_out('os.path.exists', fake_os_path_exists)
         self.stubs.Set(self.drvr, '_undefine_domain',
                        fake_undefine_domain)
         self.stubs.Set(self.drvr, 'unplug_vifs',
