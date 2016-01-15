@@ -153,7 +153,16 @@ class _TestInstanceObject(object):
             test_vcpu_model.fake_vcpumodel.obj_to_primitive())
         fake_mig_context = jsonutils.dumps(
             test_mig_ctxt.fake_migration_context_obj.obj_to_primitive())
+        fake_service = {'created_at': None, 'updated_at': None,
+                        'deleted_at': None, 'deleted': False, 'id': 123,
+                        'host': 'fake-host', 'binary': 'nova-fake',
+                        'topic': 'fake-service-topic', 'report_count': 1,
+                        'forced_down': False, 'disabled': False,
+                        'disabled_reason': None, 'last_seen_up': None,
+                        'version': 1,
+                    }
         fake_instance = dict(self.fake_instance,
+                             services=[fake_service],
                              extra={
                                  'numa_topology': fake_topology,
                                  'pci_requests': fake_requests,
@@ -177,6 +186,7 @@ class _TestInstanceObject(object):
             expected_attrs=instance.INSTANCE_OPTIONAL_ATTRS)
         for attr in instance.INSTANCE_OPTIONAL_ATTRS:
             self.assertTrue(inst.obj_attr_is_set(attr))
+        self.assertEqual(123, inst.services[0].id)
 
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'instance_get')
