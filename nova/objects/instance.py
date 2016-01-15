@@ -57,6 +57,9 @@ INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
 INSTANCE_DEFAULT_FIELDS = ['metadata', 'system_metadata',
                            'info_cache', 'security_groups']
 
+# Maximum count of tags to one instance
+MAX_TAG_COUNT = 50
+
 
 def _expected_cols(expected_attrs):
     """Return expected_attrs that are columns needing joining.
