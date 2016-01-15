@@ -591,6 +591,27 @@ def check_doubled_words(physical_line, filename):
         return (0, msg % {'word': match.group(1)})
 
 
+def check_python3_no_iteritems(logical_line):
+    msg = ("N344: Use six.iteritems() instead of dict.iteritems().")
+
+    if re.search(r".*\.iteritems\(\)", logical_line):
+        yield(0, msg)
+
+
+def check_python3_no_iterkeys(logical_line):
+    msg = ("N345: Use six.iterkeys() instead of dict.iterkeys().")
+
+    if re.search(r".*\.iterkeys\(\)", logical_line):
+        yield(0, msg)
+
+
+def check_python3_no_itervalues(logical_line):
+    msg = ("N346: Use six.itervalues() instead of dict.itervalues().")
+
+    if re.search(r".*\.itervalues\(\)", logical_line):
+        yield(0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -621,3 +642,6 @@ def factory(register):
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
     register(check_doubled_words)
+    register(check_python3_no_iteritems)
+    register(check_python3_no_iterkeys)
+    register(check_python3_no_itervalues)

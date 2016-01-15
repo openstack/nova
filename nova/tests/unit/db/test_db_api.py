@@ -1520,11 +1520,8 @@ class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
         if ignored_keys is None:
             ignored_keys = []
-        if isinstance(obj, dict):
-            obj_items = obj.items()
-        else:
-            obj_items = obj.iteritems()
-        return {k: v for k, v in obj_items
+
+        return {k: v for k, v in obj.items()
                 if k not in ignored_keys}
 
     def _assertEqualObjects(self, obj1, obj2, ignored_keys=None):
@@ -7385,7 +7382,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         service_data['host'] = 'host2'
         service = db.service_create(self.ctxt, service_data)
 
-        existing_node = dict(self.item.iteritems())
+        existing_node = dict(self.item.items())
         expected = [existing_node]
 
         for name in ['bm_node1', 'bm_node2']:

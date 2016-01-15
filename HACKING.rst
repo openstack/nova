@@ -54,6 +54,9 @@ Nova Specific Commandments
 - [N341] contextlib.nested is deprecated
 - [N342] Config options should be in the central location ``nova/conf/``
 - [N343] Check for common double word typos
+- [N344] Python 3: do not use dict.iteritems.
+- [N345] Python 3: do not use dict.iterkeys.
+- [N346] Python 3: do not use dict.itervalues.
 
 Creating Unit Tests
 -------------------
