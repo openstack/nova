@@ -27,7 +27,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.network import api as network_api
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
@@ -52,7 +51,7 @@ class NotificationsTestCase(test.TestCase):
             self.assertTrue(ctxt.is_admin)
             return self.net_info
 
-        self.stubs.Set(network_api.API, 'get_instance_nw_info',
+        self.stub_out('nova.network.api.API.get_instance_nw_info',
                 fake_get_nw_info)
         fake_network.set_stub_network_methods(self)
 
@@ -420,7 +419,7 @@ class NotificationsTestCase(test.TestCase):
 
         def sending_no_state_change(context, instance, **kwargs):
             called[0] = True
-        self.stubs.Set(notifications, '_send_instance_update_notification',
+        self.stub_out('nova.notifications._send_instance_update_notification',
                        sending_no_state_change)
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertTrue(called[0])
@@ -428,7 +427,7 @@ class NotificationsTestCase(test.TestCase):
     def test_fail_sending_update(self):
         def fail_sending(context, instance, **kwargs):
             raise Exception('failed to notify')
-        self.stubs.Set(notifications, '_send_instance_update_notification',
+        self.stub_out('nova.notifications._send_instance_update_notification',
                        fail_sending)
 
         notifications.send_update(self.context, self.instance, self.instance)

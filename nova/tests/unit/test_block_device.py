@@ -364,11 +364,11 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         def fake_validate(obj, dct):
             pass
 
-        self.stubs.Set(block_device.BlockDeviceDict, '_fields',
+        self.stub_out('nova.block_device.BlockDeviceDict._fields',
                        set(['field1', 'field2']))
-        self.stubs.Set(block_device.BlockDeviceDict, '_db_only_fields',
+        self.stub_out('nova.block_device.BlockDeviceDict._db_only_fields',
                        set(['db_field1', 'db_field2']))
-        self.stubs.Set(block_device.BlockDeviceDict, '_validate',
+        self.stub_out('nova.block_device.BlockDeviceDict._validate',
                        fake_validate)
 
         # Make sure db fields are not picked up if they are not
