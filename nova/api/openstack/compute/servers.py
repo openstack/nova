@@ -536,7 +536,7 @@ class ServersController(wsgi.Controller):
             self.create_extension_manager.map(self._create_extension_point,
                                               server_dict, create_kwargs, body)
 
-        availability_zone = create_kwargs.get("availability_zone")
+        availability_zone = create_kwargs.pop("availability_zone", None)
 
         target = {
             'project_id': context.project_id,
@@ -546,11 +546,10 @@ class ServersController(wsgi.Controller):
 
         # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
         # extension after refactor it.
-        if availability_zone:
-            _dummy, host, node = self.compute_api._handle_availability_zone(
-                context, availability_zone)
-            if host or node:
-                authorize(context, {}, 'create:forced_host')
+        parse_az = self.compute_api.parse_availability_zone
+        availability_zone, host, node = parse_az(context, availability_zone)
+        if host or node:
+            authorize(context, {}, 'create:forced_host')
 
         block_device_mapping = create_kwargs.get("block_device_mapping")
         # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
@@ -597,6 +596,8 @@ class ServersController(wsgi.Controller):
                             image_uuid,
                             display_name=name,
                             display_description=name,
+                            availability_zone=availability_zone,
+                            forced_host=host, forced_node=node,
                             metadata=server_dict.get('metadata', {}),
                             admin_password=password,
                             requested_networks=requested_networks,
