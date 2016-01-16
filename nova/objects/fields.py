@@ -420,6 +420,20 @@ class MonitorMetricType(Enum):
             valid_values=MonitorMetricType.ALL)
 
 
+class HostStatus(Enum):
+
+    UP = "UP"  # The nova-compute is up.
+    DOWN = "DOWN"  # The nova-compute is forced_down.
+    MAINTENANCE = "MAINTENANCE"  # The nova-compute is disabled.
+    UNKNOWN = "UNKNOWN"  # The nova-compute has not reported.
+
+    ALL = (UP, DOWN, MAINTENANCE, UNKNOWN)
+
+    def __init__(self):
+        super(HostStatus, self).__init__(
+            valid_values=HostStatus.ALL)
+
+
 class PciDeviceStatus(Enum):
 
     AVAILABLE = "available"

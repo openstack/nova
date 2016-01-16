@@ -103,6 +103,15 @@ class Service(BASE, NovaBase, models.SoftDeleteMixin):
     forced_down = Column(Boolean, default=False)
     version = Column(Integer, default=0)
 
+    instance = orm.relationship(
+        "Instance",
+        backref='services',
+        primaryjoin='and_(Service.host == Instance.host,'
+                    'Service.binary == "nova-compute",'
+                    'Instance.deleted == 0)',
+        foreign_keys=host,
+    )
+
 
 class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a running compute service on a host."""
