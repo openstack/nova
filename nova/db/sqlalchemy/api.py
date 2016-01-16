@@ -4565,7 +4565,9 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
 def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:
-        query = query.filter(models.Migration.status == filters["status"])
+        status = filters["status"]
+        status = [status] if isinstance(status, str) else status
+        query = query.filter(models.Migration.status.in_(status))
     if "host" in filters:
         host = filters["host"]
         query = query.filter(or_(models.Migration.source_compute == host,

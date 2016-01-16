@@ -2478,6 +2478,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         # Only instance 2 has a migration record
         migration = objects.Migration(instance_uuid=instance_2.uuid)
+        # Consider the migration successful
+        migration.status = 'done'
 
         with test.nested(
             mock.patch.object(self.compute, '_get_instances_on_driver',
