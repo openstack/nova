@@ -159,16 +159,25 @@ class FakeVirtDriver(driver.ComputeDriver):
         ] if self.pci_support else []
         self.pci_stats = [
             {
-                'count': 3,
+                'count': 2,
                 'vendor_id': '8086',
                 'product_id': '0443',
-                'numa_node': 1
+                'numa_node': 1,
+                'dev_type': fields.PciDeviceType.SRIOV_VF
+            },
+            {
+                'count': 1,
+                'vendor_id': '8086',
+                'product_id': '0443',
+                'numa_node': 1,
+                'dev_type': fields.PciDeviceType.SRIOV_PF
             },
             {
                 'count': 1,
                 'vendor_id': '8086',
                 'product_id': '7891',
-                'numa_node': None
+                'numa_node': None,
+                'dev_type': fields.PciDeviceType.SRIOV_VF
             },
         ] if self.pci_support else []
         if stats is not None:
@@ -217,9 +226,7 @@ class BaseTestCase(test.TestCase):
 
         self.context = context.get_admin_context()
 
-        self.flags(pci_passthrough_whitelist=[
-            '{"vendor_id": "8086", "product_id": "0443"}',
-            '{"vendor_id": "8086", "product_id": "7891"}'])
+        self._set_pci_passthrough_whitelist()
         self.flags(use_local=True, group='conductor')
         self.conductor = self.start_service('conductor',
                                             manager=CONF.conductor.manager)
@@ -237,6 +244,11 @@ class BaseTestCase(test.TestCase):
         self.updated = False
         self.deleted = False
         self.update_call_count = 0
+
+    def _set_pci_passthrough_whitelist(self):
+        self.flags(pci_passthrough_whitelist=[
+            '{"vendor_id": "8086", "product_id": "0443"}',
+            '{"vendor_id": "8086", "product_id": "7891"}'])
 
     def _create_compute_node(self, values=None):
         # This creates a db representation of a compute_node.
