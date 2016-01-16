@@ -34,6 +34,7 @@ from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import image
 from nova import manager
+from nova import network
 from nova import objects
 from nova.objects import base as nova_object
 from nova import rpc
@@ -149,6 +150,7 @@ class ComputeTaskManager(base.Base):
         super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.image_api = image.API()
+        self.network_api = network.API()
         self.servicegroup_api = servicegroup.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.notifier = rpc.get_notifier('compute', CONF.host)
@@ -249,6 +251,11 @@ class ComputeTaskManager(base.Base):
         scheduler_utils.set_vm_state_and_notify(
                 context, instance_uuid, 'compute_task', method, updates,
                 ex, request_spec, self.db)
+
+    def _cleanup_allocated_networks(
+            self, context, instance, requested_networks):
+        self.network_api.deallocate_for_instance(
+            context, instance, requested_networks=requested_networks)
 
     def _live_migrate(self, context, instance, scheduler_hint,
                       block_migration, disk_over_commit):
@@ -369,6 +376,8 @@ class ComputeTaskManager(base.Base):
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'build_instances', updates,
                     exc, request_spec)
+                self._cleanup_allocated_networks(
+                    context, instance, requested_networks)
             return
 
         for (instance, host) in six.moves.zip(instances, hosts):
