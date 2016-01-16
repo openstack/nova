@@ -511,7 +511,8 @@ class TestNeutronv2Base(test.TestCase):
             if not has_portbinding:
                 api._populate_neutron_extension_values(mox.IgnoreArg(),
                     self.instance, mox.IgnoreArg(),
-                    mox.IgnoreArg(), neutron=self.moxed_client).AndReturn(None)
+                    mox.IgnoreArg(), neutron=self.moxed_client,
+                    bind_host_id=None).AndReturn(None)
             else:
                 # since _populate_neutron_extension_values() will call
                 # _has_port_binding_extension()
@@ -1107,7 +1108,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
             api._populate_neutron_extension_values(self.context,
                 self.instance, None, binding_port_req_body,
-                neutron=self.moxed_client).AndReturn(None)
+                neutron=self.moxed_client, bind_host_id=None).AndReturn(None)
             if index == 0:
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn({'port': port})
@@ -1161,7 +1162,7 @@ class TestNeutronv2(TestNeutronv2Base):
         }
         api._populate_neutron_extension_values(self.context,
             self.instance, None, binding_port_req_body,
-            neutron=self.moxed_client).AndReturn(None)
+            neutron=self.moxed_client, bind_host_id=None).AndReturn(None)
         self.moxed_client.create_port(
             MyComparator(port_req_body)).AndRaise(
                 Exception("fail to create port"))
@@ -3664,7 +3665,8 @@ class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     def test_allocate_for_instance_portbinding(self):
-        self._allocate_for_instance(1, portbinding=True)
+        self._allocate_for_instance(1, portbinding=True,
+                                    bind_host_id=self.instance.get('host'))
 
     def test_populate_neutron_extension_values_binding(self):
         api = neutronapi.API()
@@ -3677,7 +3679,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         instance = {'host': host_id}
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(self.context, instance,
-                                               None, port_req_body)
+                                               None, port_req_body,
+                                               bind_host_id=host_id)
         self.assertEqual(host_id, port_req_body['port']['binding:host_id'])
         self.assertFalse(port_req_body['port'].get('binding:profile'))
 

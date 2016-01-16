@@ -810,6 +810,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.get_device_name_for_instance(
             instance, [], mock.Mock(spec=objects.BlockDeviceMapping))
 
+    def test_network_binding_host_id(self):
+        # NOTE(jroll) self._get_running_instance calls spawn(), so we can't
+        # use it to test this method. Make a simple object instead; we just
+        # need instance.host.
+        instance = objects.Instance(self.ctxt, host='somehost')
+        self.assertEqual(instance.host,
+            self.connection.network_binding_host_id(self.ctxt, instance))
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
