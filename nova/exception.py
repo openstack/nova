@@ -635,6 +635,11 @@ class VolumeBDMNotFound(NotFound):
     msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
 
 
+class VolumeBDMIsMultiAttach(Invalid):
+    msg_fmt = _("Block Device Mapping %(volume_id)s is a multi-attach volume"
+                " and is not valid for this operation.")
+
+
 class VolumeBDMPathNotFound(VolumeBDMNotFound):
     msg_fmt = _("No volume Block Device Mapping at path: %(path)s")
 

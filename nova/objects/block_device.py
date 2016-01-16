@@ -19,7 +19,7 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -58,7 +58,9 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.13: Instance version 1.21
     # Version 1.14: Instance version 1.22
     # Version 1.15: Instance version 1.23
-    VERSION = '1.15'
+    # Version 1.16: Deprecate get_by_volume_id(), add
+    #               get_by_volume() and get_by_volume_and_instance()
+    VERSION = '1.16'
 
     fields = {
         'id': fields.IntegerField(),
@@ -195,15 +197,22 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
             cells_api.bdm_update_or_create_at_top(self._context, self,
                     create=create)
 
+    # NOTE(danms): This method is deprecated and will be removed in
+    # v2.0 of the object
     @base.remotable_classmethod
     def get_by_volume_id(cls, context, volume_id,
                          instance_uuid=None, expected_attrs=None):
         if expected_attrs is None:
             expected_attrs = []
-        db_bdm = db.block_device_mapping_get_by_volume_id(
+        db_bdms = db.block_device_mapping_get_all_by_volume_id(
                 context, volume_id, _expected_cols(expected_attrs))
-        if not db_bdm:
+        if not db_bdms:
             raise exception.VolumeBDMNotFound(volume_id=volume_id)
+        if len(db_bdms) > 1:
+            LOG.warning(_LW('Legacy get_by_volume_id() call found multiple '
+                            'BDMs for volume %(volume)s'),
+                        {'volume': volume_id})
+        db_bdm = db_bdms[0]
         # NOTE (ndipanov): Move this to the db layer into a
         # get_by_instance_and_volume_id method
         if instance_uuid and instance_uuid != db_bdm['instance_uuid']:
@@ -211,6 +220,32 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                     reason=_("Volume does not belong to the "
                              "requested instance."))
         return cls._from_db_object(context, cls(), db_bdm,
+                                   expected_attrs=expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_volume_and_instance(cls, context, volume_id, instance_uuid,
+                                   expected_attrs=None):
+        if expected_attrs is None:
+            expected_attrs = []
+        db_bdm = db.block_device_mapping_get_by_instance_and_volume_id(
+            context, volume_id, instance_uuid,
+            _expected_cols(expected_attrs))
+        if not db_bdm:
+            raise exception.VolumeBDMNotFound(volume_id=volume_id)
+        return cls._from_db_object(context, cls(), db_bdm,
+                                   expected_attrs=expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_volume(cls, context, volume_id, expected_attrs=None):
+        if expected_attrs is None:
+            expected_attrs = []
+        db_bdms = db.block_device_mapping_get_all_by_volume_id(
+                context, volume_id, _expected_cols(expected_attrs))
+        if not db_bdms:
+            raise exception.VolumeBDMNotFound(volume_id=volume_id)
+        if len(db_bdms) > 1:
+            raise exception.VolumeBDMIsMultiAttach(volume_id=volume_id)
+        return cls._from_db_object(context, cls(), db_bdms[0],
                                    expected_attrs=expected_attrs)
 
     @property

@@ -1722,8 +1722,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        fake_vol_unreserve)
         self.stubs.Set(self.compute.volume_api, 'terminate_connection',
                        fake_vol_api_func)
-        self.stubs.Set(db, 'block_device_mapping_get_by_volume_id',
-                       lambda x, y, z: fake_bdm)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_volume_id',
+                       lambda x, y, z: [fake_bdm])
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda x: {})
         self.stubs.Set(self.compute.driver, 'swap_volume',
