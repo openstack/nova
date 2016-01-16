@@ -2225,11 +2225,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 fake_bdm, expected_attrs=['instance'])
 
         self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_id')
+                                 'get_by_volume')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_create')
 
-        objects.BlockDeviceMapping.get_by_volume_id(
+        objects.BlockDeviceMapping.get_by_volume(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_create(self.context,
@@ -2266,11 +2266,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 fake_bdm, expected_attrs=['instance'])
 
         self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_id')
+                                 'get_by_volume')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_delete')
 
-        objects.BlockDeviceMapping.get_by_volume_id(
+        objects.BlockDeviceMapping.get_by_volume(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_delete(self.context,

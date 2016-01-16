@@ -12472,14 +12472,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
     @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.save')
     @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
-                'get_by_volume_id')
+                'get_by_volume_and_instance')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def test_swap_volume_driver_bdm_save(self, get_guest,
                                          connect_volume, get_volume_config,
-                                         get_by_volume_id, volume_save,
-                                         swap_volume, disconnect_volume):
+                                         get_by_volume_and_instance,
+                                         volume_save, swap_volume,
+                                         disconnect_volume):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
         old_connection_info = {'driver_volume_type': 'fake',
@@ -12516,7 +12517,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                  'destination_type': 'volume',
                  'volume_id': 'fake-volume-id-2',
                  'boot_index': 0}))
-        get_by_volume_id.return_value = bdm
+        get_by_volume_and_instance.return_value = bdm
 
         conn.swap_volume(old_connection_info, new_connection_info, instance,
                          '/dev/vdb', 1)
@@ -14872,9 +14873,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.'
                 'refresh_connection_info')
     @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
-                'get_by_volume_id')
-    def test_volume_refresh_connection_info(self, mock_get_by_volume_id,
+                'get_by_volume_and_instance')
+    def test_volume_refresh_connection_info(self,
+                                            mock_get_by_volume_and_instance,
                                             mock_refresh_connection_info):
+        instance = objects.Instance(**self.inst)
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': 123,
             'instance_uuid': 'fake-instance',
@@ -14884,13 +14887,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             'volume_id': 'fake-volume-id-1',
             'connection_info': '{"fake": "connection_info"}'})
         fake_bdm = objects.BlockDeviceMapping(self.c, **fake_bdm)
-        mock_get_by_volume_id.return_value = fake_bdm
+        mock_get_by_volume_and_instance.return_value = fake_bdm
 
-        self.drvr._volume_refresh_connection_info(self.c, self.inst,
+        self.drvr._volume_refresh_connection_info(self.c, instance,
                                                   self.volume_uuid)
 
-        mock_get_by_volume_id.assert_called_once_with(self.c, self.volume_uuid)
-        mock_refresh_connection_info.assert_called_once_with(self.c, self.inst,
+        mock_get_by_volume_and_instance.assert_called_once_with(
+            self.c, self.volume_uuid, instance.uuid)
+        mock_refresh_connection_info.assert_called_once_with(self.c, instance,
             self.drvr._volume_api, self.drvr)
 
     def test_volume_snapshot_create(self, quiesce=True):

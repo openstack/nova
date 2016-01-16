@@ -1239,8 +1239,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Save updates made in connection_info when connect_volume was called
         volume_id = new_connection_info.get('serial')
-        bdm = objects.BlockDeviceMapping.get_by_volume_id(
-            nova_context.get_admin_context(), volume_id)
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            nova_context.get_admin_context(), volume_id, instance.uuid)
         driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
         driver_bdm['connection_info'] = new_connection_info
         driver_bdm.save()
@@ -1793,8 +1793,8 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     def _volume_refresh_connection_info(self, context, instance, volume_id):
-        bdm = objects.BlockDeviceMapping.get_by_volume_id(context,
-                                                          volume_id)
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                  context, volume_id, instance.uuid)
 
         driver_bdm = driver_block_device.convert_volume(bdm)
         if driver_bdm:

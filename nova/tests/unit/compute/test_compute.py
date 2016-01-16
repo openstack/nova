@@ -429,7 +429,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock.patch.object(self.compute, '_driver_detach_volume'),
             mock.patch.object(self.compute.volume_api, 'detach'),
             mock.patch.object(objects.BlockDeviceMapping,
-                              'get_by_volume_id'),
+                              'get_by_volume_and_instance'),
             mock.patch.object(fake_bdm, 'destroy')
         ) as (mock_internal_detach, mock_detach, mock_get, mock_destroy):
             mock_detach.side_effect = test.TestingException
@@ -744,15 +744,15 @@ class ComputeVolumeTestCase(BaseTestCase):
                'volume_id': uuids.volume_id}
 
         self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_id')
+                                 'get_by_volume_and_instance')
         self.mox.StubOutWithMock(self.compute.driver, 'block_stats')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
 
         # The following methods will be called
-        objects.BlockDeviceMapping.get_by_volume_id(self.context,
-                                                    uuids.volume_id).AndReturn(
-                                                    bdm.obj_clone())
+        objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.context, uuids.volume_id, instance.uuid).AndReturn(
+                                                              bdm.obj_clone())
         self.compute.driver.block_stats(instance, 'vdb').\
             AndReturn([1, 30, 1, 20, None])
         self.compute._get_host_volume_bdms(self.context,
@@ -9762,10 +9762,11 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_libvirt_driver_detach_volume_fails)
 
         self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_id')
-        objects.BlockDeviceMapping.get_by_volume_id(
-                self.context, 1).AndReturn(objects.BlockDeviceMapping(
-                    context=self.context, **fake_bdm))
+                                 'get_by_volume_and_instance')
+        objects.BlockDeviceMapping.get_by_volume_and_instance(
+                self.context, 1, instance.uuid).\
+                    AndReturn(objects.BlockDeviceMapping(
+                        context=self.context, **fake_bdm))
         self.mox.ReplayAll()
 
         self.assertRaises(AttributeError, self.compute.detach_volume,
@@ -9788,7 +9789,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(self.compute.driver, 'detach_volume',
                               side_effect=exception.DiskNotFound('sdb')),
             mock.patch.object(objects.BlockDeviceMapping,
-                              'get_by_volume_id', return_value=bdm),
+                              'get_by_volume_and_instance', return_value=bdm),
             mock.patch.object(cinder.API, 'terminate_connection'),
             mock.patch.object(bdm, 'destroy'),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),

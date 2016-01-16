@@ -262,7 +262,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
             'nova.compute.manager.ComputeManager.attach_volume',
             lambda *a, **k: None)
         self.stub_out(
-            'nova.objects.BlockDeviceMapping.get_by_volume_id',
+            'nova.objects.BlockDeviceMapping.get_by_volume_and_instance',
             classmethod(lambda *a, **k: None))
 
         volume = fakes.stub_volume_get(None, context.get_admin_context(),
