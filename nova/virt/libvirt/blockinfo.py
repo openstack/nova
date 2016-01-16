@@ -520,8 +520,6 @@ def get_disk_mapping(virt_type, instance,
 
         return mapping
 
-    inst_type = instance.get_flavor()
-
     pre_assigned_device_names = \
     [block_device.strip_dev(get_device_name(bdm)) for bdm in itertools.chain(
         driver.block_device_info_get_ephemerals(block_device_info),
@@ -577,7 +575,7 @@ def get_disk_mapping(virt_type, instance,
             swap, mapping, disk_bus)
         mapping['disk.swap'] = swap_info
         update_bdm(swap, swap_info)
-    elif inst_type['swap'] > 0:
+    elif instance.get_flavor()['swap'] > 0:
         swap_info = get_next_disk_info(mapping, disk_bus,
             assigned_devices=pre_assigned_device_names)
         if not block_device.volume_in_mapping(swap_info['dev'],

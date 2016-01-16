@@ -181,9 +181,14 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
-                                             "virtio", "ide",
-                                             image_meta)
+        with mock.patch.object(instance_ref, 'get_flavor',
+                               return_value=instance_ref.flavor) as get_flavor:
+            mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                                 "virtio", "ide",
+                                                 image_meta)
+        # Since there was no block_device_info passed to get_disk_mapping we
+        # expect to get the swap info from the flavor in the instance.
+        get_flavor.assert_called_once_with()
 
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vda',
@@ -673,10 +678,14 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                         'disk_bus': 'virtio',
                         'delete_on_termination': True}
 
-        blockinfo.get_disk_mapping("kvm", instance_ref,
-                                   "virtio", "ide",
-                                   image_meta,
-                                   block_device_info)
+        with mock.patch.object(instance_ref, 'get_flavor') as get_flavor_mock:
+            blockinfo.get_disk_mapping("kvm", instance_ref,
+                                       "virtio", "ide",
+                                       image_meta,
+                                       block_device_info)
+        # we should have gotten the swap info from block_device_info rather
+        # than the flavor information on the instance
+        self.assertFalse(get_flavor_mock.called)
 
         self.assertEqual(expected_swap, block_device_info['swap'])
         self.assertEqual(expected_ephemeral,
