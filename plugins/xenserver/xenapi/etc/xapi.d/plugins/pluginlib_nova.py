@@ -85,7 +85,7 @@ def _get_domain_0(session):
     this_host_ref = session.xenapi.session.get_this_host(session.handle)
     expr = 'field "is_control_domain" = "true" and field "resident_on" = "%s"'
     expr = expr % this_host_ref
-    return session.xenapi.VM.get_all_records_where(expr).keys()[0]
+    return list(session.xenapi.VM.get_all_records_where(expr).keys())[0]
 
 
 def with_vdi_in_dom0(session, vdi, read_only, f):
