@@ -12439,6 +12439,30 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance, network_info=network_info)
         block_device_info_get_mapping.assert_called_once_with(bdm_info)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'unfilter_instance')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
+                       return_value=True)
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
+    def test_cleanup_migrate_data_shared_block_storage(self,
+                                                       _undefine_domain,
+                                                       save,
+                                                       delete_instance_files,
+                                                       unfilter_instance):
+        # Tests the cleanup method when migrate_data has
+        # is_shared_block_storage=True and destroy_disks=False.
+        instance = objects.Instance(self.context, **self.test_instance)
+        migrate_data = objects.LibvirtLiveMigrateData(
+                is_shared_block_storage=True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        drvr.cleanup(
+            self.context, instance, network_info={}, destroy_disks=False,
+            migrate_data=migrate_data, destroy_vifs=False)
+        delete_instance_files.assert_called_once_with(instance)
+        self.assertEqual(1, int(instance.system_metadata['clean_attempts']))
+        self.assertTrue(instance.cleaned)
+        save.assert_called_once_with()
+
     def test_swap_volume(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 

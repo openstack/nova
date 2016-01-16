@@ -957,9 +957,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if CONF.libvirt.images_type == 'rbd':
                 self._cleanup_rbd(instance)
 
-        if destroy_disks or (
-                migrate_data and migrate_data.get('is_shared_block_storage',
-                                                  False)):
+        is_shared_block_storage = False
+        if migrate_data and 'is_shared_block_storage' in migrate_data:
+            is_shared_block_storage = migrate_data.is_shared_block_storage
+        if destroy_disks or is_shared_block_storage:
             attempts = int(instance.system_metadata.get('clean_attempts',
                                                         '0'))
             success = self.delete_instance_files(instance)
