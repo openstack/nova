@@ -13,7 +13,6 @@
 #    under the License.
 
 
-import calendar
 import datetime
 
 import iso8601
@@ -154,11 +153,6 @@ def fake_service_update(context, service_id, values):
 
 def fake_utcnow():
     return datetime.datetime(2012, 10, 29, 13, 42, 11)
-
-
-def fake_utcnow_ts():
-    d = fake_utcnow()
-    return calendar.timegm(d.utctimetuple())
 
 
 class ServicesTestV21(test.TestCase):
