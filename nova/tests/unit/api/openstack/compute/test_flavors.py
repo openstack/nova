@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import flavors as flavors_v21
-import nova.compute.flavors
 from nova import context
 from nova import exception
 from nova import objects
@@ -30,67 +30,6 @@ NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 
 
-FAKE_FLAVORS = {
-    'flavor 1': {
-        "flavorid": '1',
-        "name": 'flavor 1',
-        "memory_mb": '256',
-        "root_gb": '10',
-        "ephemeral_gb": '20',
-        "swap": '10',
-        "disabled": False,
-        "vcpus": '',
-    },
-    'flavor 2': {
-        "flavorid": '2',
-        "name": 'flavor 2',
-        "memory_mb": '512',
-        "root_gb": '20',
-        "ephemeral_gb": '10',
-        "swap": '5',
-        "disabled": False,
-        "vcpus": '',
-    },
-}
-
-
-def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
-    return FAKE_FLAVORS['flavor %s' % flavorid]
-
-
-def fake_get_all_flavors_sorted_list(context=None, inactive=False,
-                                     filters=None, sort_key='flavorid',
-                                     sort_dir='asc', limit=None, marker=None):
-    if marker in ['99999']:
-        raise exception.MarkerNotFound(marker)
-
-    def reject_min(db_attr, filter_attr):
-        return (filter_attr in filters and
-                int(flavor[db_attr]) < int(filters[filter_attr]))
-
-    filters = filters or {}
-    res = []
-    for (flavor_name, flavor) in FAKE_FLAVORS.items():
-        if reject_min('memory_mb', 'min_memory_mb'):
-            continue
-        elif reject_min('root_gb', 'min_root_gb'):
-            continue
-
-        res.append(flavor)
-
-    res = sorted(res, key=lambda item: item[sort_key])
-    output = []
-    marker_found = True if marker is None else False
-    for flavor in res:
-        if not marker_found and marker == flavor['flavorid']:
-            marker_found = True
-        elif marker_found:
-            if limit is None or len(output) < int(limit):
-                output.append(flavor)
-
-    return output
-
-
 def fake_get_limit_and_marker(request, max_limit=1):
     params = common.get_pagination_params(request)
     limit = params.get('limit', max_limit)
@@ -100,13 +39,7 @@ def fake_get_limit_and_marker(request, max_limit=1):
     return limit, marker
 
 
-def empty_get_all_flavors_sorted_list(context=None, inactive=False,
-                                      filters=None, sort_key='flavorid',
-                                      sort_dir='asc', limit=None, marker=None):
-    return []
-
-
-def return_flavor_not_found(flavor_id, ctxt=None):
+def return_flavor_not_found(context, flavor_id, read_deleted=None):
     raise exception.FlavorNotFound(flavor_id=flavor_id)
 
 
@@ -120,25 +53,21 @@ class FlavorsTestV21(test.TestCase):
     def setUp(self):
         super(FlavorsTestV21, self).setUp()
         fakes.stub_out_networking(self)
-        self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
-                       fake_get_all_flavors_sorted_list)
-        self.stubs.Set(nova.compute.flavors,
-                       "get_flavor_by_flavor_id",
-                       fake_flavor_get_by_flavor_id)
+        fakes.stub_out_flavor_get_all(self)
+        fakes.stub_out_flavor_get_by_flavor_id(self)
         self.controller = self.Controller()
 
-    def _set_expected_body(self, expected, ephemeral, swap, disabled):
+    def _set_expected_body(self, expected, flavor):
         # NOTE(oomichi): On v2.1 API, some extensions of v2.0 are merged
         # as core features and we can get the following parameters as the
         # default.
-        expected['OS-FLV-EXT-DATA:ephemeral'] = ephemeral
-        expected['OS-FLV-DISABLED:disabled'] = disabled
-        expected['swap'] = swap
+        expected['OS-FLV-EXT-DATA:ephemeral'] = flavor.ephemeral_gb
+        expected['OS-FLV-DISABLED:disabled'] = flavor.disabled
+        expected['swap'] = flavor.swap
 
-    def test_get_flavor_by_invalid_id(self):
-        self.stubs.Set(nova.compute.flavors,
-                       "get_flavor_by_flavor_id",
-                       return_flavor_not_found)
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id',
+                side_effect=return_flavor_not_found)
+    def test_get_flavor_by_invalid_id(self, mock_get):
         req = self.fake_request.blank(self._prefix + '/flavors/asdf')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, 'asdf')
@@ -148,11 +77,11 @@ class FlavorsTestV21(test.TestCase):
         flavor = self.controller.show(req, '1')
         expected = {
             "flavor": {
-                "id": "1",
-                "name": "flavor 1",
-                "ram": "256",
-                "disk": "10",
-                "vcpus": "",
+                "id": fakes.FLAVORS['1'].flavorid,
+                "name": fakes.FLAVORS['1'].name,
+                "ram": fakes.FLAVORS['1'].memory_mb,
+                "disk": fakes.FLAVORS['1'].root_gb,
+                "vcpus": fakes.FLAVORS['1'].vcpus,
                 "links": [
                     {
                         "rel": "self",
@@ -167,8 +96,7 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         }
-        self._set_expected_body(expected['flavor'], ephemeral='20',
-                                swap='10', disabled=False)
+        self._set_expected_body(expected['flavor'], fakes.FLAVORS['1'])
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_with_custom_link_prefix(self):
@@ -178,11 +106,11 @@ class FlavorsTestV21(test.TestCase):
         flavor = self.controller.show(req, '1')
         expected = {
             "flavor": {
-                "id": "1",
-                "name": "flavor 1",
-                "ram": "256",
-                "disk": "10",
-                "vcpus": "",
+                "id": fakes.FLAVORS['1'].flavorid,
+                "name": fakes.FLAVORS['1'].name,
+                "ram": fakes.FLAVORS['1'].memory_mb,
+                "disk": fakes.FLAVORS['1'].root_gb,
+                "vcpus": fakes.FLAVORS['1'].vcpus,
                 "links": [
                     {
                         "rel": "self",
@@ -197,8 +125,7 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         }
-        self._set_expected_body(expected['flavor'], ephemeral='20',
-                                swap='10', disabled=False)
+        self._set_expected_body(expected['flavor'], fakes.FLAVORS['1'])
         self.assertEqual(expected, flavor)
 
     def test_get_flavor_list(self):
@@ -207,8 +134,8 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "1",
-                    "name": "flavor 1",
+                    "id": fakes.FLAVORS['1'].flavorid,
+                    "name": fakes.FLAVORS['1'].name,
                     "links": [
                         {
                             "rel": "self",
@@ -223,8 +150,8 @@ class FlavorsTestV21(test.TestCase):
                     ],
                 },
                 {
-                    "id": "2",
-                    "name": "flavor 2",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
                     "links": [
                         {
                             "rel": "self",
@@ -250,8 +177,8 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "2",
-                    "name": "flavor 2",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
                     "links": [
                         {
                             "rel": "self",
@@ -288,11 +215,11 @@ class FlavorsTestV21(test.TestCase):
 
         expected_flavors = [
             {
-                "id": "1",
-                "name": "flavor 1",
-                "ram": "256",
-                "disk": "10",
-                "vcpus": "",
+                "id": fakes.FLAVORS['1'].flavorid,
+                "name": fakes.FLAVORS['1'].name,
+                "ram": fakes.FLAVORS['1'].memory_mb,
+                "disk": fakes.FLAVORS['1'].root_gb,
+                "vcpus": fakes.FLAVORS['1'].vcpus,
                 "links": [
                     {
                         "rel": "self",
@@ -307,8 +234,7 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         ]
-        self._set_expected_body(expected_flavors[0], ephemeral='20',
-                                swap='10', disabled=False)
+        self._set_expected_body(expected_flavors[0], fakes.FLAVORS['1'])
 
         self.assertEqual(response_list, expected_flavors)
         self.assertEqual(response_links[0]['rel'], 'next')
@@ -327,8 +253,8 @@ class FlavorsTestV21(test.TestCase):
 
         expected_flavors = [
             {
-                "id": "1",
-                "name": "flavor 1",
+                "id": fakes.FLAVORS['1'].flavorid,
+                "name": fakes.FLAVORS['1'].name,
                 "links": [
                     {
                         "rel": "self",
@@ -343,8 +269,8 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
             {
-                "id": "2",
-                "name": "flavor 2",
+                "id": fakes.FLAVORS['2'].flavorid,
+                "name": fakes.FLAVORS['2'].name,
                 "links": [
                     {
                         "rel": "self",
@@ -379,8 +305,8 @@ class FlavorsTestV21(test.TestCase):
 
         expected_flavors = [
             {
-                "id": "1",
-                "name": "flavor 1",
+                "id": fakes.FLAVORS['1'].flavorid,
+                "name": fakes.FLAVORS['1'].name,
                 "links": [
                     {
                         "rel": "self",
@@ -408,11 +334,11 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "1",
-                    "name": "flavor 1",
-                    "ram": "256",
-                    "disk": "10",
-                    "vcpus": "",
+                    "id": fakes.FLAVORS['1'].flavorid,
+                    "name": fakes.FLAVORS['1'].name,
+                    "ram": fakes.FLAVORS['1'].memory_mb,
+                    "disk": fakes.FLAVORS['1'].root_gb,
+                    "vcpus": fakes.FLAVORS['1'].vcpus,
                     "links": [
                         {
                             "rel": "self",
@@ -427,11 +353,11 @@ class FlavorsTestV21(test.TestCase):
                     ],
                 },
                 {
-                    "id": "2",
-                    "name": "flavor 2",
-                    "ram": "512",
-                    "disk": "20",
-                    "vcpus": "",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
+                    "ram": fakes.FLAVORS['2'].memory_mb,
+                    "disk": fakes.FLAVORS['2'].root_gb,
+                    "vcpus": fakes.FLAVORS['2'].vcpus,
                     "links": [
                         {
                             "rel": "self",
@@ -447,16 +373,13 @@ class FlavorsTestV21(test.TestCase):
                 },
             ],
         }
-        self._set_expected_body(expected['flavors'][0], ephemeral='20',
-                                swap='10', disabled=False)
-        self._set_expected_body(expected['flavors'][1], ephemeral='10',
-                                swap='5', disabled=False)
+        self._set_expected_body(expected['flavors'][0], fakes.FLAVORS['1'])
+        self._set_expected_body(expected['flavors'][1], fakes.FLAVORS['2'])
         self.assertEqual(expected, flavor)
 
-    def test_get_empty_flavor_list(self):
-        self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
-                       empty_get_all_flavors_sorted_list)
-
+    @mock.patch('nova.objects.FlavorList.get_all',
+                return_value=objects.FlavorList())
+    def test_get_empty_flavor_list(self, mock_get):
         req = self.fake_request.blank(self._prefix + '/flavors')
         flavors = self.controller.index(req)
         expected = {'flavors': []}
@@ -469,8 +392,8 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "2",
-                    "name": "flavor 2",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
                     "links": [
                         {
                             "rel": "self",
@@ -501,8 +424,8 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "2",
-                    "name": "flavor 2",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
                     "links": [
                         {
                             "rel": "self",
@@ -536,11 +459,11 @@ class FlavorsTestV21(test.TestCase):
         expected = {
             "flavors": [
                 {
-                    "id": "2",
-                    "name": "flavor 2",
-                    "ram": "512",
-                    "disk": "20",
-                    "vcpus": "",
+                    "id": fakes.FLAVORS['2'].flavorid,
+                    "name": fakes.FLAVORS['2'].name,
+                    "ram": fakes.FLAVORS['2'].memory_mb,
+                    "disk": fakes.FLAVORS['2'].root_gb,
+                    "vcpus": fakes.FLAVORS['2'].vcpus,
                     "links": [
                         {
                             "rel": "self",
@@ -556,8 +479,7 @@ class FlavorsTestV21(test.TestCase):
                 },
             ],
         }
-        self._set_expected_body(expected['flavors'][0], ephemeral='10',
-                                swap='5', disabled=False)
+        self._set_expected_body(expected['flavors'][0], fakes.FLAVORS['2'])
         self.assertEqual(expected, flavor)
 
 

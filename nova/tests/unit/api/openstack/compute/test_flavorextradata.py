@@ -13,45 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from oslo_serialization import jsonutils
 import webob
 
-from nova.compute import flavors
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-
-def fake_get_flavor_by_flavor_id(flavorid, ctxt=None):
-    return {
-        'id': flavorid,
-        'flavorid': str(flavorid),
-        'root_gb': 1,
-        'ephemeral_gb': 1,
-        'name': u'test',
-        'deleted': False,
-        'created_at': datetime.datetime(2012, 1, 1, 1, 1, 1, 1),
-        'updated_at': None,
-        'memory_mb': 512,
-        'vcpus': 1,
-        'extra_specs': {},
-        'deleted_at': None,
-        'vcpu_weight': None,
-        'swap': 0,
-        'is_public': True,
-        'disabled': False,
-        'rxtx_factor': 1.0,
-    }
-
-
-def fake_get_all_flavors_sorted_list(context=None, inactive=False,
-                                     filters=None, sort_key='flavorid',
-                                     sort_dir='asc', limit=None, marker=None):
-    return [
-        fake_get_flavor_by_flavor_id(1),
-        fake_get_flavor_by_flavor_id(2)
-    ]
 
 
 class FlavorExtraDataTestV21(test.NoDBTestCase):
@@ -59,10 +25,8 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorExtraDataTestV21, self).setUp()
-        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
-                                        fake_get_flavor_by_flavor_id)
-        self.stubs.Set(flavors, 'get_all_flavors_sorted_list',
-                       fake_get_all_flavors_sorted_list)
+        fakes.stub_out_flavor_get_all(self)
+        fakes.stub_out_flavor_get_by_flavor_id(self)
 
     @property
     def app(self):
@@ -75,12 +39,12 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
     def test_show(self):
         expected = {
             'flavor': {
-                'id': '1',
-                'name': 'test',
-                'ram': 512,
-                'vcpus': 1,
-                'disk': 1,
-                'OS-FLV-EXT-DATA:ephemeral': 1,
+                'id': fakes.FLAVORS['1'].flavorid,
+                'name': fakes.FLAVORS['1'].name,
+                'ram': fakes.FLAVORS['1'].memory_mb,
+                'vcpus': fakes.FLAVORS['1'].vcpus,
+                'disk': fakes.FLAVORS['1'].root_gb,
+                'OS-FLV-EXT-DATA:ephemeral': fakes.FLAVORS['1'].ephemeral_gb,
             }
         }
 
@@ -94,24 +58,24 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
     def test_detail(self):
         expected = [
             {
-                'id': '1',
-                'name': 'test',
-                'ram': 512,
-                'vcpus': 1,
-                'disk': 1,
-                'OS-FLV-EXT-DATA:ephemeral': 1,
-                'rxtx_factor': 1.0,
-                'os-flavor-access:is_public': True,
+                'id': fakes.FLAVORS['1'].flavorid,
+                'name': fakes.FLAVORS['1'].name,
+                'ram': fakes.FLAVORS['1'].memory_mb,
+                'vcpus': fakes.FLAVORS['1'].vcpus,
+                'disk': fakes.FLAVORS['1'].root_gb,
+                'OS-FLV-EXT-DATA:ephemeral': fakes.FLAVORS['1'].ephemeral_gb,
+                'rxtx_factor': fakes.FLAVORS['1'].rxtx_factor or u'',
+                'os-flavor-access:is_public': fakes.FLAVORS['1'].is_public,
             },
             {
-                'id': '2',
-                'name': 'test',
-                'ram': 512,
-                'vcpus': 1,
-                'disk': 1,
-                'OS-FLV-EXT-DATA:ephemeral': 1,
-                'rxtx_factor': 1.0,
-                'os-flavor-access:is_public': True,
+                'id': fakes.FLAVORS['2'].flavorid,
+                'name': fakes.FLAVORS['2'].name,
+                'ram': fakes.FLAVORS['2'].memory_mb,
+                'vcpus': fakes.FLAVORS['2'].vcpus,
+                'disk': fakes.FLAVORS['2'].root_gb,
+                'OS-FLV-EXT-DATA:ephemeral': fakes.FLAVORS['2'].ephemeral_gb,
+                'rxtx_factor': fakes.FLAVORS['2'].rxtx_factor or u'',
+                'os-flavor-access:is_public': fakes.FLAVORS['2'].is_public,
             },
         ]
 

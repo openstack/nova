@@ -15,50 +15,8 @@
 from oslo_serialization import jsonutils
 import webob
 
-from nova.compute import flavors
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-FAKE_FLAVORS = {
-    'flavor 1': {
-        "flavorid": '1',
-        "name": 'flavor 1',
-        "memory_mb": '256',
-        "root_gb": '10',
-        "swap": 512,
-        "vcpus": 1,
-        "ephemeral_gb": 1,
-        "disabled": False,
-        "is_public": True,
-        "rxtx_factor": 1.0,
-    },
-    'flavor 2': {
-        "flavorid": '2',
-        "name": 'flavor 2',
-        "memory_mb": '512',
-        "root_gb": '10',
-        "swap": None,
-        "vcpus": 1,
-        "ephemeral_gb": 1,
-        "disabled": False,
-        "is_public": True,
-        "rxtx_factor": 1.0,
-    },
-}
-
-
-# TODO(jogo) dedup these across nova.api.openstack.contrib.test_flavor*
-def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
-    return FAKE_FLAVORS['flavor %s' % flavorid]
-
-
-def fake_get_all_flavors_sorted_list(context=None, inactive=False,
-                                     filters=None, sort_key='flavorid',
-                                     sort_dir='asc', limit=None, marker=None):
-    return [
-        fake_flavor_get_by_flavor_id(1),
-        fake_flavor_get_by_flavor_id(2)
-    ]
 
 
 class FlavorSwapTestV21(test.NoDBTestCase):
@@ -69,11 +27,8 @@ class FlavorSwapTestV21(test.NoDBTestCase):
     def setUp(self):
         super(FlavorSwapTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(flavors, "get_all_flavors_sorted_list",
-                       fake_get_all_flavors_sorted_list)
-        self.stubs.Set(flavors,
-                       "get_flavor_by_flavor_id",
-                       fake_flavor_get_by_flavor_id)
+        fakes.stub_out_flavor_get_all(self)
+        fakes.stub_out_flavor_get_by_flavor_id(self)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
@@ -88,14 +43,15 @@ class FlavorSwapTestV21(test.NoDBTestCase):
         return jsonutils.loads(body).get('flavors')
 
     def assertFlavorSwap(self, flavor, swap):
-        self.assertEqual(str(flavor.get('%sswap' % self.prefix)), swap)
+        self.assertEqual(flavor.get('%sswap' % self.prefix), swap)
 
     def test_show(self):
         url = self.base_url + '/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertFlavorSwap(self._get_flavor(res.body), '512')
+        self.assertFlavorSwap(self._get_flavor(res.body),
+                              fakes.FLAVORS['1'].swap)
 
     def test_detail(self):
         url = self.base_url + '/detail'
@@ -103,5 +59,5 @@ class FlavorSwapTestV21(test.NoDBTestCase):
 
         self.assertEqual(res.status_int, 200)
         flavors = self._get_flavors(res.body)
-        self.assertFlavorSwap(flavors[0], '512')
-        self.assertFlavorSwap(flavors[1], '')
+        self.assertFlavorSwap(flavors[0], fakes.FLAVORS['1'].swap)
+        self.assertFlavorSwap(flavors[1], fakes.FLAVORS['2'].swap)
