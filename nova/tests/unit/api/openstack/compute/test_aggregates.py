@@ -25,6 +25,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
@@ -429,7 +430,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                                            "host1"}})
 
         aggregate = _transform_aggregate_az(aggregate['aggregate'])
-        self._assert_agg_data(AGGREGATE, aggregate)
+        self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
 
     def test_add_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -713,9 +714,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.assertEqual(agg, marshalled_agg['aggregate'])
 
     def _assert_agg_data(self, expected, actual):
-        expected_data = expected.obj_to_primitive()['nova_object.data']
-        actual_data = expected.obj_to_primitive()['nova_object.data']
-        self.assertEqual(expected_data, actual_data)
+        self.assertTrue(obj_base.obj_equal_prims(expected, actual),
+                        "The aggregate objects were not equal")
 
 
 class AggregateTestCaseV2(AggregateTestCaseV21):
