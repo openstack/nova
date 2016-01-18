@@ -16,7 +16,6 @@ Tests For Scheduler Host Filters.
 """
 
 import inspect
-import sys
 
 import mock
 from six.moves import range
@@ -45,24 +44,19 @@ class FiltersTestCase(test.NoDBTestCase):
             mock_load.return_value = None
             self.filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
 
-    def test_filter_all(self):
+    @mock.patch('nova.filters.BaseFilter._filter_one')
+    def test_filter_all(self, mock_filter_one):
+        mock_filter_one.side_effect = [True, False, True]
         filter_obj_list = ['obj1', 'obj2', 'obj3']
         spec_obj = objects.RequestSpec()
         base_filter = filters.BaseFilter()
-
-        self.mox.StubOutWithMock(base_filter, '_filter_one')
-
-        base_filter._filter_one('obj1', spec_obj).AndReturn(True)
-        base_filter._filter_one('obj2', spec_obj).AndReturn(False)
-        base_filter._filter_one('obj3', spec_obj).AndReturn(True)
-
-        self.mox.ReplayAll()
 
         result = base_filter.filter_all(filter_obj_list, spec_obj)
         self.assertTrue(inspect.isgenerator(result))
         self.assertEqual(['obj1', 'obj3'], list(result))
 
-    def test_filter_all_recursive_yields(self):
+    @mock.patch('nova.filters.BaseFilter._filter_one')
+    def test_filter_all_recursive_yields(self, mock_filter_one):
         # Test filter_all() allows generators from previous filter_all()s.
         # filter_all() yields results.  We want to make sure that we can
         # call filter_all() with generators returned from previous calls
@@ -70,10 +64,6 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_obj_list = ['obj1', 'obj2', 'obj3']
         spec_obj = objects.RequestSpec()
         base_filter = filters.BaseFilter()
-
-        self.mox.StubOutWithMock(base_filter, '_filter_one')
-
-        total_iterations = 200
 
         # The order that _filter_one is going to get called gets
         # confusing because we will be recursively yielding things..
@@ -83,12 +73,14 @@ class FiltersTestCase(test.NoDBTestCase):
         # call gets to processing 'obj2'.  We then return 'False' for it.
         # After that, 'obj3' gets yielded 'total_iterations' number of
         # times.
+        mock_results = []
+        total_iterations = 200
         for x in range(total_iterations):
-            base_filter._filter_one('obj1', spec_obj).AndReturn(True)
-        base_filter._filter_one('obj2', spec_obj).AndReturn(False)
+            mock_results.append(True)
+        mock_results.append(False)
         for x in range(total_iterations):
-            base_filter._filter_one('obj3', spec_obj).AndReturn(True)
-        self.mox.ReplayAll()
+            mock_results.append(True)
+        mock_filter_one.side_effect = mock_results
 
         objs = iter(filter_obj_list)
         for x in range(total_iterations):
@@ -106,29 +98,15 @@ class FiltersTestCase(test.NoDBTestCase):
         def _fake_base_loader_init(*args, **kwargs):
             pass
 
-        self.stubs.Set(loadables.BaseLoader, '__init__',
-                       _fake_base_loader_init)
+        self.stub_out('nova.loadables.BaseLoader.__init__',
+                      _fake_base_loader_init)
 
-        filt1_mock = self.mox.CreateMock(Filter1)
-        filt2_mock = self.mox.CreateMock(Filter2)
-
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter1',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt1_mock, 'run_filter_for_index')
-        self.mox.StubOutWithMock(filt1_mock, 'filter_all')
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter2',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt2_mock, 'run_filter_for_index')
-        self.mox.StubOutWithMock(filt2_mock, 'filter_all')
-
-        filt1_mock.run_filter_for_index(0).AndReturn(True)
-        filt1_mock.filter_all(filter_objs_initial,
-                              spec_obj).AndReturn(filter_objs_second)
-        filt2_mock.run_filter_for_index(0).AndReturn(True)
-        filt2_mock.filter_all(filter_objs_second,
-                              spec_obj).AndReturn(filter_objs_last)
-
-        self.mox.ReplayAll()
+        filt1_mock = mock.Mock(Filter1)
+        filt1_mock.run_filter_for_index.return_value = True
+        filt1_mock.filter_all.return_value = filter_objs_second
+        filt2_mock = mock.Mock(Filter2)
+        filt2_mock.run_filter_for_index.return_value = True
+        filt2_mock.filter_all.return_value = filter_objs_last
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
         filter_mocks = [filt1_mock, filt2_mock]
@@ -136,6 +114,10 @@ class FiltersTestCase(test.NoDBTestCase):
                                                      filter_objs_initial,
                                                      spec_obj)
         self.assertEqual(filter_objs_last, result)
+        filt1_mock.filter_all.assert_called_once_with(filter_objs_initial,
+                                                      spec_obj)
+        filt2_mock.filter_all.assert_called_once_with(filter_objs_second,
+                                                      spec_obj)
 
     def test_get_filtered_objects_for_index(self):
         """Test that we don't call a filter when its
@@ -148,34 +130,24 @@ class FiltersTestCase(test.NoDBTestCase):
         def _fake_base_loader_init(*args, **kwargs):
             pass
 
-        self.stubs.Set(loadables.BaseLoader, '__init__',
-                       _fake_base_loader_init)
+        self.stub_out('nova.loadables.BaseLoader.__init__',
+                      _fake_base_loader_init)
 
-        filt1_mock = self.mox.CreateMock(Filter1)
-        filt2_mock = self.mox.CreateMock(Filter2)
-
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter1',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt1_mock, 'run_filter_for_index')
-        self.mox.StubOutWithMock(filt1_mock, 'filter_all')
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter2',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt2_mock, 'run_filter_for_index')
-        self.mox.StubOutWithMock(filt2_mock, 'filter_all')
-
-        filt1_mock.run_filter_for_index(0).AndReturn(True)
-        filt1_mock.filter_all(filter_objs_initial,
-                              spec_obj).AndReturn(filter_objs_second)
-        # return false so filter_all will not be called
-        filt2_mock.run_filter_for_index(0).AndReturn(False)
-
-        self.mox.ReplayAll()
+        filt1_mock = mock.Mock(Filter1)
+        filt1_mock.run_filter_for_index.return_value = True
+        filt1_mock.filter_all.return_value = filter_objs_second
+        filt2_mock = mock.Mock(Filter2)
+        filt2_mock.run_filter_for_index.return_value = False
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
         filter_mocks = [filt1_mock, filt2_mock]
-        filter_handler.get_filtered_objects(filter_mocks,
-                                            filter_objs_initial,
-                                            spec_obj)
+        result = filter_handler.get_filtered_objects(filter_mocks,
+                                                     filter_objs_initial,
+                                                     spec_obj)
+        self.assertEqual(filter_objs_second, result)
+        filt1_mock.filter_all.assert_called_once_with(filter_objs_initial,
+                                                      spec_obj)
+        filt2_mock.filter_all.assert_not_called()
 
     def test_get_filtered_objects_none_response(self):
         filter_objs_initial = ['initial', 'filter1', 'objects1']
@@ -184,25 +156,13 @@ class FiltersTestCase(test.NoDBTestCase):
         def _fake_base_loader_init(*args, **kwargs):
             pass
 
-        self.stubs.Set(loadables.BaseLoader, '__init__',
-                       _fake_base_loader_init)
+        self.stub_out('nova.loadables.BaseLoader.__init__',
+                      _fake_base_loader_init)
 
-        filt1_mock = self.mox.CreateMock(Filter1)
-        filt2_mock = self.mox.CreateMock(Filter2)
-
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter1',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt1_mock, 'run_filter_for_index')
-        self.mox.StubOutWithMock(filt1_mock, 'filter_all')
-        # Shouldn't be called.
-        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter2',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(filt2_mock, 'filter_all')
-
-        filt1_mock.run_filter_for_index(0).AndReturn(True)
-        filt1_mock.filter_all(filter_objs_initial,
-                              spec_obj).AndReturn(None)
-        self.mox.ReplayAll()
+        filt1_mock = mock.Mock(Filter1)
+        filt1_mock.run_filter_for_index.return_value = True
+        filt1_mock.filter_all.return_value = None
+        filt2_mock = mock.Mock(Filter2)
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
         filter_mocks = [filt1_mock, filt2_mock]
@@ -210,6 +170,9 @@ class FiltersTestCase(test.NoDBTestCase):
                                                      filter_objs_initial,
                                                      spec_obj)
         self.assertIsNone(result)
+        filt1_mock.filter_all.assert_called_once_with(filter_objs_initial,
+                                                      spec_obj)
+        filt2_mock.filter_all.assert_not_called()
 
     def test_get_filtered_objects_info_log_none_returned(self):
         LOG = filters.LOG
