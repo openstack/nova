@@ -1792,6 +1792,31 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               </devices>
             </domain>""")
 
+    def test_config_uefi(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "kvm"
+        obj.memory = 100 * units.Mi
+        obj.vcpus = 1
+        obj.name = "uefi"
+        obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
+        obj.os_type = "x86_64"
+        obj.os_loader = '/tmp/OVMF.fd'
+        obj.os_loader_type = 'pflash'
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(xml, """
+            <domain type="kvm">
+              <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
+              <name>uefi</name>
+              <memory>104857600</memory>
+              <vcpu>1</vcpu>
+              <os>
+                <type>x86_64</type>
+                <loader readonly='yes' type='pflash'>/tmp/OVMF.fd</loader>
+                <nvram template="/tmp/OVMF.fd"></nvram>
+              </os>
+            </domain>""")
+
     def test_config_boot_menu(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "kvm"

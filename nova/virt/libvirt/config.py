@@ -1858,6 +1858,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.sysinfo = None
         self.os_type = None
         self.os_loader = None
+        self.os_loader_type = None
         self.os_kernel = None
         self.os_initrd = None
         self.os_cmdline = None
@@ -1903,7 +1904,17 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
         if self.os_loader is not None:
-            os.append(self._text_node("loader", self.os_loader))
+            # Generate XML nodes for UEFI boot.
+            if self.os_loader_type == "pflash":
+                loader = self._text_node("loader", self.os_loader)
+                loader.set("type", "pflash")
+                loader.set("readonly", "yes")
+                os.append(loader)
+                nvram = self._text_node("nvram", "")
+                nvram.set("template", self.os_loader)
+                os.append(nvram)
+            else:
+                os.append(self._text_node("loader", self.os_loader))
         if self.os_initrd is not None:
             os.append(self._text_node("initrd", self.os_initrd))
         if self.os_cmdline is not None:
