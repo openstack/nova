@@ -2850,6 +2850,58 @@ class TestNeutronv2WithMock(test.TestCase):
                           api.get_instance_nw_info, 'context', instance)
         mock_lock.assert_called_once_with('refresh_cache-%s' % instance.uuid)
 
+    @mock.patch('nova.network.neutronv2.api.LOG')
+    def test_get_instance_nw_info_verify_duplicates_ignored(self, mock_log):
+        """test that the returned networks & port_ids from
+        _gather_port_ids_and_networks doesn't contain any duplicates
+
+        The test fakes an instance with two ports connected to two networks.
+        The _gather_port_ids_and_networks method will be called with the
+        instance and a list of port ids of which one port id is configured
+        already to the instance (== duplicate #1) and a list of
+        networks that already contains a network to which an instance port
+        is connected (== duplicate #2).
+
+        All-in-all, we expect the resulting port ids list to contain 3 items
+        (["instance_port_1", "port_1", "port_2"]) and the resulting networks
+        list to contain 3 items (["net_1", "net_2", "instance_network_1"])
+        while the warning message for duplicate items was executed twice
+        (due to "duplicate #1" & "duplicate #2")
+        """
+
+        networks = [model.Network(id="net_1"),
+                    model.Network(id="net_2")]
+        port_ids = ["port_1", "port_2"]
+
+        instance_networks = [{"id": "instance_network_1",
+                              "name": "fake_network",
+                              "tenant_id": "fake_tenant_id"}]
+        instance_port_ids = ["instance_port_1"]
+
+        network_info = model.NetworkInfo(
+            [{'id': port_ids[0],
+              'network': networks[0]},
+             {'id': instance_port_ids[0],
+              'network': model.Network(
+                  id=instance_networks[0]["id"],
+                  label=instance_networks[0]["name"],
+                  meta={"tenant_id": instance_networks[0]["tenant_id"]})}]
+        )
+
+        instance_uuid = uuid.uuid4()
+        instance = objects.Instance(uuid=instance_uuid,
+                                    info_cache=objects.InstanceInfoCache(
+                                        context=self.context,
+                                        instance_uuid=instance_uuid,
+                                        network_info=network_info))
+
+        new_networks, new_port_ids = self.api._gather_port_ids_and_networks(
+            self.context, instance, networks, port_ids)
+
+        self.assertEqual(new_networks, networks + instance_networks)
+        self.assertEqual(new_port_ids, instance_port_ids + port_ids)
+        self.assertEqual(2, mock_log.warning.call_count)
+
     @mock.patch('oslo_concurrency.lockutils.lock')
     @mock.patch.object(neutronapi.API, '_get_instance_nw_info')
     @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
