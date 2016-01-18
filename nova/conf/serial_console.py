@@ -48,7 +48,7 @@ Interdependencies to other options:
 
 port_range_opt = cfg.StrOpt('port_range',
         default=DEFAULT_PORT_RANGE,
-        # TODO(markus_z): regex="\d+:\d+", As soon as we have oslo.config 2.7
+        regex="\d+:\d+",
         help="""
 A range of TCP ports a guest can use for its backend.
 
