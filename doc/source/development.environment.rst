@@ -83,16 +83,16 @@ Install the prerequisite packages.
 
 On Ubuntu::
 
-  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev graphviz libsqlite3-dev python-tox
+  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev graphviz libsqlite3-dev python-tox python3-dev python3
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel libvirt-devel graphviz sqlite-devel
+  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel libvirt-devel graphviz sqlite-devel python3-devel python3
   sudo pip-python install tox
 
 On openSUSE-based distributions (SLES 12, openSUSE 13.1, Factory or Tumbleweed)::
 
-  sudo zypper in gcc git libffi-devel libmysqlclient-devel libvirt-devel libxslt-devel postgresql-devel python-devel python-pip python-tox python-virtualenv
+  sudo zypper in gcc git libffi-devel libmysqlclient-devel libvirt-devel libxslt-devel postgresql-devel python-devel python-pip python-tox python-virtualenv python3-devel python3
 
 
 Mac OS X Systems
