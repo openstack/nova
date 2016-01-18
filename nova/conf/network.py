@@ -91,18 +91,50 @@ network_opts = [
                default="nova.network.l3.LinuxNetL3",
                help="Indicates underlying L3 management library"),
     cfg.BoolOpt("share_dhcp_address",
-                default=False,
-                deprecated_for_removal=True,
-                help="DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE "
-                     "NETWORK. If True in multi_host mode, all compute hosts "
-                     "share the same dhcp address. The same IP address used "
-                     "for DHCP will be added on each nova-network node which "
-                     "is only visible to the vms on the same host."),
+            default=False,
+            deprecated_for_removal=True,
+            help="""
+DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
+
+If True in multi_host mode, all compute hosts share the same dhcp address. The
+same IP address used for DHCP will be added on each nova-network node which is
+only visible to the VMs on the same host.
+
+The use of this configuration has been deprecated and may be removed in any
+release after Mitaka. It is recommended that instead of relying on this option,
+an explicit value should be passed to 'create_networks()' as a keyword argument
+with the name 'share_address'.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+
     # NOTE(mriedem): Remove network_device_mtu in Newton.
     cfg.IntOpt("network_device_mtu",
-               deprecated_for_removal=True,
-               help="DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE "
-                    "NETWORK. MTU setting for network interface."),
+            deprecated_for_removal=True,
+            help="""
+DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
+
+MTU (Maximum Transmission Unit) setting for a network interface.
+
+The use of this configuration has been deprecated and may be removed in any
+release after Mitaka. It is recommended that instead of relying on this option,
+an explicit value should be passed to 'create_networks()' as a keyword argument
+with the name 'mtu'.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
 ]
 
 
