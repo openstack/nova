@@ -478,7 +478,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance object
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
-
+        :returns: a XenapiLiveMigrateData object
         """
         return self._vmops.check_can_live_migrate_destination(context,
                                                               instance,
@@ -506,6 +506,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param dest_check_data: result of check_can_live_migrate_destination
                                 includes the block_migration flag
         :param block_device_info: result of _get_instance_block_device_info
+        :returns: a XenapiLiveMigrateData object
         """
         return self._vmops.check_can_live_migrate_source(context, instance,
                                                          dest_check_data)
@@ -534,7 +535,7 @@ class XenAPIDriver(driver.ComputeDriver):
             recovery method when any exception occurs.
             expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, migrate VM disk.
-        :param migrate_data: implementation specific params
+        :param migrate_data: a XenapiLiveMigrateData object
         """
         self._vmops.live_migrate(context, instance, dest, post_method,
                                  recover_method, block_migration, migrate_data)
@@ -544,6 +545,17 @@ class XenAPIDriver(driver.ComputeDriver):
                                                block_device_info,
                                                destroy_disks=True,
                                                migrate_data=None):
+        """Performs a live migration rollback.
+
+        :param context: security context
+        :param instance: instance object that was being migrated
+        :param network_info: instance network information
+        :param block_device_info: instance block device information
+        :param destroy_disks:
+            if true, destroy disks at destination during cleanup
+        :param migrate_data: A XenapiLiveMigrateData object
+        """
+
         # NOTE(johngarbutt) Destroying the VM is not appropriate here
         # and in the cases where it might make sense,
         # XenServer has already done it.
@@ -560,6 +572,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param block_device_info:
             It must be the result of _get_instance_volume_bdms()
             at compute manager.
+        :returns: a XenapiLiveMigrateData object
         """
         # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
         result = objects.XenapiLiveMigrateData()
@@ -574,7 +587,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param context: security context
         :instance: instance object that was migrated
         :block_device_info: instance block device information
-        :param migrate_data: if not None, it is a dict which has data
+        :param migrate_data: a XenapiLiveMigrateData object
         """
         self._vmops.post_live_migration(context, instance, migrate_data)
 
