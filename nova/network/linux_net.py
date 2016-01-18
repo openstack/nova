@@ -35,6 +35,7 @@ from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova.network import model as network_model
@@ -140,12 +141,11 @@ linux_net_opts = [
                  help='Number of seconds to wait between ebtables retries.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(linux_net_opts)
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('network_device_mtu', 'nova.objects.network')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we

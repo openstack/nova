@@ -36,7 +36,6 @@ import nova.image.download.file
 import nova.ipv6.api
 import nova.netconf
 import nova.notifications
-import nova.objects.network
 import nova.paths
 import nova.quota
 import nova.service
@@ -68,7 +67,6 @@ def list_opts():
              nova.exception.exc_log_opts,
              nova.netconf.netconf_opts,
              nova.notifications.notify_opts,
-             nova.objects.network.network_opts,
              nova.paths.path_opts,
              nova.quota.quota_opts,
              nova.service.service_opts,
