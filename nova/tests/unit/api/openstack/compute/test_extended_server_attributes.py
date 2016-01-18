@@ -34,6 +34,12 @@ UUID4 = '00000000-0000-0000-0000-000000000004'
 UUID5 = '00000000-0000-0000-0000-000000000005'
 
 
+def fake_services(host):
+    service_list = [objects.Service(id=0, host=host, forced_down=True,
+                                   binary='nova-compute')]
+    return objects.ServiceList(objects=service_list)
+
+
 def fake_compute_get(*args, **kwargs):
     return fakes.stub_instance_obj(
         None, 1, uuid=UUID3, host="host-fake",
@@ -42,7 +48,8 @@ def fake_compute_get(*args, **kwargs):
         kernel_id=UUID4, ramdisk_id=UUID5,
         display_name="hostname-1",
         root_device_name="/dev/vda",
-        user_data="userdata")
+        user_data="userdata",
+        services=fake_services("host-fake"))
 
 
 def fake_compute_get_all(*args, **kwargs):
@@ -53,14 +60,16 @@ def fake_compute_get_all(*args, **kwargs):
             kernel_id=UUID4, ramdisk_id=UUID5,
             display_name="hostname-1",
             root_device_name="/dev/vda",
-            user_data="userdata"),
+            user_data="userdata",
+            services=fake_services("host-1")),
         fakes.stub_instance_obj(
             None, 2, uuid=UUID2, host="host-2", node="node-2",
             reservation_id="r-2", launch_index=1,
             kernel_id=UUID4, ramdisk_id=UUID5,
             display_name="hostname-2",
             root_device_name="/dev/vda",
-            user_data="userdata"),
+            user_data="userdata",
+            services=fake_services("host-2")),
     ]
     return objects.InstanceList(objects=inst_list)
 
@@ -208,3 +217,36 @@ class ExtendedServerAttributesTestV23(ExtendedServerAttributesTestV21):
                                     hostname="hostname-%s" % (i + 1),
                                     root_device_name="/dev/vda",
                                     user_data="userdata")
+
+
+class ExtendedServerAttributesTestV216(ExtendedServerAttributesTestV21):
+    wsgi_api_version = '2.16'
+
+    def assertServerAttributes(self, server, host, node, instance_name,
+                               host_status):
+        super(ExtendedServerAttributesTestV216, self).assertServerAttributes(
+            server, host, node, instance_name)
+        self.assertEqual(server.get('host_status'), host_status)
+
+    def test_show(self):
+        url = self.fake_url + '/servers/%s' % UUID3
+        res = self._make_request(url)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertServerAttributes(self._get_server(res.body),
+                                host='host-fake',
+                                node='node-fake',
+                                instance_name=NAME_FMT % 1,
+                                host_status="DOWN")
+
+    def test_detail(self):
+        url = self.fake_url + '/servers/detail'
+        res = self._make_request(url)
+
+        self.assertEqual(res.status_int, 200)
+        for i, server in enumerate(self._get_servers(res.body)):
+            self.assertServerAttributes(server,
+                                    host='host-%s' % (i + 1),
+                                    node='node-%s' % (i + 1),
+                                    instance_name=NAME_FMT % (i + 1),
+                                    host_status="DOWN")

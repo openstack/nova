@@ -150,3 +150,10 @@ user documentation.
 
   From this version of the API users can choose 'soft-affinity' and
   'soft-anti-affinity' rules too for server-groups.
+
+2.16
+----
+
+  Exposes new host_status attribute for servers/detail and servers/{server_id}.
+  Ability to get nova-compute status when querying servers. By default, this is
+  only exposed to cloud administrators.

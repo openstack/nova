@@ -41,6 +41,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
 from nova import policy
 from nova import quota
@@ -70,6 +71,7 @@ class _ComputeAPIUnitTestMixIn(object):
         super(_ComputeAPIUnitTestMixIn, self).setUp()
         self.user_id = 'fake'
         self.project_id = 'fake'
+        self.compute_api = compute_api.API()
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
 
@@ -154,6 +156,13 @@ class _ComputeAPIUnitTestMixIn(object):
             instance.update(params)
         instance.obj_reset_changes()
         return instance
+
+    def _obj_to_list_obj(self, list_obj, obj):
+        list_obj.objects = []
+        list_obj.objects.append(obj)
+        list_obj._context = self.context
+        list_obj.obj_reset_changes()
+        return list_obj
 
     def test_create_quota_exceeded_messages(self):
         image_href = "image_href"
@@ -3018,6 +3027,61 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api._apply_instance_name_template(self.context,
                                                            instance, 1)
             self.assertEqual('Server-%s' % instance.uuid, instance.hostname)
+
+    def test_host_statuses(self):
+        # NOTE(tojuvone) Some test cases break utcnow() by calling
+        # timeutils.set_time_override() with some own time. Have to issue a
+        # bug to fix those cases to reset time back like line below so next
+        # test cases will work.
+        timeutils.clear_time_override()
+        instances = [
+            objects.Instance(uuid='uuid1', host='host1', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host1',
+                             disabled=True, forced_down=True,
+                             binary='nova-compute'))),
+            objects.Instance(uuid='uuid2', host='host2', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host2',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute'))),
+            objects.Instance(uuid='uuid3', host='host3', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host3',
+                             disabled=False, last_seen_up=timeutils.utcnow()
+                             - datetime.timedelta(minutes=5),
+                             forced_down=False, binary='nova-compute'))),
+            objects.Instance(uuid='uuid4', host='host4', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host4',
+                             disabled=False, last_seen_up=timeutils.utcnow(),
+                             forced_down=False, binary='nova-compute'))),
+            objects.Instance(uuid='uuid5', host='host5', services=
+                             objects.ServiceList()),
+            objects.Instance(uuid='uuid6', host=None, services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host6',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute'))),
+            objects.Instance(uuid='uuid7', host='host2', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host2',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute')))
+            ]
+
+        host_statuses = self.compute_api.get_instances_host_statuses(
+                        instances)
+        expect_statuses = {'uuid1': fields_obj.HostStatus.DOWN,
+                           'uuid2': fields_obj.HostStatus.MAINTENANCE,
+                           'uuid3': fields_obj.HostStatus.UNKNOWN,
+                           'uuid4': fields_obj.HostStatus.UP,
+                           'uuid5': fields_obj.HostStatus.NONE,
+                           'uuid6': fields_obj.HostStatus.NONE,
+                           'uuid7': fields_obj.HostStatus.MAINTENANCE}
+        for instance in instances:
+            self.assertEqual(expect_statuses[instance.uuid],
+                             host_statuses[instance.uuid])
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
