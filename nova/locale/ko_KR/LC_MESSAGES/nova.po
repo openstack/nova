@@ -1,9 +1,11 @@
-# Korean (South Korea) translations for nova.
+# Translations template for nova.
 # Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
 # Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
+# Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
+# Sungjin Kang <potopro@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
 # HYUNGBAI PARK <openstack.make@gmail.com>, 2015. #zanata
 # Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
@@ -11,18 +13,19 @@
 # Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev70\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
-"PO-Revision-Date: 2015-11-11 03:40+0000\n"
-"Last-Translator: HYUNGBAI PARK <openstack.make@gmail.com>\n"
-"Language: ko_KR\n"
-"Language-Team: Korean (South Korea)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
+"POT-Creation-Date: 2016-01-16 19:54+0000\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
+"PO-Revision-Date: 2015-11-26 05:26+0000\n"
+"Last-Translator: HYUNGBAI PARK <openstack.make@gmail.com>\n"
+"Language: ko-KR\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
+"Language-Team: Korean (South Korea)\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -786,7 +789,7 @@ msgstr ""
 "구성이 명시적 CPU 모델을 요청했지만 현재 libvirt 하이퍼바이저 '%s'이(가) CPU "
 "모델 선택을 지원하지 않음"
 
-#, python-format
+#, fuzzy, python-format
 msgid ""
 "Conflict updating instance %(instance_uuid)s, but we were unable to "
 "determine the cause"

@@ -1,4 +1,4 @@
-# Chinese (Simplified, China) translations for nova.
+# Translations template for nova.
 # Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
@@ -8,36 +8,43 @@
 # Ying Chun Guo <daisy.ycguo@gmail.com>, 2013
 # donghua <me@lidonghua.com>, 2013
 # LIU Yulong <dragon889@163.com>, 2013
+# LIU Yulong <dragon889@163.com>, 2013
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2011
 # hamo <hamo.by@gmail.com>, 2012
 # hanxue <leehanxue@gmail.com>, 2012
 # honglei, 2015
 # Jack River <ritksm@gmail.com>, 2013
 # kwang1971 <kwang1971@gmail.com>, 2014
+# kwang1971 <kwang1971@gmail.com>, 2014
 # Lee Anthony <imagineful@gmail.com>, 2013
+# Jack River <ritksm@gmail.com>, 2013
 # Shuwen SUN <chris-void@outlook.com>, 2014
 # Tom Fifield <tom@openstack.org>, 2013-2014
 # Xiao Xi LIU <liuxx@cn.ibm.com>, 2014
+# XiaoYong Yuan <chbrian77@gmail.com>, 2013
 # 颜海峰 <yanheven@gmail.com>, 2014
 # Yu Zhang, 2013
+# Yu Zhang, 2013
 # 汪军 <wwyyzz08@sina.com>, 2015
+# 颜海峰 <yanheven@gmail.com>, 2014
 # Daisy <guoyingc@cn.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev13\n"
+"Project-Id-Version: nova 12.0.1.dev70\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-20 06:05+0000\n"
+"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2015-09-27 06:26+0000\n"
 "Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language: zh_Hans_CN\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 "Language-Team: Chinese (China)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.1.1\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."

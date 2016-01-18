@@ -1,24 +1,36 @@
-# Russian translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# Ilya Alekseyev <ilyaalekseyev@acm.org>, 2013
+# Aleksandr Brezhnev <abrezhnev@gmail.com>, 2013
+# Alexei Rudenko <alexei.rudenko@gmail.com>, 2013
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
+# lykoz <woof@stopme.net>, 2012
+# Alexei Rudenko <alexei.rudenko@gmail.com>, 2013
+# Stanislav Hanzhin <hanzhin.stas@gmail.com>, 2013
+# dvy <vasily.dubinin@gmail.com>, 2014
+# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Filatov Sergey <filatecs@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev32\n"
+"Project-Id-Version: nova 12.0.1.dev70\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-06 06:10+0000\n"
-"PO-Revision-Date: 2015-09-06 10:17+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-01-17 11:24+0000\n"
+"Last-Translator: Filatov Sergey <filatecs@gmail.com>\n"
 "Language: ru\n"
-"Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n"
-"%100>=11 && n%100<=14)? 2 : 3)\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
+"%100>=11 && n%100<=14)? 2 : 3);\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
+"Language-Team: Russian\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -46,6 +58,14 @@ msgstr "%(cidr)s не является допустимой IP-сетью."
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid "%(field)s should not be part of the updates."
+msgstr "%(field)s не должен быть частью обновления"
+
+#, python-format
+msgid "%(fieldname)s missing field type"
+msgstr "отсутствует тип поля в %(fieldname)s"
 
 #, python-format
 msgid "%(host)s:%(port)s: Target closed"
@@ -88,6 +108,10 @@ msgstr "%(req)s необходимо для создания сети."
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "Гипервизор %(type)s не поддерживает устройства PCI"
+
+#, python-format
+msgid "%(typename)s in %(fieldname)s is not an instance of Enum"
+msgstr "%(typename)s в %(fieldname)s не является пронумерованным множеством"
 
 #, python-format
 msgid "%(value_name)s must be <= %(max_value)d"
@@ -392,6 +416,14 @@ msgstr "Неверный формат volumeId: volumeId имеет неверн
 msgid "Binary"
 msgstr "Двоичный"
 
+#, python-format
+msgid ""
+"Binding failed for port %(port_id)s, please check neutron logs for more "
+"information."
+msgstr ""
+"Не удалось выполнить связывание порта %(port_id)s, для дополнительной "
+"информацией проверьте логи Neutron"
+
 msgid "Blank components"
 msgstr "Пустые компоненты"
 
@@ -489,6 +521,18 @@ msgstr "Число CPU %(cpunum)d превышает максимальное (%
 #, python-format
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "Число CPU %(cpuset)s не назначено ни одному узлу"
+
+#, python-format
+msgid "CPU pinning is not supported by the host: %(reason)s"
+msgstr "Закрепление CPU не поддерживается хостом: %(reason)s"
+
+#, python-format
+msgid ""
+"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
+"%(cpuset)s"
+msgstr ""
+"Множество CPU для закрепления/открепления %(requested)s должно быть "
+"подмножеством известных множеств CPU %(cpuset)s"
 
 msgid "Can not find requested image"
 msgstr "Невозможно найти запрошенный образ"
@@ -765,6 +809,21 @@ msgid ""
 msgstr ""
 "Конфигурация запросила явную модель CPU, но гипервизор текущей libvirt '%s' "
 "не поддерживает выбор моделей CPU"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s, but we were unable to "
+"determine the cause"
+msgstr ""
+"Конфликт при обновлении экземпляра %(instance_uuid)s, причина не установлена"
+
+#, python-format
+msgid ""
+"Conflict updating instance %(instance_uuid)s. Expected: %(expected)s. "
+"Actual: %(actual)s"
+msgstr ""
+"Конфликт при обновлении экземпляра %(instance_uuid)s. Ожидалось: "
+"%(expected)s. Получено: %(actual)s"
 
 msgid "Conflicting policies configured!"
 msgstr "Настроены конфликтующие стратегии!"
@@ -1172,6 +1231,10 @@ msgstr ""
 "%(max_retries)d для экземпляра %(instance_uuid)s в процессе оперативного "
 "переноса"
 
+#, python-format
+msgid "Exceeded maximum number of retries. %(reason)s"
+msgstr "Превышено максимальное количество попыток. %(reason)s"
+
 msgid "Exceeded the maximum number of slots"
 msgstr "Превышено максимальное число слотов"
 
@@ -1529,8 +1592,30 @@ msgstr "Не удалось найти разновидность с имене�
 msgid "Flavor with name %(name)s already exists."
 msgstr "Разновидность с именем %(name)s уже существует."
 
+#, python-format
+msgid ""
+"Flavor's disk is smaller than the minimum size specified in image metadata. "
+"Flavor disk is %(flavor_size)i bytes, minimum size is %(image_min_disk)i "
+"bytes."
+msgstr ""
+"Диск flavor-а меньше чем минимальный размер, указанный в метаданных образа. "
+"Диск flavor-а: %(flavor_size)i байт, минимальный размер:  %(image_min_disk)i "
+"байт."
+
+#, python-format
+msgid ""
+"Flavor's disk is too small for requested image. Flavor disk is "
+"%(flavor_size)i bytes, image is %(image_size)i bytes."
+msgstr ""
+"Диск flavor-а слишком мал для запрошенного образа. Диск flavor-а: "
+"%(flavor_size)i байт, образ:  %(image_size)i байт."
+
 msgid "Flavor's memory is too small for requested image."
 msgstr "Память разновидности слишком мала для запрошенного образа."
+
+#, python-format
+msgid "Floating IP %(address)s association has failed."
+msgstr "Не удалось выполнить связывание нефиксированного IP %(address)s"
 
 msgid "Floating IP allocate failed."
 msgstr "Выделение нефиксированных IP-адресов не выполнено."
@@ -1880,6 +1965,10 @@ msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
 msgstr "В экземпляре %(instance_uuid)s не указана топология NUMA"
 
 #, python-format
+msgid "Instance %(instance_uuid)s does not specify a migration context."
+msgstr "В экземпляре  %(instance_uuid)s не указан контекст миграции"
+
+#, python-format
 msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
 msgstr "Экземпляр %(instance_uuid)s не имеет фиксированных IP '%(ip)s'."
 
@@ -2146,6 +2235,10 @@ msgstr "Недопустимый ИД: %(instance_id)s (ожидается \"i-.
 #, python-format
 msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
 msgstr "Недопустимый ИД: %(volume_id)s (ожидается \"i-...\")"
+
+#, python-format
+msgid "Invalid image format '%(format)s'"
+msgstr "Недопустимый формат образа '%(format)s'"
 
 #, python-format
 msgid "Invalid image href %(image_href)s."
@@ -2800,6 +2893,10 @@ msgstr "Для подкачки новый том необходимо откл�
 msgid "New volume must be the same size or larger."
 msgstr "Размер нового тома должен быть тем же или большим."
 
+#, python-format
+msgid "No Block Device Mapping with id %(id)s."
+msgstr "Отсутствует связь блочного устройства с id %(id)s."
+
 msgid "No CIDR requested"
 msgstr "CIDR не запрошен"
 
@@ -3135,6 +3232,15 @@ msgid "Page size %(pagesize)s is not supported by the host."
 msgstr "Размер страницы %(pagesize)s не поддерживается хостом."
 
 #, python-format
+msgid ""
+"Parameters %(missing_params)s not present in vif_details for vif %(vif_id)s. "
+"Check your Neutron configuration to validate that the macvtap parameters are "
+"correct."
+msgstr ""
+"Параметры %(missing_params)s отсутствуют в vif_details для vif %(vif_id)s. "
+"Проверьте что параметры macvtap в конфигурации Neutron верны."
+
+#, python-format
 msgid "Path %s must be LVM logical volume"
 msgstr "Путь %s должен быть логическим томом LVM"
 
@@ -3223,6 +3329,10 @@ msgstr ""
 msgid "QEMU guest agent is not enabled"
 msgstr "Гостевой агент QEMU не включен"
 
+#, python-format
+msgid "Quiescing is not supported in instance %(instance_id)s"
+msgstr "Стабилизация не поддерживается для экземпляра %(instance_id)s"
+
 msgid "Quota"
 msgstr "Квота"
 
@@ -3232,6 +3342,14 @@ msgstr "Класс квоты %(class_name)s не найден."
 
 msgid "Quota could not be found"
 msgstr "Квота не найдена"
+
+#, python-format
+msgid ""
+"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)s "
+"of %(allowed)s %(overs)s"
+msgstr ""
+"Превышена квота для %(overs)s: Запрошено %(req)s, уже используется %(used)s "
+"из %(allowed)s %(overs)s"
 
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
@@ -3592,6 +3710,9 @@ msgstr "Служба с хостом %(host)s для двоичного файл
 msgid "Service with host %(host)s topic %(topic)s exists."
 msgstr "Служба с хостом %(host)s для раздела %(topic)s существует."
 
+msgid "Set admin password is not supported"
+msgstr "Установка пароля администратора не поддерживается"
+
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
 msgstr "Теневая таблица с именем %(name)s уже существует."
@@ -3757,6 +3878,9 @@ msgstr ""
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "Диапазон портов консоли %(min_port)d-%(max_port)d исчерпан."
 
+msgid "The created instance's disk would be too small."
+msgstr "Диск созданного экземпляра будет слишком мал"
+
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "Текущий драйвер не поддерживает сохранение временных разделов."
 
@@ -3770,6 +3894,9 @@ msgstr "Не удалось скопировать файл %(src)s в %(dest)s"
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr "Фильтр брандмауэра для %s не существует"
+
+msgid "The floating IP request failed with a BadRequest"
+msgstr "Не удалось выполнить запрос нефиксированного IP: BadRequest"
 
 msgid "The input is not a string or unicode"
 msgstr "Введенное значение не является строкой или unicode"
@@ -4536,14 +4663,41 @@ msgid "Volume %(volume_id)s could not be found."
 msgstr "Том %(volume_id)s не найден."
 
 #, python-format
+msgid ""
+"Volume %(volume_id)s did not finish being created even after we waited "
+"%(seconds)s seconds or %(attempts)s attempts. And its status is "
+"%(volume_status)s."
+msgstr ""
+"Создание тома %(volume_id)s не завершилось по прошествию %(seconds)s секунд "
+"или %(attempts)s попыток. Статус: %(volume_status)s."
+
+#, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
 msgstr "Том %(volume_id)s никуда не присоединён"
 
 msgid "Volume does not belong to the requested instance."
 msgstr "Том не относится к запрашиваемому экземпляру."
 
+#, python-format
+msgid ""
+"Volume encryption is not supported for %(volume_type)s volume %(volume_id)s"
+msgstr ""
+"Шифрование тома не поддерживается для  %(volume_type)s томов %(volume_id)s"
+
+#, python-format
+msgid ""
+"Volume is smaller than the minimum size specified in image metadata. Volume "
+"size is %(volume_size)i bytes, minimum size is %(image_min_disk)i bytes."
+msgstr ""
+"Размер тома меньше чем минимальный размер, указанный в метаданных образа. "
+"Размер тома: %(volume_size)i байт, минимальный размер:  %(image_min_disk)i "
+"байт."
+
 msgid "Volume must be attached in order to detach."
 msgstr "Том должен быть подключен, чтобы его можно было отключить."
+
+msgid "Volume resource quota exceeded"
+msgstr "Превышена квота ресурсов томов"
 
 #, python-format
 msgid "Volume sets block size, but libvirt '%s' or later is required."
