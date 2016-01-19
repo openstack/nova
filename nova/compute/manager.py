@@ -6302,10 +6302,9 @@ class ComputeManager(manager.Manager):
                 LOG.info(_LI("Compute node '%s' not found in "
                              "update_available_resource."), nodename)
                 continue
-            except Exception as e:
-                LOG.error(_LE("Error updating resources for node "
-                              "%(node)s: %(e)s"),
-                          {'node': nodename, 'e': e})
+            except Exception:
+                LOG.exception(_LE("Error updating resources for node "
+                              "%(node)s."), {'node': nodename})
             new_resource_tracker_dict[nodename] = rt
 
         # NOTE(comstud): Replace the RT cache before looping through
