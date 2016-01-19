@@ -1,0 +1,6 @@
+---
+upgrade:
+  - Default RBAC policy for lock operations has been modified to
+    admin_or_owner for the stable V2.0 API. Please understand to modify the
+    policy if you still keep to have anyone to lock an instance and you're
+    still using the stable API endpoint.
