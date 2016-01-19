@@ -72,6 +72,12 @@ class _TestInstanceObject(object):
         db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
                                      instance_uuid=db_inst['uuid'])
 
+        db_inst['system_metadata'] = {
+            'image_name': 'os2-warp',
+            'image_min_ram': 100,
+            'image_hw_disk_bus': 'ide',
+            'image_hw_vif_model': 'ne2k_pci',
+        }
         return db_inst
 
     def test_datetime_deserialization(self):
@@ -840,6 +846,21 @@ class _TestInstanceObject(object):
         mock_ec2.assert_called_once_with(self.context, mock.ANY)
 
         self.assertEqual(fake_ec2_ids.instance_id, inst.ec2_ids.instance_id)
+
+    @mock.patch('nova.db.instance_get_by_uuid')
+    def test_with_image_meta(self, mock_get):
+        fake_inst = dict(self.fake_instance)
+        mock_get.return_value = fake_inst
+
+        inst = instance.Instance.get_by_uuid(self.context,
+                                             fake_inst['uuid'],
+                                             expected_attrs=['image_meta'])
+
+        image_meta = inst.image_meta
+        self.assertIsInstance(image_meta, objects.ImageMeta)
+        self.assertEqual(100, image_meta.min_ram)
+        self.assertEqual('ide', image_meta.properties.hw_disk_bus)
+        self.assertEqual('ne2k_pci', image_meta.properties.hw_vif_model)
 
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(objects.Instance, 'name', 'foo')

@@ -201,6 +201,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         super(Instance, self).__init__(*args, **kwargs)
         self._reset_metadata_tracking()
 
+    @property
+    def image_meta(self):
+        return objects.ImageMeta.from_instance(self)
+
     def _reset_metadata_tracking(self, fields=None):
         if fields is None or 'system_metadata' in fields:
             self._orig_system_metadata = (dict(self.system_metadata) if
