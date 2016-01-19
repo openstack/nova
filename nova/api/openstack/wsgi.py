@@ -86,6 +86,17 @@ def get_media_map():
     return dict(_MEDIA_TYPE_MAP.items())
 
 
+# NOTE(rlrossit): This function allows a get on both a dict-like and an
+# object-like object. cache_db_items() is used on both versioned objects and
+# dicts, so the function can't be totally changed over to [] syntax, nor
+# can it be changed over to use getattr().
+def item_get(item, item_key):
+    if hasattr(item, '__getitem__'):
+        return item[item_key]
+    else:
+        return getattr(item, item_key)
+
+
 class Request(wsgi.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
 
@@ -105,7 +116,7 @@ class Request(wsgi.Request):
         """
         db_items = self._extension_data['db_items'].setdefault(key, {})
         for item in items:
-            db_items[item[item_key]] = item
+            db_items[item_get(item, item_key)] = item
 
     def get_db_items(self, key):
         """Allow an API extension to get previously stored objects within
