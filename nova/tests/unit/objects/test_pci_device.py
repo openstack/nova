@@ -117,7 +117,7 @@ class _TestPciDeviceObject(object):
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
 
     def test_create_pci_device(self):
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'product_id', 'vendor_id',
@@ -128,7 +128,7 @@ class _TestPciDeviceObject(object):
         self.dev_dict = copy.copy(dev_dict)
         self.dev_dict['k1'] = 'v1'
         self.dev_dict['k2'] = 'v2'
-        self.pci_device = pci_device.PciDevice.create(self.dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
         extra_value = self.pci_device.extra_info
         self.assertEqual(extra_value.get('k1'), 'v1')
         self.assertEqual(set(extra_value.keys()), set(('k1', 'k2')))
@@ -138,7 +138,7 @@ class _TestPciDeviceObject(object):
                               'parent_addr', 'extra_info']))
 
     def test_update_device(self):
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device.obj_reset_changes()
         changes = {'product_id': 'p2', 'vendor_id': 'v2'}
         self.pci_device.update_device(changes)
@@ -147,7 +147,7 @@ class _TestPciDeviceObject(object):
                          set(['vendor_id', 'product_id', 'parent_addr']))
 
     def test_update_device_same_value(self):
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device.obj_reset_changes()
         changes = {'product_id': 'p', 'vendor_id': 'v2'}
         self.pci_device.update_device(changes)
@@ -221,7 +221,7 @@ class _TestPciDeviceObject(object):
 
         ctxt = context.get_admin_context()
         self.stubs.Set(db, 'pci_device_update', _fake_update)
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device._context = ctxt
         self.pci_device.save()
         self.assertEqual(self.extra_info, '{}')
@@ -295,48 +295,48 @@ class _TestPciDeviceObject(object):
                           update_mock.call_args[0][3]['extra_info'])
 
     def test_update_numa_node(self):
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.assertEqual(0, self.pci_device.numa_node)
 
         self.dev_dict = copy.copy(dev_dict)
         self.dev_dict['numa_node'] = '1'
-        self.pci_device = pci_device.PciDevice.create(self.dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
         self.assertEqual(1, self.pci_device.numa_node)
 
     def test_pci_device_equivalent(self):
-        pci_device1 = pci_device.PciDevice.create(dev_dict)
-        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
+        pci_device2 = pci_device.PciDevice.create(None, dev_dict)
         self.assertEqual(pci_device1, pci_device2)
 
     def test_pci_device_equivalent_with_ignore_field(self):
-        pci_device1 = pci_device.PciDevice.create(dev_dict)
-        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
+        pci_device2 = pci_device.PciDevice.create(None, dev_dict)
         pci_device2.updated_at = timeutils.utcnow()
         self.assertEqual(pci_device1, pci_device2)
 
     def test_pci_device_not_equivalent1(self):
-        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
         dev_dict2 = copy.copy(dev_dict)
         dev_dict2['address'] = 'b'
-        pci_device2 = pci_device.PciDevice.create(dev_dict2)
+        pci_device2 = pci_device.PciDevice.create(None, dev_dict2)
         self.assertNotEqual(pci_device1, pci_device2)
 
     def test_pci_device_not_equivalent2(self):
-        pci_device1 = pci_device.PciDevice.create(dev_dict)
-        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
+        pci_device2 = pci_device.PciDevice.create(None, dev_dict)
         delattr(pci_device2, 'address')
         self.assertNotEqual(pci_device1, pci_device2)
 
     def test_pci_device_not_equivalent_with_none(self):
-        pci_device1 = pci_device.PciDevice.create(dev_dict)
-        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
+        pci_device2 = pci_device.PciDevice.create(None, dev_dict)
         pci_device1.instance_uuid = 'aaa'
         pci_device2.instance_uuid = None
         self.assertNotEqual(pci_device1, pci_device2)
 
     def test_claim_device(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         self.assertEqual(devobj.status,
                          fields.PciDeviceStatus.CLAIMED)
@@ -346,14 +346,14 @@ class _TestPciDeviceObject(object):
 
     def test_claim_device_fail(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.status = fields.PciDeviceStatus.ALLOCATED
         self.assertRaises(exception.PciDeviceInvalidStatus,
                           devobj.claim, self.inst)
 
     def test_allocate_device(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         devobj.allocate(self.inst)
         self.assertEqual(devobj.status,
@@ -367,7 +367,7 @@ class _TestPciDeviceObject(object):
 
     def test_allocate_device_fail_status(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.status = 'removed'
         self.assertRaises(exception.PciDeviceInvalidStatus,
                           devobj.allocate, self.inst)
@@ -376,14 +376,14 @@ class _TestPciDeviceObject(object):
         self._create_fake_instance()
         inst_2 = instance.Instance()
         inst_2.uuid = 'fake-inst-uuid-2'
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         self.assertRaises(exception.PciDeviceInvalidOwner,
                           devobj.allocate, inst_2)
 
     def test_free_claimed_device(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         devobj.free(self.inst)
         self.assertEqual(devobj.status,
@@ -406,20 +406,20 @@ class _TestPciDeviceObject(object):
 
     def test_free_device_fail(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.status = fields.PciDeviceStatus.REMOVED
         self.assertRaises(exception.PciDeviceInvalidStatus, devobj.free)
 
     def test_remove_device(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.remove()
         self.assertEqual(devobj.status, fields.PciDeviceStatus.REMOVED)
         self.assertIsNone(devobj.instance_uuid)
 
     def test_remove_device_fail(self):
         self._create_fake_instance()
-        devobj = pci_device.PciDevice.create(dev_dict)
+        devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         self.assertRaises(exception.PciDeviceInvalidStatus, devobj.remove)
 

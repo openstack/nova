@@ -173,5 +173,5 @@ class PciDevSpecTestCase(test.NoDBTestCase):
             'extra_k1': 'v1',
         }
 
-        pci_obj = objects.PciDevice.create(pci_dev)
+        pci_obj = objects.PciDevice.create(None, pci_dev)
         self.assertTrue(pci.match_pci_obj(pci_obj))

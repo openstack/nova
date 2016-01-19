@@ -63,10 +63,10 @@ pci_requests_multiple = [objects.InstancePCIRequest(count=1,
 
 class PciDeviceStatsTestCase(test.NoDBTestCase):
     def _create_fake_devs(self):
-        self.fake_dev_1 = objects.PciDevice.create(fake_pci_1)
-        self.fake_dev_2 = objects.PciDevice.create(fake_pci_2)
-        self.fake_dev_3 = objects.PciDevice.create(fake_pci_3)
-        self.fake_dev_4 = objects.PciDevice.create(fake_pci_4)
+        self.fake_dev_1 = objects.PciDevice.create(None, fake_pci_1)
+        self.fake_dev_2 = objects.PciDevice.create(None, fake_pci_2)
+        self.fake_dev_3 = objects.PciDevice.create(None, fake_pci_3)
+        self.fake_dev_4 = objects.PciDevice.create(None, fake_pci_4)
 
         map(self.pci_stats.add_device,
             [self.fake_dev_1, self.fake_dev_2,
@@ -225,7 +225,8 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                        'dev_type': 'type-PCI',
                        'parent_addr': None,
                        'numa_node': 0}
-            self.pci_tagged_devices.append(objects.PciDevice.create(pci_dev))
+            self.pci_tagged_devices.append(objects.PciDevice.create(None,
+                                                                    pci_dev))
 
         self.pci_untagged_devices = []
         for dev in range(3):
@@ -238,7 +239,8 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                        'dev_type': 'type-PCI',
                        'parent_addr': None,
                        'numa_node': 0}
-            self.pci_untagged_devices.append(objects.PciDevice.create(pci_dev))
+            self.pci_untagged_devices.append(objects.PciDevice.create(None,
+                                                                      pci_dev))
 
         map(self.pci_stats.add_device, self.pci_tagged_devices)
         map(self.pci_stats.add_device, self.pci_untagged_devices)
@@ -296,7 +298,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                    'status': 'available',
                    'parent_addr': None,
                    'request_id': None}
-        pci_dev_obj = objects.PciDevice.create(pci_dev)
+        pci_dev_obj = objects.PciDevice.create(None, pci_dev)
         self.pci_stats.add_device(pci_dev_obj)
         # There should be no change
         self.assertIsNone(
@@ -312,7 +314,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                    'status': 'available',
                    'parent_addr': None,
                    'request_id': None}
-        pci_dev_obj = objects.PciDevice.create(pci_dev)
+        pci_dev_obj = objects.PciDevice.create(None, pci_dev)
         self.pci_stats.remove_device(pci_dev_obj)
         # There should be no change
         self.assertIsNone(
@@ -349,7 +351,8 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                        'dev_type': fields.PciDeviceType.SRIOV_PF,
                        'parent_addr': None,
                        'numa_node': 0}
-            self.sriov_pf_devices.append(objects.PciDevice.create(pci_dev))
+            self.sriov_pf_devices.append(objects.PciDevice.create(None,
+                                                                  pci_dev))
 
         self.sriov_vf_devices = []
         for dev in range(8):
@@ -362,7 +365,8 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                        'dev_type': fields.PciDeviceType.SRIOV_VF,
                        'parent_addr': '0000:81:00.%d' % int(dev / 4),
                        'numa_node': 0}
-            self.sriov_vf_devices.append(objects.PciDevice.create(pci_dev))
+            self.sriov_vf_devices.append(objects.PciDevice.create(None,
+                                                                  pci_dev))
 
         list(map(self.pci_stats.add_device, self.sriov_pf_devices))
         list(map(self.pci_stats.add_device, self.sriov_vf_devices))
