@@ -1,0 +1,5 @@
+---
+upgrade:
+  - XenServer hypervisor type has been changed from ``xen`` to ``XenServer``.
+    It could impact your aggregate metadata or your flavor extra specs if you
+    provide only the former.
