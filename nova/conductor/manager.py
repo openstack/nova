@@ -254,8 +254,22 @@ class ComputeTaskManager(base.Base):
 
     def _cleanup_allocated_networks(
             self, context, instance, requested_networks):
-        self.network_api.deallocate_for_instance(
-            context, instance, requested_networks=requested_networks)
+        try:
+            self.network_api.deallocate_for_instance(
+                context, instance, requested_networks=requested_networks)
+        except Exception:
+            msg = _LE('Failed to deallocate networks')
+            LOG.exception(msg, instance=instance)
+            return
+
+        instance.system_metadata['network_allocated'] = 'False'
+        try:
+            instance.save()
+        except exception.InstanceNotFound:
+            # NOTE: It's possible that we're cleaning up the networks
+            # because the instance was deleted.  If that's the case then this
+            # exception will be raised by instance.save()
+            pass
 
     def _live_migrate(self, context, instance, scheduler_hint,
                       block_migration, disk_over_commit):
