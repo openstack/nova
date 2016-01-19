@@ -121,7 +121,8 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'product_id', 'vendor_id',
-                              'numa_node', 'status', 'address', 'extra_info']))
+                              'numa_node', 'status', 'address', 'extra_info',
+                              'parent_addr']))
 
     def test_pci_device_extra_info(self):
         self.dev_dict = copy.copy(dev_dict)
@@ -134,7 +135,7 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'address', 'product_id',
                               'vendor_id', 'numa_node', 'status',
-                              'extra_info']))
+                              'parent_addr', 'extra_info']))
 
     def test_update_device(self):
         self.pci_device = pci_device.PciDevice.create(dev_dict)
@@ -143,7 +144,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.update_device(changes)
         self.assertEqual(self.pci_device.vendor_id, 'v2')
         self.assertEqual(self.pci_device.obj_what_changed(),
-                         set(['vendor_id', 'product_id']))
+                         set(['vendor_id', 'product_id', 'parent_addr']))
 
     def test_update_device_same_value(self):
         self.pci_device = pci_device.PciDevice.create(dev_dict)
@@ -153,7 +154,7 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.vendor_id, 'v2')
         self.assertEqual(self.pci_device.obj_what_changed(),
-                         set(['vendor_id', 'product_id']))
+                         set(['vendor_id', 'product_id', 'parent_addr']))
 
     def test_get_by_dev_addr(self):
         ctxt = context.get_admin_context()

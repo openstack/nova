@@ -130,7 +130,6 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'status': 'available',
                 'extra_k1': 'v1',
                 'numa_node': 1,
-                'parent_addr': None,
             },
             {
                 'label': 'label_8086_0123',
@@ -142,7 +141,6 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'status': 'available',
                 'extra_k1': 'v1',
                 'numa_node': 1,
-                'parent_addr': None,
             },
             {
                 'label': 'label_8086_7891',
