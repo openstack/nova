@@ -2237,7 +2237,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE)
         fake_nw_info = network_model.NetworkInfo()
-        rescue_image_meta = {'id': 'fake', 'name': 'fake'}
+        rescue_image_meta = objects.ImageMeta.from_dict(
+            {'id': 'fake', 'name': 'fake'})
         with test.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
@@ -3165,7 +3166,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
-        self.compute.driver.spawn(self.context, self.instance, self.image,
+        self.compute.driver.spawn(self.context, self.instance,
+                mox.IsA(objects.ImageMeta),
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
@@ -3438,7 +3440,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
-        self.compute.driver.spawn(self.context, self.instance, self.image,
+        self.compute.driver.spawn(self.context, self.instance,
+                mox.IsA(objects.ImageMeta),
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
@@ -3473,7 +3476,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         exc = test.TestingException()
-        self.compute.driver.spawn(self.context, self.instance, self.image,
+        self.compute.driver.spawn(self.context, self.instance,
+                mox.IsA(objects.ImageMeta),
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
@@ -3576,7 +3580,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
 
             spawn.assert_has_calls([mock.call(self.context, self.instance,
-                self.image, self.injected_files, self.admin_pass,
+                test.MatchType(objects.ImageMeta),
+                self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info)])
 
@@ -3633,7 +3638,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self.compute._build_resources(self.context, self.instance,
-                self.requested_networks, self.security_groups, self.image,
+                self.requested_networks, self.security_groups,
+                mox.IsA(objects.ImageMeta),
                 self.block_device_mapping).AndRaise(exc)
         self._notify_about_instance_usage('create.error',
             fault=exc, stub=False)

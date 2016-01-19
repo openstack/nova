@@ -107,8 +107,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver.list_instances()
         self.driver._vmops.list_instances.assert_called_once_with()
 
-    @mock.patch.object(driver.objects.ImageMeta, 'from_dict')
-    def test_spawn(self, mock_meta_from_dict):
+    def test_spawn(self):
         self.driver.spawn(
             mock.sentinel.context, mock.sentinel.instance,
             mock.sentinel.image_meta, mock.sentinel.injected_files,
@@ -117,7 +116,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
         self.driver._vmops.spawn.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock_meta_from_dict.return_value, mock.sentinel.injected_files,
+            mock.sentinel.image_meta, mock.sentinel.injected_files,
             mock.sentinel.admin_password, mock.sentinel.network_info,
             mock.sentinel.block_device_info)
 
@@ -378,8 +377,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.network_info, mock.sentinel.block_device_info,
             mock.sentinel.power_on)
 
-    @mock.patch.object(driver.objects.ImageMeta, 'from_dict')
-    def test_finish_migration(self, mock_meta_from_dict):
+    def test_finish_migration(self):
         self.driver.finish_migration(
             mock.sentinel.context, mock.sentinel.migration,
             mock.sentinel.instance, mock.sentinel.disk_info,
@@ -390,7 +388,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._migrationops.finish_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.migration,
             mock.sentinel.instance, mock.sentinel.disk_info,
-            mock.sentinel.network_info, mock_meta_from_dict.return_value,
+            mock.sentinel.network_info, mock.sentinel.image_meta,
             mock.sentinel.resize_instance, mock.sentinel.block_device_info,
             mock.sentinel.power_on)
 

@@ -1322,7 +1322,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(connection_info, disk_dev)
 
     def attach_interface(self, instance, image_meta, vif):
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         guest = self._host.get_guest(instance)
 
         self.vif_driver.plug(instance, vif)
@@ -1602,12 +1601,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         The qemu-guest-agent must be setup to execute fsfreeze.
         """
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._set_quiesced(context, instance, image_meta, True)
 
     def unquiesce(self, context, instance, image_meta):
         """Thaw the guest filesystems after snapshot."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._set_quiesced(context, instance, image_meta, False)
 
     def _live_snapshot(self, context, instance, guest, disk_path, out_path,
@@ -2475,7 +2472,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         rescue_image_id = None
         if image_meta is not None:
-            image_meta = objects.ImageMeta.from_dict(image_meta)
             if image_meta.obj_attr_is_set("id"):
                 rescue_image_id = image_meta.id
 
@@ -2530,7 +2526,6 @@ class LibvirtDriver(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta,
@@ -7003,8 +6998,6 @@ class LibvirtDriver(driver.ComputeDriver):
                          block_device_info=None, power_on=True):
         LOG.debug("Starting finish_migration", instance=instance)
 
-        image_meta = objects.ImageMeta.from_dict(image_meta)
-
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
@@ -7333,7 +7326,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return False
 
     def default_root_device_name(self, instance, image_meta, root_bdm):
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         disk_bus = blockinfo.get_disk_bus_for_device_type(
             instance, CONF.libvirt.virt_type, image_meta, "disk")
         cdrom_bus = blockinfo.get_disk_bus_for_device_type(

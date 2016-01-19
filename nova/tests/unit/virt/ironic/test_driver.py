@@ -898,7 +898,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
-        image_meta = ironic_utils.get_test_image_meta_object()
+        image_meta = ironic_utils.get_test_image_meta()
         flavor = ironic_utils.get_test_flavor()
         self.driver._add_driver_fields(node, instance, image_meta, flavor)
         expected_patch = [{'path': '/instance_info/image_source', 'op': 'add',
@@ -941,7 +941,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
-        image_meta = ironic_utils.get_test_image_meta_object()
+        image_meta = ironic_utils.get_test_image_meta()
         flavor = ironic_utils.get_test_flavor()
         self.assertRaises(exception.InstanceDeployFailure,
                           self.driver._add_driver_fields,

@@ -74,12 +74,8 @@ def get_test_flavor(**kw):
 
 
 def get_test_image_meta(**kw):
-    return {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')}
-
-
-def get_test_image_meta_object(**kw):
     return objects.ImageMeta.from_dict(
-        get_test_image_meta(**kw))
+        {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')})
 
 
 class FakePortClient(object):

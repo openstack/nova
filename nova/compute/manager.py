@@ -2010,8 +2010,9 @@ class ComputeManager(manager.Manager):
                 # the host is set on the instance.
                 self._validate_instance_group_policy(context, instance,
                         filter_properties)
+                image_meta = objects.ImageMeta.from_dict(image)
                 with self._build_resources(context, instance,
-                        requested_networks, security_groups, image,
+                        requested_networks, security_groups, image_meta,
                         block_device_mapping) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
@@ -2025,7 +2026,7 @@ class ComputeManager(manager.Manager):
                     LOG.debug('Start spawning the instance on the hypervisor.',
                               instance=instance)
                     with timeutils.StopWatch() as timer:
-                        self.driver.spawn(context, instance, image,
+                        self.driver.spawn(context, instance, image_meta,
                                           injected_files, admin_password,
                                           network_info=network_info,
                                           block_device_info=block_device_info)
@@ -2118,7 +2119,7 @@ class ComputeManager(manager.Manager):
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
-            security_groups, image, block_device_mapping):
+                         security_groups, image_meta, block_device_mapping):
         resources = {}
         network_info = None
         try:
@@ -2145,7 +2146,7 @@ class ComputeManager(manager.Manager):
         try:
             # Verify that all the BDMs have a device_name set and assign a
             # default to the ones missing it with the help of the driver.
-            self._default_block_device_names(context, instance, image,
+            self._default_block_device_names(context, instance, image_meta,
                     block_device_mapping)
 
             LOG.debug('Start building block device mappings for instance.',
@@ -2806,6 +2807,13 @@ class ComputeManager(manager.Manager):
         with claim_context:
             self._do_rebuild_instance(*args, **kwargs)
 
+    @staticmethod
+    def _get_image_name(image_meta):
+        if image_meta.obj_attr_is_set("name"):
+            return image_meta.name
+        else:
+            return ''
+
     def _do_rebuild_instance(self, context, instance, orig_image_ref,
                              image_ref, injected_files, new_pass,
                              orig_sys_metadata, bdms, recreate,
@@ -2841,9 +2849,10 @@ class ComputeManager(manager.Manager):
                                 " '%s'"), str(image_ref))
 
         if image_ref:
-            image_meta = self.image_api.get(context, image_ref)
+            image_meta = objects.ImageMeta.from_image_ref(
+                context, self.image_api, image_ref)
         else:
-            image_meta = {}
+            image_meta = objects.ImageMeta.from_dict({})
 
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated
@@ -2857,7 +2866,7 @@ class ComputeManager(manager.Manager):
                 extra_usage_info=extra_usage_info)
 
         # This message should contain the new image_ref
-        extra_usage_info = {'image_name': image_meta.get('name', '')}
+        extra_usage_info = {'image_name': self._get_image_name(image_meta)}
         self._notify_about_instance_usage(context, instance,
                 "rebuild.start", extra_usage_info=extra_usage_info)
 
@@ -3316,10 +3325,8 @@ class ComputeManager(manager.Manager):
                         instance=instance)
             rescue_image_ref = instance.image_ref
 
-        image_meta = self.image_api.get(context, rescue_image_ref)
-        # NOTE(belliott) bug #1227350 - xenapi needs the actual image id
-        image_meta['id'] = rescue_image_ref
-        return image_meta
+        return objects.ImageMeta.from_image_ref(
+            context, self.image_api, rescue_image_ref)
 
     @wrap_exception()
     @reverts_task_state
@@ -3339,7 +3346,7 @@ class ComputeManager(manager.Manager):
                                                    rescue_image_ref)
 
         extra_usage_info = {'rescue_image_name':
-                            rescue_image_meta.get('name', '')}
+                            self._get_image_name(rescue_image_meta)}
         self._notify_about_instance_usage(context, instance,
                 "rescue.start", extra_usage_info=extra_usage_info,
                 network_info=network_info)
@@ -3896,7 +3903,7 @@ class ComputeManager(manager.Manager):
         instance.flavor = instance_type
 
     def _finish_resize(self, context, instance, migration, disk_info,
-                       image):
+                       image_meta):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
@@ -3946,7 +3953,7 @@ class ComputeManager(manager.Manager):
             self.driver.finish_migration(context, migration, instance,
                                          disk_info,
                                          network_info,
-                                         image, resize_instance,
+                                         image_meta, resize_instance,
                                          block_device_info, power_on)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -3985,8 +3992,9 @@ class ComputeManager(manager.Manager):
                                                   reservations,
                                                   instance=instance)
         try:
+            image_meta = objects.ImageMeta.from_dict(image)
             self._finish_resize(context, instance, migration,
-                                disk_info, image)
+                                disk_info, image_meta)
             quotas.commit()
         except Exception:
             LOG.exception(_LE('Setting instance vm_state to ERROR'),
@@ -4335,13 +4343,14 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker(node)
         limits = filter_properties.get('limits', {})
 
+        shelved_image_ref = instance.image_ref
         if image:
-            shelved_image_ref = instance.image_ref
             instance.image_ref = image['id']
-            image_meta = image
+            image_meta = objects.ImageMeta.from_dict(image)
         else:
-            image_meta = utils.get_image_from_system_metadata(
-                instance.system_metadata)
+            image_meta = objects.ImageMeta.from_dict(
+                utils.get_image_from_system_metadata(
+                    instance.system_metadata))
 
         self.network_api.setup_instance_network_on_host(context, instance,
                                                         self.host)
@@ -4941,8 +4950,7 @@ class ComputeManager(manager.Manager):
                           'ports'), {'ports': len(network_info)})
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
 
         try:
             self.driver.attach_interface(instance, image_meta, network_info[0])
@@ -6651,8 +6659,7 @@ class ComputeManager(manager.Manager):
     def quiesce_instance(self, context, instance):
         """Quiesce an instance on this host."""
         context = context.elevated()
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.quiesce(context, instance, image_meta)
 
     def _wait_for_snapshots_completion(self, context, mapping):
@@ -6687,6 +6694,5 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE("Exception while waiting completion of "
                                   "volume snapshots: %s"),
                               error, instance=instance)
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
+        image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.unquiesce(context, instance, image_meta)

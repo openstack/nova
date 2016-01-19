@@ -126,6 +126,25 @@ class ImageMeta(base.NovaObject):
         image_meta = utils.get_image_from_system_metadata(sysmeta)
         return cls.from_dict(image_meta)
 
+    @classmethod
+    def from_image_ref(cls, context, image_api, image_ref):
+        """Create instance from glance image
+
+        :param context: the request context
+        :param image_api: the glance client API
+        :param image_ref: the glance image identifier
+
+        Creates a new object instance, initializing from the
+        properties associated with a glance image
+
+        :returns: an ImageMeta instance
+        """
+
+        image_meta = image_api.get(context, image_ref)
+        image = cls.from_dict(image_meta)
+        setattr(image, "id", image_ref)
+        return image
+
 
 @base.NovaObjectRegistry.register
 class ImageMetaProps(base.NovaObject):

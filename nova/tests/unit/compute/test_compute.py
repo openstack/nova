@@ -2216,7 +2216,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
 
         self.compute._get_rescue_image(
-            mox.IgnoreArg(), inst_obj, mox.IgnoreArg()).AndReturn({})
+            mox.IgnoreArg(), inst_obj, mox.IgnoreArg()).AndReturn(
+                objects.ImageMeta.from_dict({}))
         nova.virt.fake.FakeDriver.rescue(
             mox.IgnoreArg(), inst_obj, [], mox.IgnoreArg(), 'password'
             ).AndRaise(RuntimeError("Try again later"))
@@ -2256,7 +2257,8 @@ class ComputeTestCase(BaseTestCase):
 
         mock_image_get.assert_called_with(ctxt, image_ref)
         mock_rescue.assert_called_with(ctxt, instance, [],
-                                       rescue_image_meta, 'password')
+                                       test.MatchType(objects.ImageMeta),
+                                       'password')
         self.compute.terminate_instance(ctxt, instance, [], [])
 
     @mock.patch.object(image_api.API, "get")
@@ -2284,7 +2286,8 @@ class ComputeTestCase(BaseTestCase):
         mock_image_get.assert_called_with(ctxt, image_ref)
 
         mock_rescue.assert_called_with(ctxt, instance, [],
-                                       rescue_image_meta, 'password')
+                                       test.MatchType(objects.ImageMeta),
+                                       'password')
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_power_on(self):
@@ -4467,7 +4470,7 @@ class ComputeTestCase(BaseTestCase):
             vm_state = vm_states.STOPPED
         params = {'vm_state': vm_state}
         instance = self._create_fake_instance_obj(params)
-        image = 'fake-image'
+        image = {}
         disk_info = 'fake-disk-info'
         instance_type = flavors.get_default_flavor()
 
@@ -4564,7 +4567,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.finish_migration(self.context, migration,
                                              instance, disk_info,
                                              'fake-nwinfo1',
-                                             image, resize_instance,
+                                             mox.IsA(objects.ImageMeta),
+                                             resize_instance,
                                              'fake-bdminfo', power_on)
         # Ensure instance status updates is after the migration finish
         migration.save().WithSideEffects(_mig_save)
@@ -11445,7 +11449,9 @@ class EvacuateHostTestCase(BaseTestCase):
         """Confirm evacuate scenario on shared storage."""
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
+                mox.IsA(objects.Instance),
+                mox.IsA(objects.ImageMeta),
+                mox.IgnoreArg(), 'newpass',
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
@@ -11458,14 +11464,11 @@ class EvacuateHostTestCase(BaseTestCase):
         """Confirm evacuate scenario without shared storage
         (rebuild from image)
         """
-        fake_image = {'id': 1,
-                      'name': 'fake_name',
-                      'properties': {'kernel_id': 'fake_kernel_id',
-                                     'ramdisk_id': 'fake_ramdisk_id'}}
 
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), mox.IsA(fake_image),
+                mox.IsA(objects.Instance),
+                mox.IsA(objects.ImageMeta),
                 mox.IgnoreArg(), mox.IsA('newpass'),
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
@@ -11496,14 +11499,10 @@ class EvacuateHostTestCase(BaseTestCase):
                               lambda: self._rebuild(on_shared_storage=True))
 
     def test_on_shared_storage_not_provided_host_without_shared_storage(self):
-        fake_image = {'id': 1,
-                      'name': 'fake_name',
-                      'properties': {'kernel_id': 'fake_kernel_id',
-                                     'ramdisk_id': 'fake_ramdisk_id'}}
-
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), mox.IsA(fake_image),
+                mox.IsA(objects.Instance),
+                mox.IsA(objects.ImageMeta),
                 mox.IgnoreArg(), mox.IsA('newpass'),
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
@@ -11517,7 +11516,9 @@ class EvacuateHostTestCase(BaseTestCase):
     def test_on_shared_storage_not_provided_host_with_shared_storage(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
+                mox.IsA(objects.Instance),
+                mox.IsA(objects.ImageMeta),
+                mox.IgnoreArg(), 'newpass',
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
