@@ -1162,6 +1162,26 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'stop', id)
 
+    @wsgi.Controller.api_version("2.17")
+    @wsgi.response(202)
+    @extensions.expected_errors((400, 404, 409))
+    @wsgi.action('trigger_crash_dump')
+    @validation.schema(schema_servers.trigger_crash_dump)
+    def _action_trigger_crash_dump(self, req, id, body):
+        """Trigger crash dump in an instance"""
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
+        authorize(context, instance, 'trigger_crash_dump')
+        try:
+            self.compute_api.trigger_crash_dump(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                'trigger_crash_dump', id)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.NMINotSupported as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+
 
 def remove_invalid_options(context, search_options, allowed_search_options):
     """Remove search options that are not valid for non-admin API/context."""

@@ -157,3 +157,9 @@ user documentation.
   Exposes new host_status attribute for servers/detail and servers/{server_id}.
   Ability to get nova-compute status when querying servers. By default, this is
   only exposed to cloud administrators.
+
+2.17
+----
+
+  Add a new API for triggering crash dump in an instance. Different operation
+  systems in instance may need different configurations to trigger crash dump.

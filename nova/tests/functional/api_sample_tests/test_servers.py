@@ -267,3 +267,19 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
         response = self._do_get('servers?status=active&status=error')
         subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
+
+
+class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+    microversion = '2.17'
+    scenarios = [('v2_17', {'api_major_version': 'v2.1'})]
+
+    def test_trigger_crash_dump(self):
+        uuid = self._post_server()
+
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-trigger-crash-dump',
+                                 {},
+                                 api_version=self.microversion)
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
