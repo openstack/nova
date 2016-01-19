@@ -71,6 +71,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         'metrics': fields.StringField(nullable=True),
         'stats': fields.DictOfNullableStringsField(nullable=True),
         'host_ip': fields.IPAddressField(nullable=True),
+        # TODO(rlrossit): because of history, numa_topology is held here as a
+        # StringField, not a NUMATopology object. In version 2 of ComputeNode
+        # this will be converted over to a fields.ObjectField('NUMATopology')
         'numa_topology': fields.StringField(nullable=True),
         # NOTE(pmurray): the supported_hv_specs field maps to the
         # supported_instances field in the database
