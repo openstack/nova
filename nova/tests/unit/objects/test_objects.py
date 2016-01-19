@@ -1200,48 +1200,6 @@ object_data = {
 
 
 class TestObjectVersions(test.NoDBTestCase):
-    @staticmethod
-    def _is_method(thing):
-        # NOTE(dims): In Python3, The concept of 'unbound methods' has
-        # been removed from the language. When referencing a method
-        # as a class attribute, you now get a plain function object.
-        # so let's check for both
-        return inspect.isfunction(thing) or inspect.ismethod(thing)
-
-    def _find_remotable_method(self, cls, thing, parent_was_remotable=False):
-        """Follow a chain of remotable things down to the original function."""
-        if isinstance(thing, classmethod):
-            return self._find_remotable_method(cls, thing.__get__(None, cls))
-        elif self._is_method(thing) and hasattr(thing, 'remotable'):
-            return self._find_remotable_method(cls, thing.original_fn,
-                                               parent_was_remotable=True)
-        elif parent_was_remotable:
-            # We must be the first non-remotable thing underneath a stack of
-            # remotable things (i.e. the actual implementation method)
-            return thing
-        else:
-            # This means the top-level thing never hit a remotable layer
-            return None
-
-    def _un_unicodify_enum_valid_values(self, _fields):
-        for name, field in _fields:
-            if not isinstance(field, (fields.BaseEnumField,
-                                      fields.EnumField)):
-                continue
-            orig_type = type(field._type._valid_values)
-            field._type._valid_values = orig_type(
-                [x.encode('utf-8') for x in
-                 field._type._valid_values])
-
-    def test_find_remotable_method(self):
-        class MyObject(object):
-            @base.remotable
-            def my_method(self):
-                return 'Hello World!'
-        thing = self._find_remotable_method(MyObject,
-                                            getattr(MyObject, 'my_method'))
-        self.assertIsNotNone(thing)
-
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
                         base.NovaObjectRegistry.obj_classes())
