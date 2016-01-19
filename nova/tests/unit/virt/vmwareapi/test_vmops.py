@@ -527,7 +527,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          resize_instance=resize_instance,
                                          image_meta=None,
                                          power_on=power_on)
-            fake_resize_create_ephemerals_and_swap.called_once_with(
+            fake_resize_create_ephemerals_and_swap.assert_called_once_with(
                 'fake-ref', self._instance, None)
             if power_on:
                 fake_power_on.assert_called_once_with(self._session,
@@ -656,8 +656,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_attach_disk.assert_called_once_with(
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
                     '[fake] uuid/root.vmdk')
-            fake_remove_ephemerals_and_swap.called_once_with('fake-ref')
-            fake_resize_create_ephemerals_and_swap.called_once_with(
+            fake_remove_ephemerals_and_swap.assert_called_once_with('fake-ref')
+            fake_resize_create_ephemerals_and_swap.assert_called_once_with(
                 'fake-ref', self._instance, None)
         if power_on:
             fake_power_on.assert_called_once_with(self._session,

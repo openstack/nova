@@ -230,7 +230,7 @@ class RebootRetryTestCase(AgentTestCaseBase):
         self.assertEqual("done", result)
         self.assertTrue(mock_session.VM.get_domid.called)
         self.assertEqual(2, mock_session.call_plugin.call_count)
-        mock_wait.called_once_with(mock_session, self.vm_ref,
+        mock_wait.assert_called_once_with(mock_session, self.vm_ref,
                                    "fake_dom_id", "asdf")
 
     @mock.patch.object(time, 'sleep')
