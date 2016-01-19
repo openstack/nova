@@ -2252,8 +2252,8 @@ def _exact_instance_filter(query, filters, legal_keys):
 
     # Apply simple exact matches
     if filter_dict:
-        query = query.filter_by(**filter_dict)
-
+        query = query.filter(*[getattr(models.Instance, k) == v
+                               for k, v in filter_dict.items()])
     return query
 
 
