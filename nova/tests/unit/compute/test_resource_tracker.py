@@ -638,7 +638,7 @@ class ComputeMonitorTestCase(BaseTestCase):
     @mock.patch.object(resource_tracker.LOG, 'warning')
     def test_get_host_metrics_exception(self, mock_LOG_warning):
         monitor = mock.MagicMock()
-        monitor.add_metrics_to_list.side_effect = Exception
+        monitor.populate_metrics.side_effect = Exception
         self.tracker.monitors = [monitor]
         metrics = self.tracker._get_host_metrics(self.context,
                                                  self.node_name)
@@ -658,8 +658,13 @@ class ComputeMonitorTestCase(BaseTestCase):
             def get_metric_names(self):
                 return set(["cpu.frequency"])
 
-            def get_metrics(self):
-                return [("cpu.frequency", 100, self.NOW_TS)]
+            def populate_metrics(self, monitor_list):
+                metric_object = objects.MonitorMetric()
+                metric_object.name = 'cpu.frequency'
+                metric_object.value = 100
+                metric_object.timestamp = self.NOW_TS
+                metric_object.source = self.source
+                monitor_list.objects.append(metric_object)
 
         self.tracker.monitors = [FakeCPUMonitor(None)]
         mock_notifier = mock.Mock()

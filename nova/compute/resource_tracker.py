@@ -471,7 +471,7 @@ class ResourceTracker(object):
         metrics_info = {}
         for monitor in self.monitors:
             try:
-                monitor.add_metrics_to_list(metrics)
+                monitor.populate_metrics(metrics)
             except Exception as exc:
                 LOG.warning(_LW("Cannot get the metrics from %(mon)s; "
                                 "error: %(exc)s"),
