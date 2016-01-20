@@ -404,7 +404,9 @@ class ResourceTest(test.NoDBTestCase):
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
         # verify no content_type is contained in the request
-        req.content_type = None
+        req = webob.Request.blank('/tests/test_id', method="PUT",
+                                  content_type='application/xml')
+        req.content_type = 'application/xml'
         req.body = b'{"body": {"key": "value"}}'
         response = req.get_response(app)
         expected_unsupported_type_body = {'badRequest':
@@ -543,9 +545,8 @@ class ResourceTest(test.NoDBTestCase):
         request.headers['Content-Type'] = 'application/none'
         request.body = b'foo'
 
-        content_type, body = resource.get_body(request)
-        self.assertIsNone(content_type)
-        self.assertEqual(b'', body)
+        self.assertRaises(exception.InvalidContentType,
+                          resource.get_body, request)
 
     def test_get_body_no_content_type(self):
         class Controller(object):
@@ -634,31 +635,16 @@ class ResourceTest(test.NoDBTestCase):
         self.assertEqual(b'', response.body)
         self.assertEqual(response.status_int, 200)
 
-    def test_deserialize_badtype(self):
+    def test_deserialize_default(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
 
         controller = Controller()
         resource = wsgi.Resource(controller)
-        self.assertRaises(exception.InvalidContentType,
-                          resource.deserialize,
-                          controller.index, 'application/none', 'foo')
 
-    def test_deserialize_default(self):
-        class JSONDeserializer(object):
-            def deserialize(self, body):
-                return 'json'
-
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller, json=JSONDeserializer)
-
-        obj = resource.deserialize(controller.index, 'application/json', 'foo')
-        self.assertEqual(obj, 'json')
+        obj = resource.deserialize('["foo"]')
+        self.assertEqual(obj, {'body': ['foo']})
 
     def test_register_actions(self):
         class Controller(object):

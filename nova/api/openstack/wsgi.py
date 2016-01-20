@@ -526,8 +526,7 @@ class Resource(wsgi.Application):
     """
     support_api_request_version = False
 
-    def __init__(self, controller, action_peek=None, inherits=None,
-                 **deserializers):
+    def __init__(self, controller, action_peek=None, inherits=None):
         """:param controller: object that implement methods created by routes
                               lib
            :param action_peek: dictionary of routines for peeking into an
@@ -541,14 +540,9 @@ class Resource(wsgi.Application):
 
         self.controller = controller
 
-        default_deserializers = dict(json=JSONDeserializer)
-        default_deserializers.update(deserializers)
-
-        self.default_deserializers = default_deserializers
         self.default_serializers = dict(json=JSONDictSerializer)
 
-        self.action_peek = dict(json=action_peek_json)
-        self.action_peek.update(action_peek or {})
+        self.action_peek = action_peek_json
 
         # Copy over the actions dictionary
         self.wsgi_actions = {}
@@ -612,30 +606,12 @@ class Resource(wsgi.Application):
         return args
 
     def get_body(self, request):
-        try:
-            content_type = request.get_content_type()
-        except exception.InvalidContentType:
-            LOG.debug("Unrecognized Content-Type provided in request")
-            return None, b''
+        content_type = request.get_content_type()
 
         return content_type, request.body
 
-    def deserialize(self, meth, content_type, body):
-        meth_deserializers = getattr(meth, 'wsgi_deserializers', {})
-        try:
-            mtype = get_media_map().get(content_type, content_type)
-            if mtype in meth_deserializers:
-                deserializer = meth_deserializers[mtype]
-            else:
-                deserializer = self.default_deserializers[mtype]
-        except (KeyError, TypeError):
-            raise exception.InvalidContentType(content_type=content_type)
-
-        if (hasattr(deserializer, 'want_controller')
-                and deserializer.want_controller):
-            return deserializer(self.controller).deserialize(body)
-        else:
-            return deserializer().deserialize(body)
+    def deserialize(self, body):
+        return JSONDeserializer().deserialize(body)
 
     def pre_process_extensions(self, extensions, request, action_args):
         # List of callables for post-processing extensions
@@ -724,8 +700,15 @@ class Resource(wsgi.Application):
         # content type
         action_args = self.get_action_args(request.environ)
         action = action_args.pop('action', None)
-        content_type, body = self.get_body(request)
-        accept = request.best_match_content_type()
+
+        # NOTE(sdague): we filter out InvalidContentTypes early so we
+        # know everything is good from here on out.
+        try:
+            content_type, body = self.get_body(request)
+            accept = request.best_match_content_type()
+        except exception.InvalidContentType:
+            msg = _("Unsupported Content-Type")
+            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         # NOTE(Vek): Splitting the function up this way allows for
         #            auditing by external tools that wrap the existing
@@ -770,10 +753,7 @@ class Resource(wsgi.Application):
                 if request.content_length == 0:
                     contents = {'body': None}
                 else:
-                    contents = self.deserialize(meth, content_type, body)
-        except exception.InvalidContentType:
-            msg = _("Unsupported Content-Type")
-            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
+                    contents = self.deserialize(body)
         except exception.MalformedRequestBody:
             msg = _("Malformed request body")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
@@ -857,7 +837,6 @@ class Resource(wsgi.Application):
 
     def _get_method(self, request, action, content_type, body):
         """Look up the action-specific method and its extensions."""
-
         # Look up the method
         try:
             if not self.controller:
@@ -873,9 +852,7 @@ class Resource(wsgi.Application):
             return meth, self.wsgi_extensions.get(action, [])
 
         if action == 'action':
-            # OK, it's an action; figure out which action...
-            mtype = get_media_map().get(content_type)
-            action_name = self.action_peek[mtype](body)
+            action_name = self.action_peek(body)
         else:
             action_name = action
 
