@@ -18,19 +18,19 @@ Websocket proxy that is compatible with OpenStack Nova.
 Leverages websockify.py by Joel Martin
 '''
 
-from six.moves import http_cookies as Cookie
-import six.moves.urllib.parse as urlparse
 import socket
 import sys
 
+from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import http_cookies as Cookie
+import six.moves.urllib.parse as urlparse
 import websockify
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
-from oslo_config import cfg
 
 LOG = logging.getLogger(__name__)
 

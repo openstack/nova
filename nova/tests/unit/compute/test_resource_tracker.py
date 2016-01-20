@@ -17,13 +17,13 @@
 
 import copy
 import datetime
-import six
 import uuid
 
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+import six
 
 from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker

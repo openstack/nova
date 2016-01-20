@@ -15,6 +15,7 @@
 
 
 import abc
+
 import six
 
 from nova import keymgr

@@ -13,6 +13,7 @@
 #    under the License.
 
 import os
+
 from six.moves import StringIO
 
 from nova.virt.libvirt import utils as libvirt_utils

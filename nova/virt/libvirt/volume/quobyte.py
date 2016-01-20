@@ -15,12 +15,12 @@
 
 import errno
 import os
-import six
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
+import six
 
 from nova import exception as nova_exception
 from nova.i18n import _

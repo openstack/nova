@@ -15,7 +15,6 @@
 
 from eventlet import greenthread
 import mock
-
 import six
 
 from nova import exception

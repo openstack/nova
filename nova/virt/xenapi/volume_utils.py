@@ -19,7 +19,6 @@ and storage repositories
 """
 
 import re
-import six
 import string
 import uuid
 
@@ -28,6 +27,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import versionutils
+import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LW

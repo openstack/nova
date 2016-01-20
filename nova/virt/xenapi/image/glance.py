@@ -14,11 +14,11 @@
 #    under the License.
 
 import functools
-import six
 import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from nova.compute import utils as compute_utils
 from nova import exception
