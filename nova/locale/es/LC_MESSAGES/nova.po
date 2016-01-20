@@ -5554,7 +5554,7 @@ msgstr "CPU's no disponibles después de analizar %r"
 #: nova/virt/hardware.py:87 nova/virt/hardware.py:91
 #, python-format
 msgid "Invalid range expression %r"
-msgstr "Expresión de intérvalo inválida %"
+msgstr "Expresión de intérvalo inválida %r"
 
 #: nova/virt/hardware.py:100
 #, python-format
@@ -5564,7 +5564,7 @@ msgstr "Expresión de exclusión inválida %r"
 #: nova/virt/hardware.py:107
 #, python-format
 msgid "Invalid inclusion expression %r"
-msgstr "Expresión de inclusión inválida %"
+msgstr "Expresión de inclusión inválida %r"
 
 #: nova/virt/images.py:56
 #, python-format

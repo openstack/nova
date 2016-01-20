@@ -1365,7 +1365,7 @@ msgid ""
 "%(args)r"
 msgstr ""
 "La llamada del agente para %(method)s ha arrojado una respuesta inválida: "
-"%(ret)r. args=$(args)r"
+"%(ret)r. args=%(args)r"
 
 #: nova/virt/xenapi/agent.py:146
 #, python-format
