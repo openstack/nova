@@ -311,38 +311,6 @@ class JSONDictSerializer(DictSerializer):
         return six.text_type(jsonutils.dumps(data))
 
 
-def serializers(**serializers):
-    """Attaches serializers to a method.
-
-    This decorator associates a dictionary of serializers with a
-    method.  Note that the function attributes are directly
-    manipulated; the method is not wrapped.
-    """
-
-    def decorator(func):
-        if not hasattr(func, 'wsgi_serializers'):
-            func.wsgi_serializers = {}
-        func.wsgi_serializers.update(serializers)
-        return func
-    return decorator
-
-
-def deserializers(**deserializers):
-    """Attaches deserializers to a method.
-
-    This decorator associates a dictionary of deserializers with a
-    method.  Note that the function attributes are directly
-    manipulated; the method is not wrapped.
-    """
-
-    def decorator(func):
-        if not hasattr(func, 'wsgi_deserializers'):
-            func.wsgi_deserializers = {}
-        func.wsgi_deserializers.update(deserializers)
-        return func
-    return decorator
-
-
 def response(code):
     """Attaches response code to a method.
 
