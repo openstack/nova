@@ -2227,7 +2227,7 @@ class API(base.Base):
         """
         props_copy = dict(extra_properties, backup_type=backup_type)
 
-        if self.is_volume_backed_instance(context, instance):
+        if compute_utils.is_volume_backed_instance(context, instance):
             LOG.info(_LI("It's not supported to backup volume backed "
                          "instance."), context=context, instance=instance)
             raise exception.InvalidRequest()
@@ -2474,7 +2474,7 @@ class API(base.Base):
         self._check_auto_disk_config(image=image, **kwargs)
 
         flavor = instance.get_flavor()
-        root_bdm = self._get_root_bdm(context, instance)
+        root_bdm = compute_utils.get_root_bdm(context, instance)
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
@@ -2654,7 +2654,8 @@ class API(base.Base):
                     flavor_id, read_deleted="no")
             if (new_instance_type.get('root_gb') == 0 and
                 current_instance_type.get('root_gb') != 0 and
-                not self.is_volume_backed_instance(context, instance)):
+                not compute_utils.is_volume_backed_instance(context,
+                    instance)):
                 reason = _('Resize to zero disk flavor is not allowed.')
                 raise exception.CannotResizeDisk(reason=reason)
 
@@ -2765,7 +2766,7 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.SHELVE)
 
-        if not self.is_volume_backed_instance(context, instance):
+        if not compute_utils.is_volume_backed_instance(context, instance):
             name = '%s-shelved' % instance.display_name
             image_meta = self._create_image(context, instance, name,
                     'snapshot')
@@ -2891,7 +2892,7 @@ class API(base.Base):
             if bdm.volume_id:
                 vol = self.volume_api.get(context, bdm.volume_id)
                 self.volume_api.check_attached(context, vol)
-        if self.is_volume_backed_instance(context, instance, bdms):
+        if compute_utils.is_volume_backed_instance(context, instance, bdms):
             reason = _("Cannot rescue a volume-backed instance")
             raise exception.InstanceNotRescuable(instance_id=instance.uuid,
                                                  reason=reason)
@@ -3372,21 +3373,6 @@ class API(base.Base):
                                                      instance=instance,
                                                      diff=diff)
         return _metadata
-
-    def _get_root_bdm(self, context, instance, bdms=None):
-        if bdms is None:
-            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance.uuid)
-
-        return bdms.root_bdm()
-
-    def is_volume_backed_instance(self, context, instance, bdms=None):
-        root_bdm = self._get_root_bdm(context, instance, bdms)
-        if root_bdm is not None:
-            return root_bdm.is_volume
-        # in case we hit a very old instance without root bdm, we _assume_ that
-        # instance is backed by a volume, if and only if image_ref is not set
-        return not instance.image_ref
 
     @check_instance_lock
     @check_instance_cell

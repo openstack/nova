@@ -1860,14 +1860,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
 
-        self.mox.StubOutWithMock(self.compute.compute_api,
+        self.mox.StubOutWithMock(compute_utils,
                                  'is_volume_backed_instance')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_source')
 
-        self.compute.compute_api.is_volume_backed_instance(
+        compute_utils.is_volume_backed_instance(
                 self.context, instance).AndReturn(is_volume_backed)
         self.compute._get_instance_block_device_info(
                 self.context, instance, refresh_conn_info=True
@@ -1896,8 +1896,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-        @mock.patch.object(self.compute.compute_api,
-                           'is_volume_backed_instance')
+        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
         @mock.patch.object(self.compute,
                            '_get_instance_block_device_info')
         def do_test(mock_block_info, mock_volume_backed,
@@ -4564,7 +4563,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch.object(compute.driver, 'check_can_live_migrate_source')
         @mock.patch.object(compute, '_get_instance_block_device_info')
-        @mock.patch.object(compute.compute_api, 'is_volume_backed_instance')
+        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
         def _test(mock_ivbi, mock_gibdi, mock_cclms):
             mock_cclms.return_value = data
             self.assertIsInstance(
@@ -4583,7 +4582,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute, 'network_api')
         @mock.patch.object(compute.driver, 'pre_live_migration')
         @mock.patch.object(compute, '_get_instance_block_device_info')
-        @mock.patch.object(compute.compute_api, 'is_volume_backed_instance')
+        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
         def _test(mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_notify):
             migrate_data = migrate_data_obj.LiveMigrateData()
             mock_plm.return_value = migrate_data

@@ -36,6 +36,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova.compute import flavors
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -1109,7 +1110,7 @@ class ServersController(wsgi.Controller):
                     context, instance.uuid)
 
         try:
-            if self.compute_api.is_volume_backed_instance(context, instance,
+            if compute_utils.is_volume_backed_instance(context, instance,
                                                           bdms):
                 authorize(context, action="create_image:allow_volume_backed")
                 image = self.compute_api.snapshot_volume_backed(

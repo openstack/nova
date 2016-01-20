@@ -4379,8 +4379,8 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller._action_create_image,
             self.req, FAKE_UUID, body=body)
 
-    @mock.patch.object(compute_api.API, 'is_volume_backed_instance',
-                       return_value=True)
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(servers.ServersController, '_get_server')
     def test_create_vol_backed_img_snapshotting_policy_blocks_project(self,
@@ -4404,8 +4404,8 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rules, rule_name, self.controller._action_create_image,
             self.req, FAKE_UUID, body=body)
 
-    @mock.patch.object(compute_api.API, 'is_volume_backed_instance',
-                       return_value=True)
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(servers.ServersController, '_get_server')
     def test_create_vol_backed_img_snapshotting_policy_blocks_role(self,

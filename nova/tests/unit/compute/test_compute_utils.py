@@ -52,6 +52,8 @@ from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
+FAKE_IMAGE_REF = uuids.image_ref
+
 
 def create_instance(context, user_id='fake', project_id='fake', params=None):
     """Create a test instance."""
@@ -719,3 +721,119 @@ class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
         compute_utils.reserve_quota_delta(self.context, deltas, inst)
         mock_reserve.assert_called_once_with(project_id=inst.project_id,
                                              user_id=inst.user_id, **deltas)
+
+
+class IsVolumeBackedInstanceTestCase(test.TestCase):
+    def setUp(self):
+        super(IsVolumeBackedInstanceTestCase, self).setUp()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                            self.project_id)
+
+    def test_is_volume_backed_instance_no_bdm_no_image(self):
+        ctxt = self.context
+
+        instance = create_instance(ctxt, params={'image_ref': ''})
+        self.assertTrue(
+            compute_utils.is_volume_backed_instance(ctxt, instance, None))
+
+    def test_is_volume_backed_instance_empty_bdm_with_image(self):
+        ctxt = self.context
+        instance = create_instance(ctxt, params={
+            'root_device_name': 'vda',
+            'image_ref': FAKE_IMAGE_REF
+        })
+        self.assertFalse(
+            compute_utils.is_volume_backed_instance(
+                ctxt, instance,
+                block_device_obj.block_device_make_list(ctxt, [])))
+
+    def test_is_volume_backed_instance_bdm_volume_no_image(self):
+        ctxt = self.context
+        instance = create_instance(ctxt, params={
+            'root_device_name': 'vda',
+            'image_ref': ''
+        })
+        bdms = block_device_obj.block_device_make_list(ctxt,
+                            [fake_block_device.FakeDbBlockDeviceDict(
+                                {'source_type': 'volume',
+                                 'device_name': '/dev/vda',
+                                 'volume_id': uuids.volume_id,
+                                 'instance_uuid':
+                                     'f8000000-0000-0000-0000-000000000000',
+                                 'boot_index': 0,
+                                 'destination_type': 'volume'})])
+        self.assertTrue(
+            compute_utils.is_volume_backed_instance(ctxt, instance, bdms))
+
+    def test_is_volume_backed_instance_bdm_local_no_image(self):
+        # if the root device is local the instance is not volume backed, even
+        # if no image_ref is set.
+        ctxt = self.context
+        instance = create_instance(ctxt, params={
+            'root_device_name': 'vda',
+            'image_ref': ''
+        })
+        bdms = block_device_obj.block_device_make_list(ctxt,
+               [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'volume_id': uuids.volume_id,
+                 'destination_type': 'local',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
+                 'boot_index': 0,
+                 'snapshot_id': None}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vdb',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
+                 'boot_index': 1,
+                 'destination_type': 'volume',
+                 'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
+                 'snapshot_id': None})])
+        self.assertFalse(
+            compute_utils.is_volume_backed_instance(ctxt, instance, bdms))
+
+    def test_is_volume_backed_instance_bdm_volume_with_image(self):
+        ctxt = self.context
+        instance = create_instance(ctxt, params={
+            'root_device_name': 'vda',
+            'image_ref': FAKE_IMAGE_REF
+        })
+        bdms = block_device_obj.block_device_make_list(ctxt,
+                            [fake_block_device.FakeDbBlockDeviceDict(
+                                {'source_type': 'volume',
+                                 'device_name': '/dev/vda',
+                                 'volume_id': uuids.volume_id,
+                                 'boot_index': 0,
+                                 'destination_type': 'volume'})])
+        self.assertTrue(
+            compute_utils.is_volume_backed_instance(ctxt, instance, bdms))
+
+    def test_is_volume_backed_instance_bdm_snapshot(self):
+        ctxt = self.context
+        instance = create_instance(ctxt, params={
+            'root_device_name': 'vda'
+        })
+        bdms = block_device_obj.block_device_make_list(ctxt,
+               [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'snapshot_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
+                 'destination_type': 'volume',
+                 'boot_index': 0,
+                 'volume_id': None})])
+        self.assertTrue(
+            compute_utils.is_volume_backed_instance(ctxt, instance, bdms))
+
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_is_volume_backed_instance_empty_bdm_by_uuid(self, mock_bdms):
+        ctxt = self.context
+        instance = create_instance(ctxt)
+        mock_bdms.return_value = block_device_obj.block_device_make_list(
+            ctxt, [])
+        self.assertFalse(
+            compute_utils.is_volume_backed_instance(ctxt, instance, None))
+        mock_bdms.assert_called_with(ctxt, instance.uuid)
