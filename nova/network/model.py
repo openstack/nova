@@ -317,6 +317,8 @@ class VIF8021QbgParams(Model):
     """Represents the parameters for a 802.1qbg VIF."""
 
     def __init__(self, managerid, typeid, typeidversion, instanceid):
+        super(VIF8021QbgParams, self).__init__()
+
         self['managerid'] = managerid
         self['typeid'] = typeid
         self['typeidversion'] = typeidversion
@@ -327,6 +329,8 @@ class VIF8021QbhParams(Model):
     """Represents the parameters for a 802.1qbh VIF."""
 
     def __init__(self, profileid):
+        super(VIF8021QbhParams, self).__init__()
+
         self['profileid'] = profileid
 
 
@@ -487,6 +491,8 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     """
 
     def __init__(self, async_method, *args, **kwargs):
+        super(NetworkInfoAsyncWrapper, self).__init__()
+
         self._gt = utils.spawn(async_method, *args, **kwargs)
         methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:
