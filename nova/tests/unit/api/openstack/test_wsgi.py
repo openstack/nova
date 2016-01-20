@@ -206,12 +206,6 @@ class ActionDispatcherTest(test.NoDBTestCase):
         self.assertEqual(serializer.dispatch({}, action='update'), 'trousers')
 
 
-class DictSerializerTest(test.NoDBTestCase):
-    def test_dispatch_default(self):
-        serializer = wsgi.DictSerializer()
-        self.assertEqual(serializer.serialize({}, 'update'), '')
-
-
 class JSONDictSerializerTest(test.NoDBTestCase):
     def test_json(self):
         input_dict = dict(servers=dict(a=(2, 3)))
@@ -220,12 +214,6 @@ class JSONDictSerializerTest(test.NoDBTestCase):
         result = serializer.serialize(input_dict)
         result = result.replace('\n', '').replace(' ', '')
         self.assertEqual(result, expected_json)
-
-
-class TextDeserializerTest(test.NoDBTestCase):
-    def test_dispatch_default(self):
-        deserializer = wsgi.TextDeserializer()
-        self.assertEqual(deserializer.deserialize({}, 'update'), {})
 
 
 class JSONDeserializerTest(test.NoDBTestCase):
