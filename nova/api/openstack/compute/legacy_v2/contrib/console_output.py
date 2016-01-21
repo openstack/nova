@@ -62,6 +62,8 @@ class ConsoleOutputController(wsgi.Controller):
             output = self.compute_api.get_console_output(context,
                                                          instance,
                                                          length)
+        except exception.ConsoleNotAvailable as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.NotFound:
             msg = _('Unable to get console')
             raise webob.exc.HTTPNotFound(explanation=msg)

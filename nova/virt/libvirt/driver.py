@@ -2851,8 +2851,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     continue
                 break
         else:
-            msg = _("Guest does not have a console available")
-            raise exception.NovaException(msg)
+            raise exception.ConsoleNotAvailable()
 
         self._chown_console_log_for_instance(instance)
         data = self._flush_libvirt_console(pty)

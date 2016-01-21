@@ -55,7 +55,8 @@ class ConsoleOutputController(wsgi.Controller):
         # NOTE(cyeoh): This covers race conditions where the instance is
         # deleted between common.get_instance and get_console_output
         # being called
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceNotFound,
+                exception.ConsoleNotAvailable) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())

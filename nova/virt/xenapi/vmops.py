@@ -1767,8 +1767,7 @@ class VMOps(object):
                     'get_console_log', {'dom_id': dom_id})
         except self._session.XenAPI.Failure:
             LOG.exception(_LE("Guest does not have a console available"))
-            msg = _("Guest does not have a console available")
-            raise exception.NovaException(msg)
+            raise exception.ConsoleNotAvailable()
 
         return zlib.decompress(base64.b64decode(raw_console_data))
 
