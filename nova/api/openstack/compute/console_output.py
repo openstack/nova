@@ -35,7 +35,7 @@ class ConsoleOutputController(wsgi.Controller):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API(skip_policy_check=True)
 
-    @extensions.expected_errors((400, 404, 409, 501))
+    @extensions.expected_errors((404, 409, 501))
     @wsgi.action('os-getConsoleOutput')
     @validation.schema(console_output.get_console_output)
     def get_console_output(self, req, id, body):
