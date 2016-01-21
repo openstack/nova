@@ -363,6 +363,13 @@ class GuestTestCase(test.NoDBTestCase):
         <address domain='0x0000' bus='0x06' slot='0x12' function='0x6'/>
       </source>
     </hostdev>
+    <interface type="bridge">
+      <mac address="fa:16:3e:f9:af:ae"/>
+      <model type="virtio"/>
+      <driver name="qemu"/>
+      <source bridge="qbr84008d03-11"/>
+      <target dev="tap84008d03-11"/>
+    </interface>
     <controller type='usb' index='0'/>
     <controller type='pci' index='0' model='pci-root'/>
     <memballoon model='none'/>
@@ -373,14 +380,15 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.XMLDesc.return_value = xml
 
         devs = self.guest.get_all_devices()
-        # Only currently parse <disk> and <hostdev> elements
+        # Only currently parse <disk>, <hostdev> and <interface> elements
         # hence we're not counting the controller/memballoon
-        self.assertEqual(5, len(devs))
+        self.assertEqual(6, len(devs))
         self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(devs[1], vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(devs[2], vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(devs[3], vconfig.LibvirtConfigGuestHostdev)
         self.assertIsInstance(devs[4], vconfig.LibvirtConfigGuestHostdev)
+        self.assertIsInstance(devs[5], vconfig.LibvirtConfigGuestInterface)
 
         devs = self.guest.get_all_devices(vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(3, len(devs))
@@ -398,6 +406,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(devs))
         self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestHostdev)
         self.assertIsInstance(devs[1], vconfig.LibvirtConfigGuestHostdev)
+
+        devs = self.guest.get_all_devices(vconfig.LibvirtConfigGuestInterface)
+        self.assertEqual(1, len(devs))
+        self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestInterface)
 
     def test_get_info(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)
