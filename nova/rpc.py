@@ -33,8 +33,20 @@ from oslo_serialization import jsonutils
 import nova.context
 import nova.exception
 
+
 CONF = cfg.CONF
+notification_opts = [
+    cfg.StrOpt('notification_format',
+               choices=['unversioned', 'versioned', 'both'],
+               default='both',
+               help='Specifies which notification format shall be used by '
+                    'nova.'),
+]
+
+CONF.register_opts(notification_opts)
+
 TRANSPORT = None
+LEGACY_NOTIFIER = None
 NOTIFIER = None
 
 ALLOWED_EXMODS = [
@@ -56,21 +68,34 @@ TRANSPORT_ALIASES = {
 
 
 def init(conf):
-    global TRANSPORT, NOTIFIER
+    global TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     exmods = get_allowed_exmods()
     TRANSPORT = messaging.get_transport(conf,
                                         allowed_remote_exmods=exmods,
                                         aliases=TRANSPORT_ALIASES)
     serializer = RequestContextSerializer(JsonPayloadSerializer())
-    NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer)
+    if conf.notification_format == 'unversioned':
+        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer)
+        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+                                      driver='noop')
+    elif conf.notification_format == 'both':
+        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer)
+        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+                                      topic='versioned_notifications')
+    else:
+        LEGACY_NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+                                             driver='noop')
+        NOTIFIER = messaging.Notifier(TRANSPORT, serializer=serializer,
+                                      topic='versioned_notifications')
 
 
 def cleanup():
-    global TRANSPORT, NOTIFIER
+    global TRANSPORT, LEGACY_NOTIFIER, NOTIFIER
     assert TRANSPORT is not None
+    assert LEGACY_NOTIFIER is not None
     assert NOTIFIER is not None
     TRANSPORT.cleanup()
-    TRANSPORT = NOTIFIER = None
+    TRANSPORT = LEGACY_NOTIFIER = NOTIFIER = None
 
 
 def set_defaults(control_exchange):
@@ -141,7 +166,12 @@ def get_server(target, endpoints, serializer=None):
 
 
 def get_notifier(service, host=None, publisher_id=None):
-    assert NOTIFIER is not None
+    assert LEGACY_NOTIFIER is not None
     if not publisher_id:
         publisher_id = "%s.%s" % (service, host or CONF.host)
+    return LEGACY_NOTIFIER.prepare(publisher_id=publisher_id)
+
+
+def get_versioned_notifier(publisher_id):
+    assert NOTIFIER is not None
     return NOTIFIER.prepare(publisher_id=publisher_id)
