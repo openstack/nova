@@ -451,8 +451,12 @@ class ResponseObject(object):
         return self._headers.copy()
 
 
-def action_peek_json(body):
-    """Determine action to invoke."""
+def action_peek(body):
+    """Determine action to invoke.
+
+    This looks inside the json body and fetches out the action method
+    name.
+    """
 
     try:
         decoded = jsonutils.loads(body)
@@ -465,7 +469,7 @@ def action_peek_json(body):
         msg = _("too many body keys")
         raise exception.MalformedRequestBody(reason=msg)
 
-    # Return the action and the decoded body...
+    # Return the action name
     return list(decoded.keys())[0]
 
 
@@ -526,12 +530,9 @@ class Resource(wsgi.Application):
     """
     support_api_request_version = False
 
-    def __init__(self, controller, action_peek=None, inherits=None):
+    def __init__(self, controller, inherits=None):
         """:param controller: object that implement methods created by routes
                               lib
-           :param action_peek: dictionary of routines for peeking into an
-                               action request body to determine the
-                               desired action
            :param inherits: another resource object that this resource should
                             inherit extensions from. Any action extensions that
                             are applied to the parent resource will also apply
@@ -541,8 +542,6 @@ class Resource(wsgi.Application):
         self.controller = controller
 
         self.default_serializers = dict(json=JSONDictSerializer)
-
-        self.action_peek = action_peek_json
 
         # Copy over the actions dictionary
         self.wsgi_actions = {}
@@ -852,7 +851,7 @@ class Resource(wsgi.Application):
             return meth, self.wsgi_extensions.get(action, [])
 
         if action == 'action':
-            action_name = self.action_peek(body)
+            action_name = action_peek(body)
         else:
             action_name = action
 
