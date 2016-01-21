@@ -1,0 +1,32 @@
+---
+features:
+  - |
+    This release adds support to attach a volume to multiple
+    server instances. The feature can only be used in Nova if the
+    volume is created in Cinder with the **multiattach** flag set
+    to True. It is the responsibility of the user to use a
+    proper filesystem in the guest that supports shared read/write access.
+
+    This feature is currently only supported by the libvirt compute driver
+    and only then if qemu<2.10 or libvirt>3.10 on the compute host.
+
+    API restrictions:
+
+    * Compute API microversion 2.60 must be used to create a server from
+      a multiattach volume or to attach a multiattach volume to an existing
+      server instance.
+    * When creating a server using a multiattach volume, the API will check
+      if the compute services have all been upgraded to a minimum level of
+      support and will fail with a 409 HTTPConflict response if the computes
+      are not yet upgraded.
+    * Attaching a multiattach volume to a shelved offloaded instance is not
+      supported and will result in a 400 HTTPBadRequest response.
+    * Attaching a multiattach volume to an existing server instance will check
+      that the compute hosting that instance is new enough to support it and
+      has the capability to support it. If the compute cannot support the
+      multiattach volume, a 409 HTTPConflict response is returned.
+
+    See the `Cinder enable multiattach`_ spec for details on configuring
+    Cinder for multiattach support.
+
+    .. _Cinder enable multiattach: https://specs.openstack.org/openstack/cinder-specs/specs/queens/enable-multiattach.html

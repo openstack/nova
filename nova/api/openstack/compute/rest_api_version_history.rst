@@ -757,3 +757,11 @@ Added pagination support for migrations, there are four changes:
   addition to the migrations id in the response.
 * The query parameter schema of the ``GET /os-migrations`` API no longer
   allows additional properties.
+
+2.60
+----
+
+From this version of the API users can attach a ``multiattach`` capable volume
+to multiple instances. The API request for creating the additional attachments
+is the same. The chosen virt driver and the volume back end has to support the
+functionality as well.

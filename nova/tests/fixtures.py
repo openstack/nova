@@ -1334,6 +1334,7 @@ class CinderFixture(fixtures.Fixture):
                              'display_name': 'TEST1',
                              'attach_status': 'detached',
                              'id': volume_id,
+                             'multiattach': False,
                              'size': 1
                          }
                 if ((self.swap_volume_instance_uuid and
@@ -1365,6 +1366,7 @@ class CinderFixture(fixtures.Fixture):
                         'display_name': volume_id,
                         'attach_status': 'attached',
                         'id': volume_id,
+                        'multiattach': False,
                         'size': 1,
                         'attachments': {
                             instance_uuid: {
@@ -1381,6 +1383,7 @@ class CinderFixture(fixtures.Fixture):
                     'display_name': 'TEST2',
                     'attach_status': 'detached',
                     'id': volume_id,
+                    'multiattach': False,
                     'size': 1
                 }
 
@@ -1482,6 +1485,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
     SWAP_ERR_OLD_VOL = '828419fa-3efb-4533-b458-4267ca5fe9b1'
     SWAP_ERR_NEW_VOL = '9c6d9c2d-7a8f-4c80-938d-3bf062b8d489'
     SWAP_ERR_ATTACH_ID = '4a3cd440-b9c2-11e1-afa6-0800200c9a66'
+    MULTIATTACH_VOL = '4757d51f-54eb-4442-8684-3399a6431f67'
 
     # This represents a bootable image-backed volume to test
     # boot-from-volume scenarios.
@@ -1510,6 +1514,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                              'display_name': 'TEST1',
                              'attach_status': 'detached',
                              'id': volume_id,
+                             'multiattach': False,
                              'size': 1
                          }
                 if ((self.swap_volume_instance_uuid and
@@ -1541,6 +1546,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                         'display_name': volume_id,
                         'attach_status': 'attached',
                         'id': volume_id,
+                        'multiattach': volume_id == self.MULTIATTACH_VOL,
                         'size': 1,
                         'attachments': {
                             instance_uuid: {
@@ -1557,6 +1563,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                     'display_name': 'TEST2',
                     'attach_status': 'detached',
                     'id': volume_id,
+                    'multiattach': volume_id == self.MULTIATTACH_VOL,
                     'size': 1
                 }
 

@@ -583,7 +583,7 @@ def stub_volume(id, **kwargs):
         'volume_type_id': 'fakevoltype',
         'volume_metadata': [],
         'volume_type': {'name': 'vol_type_name'},
-        'multiattach': True,
+        'multiattach': False,
         'attachments': {'fakeuuid': {'mountpoint': '/'},
                         'fakeuuid2': {'mountpoint': '/dev/sdb'}
                         }

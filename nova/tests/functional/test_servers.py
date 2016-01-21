@@ -988,6 +988,7 @@ class ServerTestV220(ServersTestBase):
         server_id = found_server['id']
 
         # Test attach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(volume.cinder,
                                        'is_microversion_supported'),
                          mock.patch.object(compute_api.API,
@@ -1007,7 +1008,6 @@ class ServerTestV220(ServersTestBase):
             self.assertTrue(mock_attach.called)
 
         # Test detach volume
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(volume.cinder.API,
                                            'begin_detaching'),
                          mock.patch.object(objects.BlockDeviceMappingList,
@@ -1033,6 +1033,7 @@ class ServerTestV220(ServersTestBase):
         server_id = found_server['id']
 
         # Test attach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(volume.cinder,
                                        'is_microversion_supported'),
                          mock.patch.object(compute_api.API,
@@ -1052,7 +1053,6 @@ class ServerTestV220(ServersTestBase):
             self.assertIsNone(attach_response['device'])
 
         # Test detach volume
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(volume.cinder.API,
                                            'begin_detaching'),
                          mock.patch.object(objects.BlockDeviceMappingList,
@@ -1104,7 +1104,6 @@ class ServerTestV220(ServersTestBase):
             self.assertIsNone(attach_response['device'])
 
         # Test detach volume
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(volume.cinder.API,
                                            'begin_detaching'),
                          mock.patch.object(objects.BlockDeviceMappingList,

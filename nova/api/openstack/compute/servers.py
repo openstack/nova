@@ -540,6 +540,7 @@ class ServersController(wsgi.Controller):
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, ctxt=context, read_deleted="no")
 
+            supports_multiattach = common.supports_multiattach_volume(req)
             (instances, resv_id) = self.compute_api.create(context,
                             inst_type,
                             image_uuid,
@@ -551,6 +552,7 @@ class ServersController(wsgi.Controller):
                             admin_password=password,
                             requested_networks=requested_networks,
                             check_server_group_quota=True,
+                            supports_multiattach=supports_multiattach,
                             **create_kwargs)
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
@@ -622,12 +624,14 @@ class ServersController(wsgi.Controller):
                 exception.RealtimeConfigurationInvalid,
                 exception.RealtimeMaskNotFoundOrInvalid,
                 exception.SnapshotNotFound,
-                exception.UnableToAutoAllocateNetwork) as error:
+                exception.UnableToAutoAllocateNetwork,
+                exception.MultiattachNotSupportedOldMicroversion) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
                 exception.NetworkAmbiguous,
-                exception.NoUniqueMatch) as error:
+                exception.NoUniqueMatch,
+                exception.MultiattachSupportNotYetAvailable) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it

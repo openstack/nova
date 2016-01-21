@@ -83,7 +83,8 @@ class BlockDeviceMappingTestV21(test.TestCase):
             test.MatchType(fakes.FakeRequestContext),
             test.MatchType(objects.Instance),
             test.MatchType(objects.Flavor),
-            test.MatchType(objects.BlockDeviceMappingList))
+            test.MatchType(objects.BlockDeviceMappingList),
+            False)
 
     def test_create_instance_with_volumes_enabled(self):
         params = {'block_device_mapping': self.bdm}
