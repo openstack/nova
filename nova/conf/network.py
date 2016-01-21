@@ -139,23 +139,116 @@ with the name 'mtu'.
 
 linux_net_opts = [
     cfg.MultiStrOpt('dhcpbridge_flagfile',
-                    default=['/etc/nova/nova-dhcpbridge.conf'],
-                    help='Location of flagfiles for dhcpbridge'),
+            default=['/etc/nova/nova-dhcpbridge.conf'],
+            help="""
+This option is a list of full paths to one or more configuration files for
+dhcpbridge. In most cases the default path of '/etc/nova/nova-dhcpbridge.conf'
+should be sufficient, but if you have special needs for configuring dhcpbridge,
+you can change or add to this list.
+
+* Possible values
+
+    A list of strings, where each string is the full path to a dhcpbridge
+    configuration file.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.StrOpt('networks_path',
-               default=paths.state_path_def('networks'),
-               help='Location to keep network config files'),
+            default=paths.state_path_def('networks'),
+            help="""
+The location where the network configuration files will be kept. The default is
+the 'networks' directory off of the location where nova's Python module is
+installed.
+
+* Possible values
+
+    A string containing the full path to the desired configuration directory
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.StrOpt('public_interface',
-               default='eth0',
-               help='Interface for public IP addresses'),
+            default='eth0',
+            help="""
+This is the name of the network interface for public IP addresses. The default
+is 'eth0'.
+
+* Possible values:
+
+    Any string representing a network interface name
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.StrOpt('dhcpbridge',
-               default=paths.bindir_def('nova-dhcpbridge'),
-               help='Location of nova-dhcpbridge'),
+            default=paths.bindir_def('nova-dhcpbridge'),
+            help="""
+The location of the binary nova-dhcpbridge. By default it is the binary named
+'nova-dhcpbridge' that is installed with all the other nova binaries.
+
+* Possible values:
+
+    Any string representing the full path to the binary for dhcpbridge
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.StrOpt('routing_source_ip',
-               default='$my_ip',
-               help='Public IP of network host'),
+            default='$my_ip',
+            help="""
+This is the public IP address of the network host. It is used when creating a
+SNAT rule.
+
+* Possible values:
+
+    Any valid IP address
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    force_snat_range
+"""),
     cfg.IntOpt('dhcp_lease_time',
-               default=86400,
-               help='Lifetime of a DHCP lease in seconds'),
+            default=86400,
+            help="""
+The lifetime of a DHCP lease, in seconds. The default is 86400 (one day).
+
+Possible values:
+
+    Any positive integer value.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.MultiStrOpt('dns_server',
                     default=[],
                     help='If set, uses specific DNS server for dnsmasq. Can'
