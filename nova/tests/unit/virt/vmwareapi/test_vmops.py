@@ -59,7 +59,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         super(VMwareVMOpsTestCase, self).setUp()
         ds_util.dc_cache_reset()
         vmwareapi_fake.reset()
-        stubs.set_stubs(self.stubs)
+        stubs.set_stubs(self)
         self.flags(enabled=True, group='vnc')
         self.flags(image_cache_subdirectory_name='vmware_base',
                    my_ip='',

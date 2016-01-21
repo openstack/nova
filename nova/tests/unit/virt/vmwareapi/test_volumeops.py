@@ -36,7 +36,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
         super(VMwareVolumeOpsTestCase, self).setUp()
         vmwareapi_fake.reset()
-        stubs.set_stubs(self.stubs)
+        stubs.set_stubs(self)
         self._session = driver.VMwareAPISession()
         self._context = context.RequestContext('fake_user', 'fake_project')
 
