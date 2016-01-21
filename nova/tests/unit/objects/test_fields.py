@@ -941,3 +941,58 @@ class TestIPV6Network(TestField):
                                     for x in good]
         self.from_primitive_values = [(x, netaddr.IPNetwork(x))
                                       for x in good]
+
+
+class TestNotificationPriority(TestField):
+    def setUp(self):
+        super(TestNotificationPriority, self).setUp()
+        self.field = fields.NotificationPriorityField()
+        self.coerce_good_values = [('audit', 'audit'),
+                                   ('critical', 'critical'),
+                                   ('debug', 'debug'),
+                                   ('error', 'error'),
+                                   ('sample', 'sample'),
+                                   ('warn', 'warn')]
+        self.coerce_bad_values = ['warning']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'warn'", self.field.stringify('warn'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'warning')
+
+
+class TestNotificationPhase(TestField):
+    def setUp(self):
+        super(TestNotificationPhase, self).setUp()
+        self.field = fields.NotificationPhaseField()
+        self.coerce_good_values = [('start', 'start'),
+                                   ('end', 'end'),
+                                   ('error', 'error')]
+        self.coerce_bad_values = ['begin']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'error'", self.field.stringify('error'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'begin')
+
+
+class TestNotificationAction(TestField):
+    def setUp(self):
+        super(TestNotificationAction, self).setUp()
+        self.field = fields.NotificationActionField()
+        self.coerce_good_values = [('update', 'update')]
+        self.coerce_bad_values = ['magic']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'update'", self.field.stringify('update'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'magic')
