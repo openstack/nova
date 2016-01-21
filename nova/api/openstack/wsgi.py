@@ -542,6 +542,29 @@ class Resource(wsgi.Application):
     def deserialize(self, body):
         return JSONDeserializer().deserialize(body)
 
+    # NOTE(sdague): I didn't start the fire, however here is what all
+    # of this is about.
+    #
+    # In the legacy v2 code stack, extensions could extend actions
+    # with a generator that let 1 method be split into a top and
+    # bottom half. The top half gets executed before the main
+    # processing of the request (so effectively gets to modify the
+    # request before it gets to the main method).
+    #
+    # Returning a response triggers a shortcut to fail out. The
+    # response will nearly always be a failure condition, as it ends
+    # up skipping further processing one level up from here.
+    #
+    # This then passes on the list of extensions, in reverse order,
+    # on. post_process will run through all those, again with same
+    # basic logic.
+    #
+    # In tree this is only used in the legacy v2 stack, and only in
+    # the DiskConfig and SchedulerHints from what I can see.
+    #
+    # pre_process_extensions can be removed when the legacyv2 code
+    # goes away. post_proccess_extensions can be massively simplified
+    # at that point.
     def pre_process_extensions(self, extensions, request, action_args):
         # List of callables for post-processing extensions
         post = []
@@ -569,7 +592,8 @@ class Resource(wsgi.Application):
                 # Regular functions only perform post-processing
                 post.append(ext)
 
-        # Run post-processing in the reverse order
+        # None is response, it means we keep going. We reverse the
+        # extension list for post-processing.
         return None, reversed(post)
 
     def post_process_extensions(self, extensions, resp_obj, request,
