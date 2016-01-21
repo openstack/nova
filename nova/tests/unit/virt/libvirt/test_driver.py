@@ -14467,6 +14467,30 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             'detach_interface', power_state.SHUTDOWN,
             expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
+    @mock.patch('nova.virt.libvirt.driver.LOG')
+    def test_detach_interface_device_not_found(self, mock_log):
+        # Asserts that we don't log an error when the interface device is not
+        # found on the guest after a libvirt error during detach.
+        instance = self._create_instance()
+        vif = _fake_network_info(self, 1)[0]
+        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest.get_power_state = mock.Mock()
+        self.drvr._host.get_guest = mock.Mock(return_value=guest)
+        self.drvr.vif_driver = mock.Mock()
+        error = fakelibvirt.libvirtError(
+            'no matching network device was found')
+        error.err = (fakelibvirt.VIR_ERR_OPERATION_FAILED,)
+        guest.detach_device = mock.Mock(side_effect=error)
+        # mock out that get_interface_by_mac doesn't find the interface
+        guest.get_interface_by_mac = mock.Mock(return_value=None)
+        self.drvr.detach_interface(instance, vif)
+        guest.get_interface_by_mac.assert_called_once_with(vif['address'])
+        # an error shouldn't be logged, but a warning should be logged
+        self.assertFalse(mock_log.error.called)
+        self.assertEqual(1, mock_log.warning.call_count)
+        self.assertIn('the device is no longer found on the guest',
+                      six.text_type(mock_log.warning.call_args[0]))
+
     def test_rescue(self):
         instance = self._create_instance({'config_drive': None})
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"

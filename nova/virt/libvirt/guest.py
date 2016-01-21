@@ -186,6 +186,22 @@ class Guest(object):
 
         return interfaces
 
+    def get_interface_by_mac(self, mac):
+        """Lookup a LibvirtConfigGuestInterface by the MAC address.
+
+        :param mac: MAC address of the guest interface.
+        :type mac: str
+        :returns: nova.virt.libvirt.config.LibvirtConfigGuestInterface instance
+            if found, else None
+        """
+
+        if mac:
+            interfaces = self.get_all_devices(
+                vconfig.LibvirtConfigGuestInterface)
+            for interface in interfaces:
+                if interface.mac_addr == mac:
+                    return interface
+
     def get_vcpus_info(self):
         """Returns virtual cpus information of guest.
 
