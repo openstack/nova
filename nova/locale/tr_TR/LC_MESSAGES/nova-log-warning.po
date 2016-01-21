@@ -4,21 +4,22 @@
 #
 # Translators:
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-09-08 05:38+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Turkish (Turkey)\n"
-"Language: tr-TR\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-01-20 01:48+0000\n"
+"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
+"Language: tr-TR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Turkish (Turkey)\n"
 
 #, python-format
 msgid ""
@@ -36,7 +37,7 @@ msgstr "%(host_state)s'den yakın zamanda haber alınamadı"
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr ""
-"%(pid)s için %(over)s kota aşıldı, sunucu yeniden boyutlandırılmaya "
+"%(pid)s için %(overs)s kota aşıldı, sunucu yeniden boyutlandırılmaya "
 "çalışıldı."
 
 #, python-format
@@ -55,14 +56,6 @@ msgstr "%s zaten bağlı"
 msgid "%s swap image was used by instance but no back files existing!"
 msgstr ""
 "%s swap imajı sunucu tarafından kullanılmuş ama mevcut arka dosyalar yok!"
-
-#, python-format
-msgid ""
-"Access key %(access_key)s has had %(failures)d failed authentications and "
-"will be locked out for %(lock_mins)d minutes."
-msgstr ""
-"%(access_key)s erişim anahtarı %(failures)d kez yanlış girildi ve "
-"%(lock_mins)d dakika boyunca kilitlenmiş olacak."
 
 #, python-format
 msgid "Address |%(address)s| is not allocated"
@@ -415,7 +408,7 @@ msgid ""
 "Found multiple matches for domain %(domain)s.\n"
 "%(entry)s"
 msgstr ""
-"%(domain) alanı için birden fazla eşleşme bulundu.\n"
+"%(domain)s alanı için birden fazla eşleşme bulundu.\n"
 "%(entry)s"
 
 msgid ""
@@ -697,7 +690,7 @@ msgstr "Neutron hatası: Sabit IP %s zaten kullanımda."
 #, python-format
 msgid ""
 "Neutron error: MAC address %(mac)s is already in use on network %(network)s."
-msgstr "Neutron hatası: MAC adresi %(mac) %(network)s ağında zaten kullanımda"
+msgstr "Neutron hatası: MAC adresi %(mac)s %(network)s ağında zaten kullanımda"
 
 #, python-format
 msgid "Neutron error: No more fixed IPs in network: %s"
@@ -901,16 +894,6 @@ msgstr ""
 "Nova artık %(version)s sürümünden eski VMware vCenter sürümleriyle "
 "çalıştırılmıyor. Gerekli asgari vCenter sürümü 13.0.0 sürümüyle beraber "
 "%(version)s olarak artırılacak."
-
-#, python-format
-msgid ""
-"Running Nova with a libvirt version less than %(version)s is deprecated. The "
-"required minimum version of libvirt will be raised to %(version)s in the "
-"13.0.0 release."
-msgstr ""
-"Nova'nın %(version)s sürümünden eski libvirt ile çalıştırılması artık "
-"kullanılmıyor. 13.0.0 sürümüyle birlikte gerekli libvirt sürümü %(version)s "
-"olarak artırılacak."
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1179,14 +1162,14 @@ msgstr ""
 #, python-format
 msgid "Warning, memory usage is 0 for %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Uyarı, çıplak saç düğüm %(node)s üzerindeki %(instance) için hafıza "
+"Uyarı, çıplak saç düğüm %(node)s üzerindeki %(instance)s için hafıza "
 "kullanımı 0."
 
 #, python-format
 msgid ""
 "Warning, number of cpus is 0 for %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Uyarı, çıplak saç düğüm %(node)s üzerindeki %(instance) için cpu sayısı 0."
+"Uyarı, çıplak saç düğüm %(node)s üzerindeki %(instance)s için cpu sayısı 0."
 
 #, python-format
 msgid ""
@@ -1285,10 +1268,6 @@ msgstr "isLuks anormal şekilde çıktı (durum %(exit_code)s): %(stderr)s"
 #, python-format
 msgid "multiple fixed_ips exist, using the first IPv4 fixed_ip: %s"
 msgstr "birden fazla sabit_ip mevcut, ilk IPv4 sabit ip kullanılıyor: %s"
-
-#, python-format
-msgid "multiple fixed_ips exist, using the first: %s"
-msgstr "birden fazla sabit_ip mevcut, ilki kullanılıyor: %s"
 
 #, python-format
 msgid ""

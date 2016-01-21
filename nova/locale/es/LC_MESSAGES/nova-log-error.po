@@ -11,21 +11,22 @@
 # Sergio Cuellar Valdes <scuellarv@kionetworks.com>, 2015
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
-"Language-Team: Spanish\n"
-"Language: es\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-01-20 01:51+0000\n"
+"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
+"Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Spanish\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Ha fallado la búsqueda de las VDIs"
@@ -207,10 +208,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "La variable de entorno 'NETWORK_ID' debe ser establecida."
 
 #, python-format
-msgid "Environment: %s"
-msgstr "Entorno: %s"
-
-#, python-format
 msgid "Error copying key: %s"
 msgstr "Error al copiar la llave: %s"
 
@@ -355,10 +352,6 @@ msgstr "Error al intentar Rescatar Instancia"
 
 msgid "Error trying to reschedule"
 msgstr "Error al intentar volver a programar "
-
-#, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Error al actualizar recursos para nodo %(node)s: %(e)s"
 
 msgid "Error waiting for responses from neighbor cells"
 msgstr "Error al esperar respuestas de celdas vecinas"
@@ -699,9 +692,6 @@ msgstr "Error al limpiar VDI conectados "
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Excepción fatal ejecutando %(name)s %(type)s-enlace: %(obj)s"
 
-msgid "FaultWrapper error"
-msgstr "Error de FaultWrapper"
-
 msgid "Guest does not have a console available"
 msgstr "El invitado no tiene una consola disponible"
 
@@ -754,10 +744,6 @@ msgstr "Interfaz %s no encontrada"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "Serie del servidor no válido: %s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Falla de keystone: %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -946,7 +932,7 @@ msgid ""
 "%(args)r"
 msgstr ""
 "La llamada del agente para %(method)s ha arrojado una respuesta inválida: "
-"%(ret)r. args=$(args)r"
+"%(ret)r. args=%(args)r"
 
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s."
@@ -1064,10 +1050,6 @@ msgstr "Incapaz de actualizar el anfitrión del puerto %s"
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
 msgstr "No pudo actualizar el índice VNIC de la instancia para el puerto %s."
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "Inesperado %(ex_name)s: %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Fallo de compilación inesperado, no se reprogramará la compilación."

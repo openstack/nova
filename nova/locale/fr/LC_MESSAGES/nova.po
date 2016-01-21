@@ -1,22 +1,46 @@
-# French translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# ariivarua <lchevouline@sgc-ingenierie.com>, 2013
+# Fabien B. <fabien.bavent@gmail.com>, 2013
+# Corina Roe <croe@redhat.com>, 2014
+# CryLegend <crylegend95@gmail.com>, 2013
+# EVEILLARD <stephane.eveillard@gmail.com>, 2013
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
+# Frédéric <frosmont@free.fr>, 2014
+# GuiTsi <g-tsilefski@hotmail.fr>, 2013
+# Jonathan Dupart <jonathan+transifex@dupart.org>, 2014
+# Kodoku <kevintibi@hotmail.com>, 2013
+# Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
+# Eric Marques <marques94@free.fr>, 2013
+# Maxime COQUEREL <max.coquerel@gmail.com>, 2014-2015
+# Andrew Melim <nokostya.translation@gmail.com>, 2014
+# Olivier Buisson <obuisson1976@gmail.com>, 2012
+# Patrice LACHANCE <patlachance@gmail.com>, 2013
+# EVEILLARD <stephane.eveillard@gmail.com>, 2013
+# Vincent JOBARD <vinzjobard@gmail.com>, 2013
+# Benjamin Godard <ben@hacktopie.net>, 2013
+# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
+# Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
+"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2015-10-07 11:52+0000\n"
 "Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 "Language-Team: French\n"
-"Plural-Forms: nplurals=2; plural=(n > 1)\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -222,9 +246,6 @@ msgstr ""
 #, python-format
 msgid "API version %(version)s is not supported on this method."
 msgstr "La version %(version)s de l'API n'est pas supporté par cette méthode "
-
-msgid "Access key not provided"
-msgstr "Clé d'accès non fournie"
 
 msgid "Access list not available for public flavors."
 msgstr "Liste d'accès non disponible pour les versions publiques."
@@ -867,10 +888,6 @@ msgstr "Impossible de trouver le binaire %(binary)s sur l'hôte %(host)s."
 msgid "Could not find config at %(path)s"
 msgstr "Configuration introuvable dans %(path)s"
 
-#, python-format
-msgid "Could not find key pair(s): %s"
-msgstr "Impossible de trouver la ou les paires de clés : %s"
-
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr ""
 "Impossible de trouver la ou les références de magasin de données utilisé par "
@@ -905,14 +922,6 @@ msgstr "Impossible de télécharger l'image %(image_id)s"
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "Impossible de trouver l'IP du lien local de %(interface)s :%(ex)s"
-
-#, python-format
-msgid ""
-"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
-"%(vm_state)s, current task_state: %(task_state)s"
-msgstr ""
-"L'instance %(instance)s n'a pas pu être stoppée en moins de 1 heure. Etat "
-"actuel de la VM: %(vm_state)s, etat actuel de la tache: %(task_state)s"
 
 msgid "Create networks failed"
 msgstr "La création de réseaux a échoué"
@@ -1158,21 +1167,6 @@ msgstr "UUID attendu mais %(uuid)s reçu."
 msgid "Expected object of type: %s"
 msgstr "Objet attendu de type : %s"
 
-msgid "Expecting a list of resources"
-msgstr "En attente d'une liste de ressources"
-
-msgid "Expecting a list of tagSets"
-msgstr "En attente d'un ensemble d'étiquettes"
-
-msgid "Expecting both key and value to be set"
-msgstr "En attente à la fois de la clé et de la valeur pour être positionné"
-
-msgid "Expecting key to be set"
-msgstr "La clée doit être définie"
-
-msgid "Expecting tagSet to be key/value pairs"
-msgstr "En attente d'un ensemble d'étiquettes pour être des paires clé/valeur"
-
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "Colonne supplémentaire %(table)s.%(column)s dans la table image"
@@ -1339,10 +1333,6 @@ msgstr "Échec à suspendre l'instance : %(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Échec à terminer l'instance : %(reason)s"
 
-#, python-format
-msgid "Failure parsing response from keystone: %s"
-msgstr "Echec de l'analyse syntaxique de la réponse de Keystone : %s"
-
 msgid "Failure prepping block device."
 msgstr "Echec de préparation de l'unité par bloc."
 
@@ -1505,9 +1495,6 @@ msgstr "L'association de l'IP floattante %(address)s a échoué."
 
 msgid "Floating IP allocate failed."
 msgstr "L'allocation de l'IP flottante a échoué"
-
-msgid "Floating ip is not associated."
-msgstr "L'adresse IP flottante n'est pas associée."
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1681,9 +1668,6 @@ msgstr "Limite de métadonnées d'image dépassée"
 #, python-format
 msgid "Image model '%(image)s' is not supported"
 msgstr "Le modèle d'image '%(image)s' n'est pas supporté"
-
-msgid "Image must be available"
-msgstr "L'image doit être disponible"
 
 msgid "Image not found."
 msgstr "Image introuvable."
@@ -1917,9 +1901,6 @@ msgstr "L'interface %(interface)s non trouvée."
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr "Contenu BAse 64 invalide pour le fichier %(path)s"
 
-msgid "Invalid CIDR"
-msgstr "CIDR non valide"
-
 msgid "Invalid Connection Info"
 msgstr "Informations de connexion non valides"
 
@@ -1930,10 +1911,6 @@ msgstr "ID non valide %(id)s reçu."
 #, python-format
 msgid "Invalid IP format %s"
 msgstr "Format adresse IP non valide %s"
-
-#, python-format
-msgid "Invalid IP protocol %(protocol)s"
-msgstr "Protocol IP non valide %(protocol)s"
 
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
@@ -2227,19 +2204,8 @@ msgid "Invalid usage_type: %s"
 msgstr "Type d'utilisation (usage_type) non valide : %s"
 
 #, python-format
-msgid ""
-"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
-"volume attached at root (%(root)s)"
-msgstr ""
-"Valeur non valide '%(ec2_instance_id)s' pour instanceId. L'instance ne "
-"comporte pas de volume associé à la racine (%(root)s)"
-
-#, python-format
 msgid "Invalid value '%s' for force."
 msgstr "Valeur invalide '%s' pour le 'forçage'."
-
-msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
-msgstr "Valeur non valide pour 'scheduler_max_attempts', doit être >= 1"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2830,9 +2796,6 @@ msgstr "Aucun corps de demande"
 msgid "No root disk defined."
 msgstr "Aucun disque racine défini."
 
-msgid "No rule for the specified parameters."
-msgstr "Pas de règle pour les paramètres spécifiés."
-
 msgid "No suitable network for migrate"
 msgstr "Aucun réseau adéquat pour migrer"
 
@@ -2865,10 +2828,6 @@ msgstr "Pas capable d'acquérir un port libre pour %(host)s"
 #, python-format
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "Pas capable de lier %(host)s : %(port)d, %(error)s "
-
-#, python-format
-msgid "Not allowed to modify attributes for image %s"
-msgstr "Non autorisé à modifier les attributs de l'image %s"
 
 msgid "Not an rbd snapshot"
 msgstr "N'est pas un instantané rbd"
@@ -2947,9 +2906,6 @@ msgstr ""
 
 msgid "Only host parameter can be specified"
 msgstr "Seul le paramètre Hôte doit être spécifié"
-
-msgid "Only instances implemented"
-msgstr "Seules les instances implémentées"
 
 msgid "Only root certificate can be retrieved."
 msgstr "Seul le certificat racine peut être extrait."
@@ -3512,9 +3468,6 @@ msgstr ""
 "veuillez vérifier si vous avez suffisamment d'espace disponible sur votre "
 "disque."
 
-msgid "Signature not provided"
-msgstr "Signature non fournie"
-
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Le snapshot %(snapshot_id)s n'a pas été trouvé."
@@ -3898,9 +3851,6 @@ msgstr ""
 "Timeout lors de la vérification de la possibilité de migrer à chaud vers "
 "l'hôte: %s"
 
-msgid "Timestamp failed validation."
-msgstr "Echec de validation de l'horodatage."
-
 msgid "To and From ports must be integers"
 msgstr "Les ports de destination et d'origine doivent être des entiers"
 
@@ -3915,18 +3865,12 @@ msgstr ""
 "Trop adresses IPs vont être générés. Augmentez /%s pour réduire le nombre "
 "généré."
 
-msgid "Too many failed authentications."
-msgstr "Trop d'erreur d'authentification"
-
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr ""
 "Le type et le code doivent être des entiers pour le type de protocole ICMP"
 
 msgid "UUID is required to delete Neutron Networks"
 msgstr "UUID est demandée pour supprimer les réseaux Neutron"
-
-msgid "Unable to associate IP Address, no fixed_ips."
-msgstr "Impossible d'associer l'adresse IP, pas de fixed_ips."
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Impossible d'authentifier le client Ironic."
@@ -4212,9 +4156,6 @@ msgstr ""
 msgid "Unknown delete_info type %s"
 msgstr "Type inconnu delete_info %s"
 
-msgid "Unknown error occurred."
-msgstr "Erreur inconnue est survenue."
-
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "image_type=%s inconnu"
@@ -4453,12 +4394,6 @@ msgid "Volume resource quota exceeded"
 msgstr "Quota de ressource de Volume dépassé."
 
 #, python-format
-msgid "Volume sets block size, but libvirt '%s' or later is required."
-msgstr ""
-"Le volume définit la taille de bloc, mais libvirt '%s' ou version ultérieure "
-"est requis."
-
-#, python-format
 msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
@@ -4591,9 +4526,6 @@ msgstr "block_device_mapping doit être une liste"
 msgid "block_device_mapping_v2 must be a list"
 msgstr "block_device_mapping_v2 doit être une liste"
 
-msgid "can't build a valid rule"
-msgstr "ne peut construire une règle valide"
-
 msgid "cannot delete non-existent key"
 msgstr "Impossible de supprimer une clé inexistante"
 
@@ -4712,13 +4644,6 @@ msgstr "image"
 msgid "image already mounted"
 msgstr "image déjà montée"
 
-#, python-format
-msgid "image of %(instance)s at %(now)s"
-msgstr "image de %(instance)s à %(now)s"
-
-msgid "imageLocation is required"
-msgstr "imageLocation est obligatoire"
-
 msgid "index"
 msgstr "index"
 
@@ -4802,9 +4727,6 @@ msgstr "Device nbd %s n'est pas apparu"
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd non disponible : module non chargé"
 
-msgid "need group_name or group_id"
-msgstr "besoin de group_name ou de group_id"
-
 msgid "network"
 msgstr "network"
 
@@ -4835,16 +4757,8 @@ msgstr ""
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage doit etre spécifié"
 
-msgid "only group \"all\" is supported"
-msgstr "Seul le group \"tous\" est supporté"
-
 msgid "operation time out"
 msgstr "l'opération a dépassé le délai d'attente"
-
-msgid "operation_type must be add or remove"
-msgstr ""
-"le type d'opération (operation_type) doit être ajout (add) ou suppression "
-"(remove)"
 
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr "os-getConsoleOutput incorrect ou manquant dans le corps de demande"
@@ -4883,9 +4797,6 @@ msgstr "Librairies python rbd non trouvé"
 msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
 "read_deleted peut uniquement correspondre à 'no', 'yes' ou 'only', et non %r"
-
-msgid "resource_id and tag are required"
-msgstr "les champs 'resource_id' et 'tag' sont requis"
 
 msgid "rpc_port must be integer"
 msgstr "rpc_port doit être un entier"
@@ -4954,9 +4865,6 @@ msgstr "Champs non supportés : %s"
 
 msgid "user"
 msgstr "utilisateur"
-
-msgid "user or group not specified"
-msgstr "Utilisateur ou groupe non spécifié"
 
 msgid "uuid"
 msgstr "uuid"

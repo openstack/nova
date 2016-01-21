@@ -8,19 +8,19 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-12-21 12:12+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech\n"
-"Language: cs\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-12-21 12:12+0000\n"
+"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Czech\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Hledání VBD selhalo"
@@ -233,10 +233,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Proměnná prostředí 'NETWORK_ID' musí být nastavena."
 
 #, python-format
-msgid "Environment: %s"
-msgstr "Prostředí: %s"
-
-#, python-format
 msgid ""
 "Error contacting glance server '%(server)s' for '%(method)s', %(extra)s."
 msgstr ""
@@ -392,10 +388,6 @@ msgstr "Chyba při pokusu o záchranu instance"
 
 msgid "Error trying to reschedule"
 msgstr "Chyba při pokusu o znovu naplánování"
-
-#, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Chyba při aktualizaci zdrojů pro uzel %(node)s: %(e)s"
 
 msgid "Error waiting for responses from neighbor cells"
 msgstr "Chyba při čekání na odpověď od sousedních buněk"
@@ -763,9 +755,6 @@ msgstr "Čištění připojených VDI selhalo"
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Závažná výjimka při spuštění %(name)s %(type)s-hák: %(obj)s"
 
-msgid "FaultWrapper error"
-msgstr "Chyba ve FaultWrapper"
-
 msgid "Guest does not have a console available"
 msgstr "Host nemá konzoli k dispozici"
 
@@ -826,10 +815,6 @@ msgstr "Rozhraní %s nenalezeno"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "Neplatný řetězec serveru: %s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Selhání Keystone: %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -1146,10 +1131,6 @@ msgstr "Nelze aktualizovat hostitele na portu %s"
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
 msgstr "Nelze aktualizovat index VNIC instance pro port %s."
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "Zjištěno neočekávané %(ex_name)s: %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Neočekávané selhání sestavení, nebude znovu naplánováno."

@@ -10,19 +10,19 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language-Team: Chinese (China)\n"
-"Language: zh-CN\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
+"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
+"Language: zh-CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Chinese (China)\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "查找VDI失败"
@@ -196,10 +196,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "必须设置环境变量'NETWORK_ID'。"
 
 #, python-format
-msgid "Environment: %s"
-msgstr "Environment: %s"
-
-#, python-format
 msgid "Error copying key: %s"
 msgstr "复制key：%s 出错"
 
@@ -332,10 +328,6 @@ msgstr "尝试救援实例时发生错误"
 
 msgid "Error trying to reschedule"
 msgstr "尝试重新调度时出错"
-
-#, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "更新节点 %(node)s: %(e)s 资源时发生错误。"
 
 msgid "Error waiting for responses from neighbor cells"
 msgstr "等待来自相邻cell的响应发生错误"
@@ -673,9 +665,6 @@ msgstr "清除已连接的 VDI 时，发生故障"
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "运行%(name)s %(type)s-hook: %(obj)s时发生致命错误"
 
-msgid "FaultWrapper error"
-msgstr "FaultWrapper错误"
-
 msgid "Guest does not have a console available"
 msgstr "Guest 没有控制台可用"
 
@@ -718,10 +707,6 @@ msgstr "没有找到接口%s"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "server_string 无效：%s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Keystone 发生故障：%s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -1003,10 +988,6 @@ msgstr "无法更新端口 %s 的主机"
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
 msgstr "无法更新实例VNIC的索引的端口 %s"
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "发生意外错误 %(ex_name)s ：%(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "意外构筑失败，未重新安排构筑。"

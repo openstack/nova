@@ -8,19 +8,19 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-12-18 02:33+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech\n"
-"Language: cs\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-12-18 02:33+0000\n"
+"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Czech\n"
 
 #, python-format
 msgid ""
@@ -68,14 +68,6 @@ msgstr "%s již je připojeno"
 msgid "%s swap image was used by instance but no back files existing!"
 msgstr ""
 "%s odkládací obraz byl použit instanci ale žáfné záložní soubory neexistují!"
-
-#, python-format
-msgid ""
-"Access key %(access_key)s has had %(failures)d failed authentications and "
-"will be locked out for %(lock_mins)d minutes."
-msgstr ""
-"Přístupový klíč %(access_key)s %(failures)d krát selhal při ověření a bude "
-"zablokován na %(lock_mins)d minut."
 
 #, python-format
 msgid "Address |%(address)s| is not allocated"
@@ -1145,16 +1137,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Running Nova with a libvirt version less than %(version)s is deprecated. The "
-"required minimum version of libvirt will be raised to %(version)s in the "
-"13.0.0 release."
-msgstr ""
-"Spouštět Nova pomocí libvirt s verzí starší než %(version)s je zastaralé. "
-"Požadovaná minimální verze libvirt bude ve verzi 13.0.0 zvýšena na "
-"%(version)s."
-
-#, python-format
-msgid ""
 "Running Nova with a live_migration_flag config option which contains "
 "%(flag)s will cause all live-migrations to be block-migrations instead. This "
 "setting should only be on the block_migration_flag instead."
@@ -1270,15 +1252,6 @@ msgid ""
 msgstr ""
 "Volby nastavení rozšíření jsou zastaralé. V blízké budoucnosti budete muset "
 "spouštět celé API."
-
-msgid ""
-"The in tree EC2 API is deprecated as of Kilo release and may be removed in a "
-"future release. The openstack ec2-api project http://git.openstack.org/cgit/"
-"openstack/ec2-api/ is the target replacement for this functionality."
-msgstr ""
-"EC2 API ve stromě je od verze Kilo označeno jako zastaralé a v budoucích "
-"verzích mlže být odstraněno. Projekt openstack ec2-api na adrese http://git."
-"openstack.org/cgit/openstack/ec2-api/ má za cíl nahradit tuto funkcionalitu."
 
 #, python-format
 msgid ""
@@ -1701,10 +1674,6 @@ msgstr "isLuks byl mimořádně ukončen (stav %(exit_code)s): %(stderr)s"
 msgid "multiple fixed_ips exist, using the first IPv4 fixed_ip: %s"
 msgstr ""
 "Existuje mnoho pevných ip adres, bude použita první pevná ip adresa IPv4: %s"
-
-#, python-format
-msgid "multiple fixed_ips exist, using the first: %s"
-msgstr "existuje mnoho pevných ip adres, bude použita první: %s"
 
 #, python-format
 msgid ""
