@@ -145,6 +145,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         map(lambda x: dev_dict.pop(x, None),
             [key for key in no_changes])
 
+        # NOTE(ndipanov): This needs to be set as it's accessed when matching
+        dev_dict.setdefault('parent_addr')
+
         for k, v in dev_dict.items():
             if k in self.fields.keys():
                 setattr(self, k, v)
