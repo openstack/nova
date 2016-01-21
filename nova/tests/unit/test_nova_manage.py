@@ -18,6 +18,7 @@ import sys
 
 import fixtures
 import mock
+from oslo_utils import uuidutils
 
 from nova.cmd import manage
 from nova import context
@@ -655,3 +656,140 @@ class CellCommandsTestCase(test.NoDBTestCase):
                       'weight_offset': 0.0,
                       'weight_scale': 0.0}
         mock_db_cell_create.assert_called_once_with(ctxt, exp_values)
+
+
+class CellV2CommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(CellV2CommandsTestCase, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
+        self.commands = manage.CellV2Commands()
+
+    def test_map_cell_and_hosts(self):
+        # Create some fake compute nodes and check if they get host mappings
+        ctxt = context.RequestContext()
+        values = {
+                'vcpus': 4,
+                'memory_mb': 4096,
+                'local_gb': 1024,
+                'vcpus_used': 2,
+                'memory_mb_used': 2048,
+                'local_gb_used': 512,
+                'hypervisor_type': 'Hyper-Dan-VM-ware',
+                'hypervisor_version': 1001,
+                'cpu_info': 'Schmintel i786',
+            }
+        for i in range(3):
+            host = 'host%s' % i
+            compute_node = objects.ComputeNode(ctxt, host=host, **values)
+            compute_node.create()
+        cell_transport_url = "fake://guest:devstack@127.0.0.1:9999/"
+        self.commands.map_cell_and_hosts(cell_transport_url, name='ssd',
+                                         verbose=True)
+        cell_mapping_uuid = sys.stdout.getvalue().strip()
+        # Verify the cell mapping
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_mapping_uuid)
+        self.assertEqual('ssd', cell_mapping.name)
+        self.assertEqual(cell_transport_url, cell_mapping.transport_url)
+        # Verify the host mappings
+        for i in range(3):
+            host = 'host%s' % i
+            host_mapping = objects.HostMapping.get_by_host(ctxt, host)
+            self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
+
+    def test_map_cell_and_hosts_duplicate(self):
+        # Create a cell mapping and hosts and check that nothing new is created
+        ctxt = context.RequestContext()
+        cell_mapping_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_mapping_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        # Create compute nodes that will map to the cell
+        values = {
+                'vcpus': 4,
+                'memory_mb': 4096,
+                'local_gb': 1024,
+                'vcpus_used': 2,
+                'memory_mb_used': 2048,
+                'local_gb_used': 512,
+                'hypervisor_type': 'Hyper-Dan-VM-ware',
+                'hypervisor_version': 1001,
+                'cpu_info': 'Schmintel i786',
+            }
+        for i in range(3):
+            host = 'host%s' % i
+            compute_node = objects.ComputeNode(ctxt, host=host, **values)
+            compute_node.create()
+            host_mapping = objects.HostMapping(
+                    ctxt, host=host, cell_mapping=cell_mapping)
+            host_mapping.create()
+        cell_transport_url = "fake://guest:devstack@127.0.0.1:9999/"
+        retval = self.commands.map_cell_and_hosts(cell_transport_url,
+                                                  name='ssd',
+                                                  verbose=True)
+        self.assertEqual(0, retval)
+        output = sys.stdout.getvalue().strip()
+        expected = ''
+        for i in range(3):
+            expected += ('Host host%s is already mapped to cell %s\n' %
+                         (i, cell_mapping_uuid))
+        expected += 'All hosts are already mapped to cell(s), exiting.'
+        self.assertEqual(expected, output)
+
+    def test_map_cell_and_hosts_partial_update(self):
+        # Create a cell mapping and partial hosts and check that
+        # missing HostMappings are created
+        ctxt = context.RequestContext()
+        cell_mapping_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_mapping_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        # Create compute nodes that will map to the cell
+        values = {
+                'vcpus': 4,
+                'memory_mb': 4096,
+                'local_gb': 1024,
+                'vcpus_used': 2,
+                'memory_mb_used': 2048,
+                'local_gb_used': 512,
+                'hypervisor_type': 'Hyper-Dan-VM-ware',
+                'hypervisor_version': 1001,
+                'cpu_info': 'Schmintel i786',
+            }
+        for i in range(3):
+            host = 'host%s' % i
+            compute_node = objects.ComputeNode(ctxt, host=host, **values)
+            compute_node.create()
+        # Only create 2 existing HostMappings out of 3
+        for i in range(2):
+            host = 'host%s' % i
+            host_mapping = objects.HostMapping(
+                    ctxt, host=host, cell_mapping=cell_mapping)
+            host_mapping.create()
+        cell_transport_url = "fake://guest:devstack@127.0.0.1:9999/"
+        self.commands.map_cell_and_hosts(cell_transport_url,
+                                         name='ssd',
+                                         verbose=True)
+        # Verify the HostMapping for the last host was created
+        host_mapping = objects.HostMapping.get_by_host(ctxt, 'host2')
+        self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
+        # Verify the output
+        output = sys.stdout.getvalue().strip()
+        expected = ''
+        for i in range(2):
+            expected += ('Host host%s is already mapped to cell %s\n' %
+                         (i, cell_mapping_uuid))
+        # The expected CellMapping UUID for the last host should be the same
+        expected += cell_mapping.uuid
+        self.assertEqual(expected, output)
+
+    def test_map_cell_and_hosts_no_hosts_found(self):
+        cell_transport_url = "fake://guest:devstack@127.0.0.1:9999/"
+        retval = self.commands.map_cell_and_hosts(cell_transport_url,
+                                                  name='ssd',
+                                                  verbose=True)
+        self.assertEqual(0, retval)
+        output = sys.stdout.getvalue().strip()
+        expected = 'No hosts found to map to cell, exiting.'
+        self.assertEqual(expected, output)
