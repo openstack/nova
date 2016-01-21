@@ -1058,62 +1058,6 @@ class ResponseObjectTest(test.NoDBTestCase):
         hdrs['hEADER'] = 'bar'
         self.assertEqual(robj['hEADER'], 'foo')
 
-    def test_default_serializers(self):
-        robj = wsgi.ResponseObject({})
-        self.assertEqual(robj.serializers, {})
-
-    def test_bind_serializers(self):
-        robj = wsgi.ResponseObject({}, json='foo')
-        robj._bind_method_serializers(dict(xml='bar', json='baz'))
-        self.assertEqual(robj.serializers, dict(xml='bar', json='foo'))
-
-    def test_get_serializer(self):
-        robj = wsgi.ResponseObject({}, json='json', xml='xml', atom='atom')
-        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
-            _mtype, serializer = robj.get_serializer(content_type)
-            self.assertEqual(serializer, mtype)
-
-    def test_get_serializer_defaults(self):
-        robj = wsgi.ResponseObject({})
-        default_serializers = dict(json='json', xml='xml', atom='atom')
-        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
-            self.assertRaises(exception.InvalidContentType,
-                              robj.get_serializer, content_type)
-            _mtype, serializer = robj.get_serializer(content_type,
-                                                     default_serializers)
-            self.assertEqual(serializer, mtype)
-
-    def test_serialize(self):
-        class JSONSerializer(object):
-            def serialize(self, obj):
-                return 'json'
-
-        class AtomSerializer(object):
-            def serialize(self, obj):
-                return 'atom'
-
-        robj = wsgi.ResponseObject({}, code=202,
-                                   json=JSONSerializer,
-                                   atom=AtomSerializer)
-        robj['X-header1'] = 'header1'
-        robj['X-header2'] = 'header2'
-        robj['X-header3'] = 3
-        robj['X-header-unicode'] = u'header-unicode'
-
-        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
-            request = wsgi.Request.blank('/tests/123')
-            response = robj.serialize(request, content_type)
-            self.assertEqual(content_type.encode("utf-8"),
-                             response.headers['Content-Type'])
-            for hdr, val in six.iteritems(response.headers):
-                # All headers must be utf8
-                self.assertThat(val, matchers.EncodedByUTF8())
-            self.assertEqual(b'header1', response.headers['X-header1'])
-            self.assertEqual(b'header2', response.headers['X-header2'])
-            self.assertEqual(b'3', response.headers['X-header3'])
-            self.assertEqual(response.status_int, 202)
-            self.assertEqual(mtype.encode("utf-8"), response.body)
-
 
 class ValidBodyTest(test.NoDBTestCase):
 

@@ -312,29 +312,21 @@ def response(code):
 
 
 class ResponseObject(object):
-    """Bundles a response object with appropriate serializers.
+    """Bundles a response object
 
-    Object that app methods may return in order to bind alternate
-    serializers with a response object to be serialized.  Its use is
-    optional.
+    Object that app methods may return in order to allow its response
+    to be modified by extensions in the code. Its use is optional (and
+    should only be used if you really know what you are doing).
     """
 
-    def __init__(self, obj, code=None, headers=None, **serializers):
-        """Binds serializers with an object.
-
-        Takes keyword arguments akin to the @serializer() decorator
-        for specifying serializers.  Serializers specified will be
-        given preference over default serializers or method-specific
-        serializers on return.
-        """
+    def __init__(self, obj, code=None, headers=None):
+        """Builds a response object."""
 
         self.obj = obj
-        self.serializers = serializers
         self._default_code = 200
         self._code = code
         self._headers = headers or {}
-        self.serializer = None
-        self.media_type = None
+        self.serializer = JSONDictSerializer()
 
     def __getitem__(self, key):
         """Retrieves a header with the given name."""
@@ -351,76 +343,14 @@ class ResponseObject(object):
 
         del self._headers[key.lower()]
 
-    def _bind_method_serializers(self, meth_serializers):
-        """Binds method serializers with the response object.
-
-        Binds the method serializers with the response object.
-        Serializers specified to the constructor will take precedence
-        over serializers specified to this method.
-
-        :param meth_serializers: A dictionary with keys mapping to
-                                 response types and values containing
-                                 serializer objects.
-        """
-
-        # We can't use update because that would be the wrong
-        # precedence
-        for mtype, serializer in meth_serializers.items():
-            self.serializers.setdefault(mtype, serializer)
-
-    def get_serializer(self, content_type, default_serializers=None):
-        """Returns the serializer for the wrapped object.
-
-        Returns the serializer for the wrapped object subject to the
-        indicated content type.  If no serializer matching the content
-        type is attached, an appropriate serializer drawn from the
-        default serializers will be used.  If no appropriate
-        serializer is available, raises InvalidContentType.
-        """
-
-        default_serializers = default_serializers or {}
-
-        try:
-            mtype = get_media_map().get(content_type, content_type)
-            if mtype in self.serializers:
-                return mtype, self.serializers[mtype]
-            else:
-                return mtype, default_serializers[mtype]
-        except (KeyError, TypeError):
-            raise exception.InvalidContentType(content_type=content_type)
-
-    def preserialize(self, content_type, default_serializers=None):
-        """Prepares the serializer that will be used to serialize.
-
-        Determines the serializer that will be used and prepares an
-        instance of it for later call.  This allows the serializer to
-        be accessed by extensions for, e.g., template extension.
-        """
-
-        mtype, serializer = self.get_serializer(content_type,
-                                                default_serializers)
-        self.media_type = mtype
-        self.serializer = serializer()
-
-    def attach(self, **kwargs):
-        """Attach slave templates to serializers."""
-
-        if self.media_type in kwargs:
-            self.serializer.attach(kwargs[self.media_type])
-
-    def serialize(self, request, content_type, default_serializers=None):
+    def serialize(self, request, content_type):
         """Serializes the wrapped object.
 
         Utility method for serializing the wrapped object.  Returns a
         webob.Response object.
         """
 
-        if self.serializer:
-            serializer = self.serializer
-        else:
-            _mtype, _serializer = self.get_serializer(content_type,
-                                                      default_serializers)
-            serializer = _serializer()
+        serializer = self.serializer
 
         body = None
         if self.obj is not None:
@@ -795,19 +725,14 @@ class Resource(wsgi.Application):
             # Run post-processing extensions
             if resp_obj:
                 # Do a preserialize to set up the response object
-                serializers = getattr(meth, 'wsgi_serializers', {})
-                resp_obj._bind_method_serializers(serializers)
                 if hasattr(meth, 'wsgi_code'):
                     resp_obj._default_code = meth.wsgi_code
-                resp_obj.preserialize(accept, self.default_serializers)
-
                 # Process post-processing extensions
                 response = self.post_process_extensions(post, resp_obj,
                                                         request, action_args)
 
             if resp_obj and not response:
-                response = resp_obj.serialize(request, accept,
-                                              self.default_serializers)
+                response = resp_obj.serialize(request, accept)
 
         if hasattr(response, 'headers'):
             for hdr, val in list(response.headers.items()):
@@ -1136,14 +1061,9 @@ class Fault(webob.exc.HTTPException):
             self.wrapped_exc.headers['Vary'] = \
               API_VERSION_REQUEST_HEADER
 
-        content_type = req.best_match_content_type()
-        serializer = {
-            'application/json': JSONDictSerializer(),
-        }[content_type]
-
-        self.wrapped_exc.content_type = content_type
+        self.wrapped_exc.content_type = 'application/json'
         self.wrapped_exc.charset = 'UTF-8'
-        self.wrapped_exc.text = serializer.serialize(fault_data)
+        self.wrapped_exc.text = JSONDictSerializer().serialize(fault_data)
 
         return self.wrapped_exc
 
@@ -1180,20 +1100,15 @@ class RateLimitFault(webob.exc.HTTPException):
         to our error format.
         """
         user_locale = request.best_match_language()
-        content_type = request.best_match_content_type()
 
         self.content['overLimit']['message'] = \
             i18n.translate(self.content['overLimit']['message'], user_locale)
         self.content['overLimit']['details'] = \
             i18n.translate(self.content['overLimit']['details'], user_locale)
 
-        serializer = {
-            'application/json': JSONDictSerializer(),
-        }[content_type]
-
-        content = serializer.serialize(self.content)
+        content = JSONDictSerializer().serialize(self.content)
         self.wrapped_exc.charset = 'UTF-8'
-        self.wrapped_exc.content_type = content_type
+        self.wrapped_exc.content_type = "application/json"
         self.wrapped_exc.text = content
 
         return self.wrapped_exc
