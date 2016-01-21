@@ -6533,20 +6533,21 @@ class LibvirtDriver(driver.ComputeDriver):
                     context, instance, instance_dir, disk_info,
                     fallback_from_host=instance.host)
 
-        if not (is_block_migration or is_shared_instance_path):
-            # NOTE(angdraug): when block storage is shared between source and
-            # destination and instance path isn't (e.g. volume backed or rbd
-            # backed instance), instance path on destination has to be prepared
+            if not is_block_migration:
+                # NOTE(angdraug): when block storage is shared between source
+                # and destination and instance path isn't (e.g. volume backed
+                # or rbd backed instance), instance path on destination has to
+                # be prepared
 
-            # Touch the console.log file, required by libvirt.
-            console_file = self._get_console_log_path(instance)
-            LOG.debug('Touch instance console log: %s', console_file,
-                      instance=instance)
-            libvirt_utils.file_open(console_file, 'a').close()
+                # Touch the console.log file, required by libvirt.
+                console_file = self._get_console_log_path(instance)
+                LOG.debug('Touch instance console log: %s', console_file,
+                          instance=instance)
+                libvirt_utils.file_open(console_file, 'a').close()
 
-            # if image has kernel and ramdisk, just download
-            # following normal way.
-            self._fetch_instance_kernel_ramdisk(context, instance)
+                # if image has kernel and ramdisk, just download
+                # following normal way.
+                self._fetch_instance_kernel_ramdisk(context, instance)
 
         # Establishing connection to volume server.
         block_device_mapping = driver.block_device_info_get_mapping(
