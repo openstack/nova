@@ -49,6 +49,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self._instance = fake_instance.fake_instance_obj(
             None,
             **{'id': 7, 'name': 'fake!',
+               'display_name': 'fake-display-name',
                'uuid': uuidutils.generate_uuid(),
                'vcpus': 2, 'memory_mb': 2048})
 
@@ -1731,6 +1732,39 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertIsNone(vm_util.folder_ref_cache_get(path))
         vm_util.folder_ref_cache_update(path, 'fake-ref')
         self.assertEqual('fake-ref', vm_util.folder_ref_cache_get(path))
+
+    def test_get_vm_name(self):
+        uuid = uuidutils.generate_uuid()
+        expected = uuid
+        name = vm_util._get_vm_name(None, uuid)
+        self.assertEqual(expected, name)
+
+        display_name = 'fira'
+        expected = 'fira (%s)' % uuid
+        name = vm_util._get_vm_name(display_name, uuid)
+        self.assertEqual(expected, name)
+
+        display_name = 'X' * 255
+        expected = '%s (%s)' % ('X' * 41, uuid)
+        name = vm_util._get_vm_name(display_name, uuid)
+        self.assertEqual(expected, name)
+        self.assertEqual(len(name), 80)
+
+    @mock.patch.object(vm_util, '_get_vm_name', return_value='fake-name')
+    def test_rename_vm(self, mock_get_name):
+        session = fake.FakeSession()
+        with test.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake_rename_task'),
+            mock.patch.object(session, '_wait_for_task')
+        ) as (_call_method, _wait_for_task):
+            vm_util.rename_vm(session, 'fake-ref', self._instance)
+            _call_method.assert_called_once_with(mock.ANY,
+                'Rename_Task', 'fake-ref', newName='fake-name')
+            _wait_for_task.assert_called_once_with(
+                'fake_rename_task')
+        mock_get_name.assert_called_once_with(self._instance.display_name,
+                                              self._instance.uuid)
 
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)

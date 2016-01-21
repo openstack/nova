@@ -177,6 +177,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._set_exception_vars()
         self.node_name = self.conn._nodename
         self.ds = 'ds1'
+        self._display_name = 'fake-display-name'
 
         self.vim = vmwareapi_fake.FakeVim()
 
@@ -301,6 +302,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         if ephemeral is not None:
             self.type_data['ephemeral_gb'] = ephemeral
         values = {'name': 'fake_name',
+                  'display_name': self._display_name,
                   'id': 1,
                   'uuid': uuid,
                   'project_id': self.project_id,
@@ -348,7 +350,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # Get record for VM
         vms = vmwareapi_fake._get_objects("VirtualMachine")
         for vm in vms.objects:
-            if vm.get('name') == self.uuid:
+            if vm.get('name') == vm_util._get_vm_name(self._display_name,
+                                                      self.uuid):
                 return vm
         self.fail('Unable to find VM backing!')
 
@@ -438,11 +441,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         uuids = self.conn.list_instance_uuids()
         self.assertEqual(1, len(uuids))
-
-    def test_list_instance_uuids_invalid_uuid(self):
-        self._create_vm(uuid='fake_id')
-        uuids = self.conn.list_instance_uuids()
-        self.assertEqual(0, len(uuids))
 
     def _cached_files_exist(self, exists=True):
         cache = ds_obj.DatastorePath(self.ds, 'vmware_base',
