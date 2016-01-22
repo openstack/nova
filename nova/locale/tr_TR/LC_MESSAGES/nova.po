@@ -6,16 +6,17 @@
 # Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013
 # Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev70\n"
+"Project-Id-Version: nova 12.0.2.dev1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"POT-Creation-Date: 2016-01-21 20:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-09-06 10:17+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"PO-Revision-Date: 2016-01-20 02:37+0000\n"
+"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: tr-TR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -2791,9 +2792,7 @@ msgstr "Ağ sürücüsü bu fonksiyonu desteklemiyor."
 
 #, python-format
 msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
-msgstr ""
-"%(network_id)s ağında %(host)s ağ sunucusunun hiç dinamik IP'si yok.\n"
-" "
+msgstr "%(network_id)s ağında %(host)s ağ sunucusunun hiç dinamik IP'si yok. "
 
 msgid "Network label is required"
 msgstr "Ağ etiketi gerekli"
@@ -4461,11 +4460,11 @@ msgstr "Önce Essex sürümünü kullanarak veritabanı yükseltimi yapın."
 
 #, python-format
 msgid "User %(username)s not found in password file."
-msgstr "Kullanıcı %(username) parola dosyasında bulunamadı."
+msgstr "Kullanıcı %(username)s parola dosyasında bulunamadı."
 
 #, python-format
 msgid "User %(username)s not found in shadow file."
-msgstr "Kullanıcı % (kullanıcıadı) gölge dosyasında bulunamadı."
+msgstr "Kullanıcı %(username)s gölge dosyasında bulunamadı."
 
 msgid "User data needs to be valid base 64."
 msgstr "Kullanıcı verisi geçerli base 64 olmalıdır."

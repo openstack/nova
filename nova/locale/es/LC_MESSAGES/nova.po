@@ -14,16 +14,17 @@
 # Marian Tort <marian.tort@gmail.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev70\n"
+"Project-Id-Version: nova 12.0.2.dev1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"POT-Creation-Date: 2016-01-21 20:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-09-29 06:56+0000\n"
-"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
+"PO-Revision-Date: 2016-01-20 02:43+0000\n"
+"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -2381,7 +2382,7 @@ msgstr "Se ha proporcionado una referencia de imagen no válida."
 
 #, python-format
 msgid "Invalid inclusion expression %r"
-msgstr "Expresión de inclusión inválida %"
+msgstr "Expresión de inclusión inválida %r"
 
 #, python-format
 msgid ""
@@ -2474,7 +2475,7 @@ msgstr "Firma de solicitud de proxy no válida."
 
 #, python-format
 msgid "Invalid range expression %r"
-msgstr "Expresión de intérvalo inválida %"
+msgstr "Expresión de intérvalo inválida %r"
 
 msgid "Invalid request body"
 msgstr "Cuerpo de solicitud no válido"
@@ -4171,7 +4172,7 @@ msgstr ""
 
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
-msgstr "El número de puertos definidos: %(ports)s es más del límite: %(quota)d"
+msgstr "El número de puertos definidos: %(ports)d es más del límite: %(quota)d"
 
 msgid "The only partition should be partition 1."
 msgstr "La unica partición debe ser la partición 1."

@@ -17,16 +17,17 @@
 # Fernando Pimenta <fernando.c.pimenta@gmail.com>, 2015. #zanata
 # Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# José Mello <jose.eduardo.jr@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev70\n"
+"Project-Id-Version: nova 12.0.2.dev1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"POT-Creation-Date: 2016-01-21 20:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-09-11 06:59+0000\n"
-"Last-Translator: Fernando Pimenta <fernando.c.pimenta@gmail.com>\n"
+"PO-Revision-Date: 2016-01-20 07:47+0000\n"
+"Last-Translator: José Mello <jose.eduardo.jr@gmail.com>\n"
 "Language: pt-BR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -59,6 +60,10 @@ msgstr "%(cidr)s não é uma rede de IP válida."
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid "%(fieldname)s missing field type"
+msgstr "%(fieldname)s faltando tipo do campo"
 
 #, python-format
 msgid "%(host)s:%(port)s: Target closed"
@@ -408,6 +413,12 @@ msgstr "binário"
 msgid "Blank components"
 msgstr "Componentes em branco"
 
+msgid ""
+"Blank volumes (source: 'blank', dest: 'volume') need to have non-zero size"
+msgstr ""
+"Volumes em branco (origem: 'blank', dest: 'volume') precisam ter tamanho "
+"diferente de zero"
+
 #, python-format
 msgid "Block Device %(id)s is not bootable."
 msgstr "%(id)s do Dispositivo de Bloco não é inicializável."
@@ -720,6 +731,9 @@ msgstr "A mensagem da célula atingiu a contagem máxima de hops: %(hop_count)s"
 msgid "Cell name cannot be empty"
 msgstr "O nome da célula não pode estar vazio"
 
+msgid "Cell name cannot contain '!', '.' or '@'"
+msgstr "Nome da célula não pode conter '!', '.' ou '@'"
+
 msgid "Cell type must be 'parent' or 'child'"
 msgstr "O tipo da célula deve ser 'pai' ou 'filho'"
 
@@ -956,6 +970,10 @@ msgstr "DNS1"
 
 msgid "DNS2"
 msgstr "DNS2"
+
+#, python-format
+msgid "Database migration failed: %(reason)s"
+msgstr "Migração de banco de dados falhou: %(reason)s"
 
 #, python-format
 msgid "Datastore regex %s did not match any datastores"
@@ -1197,6 +1215,10 @@ msgstr ""
 "Excedido o máximo de novas tentativas de planejamento %(max_retries)d para a "
 "instância %(instance_uuid)s durante migração em tempo real"
 
+#, python-format
+msgid "Exceeded maximum number of retries. %(reason)s"
+msgstr "Foi excedido o número máximo de tentativas. %(reason)s"
+
 msgid "Exceeded the maximum number of slots"
 msgstr "Foi excedido o número máximo de slots"
 
@@ -1238,6 +1260,10 @@ msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr ""
 "Falha ao validar chaves de especificações extras fornecidas. Sequência "
 "esperada"
+
+#, python-format
+msgid "Failed to add bridge: %s"
+msgstr "Falha ao incluir bridge: %s"
 
 #, python-format
 msgid ""
@@ -2127,6 +2153,10 @@ msgid "Invalid entry: '%s'; Expecting list or dict"
 msgstr "Entrada inválida: '%s'; Esperando dicionário ou lista"
 
 #, python-format
+msgid "Invalid event name %s"
+msgstr "Nome de evento inválido %s"
+
+#, python-format
 msgid "Invalid event status `%s'"
 msgstr "status de eventos inválido `%s'"
 
@@ -2164,6 +2194,10 @@ msgstr "ID inválido: %(instance_id)s (esperando \"i-...\")"
 #, python-format
 msgid "Invalid id: %(volume_id)s (expecting \"i-...\")"
 msgstr "ID inválido: %(volume_id)s (esperando \"i-...\")"
+
+#, python-format
+msgid "Invalid image format '%(format)s'"
+msgstr "Formato de imagem inválido '%(format)s'"
 
 #, python-format
 msgid "Invalid image href %(image_href)s."
@@ -2637,6 +2671,9 @@ msgstr "Está faltando o campo do motivo da desativação"
 msgid "Missing flavorRef attribute"
 msgstr "Atributo flavorRef ausente"
 
+msgid "Missing forced_down field"
+msgstr "Faltando campo forced_down"
+
 msgid "Missing imageRef attribute"
 msgstr "Atributo imageRef ausente"
 
@@ -2822,6 +2859,10 @@ msgstr "O novo volume deve ser removido para a troca."
 
 msgid "New volume must be the same size or larger."
 msgstr "O novo volume deve ser do mesmo tamanho ou maior."
+
+#, python-format
+msgid "No Block Device Mapping with id %(id)s."
+msgstr "Nenhum Mapeamento de Dispositivo de Bloco com id %(id)s."
 
 msgid "No CIDR requested"
 msgstr "Nenhum CIDR solicitado"
@@ -3619,6 +3660,9 @@ msgstr "O serviço com host %(host)s binário %(binary)s existe."
 msgid "Service with host %(host)s topic %(topic)s exists."
 msgstr "O serviço com host %(host)s tópico %(topic)s existe."
 
+msgid "Set admin password is not supported"
+msgstr "Definir senha admin não é suportado"
+
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
 msgstr "A tabela de sombra com o nome %(name)s já existe."
@@ -3784,6 +3828,9 @@ msgstr ""
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr ""
 "O intervalo de portas do console %(min_port)d-%(max_port)d está esgotado."
+
+msgid "The created instance's disk would be too small."
+msgstr "O disco da instância criada seria muito pequeno."
 
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "O driver atual não suporta a preservação partições temporárias."
@@ -4768,6 +4815,9 @@ msgstr "não é possível armazenar chaves arbitrárias"
 
 msgid "cannot understand JSON"
 msgstr "não é possível entender JSON"
+
+msgid "cell_uuid must be set"
+msgstr "cell_uuid deve ser definido"
 
 msgid "clone() is not implemented"
 msgstr "clone() não está implementado"
