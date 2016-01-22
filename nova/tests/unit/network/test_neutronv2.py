@@ -727,6 +727,21 @@ class TestNeutronv2(TestNeutronv2Base):
                                                None,
                                                None)
 
+    def test_get_instance_nw_info_ignores_neutron_ports_empty_cache(self):
+        # Tests that ports returned from neutron that match the same
+        # instance_id/device_id are ignored when the instance info cache is
+        # empty.
+        port_data2 = copy.copy(self.port_data2)
+
+        # set device_id on the ports to be the same.
+        port_data2[1]['device_id'] = port_data2[0]['device_id']
+        network_cache = {'info_cache': {'network_info': []}}
+
+        self._fake_get_instance_nw_info_helper(network_cache,
+                                               port_data2,
+                                               None,
+                                               None)
+
     def _fake_get_instance_nw_info_helper(self, network_cache,
                                           current_neutron_ports,
                                           networks=None, port_ids=None):
@@ -766,8 +781,26 @@ class TestNeutronv2(TestNeutronv2Base):
                      'tenant_id': iface['network']['meta']['tenant_id']}
                     for iface in ifaces]
         if networks is None:
-            self.moxed_client.list_networks(
-                id=net_ids).AndReturn({'networks': nets})
+            if ifaces:
+                self.moxed_client.list_networks(
+                    id=net_ids).AndReturn({'networks': nets})
+            else:
+                non_shared_nets = [
+                    {'id': iface['network']['id'],
+                     'name': iface['network']['label'],
+                     'tenant_id': iface['network']['meta']['tenant_id']}
+                    for iface in ifaces if not iface['shared']]
+                shared_nets = [
+                    {'id': iface['network']['id'],
+                     'name': iface['network']['label'],
+                     'tenant_id': iface['network']['meta']['tenant_id']}
+                    for iface in ifaces if iface['shared']]
+                self.moxed_client.list_networks(
+                    shared=False,
+                    tenant_id=self.instance['project_id']
+                        ).AndReturn({'networks': non_shared_nets})
+                self.moxed_client.list_networks(
+                    shared=True).AndReturn({'networks': shared_nets})
         else:
             networks = networks + [
                 dict(id=iface['network']['id'],
@@ -2668,6 +2701,8 @@ class TestNeutronv2(TestNeutronv2Base):
             mock_nw_info_build_network,
             mock_nw_info_get_ips,
             mock_nw_info_get_subnets):
+        # An empty instance info network cache should not be populated from
+        # ports found in Neutron.
         api = neutronapi.API()
 
         fake_inst = objects.Instance()
@@ -2696,7 +2731,7 @@ class TestNeutronv2(TestNeutronv2Base):
             tenant_id='fake', device_id='uuid').AndReturn(
                 {'ports': fake_ports})
 
-        mock_gather_port_ids_and_networks.return_value = (None, None)
+        mock_gather_port_ids_and_networks.return_value = ([], [])
         mock_get_preexisting_port_ids.return_value = []
         mock_nw_info_build_network.return_value = (None, None)
         mock_nw_info_get_ips.return_value = []
@@ -2707,7 +2742,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
         nw_infos = api._build_network_info_model(
             self.context, fake_inst)
-        self.assertEqual(1, len(nw_infos))
+        self.assertEqual(0, len(nw_infos))
 
     def test_get_subnets_from_port(self):
         api = neutronapi.API()
