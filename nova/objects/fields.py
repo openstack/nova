@@ -251,6 +251,27 @@ class HVType(Enum):
         return super(HVType, self).coerce(obj, attr, value)
 
 
+class ImageSignatureHashType(Enum):
+    # Represents the possible hash methods used for image signing
+    def __init__(self):
+        self.hashes = ('SHA-224', 'SHA-256', 'SHA-384', 'SHA-512')
+        super(ImageSignatureHashType, self).__init__(
+            valid_values=self.hashes
+        )
+
+
+class ImageSignatureKeyType(Enum):
+    # Represents the possible keypair types used for image signing
+    def __init__(self):
+        self.key_types = (
+            'DSA', 'ECC_SECT571K1', 'ECC_SECT409K1', 'ECC_SECT571R1',
+            'ECC_SECT409R1', 'ECC_SECP521R1', 'ECC_SECP384R1', 'RSA-PSS'
+        )
+        super(ImageSignatureKeyType, self).__init__(
+            valid_values=self.key_types
+        )
+
+
 class OSType(Enum):
 
     LINUX = "linux"
@@ -732,6 +753,14 @@ class FirmwareTypeField(BaseEnumField):
 
 class HVTypeField(BaseEnumField):
     AUTO_TYPE = HVType()
+
+
+class ImageSignatureHashTypeField(BaseEnumField):
+    AUTO_TYPE = ImageSignatureHashType()
+
+
+class ImageSignatureKeyTypeField(BaseEnumField):
+    AUTO_TYPE = ImageSignatureKeyType()
 
 
 class OSTypeField(BaseEnumField):

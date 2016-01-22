@@ -160,7 +160,8 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.9: added hw_cpu_thread_policy field
     # Version 1.10: added hw_cpu_realtime_mask field
     # Version 1.11: Added hw_firmware_type field
-    VERSION = '1.11'
+    # Version 1.12: Added properties for image signature verification
+    VERSION = '1.12'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
@@ -370,6 +371,19 @@ class ImageMetaProps(base.NovaObject):
 
         # integer value 1
         'img_version': fields.IntegerField(),
+
+        # base64 of encoding of image signature
+        'img_signature': fields.StringField(),
+
+        # string indicating hash method used to compute image signature
+        'img_signature_hash_method': fields.ImageSignatureHashTypeField(),
+
+        # string indicating Castellan uuid of certificate
+        # used to compute the image's signature
+        'img_signature_certificate_uuid': fields.UUIDField(),
+
+        # string indicating type of key used to compute image signature
+        'img_signature_key_type': fields.ImageSignatureKeyTypeField(),
 
         # string of username with admin privileges
         'os_admin_user': fields.StringField(),
