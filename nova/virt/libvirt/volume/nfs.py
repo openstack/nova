@@ -10,11 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from nova.i18n import _LE, _LW
 from nova import paths

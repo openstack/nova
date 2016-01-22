@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six.moves.urllib.parse as urlparse
 
 import mock
+import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.image.download import file as tm_file

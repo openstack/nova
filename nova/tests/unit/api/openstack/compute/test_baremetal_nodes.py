@@ -13,11 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+from ironicclient import exc as ironic_exc
 import mock
 import six
 from webob import exc
-
-from ironicclient import exc as ironic_exc
 
 from nova.api.openstack.compute import baremetal_nodes \
         as b_nodes_v21
