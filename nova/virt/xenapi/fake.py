@@ -77,12 +77,11 @@ LOG = logging.getLogger(__name__)
 def reset():
     for c in _CLASSES:
         _db_content[c] = {}
-    host = create_host('fake')
+    create_host('fake')
     create_vm('fake dom 0',
               'Running',
               is_a_template=False,
-              is_control_domain=True,
-              resident_on=host)
+              is_control_domain=True)
 
 
 def reset_table(table):
