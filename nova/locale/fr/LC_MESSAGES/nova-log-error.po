@@ -12,19 +12,19 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-11-27 05:04+0000\n"
-"Last-Translator: Maxime Coquerel <max.coquerel@gmail.com>\n"
-"Language-Team: French\n"
-"Language: fr\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-11-27 05:04+0000\n"
+"Last-Translator: Maxime Coquerel <max.coquerel@gmail.com>\n"
+"Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: French\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "Échec de la recherche du VDIs"
@@ -202,10 +202,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
 
 #, python-format
-msgid "Environment: %s"
-msgstr "Environnement : %s"
-
-#, python-format
 msgid "Error copying key: %s"
 msgstr "Erreur lors de la copie de clé: %s"
 
@@ -355,10 +351,6 @@ msgstr "Erreur en essayant de Sauver l'Instance"
 
 msgid "Error trying to reschedule"
 msgstr "Erreur lors de la tentative de replanification"
-
-#, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Erreur lors de la mise a jour des ressources du nœud %(node)s: %(e)s"
 
 msgid "Error waiting for responses from neighbor cells"
 msgstr "Erreur lors de l'attente de réponses des cellules voisines"
@@ -728,9 +720,6 @@ msgstr "Echec lors du nettoyage des VDI connectées"
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
 
-msgid "FaultWrapper error"
-msgstr "Erreur FaultWrapper"
-
 msgid "Guest does not have a console available"
 msgstr "Aucune console n'est disponible pour l'invité"
 
@@ -781,10 +770,6 @@ msgstr "Interface %s non trouvé"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "server_string non valide : %s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Défaillance de Keystone : %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -1099,10 +1084,6 @@ msgstr "Incapable de mettre à jour l'hôte du port %s"
 msgid "Unable to update instance VNIC index for port %s."
 msgstr ""
 "Impossible de mettre à jour les index des VNIC des instances pour le port %s."
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "%(ex_name)s inattendu levé : %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Échec inexpliqué de la génération, pas de construction re-planifiée."

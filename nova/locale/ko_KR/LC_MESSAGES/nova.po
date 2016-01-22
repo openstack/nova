@@ -1,22 +1,31 @@
-# Korean (South Korea) translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
+# Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
+# Sungjin Kang <potopro@gmail.com>, 2013
+# Sungjin Kang <potopro@gmail.com>, 2013
+# Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
+# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
+"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2015-10-07 05:39+0000\n"
 "Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
-"Language: ko_KR\n"
+"Language: ko-KR\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 "Language-Team: Korean (South Korea)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -182,9 +191,6 @@ msgstr ""
 #, python-format
 msgid "API version %(version)s is not supported on this method."
 msgstr "API 버전 %(version)s에서는 이 메소드를 지원하지 않습니다.."
-
-msgid "Access key not provided"
-msgstr "액세스 키가 제공되지 않음"
 
 msgid "Access list not available for public flavors."
 msgstr "액세스 목록이 공용 플레이버에 사용할 수 없습니다. "
@@ -754,10 +760,6 @@ msgstr "%(host)s 호스트에서 2진 %(binary)s을(를) 찾을 수 없습니다
 msgid "Could not find config at %(path)s"
 msgstr "%(path)s에서 구성을 찾을 수 없음"
 
-#, python-format
-msgid "Could not find key pair(s): %s"
-msgstr "키 쌍을 찾을 수 없음: %s"
-
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "VM이 사용하는 데이터 저장소 참조를 찾을 수 없습니다. "
 
@@ -790,14 +792,6 @@ msgstr "%(image_id)s 이미지를 업로드할 수 없음"
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "%(interface)s의 링크 로컬 IP를 가져올 수 없음 :%(ex)s"
-
-#, python-format
-msgid ""
-"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
-"%(vm_state)s, current task_state: %(task_state)s"
-msgstr ""
-"%(instance)s 인스턴스를 1시간 내에 중지할 수 없습니다. 현재 vm_state: "
-"%(vm_state)s, 현재 task_state: %(task_state)s"
 
 msgid "Create networks failed"
 msgstr "네트워크 작성 실패"
@@ -1023,21 +1017,6 @@ msgstr "uuid를 예상했지만 %(uuid)s을(를) 수신했습니다. "
 msgid "Expected object of type: %s"
 msgstr "예상한 오브젝트 유형: %s"
 
-msgid "Expecting a list of resources"
-msgstr "자원 목록 예상"
-
-msgid "Expecting a list of tagSets"
-msgstr "tagSets의 목록 예상"
-
-msgid "Expecting both key and value to be set"
-msgstr "키와 값을 모두 설정해야 함"
-
-msgid "Expecting key to be set"
-msgstr "키 설정을 예상"
-
-msgid "Expecting tagSet to be key/value pairs"
-msgstr "tagSet는 키/값 쌍이어야 함"
-
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "새도우 테이블에 %(table)s.%(column)s 열이 추가로 있음"
@@ -1195,10 +1174,6 @@ msgstr "인스턴스 일시중단 실패: %(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "인스턴스 종료 실패: %(reason)s"
 
-#, python-format
-msgid "Failure parsing response from keystone: %s"
-msgstr "키스톤에서 응답을 구문 분석하지 못함: %s"
-
 msgid "Failure prepping block device."
 msgstr "블록 디바이스 준비 실패"
 
@@ -1333,9 +1308,6 @@ msgstr "플레이버의 메모리가 요청된 이미지에 대해 너무 작습
 
 msgid "Floating IP allocate failed."
 msgstr "부동 IP 할당에 실패했습니다."
-
-msgid "Floating ip is not associated."
-msgstr "부동 IP가 연관되지 않았습니다. "
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1494,9 +1466,6 @@ msgstr "이미지 메타데이터 키가 너무 김"
 
 msgid "Image metadata limit exceeded"
 msgstr "이미지 메타데이터 한계 초과"
-
-msgid "Image must be available"
-msgstr "이미지가 사용 가능해야 함"
 
 msgid "Image not found."
 msgstr "이미지를 찾을 수 없습니다. "
@@ -1718,9 +1687,6 @@ msgstr "%(interface)s 인터페이스를 찾을 수 없습니다. "
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr "파일 %(path)s에 대해 올바르지 않은 Base 64 데이터"
 
-msgid "Invalid CIDR"
-msgstr "올바르지 않은 CIDR"
-
 msgid "Invalid Connection Info"
 msgstr "올바르지 않은 연결 정보"
 
@@ -1731,10 +1697,6 @@ msgstr "올바르지 않은 ID가 %(id)s을(를) 수신했습니다."
 #, python-format
 msgid "Invalid IP format %s"
 msgstr "올바르지 않은 IP 형식 %s"
-
-#, python-format
-msgid "Invalid IP protocol %(protocol)s"
-msgstr "올바르지 않은 IP 프로토콜 %(protocol)s"
 
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
@@ -2017,19 +1979,8 @@ msgid "Invalid usage_type: %s"
 msgstr "올바르지 않은 usage_type: %s"
 
 #, python-format
-msgid ""
-"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
-"volume attached at root (%(root)s)"
-msgstr ""
-"instanceId에 대한 올바르지 않은 값 '%(ec2_instance_id)s'입니다. 루트"
-"(%(root)s)에 첨부된 볼륨이 인스턴스에 없습니다."
-
-#, python-format
 msgid "Invalid value '%s' for force."
 msgstr "강제 실행에 대한 올바르지 않은 값 '%s'입니다. "
-
-msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
-msgstr "'scheduler_max_attempts'에 대한 올바르지 않은 값, >= 1이어야 함"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2581,9 +2532,6 @@ msgstr "요청 본문 없음"
 msgid "No root disk defined."
 msgstr "루트 디스크가 정의되지 않았습니다."
 
-msgid "No rule for the specified parameters."
-msgstr "지정된 매개변수에 대한 규칙이 없습니다. "
-
 msgid "No suitable network for migrate"
 msgstr "마이그레이션을 위한 지속 가능한 네트워크 없음"
 
@@ -2616,10 +2564,6 @@ msgstr "%(host)s에 사용 가능한 포트를 획득할 수 없음"
 #, python-format
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "%(host)s:%(port)d, %(error)s을(를) 바인드할 수 없음"
-
-#, python-format
-msgid "Not allowed to modify attributes for image %s"
-msgstr "%s 이미지의 속성을 수정하도록 허용하지 않음"
 
 msgid "Not an rbd snapshot"
 msgstr "rbd 스냅샷이 아님"
@@ -2691,9 +2635,6 @@ msgstr ""
 
 msgid "Only host parameter can be specified"
 msgstr "호스트 매개변수만 지정할 수 있음"
-
-msgid "Only instances implemented"
-msgstr "인스턴스만 구현됨"
 
 msgid "Only root certificate can be retrieved."
 msgstr "루트 인증서만 검색할 수 있습니다. "
@@ -3220,9 +3161,6 @@ msgstr ""
 "resize2fs를 사용한 파일 시스템 축소에 실패했습니다. 사용자의 디스크에충분한 "
 "여유 공간이 있는지 확인하십시오."
 
-msgid "Signature not provided"
-msgstr "서명이 제공되지 않음"
-
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s 스냅샷을 찾을 수 없습니다. "
@@ -3563,9 +3501,6 @@ msgstr "%s 디바이스가 작성되기를 기다리다가 제한시간 초과�
 msgid "Timeout waiting for response from cell"
 msgstr "셀의 응답을 대시하는 중에 제한시간 초과"
 
-msgid "Timestamp failed validation."
-msgstr "시간소인이 유효성 검증에 실패했습니다. "
-
 msgid "To and From ports must be integers"
 msgstr "발신 및 수신 포트는 정수여야 함"
 
@@ -3579,17 +3514,11 @@ msgid ""
 msgstr ""
 "너무 많은 IP 주소가 생성됩니다. 생성된 숫자를 줄이려면 /%s을(를)늘리십시오. "
 
-msgid "Too many failed authentications."
-msgstr "실패한 인증이 너무 많습니다. "
-
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP 프로토콜 유형의 경우 유형 및 코드는 정수여야 함"
 
 msgid "UUID is required to delete Neutron Networks"
 msgstr "Neutron 네트워크를 삭제하기 위해 UUID가 필요합니다. "
-
-msgid "Unable to associate IP Address, no fixed_ips."
-msgstr "IP 주소를 연관시킬 수 없습니다. fixed_ips가 없습니다. "
 
 msgid "Unable to authenticate Ironic client."
 msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
@@ -3872,9 +3801,6 @@ msgstr ""
 msgid "Unknown delete_info type %s"
 msgstr "알 수 없는 delete_info 유형: %s"
 
-msgid "Unknown error occurred."
-msgstr "알 수 없는 오류가 발생했습니다."
-
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "알 수 없는 image_type=%s"
@@ -4089,10 +4015,6 @@ msgid "Volume resource quota exceeded"
 msgstr "볼륨 리소스 quota를 초과하였습니다"
 
 #, python-format
-msgid "Volume sets block size, but libvirt '%s' or later is required."
-msgstr "볼륨에서 블록 크기를 설정하지만 libvirt '%s' 이상이 필요합니다. "
-
-#, python-format
 msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
@@ -4210,9 +4132,6 @@ msgstr "block_device_mapping은 목록이어야 함"
 msgid "block_device_mapping_v2 must be a list"
 msgstr "block_device_mapping_v2는 목록이어야 함"
 
-msgid "can't build a valid rule"
-msgstr "올바른 규칙을 구성할 수 없음"
-
 msgid "cannot delete non-existent key"
 msgstr "존재하지 않는 키를 삭제할 수 없음"
 
@@ -4325,13 +4244,6 @@ msgstr "이미지"
 msgid "image already mounted"
 msgstr "이미지가 이미 마운트되었음"
 
-#, python-format
-msgid "image of %(instance)s at %(now)s"
-msgstr "%(now)s에 %(instance)s의 이미지"
-
-msgid "imageLocation is required"
-msgstr "imageLocation 필요"
-
 msgid "index"
 msgstr "인덱스"
 
@@ -4413,9 +4325,6 @@ msgstr "nbd 디바이스 %s이(가) 표시되지 않음"
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd 사용 불가능: 모듈이 로드되지 않았음"
 
-msgid "need group_name or group_id"
-msgstr "group_name 또는 group_id가 필요함"
-
 msgid "network"
 msgstr "네트워크"
 
@@ -4436,14 +4345,8 @@ msgstr "ssh 명령을 실행할 수 없음: %s"
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage를 지정해야 합니다."
 
-msgid "only group \"all\" is supported"
-msgstr "\"all\" 그룹만 지원됨"
-
 msgid "operation time out"
 msgstr "조작 제한시간이 초과됨"
-
-msgid "operation_type must be add or remove"
-msgstr "operation_type이 추가 또는 제거여야 함"
 
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr "os-getConsoleOutput이 잘못 되었거나 요청 본문에서 누락되었음"
@@ -4483,9 +4386,6 @@ msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
 "read_deleted는 'no', 'yes', 'only' 중 하나만 가능하며, %r은(는) 사용하지 못 "
 "합니다."
-
-msgid "resource_id and tag are required"
-msgstr "자원 ID 와 태그가 필요함"
 
 msgid "rpc_port must be integer"
 msgstr "rpc_port는 정수여야 함"
@@ -4550,9 +4450,6 @@ msgstr "지원되지 않는 필드: %s"
 
 msgid "user"
 msgstr "user"
-
-msgid "user or group not specified"
-msgstr "사용자 또는 그룹이 지정되지 않음"
 
 msgid "uuid"
 msgstr "uuid"

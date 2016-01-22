@@ -8,19 +8,19 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-12-16 03:45+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech\n"
-"Language: cs\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-12-16 03:45+0000\n"
+"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Czech\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -68,23 +68,12 @@ msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 "Přidávání bezpečnostní skupiny %(security_group_id)s k portu %(port_id)s"
 
-msgid "Allocate address"
-msgstr "Přidělit adresu"
-
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Přidělena síť: '%s' pro instanci"
 
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Přidružit adresu %(public_ip)s k instanci %(instance_id)s"
-
 msgid "Attach interface"
 msgstr "Připojit rozhraní"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "Připojit svazek %(volume_id)s k instanci %(instance_id)s na %(device)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
@@ -230,20 +219,8 @@ msgid "Create assisted snapshot from volume %s"
 msgstr "Vytvořit snímek s pomocí ze svazku %s"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "Vytvořit pár klíčů %s"
-
-#, python-format
 msgid "Create snapshot from volume %s"
 msgstr "Vytvořit snímek ze svazku %s"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Vytvořit snímek svazku %s"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "Vytvořit svazek ze snímku %s"
 
 #, python-format
 msgid "Create volume of %s GB"
@@ -270,14 +247,6 @@ msgid ""
 msgstr ""
 "Zbývající data %(remaining)d bajtů, nejnižší hladina %(watermark)d bajtů "
 "před %(last)d vteřinami"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "Zrušení registrace obrazu %s"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Smazat pár klíčů %s"
 
 #, python-format
 msgid "Delete security group %s"
@@ -358,10 +327,6 @@ msgstr "Přidělení zařízení selhalo. Další pokus za 2 vteřiny."
 #, python-format
 msgid "Disabling host %s."
 msgstr "Zakazování hostitele %s."
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Odloučit adresu %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
@@ -533,10 +498,6 @@ msgid "Get console output"
 msgstr "Získat výstup konzole"
 
 #, python-format
-msgid "Get console output for instance %s"
-msgstr "Získat výstup konzole pro instanci %s"
-
-#, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
@@ -595,10 +556,6 @@ msgid ""
 msgstr ""
 "Data vytvoření obrazu, uložitelné v mezipaměti: %(cache)s, stáhnuto: "
 "%(downloaded)s trvání: %(duration).2f vteřin pro obraz %(image_id)s"
-
-#, python-format
-msgid "Import key %s"
-msgstr "Importovat klíč %s"
 
 #, python-format
 msgid ""
@@ -828,10 +785,6 @@ msgstr ""
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
 msgstr "Přepínání hostitele %(host_name)s do režimu údržby %(mode)s."
 
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Restartovat instanci %r"
-
 msgid "Rebooting instance"
 msgstr "Restartování instance"
 
@@ -878,14 +831,6 @@ msgstr ""
 
 msgid "Recovered from being unable to report status."
 msgstr "Nemožnost hlásit stav byla opravena."
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Obraz %(image_location)s registrován s id %(image_id)s"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Uvolnit adresu %s"
 
 msgid "Reloading compute RPC API"
 msgstr "Znovu načítání výpočtové API RPC"
@@ -1113,11 +1058,6 @@ msgstr ""
 "%(ex)s"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "Neoprávněný požadavek pro ovladač=%(controller)s a činnost=%(action)s"
-
-#, python-format
 msgid "Unexpected error: %s"
 msgstr "Neočekávaná chyba: %s"
 
@@ -1133,10 +1073,6 @@ msgstr "Aktualizace mezipaměti využití šířky pásma"
 #, python-format
 msgid "Updating from migration %s"
 msgstr "Aktualizování z přesunu %s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "Aktualizace zveřejnění obrazu %s"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"

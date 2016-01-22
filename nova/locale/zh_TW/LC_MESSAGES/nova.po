@@ -1,22 +1,29 @@
-# Chinese (Traditional, Taiwan) translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# Chao-Hsiung Liao <pesder@gmail.com>, 2012
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
+# Pellaeon Lin <nfsmwlin@gmail.com>, 2013
+# Pellaeon Lin <nfsmwlin@gmail.com>, 2013
+# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
+"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2015-09-06 10:17+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language: zh_Hant_TW\n"
+"Language: zh-TW\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 "Language-Team: Chinese (Taiwan)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -177,9 +184,6 @@ msgstr "API 版本字串 %(version)s 格式無效。格式必須為 MajorNum.Min
 #, python-format
 msgid "API version %(version)s is not supported on this method."
 msgstr "此方法不支援 API %(version)s 版。"
-
-msgid "Access key not provided"
-msgstr "未提供存取金鑰"
 
 msgid "Access list not available for public flavors."
 msgstr "存取清單不適用於公用特性。"
@@ -724,10 +728,6 @@ msgstr "在主機 %(host)s 上找不到二進位檔 %(binary)s。"
 msgid "Could not find config at %(path)s"
 msgstr "在 %(path)s 處找不到配置"
 
-#, python-format
-msgid "Could not find key pair(s): %s"
-msgstr "找不到金鑰組：%s"
-
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "找不到 VM 所使用的資料儲存庫參照。"
 
@@ -758,14 +758,6 @@ msgstr "無法上傳映像檔 %(image_id)s"
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "無法取得 %(interface)s 的鏈結本端 IP：%(ex)s"
-
-#, python-format
-msgid ""
-"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
-"%(vm_state)s, current task_state: %(task_state)s"
-msgstr ""
-"在 1 小時之內，無法停止實例 %(instance)s。現行 vm_state：%(vm_state)s，現行 "
-"task_state：%(task_state)s"
 
 msgid "Create networks failed"
 msgstr "建立網路失敗"
@@ -982,21 +974,6 @@ msgstr "需要 UUID，但收到 %(uuid)s。"
 msgid "Expected object of type: %s"
 msgstr "需要類型為 %s 的物件"
 
-msgid "Expecting a list of resources"
-msgstr "預期資源清單"
-
-msgid "Expecting a list of tagSets"
-msgstr "預期 tagSet 清單"
-
-msgid "Expecting both key and value to be set"
-msgstr "預期設定索引鍵及值"
-
-msgid "Expecting key to be set"
-msgstr "預期設定索引鍵"
-
-msgid "Expecting tagSet to be key/value pairs"
-msgstr "tagSet 預期為鍵值組"
-
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "備份副本表格中存在額外直欄 %(table)s.%(column)s"
@@ -1150,10 +1127,6 @@ msgstr "無法懸置實例：%(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "無法終止實例：%(reason)s"
 
-#, python-format
-msgid "Failure parsing response from keystone: %s"
-msgstr "剖析來自 Keystone 的回應失敗：%s "
-
 msgid "Failure prepping block device."
 msgstr "準備區塊裝置時失敗。"
 
@@ -1274,9 +1247,6 @@ msgstr "特性的記憶體太小，裝不下所要求的映像檔。"
 
 msgid "Floating IP allocate failed."
 msgstr "浮動 IP 配置失敗。"
-
-msgid "Floating ip is not associated."
-msgstr "未與浮動 IP 產生關聯。"
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1430,9 +1400,6 @@ msgstr "映像檔 meta 資料索引鍵太長"
 
 msgid "Image metadata limit exceeded"
 msgstr "已超出映像檔 meta 資料限制"
-
-msgid "Image must be available"
-msgstr "映像檔必須可用"
 
 msgid "Image not found."
 msgstr "找不到映像檔。"
@@ -1648,9 +1615,6 @@ msgstr "找不到介面 %(interface)s。"
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr "檔案 %(path)s 的 Base 64 資料無效"
 
-msgid "Invalid CIDR"
-msgstr "無效的 CIDR"
-
 msgid "Invalid Connection Info"
 msgstr "無效的連線資訊"
 
@@ -1661,10 +1625,6 @@ msgstr "收到無效的 ID %(id)s。"
 #, python-format
 msgid "Invalid IP format %s"
 msgstr "無效的 IP 格式 %s"
-
-#, python-format
-msgid "Invalid IP protocol %(protocol)s"
-msgstr "無效的 IP 通訊協定 %(protocol)s"
 
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
@@ -1941,19 +1901,8 @@ msgid "Invalid usage_type: %s"
 msgstr "usage_type %s 無效"
 
 #, python-format
-msgid ""
-"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
-"volume attached at root (%(root)s)"
-msgstr ""
-"instanceId 的值 '%(ec2_instance_id)s' 無效。實例沒有在根目錄 (%(root)s) 處連"
-"接磁區。"
-
-#, python-format
 msgid "Invalid value '%s' for force."
 msgstr "強制值 '%s' 無效。"
-
-msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
-msgstr "'scheduler_max_attempts' 的值無效，必須 >= 1"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2488,9 +2437,6 @@ msgstr "沒有要求內文"
 msgid "No root disk defined."
 msgstr "未定義根磁碟。"
 
-msgid "No rule for the specified parameters."
-msgstr "指定的參數沒有規則。"
-
 msgid "No suitable network for migrate"
 msgstr "沒有適合於移轉的網路"
 
@@ -2523,10 +2469,6 @@ msgstr "無法獲得 %(host)s 的可用埠"
 #, python-format
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "無法連結 %(host)s:%(port)d，%(error)s"
-
-#, python-format
-msgid "Not allowed to modify attributes for image %s"
-msgstr "不容許修改映像檔 %s 的屬性"
 
 msgid "Not an rbd snapshot"
 msgstr "不是 rbd Snapshot"
@@ -2594,9 +2536,6 @@ msgstr ""
 
 msgid "Only host parameter can be specified"
 msgstr "只能指定主機參數"
-
-msgid "Only instances implemented"
-msgstr "僅實作了實例"
 
 msgid "Only root certificate can be retrieved."
 msgstr "只能擷取主要憑證。"
@@ -3099,9 +3038,6 @@ msgid ""
 msgstr ""
 "使用 resize2fs 來縮小檔案系統時失敗，請檢查磁碟上是否具有足夠的可用空間。"
 
-msgid "Signature not provided"
-msgstr "未提供簽章"
-
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "找不到 Snapshot %(snapshot_id)s。"
@@ -3429,9 +3365,6 @@ msgstr "等待建立裝置 %s 時發生逾時"
 msgid "Timeout waiting for response from cell"
 msgstr "等候 Cell 回應時發生逾時"
 
-msgid "Timestamp failed validation."
-msgstr "時間戳記驗證失敗。"
-
 msgid "To and From ports must be integers"
 msgstr "目標埠和來源埠必須是整數"
 
@@ -3444,17 +3377,11 @@ msgid ""
 "number generated."
 msgstr "將產生太多的 IP 位址。請增大 /%s 以減少所產生的數目。"
 
-msgid "Too many failed authentications."
-msgstr "鑑別失敗太多次。"
-
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP 通訊協定類型的類型及代碼必須是整數"
 
 msgid "UUID is required to delete Neutron Networks"
 msgstr "需要 UUID 才能刪除「Neutron 網路」"
-
-msgid "Unable to associate IP Address, no fixed_ips."
-msgstr "無法與 IP 位址產生關聯，沒有 fixed_ip。"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "無法鑑別 Ironic 用戶端。"
@@ -3729,9 +3656,6 @@ msgstr "不明的配置磁碟機格式 %(format)s。請選取 iso9660 或 vfat �
 msgid "Unknown delete_info type %s"
 msgstr "不明的 delete_info 類型 %s"
 
-msgid "Unknown error occurred."
-msgstr "發生不明錯誤。"
-
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "不明的 image_type = %s"
@@ -3924,10 +3848,6 @@ msgid "Volume must be attached in order to detach."
 msgstr "磁區必須連接才能分離。"
 
 #, python-format
-msgid "Volume sets block size, but libvirt '%s' or later is required."
-msgstr "由磁區設定區塊大小，但需要 libVirt '%s' 或更新版本。"
-
-#, python-format
 msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
@@ -4037,9 +3957,6 @@ msgstr "block_device_mapping 必須是清單"
 
 msgid "block_device_mapping_v2 must be a list"
 msgstr "block_device_mapping_v2 必須是清單"
-
-msgid "can't build a valid rule"
-msgstr "無法建置有效規則"
 
 msgid "cannot delete non-existent key"
 msgstr "無法刪除不存在的索引鍵"
@@ -4151,13 +4068,6 @@ msgstr "映像檔"
 msgid "image already mounted"
 msgstr "已裝載映像檔"
 
-#, python-format
-msgid "image of %(instance)s at %(now)s"
-msgstr "(%(now)s) 處的 %(instance)s 映像檔"
-
-msgid "imageLocation is required"
-msgstr "需要 imageLocation"
-
 msgid "index"
 msgstr "索引"
 
@@ -4239,9 +4149,6 @@ msgstr "NBD 裝置 %s 未顯示"
 msgid "nbd unavailable: module not loaded"
 msgstr "NBD 無法使用：未載入模組"
 
-msgid "need group_name or group_id"
-msgstr "需要 group_name 或 group_id"
-
 msgid "network"
 msgstr "網路"
 
@@ -4262,14 +4169,8 @@ msgstr "無法執行 SSH 指令：%s"
 msgid "onSharedStorage must be specified."
 msgstr "必須指定 onSharedStorage。"
 
-msgid "only group \"all\" is supported"
-msgstr "僅支援群組 \"all\""
-
 msgid "operation time out"
 msgstr "作業逾時"
-
-msgid "operation_type must be add or remove"
-msgstr "operation_type 必須是新增或移除"
 
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr "要求內文中 os-getConsoleOutput 格式不正確或者已遺漏"
@@ -4307,9 +4208,6 @@ msgstr "找不到 rbd Python 程式庫"
 #, python-format
 msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr "read_deleted 只能是 'no'、'yes' 或 'only' 其中之一，不能是 %r"
-
-msgid "resource_id and tag are required"
-msgstr "需要 resource_id 及標籤"
 
 msgid "rpc_port must be integer"
 msgstr "rpc_port 必須是整數"
@@ -4372,9 +4270,6 @@ msgstr "不支援的欄位：%s"
 
 msgid "user"
 msgstr "使用者"
-
-msgid "user or group not specified"
-msgstr "未指定使用者或群組"
 
 msgid "uuid"
 msgstr "UUID"

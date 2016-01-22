@@ -1,22 +1,30 @@
-# Czech translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# David Soukup <daos2@seznam.cz>, 2013
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011
+# Jaroslav Lichtblau <dragonlord@seznam.cz>, 2014
+# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2013,2015
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
+# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-12-21 12:12+0000\n"
+"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-01-08 01:32+0000\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 "Language-Team: Czech\n"
-"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP address."
@@ -235,9 +243,6 @@ msgstr ""
 #, python-format
 msgid "API version %(version)s is not supported on this method."
 msgstr "API s verzí %(version)s není v této metodě podporován."
-
-msgid "Access key not provided"
-msgstr "Přístupový klíč není zadán"
 
 msgid "Access list not available for public flavors."
 msgstr "Seznam přístupu není dostupný pro veřejné konfigurace."
@@ -916,10 +921,6 @@ msgstr "Nelze najít binární soubor %(binary)s v hostiteli %(host)s."
 msgid "Could not find config at %(path)s"
 msgstr "Nelze najít nastavení v %(path)s"
 
-#, python-format
-msgid "Could not find key pair(s): %s"
-msgstr "Nelze najít pár klíčů: %s"
-
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "Nelze najít odkazy datového úložiště, který VM používá."
 
@@ -952,14 +953,6 @@ msgstr "Nelze nahrát obraz %(image_id)s"
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "Nelze získat IP místního spojení %(interface)s :%(ex)s"
-
-#, python-format
-msgid ""
-"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
-"%(vm_state)s, current task_state: %(task_state)s"
-msgstr ""
-"Nešlo zastavit instanci %(instance)s do jedné hodiny. Současný stav vm: "
-"%(vm_state)s, současný stav úkolu: %(task_state)s"
 
 msgid "Create networks failed"
 msgstr "Vytvoření sítí selhalo"
@@ -1232,21 +1225,6 @@ msgstr "Očekáváno uuid ale obdrženo %(uuid)s."
 msgid "Expected object of type: %s"
 msgstr "Očekáván objekt typu: %s"
 
-msgid "Expecting a list of resources"
-msgstr "Očekáván seznam zdrojů"
-
-msgid "Expecting a list of tagSets"
-msgstr "Očekáván seznam sad značek"
-
-msgid "Expecting both key and value to be set"
-msgstr "Očekáváno zadání jak klíče tak i hodnoty"
-
-msgid "Expecting key to be set"
-msgstr "Očekáváno zadání klíče"
-
-msgid "Expecting tagSet to be key/value pairs"
-msgstr "Očekáváno, že seznam značek bude ve formátu párů klíč/hodnota"
-
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "Sloupec %(table)s.%(column)s je ve stínové tabulce navíc"
@@ -1411,10 +1389,6 @@ msgstr "Nelze pozastavit instanci: %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Nelze ukončit instanci: %(reason)s"
-
-#, python-format
-msgid "Failure parsing response from keystone: %s"
-msgstr "Nelze analyzovat odpověď od keystone: %s"
 
 msgid "Failure prepping block device."
 msgstr "Chyba při přípravě blokového zařízení."
@@ -1625,9 +1599,6 @@ msgstr "Plovoucí IP adresa nenalezeno pro hostitele %(host)s."
 msgid "Floating IP pool not found."
 msgstr "Zásoba plovoucích IP adres nenalezena."
 
-msgid "Floating ip is not associated."
-msgstr "Plovoucí ip adresa není přidružena."
-
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
@@ -1799,9 +1770,6 @@ msgstr "Popisná data obrazu překračují limit"
 #, python-format
 msgid "Image model '%(image)s' is not supported"
 msgstr "Model obrazu '%(image)s' není podporován"
-
-msgid "Image must be available"
-msgstr "Obraz musí být dostupný"
 
 msgid "Image not found."
 msgstr "Obraz nenalezen"
@@ -2058,9 +2026,6 @@ msgstr "Rozhraní %(interface)s nenalezeno."
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr "Neplatná data Base 64 pro soubor %(path)s"
 
-msgid "Invalid CIDR"
-msgstr "Neplatný CIDR"
-
 msgid "Invalid Connection Info"
 msgstr "Neplatné informace o připojení"
 
@@ -2071,10 +2036,6 @@ msgstr "Obdrženo neplatné ID %(id)s."
 #, python-format
 msgid "Invalid IP format %s"
 msgstr "Neplatný formát IP adresy %s"
-
-#, python-format
-msgid "Invalid IP protocol %(protocol)s"
-msgstr "Neplatný IP protokol %(protocol)s"
 
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
@@ -2385,19 +2346,8 @@ msgid "Invalid usage_type: %s"
 msgstr "Neplatný typ použití: %s"
 
 #, python-format
-msgid ""
-"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
-"volume attached at root (%(root)s)"
-msgstr ""
-"Neplatná hodnota '%(ec2_instance_id)s' pro id instance. Instance nemá v "
-"kořeni připojen svazek (%(root)s)"
-
-#, python-format
 msgid "Invalid value '%s' for force."
 msgstr "Neplatná hodnota '%s' pro vynucení."
-
-msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
-msgstr "Neplatná hodnota pro 'scheduler_max_attempts', musí být >= 1"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -3016,9 +2966,6 @@ msgstr "Žádné tělo žádosti"
 msgid "No root disk defined."
 msgstr "Nezadán žádný kořenový disk."
 
-msgid "No rule for the specified parameters."
-msgstr "Pro zadané parametry není žádné pravidlo."
-
 msgid "No suitable network for migrate"
 msgstr "Žádné vhodné sítě pro přesun"
 
@@ -3051,10 +2998,6 @@ msgstr "Nelze získat volný port pro %(host)s"
 #, python-format
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "Nelze svázat %(host)s:%(port)d, %(error)s"
-
-#, python-format
-msgid "Not allowed to modify attributes for image %s"
-msgstr "Nemáte oprávnění měnit vlastnosti obrazu %s"
 
 msgid "Not an rbd snapshot"
 msgstr "Není snímkem rbd"
@@ -3137,9 +3080,6 @@ msgstr ""
 msgid "Only host parameter can be specified"
 msgstr "Pouze parametry hostitele mohou být zadány"
 
-msgid "Only instances implemented"
-msgstr "Jsou zavedeny pouze instance"
-
 msgid "Only root certificate can be retrieved."
 msgstr "Může být získán pouze kořenový certifikát."
 
@@ -3183,6 +3123,10 @@ msgstr ""
 #, python-format
 msgid "PCI device %(id)s not found"
 msgstr "PCI zařízení %(id)s nenalezeno"
+
+#, python-format
+msgid "PCI device request %(requests)s failed"
+msgstr "Žádost zařízení PCI %(requests)s selhala"
 
 #, python-format
 msgid ""
@@ -3453,6 +3397,10 @@ msgstr ""
 msgid "RequestSpec not found for instance %(instance_uuid)s"
 msgstr "U instance %(instance_uuid)s nebyla nalezena žádost o specifikaci"
 
+msgid "Requested CPU control policy not supported by host"
+msgstr ""
+"Požadovaná zásada kontroly procesoru není podporována na tomto hostiteli"
+
 #, python-format
 msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
 msgstr ""
@@ -3493,6 +3441,14 @@ msgid ""
 msgstr ""
 "Požadované limity vCPU %(sockets)d:%(cores)d:%(threads)d je nemožné pslnit "
 "pro daný počet vCPU %(vcpus)d"
+
+#, python-format
+msgid ""
+"Required image properties for signature verification do not exist. Cannot "
+"verify signature. Missing property: %s"
+msgstr ""
+"Požadované vlastnosti obrazu pro ověření podpisu neexistují. Nelze ověřit "
+"podpis. Chybí vlastnost: %s"
 
 #, python-format
 msgid "Rescue device does not exist for instance %s"
@@ -3735,9 +3691,6 @@ msgid ""
 msgstr ""
 "Zmenšení souborového systému pomocí resize2fs selhalo, prosím zkontrolujte, "
 "zda máte na svém disku dostatek volného místa."
-
-msgid "Signature not provided"
-msgstr "Podpis není zadán"
 
 #, python-format
 msgid "Signature verification for the image failed: %(reason)s."
@@ -4160,9 +4113,6 @@ msgstr ""
 "Při kontrole možnosti přesunu za provozu na hostitele %s vypršel časový "
 "limit."
 
-msgid "Timestamp failed validation."
-msgstr "Časové razítko neprošlo ověřením."
-
 msgid "To and From ports must be integers"
 msgstr "Porty Do a Od musí být celá čísla"
 
@@ -4177,17 +4127,11 @@ msgstr ""
 "Bude vytvořeno příliš mnoho IP adres. Prosím zvyšte /%s pro snížení počtu "
 "vytvořených IP adres."
 
-msgid "Too many failed authentications."
-msgstr "Příliš mnoho ověření selhalo."
-
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "Typ a kód musí být v protokolu ICMP celá čísla"
 
 msgid "UUID is required to delete Neutron Networks"
 msgstr "Pro smazání sítí Neutron je vyžadováno UUID"
-
-msgid "Unable to associate IP Address, no fixed_ips."
-msgstr "Nelze přidružit pevnou IP adresu, nezadáno fixed_ips."
 
 #, python-format
 msgid ""
@@ -4511,9 +4455,6 @@ msgstr ""
 msgid "Unknown delete_info type %s"
 msgstr "Neznámý typ mazání informací %s"
 
-msgid "Unknown error occurred."
-msgstr "Vyskytla se neznámá chyba."
-
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "Neznámý typ obrazu=%s"
@@ -4751,12 +4692,6 @@ msgid "Volume resource quota exceeded"
 msgstr "Překročena kvóta zdroje svazku"
 
 #, python-format
-msgid "Volume sets block size, but libvirt '%s' or later is required."
-msgstr ""
-"Svazek nastavuje velikost bloku, ale to vyžaduje libvirt verze '%s' nebo "
-"vyšší."
-
-#, python-format
 msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
@@ -4905,9 +4840,6 @@ msgstr "mapování blokového zařízení musí být seznam"
 msgid "block_device_mapping_v2 must be a list"
 msgstr "Mapování blokového zařízení verze 2 musí být seznam"
 
-msgid "can't build a valid rule"
-msgstr "nelze sestavit platné pravidlo"
-
 msgid "cannot delete non-existent key"
 msgstr "nelze smazat neexistující klíč"
 
@@ -5029,13 +4961,6 @@ msgstr "obraz"
 msgid "image already mounted"
 msgstr "obraz již je připojen"
 
-#, python-format
-msgid "image of %(instance)s at %(now)s"
-msgstr "Obraz z %(instance)s v %(now)s"
-
-msgid "imageLocation is required"
-msgstr "ImageLocation je povinné"
-
 msgid "index"
 msgstr "rejstřík"
 
@@ -5122,9 +5047,6 @@ msgstr "zařízení nbd %s se nezobrazilo"
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd nedostupné: modul nenačten"
 
-msgid "need group_name or group_id"
-msgstr "je třeba zadat název nebo id skupiny"
-
 msgid "network"
 msgstr "síť"
 
@@ -5155,14 +5077,8 @@ msgstr ""
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage musí být zadáno."
 
-msgid "only group \"all\" is supported"
-msgstr "podporována je pouze skupina \"all\""
-
 msgid "operation time out"
 msgstr "operace vypršela"
-
-msgid "operation_type must be add or remove"
-msgstr "typ operace musí být add nebo remove"
 
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr "os-získání výstupu konzole poškozeno, nebo chybí z těla požadavku"
@@ -5200,9 +5116,6 @@ msgstr "python knihovny rbd nenalezeny"
 #, python-format
 msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr "čtení smazaného může být buď 'no', 'yes' nebo 'only', ne %r"
-
-msgid "resource_id and tag are required"
-msgstr "Id zdroje a značka jsou vyžadovány"
 
 msgid "rpc_port must be integer"
 msgstr "Port rpc musí být celé číslo"
@@ -5268,9 +5181,6 @@ msgstr "nepodporovaná pole: %s"
 
 msgid "user"
 msgstr "uživatel"
-
-msgid "user or group not specified"
-msgstr "uživatel nebo skupina nebyly zadány"
 
 msgid "uuid"
 msgstr "uuid"

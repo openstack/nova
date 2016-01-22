@@ -1,22 +1,27 @@
-# Turkish (Turkey) translations for nova.
-# Copyright (C) 2016 ORGANIZATION
+# Translations template for nova.
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
+# Translators:
+# Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013
+# Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013
+# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-09-06 10:17+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language: tr_TR\n"
-"Language-Team: Turkish (Turkey)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
+"POT-Creation-Date: 2016-01-21 04:18+0000\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.2.0\n"
+"PO-Revision-Date: 2016-01-20 01:45+0000\n"
+"Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
+"Language: tr-TR\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.0\n"
+"X-Generator: Zanata 3.7.3\n"
+"Language-Team: Turkish (Turkey)\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -196,9 +201,6 @@ msgstr ""
 #, python-format
 msgid "API version %(version)s is not supported on this method."
 msgstr "API sürümü %(version)s bu metodda desteklenmiyor."
-
-msgid "Access key not provided"
-msgstr "Erişim anahtarı verilmedi."
 
 msgid "Access list not available for public flavors."
 msgstr "Erişim listesi açık nitelikler için kullanılamaz."
@@ -782,10 +784,6 @@ msgstr "%(host)s sunucusunda %(binary)s ikilisi bulunamadı."
 msgid "Could not find config at %(path)s"
 msgstr "%(path)s'deki yapılandırma bulunamadı"
 
-#, python-format
-msgid "Could not find key pair(s): %s"
-msgstr "Anahtar çift(ler)i bulunamadı: %s"
-
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "VM'nin kullandığı veri deposu referansı(ları) bulunamadı."
 
@@ -818,14 +816,6 @@ msgstr "İmaj %(image_id)s yüklenemedi"
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-
-#, python-format
-msgid ""
-"Couldn't stop instance %(instance)s within 1 hour. Current vm_state: "
-"%(vm_state)s, current task_state: %(task_state)s"
-msgstr ""
-"Sunucu %(instance)s 1 saattir durdurulamadı. Şu anki vm_durumu: "
-"%(vm_state)s, mevcut görev_durumu: %(task_state)s"
 
 msgid "Create networks failed"
 msgstr "Ağ oluşturma başarısız"
@@ -1063,21 +1053,6 @@ msgstr "Bir uuid bekleniyordu ama %(uuid)s alındı."
 msgid "Expected object of type: %s"
 msgstr "Beklenen nesne türü: %s"
 
-msgid "Expecting a list of resources"
-msgstr "Bir kaynak listesi bekleniyor"
-
-msgid "Expecting a list of tagSets"
-msgstr "tagSets listesi bekleniyor"
-
-msgid "Expecting both key and value to be set"
-msgstr "Hem anahtar hem değerin ayarlanmış olması bekleniyor"
-
-msgid "Expecting key to be set"
-msgstr "Anahtarın ayarlanmış olması bekleniyor"
-
-msgid "Expecting tagSet to be key/value pairs"
-msgstr "tagSet'in anahtar/değer çifti olması bekleniyor"
-
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "Gölge tabloda ek sütun %(table)s.%(column)s"
@@ -1244,10 +1219,6 @@ msgstr "Sunucu askıya alınamadı: %(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Sunucu sonlandırılamadı: %(reason)s"
 
-#, python-format
-msgid "Failure parsing response from keystone: %s"
-msgstr "Keystone'den gelen yanıt ayrıştırılırken hata: %s"
-
 msgid "Failure prepping block device."
 msgstr "Blok aygıt hazırlama başarısız."
 
@@ -1391,9 +1362,6 @@ msgstr "Değişken IP %(address)s ilişkilendirmesi başarısız."
 
 msgid "Floating IP allocate failed."
 msgstr "Değişken IP ayrılması başarısız."
-
-msgid "Floating ip is not associated."
-msgstr "Değişken ip ilişkilendirilmemiş."
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1560,9 +1528,6 @@ msgstr "İmaj üstveri sınırı aşıldı"
 #, python-format
 msgid "Image model '%(image)s' is not supported"
 msgstr "İmaj modeli '%(image)s' desteklenmiyor"
-
-msgid "Image must be available"
-msgstr "İmaj müsait olmak zorunda"
 
 msgid "Image not found."
 msgstr "İmaj bulunamadı"
@@ -1792,9 +1757,6 @@ msgstr "%(interface)s arayüzü bulunamadı."
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr "%(path)s dosyası için geçersiz base 64 verisi"
 
-msgid "Invalid CIDR"
-msgstr "Geçersiz CIDR"
-
 msgid "Invalid Connection Info"
 msgstr "Geçersiz Bağlantı Bilgisi"
 
@@ -1805,10 +1767,6 @@ msgstr "Geçersiz ID alındı %(id)s."
 #, python-format
 msgid "Invalid IP format %s"
 msgstr "Geçersiz IP biçimi %s"
-
-#, python-format
-msgid "Invalid IP protocol %(protocol)s"
-msgstr "Geçersiz IP iletişim kuralı %(protocol)s"
 
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
@@ -2100,19 +2058,8 @@ msgid "Invalid usage_type: %s"
 msgstr "Geçersiz usage_type: %s"
 
 #, python-format
-msgid ""
-"Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not have a "
-"volume attached at root (%(root)s)"
-msgstr ""
-"instanceId için geçersiz değer '%(ec2_instance_id)s'. Sunucunun (%(root)s) "
-"köküne bağlanmış bir mantıksal sürücü yok"
-
-#, python-format
 msgid "Invalid value '%s' for force."
 msgstr "Zorlama için geçersiz değer '%s'."
-
-msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
-msgstr "'scheduler_max_attempts' için geçersiz değer, >= 1 olmalı"
 
 #, python-format
 msgid "Invalid value for Config Drive option: %(option)s"
@@ -2693,9 +2640,6 @@ msgstr "İstek gövdesi yok"
 msgid "No root disk defined."
 msgstr "Kök disk tanımlanmamış."
 
-msgid "No rule for the specified parameters."
-msgstr "Belirlenmiş parametreler için hiç kural yok"
-
 msgid "No suitable network for migrate"
 msgstr "Göç için uygun bir ağ yok"
 
@@ -2729,10 +2673,6 @@ msgstr "%(host)s için boş bir bağlantı noktası edinilemedi"
 #, python-format
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "%(host)s:%(port)d bağlanamadı, %(error)s"
-
-#, python-format
-msgid "Not allowed to modify attributes for image %s"
-msgstr "%s imajının özniteliklerinin değiştirilmesine izin verilmiyor"
 
 msgid "Not an rbd snapshot"
 msgstr "Rbd anlık görüntüsü değil"
@@ -2808,9 +2748,6 @@ msgstr ""
 
 msgid "Only host parameter can be specified"
 msgstr "Yalnızca host parametresi belirtilebilir"
-
-msgid "Only instances implemented"
-msgstr "Yalnızca uygulanan sunucular"
 
 msgid "Only root certificate can be retrieved."
 msgstr "Sadece kök sertifikası alınabilir."
@@ -3358,9 +3295,6 @@ msgstr ""
 "resize2fs ile dosya sisteminin küçültülmesi başarısız, lütfen diskinizde "
 "yeterli alan olduğundan emin olun."
 
-msgid "Signature not provided"
-msgstr "İmza verilmedi."
-
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s sistem anlık görüntüsü bulunamadı."
@@ -3716,9 +3650,6 @@ msgstr "%s aygıtının oluşturulması beklenirken zaman aşımı"
 msgid "Timeout waiting for response from cell"
 msgstr "Hücreden cevap beklerken zaman aşımı"
 
-msgid "Timestamp failed validation."
-msgstr "Zaman damgası doğrulamada başarısız."
-
 msgid "To and From ports must be integers"
 msgstr "Hedef ve Kaynak bağlantı noktaları tam sayı olmalı"
 
@@ -3733,17 +3664,11 @@ msgstr ""
 "Çok fazla IP adresi üretilecek. Lütfen üretilen sayıyı azaltmak için /%s'i "
 "artırın."
 
-msgid "Too many failed authentications."
-msgstr "Çok sayıda kimlik doğrulama başarısız oldu."
-
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP iletişim kuralı türü için Tür ve Kod tam sayı olmalı"
 
 msgid "UUID is required to delete Neutron Networks"
 msgstr "Neutron Ağlarını silmek için UUID gerekiyor"
-
-msgid "Unable to associate IP Address, no fixed_ips."
-msgstr "IP Adresi ilişkilendirilemedi, sabit_ip yok."
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Ironic istemcisi doğrulanamıyor."
@@ -4020,9 +3945,6 @@ msgstr "Tanınmayan zincir: %r"
 msgid "Unknown delete_info type %s"
 msgstr "Bilinmeyen delete_info türü %s"
 
-msgid "Unknown error occurred."
-msgstr "Bilinmeyen bir hata oluştu."
-
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "Bilinmeyen image_type=%s"
@@ -4079,11 +4001,11 @@ msgstr "Önce Essex sürümünü kullanarak veritabanı yükseltimi yapın."
 
 #, python-format
 msgid "User %(username)s not found in password file."
-msgstr "Kullanıcı %(username) parola dosyasında bulunamadı."
+msgstr "Kullanıcı %(username)s parola dosyasında bulunamadı."
 
 #, python-format
 msgid "User %(username)s not found in shadow file."
-msgstr "Kullanıcı % (kullanıcıadı) gölge dosyasında bulunamadı."
+msgstr "Kullanıcı %(username)s gölge dosyasında bulunamadı."
 
 msgid "User data needs to be valid base 64."
 msgstr "Kullanıcı verisi geçerli base 64 olmalıdır."
@@ -4232,12 +4154,6 @@ msgid "Volume must be attached in order to detach."
 msgstr "Mantıksal sürücünün ayrılabilmesi için eklenmiş olmalıdır."
 
 #, python-format
-msgid "Volume sets block size, but libvirt '%s' or later is required."
-msgstr ""
-"Mantıksal sürücü blok boyutu ayarlıyor, ama libvirt '%s' ya da daha yenisi "
-"gerekli."
-
-#, python-format
 msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
@@ -4357,9 +4273,6 @@ msgstr "blok_aygıt_eşleştirmesi liste olmalı"
 msgid "block_device_mapping_v2 must be a list"
 msgstr "blok_aygıt_eşleşetirmesi_v2 bir liste olmalı"
 
-msgid "can't build a valid rule"
-msgstr "geçerli bir kural inşa edilemiyor"
-
 msgid "cannot delete non-existent key"
 msgstr "olmayan anahtar silinemez"
 
@@ -4471,13 +4384,6 @@ msgstr "imaj"
 msgid "image already mounted"
 msgstr "imaj zaten bağlanmış"
 
-#, python-format
-msgid "image of %(instance)s at %(now)s"
-msgstr "%(instance)s in %(now)s deki imajı"
-
-msgid "imageLocation is required"
-msgstr "imageLocation gerekli"
-
 msgid "index"
 msgstr "indis"
 
@@ -4561,9 +4467,6 @@ msgstr "nbd aygıtı %s ortaya çıkmadı"
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd kullanılabilir değil: modül yüklenmemiş"
 
-msgid "need group_name or group_id"
-msgstr "group_name veya group_id gerekli"
-
 msgid "network"
 msgstr "ağ"
 
@@ -4584,14 +4487,8 @@ msgstr "ssh komutu çalıştırılamadı: %s"
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage belirtilmelidir."
 
-msgid "only group \"all\" is supported"
-msgstr "Sadece \"all\" grubu destekleniyor"
-
 msgid "operation time out"
 msgstr "işlem zaman aşımına uğradı"
-
-msgid "operation_type must be add or remove"
-msgstr "İşlem türü eklenmek veya kaldırılmak zorunda"
 
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr "os-getConsoleOutpu kusurlu veya istek gövdesinde bulunmuyor"
@@ -4631,9 +4528,6 @@ msgid "read_deleted can only be one of 'no', 'yes' or 'only', not %r"
 msgstr ""
 "read_deleted değişkeni 'no', 'yes' veya 'only' değerlerini alabilir, %r "
 "olamaz"
-
-msgid "resource_id and tag are required"
-msgstr "kaynak_id'si ve etiket gerekli"
 
 msgid "rpc_port must be integer"
 msgstr "rpc_port tam sayı olmalı"
@@ -4699,9 +4593,6 @@ msgstr "desteklenmeyen alanlar: %s"
 
 msgid "user"
 msgstr "kullanıcı"
-
-msgid "user or group not specified"
-msgstr "Kullanıcı veya grup belirlenmedi"
 
 msgid "uuid"
 msgstr "uuid"

@@ -11,19 +11,19 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language-Team: Chinese (China)\n"
-"Language: zh-CN\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
+"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
+"Language: zh-CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Chinese (China)\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -65,23 +65,12 @@ msgstr "活跃的基文件：%s"
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr "正在将安全组 %(security_group_id)s 添加至端口 %(port_id)s"
 
-msgid "Allocate address"
-msgstr "分配地址"
-
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "为实例分配网络： '%s' "
 
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "把地址 %(public_ip)s 关联到实例 %(instance_id)s"
-
 msgid "Attach interface"
 msgstr "请连接接口"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "把卷 %(volume_id)s 附加到实例 %(instance_id)s 上位置在 %(device)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
@@ -190,20 +179,8 @@ msgid "Create assisted snapshot from volume %s"
 msgstr "从卷%s 创建辅助的快照"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "创建密钥对 %s"
-
-#, python-format
 msgid "Create snapshot from volume %s"
 msgstr "为卷 %s 创建快照"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "创建卷 %s 的快照"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "从快照 %s 创建卷"
 
 #, python-format
 msgid "Create volume of %s GB"
@@ -228,14 +205,6 @@ msgid ""
 "Data remaining %(remaining)d bytes, low watermark %(watermark)d bytes "
 "%(last)d seconds ago"
 msgstr "在%(last)d秒以前，数据剩余%(remaining)d 字节，低值%(watermark)d 字节。"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "解除镜像 %s 的注册"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "删除密钥对 %s"
 
 #, python-format
 msgid "Delete security group %s"
@@ -314,10 +283,6 @@ msgstr "设备分配失败。将在两秒后重试。"
 #, python-format
 msgid "Disabling host %s."
 msgstr "正在禁用主机 %s。"
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "取消地址 %s 的关联"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
@@ -461,10 +426,6 @@ msgid "Get console output"
 msgstr "请获取控制台输出"
 
 #, python-format
-msgid "Get console output for instance %s"
-msgstr "获取实例 %s 控制台输出"
-
-#, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
@@ -522,10 +483,6 @@ msgid ""
 msgstr ""
 "镜像创建数据，缓存：%(cache)s，下载：持续 %(downloaded)s ：镜像 %(image_id)s "
 "%(duration).2f 秒"
-
-#, python-format
-msgid "Import key %s"
-msgstr "导入密钥 %s"
 
 #, python-format
 msgid ""
@@ -730,10 +687,6 @@ msgstr ""
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
 msgstr "正在将主机 %(host_name)s 置于维护方式 %(mode)s 下。"
 
-#, python-format
-msgid "Reboot instance %r"
-msgstr "重启实例 %r"
-
 msgid "Rebooting instance"
 msgstr "正在重新引导实例"
 
@@ -769,14 +722,6 @@ msgstr "回收删除的实例"
 
 msgid "Recovered connection to memcache server for reporting service status."
 msgstr "与memcache服务器的连接恢复，报告服务状态。"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "用id %(image_id)s 注册镜像 %(image_location)s"
-
-#, python-format
-msgid "Release address %s"
-msgstr "释放地址 %s"
 
 #, python-format
 msgid "Removable base files: %s"
@@ -969,11 +914,6 @@ msgid ""
 msgstr "不能使用扩大的域获取APIs，回归到慢代码路径：%(ex)s"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "为controller=%(controller)s 以及 action=%(action)s未验证的请求"
-
-#, python-format
 msgid "Unexpected error: %s"
 msgstr "意外错误：%s"
 
@@ -989,10 +929,6 @@ msgstr "更新带宽使用缓存"
 #, python-format
 msgid "Updating from migration %s"
 msgstr "正在从迁移 %s 进行更新"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "正在更新镜像 %s 的 publicity 属性"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"

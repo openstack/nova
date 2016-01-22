@@ -9,19 +9,19 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-10-03 03:02+0000\n"
-"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
-"Language-Team: German\n"
-"Language: de\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-03 03:02+0000\n"
+"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
+"Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: German\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -64,23 +64,12 @@ msgstr "Aktive Basisdateien: %s"
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr "Füge Sicherheitsgruppe %(security_group_id)s zu Port %(port_id)s"
 
-msgid "Allocate address"
-msgstr "Weise Adresse zu"
-
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Netwerkzuweisung: '%s' für Instanz"
 
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Verbinde Adresse %(public_ip)s mit Instanz %(instance_id)s"
-
 msgid "Attach interface"
 msgstr "Schnittstelle hinzufügen"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "Hänge Volume %(volume_id)s an Instanz %(instance_id)s via %(device)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
@@ -197,20 +186,8 @@ msgid "Create assisted snapshot from volume %s"
 msgstr "Erstelle Schattenkopievorlage vom Datenträger %s"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "Schlüsselpaar %s erstellen"
-
-#, python-format
 msgid "Create snapshot from volume %s"
 msgstr "Momentaufnahme aus Datenträger %s erstellen"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Erstelle Momentaufnahme aus Datenträger %s"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "Erzeuge Volume von der Schattenkopie %s"
 
 #, python-format
 msgid "Create volume of %s GB"
@@ -237,14 +214,6 @@ msgid ""
 msgstr ""
 "Verbleibende Daten %(remaining)d Bytes, niedrige Wassermarke %(watermark)d "
 "Bytes  seit %(last)d Sekunden"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "Melde Abbild  %s ab"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Schlüsselpaar %s löschen"
 
 #, python-format
 msgid "Delete security group %s"
@@ -325,10 +294,6 @@ msgstr "Gerätezuordnung fehlgeschlagen. Versuche es erneut in 2 Sekunden."
 #, python-format
 msgid "Disabling host %s."
 msgstr "Host %s wird deaktiviert."
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Trenne Adresse %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
@@ -496,10 +461,6 @@ msgid "Get console output"
 msgstr "Konsolenausgabe holen"
 
 #, python-format
-msgid "Get console output for instance %s"
-msgstr "Konsolenausgabe holen für Instanz %s"
-
-#, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
@@ -559,10 +520,6 @@ msgid ""
 msgstr ""
 "Abbild erstellt Daten, zum Zwischenspeicher: %(cache)s, zum Download: "
 "%(downloaded)s Dauer: %(duration).2f Sekunden für Abbild %(image_id)s"
-
-#, python-format
-msgid "Import key %s"
-msgstr "Schlüssel %s importieren"
 
 #, python-format
 msgid ""
@@ -780,10 +737,6 @@ msgstr ""
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
 msgstr "Setze Host %(host_name)s in Wartungsmodus %(mode)s."
 
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Instanz %r neu starten"
-
 msgid "Rebooting instance"
 msgstr "Instanz wird neu gestartet"
 
@@ -827,14 +780,6 @@ msgid "Recovered connection to memcache server for reporting service status."
 msgstr ""
 "Wiederhergestellte Verbindung zu Memcache-Server für Bericht zum "
 "Dienstestatus."
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Angemeldetes Abbild %(image_location)s mit ID %(image_id)s"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Adresse %s freigeben"
 
 #, python-format
 msgid "Removable base files: %s"
@@ -1041,12 +986,6 @@ msgstr ""
 "langsamen Code-Pfad: %(ex)s"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr ""
-"Unberechtigte Anfrage für Controller=%(controller)s und Aktion=%(action)s"
-
-#, python-format
 msgid "Unexpected error: %s"
 msgstr "Unerwarteter Fehler: %s"
 
@@ -1062,10 +1001,6 @@ msgstr "Aktualisiere Zwischenspeicher für Bandbreitennutzung"
 #, python-format
 msgid "Updating from migration %s"
 msgstr "Aktualisiere von Migration %s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "Aktualisiere Abbild %s öffentlich"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"

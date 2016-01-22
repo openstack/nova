@@ -6,19 +6,19 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-08-30 12:41+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Turkish (Turkey)\n"
-"Language: tr-TR\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-08-30 12:41+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language: tr-TR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Turkish (Turkey)\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -62,23 +62,12 @@ msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 "%(security_group_id)s güvenlik grubu %(port_id)s bağlantı noktasına ekleniyor"
 
-msgid "Allocate address"
-msgstr "Adres tahsisi"
-
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Ağ: '%s' sunucu için ayrıldı"
 
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "%(instance_id)s örneğine %(public_ip)s adresini ilişkilendir"
-
 msgid "Attach interface"
 msgstr "Arayüz ekle"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "%(device)s'daki %(instance_id)s örneğine %(volume_id)s birimini bağla"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
@@ -194,20 +183,8 @@ msgid "Create assisted snapshot from volume %s"
 msgstr "%s hacminden anlık görüntü oluştur"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "%s anahtar çiftini oluştur"
-
-#, python-format
 msgid "Create snapshot from volume %s"
 msgstr "%s biriminden sistem görüntüsü oluşturuluyor"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Bölüm %s'in sistem anlık görüntüsünü oluştur"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "%s sistem görüntüsünden birim oluştur"
 
 #, python-format
 msgid "Create volume of %s GB"
@@ -226,14 +203,6 @@ msgstr "Olay %(name)s:%(tag)s sunucu %(instance_uuid)s için oluşturuluyor"
 
 msgid "Creating image"
 msgstr "İmaj oluşturuluyor"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "%s imaj kaydı siliniyor"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "%s anahtar çiftini sil"
 
 #, python-format
 msgid "Delete security group %s"
@@ -314,10 +283,6 @@ msgstr "Aygıt ayırma başarısız. 2 saniye içinde tekrar denenecek."
 #, python-format
 msgid "Disabling host %s."
 msgstr "%s istemcisini kapatmak."
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Adresi kes %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
@@ -468,10 +433,6 @@ msgid "Get console output"
 msgstr "Konsol çıktısını al"
 
 #, python-format
-msgid "Get console output for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
-
-#, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
@@ -530,10 +491,6 @@ msgid ""
 msgstr ""
 "İmaj oluşturma verisi, zulalanabilir: %(cache)s, indirilmiş: %(downloaded)s "
 "süre: %(image_id)s imajı için %(duration).2f saniye"
-
-#, python-format
-msgid "Import key %s"
-msgstr "%s anahtarını içeriye aktar"
 
 #, python-format
 msgid ""
@@ -738,10 +695,6 @@ msgstr ""
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
 msgstr "%(host_name)s istemcisi %(mode)s bakım kipine alınıyor."
 
-#, python-format
-msgid "Reboot instance %r"
-msgstr "%r örneğini tekrar yükle"
-
 msgid "Rebooting instance"
 msgstr "Sunucu yeniden başlatılıyor"
 
@@ -780,14 +733,6 @@ msgstr ""
 
 msgid "Reclaiming deleted instance"
 msgstr "Silinen örnek kurtarılıyor"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "%(image_id)s id ile %(image_location)s imajı kaydedildi"
-
-#, python-format
-msgid "Release address %s"
-msgstr "%s adresini serbest bırak"
 
 #, python-format
 msgid "Removable base files: %s"
@@ -989,11 +934,6 @@ msgstr ""
 "%(ex)s"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "%(controller)s kontrolcüsü ve %(action)s işlemi için izinsiz istek"
-
-#, python-format
 msgid "Unexpected error: %s"
 msgstr "Beklenmeyen hata: %s"
 
@@ -1009,10 +949,6 @@ msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
 #, python-format
 msgid "Updating from migration %s"
 msgstr "%s göçünden güncelleniyor"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "%s imaj tanıtımı güncelleniyor"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"

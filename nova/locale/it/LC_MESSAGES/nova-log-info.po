@@ -8,19 +8,19 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:11+0000\n"
-"PO-Revision-Date: 2015-08-30 12:40+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Italian\n"
-"Language: it\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-08-30 12:40+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Italian\n"
 
 #, python-format
 msgid "%(action_str)s instance"
@@ -51,20 +51,8 @@ msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 "Aggiunta del gruppo sicurezza %(security_group_id)s alla porta %(port_id)s"
 
-msgid "Allocate address"
-msgstr "Alloca indirizzo"
-
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Associa indirizzo %(public_ip)s all'istanza %(instance_id)s"
-
 msgid "Attach interface"
 msgstr "Collega interfaccia"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr ""
-"Collegamento volume %(volume_id)s all'istanza %(instance_id)s in %(device)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
@@ -150,20 +138,8 @@ msgid "Create Security Group %s"
 msgstr "Crea gruppo di sicurezza %s"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "Crea (create) coppia di chiavi %s"
-
-#, python-format
 msgid "Create snapshot from volume %s"
 msgstr "Crea istantanea dal volume %s"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Crea istantanea del volume %s"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "Crea volume dall'istantanea %s"
 
 #, python-format
 msgid "Create volume of %s GB"
@@ -175,14 +151,6 @@ msgstr "Creazione unità config in %(path)s"
 
 msgid "Creating image"
 msgstr "Creazione immagine"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "Deregistrazione immagine %s"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Elimina (delete) coppia di chiavi %s"
 
 #, python-format
 msgid "Delete security group %s"
@@ -256,10 +224,6 @@ msgstr "Assegnazione unità non riuscita. Nuovi tentativi tra 2 secondi."
 #, python-format
 msgid "Disabling host %s."
 msgstr "Disabilitazione host %s."
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Separare l'indirizzo %s"
 
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
@@ -368,10 +332,6 @@ msgid "Get console output"
 msgstr "Ottieni l'output della console"
 
 #, python-format
-msgid "Get console output for instance %s"
-msgstr "Ottieni l'output della console per l'istanza %s"
-
-#, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
@@ -409,10 +369,6 @@ msgid ""
 msgstr ""
 "Dati di creazione immagine, cacheable: %(cache)s, scaricati: %(downloaded)s "
 "durata: %(duration).2f secondi per l'immagine %(image_id)s"
-
-#, python-format
-msgid "Import key %s"
-msgstr "Importa (import) chiave %s"
 
 #, python-format
 msgid ""
@@ -581,10 +537,6 @@ msgstr ""
 msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
 msgstr "Inserimento dell'host %(host_name)s in modalità manutenzione %(mode)s."
 
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Riavvia l'istanza %r"
-
 msgid "Rebooting instance"
 msgstr "Riavvio dell'istanza"
 
@@ -600,14 +552,6 @@ msgstr "Token ricevuto: %(token)s, %(token_dict)s"
 
 msgid "Reclaiming deleted instance"
 msgstr "Recupero dell'istanza eliminata"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Immagine registrata %(image_location)s con id %(image_id)s"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Rilascia indirizzo %s"
 
 #, python-format
 msgid "Removable base files: %s"
@@ -742,12 +686,6 @@ msgstr ""
 "code: %(ex)s"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr ""
-"Richiesta non autorizzata per controller=%(controller)s e action=%(action)s"
-
-#, python-format
 msgid "Unexpected error: %s"
 msgstr "Errore imprevisto: %s"
 
@@ -763,10 +701,6 @@ msgstr "Aggiornamento della cache di utilizzo della larghezza di banda"
 #, python-format
 msgid "Updating from migration %s"
 msgstr "Aggiornamento dalla migrazione %s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "Aggiornamento pubblicità immagine %s"
 
 #, python-format
 msgid "Updating instance to original state: '%s'"

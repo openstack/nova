@@ -7,19 +7,19 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev521\n"
+"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-08 06:12+0000\n"
-"PO-Revision-Date: 2015-08-30 12:41+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Italian\n"
-"Language: it\n"
+"POT-Creation-Date: 2016-01-21 04:19+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-08-30 12:41+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Italian\n"
 
 #, python-format
 msgid ""
@@ -151,10 +151,6 @@ msgstr ""
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "La variabile d'ambiente 'NETWORK_ID' deve essere impostata."
-
-#, python-format
-msgid "Environment: %s"
-msgstr "Ambiente: %s"
 
 #, python-format
 msgid "Error defining a domain with XML: %s"
@@ -610,10 +606,6 @@ msgid "Invalid server_string: %s"
 msgstr "stringa_server non valida %s"
 
 #, python-format
-msgid "Keystone failure: %s"
-msgstr "Errore keystone: %s"
-
-#, python-format
 msgid "Live Migration failure: %s"
 msgstr "Fallimento di Live Migration: %s"
 
@@ -842,10 +834,6 @@ msgstr "Impossibile configurare il pool: %s."
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr "Impossibile aggiornare l'host con porta %s"
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr " %(ex_name)s inaspettato sollevato da: %(ex_str)s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr ""
