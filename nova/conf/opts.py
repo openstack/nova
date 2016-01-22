@@ -64,7 +64,7 @@ def _import_modules(module_names):
         if not hasattr(mod, LIST_OPTS_FUNC_NAME):
             msg = "The module 'nova.conf.%s' should have a '%s' "\
                   "function which returns the config options." % \
-                  (LIST_OPTS_FUNC_NAME, modname)
+                  (modname, LIST_OPTS_FUNC_NAME)
             raise Exception(msg)
         else:
             imported_modules.append(mod)
