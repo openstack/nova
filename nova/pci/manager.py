@@ -57,6 +57,7 @@ class PciDevTracker(object):
         self.node_id = node_id
         self.stats = stats.PciDeviceStats()
         self.dev_filter = whitelist.Whitelist(CONF.pci_passthrough_whitelist)
+        self._context = context
         if node_id:
             self.pci_devs = objects.PciDeviceList.get_by_compute_node(
                     context, node_id)
@@ -164,8 +165,7 @@ class PciDevTracker(object):
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
             dev['compute_node_id'] = self.node_id
-            # NOTE(danms): These devices are created with no context
-            dev_obj = objects.PciDevice.create(dev)
+            dev_obj = objects.PciDevice.create(self._context, dev)
             self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
 

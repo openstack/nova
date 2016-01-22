@@ -198,7 +198,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_dev)
 
     @classmethod
-    def create(cls, dev_dict):
+    def create(cls, context, dev_dict):
         """Create a PCI device based on hypervisor information.
 
         As the device object is just created and is not synced with db yet
@@ -207,6 +207,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         pci_device = cls()
         pci_device.update_device(dev_dict)
         pci_device.status = fields.PciDeviceStatus.AVAILABLE
+        pci_device._context = context
         return pci_device
 
     @base.remotable
