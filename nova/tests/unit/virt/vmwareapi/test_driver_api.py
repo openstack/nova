@@ -188,12 +188,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         (image_service, image_id) = glance.get_remote_image_service(
             self.context, image_ref)
         metadata = image_service.show(self.context, image_id)
-        self.image = {
+        self.image = objects.ImageMeta.from_dict({
             'id': image_ref,
             'disk_format': 'vmdk',
             'size': int(metadata['size']),
-        }
-        self.fake_image_uuid = self.image['id']
+        })
+        self.fake_image_uuid = self.image.id
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.vnc_host = 'ha-host'
 
@@ -491,7 +491,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vmwareapi_fake.assertPathExists(self, str(root))
 
     def _iso_disk_type_created(self, instance_type='m1.large'):
-        self.image['disk_format'] = 'iso'
+        self.image.disk_format = 'iso'
         self._create_vm(instance_type=instance_type)
         path = ds_obj.DatastorePath(self.ds, 'vmware_base',
                                      self.fake_image_uuid,
@@ -519,7 +519,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
                        fake_attach_cdrom)
-        self.image['disk_format'] = 'iso'
+        self.image.disk_format = 'iso'
         self._create_vm()
 
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
@@ -557,7 +557,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.stubs.Set(self.conn._vmops, '_create_config_drive',
                        fake_create_config_drive)
 
-        self.image['disk_format'] = 'iso'
+        self.image.disk_format = 'iso'
         self._create_vm()
         self.assertEqual(2, self.iso_index)
 

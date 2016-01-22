@@ -87,11 +87,11 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)
         metadata = image_service.show(context, image_id)
-        self.image = {
+        self.image = objects.ImageMeta.from_dict({
             'id': image_ref,
             'disk_format': 'vmdk',
             'size': int(metadata['size']),
-        }
+        })
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None,
