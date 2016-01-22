@@ -224,32 +224,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable_classmethod
     def get_by_host_and_nodename(cls, context, host, nodename):
-        try:
-            db_compute = db.compute_node_get_by_host_and_nodename(
-                context, host, nodename)
-        except exception.ComputeHostNotFound:
-            # FIXME(sbauza): Some old computes can still have no host record
-            # We need to provide compatibility by using the old service_id
-            # record.
-            # We assume the compatibility as an extra penalty of one more DB
-            # call but that's necessary until all nodes are upgraded.
-            try:
-                service = objects.Service.get_by_compute_host(context, host)
-                db_computes = db.compute_nodes_get_by_service_id(
-                    context, service.id)
-            except exception.ServiceNotFound:
-                # We need to provide the same exception upstream
-                raise exception.ComputeHostNotFound(host=host)
-            db_compute = None
-            for compute in db_computes:
-                if compute['hypervisor_hostname'] == nodename:
-                    db_compute = compute
-                    # We can avoid an extra call to Service object in
-                    # _from_db_object
-                    db_compute['host'] = service.host
-                    break
-            if not db_compute:
-                raise exception.ComputeHostNotFound(host=host)
+        db_compute = db.compute_node_get_by_host_and_nodename(
+            context, host, nodename)
         return cls._from_db_object(context, cls(), db_compute)
 
     @base.remotable_classmethod
@@ -391,25 +367,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_all_by_host(cls, context, host, use_slave=False):
-        try:
-            db_computes = db.compute_node_get_all_by_host(context, host,
-                                                          use_slave)
-        except exception.ComputeHostNotFound:
-            # FIXME(sbauza): Some old computes can still have no host record
-            # We need to provide compatibility by using the old service_id
-            # record.
-            # We assume the compatibility as an extra penalty of one more DB
-            # call but that's necessary until all nodes are upgraded.
-            try:
-                service = objects.Service.get_by_compute_host(context, host,
-                                                              use_slave)
-                db_computes = db.compute_nodes_get_by_service_id(
-                    context, service.id)
-            except exception.ServiceNotFound:
-                # We need to provide the same exception upstream
-                raise exception.ComputeHostNotFound(host=host)
-            # We can avoid an extra call to Service object in _from_db_object
-            for db_compute in db_computes:
-                db_compute['host'] = service.host
+        db_computes = db.compute_node_get_all_by_host(context, host,
+                                                      use_slave)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
