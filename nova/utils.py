@@ -722,12 +722,12 @@ def monkey_patch():
     # If CONF.monkey_patch is not True, this function do nothing.
     if not CONF.monkey_patch:
         return
-    if six.PY3:
+    if six.PY2:
+        is_method = inspect.ismethod
+    else:
         def is_method(obj):
             # Unbound methods became regular functions on Python 3
             return inspect.ismethod(obj) or inspect.isfunction(obj)
-    else:
-        is_method = inspect.ismethod
     # Get list of modules and decorators
     for module_and_decorator in CONF.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
