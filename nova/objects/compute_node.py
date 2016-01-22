@@ -228,6 +228,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             context, host, nodename)
         return cls._from_db_object(context, cls(), db_compute)
 
+    # TODO(pkholkin): Remove this method in the next major version bump
     @base.remotable_classmethod
     def get_first_node_by_host_for_old_compat(cls, context, host,
                                               use_slave=False):
@@ -365,9 +366,14 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_compute_node_get_all_by_host(context, host, use_slave=False):
+        return db.compute_node_get_all_by_host(context, host)
+
     @base.remotable_classmethod
     def get_all_by_host(cls, context, host, use_slave=False):
-        db_computes = db.compute_node_get_all_by_host(context, host,
-                                                      use_slave)
+        db_computes = cls._db_compute_node_get_all_by_host(context, host,
+                                                      use_slave=use_slave)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)

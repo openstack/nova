@@ -567,12 +567,9 @@ def service_update(context, service_id, values):
 
 ###################
 
+@main_context_manager.reader
 def compute_node_get(context, compute_id):
-    return _compute_node_get(context, compute_id)
-
-
-def _compute_node_get(context, compute_id, session=None):
-    result = model_query(context, models.ComputeNode, session=session).\
+    result = model_query(context, models.ComputeNode).\
             filter_by(id=compute_id).\
             first()
 
@@ -582,6 +579,7 @@ def _compute_node_get(context, compute_id, session=None):
     return result
 
 
+@main_context_manager.reader
 def compute_nodes_get_by_service_id(context, service_id):
     result = model_query(context, models.ComputeNode, read_deleted='no').\
         filter_by(service_id=service_id).\
@@ -593,6 +591,7 @@ def compute_nodes_get_by_service_id(context, service_id):
     return result
 
 
+@main_context_manager.reader
 def compute_node_get_by_host_and_nodename(context, host, nodename):
     result = model_query(context, models.ComputeNode, read_deleted='no').\
         filter_by(host=host, hypervisor_hostname=nodename).\
@@ -604,9 +603,9 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return result
 
 
-def compute_node_get_all_by_host(context, host, use_slave=False):
-    result = model_query(context, models.ComputeNode, read_deleted='no',
-                         use_slave=use_slave).\
+@main_context_manager.reader.allow_async
+def compute_node_get_all_by_host(context, host):
+    result = model_query(context, models.ComputeNode, read_deleted='no').\
         filter_by(host=host).\
         all()
 
@@ -616,10 +615,12 @@ def compute_node_get_all_by_host(context, host, use_slave=False):
     return result
 
 
+@main_context_manager.reader
 def compute_node_get_all(context):
     return model_query(context, models.ComputeNode, read_deleted='no').all()
 
 
+@main_context_manager.reader
 def compute_node_search_by_hypervisor(context, hypervisor_match):
     field = models.ComputeNode.hypervisor_hostname
     return model_query(context, models.ComputeNode).\
@@ -627,6 +628,7 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
             all()
 
 
+@main_context_manager.writer
 def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
@@ -635,40 +637,39 @@ def compute_node_create(context, values):
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
-    compute_node_ref.save()
+    compute_node_ref.save(context.session)
 
     return compute_node_ref
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
 
-    session = get_session()
-    with session.begin():
-        compute_ref = _compute_node_get(context, compute_id, session=session)
-        # Always update this, even if there's going to be no other
-        # changes in data.  This ensures that we invalidate the
-        # scheduler cache of compute node data in case of races.
-        values['updated_at'] = timeutils.utcnow()
-        convert_objects_related_datetimes(values)
-        compute_ref.update(values)
+    compute_ref = compute_node_get(context, compute_id)
+    # Always update this, even if there's going to be no other
+    # changes in data.  This ensures that we invalidate the
+    # scheduler cache of compute node data in case of races.
+    values['updated_at'] = timeutils.utcnow()
+    convert_objects_related_datetimes(values)
+    compute_ref.update(values)
 
     return compute_ref
 
 
+@main_context_manager.writer
 def compute_node_delete(context, compute_id):
     """Delete a ComputeNode record."""
-    session = get_session()
-    with session.begin():
-        result = model_query(context, models.ComputeNode, session=session).\
-                 filter_by(id=compute_id).\
-                 soft_delete(synchronize_session=False)
+    result = model_query(context, models.ComputeNode).\
+             filter_by(id=compute_id).\
+             soft_delete(synchronize_session=False)
 
-        if not result:
-            raise exception.ComputeHostNotFound(host=compute_id)
+    if not result:
+        raise exception.ComputeHostNotFound(host=compute_id)
 
 
+@main_context_manager.reader
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
 

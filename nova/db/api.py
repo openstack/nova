@@ -227,7 +227,7 @@ def compute_node_get_all(context):
     return IMPL.compute_node_get_all(context)
 
 
-def compute_node_get_all_by_host(context, host, use_slave=False):
+def compute_node_get_all_by_host(context, host):
     """Get compute nodes by host name
 
     :param context: The security context (admin)
@@ -235,7 +235,7 @@ def compute_node_get_all_by_host(context, host, use_slave=False):
 
     :returns: List of dictionaries each containing compute node properties
     """
-    return IMPL.compute_node_get_all_by_host(context, host, use_slave)
+    return IMPL.compute_node_get_all_by_host(context, host)
 
 
 def compute_node_search_by_hypervisor(context, hypervisor_match):
