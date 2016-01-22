@@ -26,7 +26,6 @@ import uuid
 import mock
 from mox3 import mox
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -41,6 +40,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import crypto
 from nova import db
@@ -73,12 +73,11 @@ from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('network_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('default_availability_zone', 'nova.availability_zones')
 CONF.import_opt('login_timeout', 'nova.virt.xenapi.client.session',
                 group="xenserver")
 

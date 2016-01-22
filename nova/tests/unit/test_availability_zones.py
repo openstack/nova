@@ -18,20 +18,16 @@ Tests for availability zones
 """
 
 import mock
-from oslo_config import cfg
 import six
 
 from nova import availability_zones as az
+import nova.conf
 from nova import context
 from nova import db
 from nova import objects
 from nova import test
 
-CONF = cfg.CONF
-CONF.import_opt('internal_service_availability_zone',
-                'nova.availability_zones')
-CONF.import_opt('default_availability_zone',
-                'nova.availability_zones')
+CONF = nova.conf.CONF
 
 
 class AvailabilityZoneTestCases(test.TestCase):
