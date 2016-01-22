@@ -1137,7 +1137,18 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.CPUThreadPolicyConfigurationInvalid,
             },
-
+            {
+                # Invalid vCPUs mask with realtime
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                                             "hw:cpu_policy": "dedicated",
+                                             "hw:cpu_realtime": "yes",
+                                         }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RealtimeMaskNotFoundOrInvalid,
+            },
         ]
 
         for testitem in testdata:
