@@ -1153,8 +1153,9 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         self._expect_parted_calls()
 
         self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "user", 10, None)
+        vdi_ref = vm_utils._generate_disk(
+            self.session, {"uuid": "fake_uuid"},
+            self.vm_ref, "2", "name", "user", 10, None, None)
         self._check_vdi(vdi_ref)
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
@@ -1163,44 +1164,50 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         utils.execute('mkswap', '/dev/fakedev1', run_as_root=True)
 
         self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "swap", 10, "linux-swap")
+        vdi_ref = vm_utils._generate_disk(
+            self.session, {"uuid": "fake_uuid"},
+            self.vm_ref, "2", "name", "swap", 10, "swap", None)
         self._check_vdi(vdi_ref)
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
     def test_generate_disk_ephemeral(self):
         self._expect_parted_calls()
-        utils.execute('mkfs', '-t', 'ext4', '/dev/fakedev1',
-            run_as_root=True)
+        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral',
+                      '/dev/fakedev1', run_as_root=True)
 
         self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
+        vdi_ref = vm_utils._generate_disk(
+            self.session, {"uuid": "fake_uuid"}, self.vm_ref,
+            "4", "name", "ephemeral", 10, "ext4", "ephemeral")
         self._check_vdi(vdi_ref)
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
     def test_generate_disk_ensure_cleanup_called(self):
         self._expect_parted_calls()
-        utils.execute('mkfs', '-t', 'ext4', '/dev/fakedev1',
+        utils.execute(
+            'mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral', '/dev/fakedev1',
             run_as_root=True).AndRaise(test.TestingException)
-        vm_utils.destroy_vdi(self.session,
+        vm_utils.destroy_vdi(
+            self.session,
             mox.IgnoreArg()).AndRaise(exception.StorageError(reason=""))
 
         self.mox.ReplayAll()
-        self.assertRaises(test.TestingException, vm_utils._generate_disk,
+        self.assertRaises(
+            test.TestingException, vm_utils._generate_disk,
             self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
+            self.vm_ref, "4", "name", "ephemeral", 10, "ext4", "ephemeral")
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
     def test_generate_disk_ephemeral_local_not_attached(self):
         self.session.is_local_connection = True
         self._expect_parted_calls()
-        utils.execute('mkfs', '-t', 'ext4', '/dev/mapper/fakedev1',
-            run_as_root=True)
+        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral',
+                      '/dev/mapper/fakedev1', run_as_root=True)
 
         self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
-            None, "2", "name", "ephemeral", 10, "ext4")
+        vdi_ref = vm_utils._generate_disk(
+            self.session, {"uuid": "fake_uuid"},
+            None, "4", "name", "ephemeral", 10, "ext4", "ephemeral")
         self._check_vdi(vdi_ref, check_attached=False)
 
 
@@ -1213,6 +1220,7 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
         self.name_label = "name"
         self.ephemeral_name_label = "name ephemeral"
         self.userdevice = 4
+        self.fs_label = "ephemeral"
         self.mox.StubOutWithMock(vm_utils, "_generate_disk")
         self.mox.StubOutWithMock(vm_utils, "safe_destroy_vdis")
 
@@ -1231,46 +1239,54 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
         expected = [1024, 1024]
         self.assertEqual(expected, list(result))
 
-    def _expect_generate_disk(self, size, device, name_label):
-        vm_utils._generate_disk(self.session, self.instance, self.vm_ref,
+    def _expect_generate_disk(self, size, device, name_label, fs_label):
+        vm_utils._generate_disk(
+            self.session, self.instance, self.vm_ref,
             str(device), name_label, 'ephemeral',
-            size * 1024, None).AndReturn(device)
+            size * 1024, None, fs_label).AndReturn(device)
 
     def test_generate_ephemeral_adds_one_disk(self):
-        self._expect_generate_disk(20, self.userdevice,
-                                   self.ephemeral_name_label)
+        self._expect_generate_disk(
+            20, self.userdevice, self.ephemeral_name_label, self.fs_label)
         self.mox.ReplayAll()
 
-        vm_utils.generate_ephemeral(self.session, self.instance, self.vm_ref,
+        vm_utils.generate_ephemeral(
+            self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 20)
 
     def test_generate_ephemeral_adds_multiple_disks(self):
-        self._expect_generate_disk(2000, self.userdevice,
-                                   self.ephemeral_name_label)
-        self._expect_generate_disk(2000, self.userdevice + 1,
-                                   self.ephemeral_name_label + " (1)")
-        self._expect_generate_disk(30, self.userdevice + 2,
-                                   self.ephemeral_name_label + " (2)")
+        self._expect_generate_disk(
+            2000, self.userdevice, self.ephemeral_name_label, self.fs_label)
+        self._expect_generate_disk(
+            2000, self.userdevice + 1, self.ephemeral_name_label + " (1)",
+            self.fs_label + "1")
+        self._expect_generate_disk(
+            30, self.userdevice + 2, self.ephemeral_name_label + " (2)",
+            self.fs_label + "2")
         self.mox.ReplayAll()
 
-        vm_utils.generate_ephemeral(self.session, self.instance, self.vm_ref,
+        vm_utils.generate_ephemeral(
+            self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 4030)
 
     def test_generate_ephemeral_cleans_up_on_error(self):
-        self._expect_generate_disk(1024, self.userdevice,
-                                   self.ephemeral_name_label)
-        self._expect_generate_disk(1024, self.userdevice + 1,
-                                   self.ephemeral_name_label + " (1)")
+        self._expect_generate_disk(
+            1024, self.userdevice, self.ephemeral_name_label, self.fs_label)
+        self._expect_generate_disk(
+            1024, self.userdevice + 1, self.ephemeral_name_label + " (1)",
+            self.fs_label + "1")
 
-        vm_utils._generate_disk(self.session, self.instance, self.vm_ref,
+        vm_utils._generate_disk(
+            self.session, self.instance, self.vm_ref,
             str(self.userdevice + 2), "name ephemeral (2)", 'ephemeral',
-            units.Mi, None).AndRaise(exception.NovaException)
+            units.Mi, None, 'ephemeral2').AndRaise(exception.NovaException)
 
         vm_utils.safe_destroy_vdis(self.session, [4, 5])
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.NovaException, vm_utils.generate_ephemeral,
+        self.assertRaises(
+            exception.NovaException, vm_utils.generate_ephemeral,
             self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 4096)
 

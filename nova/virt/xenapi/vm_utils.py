@@ -1022,7 +1022,7 @@ def _make_partition(session, dev, partition_start, partition_end):
 
 
 def _generate_disk(session, instance, vm_ref, userdevice, name_label,
-                   disk_type, size_mb, fs_type):
+                   disk_type, size_mb, fs_type, fs_label=None):
     """Steps to programmatically generate a disk:
 
         1. Create VDI of desired size
@@ -1050,11 +1050,9 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
             partition_path = _make_partition(session, dev,
                                              partition_start, partition_end)
 
-            if fs_type == 'linux-swap':
-                utils.execute('mkswap', partition_path, run_as_root=True)
-            elif fs_type is not None:
-                utils.execute('mkfs', '-t', fs_type, partition_path,
-                              run_as_root=True)
+            if fs_type is not None:
+                utils.mkfs(fs_type, partition_path, fs_label,
+                           run_as_root=True)
 
         # 4. Create VBD between instance VM and VDI
         if vm_ref:
@@ -1072,7 +1070,7 @@ def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
     # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
     # partition because that is what parted supports.
     is_windows = instance['os_type'] == "windows"
-    fs_type = "vfat" if is_windows else "linux-swap"
+    fs_type = "vfat" if is_windows else "swap"
 
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'swap', swap_mb, fs_type)
@@ -1099,14 +1097,16 @@ def generate_single_ephemeral(session, instance, vm_ref, userdevice,
         instance_name_label = instance["name"]
 
     name_label = "%s ephemeral" % instance_name_label
+    fs_label = "ephemeral"
     # TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
     label_number = int(userdevice) - 4
     if label_number > 0:
         name_label = "%s (%d)" % (name_label, label_number)
+        fs_label = "ephemeral%d" % label_number
 
     return _generate_disk(session, instance, vm_ref, str(userdevice),
                           name_label, 'ephemeral', size_gb * 1024,
-                          CONF.default_ephemeral_format)
+                          CONF.default_ephemeral_format, fs_label)
 
 
 def generate_ephemeral(session, instance, vm_ref, first_userdevice,
