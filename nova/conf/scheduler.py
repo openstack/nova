@@ -13,9 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import itertools
-
 from oslo_config import cfg
+
+DEFAULT_GROUP_NAME = "DEFAULT"
+# The scheduler has options in several groups
+METRICS_GROUP_NAME = "metrics"
+TRUSTED_GROUP_NAME = "trusted_computing"
+UPGRADE_GROUP_NAME = "upgrade_levels"
 
 
 host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
@@ -81,10 +85,6 @@ rpc_sched_topic_opt = cfg.StrOpt("scheduler_topic",
         default="scheduler",
         help="The topic scheduler nodes listen on")
 
-# This option specifies an option group, so register separately
-rpcapi_cap_opt = cfg.StrOpt("scheduler",
-        help="Set a version cap for messages sent to scheduler services")
-
 scheduler_json_config_location_opt = cfg.StrOpt(
         "scheduler_json_config_location",
         default="",
@@ -121,6 +121,10 @@ restrict_iso_host_img_opt = cfg.BoolOpt(
         "restrict_isolated_hosts_to_isolated_images",
         default=True,
         help="Whether to force isolated hosts to run only isolated images")
+
+# This option specifies an option group, so register separately
+rpcapi_cap_opt = cfg.StrOpt("scheduler",
+        help="Set a version cap for messages sent to scheduler services")
 
 # These opts are registered as a separate OptGroup
 trusted_opts = [
@@ -227,7 +231,7 @@ soft_anti_affinity_weight_opt = cfg.FloatOpt(
                       'the opposite, which is soft-affinity.')
 
 
-SIMPLE_OPTS = [host_subset_size_opt,
+default_opts = [host_subset_size_opt,
                bm_default_filter_opt,
                use_bm_filters_opt,
                host_mgr_avail_filt_opt,
@@ -254,27 +258,20 @@ SIMPLE_OPTS = [host_subset_size_opt,
                soft_anti_affinity_weight_opt,
               ]
 
-ALL_OPTS = itertools.chain(
-        SIMPLE_OPTS,
-        [rpcapi_cap_opt],
-        trusted_opts,
-        metrics_weight_opts,
-        )
-
 
 def register_opts(conf):
-    conf.register_opts(SIMPLE_OPTS)
-    conf.register_opt(rpcapi_cap_opt, "upgrade_levels")
-    trust_group = cfg.OptGroup(name="trusted_computing",
+    conf.register_opts(default_opts)
+    conf.register_opt(rpcapi_cap_opt, UPGRADE_GROUP_NAME)
+    trust_group = cfg.OptGroup(name=TRUSTED_GROUP_NAME,
                                title="Trust parameters")
     conf.register_group(trust_group)
     conf.register_opts(trusted_opts, group=trust_group)
-    conf.register_opts(metrics_weight_opts, group="metrics")
+    conf.register_opts(metrics_weight_opts, group=METRICS_GROUP_NAME)
 
 
 def list_opts():
-    return {"DEFAULT": SIMPLE_OPTS,
-            "upgrade_levels": [rpcapi_cap_opt],
-            "trusted_computing": trusted_opts,
-            "metrics": metrics_weight_opts,
+    return {DEFAULT_GROUP_NAME: default_opts,
+            UPGRADE_GROUP_NAME: [rpcapi_cap_opt],
+            TRUSTED_GROUP_NAME: trusted_opts,
+            METRICS_GROUP_NAME: metrics_weight_opts,
             }
