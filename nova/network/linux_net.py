@@ -37,6 +37,7 @@ import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
+from nova.network import model as network_model
 from nova import objects
 from nova import paths
 from nova.pci import utils as pci_utils
@@ -1365,25 +1366,40 @@ def _ovs_vsctl(args):
         raise exception.OvsConfigurationFailure(inner_exception=e)
 
 
-def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id, mtu=None):
-    _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
-                'add-port', bridge, dev,
-                '--', 'set', 'Interface', dev,
-                'external-ids:iface-id=%s' % iface_id,
-                'external-ids:iface-status=active',
-                'external-ids:attached-mac=%s' % mac,
-                'external-ids:vm-uuid=%s' % instance_id])
-    _set_device_mtu(dev, mtu)
+def _create_ovs_vif_cmd(bridge, dev, iface_id, mac,
+                        instance_id, interface_type=None):
+    cmd = ['--', '--if-exists', 'del-port', dev, '--',
+            'add-port', bridge, dev,
+            '--', 'set', 'Interface', dev,
+            'external-ids:iface-id=%s' % iface_id,
+            'external-ids:iface-status=active',
+            'external-ids:attached-mac=%s' % mac,
+            'external-ids:vm-uuid=%s' % instance_id]
+    if interface_type:
+        cmd += ['type=%s' % interface_type]
+    return cmd
+
+
+def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id,
+                        mtu=None, interface_type=None):
+    _ovs_vsctl(_create_ovs_vif_cmd(bridge, dev, iface_id,
+                                   mac, instance_id,
+                                   interface_type))
+    # Note at present there is no support for setting the
+    # mtu for vhost-user type ports.
+    if interface_type != network_model.OVS_VHOSTUSER_INTERFACE_TYPE:
+        _set_device_mtu(dev, mtu)
+    else:
+        LOG.debug("MTU not set on %(interface_name)s interface "
+                  "of type %(interface_type)s.",
+                  {'interface_name': dev,
+                   'interface_type': interface_type})
 
 
 def delete_ovs_vif_port(bridge, dev, delete_dev=True):
     _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
     if delete_dev:
         delete_net_dev(dev)
-
-
-def ovs_set_vhostuser_port_type(dev):
-    _ovs_vsctl(['--', 'set', 'Interface', dev, 'type=dpdkvhostuser'])
 
 
 def create_ivs_vif_port(dev, iface_id, mac, instance_id):

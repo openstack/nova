@@ -1313,22 +1313,19 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_vhostuser_ovs_plug(self):
 
         calls = {
-                'create_ovs_vif_port': [mock.call(
-                                      'br0', 'usv-xxx-yyy-zzz',
-                                      'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
-                                      'f0000000-0000-0000-0000-000000000001',
-                                      9000)],
-                 'ovs_set_vhostuser_port_type': [mock.call('usv-xxx-yyy-zzz')]
+            'create_ovs_vif_port': [
+                 mock.call(
+                     'br0', 'usv-xxx-yyy-zzz',
+                     'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
+                     'f0000000-0000-0000-0000-000000000001', 9000,
+                     interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE
+                 )]
         }
-        with test.nested(
-                mock.patch.object(linux_net, 'create_ovs_vif_port'),
-                mock.patch.object(linux_net, 'ovs_set_vhostuser_port_type')
-        ) as (create_ovs_vif_port, ovs_set_vhostuser_port_type):
+        with mock.patch.object(linux_net,
+                               'create_ovs_vif_port') as create_ovs_vif_port:
             d = vif.LibvirtGenericVIFDriver()
             d.plug_vhostuser(self.instance, self.vif_vhostuser_ovs)
             create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
-            ovs_set_vhostuser_port_type.assert_has_calls(
-                                        calls['ovs_set_vhostuser_port_type'])
 
     def test_vhostuser_ovs_unplug(self):
         calls = {
