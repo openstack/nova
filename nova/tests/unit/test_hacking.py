@@ -628,3 +628,14 @@ class HackingTestCase(test.NoDBTestCase):
                                 checks.check_config_option_in_central_place,
                                 filename="nova/cmd/serialproxy.py",
                                 expected_errors=errors)
+
+    def test_check_doubled_words(self):
+        errors = [(1, 0, "N343")]
+
+        # Artificial break to stop pep8 detecting the test !
+        code = "This is the" + " the best comment"
+        self._assert_has_errors(code, checks.check_doubled_words,
+                                expected_errors=errors)
+
+        code = "This is the then best comment"
+        self._assert_has_no_errors(code, checks.check_doubled_words)

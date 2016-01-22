@@ -330,7 +330,7 @@ class Application(object):
           res = exc.HTTPForbidden(explanation='Nice try')
 
           # Option 3: a webob Response object (in case you need to play with
-          # headers, or you want to be treated like an iterable, or or or)
+          # headers, or you want to be treated like an iterable, or ...)
           res = Response()
           res.app_iter = open('somefile')
 

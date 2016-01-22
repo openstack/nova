@@ -101,6 +101,8 @@ http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")
 spawn_re = re.compile(
     r".*(eventlet|greenthread)\.(?P<spawn_part>spawn(_n)?)\(.*\)")
 contextlib_nested = re.compile(r"^with (contextlib\.)?nested\(")
+doubled_words_re = re.compile(
+    r"\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -576,6 +578,19 @@ def check_config_option_in_central_place(logical_line, filename):
         yield(0, msg)
 
 
+def check_doubled_words(physical_line, filename):
+    """Check for the common doubled-word typos
+
+    N343
+    """
+    msg = ("N343: Doubled word '%(word)s' typo found")
+
+    match = re.search(doubled_words_re, physical_line)
+
+    if match:
+        return (0, msg % {'word': match.group(1)})
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -605,3 +620,4 @@ def factory(register):
     register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
+    register(check_doubled_words)

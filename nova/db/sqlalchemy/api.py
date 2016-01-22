@@ -1913,7 +1913,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                                      columns_to_join=None, use_slave=False,
                                      sort_keys=None, sort_dirs=None):
-    """Return instances that match all filters sorted the the given keys.
+    """Return instances that match all filters sorted by the given keys.
     Deleted instances will be returned by default, unless there's a filter that
     says otherwise.
 

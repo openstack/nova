@@ -1358,7 +1358,7 @@ class ComputeDriver(object):
         :param nova.objects.aggregate.Aggregate aggregate:
             The aggregate which should add the given `host`
         :param str host:
-            The name of the host to add to the the given `aggregate`.
+            The name of the host to add to the given `aggregate`.
         :param dict kwargs:
             A free-form thingy...
 
@@ -1377,7 +1377,7 @@ class ComputeDriver(object):
         :param nova.objects.aggregate.Aggregate aggregate:
             The aggregate which should remove the given `host`
         :param str host:
-            The name of the host to remove from the the given `aggregate`.
+            The name of the host to remove from the given `aggregate`.
         :param dict kwargs:
             A free-form thingy...
 

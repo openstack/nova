@@ -455,7 +455,7 @@ def get_instance_path(instance, forceold=False, relative=False):
 
 
 def get_instance_path_at_destination(instance, migrate_data=None):
-    """Get the the instance path on destination node while live migration.
+    """Get the instance path on destination node while live migration.
 
     This method determines the directory name for instance storage on
     destination node, while live migration.

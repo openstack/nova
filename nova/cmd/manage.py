@@ -1277,7 +1277,7 @@ class CellV2Commands(object):
         if cell_uuid is None:
             raise Exception(_("cell_uuid must be set"))
         else:
-            # Validate the the cell exists
+            # Validate the cell exists
             cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
         filters = {}
         instances = objects.InstanceList.get_by_filters(
