@@ -2201,9 +2201,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 '_notify_about_instance_usage')
     def _test_detach_volume(self, notify_inst_usage, detach,
                             bdm_get, destroy_bdm=True):
-        volume_id = '123'
+        volume_id = uuids.volume
         inst_obj = mock.Mock()
-        inst_obj.uuid = 'uuid'
+        inst_obj.uuid = uuids.instance
+        attachment_id = uuids.attachment
 
         bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
         bdm.device_name = 'vdb'
@@ -2216,13 +2217,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
                 self.compute._detach_volume(self.context, volume_id,
                                             inst_obj,
-                                            destroy_bdm=destroy_bdm)
+                                            destroy_bdm=destroy_bdm,
+                                            attachment_id=attachment_id)
 
                 detach.assert_called_once_with(self.context, inst_obj, bdm)
                 driver.get_volume_connector.assert_called_once_with(inst_obj)
                 volume_api.terminate_connection.assert_called_once_with(
                     self.context, volume_id, connector_sentinel)
-                volume_api.detach.assert_called_once_with(mock.ANY, volume_id)
+                volume_api.detach.assert_called_once_with(mock.ANY, volume_id,
+                                                          inst_obj.uuid,
+                                                          attachment_id)
                 notify_inst_usage.assert_called_once_with(
                     self.context, inst_obj, "volume.detach",
                     extra_usage_info={'volume_id': volume_id}

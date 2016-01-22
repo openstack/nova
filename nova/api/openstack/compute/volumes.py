@@ -55,9 +55,21 @@ def _translate_volume_summary_view(context, vol):
     d['createdAt'] = vol['created_at']
 
     if vol['attach_status'] == 'attached':
+        # NOTE(ildikov): The attachments field in the volume info that
+        # Cinder sends is converted to an OrderedDict with the
+        # instance_uuid as key to make it easier for the multiattach
+        # feature to check the required information. Multiattach will
+        # be enable in the Nova API in Newton.
+        # The format looks like the following:
+        # attachments = {'instance_uuid': {
+        #                   'attachment_id': 'attachment_uuid',
+        #                   'mountpoint': '/dev/sda/
+        #                    }
+        #                }
+        attachment = vol['attachments'].items()[0]
         d['attachments'] = [_translate_attachment_detail_view(vol['id'],
-            vol['instance_uuid'],
-            vol['mountpoint'])]
+            attachment[0],
+            attachment[1].get('mountpoint'))]
     else:
         d['attachments'] = [{}]
 

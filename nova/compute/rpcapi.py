@@ -319,6 +319,7 @@ class ComputeAPI(object):
         * ...  - Remove refresh_security_group_members()
         * ...  - Remove refresh_security_group_rules()
         * 4.6  - Add trigger_crash_dump()
+        * 4.7  - Add attachment_id argument to detach_volume()
     '''
 
     VERSION_ALIASES = {
@@ -467,12 +468,16 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'detach_interface',
                    instance=instance, port_id=port_id)
 
-    def detach_volume(self, ctxt, instance, volume_id):
-        version = '4.0'
+    def detach_volume(self, ctxt, instance, volume_id, attachment_id=None):
+        extra = {'attachment_id': attachment_id}
+        version = '4.7'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            extra.pop('attachment_id')
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_volume',
-                   instance=instance, volume_id=volume_id)
+                   instance=instance, volume_id=volume_id, **extra)
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):

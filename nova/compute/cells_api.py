@@ -429,7 +429,7 @@ class ComputeCellsAPI(compute_api.API):
     @check_instance_cell
     def _detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
-        self.volume_api.check_detach(context, volume)
+        self.volume_api.check_detach(context, volume, instance=instance)
         self._cast_to_cells(context, instance, 'detach_volume',
                 volume)
 
