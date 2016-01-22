@@ -1413,6 +1413,20 @@ def create_tap_dev(dev, mac_address=None):
                       check_exit_code=[0, 2, 254])
 
 
+def create_fp_dev(dev, sockpath, sockmode):
+    if not device_exists(dev):
+        utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
+                      '--sockmode', sockmode, run_as_root=True)
+        _set_device_mtu(dev)
+        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
+                    check_exit_code=[0, 2, 254])
+
+
+def delete_fp_dev(dev):
+    if device_exists(dev):
+        utils.execute('fp-vdev', 'del', dev, run_as_root=True)
+
+
 def delete_net_dev(dev):
     """Delete a network device only if it exists."""
     if device_exists(dev):

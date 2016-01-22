@@ -280,6 +280,16 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                                     '/tmp/vif-xxx-yyy-zzz'}
               )
 
+    vif_vhostuser_fp = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              devname='tap-xxx-yyy-zzz',
+              details = {network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                     '/tmp/usv-xxx-yyy-zzz',
+                         network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True},
+              )
+
     vif_vhostuser_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
               address='ca:fe:de:ad:be:ef',
               network=network_bridge,
@@ -1216,6 +1226,19 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "source", "type", "unix")
         self._assertMacEquals(node, self.vif_vhostuser_ovs)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    @mock.patch.object(linux_net, 'create_fp_dev')
+    def test_vhostuser_fp_plug(self, mock_create_fp_dev):
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug_vhostuser(self.instance, self.vif_vhostuser_fp)
+        mock_create_fp_dev.assert_has_calls(
+            [mock.call('tap-xxx-yyy-zzz', '/tmp/usv-xxx-yyy-zzz', 'client')])
+
+    @mock.patch.object(linux_net, 'delete_fp_dev')
+    def test_vhostuser_fp_unplug(self, mock_delete_fp_dev):
+        d = vif.LibvirtGenericVIFDriver()
+        d.unplug_vhostuser(None, self.vif_vhostuser_fp)
+        mock_delete_fp_dev.assert_has_calls([mock.call('tap-xxx-yyy-zzz')])
 
     def test_vhostuser_ovs_plug(self):
 

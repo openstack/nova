@@ -89,3 +89,6 @@ sysctl: CommandFilter, sysctl, root
 
 # nova/network/linux_net.py: 'conntrack'
 conntrack: CommandFilter, conntrack, root
+
+# nova/network/linux_net.py: 'fp-vdev'
+fp-vdev: CommandFilter, fp-vdev, root
