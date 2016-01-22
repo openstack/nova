@@ -6,7 +6,7 @@
             "policies": ["anti-affinity"],
             "members": [],
             "metadata": {},
-            "project_id": "c7c9f4f175e247acb56c108fd724d667",
+            "project_id": "openstack",
             "user_id": "fake"
         }
    ]
