@@ -206,7 +206,8 @@ class API(object):
         if instance and not volume.get('attachments', {}).get(instance.uuid):
             raise exception.VolumeUnattached(volume_id=volume['id'])
 
-    def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):
+    def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw',
+               host=None):
         LOG.info('attaching volume %s', volume_id)
         volume = self.get(context, volume_id)
         volume['status'] = 'in-use'

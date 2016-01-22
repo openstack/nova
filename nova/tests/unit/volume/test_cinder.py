@@ -252,11 +252,12 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_volumes = mock.MagicMock()
         mock_cinderclient.return_value = mock.MagicMock(volumes=mock_volumes)
 
-        self.api.attach(self.ctx, 'id1', 'uuid', 'point')
+        self.api.attach(self.ctx, 'id1', 'uuid', 'point', host='fake_host')
 
         mock_cinderclient.assert_called_once_with(self.ctx)
         mock_volumes.attach.assert_called_once_with('id1', 'uuid', 'point',
-                                                    mode='rw')
+                                                    mode='rw',
+                                                    host_name='fake_host')
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attach_with_mode(self, mock_cinderclient):
@@ -267,7 +268,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         mock_cinderclient.assert_called_once_with(self.ctx)
         mock_volumes.attach.assert_called_once_with('id1', 'uuid', 'point',
-                                                    mode='ro')
+                                                    mode='ro', host_name=None)
 
     def test_detach(self):
         self.mox.StubOutWithMock(self.api,
