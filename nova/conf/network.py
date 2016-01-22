@@ -249,25 +249,102 @@ Possible values:
 
     None
 """),
-    cfg.MultiStrOpt('dns_server',
-                    default=[],
-                    help='If set, uses specific DNS server for dnsmasq. Can'
-                         ' be specified multiple times.'),
-    cfg.BoolOpt('use_network_dns_servers',
-                default=False,
-                help='If set, uses the dns1 and dns2 from the network ref.'
-                     ' as dns servers.'),
-    cfg.ListOpt('dmz_cidr',
-               default=[],
-               help='A list of dmz ranges that should be accepted'),
-    cfg.MultiStrOpt('force_snat_range',
-               default=[],
-               help='Traffic to this range will always be snatted to the '
-                    'fallback IP, even if it would normally be bridged out '
-                    'of the node. Can be specified multiple times.'),
-    cfg.StrOpt('dnsmasq_config_file',
-               default='',
-               help='Override the default dnsmasq settings with this file'),
+    cfg.MultiStrOpt("dns_server",
+            default=[],
+            help="""
+Despite the singular form of the name of this option, it is actually a list of
+zero or more server addresses that dnsmasq will use for DNS nameservers. If
+this is not empty, dnsmasq will not read /etc/resolv.conf, but will only use
+the servers specified in this option. If the option use_network_dns_servers is
+True, the dns1 and dns2 servers from the network will be appended to this list,
+and will be used as DNS servers, too.
+
+Possible values:
+
+    A list of strings, where each string is etiher an IP address or a FQDN.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    use_network_dns_servers
+"""),
+    cfg.BoolOpt("use_network_dns_servers",
+            default=False,
+            help="""
+When this option is set to True, the dns1 and dns2 servers for the network
+specified by the user on boot will be used for DNS, as well as any specified in
+the `dns_server` option.
+
+Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    dns_server
+"""),
+    cfg.ListOpt("dmz_cidr",
+            default=[],
+            help="""
+This option is a list of zero or more IP address ranges in your network's DMZ
+that should be accepted.
+
+Possible values:
+
+    A list of strings, each of which should be a valid CIDR.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+    cfg.MultiStrOpt("force_snat_range",
+            default=[],
+            help="""
+This is a list of zero or more IP ranges that traffic from the
+`routing_source_ip` will be SNATted to. If the list is empty, then no SNAT
+rules are created.
+
+Possible values:
+
+    A list of strings, each of which should be a valid CIDR.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    routing_source_ip
+"""),
+    cfg.StrOpt("dnsmasq_config_file",
+            default="",
+            help="""
+The path to the custom dnsmasq configuration file, if any.
+
+Possible values:
+
+    The full path to the configuration file, or an empty string if there is no
+    custom dnsmasq configuration file.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
     cfg.StrOpt('linuxnet_interface_driver',
                default='nova.network.linux_net.LinuxBridgeInterfaceDriver',
                help='Driver used to create ethernet devices.'),
