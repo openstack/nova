@@ -46,8 +46,6 @@ import nova.netconf
 import nova.notifications
 import nova.objects.network
 import nova.paths
-import nova.pci.request
-import nova.pci.whitelist
 import nova.quota
 import nova.rdp
 import nova.service
@@ -89,8 +87,6 @@ def list_opts():
              nova.notifications.notify_opts,
              nova.objects.network.network_opts,
              nova.paths.path_opts,
-             nova.pci.request.pci_alias_opts,
-             nova.pci.whitelist.pci_opts,
              nova.quota.quota_opts,
              nova.service.service_opts,
              nova.utils.monkey_patch_opts,
