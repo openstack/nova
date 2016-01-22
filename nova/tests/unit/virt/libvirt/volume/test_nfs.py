@@ -91,6 +91,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         tree = conf.format_dom()
         self._assertFileTypeEquals(tree, file_path)
         self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertEqual('native', tree.find('./driver').get('io'))
 
     def test_libvirt_nfs_driver_already_mounted(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_conn)
