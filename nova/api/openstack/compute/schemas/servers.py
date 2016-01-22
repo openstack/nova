@@ -161,3 +161,14 @@ reboot = {
     'required': ['reboot'],
     'additionalProperties': False
 }
+
+trigger_crash_dump = {
+    'type': 'object',
+    'properties': {
+        'trigger_crash_dump': {
+            'type': 'null'
+        }
+    },
+    'required': ['trigger_crash_dump'],
+    'additionalProperties': False
+}

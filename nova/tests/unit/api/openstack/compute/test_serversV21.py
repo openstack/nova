@@ -1937,6 +1937,91 @@ class ServersControllerUpdateTest(ControllerTest):
                 self.controller.update, req, FAKE_UUID, body=body)
 
 
+class ServersControllerTriggerCrashDumpTest(ControllerTest):
+
+    def setUp(self):
+        super(ServersControllerTriggerCrashDumpTest, self).setUp()
+
+        self.instance = fakes.stub_instance_obj(None,
+                                                vm_state=vm_states.ACTIVE)
+
+        def fake_get(ctrl, ctxt, uuid):
+            if uuid != FAKE_UUID:
+                raise webob.exc.HTTPNotFound(explanation='fakeout')
+            return self.instance
+
+        self.useFixture(
+            fixtures.MonkeyPatch('nova.api.openstack.compute.servers.'
+                                 'ServersController._get_instance',
+                                 fake_get))
+
+        self.req = fakes.HTTPRequest.blank('/servers/%s/action' % FAKE_UUID)
+        self.req.api_version_request =\
+            api_version_request.APIVersionRequest('2.17')
+        self.body = dict(trigger_crash_dump=None)
+
+    @mock.patch.object(compute_api.API, 'trigger_crash_dump')
+    def test_trigger_crash_dump(self, mock_trigger_crash_dump):
+        ctxt = self.req.environ['nova.context']
+        self.controller._action_trigger_crash_dump(self.req, FAKE_UUID,
+                                                   body=self.body)
+        mock_trigger_crash_dump.assert_called_with(ctxt, self.instance)
+
+    def test_trigger_crash_dump_policy_failed(self):
+        rule_name = "os_compute_api:servers:trigger_crash_dump"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._action_trigger_crash_dump,
+                                self.req, FAKE_UUID, body=self.body)
+        self.assertIn("os_compute_api:servers:trigger_crash_dump",
+                      exc.format_message())
+
+    @mock.patch.object(compute_api.API, 'trigger_crash_dump',
+                       fake_start_stop_not_ready)
+    def test_trigger_crash_dump_not_ready(self):
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'trigger_crash_dump',
+                       fakes.fake_actions_to_locked_server)
+    def test_trigger_crash_dump_locked_server(self):
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'trigger_crash_dump',
+                       fake_start_stop_invalid_state)
+    def test_trigger_crash_dump_invalid_state(self):
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+    def test_trigger_crash_dump_with_bogus_id(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, 'test_inst', body=self.body)
+
+    def test_trigger_crash_dump_schema_invalid_type(self):
+        self.body['trigger_crash_dump'] = 'not null'
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+    def test_trigger_crash_dump_schema_extra_property(self):
+        self.body['extra_property'] = 'extra'
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'trigger_crash_dump',
+                       side_effect=exception.NMINotSupported)
+    def test_trigger_crash_dump_not_supported(self, mock_trigger_crash_dump):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_trigger_crash_dump,
+                          self.req, FAKE_UUID, body=self.body)
+
+
 class ServerStatusTest(test.TestCase):
 
     def setUp(self):
@@ -3875,6 +3960,17 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         self._common_policy_check(
             rule, rule_name, self.controller._stop_server,
             self.req, FAKE_UUID, body={})
+
+    @mock.patch.object(servers.ServersController, '_get_instance')
+    def test_trigger_crash_dump_policy_failed(self, _get_instance_mock):
+        _get_instance_mock.return_value = None
+        rule_name = "os_compute_api:servers:trigger_crash_dump"
+        rule = {rule_name: "project:non_fake"}
+        self.req.api_version_request =\
+            api_version_request.APIVersionRequest('2.17')
+        self._common_policy_check(
+            rule, rule_name, self.controller._action_trigger_crash_dump,
+            self.req, FAKE_UUID, body={'trigger_crash_dump': None})
 
     def test_index_policy_failed(self):
         rule_name = "os_compute_api:servers:index"

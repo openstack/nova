@@ -1,0 +1,4 @@
+---
+features:
+  - A new server action trigger_crash_dump has been added to the REST API in
+    microversion 2.17.

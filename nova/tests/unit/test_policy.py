@@ -382,6 +382,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:simple_tenant_usage:show",
 "os_compute_api:servers:start",
 "os_compute_api:servers:stop",
+"os_compute_api:servers:trigger_crash_dump",
 "os_compute_api:os-create-backup",
 "os_compute_api:ips:index",
 "os_compute_api:ips:show",

@@ -58,6 +58,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              adminPass from the response body
     * 2.15 - Add soft-affinity and soft-anti-affinity policies
     * 2.16 - Exposes host_status for servers/detail and servers/{server_id}
+    * 2.17 - Add trigger_crash_dump to server actions
 """
 
 # The minimum and maximum versions of the API supported
@@ -66,7 +67,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.16"
+_MAX_API_VERSION = "2.17"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 
