@@ -3207,7 +3207,7 @@ class FloatingIPTestCase(test.TestCase):
 
         # SQLite doesn't seem to honor the uniqueness constraint on the
         # address column, so fake the collision-avoidance here
-        def fake_vif_save(vif):
+        def fake_vif_save(vif, session=None):
             if vif.address == crash_test_dummy_vif['address']:
                 raise db_exc.DBError("If you're smart, you'll retry!")
             # NOTE(russellb) The VirtualInterface object requires an ID to be

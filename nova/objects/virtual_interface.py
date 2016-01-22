@@ -93,9 +93,15 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context),
                                   objects.VirtualInterface, db_vifs)
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_virtual_interface_get_by_instance(context, instance_uuid,
+                                              use_slave=False):
+        return db.virtual_interface_get_by_instance(context, instance_uuid)
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
-        db_vifs = db.virtual_interface_get_by_instance(context, instance_uuid,
-                use_slave=use_slave)
+        db_vifs = cls._db_virtual_interface_get_by_instance(
+            context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(context, cls(context),
                                   objects.VirtualInterface, db_vifs)
