@@ -535,6 +535,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.job_tracker = instancejobtracker.InstanceJobTracker()
         self._remotefs = remotefs.RemoteFilesystem()
 
+        self._live_migration_flags = self._block_migration_flags = None
+
     def _get_volume_drivers(self):
         return libvirt_volume_drivers
 
@@ -596,7 +598,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host.initialize()
 
         self._do_quality_warnings()
-        self._do_migration_flag_warnings()
+
+        self._parse_migration_flags()
 
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
@@ -647,22 +650,42 @@ class LibvirtDriver(driver.ComputeDriver):
                  'qemu_ver': self._version_to_string(
                      MIN_QEMU_S390_VERSION)})
 
-    def _do_migration_flag_warnings(self):
-        block_migration_flag = 'VIR_MIGRATE_NON_SHARED_INC'
-        if block_migration_flag in CONF.libvirt.live_migration_flag:
+    def _check_block_migration_flags(self, live_migration_flags,
+                                     block_migration_flags):
+        if (live_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) != 0:
             LOG.warning(_LW('Running Nova with a live_migration_flag config '
-                            'option which contains %(flag)s '
+                            'option which contains VIR_MIGRATE_NON_SHARED_INC '
                             'will cause all live-migrations to be block-'
                             'migrations instead. This setting should only be '
-                            'on the block_migration_flag instead.'),
-                        {'flag': block_migration_flag})
-        if block_migration_flag not in CONF.libvirt.block_migration_flag:
+                            'on the block_migration_flag instead.'))
+
+        if (block_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) == 0:
             LOG.warning(_LW('Running Nova with a block_migration_flag config '
-                            'option which does not contain %(flag)s '
+                            'option which does not contain '
+                            'VIR_MIGRATE_NON_SHARED_INC '
                             'will cause all block-migrations to be live-'
                             'migrations instead. This setting should be '
-                            'on the block_migration_flag.'),
-                        {'flag': block_migration_flag})
+                            'on the block_migration_flag.'))
+
+    def _parse_migration_flags(self):
+        def str2sum(str_val):
+            logical_sum = 0
+            for s in [i.strip() for i in str_val.split(',') if i]:
+                try:
+                    logical_sum |= getattr(libvirt, s)
+                except AttributeError:
+                    LOG.warning(_LW("Ignoring unknown libvirt live migration "
+                                    "flag '%(flag)s'"), {'flag': s})
+            return logical_sum
+
+        live_migration_flags = str2sum(CONF.libvirt.live_migration_flag)
+        block_migration_flags = str2sum(CONF.libvirt.block_migration_flag)
+
+        self._check_block_migration_flags(live_migration_flags,
+                                          block_migration_flags)
+
+        self._live_migration_flags = live_migration_flags
+        self._block_migration_flags = block_migration_flags
 
     # TODO(sahid): This method is targeted for removal when the tests
     # have been updated to avoid its use
@@ -5747,19 +5770,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             if block_migration:
-                flaglist = CONF.libvirt.block_migration_flag.split(',')
+                migration_flags = self._block_migration_flags
             else:
-                flaglist = CONF.libvirt.live_migration_flag.split(',')
-
-            def getflag(s):
-                try:
-                    return getattr(libvirt, s)
-                except AttributeError:
-                    msg = _("Unknown libvirt live migration flag '%s'") % s
-                    raise exception.Invalid(msg)
-
-            flagvals = [getflag(x.strip()) for x in flaglist]
-            logical_sum = six.moves.reduce(lambda x, y: x | y, flagvals)
+                migration_flags = self._live_migration_flags
 
             listen_addrs = {}
             if 'graphics_listen_addr_vnc' in migrate_data:
@@ -5780,7 +5793,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
                 self._verify_serial_console_is_disabled()
                 dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
-                                 logical_sum,
+                                 migration_flags,
                                  None,
                                  CONF.libvirt.live_migration_bandwidth)
             else:
@@ -5793,7 +5806,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
                                       None,
                                       new_xml_str,
-                                      logical_sum,
+                                      migration_flags,
                                       None,
                                       CONF.libvirt.live_migration_bandwidth)
                 except libvirt.libvirtError as ex:
@@ -5819,7 +5832,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         self._verify_serial_console_is_disabled()
                         dom.migrateToURI(
                             CONF.libvirt.live_migration_uri % dest,
-                            logical_sum,
+                            migration_flags,
                             None,
                             CONF.libvirt.live_migration_bandwidth)
                     else:
