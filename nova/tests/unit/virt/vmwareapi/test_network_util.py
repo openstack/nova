@@ -38,8 +38,10 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
     def setUp(self):
         super(GetNetworkWithTheNameTestCase, self).setUp()
         fake.reset()
-        self.stubs.Set(driver.VMwareAPISession, "vim", stubs.fake_vim_prop)
-        self.stubs.Set(driver.VMwareAPISession, "_is_vim_object",
+        self.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession.vim',
+                      stubs.fake_vim_prop)
+        self.stub_out('nova.virt.vmwareapi.driver.'
+                      'VMwareAPISession.is_vim_object',
                        stubs.fake_is_vim_object)
         self._session = driver.VMwareAPISession()
 

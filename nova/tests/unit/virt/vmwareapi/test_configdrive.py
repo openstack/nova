@@ -28,7 +28,6 @@ from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
@@ -109,13 +108,12 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             pass
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
-        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
-                       'make_drive', fake_make_drive)
+        self.stub_out('nova.virt.configdrive.ConfigDriveBuilder.make_drive',
+                      fake_make_drive)
 
         def fake_upload_iso_to_datastore(iso_path, instance, **kwargs):
             pass
-        self.stubs.Set(images,
-                       'upload_iso_to_datastore',
+        self.stub_out('nova.virt.vmwareapi.images.upload_iso_to_datastore',
                        fake_upload_iso_to_datastore)
 
     def tearDown(self):
