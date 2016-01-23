@@ -5756,14 +5756,16 @@ def aggregate_host_add(context, aggregate_id, host):
 ################
 
 
+@main_context_manager.writer
 def instance_fault_create(context, values):
     """Create a new InstanceFault."""
     fault_ref = models.InstanceFault()
     fault_ref.update(values)
-    fault_ref.save()
+    fault_ref.save(context.session)
     return dict(fault_ref)
 
 
+@main_context_manager.reader
 def instance_fault_get_by_instance_uuids(context, instance_uuids):
     """Get all instance faults for the provided instance_uuids."""
     if not instance_uuids:
@@ -5934,6 +5936,7 @@ def action_event_get_by_id(context, action_id, event_id):
 
 
 @require_context
+@main_context_manager.writer
 def ec2_instance_create(context, instance_uuid, id=None):
     """Create ec2 compatible instance by provided uuid."""
     ec2_instance_ref = models.InstanceIdMapping()
@@ -5941,12 +5944,13 @@ def ec2_instance_create(context, instance_uuid, id=None):
     if id is not None:
         ec2_instance_ref.update({'id': id})
 
-    ec2_instance_ref.save()
+    ec2_instance_ref.save(context.session)
 
     return ec2_instance_ref
 
 
 @require_context
+@main_context_manager.reader
 def ec2_instance_get_by_uuid(context, instance_uuid):
     result = _ec2_instance_get_query(context).\
                     filter_by(uuid=instance_uuid).\
@@ -5959,6 +5963,7 @@ def ec2_instance_get_by_uuid(context, instance_uuid):
 
 
 @require_context
+@main_context_manager.reader
 def ec2_instance_get_by_id(context, instance_id):
     result = _ec2_instance_get_query(context).\
                     filter_by(id=instance_id).\
@@ -5971,16 +5976,14 @@ def ec2_instance_get_by_id(context, instance_id):
 
 
 @require_context
+@main_context_manager.reader
 def get_instance_uuid_by_ec2_id(context, ec2_id):
     result = ec2_instance_get_by_id(context, ec2_id)
     return result['uuid']
 
 
-def _ec2_instance_get_query(context, session=None):
-    return model_query(context,
-                       models.InstanceIdMapping,
-                       session=session,
-                       read_deleted='yes')
+def _ec2_instance_get_query(context):
+    return model_query(context, models.InstanceIdMapping, read_deleted='yes')
 
 
 ##################
