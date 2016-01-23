@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import copy
 import datetime
 
 import iso8601
@@ -142,6 +143,8 @@ def fake_db_service_update(services):
         service = _service_get_by_id(services, service_id)
         if service is None:
             raise exception.ServiceNotFound(service_id=service_id)
+        service = copy.deepcopy(service)
+        service.update(values)
         return service
     return service_update
 

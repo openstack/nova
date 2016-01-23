@@ -22,6 +22,7 @@ from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import notification
 
 
 LOG = logging.getLogger(__name__)
@@ -282,6 +283,24 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db_service = db.service_update(self._context, self.id, updates)
         self._from_db_object(self._context, self, db_service)
 
+        self._send_status_update_notification(updates)
+
+    def _send_status_update_notification(self, updates):
+        # Note(gibi): We do not trigger notification on version as that field
+        # is always dirty, which would cause that nova sends notification on
+        # every other field change. See the comment in save() too.
+        if set(updates.keys()).intersection(
+                {'disabled', 'disabled_reason', 'forced_down'}):
+            payload = ServiceStatusPayload(self)
+            ServiceStatusNotification(
+                publisher=notification.NotificationPublisher.from_service_obj(
+                    self),
+                event_type=notification.EventType(
+                    object='service',
+                    action=fields.NotificationAction.UPDATE),
+                priority=fields.NotificationPriority.INFO,
+                payload=payload).emit(self._context)
+
     @base.remotable
     def destroy(self):
         db.service_destroy(self._context, self.id)
@@ -372,3 +391,47 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
                 context, db_services)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
+
+
+@base.NovaObjectRegistry.register
+class ServiceStatusNotification(notification.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('ServiceStatusPayload')
+    }
+
+
+@base.NovaObjectRegistry.register
+class ServiceStatusPayload(notification.NotificationPayloadBase):
+    SCHEMA = {
+        'host': ('service', 'host'),
+        'binary': ('service', 'binary'),
+        'topic': ('service', 'topic'),
+        'report_count': ('service', 'report_count'),
+        'disabled': ('service', 'disabled'),
+        'disabled_reason': ('service', 'disabled_reason'),
+        'availability_zone': ('service', 'availability_zone'),
+        'last_seen_up': ('service', 'last_seen_up'),
+        'forced_down': ('service', 'forced_down'),
+        'version': ('service', 'version')
+    }
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'host': fields.StringField(nullable=True),
+        'binary': fields.StringField(nullable=True),
+        'topic': fields.StringField(nullable=True),
+        'report_count': fields.IntegerField(),
+        'disabled': fields.BooleanField(),
+        'disabled_reason': fields.StringField(nullable=True),
+        'availability_zone': fields.StringField(nullable=True),
+        'last_seen_up': fields.DateTimeField(nullable=True),
+        'forced_down': fields.BooleanField(),
+        'version': fields.IntegerField(),
+    }
+
+    def __init__(self, service):
+        super(ServiceStatusPayload, self).__init__()
+        self.populate_schema(service=service)
