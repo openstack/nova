@@ -2,45 +2,45 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-pbr>=1.6
-SQLAlchemy<1.1.0,>=1.0.10
-boto>=2.32.1
-decorator>=3.4.0
-eventlet>=0.17.4
+pbr>=1.6 # Apache-2.0
+SQLAlchemy<1.1.0,>=1.0.10 # MIT
+boto>=2.32.1 # MIT
+decorator>=3.4.0 # BSD
+eventlet>=0.17.4 # MIT
 Jinja2>=2.8 # BSD License (3 clause)
-keystonemiddleware>=4.0.0
-lxml>=2.3
-Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7'
-Routes!=2.0,>=1.12.3;python_version!='2.7'
-cryptography>=1.0 # Apache-2.0
-WebOb>=1.2.3
-greenlet>=0.3.2
-PasteDeploy>=1.5.0
-Paste
-PrettyTable<0.8,>=0.7
-sqlalchemy-migrate>=0.9.6
-netaddr!=0.7.16,>=0.7.12
-netifaces>=0.10.4
-paramiko>=1.13.0
-Babel>=1.3
-iso8601>=0.1.9
-jsonschema!=2.5.0,<3.0.0,>=2.0.0
-python-cinderclient>=1.3.1
-python-keystoneclient!=1.8.0,>=1.6.0
-python-neutronclient>=2.6.0
-python-glanceclient>=1.2.0
-requests!=2.9.0,>=2.8.1
-six>=1.9.0
+keystonemiddleware!=4.1.0,>=4.0.0 # Apache-2.0
+lxml>=2.3 # BSD
+Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7' # MIT
+Routes!=2.0,>=1.12.3;python_version!='2.7' # MIT
+cryptography>=1.0 # BSD/Apache-2.0
+WebOb>=1.2.3 # MIT
+greenlet>=0.3.2 # MIT
+PasteDeploy>=1.5.0 # MIT
+Paste # MIT
+PrettyTable<0.8,>=0.7 # BSD
+sqlalchemy-migrate>=0.9.6 # Apache-2.0
+netaddr!=0.7.16,>=0.7.12 # BSD
+netifaces>=0.10.4 # MIT
+paramiko>=1.13.0 # LGPL
+Babel>=1.3 # BSD
+iso8601>=0.1.9 # MIT
+jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
+python-cinderclient>=1.3.1 # Apache-2.0
+python-keystoneclient!=1.8.0,!=2.1.0,>=1.6.0 # Apache-2.0
+python-neutronclient>=2.6.0 # Apache-2.0
+python-glanceclient>=1.2.0 # Apache-2.0
+requests!=2.9.0,>=2.8.1 # Apache-2.0
+six>=1.9.0 # MIT
 stevedore>=1.5.0 # Apache-2.0
-setuptools>=16.0
-websockify>=0.6.1
+setuptools>=16.0 # PSF/ZPL
+websockify>=0.6.1 # LGPLv3
 oslo.concurrency>=2.3.0 # Apache-2.0
 oslo.config>=3.2.0 # Apache-2.0
 oslo.context>=0.2.0 # Apache-2.0
 oslo.log>=1.14.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
 oslo.serialization>=1.10.0 # Apache-2.0
-oslo.utils>=3.2.0 # Apache-2.0
+oslo.utils>=3.4.0 # Apache-2.0
 oslo.db>=4.1.0 # Apache-2.0
 oslo.rootwrap>=2.0.0 # Apache-2.0
 oslo.messaging!=2.8.0,!=3.1.0,>2.6.1 # Apache-2.0
@@ -49,9 +49,9 @@ oslo.i18n>=1.5.0 # Apache-2.0
 oslo.service>=1.0.0 # Apache-2.0
 rfc3986>=0.2.0 # Apache-2.0
 oslo.middleware>=3.0.0 # Apache-2.0
-psutil<2.0.0,>=1.1.1
-oslo.versionedobjects>=0.13.0
-alembic>=0.8.0
+psutil<2.0.0,>=1.1.1 # BSD
+oslo.versionedobjects>=0.13.0 # Apache-2.0
+alembic>=0.8.0 # MIT
 os-brick>=0.4.0 # Apache-2.0
 os-win>=0.0.7 # Apache-2.0
 castellan>=0.3.1 # Apache-2.0
