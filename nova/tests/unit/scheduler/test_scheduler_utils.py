@@ -107,6 +107,30 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                                             event_type,
                                                             payload)
 
+    def test_build_filter_properties(self):
+        sched_hints = {'hint': ['over-there']}
+        forced_host = 'forced-host1'
+        forced_node = 'forced-node1'
+        instance_type = objects.Flavor()
+        filt_props = scheduler_utils.build_filter_properties(sched_hints,
+                forced_host, forced_node, instance_type)
+        self.assertEqual(sched_hints, filt_props['scheduler_hints'])
+        self.assertEqual([forced_host], filt_props['force_hosts'])
+        self.assertEqual([forced_node], filt_props['force_nodes'])
+        self.assertEqual(instance_type, filt_props['instance_type'])
+
+    def test_build_filter_properties_no_forced_host_no_force_node(self):
+        sched_hints = {'hint': ['over-there']}
+        forced_host = None
+        forced_node = None
+        instance_type = objects.Flavor()
+        filt_props = scheduler_utils.build_filter_properties(sched_hints,
+                forced_host, forced_node, instance_type)
+        self.assertEqual(sched_hints, filt_props['scheduler_hints'])
+        self.assertEqual(instance_type, filt_props['instance_type'])
+        self.assertNotIn('forced_host', filt_props)
+        self.assertNotIn('forced_node', filt_props)
+
     def _test_populate_filter_props(self, host_state_obj=True,
                                     with_retry=True,
                                     force_hosts=None,

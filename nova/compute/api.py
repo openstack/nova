@@ -75,6 +75,7 @@ from nova.pci import request as pci_request
 import nova.policy
 from nova import rpc
 from nova.scheduler import client as scheduler_client
+from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import utils
 from nova.virt import hardware
@@ -902,16 +903,6 @@ class API(base.Base):
         # by the network quotas
         return base_options, max_network_count
 
-    def _build_filter_properties(self, context, scheduler_hints, forced_host,
-            forced_node, instance_type):
-        filter_properties = dict(scheduler_hints=scheduler_hints)
-        filter_properties['instance_type'] = instance_type
-        if forced_host:
-            filter_properties['force_hosts'] = [forced_host]
-        if forced_node:
-            filter_properties['force_nodes'] = [forced_node]
-        return filter_properties
-
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
@@ -1019,12 +1010,13 @@ class API(base.Base):
         return {}
 
     @staticmethod
-    def _get_requested_instance_group(context, scheduler_hints,
+    def _get_requested_instance_group(context, filter_properties,
                                       check_quota):
-        if not scheduler_hints:
+        if (not filter_properties or
+                not filter_properties.get('scheduler_hints')):
             return
 
-        group_hint = scheduler_hints.get('group')
+        group_hint = filter_properties.get('scheduler_hints').get('group')
         if not group_hint:
             return
 
@@ -1039,13 +1031,11 @@ class API(base.Base):
                min_count, max_count,
                display_name, display_description,
                key_name, key_data, security_groups,
-               availability_zone, forced_host, forced_node, user_data,
-               metadata, injected_files, admin_password,
-               access_ip_v4, access_ip_v6,
+               availability_zone, user_data, metadata, injected_files,
+               admin_password, access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
-               block_device_mapping, auto_disk_config,
-               reservation_id=None, scheduler_hints=None,
-               legacy_bdm=True, shutdown_terminate=False,
+               block_device_mapping, auto_disk_config, filter_properties,
+               reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
@@ -1059,8 +1049,6 @@ class API(base.Base):
         min_count = min_count or 1
         max_count = max_count or min_count
         block_device_mapping = block_device_mapping or []
-        if not instance_type:
-            instance_type = flavors.get_default_flavor()
 
         if image_href:
             image_id, boot_meta = self._get_image(context, image_href)
@@ -1103,16 +1091,12 @@ class API(base.Base):
                 block_device_mapping.root_bdm())
 
         instance_group = self._get_requested_instance_group(context,
-                                   scheduler_hints, check_server_group_quota)
+                                   filter_properties, check_server_group_quota)
 
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
                 block_device_mapping, shutdown_terminate,
                 instance_group, check_server_group_quota)
-
-        filter_properties = self._build_filter_properties(context,
-                scheduler_hints, forced_host,
-                forced_node, instance_type)
 
         for instance in instances:
             self._record_action_start(context, instance,
@@ -1485,19 +1469,21 @@ class API(base.Base):
                 msg = _('The requested availability zone is not available')
                 raise exception.InvalidRequest(msg)
 
+        filter_properties = scheduler_utils.build_filter_properties(
+                scheduler_hints, forced_host, forced_node, instance_type)
+
         return self._create_instance(
                        context, instance_type,
                        image_href, kernel_id, ramdisk_id,
                        min_count, max_count,
                        display_name, display_description,
                        key_name, key_data, security_group,
-                       availability_zone, forced_host, forced_node,
-                       user_data, metadata,
+                       availability_zone, user_data, metadata,
                        injected_files, admin_password,
                        access_ip_v4, access_ip_v6,
                        requested_networks, config_drive,
                        block_device_mapping, auto_disk_config,
-                       scheduler_hints=scheduler_hints,
+                       filter_properties=filter_properties,
                        legacy_bdm=legacy_bdm,
                        shutdown_terminate=shutdown_terminate,
                        check_server_group_quota=check_server_group_quota)

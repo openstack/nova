@@ -117,6 +117,20 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
     notifier.error(context, event_type, payload)
 
 
+def build_filter_properties(scheduler_hints, forced_host,
+        forced_node, instance_type):
+    """Build the filter_properties dict from data in the boot request."""
+    filter_properties = dict(scheduler_hints=scheduler_hints)
+    filter_properties['instance_type'] = instance_type
+    # TODO(alaski): It doesn't seem necessary that these are conditionally
+    # added.  Let's just add empty lists if not forced_host/node.
+    if forced_host:
+        filter_properties['force_hosts'] = [forced_host]
+    if forced_node:
+        filter_properties['force_nodes'] = [forced_node]
+    return filter_properties
+
+
 def populate_filter_properties(filter_properties, host_state):
     """Add additional information to the filter properties after a node has
     been selected by the scheduling process.
