@@ -31,7 +31,7 @@ import six
 
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE, _LI
+from nova.i18n import _LE, _LI, _LW
 from nova import image
 from nova import keymgr
 from nova import utils
@@ -270,8 +270,8 @@ class Image(object):
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
-                LOG.error(_LE('Unable to preallocate image at path: '
-                              '%(path)s'), {'path': self.path})
+                LOG.warning(_LW('Unable to preallocate image at path: '
+                                '%(path)s'), {'path': self.path})
         return can_fallocate
 
     def verify_base_size(self, base, size, base_size=0):
