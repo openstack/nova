@@ -14,7 +14,8 @@ import re
 
 from oslo_config import cfg
 
-from nova import paths
+import nova.conf
+from nova.conf import paths
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import remotefs
@@ -31,7 +32,7 @@ volume_opts = [
                     'libvirt-qemu uid and gid must be specified.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
 USERNAME_REGEX = re.compile(r"(user(?:name)?)=(?:[^ ,]+\\)?([^ ,]+)")

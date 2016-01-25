@@ -15,7 +15,7 @@
 
 from oslo_config import cfg
 
-from nova import paths
+from nova.conf import paths
 
 
 network_opts = [

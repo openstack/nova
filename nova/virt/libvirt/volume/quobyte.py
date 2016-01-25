@@ -22,11 +22,12 @@ from oslo_log import log as logging
 from oslo_utils import fileutils
 import six
 
+import nova.conf
+from nova.conf import paths
 from nova import exception as nova_exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
-from nova import paths
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
@@ -42,7 +43,7 @@ volume_opts = [
                help='Path to a Quobyte Client configuration file.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
 SOURCE_PROTOCOL = 'quobyte'

@@ -16,8 +16,9 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
+import nova.conf
+from nova.conf import paths
 from nova.i18n import _LE, _LW
-from nova import paths
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
@@ -34,7 +35,7 @@ volume_opts = [
                     'of the nfs man page for details'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(volume_opts, 'libvirt')
 
 

@@ -62,6 +62,7 @@ from nova.conf import neutron
 from nova.conf import notifications
 from nova.conf import novnc
 # from nova.conf import osapi_v21
+from nova.conf import paths
 from nova.conf import pci
 from nova.conf import quota
 from nova.conf import rdp
@@ -130,6 +131,7 @@ neutron.register_opts(CONF)
 notifications.register_opts(CONF)
 novnc.register_opts(CONF)
 # osapi_v21.register_opts(CONF)
+paths.register_opts(CONF)
 pci.register_opts(CONF)
 quota.register_opts(CONF)
 rdp.register_opts(CONF)

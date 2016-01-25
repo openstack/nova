@@ -14,8 +14,8 @@
 
 from oslo_config import cfg
 
+from nova.conf import paths
 from nova.i18n import _
-from nova import paths
 
 cloudpipe_opts = [
     cfg.StrOpt(
