@@ -17,6 +17,7 @@
 import datetime
 
 from oslo_config import cfg
+from oslo_db.sqlalchemy import enginefacade
 from oslo_utils import timeutils
 from six.moves import range
 
@@ -239,6 +240,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         assertInstancesReserved(0)
 
 
+@enginefacade.transaction_context_provider
 class FakeContext(object):
     def __init__(self, project_id, quota_class):
         self.is_admin = False
@@ -2389,7 +2391,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             )
 
         def make_sync(res_name):
-            def sync(context, project_id, user_id, session):
+            def sync(context, project_id, user_id):
                 self.sync_called.add(res_name)
                 if res_name in self.usages:
                     if self.usages[res_name].in_use < 0:
@@ -2445,16 +2447,12 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                      until_refresh=None),
                 ]
 
-        def fake_get_session():
-            return FakeSession()
-
-        def fake_get_project_user_quota_usages(context, session, project_id,
-                                               user_id):
+        def fake_get_project_user_quota_usages(context, project_id, user_id):
             return self.usages.copy(), self.usages.copy()
 
         def fake_quota_usage_create(project_id, user_id, resource,
                                     in_use, reserved, until_refresh,
-                                    session=None, save=True):
+                                    session):
             quota_usage_ref = self._make_quota_usage(
                 project_id, user_id, resource, in_use, reserved, until_refresh,
                 timeutils.utcnow(), timeutils.utcnow())
@@ -2465,7 +2463,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
         def fake_reservation_create(uuid, usage_id, project_id,
                                     user_id, resource, delta, expire,
-                                    session=None):
+                                    session):
             reservation_ref = self._make_reservation(
                 uuid, usage_id, project_id, user_id, resource, delta, expire,
                 timeutils.utcnow(), timeutils.utcnow())
@@ -2474,7 +2472,6 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
             return reservation_ref
 
-        self.stub_out('nova.db.sqlalchemy.api.get_session', fake_get_session)
         self.stub_out('nova.db.sqlalchemy.api._get_project_user_quota_usages',
                        fake_get_project_user_quota_usages)
         self.stub_out('nova.db.sqlalchemy.api._quota_usage_create',
