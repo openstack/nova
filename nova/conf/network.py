@@ -670,8 +670,18 @@ driver_opts = [
                help='Driver to use for network creation'),
 ]
 
+rpcapi_opts = [
+    cfg.StrOpt('network_topic',
+               default='network',
+               help='The topic network nodes listen on'),
+    cfg.BoolOpt('multi_host',
+                default=False,
+                help='Default value for multi_host in networks. Also, if set, '
+                     'some rpc network calls will be sent directly to host.'),
+]
+
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
-                   + security_group_opts + driver_opts)
+                   + security_group_opts + rpcapi_opts + driver_opts)
 
 
 def register_opts(conf):
@@ -680,6 +690,7 @@ def register_opts(conf):
     conf.register_opts(ldap_dns_opts)
     conf.register_opts(security_group_opts)
     conf.register_opts(driver_opts)
+    conf.register_opts(rpcapi_opts)
 
 
 def list_opts():
