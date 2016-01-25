@@ -5067,7 +5067,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def check_can_live_migrate_destination(self, context, instance,
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
-                                           disk_over_commit=False):
+                                           disk_over_commit=False,
+                                           colo=False):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
@@ -5077,6 +5078,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
+        :param colo: if true, make sure that a colo migration is possible
         :returns: a dict containing:
              :filename: name of the tmpfile under CONF.instances_path
              :block_migration: whether this is block migration
@@ -5096,11 +5098,14 @@ class LibvirtDriver(driver.ComputeDriver):
         # Create file on storage, to be checked on source host
         filename = self._create_shared_storage_test_file()
 
+        # TODO(ORBIT): Implement check for COLO migration
+
         return {"filename": filename,
                 "image_type": CONF.libvirt.images_type,
                 "block_migration": block_migration,
                 "disk_over_commit": disk_over_commit,
-                "disk_available_mb": disk_available_mb}
+                "disk_available_mb": disk_available_mb,
+                "colo": colo}
 
     def check_can_live_migrate_destination_cleanup(self, context,
                                                    dest_check_data):

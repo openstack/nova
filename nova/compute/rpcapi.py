@@ -352,13 +352,15 @@ class ComputeAPI(object):
                    instance=instance, diff=diff)
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
-                                           block_migration, disk_over_commit):
+                                           block_migration, disk_over_commit,
+                                           colo):
         self._check_live_migration_api_version(destination)
         cctxt = self.client.prepare(server=destination, version='3.32')
         return cctxt.call(ctxt, 'check_can_live_migrate_destination',
                           instance=instance,
                           block_migration=block_migration,
-                          disk_over_commit=disk_over_commit)
+                          disk_over_commit=disk_over_commit,
+                          colo=colo)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         source = _compute_host(None, instance)

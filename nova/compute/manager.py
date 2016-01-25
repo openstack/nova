@@ -4855,7 +4855,8 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
-                                           block_migration, disk_over_commit):
+                                           block_migration, disk_over_commit,
+                                           colo=False):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
@@ -4865,6 +4866,7 @@ class ComputeManager(manager.Manager):
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
+        :param colo: if true, make sure that a colo migration is possible
         :returns: a dict containing migration info
         """
         src_compute_info = obj_base.obj_to_primitive(
@@ -4873,7 +4875,7 @@ class ComputeManager(manager.Manager):
             self._get_compute_info(ctxt, CONF.host))
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
-            block_migration, disk_over_commit)
+            block_migration, disk_over_commit, colo)
         migrate_data = {}
         try:
             migrate_data = self.compute_rpcapi.\
