@@ -25,8 +25,7 @@ advantages and improvements of the current cloud.
 
 There are multiple cases which you can resolve with microversions:
 
-Older clients with new cloud
-============================
+- **Older clients with new cloud**
 
 Before using an old client to talk to a newer cloud, the old client can check
 the minimum version of microversions to verify whether the cloud is compatible
@@ -40,10 +39,62 @@ their cloud is upgraded with new versions. And the cloud operator doesn't need
 to worry that upgrading their cloud to newer versions will break any user with
 older clients that don't expect these changes.
 
-User discovery of available features between clouds
-===================================================
+- **User discovery of available features between clouds**
 
 The new features can be discovered by microversions. The user client should
 check the microversions firstly, and new features are only enabled when clouds
 support. In this way, the user client can work with clouds that have deployed
 different microversions simultaneously.
+
+Version Discovery
+=================
+
+The Version API will return the minimum and maximum microversions. These values
+are used by the client to discover the API's supported microversion(s).
+
+Requests to '/' will get version info for all endpoints. A response would look
+as follows::
+
+  {
+    "versions": [
+        {
+            "id": "v2.0",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/",
+                    "rel": "self"
+                }
+            ],
+            "status": "SUPPORTED",
+            "version": "",
+            "min_version": "",
+            "updated": "2011-01-21T11:33:21Z"
+        },
+        {
+            "id": "v2.1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/",
+                    "rel": "self"
+                }
+            ],
+            "status": "CURRENT",
+            "version": "2.14",
+            "min_version": "2.1",
+            "updated": "2013-07-23T11:33:21Z"
+        }
+    ]
+  }
+
+"version" is the maximum microversion, "min_version" is the minimum
+microversion. If the value is the empty string, it means this endpoint doesn't
+support microversions; it is a legacy v2 API endpoint -- for example, the
+endpoint `http://openstack.example.com/v2/` in the above sample. The endpoint
+`http://openstack.example.com/v2.1/` supports microversions; the maximum
+microversion is '2.14', and the minimum microversion is '2.1'. The client
+should specify a microversion between (and including) the minimum and maximum
+microversion to access the endpoint.
+
+You can also obtain specific endpoint version information by performing a GET
+on the base version URL (e.g., `http://openstack.example.com/v2.1/`). You can
+get more information about the version API at :doc:`versions`.
