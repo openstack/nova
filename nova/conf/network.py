@@ -345,28 +345,119 @@ Possible values:
 
     None
 """),
-    cfg.StrOpt('linuxnet_interface_driver',
-               default='nova.network.linux_net.LinuxBridgeInterfaceDriver',
-               help='Driver used to create ethernet devices.'),
-    cfg.StrOpt('linuxnet_ovs_integration_bridge',
-               default='br-int',
-               help='Name of Open vSwitch bridge used with linuxnet'),
-    cfg.BoolOpt('send_arp_for_ha',
-                default=False,
-                help='Send gratuitous ARPs for HA setup'),
-    cfg.IntOpt('send_arp_for_ha_count',
-               default=3,
-               help='Send this many gratuitous ARPs for HA setup'),
-    cfg.BoolOpt('use_single_default_gateway',
-                default=False,
-                help='Use single default gateway. Only first nic of vm will '
-                     'get default gateway from dhcp server'),
-    cfg.MultiStrOpt('forward_bridge_interface',
-                    default=['all'],
-                    help='An interface that bridges can forward to. If this '
-                         'is set to all then all traffic will be forwarded. '
-                         'Can be specified multiple times.'),
-    cfg.StrOpt('metadata_host',
+    cfg.StrOpt("linuxnet_interface_driver",
+            default="nova.network.linux_net.LinuxBridgeInterfaceDriver",
+            help="""
+This is the class used as the ethernet device driver for linuxnet bridge
+operations. The default value should be all you need for most cases, but if you
+wish to use a customized class, set this option to the full dot-separated
+import path for that class.
+
+Possible values:
+
+    Any string representing a dot-separated class path that Nova can import.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+    cfg.StrOpt("linuxnet_ovs_integration_bridge",
+            default="br-int",
+            help="""
+The name of the Open vSwitch bridge that is used with linuxnet when connecting
+with Open vSwitch."
+
+Possible values:
+
+    Any string representing a valid bridge name.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+    cfg.BoolOpt("send_arp_for_ha",
+            default=False,
+            help="""
+When True, when a device starts up, and upon binding floating IP addresses, arp
+messages will be sent to ensure that the arp caches on the compute hosts are
+up-to-date.
+
+Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    send_arp_for_ha_count
+"""),
+    cfg.IntOpt("send_arp_for_ha_count",
+            default=3,
+            help="""
+When arp messages are configured to be sent, they will be sent with the count
+set to the value of this option. Of course, if this is set to zero, no arp
+messages will be sent.
+
+Possible values:
+
+    Any integer greater than or equal to 0
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    send_arp_for_ha
+"""),
+    cfg.BoolOpt("use_single_default_gateway",
+            default=False,
+            help="""
+When set to True, only the firt nic of a VM will get its default gateway from
+the DHCP server.
+
+Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+    cfg.MultiStrOpt("forward_bridge_interface",
+            default=["all"],
+            help="""
+One or more interfaces that bridges can forward traffic to. If any of the items
+in this list is the special keyword 'all', then all traffic will be forwarded.
+
+Possible values:
+
+    A list of zero or more interface names, or the word 'all'.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    None
+"""),
+cfg.StrOpt('metadata_host',
                default='$my_ip',
                help='The IP address for the metadata API server'),
     cfg.IntOpt('metadata_port',
