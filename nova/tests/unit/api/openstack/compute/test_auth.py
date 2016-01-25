@@ -35,7 +35,7 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
             'auth_middleware': auth.NoAuthMiddleware}),
         ('no_project_id', {
             'expected_url': 'http://localhost/v2.1',
-            'auth_middleware': auth.NoAuthMiddlewareV2_17}),
+            'auth_middleware': auth.NoAuthMiddlewareV2_18}),
     ]
 
     def setUp(self):
