@@ -17,10 +17,11 @@
 This is the single point of entry to generate the sample configuration
 file for Nova. It collects all the necessary info from the other modules
 in this package. It is assumed that:
+
 * every other module in this package has a 'list_opts' function which
   return a dict where
-   * the keys are strings which are the group names
-   * the value of each key is a list of config options for that group
+  * the keys are strings which are the group names
+  * the value of each key is a list of config options for that group
 * the nova.conf package doesn't have further packages with config options
 * this module is only used in the context of sample file generation
 """
