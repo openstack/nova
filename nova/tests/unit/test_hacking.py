@@ -639,3 +639,24 @@ class HackingTestCase(test.NoDBTestCase):
 
         code = "This is the then best comment"
         self._assert_has_no_errors(code, checks.check_doubled_words)
+
+    def test_dict_iteritems(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_iteritems(
+            "obj.iteritems()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_iteritems(
+            "six.iteritems(ob))"))))
+
+    def test_dict_iterkeys(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_iterkeys(
+            "obj.iterkeys()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_iterkeys(
+            "six.iterkeys(ob))"))))
+
+    def test_dict_itervalues(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_itervalues(
+            "obj.itervalues()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_itervalues(
+            "six.itervalues(ob))"))))
