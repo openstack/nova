@@ -6269,9 +6269,6 @@ class ComputeManager(manager.Manager):
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
 
-    def colo_migration(self, context, primary_instance, secondary_instance):
-        self.driver.colo_migration(primary_instance, secondary_instance)
-
     def colo_cleanup(self, context, instance):
         network_info = compute_utils.get_nw_info_for_instance(instance)
         self.driver.colo_cleanup(instance, network_info)

@@ -6474,16 +6474,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             LOG.error("QEMU monitor command failed: %s", cmd)
 
-    def colo_migration(self, primary_instance, secondary_instance):
-        """Start synchronization of the primary and secondary VM."""
-        secondary_host = secondary_instance.host
-        if not libvirt_utils.is_valid_hostname(secondary_host):
-            raise exception.InvalidHostname(hostname=secondary_host)
-
-        # flaglist = CONF.libvirt.colo_migration_flag.split(',')
-        # flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
-        # logical_sum = reduce(lambda x, y: x | y, flagvals)
-
     def colo_cleanup(self, instance, network_info):
         for vif in network_info:
             self.vif_driver.cleanup_colo_plug(instance, vif)
