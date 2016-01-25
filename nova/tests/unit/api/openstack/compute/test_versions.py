@@ -66,7 +66,7 @@ EXP_VERSIONS = {
     "v2.1": {
         "id": "v2.1",
         "status": "CURRENT",
-        "version": "2.17",
+        "version": "2.18",
         "min_version": "2.1",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
@@ -128,7 +128,7 @@ class VersionsTestV20(test.NoDBTestCase):
             {
                 "id": "v2.1",
                 "status": "CURRENT",
-                "version": "2.17",
+                "version": "2.18",
                 "min_version": "2.1",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
@@ -194,7 +194,7 @@ class VersionsTestV20(test.NoDBTestCase):
         self._test_get_version_2_detail('/', accept=accept)
 
     def test_get_version_2_versions_invalid(self):
-        req = webob.Request.blank('/v2/versions/1234')
+        req = webob.Request.blank('/v2/versions/1234/foo')
         req.accept = "application/json"
         res = req.get_response(self.wsgi_app)
         self.assertEqual(404, res.status_int)
@@ -483,7 +483,7 @@ class VersionsTestV21(test.NoDBTestCase):
         self.assertEqual(expected, version)
 
     def test_get_version_21_versions_invalid(self):
-        req = webob.Request.blank('/v2.1/versions/1234')
+        req = webob.Request.blank('/v2.1/versions/1234/foo')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(404, res.status_int)

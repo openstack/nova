@@ -60,7 +60,13 @@ api_opts = [
                     'list. Specify the extension aliases here. '
                     'This option will be removed in the near future. '
                     'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21')
+                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
+        cfg.StrOpt('project_id_regex',
+                   default=None,
+                   help='DEPRECATED: The validation regex for project_ids '
+                   'used in urls. This defaults to [0-9a-f\-]+ if not set, '
+                   'which matches normal uuids created by keystone.',
+                   deprecated_for_removal=True, deprecated_group='osapi_v21')
 ]
 api_opts_group = cfg.OptGroup(name='osapi_v21', title='API v2.1 Options')
 
@@ -196,14 +202,40 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
+        # NOTE(sdague): project_id parameter is only valid if its hex
+        # or hex + dashes (note, integers are a subset of this). This
+        # is required to hand our overlaping routes issues.
+        project_id_regex = '[0-9a-f\-]+'
+        if CONF.osapi_v21.project_id_regex:
+            project_id_regex = CONF.osapi_v21.project_id_regex
+
+        project_id_token = '{project_id:%s}' % project_id_regex
         if 'parent_resource' not in kwargs:
-            kwargs['path_prefix'] = '{project_id}/'
+            kwargs['path_prefix'] = '%s/' % project_id_token
         else:
             parent_resource = kwargs['parent_resource']
             p_collection = parent_resource['collection_name']
             p_member = parent_resource['member_name']
-            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
-                                                                p_member)
+            kwargs['path_prefix'] = '%s/%s/:%s_id' % (
+                project_id_token,
+                p_collection,
+                p_member)
+        routes.Mapper.resource(
+            self,
+            member_name,
+            collection_name,
+            **kwargs)
+
+        # while we are in transition mode, create additional routes
+        # for the resource that do not include project_id.
+        if 'parent_resource' not in kwargs:
+            del kwargs['path_prefix']
+        else:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '%s/:%s_id' % (p_collection,
+                                                   p_member)
         routes.Mapper.resource(self, member_name,
                                      collection_name,
                                      **kwargs)

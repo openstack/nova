@@ -63,6 +63,11 @@ class ConfFixture(config_fixture.Config):
                 group='api_database')
         self.conf.set_default('fatal_exception_format_errors', True)
         self.conf.set_default('enabled', True, 'osapi_v21')
+        # TODO(sdague): this makes our project_id match 'fake' and
+        # 'openstack' as well. We should fix the tests to use real
+        # UUIDs then drop this work around.
+        self.conf.set_default('project_id_regex',
+                              '[0-9a-fopnstk\-]+', 'osapi_v21')
         self.conf.set_default('force_dhcp_release', False)
         self.conf.set_default('periodic_enable', False)
         policy_opts.set_defaults(self.conf)

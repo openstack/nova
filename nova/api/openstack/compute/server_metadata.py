@@ -191,3 +191,8 @@ class ServerMetadata(extensions.V21APIExtensionBase):
                        "/{project_id}/servers/{server_id}/metadata",
                        controller=wsgi_resource,
                        action='update_all', conditions={"method": ['PUT']})
+        # Also connect the non project_id routes
+        mapper.connect("metadata",
+                       "/servers/{server_id}/metadata",
+                       controller=wsgi_resource,
+                       action='update_all', conditions={"method": ['PUT']})
