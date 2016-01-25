@@ -197,7 +197,12 @@ class Timeout(fixtures.Fixture):
 
 
 class Database(fixtures.Fixture):
-    def __init__(self, database='main'):
+    def __init__(self, database='main', connection=None):
+        """Create a database fixture.
+
+        :param database: The type of database, 'main' or 'api'
+        :param connection: The connection string to use
+        """
         super(Database, self).__init__()
         # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
         # way as it is done for any other service that uses db
@@ -207,7 +212,13 @@ class Database(fixtures.Fixture):
             SESSION_CONFIGURED = True
         self.database = database
         if database == 'main':
-            self.get_engine = session.get_engine
+            if connection is not None:
+                ctxt_mgr = session.create_context_manager(
+                        connection=connection)
+                facade = ctxt_mgr.get_legacy_facade()
+                self.get_engine = facade.get_engine
+            else:
+                self.get_engine = session.get_engine
         elif database == 'api':
             self.get_engine = session.get_api_engine
 

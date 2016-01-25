@@ -286,6 +286,51 @@ def select_db_reader_mode(f):
     return wrapper
 
 
+def pick_context_manager_writer(f):
+    """Decorator to use a writer db context manager.
+
+    The db context manager will be picked from the RequestContext.
+
+    Wrapped function must have a RequestContext in the arguments.
+    """
+    @functools.wraps(f)
+    def wrapped(context, *args, **kwargs):
+        ctxt_mgr = get_context_manager(context)
+        with ctxt_mgr.writer.using(context):
+            return f(context, *args, **kwargs)
+    return wrapped
+
+
+def pick_context_manager_reader(f):
+    """Decorator to use a reader db context manager.
+
+    The db context manager will be picked from the RequestContext.
+
+    Wrapped function must have a RequestContext in the arguments.
+    """
+    @functools.wraps(f)
+    def wrapped(context, *args, **kwargs):
+        ctxt_mgr = get_context_manager(context)
+        with ctxt_mgr.reader.using(context):
+            return f(context, *args, **kwargs)
+    return wrapped
+
+
+def pick_context_manager_reader_allow_async(f):
+    """Decorator to use a reader.allow_async db context manager.
+
+    The db context manager will be picked from the RequestContext.
+
+    Wrapped function must have a RequestContext in the arguments.
+    """
+    @functools.wraps(f)
+    def wrapped(context, *args, **kwargs):
+        ctxt_mgr = get_context_manager(context)
+        with ctxt_mgr.reader.allow_async.using(context):
+            return f(context, *args, **kwargs)
+    return wrapped
+
+
 def model_query(context, model,
                 args=None,
                 read_deleted=None,
@@ -435,7 +480,7 @@ class InequalityCondition(object):
 ###################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def service_destroy(context, service_id):
     service = service_get(context, service_id)
 
@@ -451,7 +496,7 @@ def service_destroy(context, service_id):
                 soft_delete(synchronize_session=False)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get(context, service_id):
     query = model_query(context, models.Service).filter_by(id=service_id)
 
@@ -462,7 +507,7 @@ def service_get(context, service_id):
     return result
 
 
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def service_get_minimum_version(context, binary):
     min_version = context.session.query(
         func.min(models.Service.version)).\
@@ -472,7 +517,7 @@ def service_get_minimum_version(context, binary):
     return min_version
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_all(context, disabled=None):
     query = model_query(context, models.Service)
 
@@ -482,7 +527,7 @@ def service_get_all(context, disabled=None):
     return query.all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_all_by_topic(context, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -490,7 +535,7 @@ def service_get_all_by_topic(context, topic):
                 all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_by_host_and_topic(context, host, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -499,7 +544,7 @@ def service_get_by_host_and_topic(context, host, topic):
                 first()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_all_by_binary(context, binary):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -507,7 +552,7 @@ def service_get_all_by_binary(context, binary):
                 all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_by_host_and_binary(context, host, binary):
     result = model_query(context, models.Service, read_deleted="no").\
                     filter_by(host=host).\
@@ -520,14 +565,14 @@ def service_get_by_host_and_binary(context, host, binary):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def service_get_all_by_host(context, host):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
                 all()
 
 
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def service_get_by_compute_host(context, host):
     result = model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
@@ -540,7 +585,7 @@ def service_get_by_compute_host(context, host):
     return result
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
@@ -558,7 +603,7 @@ def service_create(context, values):
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def service_update(context, service_id, values):
     service_ref = service_get(context, service_id)
     # Only servicegroup.drivers.db.DbDriver._report_state() updates
@@ -747,7 +792,7 @@ def _compute_node_select(context, filters=None):
     return results
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_node_get(context, compute_id):
     results = _compute_node_select(context, {"compute_id": compute_id})
     if not results:
@@ -755,7 +800,7 @@ def compute_node_get(context, compute_id):
     return results[0]
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_node_get_model(context, compute_id):
     # TODO(edleafe): remove once the compute node resource provider migration
     # is complete, and this distinction is no longer necessary.
@@ -767,7 +812,7 @@ def compute_node_get_model(context, compute_id):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_nodes_get_by_service_id(context, service_id):
     results = _compute_node_select(context, {"service_id": service_id})
     if not results:
@@ -775,7 +820,7 @@ def compute_nodes_get_by_service_id(context, service_id):
     return results
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_node_get_by_host_and_nodename(context, host, nodename):
     results = _compute_node_select(context,
             {"host": host, "hypervisor_hostname": nodename})
@@ -784,7 +829,7 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return results[0]
 
 
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def compute_node_get_all_by_host(context, host):
     results = _compute_node_select(context, {"host": host})
     if not results:
@@ -792,11 +837,12 @@ def compute_node_get_all_by_host(context, host):
     return results
 
 
+@pick_context_manager_reader
 def compute_node_get_all(context):
     return _compute_node_select(context)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_node_search_by_hypervisor(context, hypervisor_match):
     field = models.ComputeNode.hypervisor_hostname
     return model_query(context, models.ComputeNode).\
@@ -804,7 +850,7 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
             all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
@@ -819,7 +865,7 @@ def compute_node_create(context, values):
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
 
@@ -834,7 +880,7 @@ def compute_node_update(context, compute_id, values):
     return compute_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def compute_node_delete(context, compute_id):
     """Delete a ComputeNode record."""
     result = model_query(context, models.ComputeNode).\
@@ -845,7 +891,7 @@ def compute_node_delete(context, compute_id):
         raise exception.ComputeHostNotFound(host=compute_id)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
 
@@ -1619,7 +1665,7 @@ def _fixed_ip_count_by_project(context, project_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def virtual_interface_create(context, values):
     """Create a new virtual interface record in the database.
 
@@ -1640,7 +1686,7 @@ def _virtual_interface_query(context):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table.
 
@@ -1653,7 +1699,7 @@ def virtual_interface_get(context, vif_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def virtual_interface_get_by_address(context, address):
     """Gets a virtual interface from the table.
 
@@ -1671,7 +1717,7 @@ def virtual_interface_get_by_address(context, address):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def virtual_interface_get_by_uuid(context, vif_uuid):
     """Gets a virtual interface from the table.
 
@@ -1685,7 +1731,7 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 @require_context
 @require_instance_exists_using_uuid
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
 
@@ -1699,7 +1745,7 @@ def virtual_interface_get_by_instance(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def virtual_interface_get_by_instance_and_network(context, instance_uuid,
                                                   network_id):
     """Gets virtual interface for instance that's associated with network."""
@@ -1711,7 +1757,7 @@ def virtual_interface_get_by_instance_and_network(context, instance_uuid,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records that are associated
     with the instance given by instance_id.
@@ -1724,7 +1770,7 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def virtual_interface_get_all(context):
     """Get all vifs."""
     vif_refs = _virtual_interface_query(context).all()
@@ -1796,7 +1842,7 @@ def _check_instance_exists_in_project(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_create(context, values):
     """Create a new Instance record in the database.
 
@@ -1870,7 +1916,7 @@ def _instance_data_get_for_user(context, project_id, user_id):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_destroy(context, instance_uuid, constraint=None):
     if uuidutils.is_uuid_like(instance_uuid):
         instance_ref = _instance_get_by_uuid(context, instance_uuid)
@@ -1911,7 +1957,7 @@ def instance_destroy(context, instance_uuid, constraint=None):
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def instance_get_by_uuid(context, uuid, columns_to_join=None):
     return _instance_get_by_uuid(context, uuid,
                                  columns_to_join=columns_to_join)
@@ -1929,7 +1975,7 @@ def _instance_get_by_uuid(context, uuid, columns_to_join=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get(context, instance_id, columns_to_join=None):
     try:
         result = _build_instance_get(context, columns_to_join=columns_to_join
@@ -2034,7 +2080,7 @@ def _manual_join_columns(columns_to_join):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join_new = ['info_cache', 'security_groups']
@@ -2056,7 +2102,7 @@ def instance_get_all(context, columns_to_join=None):
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                                 limit=None, marker=None, columns_to_join=None):
     """Return instances matching all filters sorted by the primary key.
@@ -2073,7 +2119,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                                      columns_to_join=None, sort_keys=None,
                                      sort_dirs=None):
@@ -2483,7 +2529,7 @@ def process_sort_params(sort_keys, sort_dirs,
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
                                          columns_to_join=None):
@@ -2530,7 +2576,7 @@ def _instance_get_all_query(context, project_only=False, joins=None):
     return query
 
 
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def instance_get_all_by_host(context, host, columns_to_join=None):
     return _instances_fill_metadata(context,
       _instance_get_all_query(context).filter_by(host=host).all(),
@@ -2551,7 +2597,7 @@ def _instance_get_all_uuids_by_host(context, host):
     return uuids
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get_all_by_host_and_node(context, host, node,
                                       columns_to_join=None):
     if columns_to_join is None:
@@ -2567,14 +2613,14 @@ def instance_get_all_by_host_and_node(context, host, node,
                 filter_by(node=node).all(), manual_joins=manual_joins)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return _instances_fill_metadata(context,
         _instance_get_all_query(context).filter_by(host=host).
                    filter(models.Instance.instance_type_id != type_id).all())
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get_all_by_grantee_security_groups(context, group_ids):
     if not group_ids:
         return []
@@ -2602,7 +2648,7 @@ def instance_floating_address_get_all(context, instance_uuid):
 
 
 # NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
                      datetime.timedelta(seconds=reboot_window))
@@ -2629,14 +2675,14 @@ def _retry_instance_update():
 
 @require_context
 @_retry_instance_update()
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_update(context, instance_uuid, values, expected=None):
     return _instance_update(context, instance_uuid, values, expected)
 
 
 @require_context
 @_retry_instance_update()
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_update_and_get_original(context, instance_uuid, values,
                                      columns_to_join=None, expected=None):
     """Set the given properties on an instance and update it. Return
@@ -2811,7 +2857,7 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
     return instance_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_add_security_group(context, instance_uuid, security_group_id):
     """Associate the given security group with the given instance."""
     sec_group_ref = models.SecurityGroupInstanceAssociation()
@@ -2821,7 +2867,7 @@ def instance_add_security_group(context, instance_uuid, security_group_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_remove_security_group(context, instance_uuid, security_group_id):
     """Disassociate the given security group from the given instance."""
     model_query(context, models.SecurityGroupInstanceAssociation).\
@@ -2834,7 +2880,7 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
@@ -2846,7 +2892,7 @@ def instance_info_cache_get(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_info_cache_update(context, instance_uuid, values):
     """Update an instance info cache record in the table.
 
@@ -2880,7 +2926,7 @@ def instance_info_cache_update(context, instance_uuid, values):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_info_cache_delete(context, instance_uuid):
     """Deletes an existing instance_info_cache record
 
@@ -2901,7 +2947,7 @@ def _instance_extra_create(context, values):
     return inst_extra_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_extra_update_by_uuid(context, instance_uuid, values):
     rows_updated = model_query(context, models.InstanceExtra).\
         filter_by(instance_uuid=instance_uuid).\
@@ -2915,7 +2961,7 @@ def instance_extra_update_by_uuid(context, instance_uuid, values):
     return rows_updated
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_extra_get_by_instance_uuid(context, instance_uuid,
                                         columns=None):
     query = model_query(context, models.InstanceExtra).\
@@ -4090,7 +4136,7 @@ def _from_legacy_values(values, legacy, allow_updates=False):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy)
@@ -4103,7 +4149,7 @@ def block_device_mapping_create(context, values, legacy=True):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_update(context, bdm_id, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
@@ -4114,7 +4160,7 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
     return query.first()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_update_or_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
@@ -4149,7 +4195,7 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids):
     if not instance_uuids:
         return []
@@ -4158,7 +4204,7 @@ def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids):
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def block_device_mapping_get_all_by_instance(context, instance_uuid):
     return _block_device_mapping_get_query(context).\
                  filter_by(instance_uuid=instance_uuid).\
@@ -4166,7 +4212,7 @@ def block_device_mapping_get_all_by_instance(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def block_device_mapping_get_all_by_volume_id(context, volume_id,
         columns_to_join=None):
     return _block_device_mapping_get_query(context,
@@ -4176,7 +4222,7 @@ def block_device_mapping_get_all_by_volume_id(context, volume_id,
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
                                                        instance_uuid,
                                                        columns_to_join=None):
@@ -4188,7 +4234,7 @@ def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_destroy(context, bdm_id):
     _block_device_mapping_get_query(context).\
             filter_by(id=bdm_id).\
@@ -4196,7 +4242,7 @@ def block_device_mapping_destroy(context, bdm_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
     _block_device_mapping_get_query(context).\
@@ -4206,7 +4252,7 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
                                                         device_name):
     _block_device_mapping_get_query(context).\
@@ -4634,7 +4680,7 @@ def project_get_networks(context, project_id, associate=True):
 ###################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def migration_create(context, values):
     migration = models.Migration()
     migration.update(values)
@@ -4642,7 +4688,7 @@ def migration_create(context, values):
     return migration
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def migration_update(context, id, values):
     migration = migration_get(context, id)
     migration.update(values)
@@ -4650,7 +4696,7 @@ def migration_update(context, id, values):
     return migration
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get(context, id):
     result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(id=id).\
@@ -4662,7 +4708,7 @@ def migration_get(context, id):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get_by_id_and_instance(context, id, instance_uuid):
     result = model_query(context, models.Migration).\
                      filter_by(id=id).\
@@ -4676,7 +4722,7 @@ def migration_get_by_id_and_instance(context, id, instance_uuid):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(instance_uuid=instance_uuid).\
@@ -4690,7 +4736,7 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
     return result
 
 
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
                                               dest_compute):
     confirm_window = (timeutils.utcnow() -
@@ -4703,7 +4749,7 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
              all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get_in_progress_by_host_and_node(context, host, node):
 
     return model_query(context, models.Migration).\
@@ -4718,7 +4764,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
             all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get_in_progress_by_instance(context, instance_uuid,
                                           migration_type=None):
     # TODO(Shaohe Feng) we should share the in-progress list.
@@ -4735,7 +4781,7 @@ def migration_get_in_progress_by_instance(context, instance_uuid,
     return query.all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:
@@ -4761,7 +4807,7 @@ def migration_get_all_by_filters(context, filters):
 ##################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def console_pool_create(context, values):
     pool = models.ConsolePool()
     pool.update(values)
@@ -4776,7 +4822,7 @@ def console_pool_create(context, values):
     return pool
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def console_pool_get_by_host_type(context, compute_host, host,
                                   console_type):
 
@@ -4795,7 +4841,7 @@ def console_pool_get_by_host_type(context, compute_host, host,
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def console_pool_get_all_by_host_type(context, host, console_type):
     return model_query(context, models.ConsolePool, read_deleted="no").\
                    filter_by(host=host).\
@@ -4807,7 +4853,7 @@ def console_pool_get_all_by_host_type(context, host, console_type):
 ##################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def console_create(context, values):
     console = models.Console()
     console.update(values)
@@ -4815,7 +4861,7 @@ def console_create(context, values):
     return console
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def console_delete(context, console_id):
     # NOTE(mdragon): consoles are meant to be transient.
     context.session.query(models.Console).\
@@ -4823,7 +4869,7 @@ def console_delete(context, console_id):
         delete()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def console_get_by_pool_instance(context, pool_id, instance_uuid):
     result = model_query(context, models.Console, read_deleted="yes").\
                    filter_by(pool_id=pool_id).\
@@ -4838,7 +4884,7 @@ def console_get_by_pool_instance(context, pool_id, instance_uuid):
     return result
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
     query = model_query(context, models.Console, read_deleted="yes").\
                 filter_by(instance_uuid=instance_uuid)
@@ -4848,7 +4894,7 @@ def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
     return query.all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def console_get(context, console_id, instance_uuid=None):
     query = model_query(context, models.Console, read_deleted="yes").\
                     filter_by(id=console_id).\
@@ -5247,7 +5293,7 @@ def _instance_metadata_get_query(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_metadata_get(context, instance_uuid):
     rows = _instance_metadata_get_query(context, instance_uuid).all()
     return {row['key']: row['value'] for row in rows}
@@ -5255,7 +5301,7 @@ def instance_metadata_get(context, instance_uuid):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
@@ -5264,7 +5310,7 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
     if delete:
@@ -5309,14 +5355,14 @@ def _instance_system_metadata_get_query(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_system_metadata_get(context, instance_uuid):
     rows = _instance_system_metadata_get_query(context, instance_uuid).all()
     return {row['key']: row['value'] for row in rows}
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_system_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
     if delete:
@@ -5398,7 +5444,7 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def bw_usage_get(context, uuid, start_period, mac):
     values = {'start_period': start_period}
     values = convert_objects_related_datetimes(values, 'start_period')
@@ -5410,7 +5456,7 @@ def bw_usage_get(context, uuid, start_period, mac):
 
 
 @require_context
-@main_context_manager.reader.allow_async
+@pick_context_manager_reader_allow_async
 def bw_usage_get_by_uuids(context, uuids, start_period):
     values = {'start_period': start_period}
     values = convert_objects_related_datetimes(values, 'start_period')
@@ -5424,7 +5470,7 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@main_context_manager.writer
+@pick_context_manager_writer
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed=None):
 
@@ -5475,7 +5521,7 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def vol_get_usage_by_time(context, begin):
     """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
@@ -5487,7 +5533,7 @@ def vol_get_usage_by_time(context, begin):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      instance_id, project_id, user_id, availability_zone,
                      update_totals=False):
@@ -5926,7 +5972,7 @@ def aggregate_host_add(context, aggregate_id, host):
 ################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_fault_create(context, values):
     """Create a new InstanceFault."""
     fault_ref = models.InstanceFault()
@@ -5935,7 +5981,7 @@ def instance_fault_create(context, values):
     return dict(fault_ref)
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_fault_get_by_instance_uuids(context, instance_uuids):
     """Get all instance faults for the provided instance_uuids."""
     if not instance_uuids:
@@ -5961,7 +6007,7 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 ##################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def action_start(context, values):
     convert_objects_related_datetimes(values, 'start_time')
     action_ref = models.InstanceAction()
@@ -5970,7 +6016,7 @@ def action_start(context, values):
     return action_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def action_finish(context, values):
     convert_objects_related_datetimes(values, 'start_time', 'finish_time')
     query = model_query(context, models.InstanceAction).\
@@ -5983,7 +6029,7 @@ def action_finish(context, values):
     return query.one()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def actions_get(context, instance_uuid):
     """Get all instance actions for the provided uuid."""
     actions = model_query(context, models.InstanceAction).\
@@ -5993,7 +6039,7 @@ def actions_get(context, instance_uuid):
     return actions
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def action_get_by_request_id(context, instance_uuid, request_id):
     """Get the action by request_id and given instance."""
     action = _action_get_by_request_id(context, instance_uuid, request_id)
@@ -6016,7 +6062,7 @@ def _action_get_last_created_by_instance_uuid(context, instance_uuid):
     return result
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def action_event_start(context, values):
     """Start an event on an instance action."""
     convert_objects_related_datetimes(values, 'start_time')
@@ -6045,7 +6091,7 @@ def action_event_start(context, values):
     return event_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def action_event_finish(context, values):
     """Finish an event on an instance action."""
     convert_objects_related_datetimes(values, 'start_time', 'finish_time')
@@ -6082,7 +6128,7 @@ def action_event_finish(context, values):
     return event_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def action_events_get(context, action_id):
     events = model_query(context, models.InstanceActionEvent).\
                          filter_by(action_id=action_id).\
@@ -6092,7 +6138,7 @@ def action_events_get(context, action_id):
     return events
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def action_event_get_by_id(context, action_id, event_id):
     event = model_query(context, models.InstanceActionEvent).\
                         filter_by(action_id=action_id).\
@@ -6106,7 +6152,7 @@ def action_event_get_by_id(context, action_id, event_id):
 
 
 @require_context
-@main_context_manager.writer
+@pick_context_manager_writer
 def ec2_instance_create(context, instance_uuid, id=None):
     """Create ec2 compatible instance by provided uuid."""
     ec2_instance_ref = models.InstanceIdMapping()
@@ -6120,7 +6166,7 @@ def ec2_instance_create(context, instance_uuid, id=None):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_instance_get_by_uuid(context, instance_uuid):
     result = _ec2_instance_get_query(context).\
                     filter_by(uuid=instance_uuid).\
@@ -6133,7 +6179,7 @@ def ec2_instance_get_by_uuid(context, instance_uuid):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def ec2_instance_get_by_id(context, instance_id):
     result = _ec2_instance_get_query(context).\
                     filter_by(id=instance_id).\
@@ -6146,7 +6192,7 @@ def ec2_instance_get_by_id(context, instance_id):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def get_instance_uuid_by_ec2_id(context, ec2_id):
     result = ec2_instance_get_by_id(context, ec2_id)
     return result['uuid']
@@ -6176,21 +6222,21 @@ def _task_log_get_query(context, task_name, period_beginning,
     return query
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def task_log_get(context, task_name, period_beginning, period_ending, host,
                  state=None):
     return _task_log_get_query(context, task_name, period_beginning,
                                period_ending, host, state).first()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def task_log_get_all(context, task_name, period_beginning, period_ending,
                      host=None, state=None):
     return _task_log_get_query(context, task_name, period_beginning,
                                period_ending, host, state).all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def task_log_begin_task(context, task_name, period_beginning, period_ending,
                         host, task_items=None, message=None):
     values = {'period_beginning': period_beginning,
@@ -6213,7 +6259,7 @@ def task_log_begin_task(context, task_name, period_beginning, period_ending,
         raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def task_log_end_task(context, task_name, period_beginning, period_ending,
                       host, errors, message=None):
     values = dict(state="DONE", errors=errors)
@@ -6591,7 +6637,7 @@ def _instance_group_policies_add(context, id, policies, set_delete=False):
 ####################
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def pci_device_get_by_addr(context, node_id, dev_addr):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(compute_node_id=node_id).\
@@ -6602,7 +6648,7 @@ def pci_device_get_by_addr(context, node_id, dev_addr):
     return pci_dev_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def pci_device_get_by_id(context, id):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(id=id).\
@@ -6612,14 +6658,14 @@ def pci_device_get_by_id(context, id):
     return pci_dev_ref
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def pci_device_get_all_by_node(context, node_id):
     return model_query(context, models.PciDevice).\
                        filter_by(compute_node_id=node_id).\
                        all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
     return model_query(context, models.PciDevice).\
                        filter_by(compute_node_id=node_id).\
@@ -6628,7 +6674,7 @@ def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
 
 
 @require_context
-@main_context_manager.reader
+@pick_context_manager_reader
 def pci_device_get_all_by_instance_uuid(context, instance_uuid):
     return model_query(context, models.PciDevice).\
                        filter_by(status='allocated').\
@@ -6636,7 +6682,7 @@ def pci_device_get_all_by_instance_uuid(context, instance_uuid):
                        all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def _instance_pcidevs_get_multi(context, instance_uuids):
     if not instance_uuids:
         return []
@@ -6645,7 +6691,7 @@ def _instance_pcidevs_get_multi(context, instance_uuids):
         filter(models.PciDevice.instance_uuid.in_(instance_uuids))
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def pci_device_destroy(context, node_id, address):
     result = model_query(context, models.PciDevice).\
                          filter_by(compute_node_id=node_id).\
@@ -6655,7 +6701,7 @@ def pci_device_destroy(context, node_id, address):
         raise exception.PciDeviceNotFound(node_id=node_id, address=address)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def pci_device_update(context, node_id, address, values):
     query = model_query(context, models.PciDevice, read_deleted="no").\
                     filter_by(compute_node_id=node_id).\
@@ -6670,7 +6716,7 @@ def pci_device_update(context, node_id, address, values):
 ####################
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_tag_add(context, instance_uuid, tag):
     tag_ref = models.Tag()
     tag_ref.resource_id = instance_uuid
@@ -6678,7 +6724,7 @@ def instance_tag_add(context, instance_uuid, tag):
 
     try:
         _check_instance_exists_in_project(context, instance_uuid)
-        with main_context_manager.writer.savepoint.using(context):
+        with get_context_manager(context).writer.savepoint.using(context):
             context.session.add(tag_ref)
     except db_exc.DBDuplicateEntry:
         # NOTE(snikitin): We should ignore tags duplicates
@@ -6687,7 +6733,7 @@ def instance_tag_add(context, instance_uuid, tag):
     return tag_ref
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_tag_set(context, instance_uuid, tags):
     _check_instance_exists_in_project(context, instance_uuid)
 
@@ -6714,14 +6760,14 @@ def instance_tag_set(context, instance_uuid, tags):
         resource_id=instance_uuid).all()
 
 
-@main_context_manager.reader
+@pick_context_manager_reader
 def instance_tag_get_by_instance_uuid(context, instance_uuid):
     _check_instance_exists_in_project(context, instance_uuid)
     return context.session.query(models.Tag).filter_by(
         resource_id=instance_uuid).all()
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_tag_delete(context, instance_uuid, tag):
     _check_instance_exists_in_project(context, instance_uuid)
     result = context.session.query(models.Tag).filter_by(
@@ -6732,7 +6778,7 @@ def instance_tag_delete(context, instance_uuid, tag):
                                             tag=tag)
 
 
-@main_context_manager.writer
+@pick_context_manager_writer
 def instance_tag_delete_all(context, instance_uuid):
     _check_instance_exists_in_project(context, instance_uuid)
     context.session.query(models.Tag).filter_by(
