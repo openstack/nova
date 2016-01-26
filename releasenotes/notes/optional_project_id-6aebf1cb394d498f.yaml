@@ -1,7 +1,7 @@
 ---
 features:
 
-  - Provides API 2.17, which makes the use of project_ids in API urls
+  - Provides API 2.18, which makes the use of project_ids in API urls
     optional.
 
 upgrade:

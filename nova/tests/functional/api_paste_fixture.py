@@ -63,5 +63,5 @@ class ApiPasteNoProjectId(ApiPasteV21Fixture):
             "paste.filter_factory = nova.api.openstack.auth:"
             "NoAuthMiddleware.factory",
             "paste.filter_factory = nova.api.openstack.auth:"
-            "NoAuthMiddlewareV2_17.factory")
+            "NoAuthMiddlewareV2_18.factory")
         target_file.write(line)

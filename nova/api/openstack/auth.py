@@ -74,7 +74,7 @@ class NoAuthMiddleware(NoAuthMiddlewareBase):
         return self.base_call(req, True, always_admin=False)
 
 
-class NoAuthMiddlewareV2_17(NoAuthMiddlewareBase):
+class NoAuthMiddlewareV2_18(NoAuthMiddlewareBase):
     """Return a fake token if one isn't specified.
 
     This provides a version of the middleware which does not add

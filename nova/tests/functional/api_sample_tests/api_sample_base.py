@@ -84,7 +84,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
             '_legacy_v2_code': True,
             '_additional_fixtures': [
                 api_paste_fixture.ApiPasteLegacyV2Fixture]}),
-        # test v2.16 code without project id
+        # test v2.18 code without project id
         ('v2_1_noproject_id', {
             'api_major_version': 'v2.1',
             '_project_id': False,
