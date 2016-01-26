@@ -4923,6 +4923,16 @@ class ComputeManager(manager.Manager):
                      context, instance, "live_migration.pre.start",
                      network_info=network_info)
 
+        # NOTE(ORBIT): Switching to secondary instance here
+        if 'colo' in migrate_data:
+            relations = (objects.FaultToleranceRelationList.
+                         get_by_primary_instance_uuid(context,
+                                                      instance["uuid"]))
+            # NOTE(ORBIT): Only one secondary instance supported.
+            relation = relations[0]
+            instance = objects.Instance.get_by_uuid(
+                                 context, relation.secondary_instance_uuid)
+
         pre_live_migration_data = self.driver.pre_live_migration(context,
                                        instance,
                                        block_device_info,
@@ -4930,9 +4940,11 @@ class ComputeManager(manager.Manager):
                                        disk,
                                        migrate_data)
 
-        # NOTE(tr3buchet): setup networks on destination host
-        self.network_api.setup_networks_on_host(context, instance,
-                                                         self.host)
+        # TODO(ORBIT)
+        if 'colo' not in migrate_data:
+            # NOTE(tr3buchet): setup networks on destination host
+            self.network_api.setup_networks_on_host(context, instance,
+                                                    self.host)
 
         # Creating filters to hypervisors and firewalls.
         # An example is that nova-instance-instance-xxx,
@@ -4976,7 +4988,10 @@ class ComputeManager(manager.Manager):
         # Create a local copy since we'll be modifying the dictionary
         migrate_data = dict(migrate_data or {})
         try:
-            if block_migration:
+            # TODO(ORBIT): Temp until quorum is supported
+            if utils.ft_enabled(instance):
+                disk = self.driver.colo_get_instance_disk_info(instance)
+            elif block_migration:
                 disk = self.driver.get_instance_disk_info(instance.name)
             else:
                 disk = None

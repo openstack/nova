@@ -761,7 +761,8 @@ class Replication(Image):
         else:
             path = libvirt_utils.get_instance_path(instance)
 
-        prefix = disk_name + '_'
+        filename = os.path.basename(disk_name).split('.')[0]
+        prefix = filename + '_'
 
         self.path = os.path.join(path, prefix + 'active.img')
         self.hidden_disk_path = os.path.join(path, prefix + 'hidden.img')

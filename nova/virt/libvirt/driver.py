@@ -3021,13 +3021,6 @@ class LibvirtDriver(driver.ComputeDriver):
                           user_id=instance['user_id'],
                           project_id=instance['project_id'])
 
-            if utils.ft_secondary(instance):
-                backend = image('disk', 'replication')
-                # NOTE(ORBIT): No fetching for block replication disks
-                backend.cache(fetch_func=lambda *a, **k: None,
-                              filename='',
-                              size=size)
-
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
                                                           instance['os_type'])
@@ -5154,12 +5147,15 @@ class LibvirtDriver(driver.ComputeDriver):
                        "without shared storage.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
 
-        # NOTE(mikal): include the instance directory name here because it
-        # doesn't yet exist on the destination but we want to force that
-        # same name to be used
-        instance_path = libvirt_utils.get_instance_path(instance,
-                                                        relative=True)
-        dest_check_data['instance_relative_path'] = instance_path
+        # NOTE(ORBIT): We don't want to use the same directory name when
+        #              executing a COLO migration.
+        if 'colo' not in dest_check_data:
+            # NOTE(mikal): include the instance directory name here because it
+            # doesn't yet exist on the destination but we want to force that
+            # same name to be used
+            instance_path = libvirt_utils.get_instance_path(instance,
+                                                            relative=True)
+            dest_check_data['instance_relative_path'] = instance_path
 
         return dest_check_data
 
@@ -5702,6 +5698,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                 project_id=instance['project_id'],
                                 size=info['virt_disk_size'])
 
+                    if utils.ft_secondary(instance):
+                        image = self.image_backend.image(instance,
+                                                         instance_disk,
+                                                         'replication')
+                        # NOTE(ORBIT): No fetching for block replication disks
+                        image.cache(fetch_func=lambda *a, **k: None,
+                                    filename='',
+                                    size=info['virt_disk_size'])
+
+
         # if image has kernel and ramdisk, just download
         # following normal way.
         self._fetch_instance_kernel_ramdisk(context, instance)
@@ -5751,6 +5757,23 @@ class LibvirtDriver(driver.ComputeDriver):
                                       block_device_info=block_device_info,
                                       write_to_disk=True)
             self._conn.defineXML(xml)
+
+    # TODO(ORBIT): Temp until quorum is supported
+    def colo_get_instance_disk_info(self, instance):
+        disk_info = []
+        instance_path = libvirt_utils.get_instance_path(instance)
+        path = os.path.join(instance_path, 'disk')
+        dk_size = int(os.path.getsize(path))
+        backing_file = libvirt_utils.get_disk_backing_file(path)
+        virt_size = disk.get_disk_size(path)
+        over_commit_size = int(virt_size) - dk_size
+        disk_info.append({'type': 'qcow2',
+            'path': path,
+            'virt_disk_size': virt_size,
+            'backing_file': backing_file,
+            'disk_size': dk_size,
+            'over_committed_disk_size': over_commit_size})
+        return jsonutils.dumps(disk_info)
 
     def _get_instance_disk_info(self, instance_name, xml,
                                 block_device_info=None):
