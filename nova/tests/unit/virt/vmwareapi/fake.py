@@ -366,8 +366,9 @@ class VirtualIDEController(DataObject):
 
 class VirtualLsiLogicController(DataObject):
     """VirtualLsiLogicController class."""
-    def __init__(self, key=0, scsiCtlrUnitNumber=0):
+    def __init__(self, key=0, scsiCtlrUnitNumber=0, busNumber=0):
         self.key = key
+        self.busNumber = busNumber
         self.scsiCtlrUnitNumber = scsiCtlrUnitNumber
         self.device = []
 
