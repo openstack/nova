@@ -795,13 +795,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_KVM_S390_VERSION) - 1)
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.PPC64)) - 1)
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_S390_VERSION))
-    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
-    def test_min_version_s390_old_libvirt(self, mock_arch,
-                                          mock_qemu_version, mock_lv_version):
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.PPC64)))
+    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+    def test_min_version_ppc_old_libvirt(self, mock_libv, mock_qemu,
+                                         mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.NovaException,
                           drvr.init_host,
@@ -809,13 +811,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_KVM_S390_VERSION))
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.PPC64)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_S390_VERSION) - 1)
-    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
-    def test_min_version_s390_old_qemu(self, mock_arch,
-                                       mock_qemu_version, mock_lv_version):
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.PPC64)) - 1)
+    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+    def test_min_version_ppc_old_qemu(self, mock_libv, mock_qemu,
+                                      mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.NovaException,
                           drvr.init_host,
@@ -823,13 +827,59 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_KVM_S390_VERSION))
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.PPC64)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_S390_VERSION))
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.PPC64)))
+    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+    def test_min_version_ppc_ok(self, mock_libv, mock_qemu, mock_arch):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.S390X)) - 1)
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.S390X)))
     @mock.patch.object(arch, "from_host", return_value=arch.S390X)
-    def test_min_version_s390_ok(self, mock_arch,
-                                 mock_qemu_version, mock_lv_version):
+    def test_min_version_s390_old_libvirt(self, mock_libv, mock_qemu,
+                                          mock_arch):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.NovaException,
+                          drvr.init_host,
+                          "dummyhost")
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.S390X)))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.S390X)) - 1)
+    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
+    def test_min_version_s390_old_qemu(self, mock_libv, mock_qemu,
+                                       mock_arch):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.NovaException,
+                          drvr.init_host,
+                          "dummyhost")
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
+                               arch.S390X)))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
+                               arch.S390X)))
+    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
+    def test_min_version_s390_ok(self, mock_libv, mock_qemu, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
