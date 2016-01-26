@@ -34,6 +34,7 @@ from nova import image
 from nova.objects import fields
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
+from nova.virt.vmwareapi import vm_util
 
 # NOTE(mdbooth): We use use_linked_clone below, but don't have to import it
 # because nova.virt.vmwareapi.driver is imported first. In fact, it is not
@@ -379,8 +380,10 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
 
     LOG.info(_LI("Downloaded image file data %(image_ref)s"),
              {'image_ref': instance.image_ref}, instance=instance)
+    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
     session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
     LOG.info(_LI("The imported VM was unregistered"), instance=instance)
+    return vmdk.capacity_in_bytes
 
 
 def get_vmdk_name_from_ovf(xmlstr):
@@ -444,11 +447,14 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                 LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
                     {'image_ref': instance.image_ref}, instance=instance)
                 imported_vm_ref = write_handle.get_imported_vm()
+                vmdk = vm_util.get_vmdk_info(session,
+                                             imported_vm_ref,
+                                             vm_name)
                 session._call_method(session.vim, "UnregisterVM",
                                      imported_vm_ref)
                 LOG.info(_LI("The imported VM was unregistered"),
                          instance=instance)
-                return
+                return vmdk.capacity_in_bytes
         raise exception.ImageUnacceptable(
             reason=_("Extracting vmdk from OVA failed."),
             image_id=image_ref)

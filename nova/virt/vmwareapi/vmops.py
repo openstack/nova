@@ -419,7 +419,7 @@ class VMwareVMOps(object):
                    'datastore_name': vi.datastore.name},
                   instance=vi.instance)
 
-        images.fetch_image_stream_optimized(
+        image_size = images.fetch_image_stream_optimized(
             context,
             vi.instance,
             self._session,
@@ -427,6 +427,10 @@ class VMwareVMOps(object):
             vi.datastore.name,
             vi.dc_info.vmFolder,
             self._root_resource_pool)
+        # The size of the image is different from the size of the virtual disk.
+        # We want to use the latter. On vSAN this is the only way to get this
+        # size because there is no VMDK descriptor.
+        vi.ii.file_size = image_size
 
     def _fetch_image_as_ova(self, context, vi, image_ds_loc):
         """Download root disk of an OVA image as streamOptimized."""
@@ -435,13 +439,17 @@ class VMwareVMOps(object):
         # of the VM use to import it with.
         vm_name = image_ds_loc.parent.basename
 
-        images.fetch_image_ova(context,
+        image_size = images.fetch_image_ova(context,
                                vi.instance,
                                self._session,
                                vm_name,
                                vi.datastore.name,
                                vi.dc_info.vmFolder,
                                self._root_resource_pool)
+        # The size of the image is different from the size of the virtual disk.
+        # We want to use the latter. On vSAN this is the only way to get this
+        # size because there is no VMDK descriptor.
+        vi.ii.file_size = image_size
 
     def _prepare_sparse_image(self, vi):
         tmp_dir_loc = vi.datastore.build_path(
