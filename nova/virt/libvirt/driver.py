@@ -2634,16 +2634,13 @@ class LibvirtDriver(driver.ComputeDriver):
             """Called at an interval until the VM is running."""
             state = self.get_info(instance)['state']
 
-            if state == power_state.RUNNING:
+            # TODO(ORBIT): The instance is not going to be resumed until the
+            #              COLO migration has started.
+            if ((utils.ft_enabled(instance) and state == power_state.PAUSED) or
+                    state == power_state.RUNNING):
                 LOG.info(_LI("Instance spawned successfully."),
                          instance=instance)
                 raise loopingcall.LoopingCallDone()
-
-        if utils.ft_enabled(instance):
-            # NOTE(ORBIT): Fault tolerant instances are not resumed because
-            #              they need to synchronize before they are started.
-            #              Skipping the wait.
-            return
 
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
         timer.start(interval=0.5).wait()
@@ -4462,11 +4459,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timeout = CONF.vif_plugging_timeout
         if (self._conn_supports_start_paused and
             utils.is_neutron() and not
-            vifs_already_plugged and power_on and timeout and
-            # NOTE(ORBIT): Neutron is not going to create any ports for
-            #              secondary instances since the netinfo is cloned
-            #              from the primary.
-            not utils.ft_secondary(instance)):
+            vifs_already_plugged and power_on and timeout):
             events = self._get_neutron_events(network_info)
         else:
             events = []
