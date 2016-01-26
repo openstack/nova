@@ -580,7 +580,7 @@ class ComputeTaskManager(base.Base):
         destination = scheduler_hint.get("host")
         try:
             live_migrate.execute(context, instance, destination,
-                             block_migration, disk_over_commit, colo)
+                                 block_migration, disk_over_commit, colo)
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
@@ -705,15 +705,14 @@ class ComputeTaskManager(base.Base):
                         block_device_mapping=block_device_mapping,
                         legacy_bdm=legacy_bdm)
 
+                    # TODO(ORBIT): Some or all of the actions below should
+                    #              probably be moved.
                     colo_tasks.wait_for_ready(instance)
-
-                    scheduler_hint = {
-                        "host": ft_secondary_host["host"]
-                    }
-                    disk_over_commit = False  # TODO(ORBIT): yes/no ?
-                    self.migrate_server(context, instance, scheduler_hint,
-                                        True, False, None, True, disk_over_commit,
-                                        colo=True)
+                    ft_secondary_instance.vm_state = vm_states.ACTIVE
+                    ft_secondary_instance.task_state = task_states.MIGRATING
+                    ft_secondary_instance.save(expected_task_state=[None])
+                    compute_api.API().colo_migrate(context, instance,
+                                                   ft_secondary_host["host"])
 
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)

@@ -5436,7 +5436,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Do live migration.
         try:
-            if 'colo' in migrate_data:
+            if "colo" in migrate_data:
                 flaglist = CONF.libvirt.colo_migration_flag.split(',')
             elif block_migration:
                 flaglist = CONF.libvirt.block_migration_flag.split(',')
@@ -5454,7 +5454,7 @@ class LibvirtDriver(driver.ComputeDriver):
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
 
-            if 'colo' in migrate_data:
+            if "colo" in migrate_data:
                 relations = (objects.FaultToleranceRelationList.
                              get_by_primary_instance_uuid(context,
                                                         instance["uuid"]))
@@ -5552,7 +5552,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_method(context, instance, dest, block_migration,
                             migrate_data)
 
-        timer.f = wait_for_live_migration
+        # TODO(ORBIT): Currently waits until instance is running, might not be
+        #              what we actually should be waiting for to determine if
+        #              the COLO migration is initialized.
+        def wait_for_colo_migration():
+            state = self.get_info(instance)['state']
+
+            if state == power_state.RUNNING:
+                timer.stop()
+                post_method(context, instance, dest)
+
+        if "colo" in migrate_data:
+            timer.f = wait_for_colo_migration
+        else:
+            timer.f = wait_for_live_migration
         timer.start(interval=0.5).wait()
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):

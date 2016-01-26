@@ -3281,6 +3281,19 @@ class API(base.Base):
             self.compute_rpcapi.external_instance_event(
                 context, instances_by_host[host], events_by_host[host])
 
+    @check_instance_lock
+    # @check_instance_cell TODO(ORBIT)
+    @check_instance_state(vm_state=[vm_states.ACTIVE])
+    def colo_migrate(self, context, instance, host):
+        """Start a COLO migration."""
+        LOG.debug("Going to try to initiate a COLO migration to %s",
+                  host or "another host", instance=instance)
+
+        instance.task_state = task_states.MIGRATING
+        instance.save(expected_task_state=[None])
+
+        self.compute_task_api.colo_migrate_instance(context, instance, host)
+
     def colo_failover(self, context, instance):
         self.compute_rpcapi.colo_failover(context, instance)
 

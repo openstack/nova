@@ -390,3 +390,12 @@ class ComputeTaskAPI(object):
                 on_shared_storage=on_shared_storage,
                 preserve_ephemeral=preserve_ephemeral,
                 host=host)
+
+    def colo_migrate_instance(self, context, instance, host_name):
+        scheduler_hint = {'host': host_name}
+        block_migration=True
+        # NOTE(ORBIT): Let the scheduler decide disk overcommitment
+        disk_over_commit=True
+        self.conductor_compute_rpcapi.migrate_server(
+            context, instance, scheduler_hint, True, False, None,
+            block_migration, disk_over_commit, None, colo=True)

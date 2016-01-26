@@ -2183,10 +2183,6 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
 
-        # TODO(ORBIT): Temp
-        if utils.ft_enabled(instance):
-            instance.vm_state = vm_states.PAUSED
-
         try:
             instance.save(expected_task_state=task_states.SPAWNING)
         except (exception.InstanceNotFound,
@@ -5015,11 +5011,16 @@ class ComputeManager(manager.Manager):
                 self._rollback_live_migration(context, instance, dest,
                                               block_migration, migrate_data)
 
+        if "colo" in migrate_data:
+            post_method = self._post_colo_migration
+        else:
+            post_method = self._post_live_migration
+
         # Executing live migration
         # live_migration might raises exceptions, but
         # nothing must be recovered in this version.
         self.driver.live_migration(context, instance, dest,
-                                   self._post_live_migration,
+                                   post_method,
                                    self._rollback_live_migration,
                                    block_migration, migrate_data)
 
@@ -5058,6 +5059,27 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_fault
+    def _post_colo_migration(self, context, instance, dest):
+        relations = (objects.FaultToleranceRelationList.
+                     get_by_primary_instance_uuid(context,
+                                                  instance["uuid"]))
+        # NOTE(ORBIT): Only one secondary instance supported.
+        relation = relations[0]
+        secondary_instance = objects.Instance.get_by_uuid(
+                context, relation.secondary_instance_uuid)
+
+        # Define domain at destination host, without doing it,
+        # pause/suspend/terminate do not work.
+        self.compute_rpcapi.post_colo_migration_at_destination(context,
+                secondary_instance)
+
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.MIGRATING)
+
+    @wrap_exception()
+    @wrap_instance_fault
     def _post_live_migration(self, ctxt, instance,
                             dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
@@ -5075,10 +5097,6 @@ class ComputeManager(manager.Manager):
         """
         LOG.info(_('_post_live_migration() is started..'),
                  instance=instance)
-
-        if "colo" in migrate_data:
-            # TODO(ORBIT): Anything needs to be done after a colo migration?
-            return
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance['uuid'])
@@ -5171,6 +5189,23 @@ class ComputeManager(manager.Manager):
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
                         instance['uuid'])
+
+    @object_compat
+    @wrap_exception()
+    @wrap_instance_fault
+    def post_colo_migration_at_destination(self, context, instance):
+        network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
+
+        self.driver.post_live_migration_at_destination(context, instance,
+                                                       network_info, True,
+                                                       block_device_info)
+
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.MIGRATING)
 
     @object_compat
     @wrap_exception()
