@@ -347,6 +347,7 @@ libvirt_volume_drivers = [
     'quobyte=nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
     'hgst=nova.virt.libvirt.volume.hgst.LibvirtHGSTVolumeDriver',
     'scaleio=nova.virt.libvirt.volume.scaleio.LibvirtScaleIOVolumeDriver',
+    'disco=nova.virt.libvirt.volume.disco.LibvirtDISCOVolumeDriver',
 ]
 
 
