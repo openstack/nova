@@ -24,6 +24,8 @@ disk_sizes = {}
 disk_backing_files = {}
 disk_type = "qcow2"
 
+RESIZE_SNAPSHOT_NAME = libvirt_utils.RESIZE_SNAPSHOT_NAME
+
 
 def create_image(disk_format, path, size):
     pass
