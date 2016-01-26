@@ -2105,6 +2105,13 @@ class ComputeManager(manager.Manager):
                 # the host is set on the instance.
                 self._validate_instance_group_policy(context, instance,
                         filter_properties)
+
+                # TODO(ORBIT): Temporary solution to only claim the secondary
+                #              instance, not spawn it.
+                #              (Might not be necessary)
+                if utils.ft_secondary(instance):
+                    return
+
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image,
                         block_device_mapping) as resources:
