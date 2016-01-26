@@ -5141,7 +5141,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(ORBIT): We don't want to use the same directory name when
         #              executing a COLO migration.
-        if 'colo' not in dest_check_data:
+        if not dest_check_data["colo"]:
             # NOTE(mikal): include the instance directory name here because it
             # doesn't yet exist on the destination but we want to force that
             # same name to be used
@@ -5436,7 +5436,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Do live migration.
         try:
-            if "colo" in migrate_data:
+            migrate_data = migrate_data or {}
+            colo_migration = migrate_data.get("colo", False)
+            if colo_migration:
                 flaglist = CONF.libvirt.colo_migration_flag.split(',')
             elif block_migration:
                 flaglist = CONF.libvirt.block_migration_flag.split(',')
@@ -5447,14 +5449,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
             dom = self._lookup_by_name(instance["name"])
 
-            pre_live_migrate_data = (migrate_data or {}).get(
+            pre_live_migrate_data = migrate_data.get(
                                         'pre_live_migration_result', {})
             listen_addrs = pre_live_migrate_data.get('graphics_listen_addrs')
 
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
 
-            if "colo" in migrate_data:
+            if colo_migration:
                 relations = (objects.FaultToleranceRelationList.
                              get_by_primary_instance_uuid(context,
                                                         instance["uuid"]))
@@ -5562,7 +5564,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 timer.stop()
                 post_method(context, instance, dest)
 
-        if "colo" in migrate_data:
+        if colo_migration:
             timer.f = wait_for_colo_migration
         else:
             timer.f = wait_for_live_migration

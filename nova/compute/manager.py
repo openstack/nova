@@ -4918,6 +4918,7 @@ class ComputeManager(manager.Manager):
                              storage.
 
         """
+        colo_migration = migrate_data.get("colo", False)
         block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
@@ -4927,7 +4928,7 @@ class ComputeManager(manager.Manager):
                      network_info=network_info)
 
         # NOTE(ORBIT): Switching to secondary instance here
-        if 'colo' in migrate_data:
+        if colo_migration:
             relations = (objects.FaultToleranceRelationList.
                          get_by_primary_instance_uuid(context,
                                                       instance["uuid"]))
@@ -4944,7 +4945,7 @@ class ComputeManager(manager.Manager):
                                        migrate_data)
 
         # TODO(ORBIT)
-        if 'colo' not in migrate_data:
+        if colo_migration:
             # NOTE(tr3buchet): setup networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
                                                     self.host)
@@ -5011,7 +5012,8 @@ class ComputeManager(manager.Manager):
                 self._rollback_live_migration(context, instance, dest,
                                               block_migration, migrate_data)
 
-        if "colo" in migrate_data:
+        colo_migration = migrate_data.get("colo", False)
+        if colo_migration:
             post_method = self._post_colo_migration
         else:
             post_method = self._post_live_migration
