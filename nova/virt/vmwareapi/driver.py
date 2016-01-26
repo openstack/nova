@@ -122,7 +122,8 @@ class VMwareVCDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
         "supports_recreate": False,
-        "supports_migrate_to_same_host": True
+        "supports_migrate_to_same_host": True,
+        "supports_attach_interface": True
     }
 
     # Legacy nodename is of the form: <mo id>(<cluster name>)

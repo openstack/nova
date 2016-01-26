@@ -124,7 +124,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     capabilities = {"has_imagecache": False,
                     "supports_recreate": False,
-                    "supports_migrate_to_same_host": False}
+                    "supports_migrate_to_same_host": False,
+                    "supports_attach_interface": False
+                    }
 
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)

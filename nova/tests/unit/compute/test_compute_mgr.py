@@ -1633,7 +1633,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     mock.call(self.context, f_instance, e,
                               mock.ANY)])
 
-        do_test()
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True):
+            do_test()
 
     def test_detach_interface_failure(self):
         # Test that the fault methods are invoked when a detach fails

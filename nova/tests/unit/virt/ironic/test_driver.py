@@ -121,6 +121,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertFalse(self.driver.capabilities['supports_recreate'],
                          'Driver capabilities for \'supports_recreate\''
                          'is invalid')
+        self.assertFalse(self.driver.capabilities[
+                             'supports_migrate_to_same_host'],
+                         'Driver capabilities for '
+                         '\'supports_migrate_to_same_host\' is invalid')
+        self.assertFalse(self.driver.capabilities[
+                            'supports_attach_interface'],
+                         'Driver capabilities for '
+                         '\'supports_attach_interface\' '
+                         'is invalid')
 
     def test__get_hypervisor_type(self):
         self.assertEqual('ironic', self.driver._get_hypervisor_type())
