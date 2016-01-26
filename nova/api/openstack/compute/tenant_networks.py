@@ -138,7 +138,7 @@ class TenantNetworkController(wsgi.Controller):
         if CONF.enable_network_quota and reservation:
             QUOTAS.commit(context, reservation)
 
-    @extensions.expected_errors((400, 403, 503))
+    @extensions.expected_errors((400, 403, 409, 503))
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ["nova.context"]
@@ -179,6 +179,8 @@ class TenantNetworkController(wsgi.Controller):
                 QUOTAS.commit(context, reservation)
         except exception.PolicyNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=six.text_type(e))
+        except exception.CidrConflict as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except Exception:
             if CONF.enable_network_quota:
                 QUOTAS.rollback(context, reservation)

@@ -223,6 +223,11 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         expex = webob.exc.HTTPForbidden
         self._test_network_create_exception(ex, expex)
 
+    def test_network_create_exception_conflictcidr(self):
+        ex = exception.CidrConflict(cidr='dummy', other='dummy')
+        expex = webob.exc.HTTPConflict
+        self._test_network_create_exception(ex, expex)
+
     def test_network_create_exception_service_unavailable(self):
         ex = Exception
         expex = webob.exc.HTTPServiceUnavailable
