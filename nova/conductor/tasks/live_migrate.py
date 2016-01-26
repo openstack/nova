@@ -79,7 +79,8 @@ class LiveMigrationTask(object):
         raise NotImplementedError()
 
     def _check_instance_is_running(self):
-        if self.instance.power_state != power_state.RUNNING:
+        if self.instance.power_state not in (power_state.RUNNING,
+                                             power_state.PAUSED):
             raise exception.InstanceNotRunning(
                     instance_id=self.instance.uuid)
 

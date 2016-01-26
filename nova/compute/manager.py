@@ -5069,6 +5069,10 @@ class ComputeManager(manager.Manager):
         LOG.info(_('_post_live_migration() is started..'),
                  instance=instance)
 
+        if "colo" in migrate_data:
+            # TODO(ORBIT): Anything needs to be done after a colo migration?
+            return
+
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance['uuid'])
 
@@ -5236,6 +5240,9 @@ class ComputeManager(manager.Manager):
             if not none, contains implementation specific data.
 
         """
+
+        # TODO(ORBIT): Anything needs to be done after a colo migration?
+
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=[task_states.MIGRATING])

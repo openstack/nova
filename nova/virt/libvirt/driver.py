@@ -258,10 +258,8 @@ libvirt_opts = [
                      'Syntax is guest-gid:host-gid:count'
                      'Maximum of 5 allowed.'),
     cfg.StrOpt('colo_migration_flag',
-               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
-                       'VIR_MIGRATE_LIVE'
-                       #', VIR_MIGRATE_COLO'
-                       )
+               default='VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_NON_SHARED_INC, VIR_MIGRATE_COLO'),
     ]
 
 CONF = cfg.CONF
@@ -3973,10 +3971,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 not utils.ft_secondary(instance)):
                 qemu_cmdline = ('-drive if=virtio,driver=quorum'
                                 ',read-pattern=fifo,cache=none'
-                                ',aio=native,children.0.file.filename=' +
+                                ',aio=native'
+                                ',id=colo1'
+                                ',children.0.file.filename=' +
                                 config.source_path +
-                                ',children.0.driver=' +
-                                config.driver_format)
+                                ',children.0.driver=' + config.driver_format)
                 guest.add_qemu_cmdline(
                     vconfig.LibvirtConfigQEMUCommandline(qemu_cmdline))
             else:
@@ -5444,7 +5443,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Do live migration.
         try:
-            if block_migration:
+            if 'colo' in migrate_data:
+                flaglist = CONF.libvirt.colo_migration_flag.split(',')
+            elif block_migration:
                 flaglist = CONF.libvirt.block_migration_flag.split(',')
             else:
                 flaglist = CONF.libvirt.live_migration_flag.split(',')
@@ -5460,7 +5461,42 @@ class LibvirtDriver(driver.ComputeDriver):
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
 
-            if migratable_flag is None or listen_addrs is None:
+            if 'colo' in migrate_data:
+                relations = (objects.FaultToleranceRelationList.
+                             get_by_primary_instance_uuid(context,
+                                                        instance["uuid"]))
+                # NOTE(ORBIT): Only one secondary instance supported.
+                relation = relations[0]
+                secondary_instance = objects.Instance.get_by_uuid(
+                                     context, relation.secondary_instance_uuid)
+
+                network_info = instance.info_cache.network_info
+                block_device_info = pre_live_migrate_data['block_device_info']
+                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                    instance,
+                                                    block_device_info)
+                image_meta = compute_utils.get_image_metadata(
+                                context, self._image_api,
+                                instance['image_ref'], instance)
+                secondary_xml = self._get_guest_xml(context, secondary_instance,
+                                                    network_info, disk_info,
+                                                    image_meta, None,
+                                                    block_device_info, False)
+
+                flaglist = CONF.libvirt.colo_migration_flag.split(',')
+                flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+                flags = reduce(lambda x, y: x | y, flagvals)
+
+                params = {
+                    libvirt.VIR_MIGRATE_PARAM_DEST_XML: secondary_xml,
+                    libvirt.VIR_MIGRATE_PARAM_DEST_NAME: secondary_instance["name"],
+                    # TODO(ORBIT): replicationa,replicationx for multiple drives?
+                    libvirt.VIR_MIGRATE_PARAM_MIGRATE_DISKS: "replication"
+                }
+                # TODO(ORBIT): Add colo migration max speed?
+                dom.migrateToURI3(CONF.libvirt.live_migration_uri % dest,
+                                  params, flags)
+            elif migratable_flag is None or listen_addrs is None:
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
                 dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
                                  logical_sum,
@@ -5639,6 +5675,12 @@ class LibvirtDriver(driver.ComputeDriver):
         res_data = {'graphics_listen_addrs': {}}
         res_data['graphics_listen_addrs']['vnc'] = CONF.vncserver_listen
         res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
+
+        # TODO(ORBIT): The block device info is needed when getting the
+        #              secondary instance xml in live_migration. This might not
+        #              be the best way of getting it there though.
+        if utils.ft_secondary(instance):
+            res_data['block_device_info'] = block_device_info
 
         return res_data
 
