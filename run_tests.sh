@@ -25,6 +25,10 @@ To run a subset of any of these tests:
 
  i.e.: tox -e py27 test_servers
 
+Use following to replace './run_test.sh -8' to do pep8 check with changed files
+
+ tox -e pep8 -- -HEAD
+
 Additional tox targets are available in tox.ini. For more information
 see:
 http://docs.openstack.org/project-team-guide/project-setup/python.html
