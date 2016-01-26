@@ -1,0 +1,12 @@
+---
+features:
+  - When RBD is used for ephemeral disks and image storage, make
+    snapshot use Ceph directly, and update Glance with the new location.
+    In case of failure, it will gracefully fallback to the "generic"
+    snapshot method.  This requires changing the typical permissions
+    for the Nova Ceph user (if using authx) to allow writing to
+    the pool where vm images are stored, and it also requires
+    configuring Glance to provide a v2 endpoint with direct_url
+    support enabled (there are security implications to doing this).
+    See http://docs.ceph.com/docs/master/rbd/rbd-openstack/ for more
+    information on configuring OpenStack with RBD.

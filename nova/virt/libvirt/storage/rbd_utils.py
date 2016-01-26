@@ -177,7 +177,7 @@ class RBDDriver(object):
             raise exception.ImageUnacceptable(image_id=url, reason=reason)
         return pieces
 
-    def _get_fsid(self):
+    def get_fsid(self):
         with RADOSClient(self) as client:
             return client.cluster.get_fsid()
 
@@ -189,7 +189,7 @@ class RBDDriver(object):
             LOG.debug('not cloneable: %s', e)
             return False
 
-        if self._get_fsid() != fsid:
+        if self.get_fsid() != fsid:
             reason = '%s is in a different ceph cluster' % url
             LOG.debug(reason)
             return False
@@ -209,19 +209,25 @@ class RBDDriver(object):
                       dict(loc=url, err=e))
             return False
 
-    def clone(self, image_location, dest_name):
+    def clone(self, image_location, dest_name, dest_pool=None):
         _fsid, pool, image, snapshot = self.parse_url(
                 image_location['url'])
-        LOG.debug('cloning %(pool)s/%(img)s@%(snap)s' %
-                  dict(pool=pool, img=image, snap=snapshot))
+        LOG.debug('cloning %(pool)s/%(img)s@%(snap)s to '
+                  '%(dest_pool)s/%(dest_name)s',
+                  dict(pool=pool, img=image, snap=snapshot,
+                       dest_pool=dest_pool, dest_name=dest_name))
         with RADOSClient(self, str(pool)) as src_client:
-            with RADOSClient(self) as dest_client:
-                rbd.RBD().clone(src_client.ioctx,
-                                     image.encode('utf-8'),
-                                     snapshot.encode('utf-8'),
-                                     dest_client.ioctx,
-                                     dest_name,
-                                     features=src_client.features)
+            with RADOSClient(self, dest_pool) as dest_client:
+                try:
+                    rbd.RBD().clone(src_client.ioctx,
+                                    image.encode('utf-8'),
+                                    snapshot.encode('utf-8'),
+                                    dest_client.ioctx,
+                                    str(dest_name),
+                                    features=src_client.features)
+                except rbd.PermissionError:
+                    raise exception.Forbidden(_('no write permission on '
+                                                'storage pool %s') % dest_pool)
 
     def size(self, name):
         with RBDVolumeProxy(self, name) as vol:
@@ -236,6 +242,31 @@ class RBDDriver(object):
         LOG.debug('resizing rbd image %s to %d', name, size)
         with RBDVolumeProxy(self, name) as vol:
             vol.resize(size)
+
+    def parent_info(self, volume, pool=None):
+        """Returns the pool, image and snapshot name for the parent of an
+        RBD volume.
+
+        :volume: Name of RBD object
+        :pool: Name of pool
+        """
+        try:
+            with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
+                return vol.parent_info()
+        except rbd.ImageNotFound:
+            raise exception.ImageUnacceptable(_("no usable parent snapshot "
+                                                "for volume %s") % volume)
+
+    def flatten(self, volume, pool=None):
+        """"Flattens" a snapshotted image with the parents' data,
+        effectively detaching it from the parent.
+
+        :volume: Name of RBD object
+        :pool: Name of pool
+        """
+        LOG.debug('flattening %(pool)s/%(vol)s', dict(pool=pool, vol=volume))
+        with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
+            tpool.execute(vol.flatten)
 
     def exists(self, name, pool=None, snapshot=None):
         try:
@@ -281,10 +312,12 @@ class RBDDriver(object):
         args += self.ceph_args()
         utils.execute('rbd', 'import', *args)
 
-    def cleanup_volumes(self, instance):
+    def _destroy_volume(self, client, volume, pool=None):
+        """Destroy an RBD volume, retrying as needed.
+        """
         def _cleanup_vol(ioctx, volume, retryctx):
             try:
-                rbd.RBD().remove(client.ioctx, volume)
+                rbd.RBD().remove(ioctx, volume)
                 raise loopingcall.LoopingCallDone(retvalue=False)
             except rbd.ImageHasSnapshots:
                 self.remove_snap(volume, libvirt_utils.RESIZE_SNAPSHOT_NAME,
@@ -297,6 +330,20 @@ class RBDDriver(object):
             if retryctx['retries'] <= 0:
                 raise loopingcall.LoopingCallDone()
 
+        # NOTE(danms): We let it go for ten seconds
+        retryctx = {'retries': 10}
+        timer = loopingcall.FixedIntervalLoopingCall(
+            _cleanup_vol, client.ioctx, volume, retryctx)
+        timed_out = timer.start(interval=1).wait()
+        if timed_out:
+            # NOTE(danms): Run this again to propagate the error, but
+            # if it succeeds, don't raise the loopingcall exception
+            try:
+                _cleanup_vol(client.ioctx, volume, retryctx)
+            except loopingcall.LoopingCallDone:
+                pass
+
+    def cleanup_volumes(self, instance):
         with RADOSClient(self, self.pool) as client:
 
             def belongs_to_instance(disk):
@@ -312,18 +359,7 @@ class RBDDriver(object):
 
             volumes = rbd.RBD().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):
-                # NOTE(danms): We let it go for ten seconds
-                retryctx = {'retries': 10}
-                timer = loopingcall.FixedIntervalLoopingCall(
-                    _cleanup_vol, client.ioctx, volume, retryctx)
-                timed_out = timer.start(interval=1).wait()
-                if timed_out:
-                    # NOTE(danms): Run this again to propagate the error, but
-                    # if it succeeds, don't raise the loopingcall exception
-                    try:
-                        _cleanup_vol(client.ioctx, volume, retryctx)
-                    except loopingcall.LoopingCallDone:
-                        pass
+                self._destroy_volume(client, volume)
 
     def get_pool_info(self):
         with RADOSClient(self) as client:
@@ -332,34 +368,49 @@ class RBDDriver(object):
                     'free': stats['kb_avail'] * units.Ki,
                     'used': stats['kb_used'] * units.Ki}
 
-    def create_snap(self, volume, name):
-        """Create a snapshot on an RBD object.
+    def create_snap(self, volume, name, pool=None, protect=False):
+        """Create a snapshot of an RBD volume.
 
         :volume: Name of RBD object
         :name: Name of snapshot
+        :pool: Name of pool
+        :protect: Set the snapshot to "protected"
         """
         LOG.debug('creating snapshot(%(snap)s) on rbd image(%(img)s)',
                   {'snap': name, 'img': volume})
-        with RBDVolumeProxy(self, volume) as vol:
+        with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
             tpool.execute(vol.create_snap, name)
+            if protect and not vol.is_protected_snap(name):
+                tpool.execute(vol.protect_snap, name)
 
-    def remove_snap(self, volume, name, ignore_errors=False):
-        """Remove a snapshot from an RBD volume.
+    def remove_snap(self, volume, name, ignore_errors=False, pool=None,
+                    force=False):
+        """Removes a snapshot from an RBD volume.
 
         :volume: Name of RBD object
         :name: Name of snapshot
         :ignore_errors: whether or not to log warnings on failures
+        :pool: Name of pool
+        :force: Remove snapshot even if it is protected
         """
-        with RBDVolumeProxy(self, volume) as vol:
+        with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
             if name in [snap.get('name', '') for snap in vol.list_snaps()]:
-                LOG.debug('removing snapshot(%(snap)s) on rbd image(%(img)s)',
-                          {'snap': name, 'img': volume})
+                if vol.is_protected_snap(name):
+                    if force:
+                        tpool.execute(vol.unprotect_snap, name)
+                    elif not ignore_errors:
+                        LOG.warning(_LW('snapshot(%(name)s) on rbd '
+                                        'image(%(img)s) is protected, '
+                                        'skipping'),
+                                    {'name': name, 'img': volume})
+                        return
+                LOG.debug('removing snapshot(%(name)s) on rbd image(%(img)s)',
+                          {'name': name, 'img': volume})
                 tpool.execute(vol.remove_snap, name)
-            else:
-                if not ignore_errors:
-                    LOG.warning(_LW('no snapshot(%(snap)s) found on '
-                                    'image(%(img)s)'), {'snap': name,
-                                                        'img': volume})
+            elif not ignore_errors:
+                LOG.warning(_LW('no snapshot(%(name)s) found on rbd '
+                                'image(%(img)s)'),
+                            {'name': name, 'img': volume})
 
     def rollback_to_snap(self, volume, name):
         """Revert an RBD volume to its contents at a snapshot.
@@ -374,3 +425,9 @@ class RBDDriver(object):
                 tpool.execute(vol.rollback_to_snap, name)
             else:
                 raise exception.SnapshotNotFound(snapshot_id=name)
+
+    def destroy_volume(self, volume, pool=None):
+        """A one-shot version of cleanup_volumes()
+        """
+        with RADOSClient(self, pool) as client:
+            self._destroy_volume(client, volume)

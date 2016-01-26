@@ -1552,48 +1552,86 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance)
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
-        snapshot_directory = CONF.libvirt.snapshots_directory
-        fileutils.ensure_tree(snapshot_directory)
-        with utils.tempdir(dir=snapshot_directory) as tmpdir:
-            try:
-                out_path = os.path.join(tmpdir, snapshot_name)
-                if live_snapshot:
-                    # NOTE(xqueralt): libvirt needs o+x in the temp directory
-                    os.chmod(tmpdir, 0o701)
-                    self._live_snapshot(context, instance, guest, disk_path,
-                                        out_path, source_format, image_format,
-                                        image_meta)
-                else:
-                    snapshot_backend.snapshot_extract(out_path, image_format)
-            finally:
-                guest = None
-                # NOTE(dkang): because previous managedSave is not called
-                #              for LXC, _create_domain must not be called.
-                if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
-                    if state == power_state.RUNNING:
-                        guest = self._create_domain(domain=virt_dom)
-                    elif state == power_state.PAUSED:
-                        guest = self._create_domain(
-                            domain=virt_dom, pause=True)
 
-                    if guest is not None:
-                        self._attach_pci_devices(guest,
-                            pci_manager.get_instance_pci_devs(instance))
-                        self._attach_sriov_ports(context, instance, guest)
-                LOG.info(_LI("Snapshot extracted, beginning image upload"),
-                         instance=instance)
-
-            # Upload that image to the image service
-
+        try:
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
-                     expected_state=task_states.IMAGE_PENDING_UPLOAD)
-            with libvirt_utils.file_open(out_path) as image_file:
-                self._image_api.update(context,
-                                       image_id,
-                                       metadata,
-                                       image_file)
-                LOG.info(_LI("Snapshot image upload complete"),
-                         instance=instance)
+                              expected_state=task_states.IMAGE_PENDING_UPLOAD)
+            metadata['location'] = snapshot_backend.direct_snapshot(
+                context, snapshot_name, image_format, image_id,
+                instance.image_ref)
+            self._snapshot_domain(context, live_snapshot, virt_dom, state,
+                                  instance)
+            self._image_api.update(context, image_id, metadata,
+                                   purge_props=False)
+        except (NotImplementedError, exception.ImageUnacceptable,
+                exception.Forbidden) as e:
+            if type(e) != NotImplementedError:
+                LOG.warning(_LW('Performing standard snapshot because direct '
+                                'snapshot failed: %(error)s'), {'error': e})
+            failed_snap = metadata.pop('location', None)
+            if failed_snap:
+                failed_snap = {'url': str(failed_snap)}
+            snapshot_backend.cleanup_direct_snapshot(failed_snap,
+                                                     also_destroy_volume=True,
+                                                     ignore_errors=True)
+            update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD,
+                              expected_state=task_states.IMAGE_UPLOADING)
+
+            snapshot_directory = CONF.libvirt.snapshots_directory
+            fileutils.ensure_tree(snapshot_directory)
+            with utils.tempdir(dir=snapshot_directory) as tmpdir:
+                try:
+                    out_path = os.path.join(tmpdir, snapshot_name)
+                    if live_snapshot:
+                        # NOTE(xqueralt): libvirt needs o+x in the tempdir
+                        os.chmod(tmpdir, 0o701)
+                        self._live_snapshot(context, instance, guest,
+                                            disk_path, out_path, source_format,
+                                            image_format, image_meta)
+                    else:
+                        snapshot_backend.snapshot_extract(out_path,
+                                                          image_format)
+                finally:
+                    self._snapshot_domain(context, live_snapshot, virt_dom,
+                                          state, instance)
+                    LOG.info(_LI("Snapshot extracted, beginning image upload"),
+                             instance=instance)
+
+                # Upload that image to the image service
+                update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                        expected_state=task_states.IMAGE_PENDING_UPLOAD)
+                with libvirt_utils.file_open(out_path) as image_file:
+                    self._image_api.update(context,
+                                           image_id,
+                                           metadata,
+                                           image_file)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_LE("Failed to snapshot image"))
+                failed_snap = metadata.pop('location', None)
+                if failed_snap:
+                    failed_snap = {'url': str(failed_snap)}
+                snapshot_backend.cleanup_direct_snapshot(
+                        failed_snap, also_destroy_volume=True,
+                        ignore_errors=True)
+
+        LOG.info(_LI("Snapshot image upload complete"), instance=instance)
+
+    def _snapshot_domain(self, context, live_snapshot, virt_dom, state,
+                         instance):
+        guest = None
+        # NOTE(dkang): because previous managedSave is not called
+        #              for LXC, _create_domain must not be called.
+        if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
+            if state == power_state.RUNNING:
+                guest = self._create_domain(domain=virt_dom)
+            elif state == power_state.PAUSED:
+                guest = self._create_domain(domain=virt_dom, pause=True)
+
+            if guest is not None:
+                self._attach_pci_devices(
+                    guest, pci_manager.get_instance_pci_devs(instance))
+                self._attach_sriov_ports(context, instance, guest)
 
     def _can_set_admin_password(self, image_meta):
         if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
