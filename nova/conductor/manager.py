@@ -687,24 +687,33 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
 
-            if utils.ft_enabled(instance):
-                if 'ft_secondary_hosts' in host:
-                    ft_tasks = fault_tolerance.FaultToleranceTasks()
-                    for ft_secondary_host in host['ft_secondary_hosts']:
-                        secondary_instance = ft_tasks.deploy_secondary_instance(
-                            context, instance.uuid,
-                            host=ft_secondary_host['host'],
-                            node=ft_secondary_host['nodename'],
-                            limits=ft_secondary_host['limits'],
-                            image=image['id'],
-                            request_spec=request_spec,
-                            filter_properties=filter_properties,
-                            admin_password=admin_password,
-                            injected_files=injected_files,
-                            requested_networks=requested_networks,
-                            security_groups=security_groups,
-                            block_device_mapping=block_device_mapping,
-                            legacy_bdm=legacy_bdm)
+            if utils.ft_enabled(instance) and 'ft_secondary_hosts' in host:
+                ft_tasks = fault_tolerance.FaultToleranceTasks()
+                for ft_secondary_host in host['ft_secondary_hosts']:
+                    ft_secondary_instance = ft_tasks.create_secondary_instance(
+                        context, instance.uuid,
+                        host=ft_secondary_host['host'],
+                        node=ft_secondary_host['nodename'],
+                        limits=ft_secondary_host['limits'],
+                        image=image['id'],
+                        request_spec=request_spec,
+                        filter_properties=filter_properties,
+                        admin_password=admin_password,
+                        injected_files=injected_files,
+                        requested_networks=requested_networks,
+                        security_groups=security_groups,
+                        block_device_mapping=block_device_mapping,
+                        legacy_bdm=legacy_bdm)
+
+                    colo_tasks.wait_for_ready(instance)
+
+                    scheduler_hint = {
+                        "host": ft_secondary_host["host"]
+                    }
+                    disk_over_commit = False  # TODO(ORBIT): yes/no ?
+                    self.migrate_server(context, instance, scheduler_hint,
+                                        True, False, None, True, disk_over_commit,
+                                        colo=True)
 
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)

@@ -18,12 +18,12 @@ import time
 from oslo.config import cfg
 
 import nova.context
-from nova.compute import power_state
-from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova import objects
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova import utils
 
 CONF = cfg.CONF
@@ -83,23 +83,16 @@ class COLOTasks(object):
 
         return vlan_id
 
-    def _wait_for_instance_host(self, instance):
-        i = 0
-        while instance.power_state != power_state.PAUSED:
-            LOG.debug("Waiting for instance to launch: %s status - %s",
-                      instance.uuid,
-                      power_state.STATE_MAP[instance.power_state])
-            # TODO(ORBIT)
-            i += 1
-            if i > 100:
-                raise Exception("COLO MIGRATE TIMEOUT")
-            time.sleep(1)
+    # TODO(ORBIT): Handle timeout?
+    def wait_for_ready(self, instance):
+        def _wait():
+            """Called at an interval until the VM is running."""
             instance.refresh()
 
-    def migrate(self, context, primary_instance, secondary_instance):
-        for instance in (primary_instance, secondary_instance):
-            instance.refresh()
-            self._wait_for_instance_host(instance)
-        LOG.debug("Starting COLO migration for %s.", primary_instance.uuid)
-        compute_rpcapi.ComputeAPI().colo_migration(context, primary_instance,
-                                                   secondary_instance)
+            if instance.vm_state == vm_states.ACTIVE:
+                LOG.info("Instance ready for COLO migration.",
+                         instance=instance)
+                raise loopingcall.LoopingCallDone()
+
+        timer = loopingcall.FixedIntervalLoopingCall(_wait)
+        timer.start(interval=0.5).wait()

@@ -102,7 +102,7 @@ class FaultToleranceTasks(object):
         flavor['extra_specs']['ft:colo_vlan_id'] = vlan_id
         return flavor
 
-    def deploy_secondary_instance(self, context, primary_instance_uuid,
+    def create_secondary_instance(self, context, primary_instance_uuid,
                                   host=None, node=None, limits=None,
                                   image=None, request_spec=None,
                                   filter_properties=None, admin_password=None,
@@ -148,10 +148,12 @@ class FaultToleranceTasks(object):
             # TODO
             check_server_group_quota=False)
 
+        secondary_instance = instances[0]
+
         relation = objects.FaultToleranceRelation()
-        relation.primary_instance_uuid = primary_instance.get('uuid')
-        relation.secondary_instance_uuid = instances[0].uuid
+        relation.primary_instance_uuid = primary_instance["uuid"]
+        relation.secondary_instance_uuid = secondary_instance["uuid"]
         LOG.debug("Creating primary/secondary instance relation: %s", relation)
         relation.create(context)
 
-        return instances[0]
+        return secondary_instance
