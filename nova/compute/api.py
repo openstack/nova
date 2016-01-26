@@ -1074,10 +1074,10 @@ class API(base.Base):
         if max_net_count == 0:
             raise exception.PortLimitExceeded()
         elif max_net_count < max_count:
-            LOG.debug("max count reduced from %(max_count)d to "
-                      "%(max_net_count)d due to network port quota",
-                      {'max_count': max_count,
-                       'max_net_count': max_net_count})
+            LOG.info(_LI("max count reduced from %(max_count)d to "
+                         "%(max_net_count)d due to network port quota"),
+                        {'max_count': max_count,
+                         'max_net_count': max_net_count})
             max_count = max_net_count
 
         block_device_mapping = self._check_and_transform_bdm(context,
