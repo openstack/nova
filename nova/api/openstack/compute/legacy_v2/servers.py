@@ -84,6 +84,7 @@ CREATE_EXCEPTIONS = {
     exception.InstanceExists: exc.HTTPConflict,
     exception.NoUniqueMatch: exc.HTTPConflict,
     exception.Invalid: exc.HTTPBadRequest,
+    exception.InstanceGroupNotFound: exc.HTTPBadRequest,
 }
 
 CREATE_EXCEPTIONS_MSGS = {

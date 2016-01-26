@@ -19,9 +19,8 @@ _hints = {
     'type': 'object',
     'properties': {
         'group': {
-            # NOTE: The value of 'group' is stored to value which is
-            # defined as varchar(255) in instance_system_metadata table.
-            'type': 'string', 'maxLength': 255,
+            'type': 'string',
+            'format': 'uuid'
         },
         'different_host': {
             # NOTE: The value of 'different_host' is the set of server

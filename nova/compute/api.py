@@ -1031,6 +1031,8 @@ class API(base.Base):
         if not group_hint:
             return
 
+        # TODO(gibi): We need to remove the following validation code when
+        # removing legacy v2 code.
         if not uuidutils.is_uuid_like(group_hint):
             msg = _('Server group scheduler hint must be a UUID.')
             raise exception.InvalidInput(reason=msg)
