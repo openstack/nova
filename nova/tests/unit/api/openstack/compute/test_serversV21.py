@@ -132,6 +132,18 @@ def fake_instance_get_all_with_locked(context, list_locked, **kwargs):
     return objects.InstanceList(objects=obj_list)
 
 
+def fake_instance_get_all_with_description(context, list_desc, **kwargs):
+    obj_list = []
+    s_id = 0
+    for desc in list_desc:
+        uuid = fakes.get_fake_uuid(desc)
+        s_id = s_id + 1
+        kwargs['display_description'] = desc
+        server = fakes.stub_instance_obj(context, id=s_id, uuid=uuid, **kwargs)
+        obj_list.append(server)
+    return objects.InstanceList(objects=obj_list)
+
+
 class MockSetAdminPassword(object):
     def __init__(self):
         self.instance_id = None
@@ -1409,6 +1421,66 @@ class ServersControllerTestV29(ServersControllerTest):
             self.assertNotIn(key, search_opts)
 
 
+class ServersControllerTestV219(ServersControllerTest):
+    wsgi_api_version = '2.19'
+
+    def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
+                              status="ACTIVE", progress=100, description=None):
+        server_dict = super(ServersControllerTestV219,
+                            self)._get_server_data_dict(uuid,
+                                                        image_bookmark,
+                                                        flavor_bookmark,
+                                                        status,
+                                                        progress)
+        server_dict['server']['locked'] = False
+        server_dict['server']['description'] = description
+        return server_dict
+
+    @mock.patch.object(compute_api.API, 'get')
+    def _test_get_server_with_description(self, description, get_mock):
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/2"
+        uuid = FAKE_UUID
+        get_mock.side_effect = fakes.fake_compute_get(id=2,
+                                              display_description=description,
+                                              uuid=uuid)
+
+        req = self.req('/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+
+        expected_server = self._get_server_data_dict(uuid,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     status="BUILD",
+                                                     progress=0,
+                                                     description=description)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
+        return res_dict
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def _test_list_server_detail_with_descriptions(self,
+                                           s1_desc,
+                                           s2_desc,
+                                           get_all_mock):
+        get_all_mock.return_value = fake_instance_get_all_with_description(
+                                        context, [s1_desc, s2_desc])
+        req = self.req('/fake/servers/detail')
+        servers_list = self.controller.detail(req)
+        # Check that each returned server has the same 'description' value
+        # and 'id' as they were created.
+        for desc in [s1_desc, s2_desc]:
+            server = next(server for server in servers_list['servers']
+                          if (server['id'] == fakes.get_fake_uuid(desc)))
+            expected = desc
+            self.assertEqual(expected, server['description'])
+
+    def test_get_server_with_description(self):
+        self._test_get_server_with_description('test desc')
+
+    def test_list_server_detail_with_descriptions(self):
+        self._test_list_server_detail_with_descriptions('desc1', 'desc2')
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
@@ -1806,6 +1878,55 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._stop_server, req, 'test_inst', body)
 
 
+class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
+
+    def setUp(self):
+        super(ServersControllerRebuildTestV219, self).setUp()
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.19')
+
+    def _rebuild_server(self, set_desc, desc):
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          display_description=desc)
+        self.stubs.Set(compute_api.API, 'get',
+                       lambda api, *a, **k: fake_get(*a, **k))
+
+        if set_desc:
+            self.body['rebuild']['description'] = desc
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        server = self.controller._action_rebuild(self.req, FAKE_UUID,
+                                                 body=self.body).obj['server']
+        self.assertEqual(server['id'], FAKE_UUID)
+        self.assertEqual(server['description'], desc)
+
+    def test_rebuild_server_with_description(self):
+        self._rebuild_server(True, 'server desc')
+
+    def test_rebuild_server_empty_description(self):
+        self._rebuild_server(True, '')
+
+    def test_rebuild_server_without_description(self):
+        self._rebuild_server(False, '')
+
+    def test_rebuild_server_remove_description(self):
+        self._rebuild_server(True, None)
+
+    def test_rebuild_server_description_too_long(self):
+        self.body['rebuild']['description'] = 'x' * 256
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=self.body)
+
+    def test_rebuild_server_description_invalid(self):
+        # Invalid non-printable control char in the desc.
+        self.body['rebuild']['description'] = "123\0d456"
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=self.body)
+
+
 class ServersControllerUpdateTest(ControllerTest):
 
     def _get_request(self, body=None, options=None):
@@ -2022,6 +2143,68 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
                           self.req, FAKE_UUID, body=self.body)
 
 
+class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
+    def _get_request(self, body=None, options=None):
+        req = super(ServersControllerUpdateTestV219, self)._get_request(
+            body=body,
+            options=options)
+        req.api_version_request = api_version_request.APIVersionRequest('2.19')
+        return req
+
+    def _update_server_desc(self, set_desc, desc=None):
+        body = {'server': {}}
+        if set_desc:
+            body['server']['description'] = desc
+        req = self._get_request()
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        return res_dict
+
+    def test_update_server_description(self):
+        res_dict = self._update_server_desc(True, 'server_desc')
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['description'], 'server_desc')
+
+    def test_update_server_empty_description(self):
+        res_dict = self._update_server_desc(True, '')
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['description'], '')
+
+    def test_update_server_without_description(self):
+        res_dict = self._update_server_desc(False)
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertIsNone(res_dict['server']['description'])
+
+    def test_update_server_remove_description(self):
+        res_dict = self._update_server_desc(True)
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertIsNone(res_dict['server']['description'])
+
+    def test_update_server_all_attributes(self):
+        body = {'server': {
+                  'name': 'server_test',
+                  'description': 'server_desc'
+               }}
+        req = self._get_request(body, {'name': 'server_test'})
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertEqual(res_dict['server']['description'], 'server_desc')
+
+    def test_update_server_description_too_long(self):
+        body = {'server': {'description': 'x' * 256}}
+        req = self._get_request(body, {'name': 'server_test'})
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, FAKE_UUID, body=body)
+
+    def test_update_server_description_invalid(self):
+        # Invalid non-printable control char in the desc.
+        body = {'server': {'description': "123\0d456"}}
+        req = self._get_request(body, {'name': 'server_test'})
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, FAKE_UUID, body=body)
+
+
 class ServerStatusTest(test.TestCase):
 
     def setUp(self):
@@ -2150,6 +2333,7 @@ class ServersControllerCreateTest(test.TestCase):
             instance = fake_instance.fake_db_instance(**{
                 'id': self.instance_cache_num,
                 'display_name': inst['display_name'] or 'test',
+                'display_description': inst['display_description'] or '',
                 'uuid': FAKE_UUID,
                 'instance_type': inst_type,
                 'image_ref': inst.get('image_ref', def_image_ref),
@@ -3112,6 +3296,48 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, body=self.body)
 
 
+class ServersControllerCreateTestV219(ServersControllerCreateTest):
+    def _create_instance_req(self, set_desc, desc=None):
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        if set_desc:
+            self.body['server']['description'] = desc
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.19')
+
+    def test_create_instance_with_description(self):
+        self._create_instance_req(True, 'server_desc')
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_none_description(self):
+        self._create_instance_req(True)
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_empty_description(self):
+        self._create_instance_req(True, '')
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_without_description(self):
+        self._create_instance_req(False)
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_description_too_long(self):
+        self._create_instance_req(True, 'X' * 256)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          self.req, body=self.body)
+
+    def test_create_instance_description_invalid(self):
+        self._create_instance_req(True, "abc\0ddef")
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          self.req, body=self.body)
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'
@@ -3789,7 +4015,7 @@ class FakeExt(extensions.V21APIExtensionBase):
         pass
 
     def fake_schema_extension_point(self, version):
-        if version == '2.1':
+        if version == '2.1' or version == '2.19':
             return self.fake_schema
         elif version == '2.0':
             return {}

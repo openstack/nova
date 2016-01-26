@@ -879,7 +879,7 @@ class API(base.Base):
             'root_gb': instance_type['root_gb'],
             'ephemeral_gb': instance_type['ephemeral_gb'],
             'display_name': display_name,
-            'display_description': display_description or '',
+            'display_description': display_description,
             'user_data': user_data,
             'key_name': key_name,
             'key_data': key_data,
