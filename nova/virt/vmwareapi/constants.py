@@ -57,6 +57,9 @@ ADAPTER_TYPE_IDE = "ide"
 ADAPTER_TYPE_LSILOGICSAS = "lsiLogicsas"
 ADAPTER_TYPE_PARAVIRTUAL = "paraVirtual"
 
+SCSI_ADAPTER_TYPES = [DEFAULT_ADAPTER_TYPE, ADAPTER_TYPE_LSILOGICSAS,
+                      ADAPTER_TYPE_BUSLOGIC, ADAPTER_TYPE_PARAVIRTUAL]
+
 SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
 
 EXTENSION_KEY = 'org.openstack.compute'
@@ -65,6 +68,9 @@ EXTENSION_TYPE_INSTANCE = 'instance'
 # The max number of devices that can be connnected to one adapter
 # One adapter has 16 slots but one reserved for controller
 SCSI_MAX_CONNECT_NUMBER = 15
+
+# The max number of SCSI adaptors that could be created on one instance.
+SCSI_MAX_CONTROLLER_NUMBER = 4
 
 # This list was extracted from the installation iso image for ESX 6.0.
 # It is contained in s.v00, which is gzipped. The list was obtained by
