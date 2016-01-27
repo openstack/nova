@@ -366,7 +366,14 @@ class RequestSpec(base.NovaObject):
 
     @staticmethod
     def _from_db_object(context, spec, db_spec):
-        spec = spec.obj_from_primitive(jsonutils.loads(db_spec['spec']))
+        spec_obj = spec.obj_from_primitive(jsonutils.loads(db_spec['spec']))
+        for key in spec.fields:
+            # Load these from the db model not the serialized object within,
+            # though they should match.
+            if key in ['id', 'instance_uuid']:
+                setattr(spec, key, db_spec[key])
+            else:
+                setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
         spec.obj_reset_changes()
         return spec

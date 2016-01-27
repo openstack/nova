@@ -31,10 +31,9 @@ class RequestSpecTestCase(test.NoDBTestCase):
         args = fake_request_spec.fake_db_spec()
         args.pop('id', None)
         self.instance_uuid = args['instance_uuid']
-        spec = request_spec.RequestSpec._from_db_object(self.context,
-                self.spec_obj,
+        request_spec.RequestSpec._from_db_object(self.context, self.spec_obj,
                 self.spec_obj._create_in_db(self.context, args))
-        return spec
+        return self.spec_obj
 
     def test_get_by_instance_uuid_not_found(self):
         self.assertRaises(exception.RequestSpecNotFound,
