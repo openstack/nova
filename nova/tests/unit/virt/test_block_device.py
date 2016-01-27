@@ -450,14 +450,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             if not fail_volume_attach:
                 self.volume_api.attach(elevated_context, fake_volume['id'],
                                        'fake_uuid', bdm_dict['device_name'],
-                                        mode=access_mode,
-                                        host=connector['host']).AndReturn(
-                                            None)
+                                        mode=access_mode).AndReturn(None)
             else:
                 self.volume_api.attach(elevated_context, fake_volume['id'],
                                        'fake_uuid', bdm_dict['device_name'],
-                                        mode=access_mode,
-                                        host=connector['host']).AndRaise(
+                                        mode=access_mode).AndRaise(
                                             test.TestingException)
                 if driver_attach:
                     self.virt_driver.detach_volume(
