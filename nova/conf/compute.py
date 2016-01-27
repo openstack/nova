@@ -55,6 +55,23 @@ compute_opts = [
                     'that images will be automatically converted to volumes '
                     'and boot instances from volumes - it just means that all '
                     'requests that attempt to create a local disk will fail.'),
+    cfg.MultiStrOpt('compute_available_monitors',
+                    deprecated_for_removal=True,
+                    help='Monitor classes available to the compute which may '
+                         'be specified more than once. This option is '
+                         'DEPRECATED and no longer used. Use setuptools entry '
+                         'points to list available monitor plugins.'),
+    cfg.ListOpt('compute_monitors',
+                default=[],
+                help='A list of monitors that can be used for getting '
+                     'compute metrics. You can use the alias/name from '
+                     'the setuptools entry points for nova.compute.monitors.* '
+                     'namespaces. If no namespace is supplied, the "cpu." '
+                     'namespace is assumed for backwards-compatibility. '
+                     'An example value that would enable both the CPU and '
+                     'NUMA memory bandwidth monitors that used the virt '
+                     'driver variant: '
+                     '["cpu.virt_driver", "numa_mem_bw.virt_driver"]'),
 ]
 
 
