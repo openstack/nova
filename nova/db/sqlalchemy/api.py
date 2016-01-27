@@ -364,7 +364,7 @@ def _sync_security_groups(context, project_id, user_id):
 
 def _sync_server_groups(context, project_id, user_id):
     return dict(server_groups=_instance_group_count_by_project_and_user(
-                context, project_id, user_id, context.session))
+                context, project_id, user_id))
 
 QUOTA_SYNC_FUNCTIONS = {
     '_sync_instances': _sync_instances,
@@ -6154,11 +6154,10 @@ def archive_deleted_rows(max_rows=None):
 
 
 def _instance_group_get_query(context, model_class, id_field=None, id=None,
-                              session=None, read_deleted=None):
+                              read_deleted=None):
     columns_to_join = {models.InstanceGroup: ['_policies', '_members']}
-    query = model_query(context, model_class, session=session,
-                        read_deleted=read_deleted, project_only=True)
-
+    query = model_query(context, model_class, read_deleted=read_deleted,
+                        project_only=True)
     for c in columns_to_join.get(model_class, []):
         query = query.options(joinedload(c))
 
@@ -6168,35 +6167,37 @@ def _instance_group_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
-def instance_group_create(context, values, policies=None,
-                          members=None):
+@main_context_manager.writer
+def instance_group_create(context, values, policies=None, members=None):
     """Create a new group."""
     uuid = values.get('uuid', None)
     if uuid is None:
         uuid = uuidutils.generate_uuid()
         values['uuid'] = uuid
-    session = get_session()
-    with session.begin():
-        try:
-            group = models.InstanceGroup()
-            group.update(values)
-            group.save(session=session)
-        except db_exc.DBDuplicateEntry:
-            raise exception.InstanceGroupIdExists(group_uuid=uuid)
 
-        # We don't want these to be lazy loaded later. We know there is
-        # nothing here since we just created this instance group.
+    try:
+        group = models.InstanceGroup()
+        group.update(values)
+        group.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        raise exception.InstanceGroupIdExists(group_uuid=uuid)
+
+    # We don't want '_policies' and '_members' attributes to be lazy loaded
+    # later. We know there is nothing here since we just created this
+    # instance group.
+    if policies:
+        _instance_group_policies_add(context, group.id, policies)
+    else:
         group._policies = []
+    if members:
+        _instance_group_members_add(context, group.id, members)
+    else:
         group._members = []
-        if policies:
-            _instance_group_policies_add(context, group.id, policies,
-                                         session=session)
-        if members:
-            _instance_group_members_add(context, group.id, members,
-                                        session=session)
+
     return instance_group_get(context, uuid)
 
 
+@main_context_manager.reader
 def instance_group_get(context, group_uuid):
     """Get a specific group by uuid."""
     group = _instance_group_get_query(context,
@@ -6209,92 +6210,82 @@ def instance_group_get(context, group_uuid):
     return group
 
 
+@main_context_manager.reader
 def instance_group_get_by_instance(context, instance_uuid):
-    session = get_session()
-    with session.begin():
-        group_member = model_query(context, models.InstanceGroupMember,
-                                   session=session).\
-                                   filter_by(instance_id=instance_uuid).\
-                                   first()
-        if not group_member:
-            raise exception.InstanceGroupNotFound(group_uuid='')
-        group = _instance_group_get_query(context, models.InstanceGroup,
-                                          models.InstanceGroup.id,
-                                          group_member.group_id,
-                                          session=session).first()
-        if not group:
-            raise exception.InstanceGroupNotFound(
-                    group_uuid=group_member.group_id)
-        return group
+    group_member = model_query(context, models.InstanceGroupMember).\
+                               filter_by(instance_id=instance_uuid).\
+                               first()
+    if not group_member:
+        raise exception.InstanceGroupNotFound(group_uuid='')
+    group = _instance_group_get_query(context, models.InstanceGroup,
+                                      models.InstanceGroup.id,
+                                      group_member.group_id).first()
+    if not group:
+        raise exception.InstanceGroupNotFound(
+                group_uuid=group_member.group_id)
+    return group
 
 
+@main_context_manager.writer
 def instance_group_update(context, group_uuid, values):
     """Update the attributes of a group.
 
     If values contains a metadata key, it updates the aggregate metadata
     too. Similarly for the policies and members.
     """
-    session = get_session()
-    with session.begin():
-        group = model_query(context,
-                            models.InstanceGroup,
-                            session=session).\
-                filter_by(uuid=group_uuid).\
-                first()
-        if not group:
-            raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+    group = model_query(context, models.InstanceGroup).\
+            filter_by(uuid=group_uuid).\
+            first()
+    if not group:
+        raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
 
-        policies = values.get('policies')
-        if policies is not None:
-            _instance_group_policies_add(context,
-                                         group.id,
-                                         values.pop('policies'),
-                                         set_delete=True,
-                                         session=session)
-        members = values.get('members')
-        if members is not None:
-            _instance_group_members_add(context,
-                                        group.id,
-                                        values.pop('members'),
-                                        set_delete=True,
-                                        session=session)
+    policies = values.get('policies')
+    if policies is not None:
+        _instance_group_policies_add(context,
+                                     group.id,
+                                     values.pop('policies'),
+                                     set_delete=True)
+    members = values.get('members')
+    if members is not None:
+        _instance_group_members_add(context,
+                                    group.id,
+                                    values.pop('members'),
+                                    set_delete=True)
 
-        group.update(values)
+    group.update(values)
 
-        if policies:
-            values['policies'] = policies
-        if members:
-            values['members'] = members
+    if policies:
+        values['policies'] = policies
+    if members:
+        values['members'] = members
 
 
+@main_context_manager.writer
 def instance_group_delete(context, group_uuid):
     """Delete a group."""
-    session = get_session()
-    with session.begin():
-        group_id = _instance_group_id(context, group_uuid, session=session)
+    group_id = _instance_group_id(context, group_uuid)
 
-        count = _instance_group_get_query(context,
-                                          models.InstanceGroup,
-                                          models.InstanceGroup.uuid,
-                                          group_uuid,
-                                          session=session).soft_delete()
-        if count == 0:
-            raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+    count = _instance_group_get_query(context,
+                                      models.InstanceGroup,
+                                      models.InstanceGroup.uuid,
+                                      group_uuid).soft_delete()
+    if count == 0:
+        raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
 
-        # Delete policies, metadata and members
-        instance_models = [models.InstanceGroupPolicy,
-                           models.InstanceGroupMember]
-        for model in instance_models:
-            model_query(context, model, session=session).\
-                    filter_by(group_id=group_id).\
-                    soft_delete()
+    # Delete policies, metadata and members
+    instance_models = [models.InstanceGroupPolicy,
+                       models.InstanceGroupMember]
+    for model in instance_models:
+        model_query(context, model).filter_by(group_id=group_id).soft_delete()
 
 
+@main_context_manager.reader
 def instance_group_get_all(context):
     """Get all groups."""
     return _instance_group_get_query(context, models.InstanceGroup).all()
 
 
+@main_context_manager.reader
 def instance_group_get_all_by_project_id(context, project_id):
     """Get all groups."""
     return _instance_group_get_query(context, models.InstanceGroup).\
@@ -6302,31 +6293,27 @@ def instance_group_get_all_by_project_id(context, project_id):
                             all()
 
 
-def _instance_group_count_by_project_and_user(context, project_id,
-                                              user_id, session=None):
-    return model_query(context, models.InstanceGroup, read_deleted="no",
-                       session=session).\
+def _instance_group_count_by_project_and_user(context, project_id, user_id):
+    return model_query(context, models.InstanceGroup, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    filter_by(user_id=user_id).\
                    count()
 
 
 def _instance_group_model_get_query(context, model_class, group_id,
-                                    session=None, read_deleted='no'):
+                                    read_deleted='no'):
     return model_query(context,
                        model_class,
-                       read_deleted=read_deleted,
-                       session=session).\
+                       read_deleted=read_deleted).\
                 filter_by(group_id=group_id)
 
 
-def _instance_group_id(context, group_uuid, session=None):
+def _instance_group_id(context, group_uuid):
     """Returns the group database ID for the group UUID."""
 
     result = model_query(context,
                          models.InstanceGroup,
-                         (models.InstanceGroup.id,),
-                         session=session).\
+                         (models.InstanceGroup.id,)).\
                 filter_by(uuid=group_uuid).\
                 first()
     if not result:
@@ -6334,39 +6321,33 @@ def _instance_group_id(context, group_uuid, session=None):
     return result.id
 
 
-def _instance_group_members_add(context, id, members, set_delete=False,
-                                session=None):
-    if not session:
-        session = get_session()
-
+def _instance_group_members_add(context, id, members, set_delete=False):
     all_members = set(members)
-    with session.begin(subtransactions=True):
-        query = _instance_group_model_get_query(context,
-                                                models.InstanceGroupMember,
-                                                id,
-                                                session=session)
-        if set_delete:
-            query.filter(~models.InstanceGroupMember.instance_id.in_(
-                         all_members)).\
-                  soft_delete(synchronize_session=False)
+    query = _instance_group_model_get_query(context,
+                                            models.InstanceGroupMember, id)
+    if set_delete:
+        query.filter(~models.InstanceGroupMember.instance_id.in_(
+                     all_members)).\
+              soft_delete(synchronize_session=False)
 
-        query = query.filter(
-                models.InstanceGroupMember.instance_id.in_(all_members))
-        already_existing = set()
-        for member_ref in query.all():
-            already_existing.add(member_ref.instance_id)
+    query = query.filter(
+            models.InstanceGroupMember.instance_id.in_(all_members))
+    already_existing = set()
+    for member_ref in query.all():
+        already_existing.add(member_ref.instance_id)
 
-        for instance_id in members:
-            if instance_id in already_existing:
-                continue
-            member_ref = models.InstanceGroupMember()
-            member_ref.update({'instance_id': instance_id,
-                               'group_id': id})
-            session.add(member_ref)
+    for instance_id in members:
+        if instance_id in already_existing:
+            continue
+        member_ref = models.InstanceGroupMember()
+        member_ref.update({'instance_id': instance_id,
+                           'group_id': id})
+        context.session.add(member_ref)
 
-        return members
+    return members
 
 
+@main_context_manager.writer
 def instance_group_members_add(context, group_uuid, members,
                                set_delete=False):
     id = _instance_group_id(context, group_uuid)
@@ -6374,6 +6355,7 @@ def instance_group_members_add(context, group_uuid, members,
                                        set_delete=set_delete)
 
 
+@main_context_manager.writer
 def instance_group_member_delete(context, group_uuid, instance_id):
     id = _instance_group_id(context, group_uuid)
     count = _instance_group_model_get_query(context,
@@ -6386,6 +6368,7 @@ def instance_group_member_delete(context, group_uuid, instance_id):
                                                     instance_id=instance_id)
 
 
+@main_context_manager.reader
 def instance_group_members_get(context, group_uuid):
     id = _instance_group_id(context, group_uuid)
     instances = model_query(context,
@@ -6395,35 +6378,28 @@ def instance_group_members_get(context, group_uuid):
     return [instance[0] for instance in instances]
 
 
-def _instance_group_policies_add(context, id, policies, set_delete=False,
-                                 session=None):
-    if not session:
-        session = get_session()
-
+def _instance_group_policies_add(context, id, policies, set_delete=False):
     allpols = set(policies)
-    with session.begin(subtransactions=True):
-        query = _instance_group_model_get_query(context,
-                                                models.InstanceGroupPolicy,
-                                                id,
-                                                session=session)
-        if set_delete:
-            query.filter(~models.InstanceGroupPolicy.policy.in_(allpols)).\
-                soft_delete(synchronize_session=False)
+    query = _instance_group_model_get_query(context,
+                                            models.InstanceGroupPolicy, id)
+    if set_delete:
+        query.filter(~models.InstanceGroupPolicy.policy.in_(allpols)).\
+            soft_delete(synchronize_session=False)
 
-        query = query.filter(models.InstanceGroupPolicy.policy.in_(allpols))
-        already_existing = set()
-        for policy_ref in query.all():
-            already_existing.add(policy_ref.policy)
+    query = query.filter(models.InstanceGroupPolicy.policy.in_(allpols))
+    already_existing = set()
+    for policy_ref in query.all():
+        already_existing.add(policy_ref.policy)
 
-        for policy in policies:
-            if policy in already_existing:
-                continue
-            policy_ref = models.InstanceGroupPolicy()
-            policy_ref.update({'policy': policy,
-                               'group_id': id})
-            session.add(policy_ref)
+    for policy in policies:
+        if policy in already_existing:
+            continue
+        policy_ref = models.InstanceGroupPolicy()
+        policy_ref.update({'policy': policy,
+                           'group_id': id})
+        context.session.add(policy_ref)
 
-        return policies
+    return policies
 
 
 ####################
