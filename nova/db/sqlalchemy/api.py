@@ -344,8 +344,7 @@ def convert_objects_related_datetimes(values, *datetime_keys):
 
 def _sync_instances(context, project_id, user_id):
     return dict(zip(('instances', 'cores', 'ram'),
-                    _instance_data_get_for_user(
-                context, project_id, user_id, context.session)))
+                    _instance_data_get_for_user(context, project_id, user_id)))
 
 
 def _sync_floating_ips(context, project_id, user_id):
@@ -1333,9 +1332,7 @@ def _fixed_ip_get_by_address(context, address, columns_to_join=None):
             result['instance_uuid'] is not None):
         instance = _instance_get_by_uuid(
             context.elevated(read_deleted='yes'),
-            result['instance_uuid'],
-            context.session
-        )
+            result['instance_uuid'])
         nova.context.authorize_project_context(context,
                                                instance.project_id)
     return result
@@ -1561,13 +1558,12 @@ def _metadata_refs(metadata_dict, meta_class):
     return metadata_refs
 
 
-def _validate_unique_server_name(context, session, name):
+def _validate_unique_server_name(context, name):
     if not CONF.osapi_compute_unique_server_name_scope:
         return
 
     lowername = name.lower()
-    base_query = model_query(context, models.Instance, session=session,
-                             read_deleted='no').\
+    base_query = model_query(context, models.Instance, read_deleted='no').\
             filter(func.lower(models.Instance.hostname) == lowername)
 
     if CONF.osapi_compute_unique_server_name_scope == 'project':
@@ -1613,6 +1609,7 @@ def _check_instance_exists_in_project(context, session, instance_uuid):
 
 
 @require_context
+@main_context_manager.writer
 def instance_create(context, values):
     """Create a new Instance record in the database.
 
@@ -1624,7 +1621,7 @@ def instance_create(context, values):
     # This must be done in a separate transaction, so that this one is not
     # aborted in case a concurrent one succeeds first and the unique constraint
     # for security group names is violated by a concurrent INSERT
-    security_group_ensure_default(context)
+    security_group_ensure_default(context, context.session)
 
     values = values.copy()
     values['metadata'] = _metadata_refs(
@@ -1651,25 +1648,23 @@ def instance_create(context, values):
     instance_ref['extra'].update(values.pop('extra', {}))
     instance_ref.update(values)
 
-    def _get_sec_group_models(session, security_groups):
+    def _get_sec_group_models(security_groups):
         models = []
-        default_group = _security_group_ensure_default(context, session)
+        default_group = _security_group_ensure_default(context,
+                                                       context.session)
         if 'default' in security_groups:
             models.append(default_group)
             # Generate a new list, so we don't modify the original
             security_groups = [x for x in security_groups if x != 'default']
         if security_groups:
             models.extend(_security_group_get_by_names(context,
-                    session, context.project_id, security_groups))
+                    context.session, context.project_id, security_groups))
         return models
 
-    session = get_session()
-    with session.begin():
-        if 'hostname' in values:
-            _validate_unique_server_name(context, session, values['hostname'])
-        instance_ref.security_groups = _get_sec_group_models(session,
-                security_groups)
-        session.add(instance_ref)
+    if 'hostname' in values:
+        _validate_unique_server_name(context, values['hostname'])
+    instance_ref.security_groups = _get_sec_group_models(security_groups)
+    context.session.add(instance_ref)
 
     # create the instance uuid to ec2_id mapping entry for instance
     ec2_instance_create(context, instance_ref['uuid'])
@@ -1677,14 +1672,12 @@ def instance_create(context, values):
     return instance_ref
 
 
-def _instance_data_get_for_user(context, project_id, user_id, session=None):
-    result = model_query(context,
-                         models.Instance, (
-                             func.count(models.Instance.id),
-                             func.sum(models.Instance.vcpus),
-                             func.sum(models.Instance.memory_mb),
-                         ), session=session).\
-                     filter_by(project_id=project_id)
+def _instance_data_get_for_user(context, project_id, user_id):
+    result = model_query(context, models.Instance, (
+        func.count(models.Instance.id),
+        func.sum(models.Instance.vcpus),
+        func.sum(models.Instance.memory_mb))).\
+        filter_by(project_id=project_id)
     if user_id:
         result = result.filter_by(user_id=user_id).first()
     else:
@@ -1695,59 +1688,55 @@ def _instance_data_get_for_user(context, project_id, user_id, session=None):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def instance_destroy(context, instance_uuid, constraint=None):
-    session = get_session()
-    with session.begin():
-        if uuidutils.is_uuid_like(instance_uuid):
-            instance_ref = _instance_get_by_uuid(context, instance_uuid,
-                    session=session)
-        else:
-            raise exception.InvalidUUID(instance_uuid)
+    if uuidutils.is_uuid_like(instance_uuid):
+        instance_ref = _instance_get_by_uuid(context, instance_uuid)
+    else:
+        raise exception.InvalidUUID(instance_uuid)
 
-        query = model_query(context, models.Instance, session=session).\
-                        filter_by(uuid=instance_uuid)
-        if constraint is not None:
-            query = constraint.apply(models.Instance, query)
-        count = query.soft_delete()
-        if count == 0:
-            raise exception.ConstraintNotMet()
-        model_query(context, models.SecurityGroupInstanceAssociation,
-                    session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        model_query(context, models.InstanceInfoCache, session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        model_query(context, models.InstanceMetadata, session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        model_query(context, models.InstanceFault, session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        model_query(context, models.InstanceExtra, session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        model_query(context, models.InstanceSystemMetadata, session=session).\
-                filter_by(instance_uuid=instance_uuid).\
-                soft_delete()
-        # NOTE(snikitin): We can't use model_query here, because there is no
-        # column 'deleted' in 'tags' table.
-        session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()
+    query = model_query(context, models.Instance).\
+                    filter_by(uuid=instance_uuid)
+    if constraint is not None:
+        query = constraint.apply(models.Instance, query)
+    count = query.soft_delete()
+    if count == 0:
+        raise exception.ConstraintNotMet()
+    model_query(context, models.SecurityGroupInstanceAssociation).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    model_query(context, models.InstanceInfoCache).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    model_query(context, models.InstanceMetadata).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    model_query(context, models.InstanceFault).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    model_query(context, models.InstanceExtra).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    model_query(context, models.InstanceSystemMetadata).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
+    # NOTE(snikitin): We can't use model_query here, because there is no
+    # column 'deleted' in 'tags' table.
+    context.session.query(models.Tag).filter_by(
+        resource_id=instance_uuid).delete()
 
     return instance_ref
 
 
 @require_context
-def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
+@main_context_manager.reader.allow_async
+def instance_get_by_uuid(context, uuid, columns_to_join=None):
     return _instance_get_by_uuid(context, uuid,
-            columns_to_join=columns_to_join, use_slave=use_slave)
+                                 columns_to_join=columns_to_join)
 
 
-def _instance_get_by_uuid(context, uuid, session=None,
-                          columns_to_join=None, use_slave=False):
-    result = _build_instance_get(context, session=session,
-                                 columns_to_join=columns_to_join,
-                                 use_slave=use_slave).\
+def _instance_get_by_uuid(context, uuid, columns_to_join=None):
+    result = _build_instance_get(context, columns_to_join=columns_to_join).\
                 filter_by(uuid=uuid).\
                 first()
 
@@ -1758,6 +1747,7 @@ def _instance_get_by_uuid(context, uuid, session=None,
 
 
 @require_context
+@main_context_manager.reader
 def instance_get(context, instance_id, columns_to_join=None):
     try:
         result = _build_instance_get(context, columns_to_join=columns_to_join
@@ -1775,10 +1765,8 @@ def instance_get(context, instance_id, columns_to_join=None):
         raise exception.InvalidID(id=instance_id)
 
 
-def _build_instance_get(context, session=None,
-                        columns_to_join=None, use_slave=False):
-    query = model_query(context, models.Instance, session=session,
-                        project_only=True, use_slave=use_slave).\
+def _build_instance_get(context, columns_to_join=None):
+    query = model_query(context, models.Instance, project_only=True).\
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache'))
     if columns_to_join is None:
@@ -1798,8 +1786,7 @@ def _build_instance_get(context, session=None,
     return query
 
 
-def _instances_fill_metadata(context, instances,
-                             manual_joins=None, use_slave=False):
+def _instances_fill_metadata(context, instances, manual_joins=None):
     """Selectively fill instances with manually-joined metadata. Note that
     instance will be converted to a dict.
 
@@ -1816,14 +1803,12 @@ def _instances_fill_metadata(context, instances,
 
     meta = collections.defaultdict(list)
     if 'metadata' in manual_joins:
-        for row in _instance_metadata_get_multi(context, uuids,
-                                                use_slave=use_slave):
+        for row in _instance_metadata_get_multi(context, uuids):
             meta[row['instance_uuid']].append(row)
 
     sys_meta = collections.defaultdict(list)
     if 'system_metadata' in manual_joins:
-        for row in _instance_system_metadata_get_multi(context, uuids,
-                                                       use_slave=use_slave):
+        for row in _instance_system_metadata_get_multi(context, uuids):
             sys_meta[row['instance_uuid']].append(row)
 
     pcidevs = collections.defaultdict(list)
@@ -1888,9 +1873,9 @@ def instance_get_all(context, columns_to_join=None):
 
 
 @require_context
+@main_context_manager.reader.allow_async
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None, columns_to_join=None,
-                                use_slave=False):
+                                limit=None, marker=None, columns_to_join=None):
     """Return instances matching all filters sorted by the primary key.
 
     See instance_get_all_by_filters_sort for more information.
@@ -1900,15 +1885,15 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     return instance_get_all_by_filters_sort(context, filters, limit=limit,
                                             marker=marker,
                                             columns_to_join=columns_to_join,
-                                            use_slave=use_slave,
                                             sort_keys=[sort_key],
                                             sort_dirs=[sort_dir])
 
 
 @require_context
+@main_context_manager.reader.allow_async
 def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
-                                     columns_to_join=None, use_slave=False,
-                                     sort_keys=None, sort_dirs=None):
+                                     columns_to_join=None, sort_keys=None,
+                                     sort_dirs=None):
     """Return instances that match all filters sorted by the given keys.
     Deleted instances will be returned by default, unless there's a filter that
     says otherwise.
@@ -1969,11 +1954,6 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                                                sort_dirs,
                                                default_dir='desc')
 
-    if CONF.database.slave_connection == '':
-        use_slave = False
-
-    session = get_session(use_slave=use_slave)
-
     if columns_to_join is None:
         columns_to_join_new = ['info_cache', 'security_groups']
         manual_joins = ['metadata', 'system_metadata']
@@ -1981,7 +1961,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         manual_joins, columns_to_join_new = (
             _manual_join_columns(columns_to_join))
 
-    query_prefix = session.query(models.Instance)
+    query_prefix = context.session.query(models.Instance)
     for column in columns_to_join_new:
         if 'extra.' in column:
             query_prefix = query_prefix.options(undefer(column))
@@ -2080,8 +2060,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     if marker is not None:
         try:
             marker = _instance_get_by_uuid(
-                    context.elevated(read_deleted='yes'), marker,
-                    session=session)
+                    context.elevated(read_deleted='yes'), marker)
         except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
     try:
@@ -2323,13 +2302,12 @@ def process_sort_params(sort_keys, sort_dirs,
 
 
 @require_context
+@main_context_manager.reader.allow_async
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         use_slave=False,
                                          columns_to_join=None):
     """Return instances and joins that were active during window."""
-    session = get_session(use_slave=use_slave)
-    query = session.query(models.Instance)
+    query = context.session.query(models.Instance)
 
     if columns_to_join is None:
         columns_to_join_new = ['info_cache', 'security_groups']
@@ -2356,15 +2334,13 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     return _instances_fill_metadata(context, query.all(), manual_joins)
 
 
-def _instance_get_all_query(context, project_only=False,
-                            joins=None, use_slave=False):
+def _instance_get_all_query(context, project_only=False, joins=None):
     if joins is None:
         joins = ['info_cache', 'security_groups']
 
     query = model_query(context,
                         models.Instance,
-                        project_only=project_only,
-                        use_slave=use_slave)
+                        project_only=project_only)
     for column in joins:
         if 'extra.' in column:
             query = query.options(undefer(column))
@@ -2373,31 +2349,28 @@ def _instance_get_all_query(context, project_only=False,
     return query
 
 
-def instance_get_all_by_host(context, host,
-                             columns_to_join=None,
-                             use_slave=False):
+@main_context_manager.reader.allow_async
+def instance_get_all_by_host(context, host, columns_to_join=None):
     return _instances_fill_metadata(context,
-      _instance_get_all_query(context,
-                              use_slave=use_slave).filter_by(host=host).all(),
-                              manual_joins=columns_to_join,
-                              use_slave=use_slave)
+      _instance_get_all_query(context).filter_by(host=host).all(),
+                              manual_joins=columns_to_join)
 
 
-def _instance_get_all_uuids_by_host(context, host, session=None):
+def _instance_get_all_uuids_by_host(context, host):
     """Return a list of the instance uuids on a given host.
 
-    Returns a list of UUIDs, not Instance model objects. This internal version
-    allows you to specify a session object as a kwarg.
+    Returns a list of UUIDs, not Instance model objects.
     """
     uuids = []
     for tuple in model_query(context, models.Instance, (models.Instance.uuid,),
-                             read_deleted="no", session=session).\
+                             read_deleted="no").\
                 filter_by(host=host).\
                 all():
         uuids.append(tuple[0])
     return uuids
 
 
+@main_context_manager.reader
 def instance_get_all_by_host_and_node(context, host, node,
                                       columns_to_join=None):
     if columns_to_join is None:
@@ -2413,12 +2386,14 @@ def instance_get_all_by_host_and_node(context, host, node,
                 filter_by(node=node).all(), manual_joins=manual_joins)
 
 
+@main_context_manager.reader
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return _instances_fill_metadata(context,
         _instance_get_all_query(context).filter_by(host=host).
                    filter(models.Instance.instance_type_id != type_id).all())
 
 
+@main_context_manager.reader
 def instance_get_all_by_grantee_security_groups(context, group_ids):
     if not group_ids:
         return []
@@ -2431,6 +2406,7 @@ def instance_get_all_by_grantee_security_groups(context, group_ids):
 
 
 @require_context
+@main_context_manager.reader
 def instance_floating_address_get_all(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
@@ -2445,6 +2421,7 @@ def instance_floating_address_get_all(context, instance_uuid):
 
 
 # NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
+@main_context_manager.reader
 def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
                      datetime.timedelta(seconds=reboot_window))
@@ -2471,15 +2448,14 @@ def _retry_instance_update():
 
 @require_context
 @_retry_instance_update()
+@main_context_manager.writer
 def instance_update(context, instance_uuid, values, expected=None):
-    session = get_session()
-    with session.begin():
-        return _instance_update(context, session, instance_uuid,
-                                values, expected)
+    return _instance_update(context, instance_uuid, values, expected)
 
 
 @require_context
 @_retry_instance_update()
+@main_context_manager.writer
 def instance_update_and_get_original(context, instance_uuid, values,
                                      columns_to_join=None, expected=None):
     """Set the given properties on an instance and update it. Return
@@ -2498,21 +2474,17 @@ def instance_update_and_get_original(context, instance_uuid, values,
 
     Raises NotFound if instance does not exist.
     """
-    session = get_session()
-    with session.begin():
-        instance_ref = _instance_get_by_uuid(context, instance_uuid,
-                                             columns_to_join=columns_to_join,
-                                             session=session)
-        return (copy.copy(instance_ref),
-                _instance_update(context, session, instance_uuid, values,
-                                 expected, original=instance_ref))
+    instance_ref = _instance_get_by_uuid(context, instance_uuid,
+                                         columns_to_join=columns_to_join)
+    return (copy.copy(instance_ref), _instance_update(
+        context, instance_uuid, values, expected, original=instance_ref))
 
 
 # NOTE(danms): This updates the instance's metadata list in-place and in
 # the database to avoid stale data and refresh issues. It assumes the
 # delete=True behavior of instance_metadata_update(...)
 def _instance_metadata_update_in_place(context, instance, metadata_type, model,
-                                       metadata, session):
+                                       metadata):
     metadata = dict(metadata)
     to_delete = []
     for keyvalue in instance[metadata_type]:
@@ -2528,22 +2500,21 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
     # allow reading deleted regular metadata anywhere.
     if metadata_type == 'system_metadata':
         for condemned in to_delete:
-            session.delete(condemned)
+            context.session.delete(condemned)
             instance[metadata_type].remove(condemned)
     else:
         for condemned in to_delete:
-            condemned.soft_delete(session=session)
+            condemned.soft_delete(context.session)
 
     for key, value in metadata.items():
         newitem = model()
         newitem.update({'key': key, 'value': value,
                         'instance_uuid': instance['uuid']})
-        session.add(newitem)
+        context.session.add(newitem)
         instance[metadata_type].append(newitem)
 
 
-def _instance_update(context, session, instance_uuid, values, expected,
-                     original=None):
+def _instance_update(context, instance_uuid, values, expected, original=None):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
@@ -2577,12 +2548,12 @@ def _instance_update(context, session, instance_uuid, values, expected,
     # osapi_compute_unique_server_name_scope is small, and a robust fix
     # will be complex. This is intentionally left as is for the moment.
     if 'hostname' in values:
-        _validate_unique_server_name(context, session, values['hostname'])
+        _validate_unique_server_name(context, values['hostname'])
 
     compare = models.Instance(uuid=instance_uuid, **expected)
     try:
         instance_ref = model_query(context, models.Instance,
-                                   project_only=True, session=session).\
+                                   project_only=True).\
                        update_on_match(compare, 'uuid', values)
     except update_match.NoRowsMatched:
         # Update failed. Try to find why and raise a specific error.
@@ -2604,8 +2575,7 @@ def _instance_update(context, session, instance_uuid, values, expected,
         # is no point refreshing it. If we have not previously read the
         # instance, we can fetch it here and we will get fresh data.
         if original is None:
-            original = _instance_get_by_uuid(context, instance_uuid,
-                                             session=session)
+            original = _instance_get_by_uuid(context, instance_uuid)
 
         conflicts_expected = {}
         conflicts_actual = {}
@@ -2649,26 +2619,28 @@ def _instance_update(context, session, instance_uuid, values, expected,
         _instance_metadata_update_in_place(context, instance_ref,
                                            'metadata',
                                            models.InstanceMetadata,
-                                           metadata, session)
+                                           metadata)
 
     if system_metadata is not None:
         _instance_metadata_update_in_place(context, instance_ref,
                                            'system_metadata',
                                            models.InstanceSystemMetadata,
-                                           system_metadata, session)
+                                           system_metadata)
 
     return instance_ref
 
 
+@main_context_manager.writer
 def instance_add_security_group(context, instance_uuid, security_group_id):
     """Associate the given security group with the given instance."""
     sec_group_ref = models.SecurityGroupInstanceAssociation()
     sec_group_ref.update({'instance_uuid': instance_uuid,
                           'security_group_id': security_group_id})
-    sec_group_ref.save()
+    sec_group_ref.save(context.session)
 
 
 @require_context
+@main_context_manager.writer
 def instance_remove_security_group(context, instance_uuid, security_group_id):
     """Disassociate the given security group from the given instance."""
     model_query(context, models.SecurityGroupInstanceAssociation).\
@@ -4223,11 +4195,11 @@ def security_group_update(context, security_group_id, values,
     return security_group_ref
 
 
-def security_group_ensure_default(context):
+def security_group_ensure_default(context, session=None):
     """Ensure default security group exists for a project_id."""
 
     try:
-        return _security_group_ensure_default(context)
+        return _security_group_ensure_default(context, session=session)
     except exception.SecurityGroupExists:
         # NOTE(rpodolyaka): a concurrent transaction has succeeded first,
         # suppress the error and proceed
@@ -5041,14 +5013,11 @@ def cell_get_all(context):
 ########################
 # User-provided metadata
 
-def _instance_metadata_get_multi(context, instance_uuids,
-                                 session=None, use_slave=False):
+def _instance_metadata_get_multi(context, instance_uuids):
     if not instance_uuids:
         return []
-    return model_query(context, models.InstanceMetadata,
-                       session=session, use_slave=use_slave).\
-                    filter(
-            models.InstanceMetadata.instance_uuid.in_(instance_uuids))
+    return model_query(context, models.InstanceMetadata).filter(
+        models.InstanceMetadata.instance_uuid.in_(instance_uuids))
 
 
 def _instance_metadata_get_query(context, instance_uuid, session=None):
@@ -5107,15 +5076,12 @@ def instance_metadata_update(context, instance_uuid, metadata, delete):
 # System-owned metadata
 
 
-def _instance_system_metadata_get_multi(context, instance_uuids,
-                                        session=None, use_slave=False):
+def _instance_system_metadata_get_multi(context, instance_uuids):
     if not instance_uuids:
         return []
     return model_query(context, models.InstanceSystemMetadata,
-                       session=session, use_slave=use_slave,
-                       read_deleted='yes').\
-                    filter(
-            models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
+                       read_deleted='yes').filter(
+        models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
 
 
 def _instance_system_metadata_get_query(context, instance_uuid, session=None):

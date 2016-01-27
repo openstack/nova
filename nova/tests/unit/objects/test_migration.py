@@ -133,8 +133,7 @@ class _TestMigrationObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(ctxt, fake_migration['instance_uuid'],
                                 columns_to_join=['info_cache',
-                                                 'security_groups'],
-                                use_slave=False
+                                                 'security_groups']
                                 ).AndReturn(fake_inst)
         mig = migration.Migration._from_db_object(ctxt,
                                                   migration.Migration(),

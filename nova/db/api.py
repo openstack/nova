@@ -656,10 +656,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
     return IMPL.instance_destroy(context, instance_uuid, constraint)
 
 
-def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
+def instance_get_by_uuid(context, uuid, columns_to_join=None):
     """Get an instance or raise if it does not exist."""
-    return IMPL.instance_get_by_uuid(context, uuid,
-                                     columns_to_join, use_slave=use_slave)
+    return IMPL.instance_get_by_uuid(context, uuid, columns_to_join)
 
 
 def instance_get(context, instance_id, columns_to_join=None):
@@ -675,7 +674,7 @@ def instance_get_all(context, columns_to_join=None):
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                 sort_dir='desc', limit=None, marker=None,
-                                columns_to_join=None, use_slave=False):
+                                columns_to_join=None):
     """Get all instances that match all filters."""
     # Note: This function exists for backwards compatibility since calls to
     # the instance layer coming in over RPC may specify the single sort
@@ -684,27 +683,24 @@ def instance_get_all_by_filters(context, filters, sort_key='created_at',
     return IMPL.instance_get_all_by_filters(context, filters, sort_key,
                                             sort_dir, limit=limit,
                                             marker=marker,
-                                            columns_to_join=columns_to_join,
-                                            use_slave=use_slave)
+                                            columns_to_join=columns_to_join)
 
 
 def instance_get_all_by_filters_sort(context, filters, limit=None,
                                      marker=None, columns_to_join=None,
-                                     use_slave=False, sort_keys=None,
-                                     sort_dirs=None):
+                                     sort_keys=None, sort_dirs=None):
     """Get all instances that match all filters sorted by multiple keys.
 
     sort_keys and sort_dirs must be a list of strings.
     """
     return IMPL.instance_get_all_by_filters_sort(
         context, filters, limit=limit, marker=marker,
-        columns_to_join=columns_to_join, use_slave=use_slave,
-        sort_keys=sort_keys, sort_dirs=sort_dirs)
+        columns_to_join=columns_to_join, sort_keys=sort_keys,
+        sort_dirs=sort_dirs)
 
 
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         use_slave=False,
                                          columns_to_join=None):
     """Get instances and joins active during a certain time window.
 
@@ -713,16 +709,12 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     """
     return IMPL.instance_get_active_by_window_joined(context, begin, end,
                                               project_id, host,
-                                              use_slave=use_slave,
                                               columns_to_join=columns_to_join)
 
 
-def instance_get_all_by_host(context, host,
-                             columns_to_join=None, use_slave=False):
+def instance_get_all_by_host(context, host, columns_to_join=None):
     """Get all instances belonging to a host."""
-    return IMPL.instance_get_all_by_host(context, host,
-                                         columns_to_join,
-                                         use_slave=use_slave)
+    return IMPL.instance_get_all_by_host(context, host, columns_to_join)
 
 
 def instance_get_all_by_host_and_node(context, host, node,
