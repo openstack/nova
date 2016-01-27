@@ -1201,11 +1201,7 @@ def is_neutron():
         return _IS_NEUTRON
 
     try:
-        # compatibility with Folsom/Grizzly configs
         cls_name = CONF.network_api_class
-        if cls_name == 'nova.network.quantumv2.api.API':
-            cls_name = 'nova.network.neutronv2.api.API'
-
         from nova.network.neutronv2 import api as neutron_api
         _IS_NEUTRON = issubclass(importutils.import_class(cls_name),
                                  neutron_api.API)
