@@ -460,6 +460,60 @@ class TestOSType(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'acme')
 
 
+class TestResourceClass(TestField):
+    def setUp(self):
+        super(TestResourceClass, self).setUp()
+        self.field = fields.ResourceClassField()
+        self.coerce_good_values = [
+            ('VCPU', 'VCPU'),
+            ('MEMORY_MB', 'MEMORY_MB'),
+            ('DISK_GB', 'DISK_GB'),
+            ('PCI_DEVICE', 'PCI_DEVICE'),
+            ('SRIOV_NET_VF', 'SRIOV_NET_VF'),
+            ('NUMA_SOCKET', 'NUMA_SOCKET'),
+            ('NUMA_CORE', 'NUMA_CORE'),
+            ('NUMA_THREAD', 'NUMA_THREAD'),
+            ('NUMA_MEMORY_MB', 'NUMA_MEMORY_MB'),
+            ('IPV4_ADDRESS', 'IPV4_ADDRESS'),
+        ]
+        self.expected_indexes = [
+            ('VCPU', 0),
+            ('MEMORY_MB', 1),
+            ('DISK_GB', 2),
+            ('PCI_DEVICE', 3),
+            ('SRIOV_NET_VF', 4),
+            ('NUMA_SOCKET', 5),
+            ('NUMA_CORE', 6),
+            ('NUMA_THREAD', 7),
+            ('NUMA_MEMORY_MB', 8),
+            ('IPV4_ADDRESS', 9),
+        ]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'VCPU'", self.field.stringify(
+            fields.ResourceClass.VCPU))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'cow')
+
+    def test_index(self):
+        for name, index in self.expected_indexes:
+            self.assertEqual(index, self.field.index(name))
+
+    def test_index_invalid(self):
+        self.assertRaises(ValueError, self.field.index, 'cow')
+
+    def test_from_index(self):
+        for name, index in self.expected_indexes:
+            self.assertEqual(name, self.field.from_index(index))
+
+    def test_from_index_invalid(self):
+        self.assertRaises(IndexError, self.field.from_index, 999)
+
+
 class TestRNGModel(TestField):
     def setUp(self):
         super(TestRNGModel, self).setUp()
