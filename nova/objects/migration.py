@@ -35,7 +35,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Added migration_type and hidden
-    VERSION = '1.2'
+    # Version 1.3: Added get_by_id_and_instance()
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -87,6 +88,12 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     @base.remotable_classmethod
     def get_by_id(cls, context, migration_id):
         db_migration = db.migration_get(context, migration_id)
+        return cls._from_db_object(context, cls(), db_migration)
+
+    @base.remotable_classmethod
+    def get_by_id_and_instance(cls, context, migration_id, instance_uuid):
+        db_migration = db.migration_get_by_id_and_instance(
+            context, migration_id, instance_uuid)
         return cls._from_db_object(context, cls(), db_migration)
 
     @base.remotable_classmethod

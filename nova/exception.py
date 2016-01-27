@@ -1122,6 +1122,11 @@ class MigrationNotFoundByStatus(MigrationNotFound):
                 "with status %(status)s.")
 
 
+class MigrationNotFoundForInstance(MigrationNotFound):
+    msg_fmt = _("Migration %(migration_id)s not found for instance "
+                "%(instance_id)s")
+
+
 class ConsoleLogOutputException(NovaException):
     msg_fmt = _("Console log output could not be retrieved for instance "
                 "%(instance_id)s. Reason: %(reason)s")
