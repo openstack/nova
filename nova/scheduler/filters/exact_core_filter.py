@@ -44,4 +44,8 @@ class ExactCoreFilter(filters.BaseHostFilter):
                        'usable_vcpus': usable_vcpus})
             return False
 
+        # NOTE(mgoddard): Setting the limit ensures that it is enforced in
+        # compute. This ensures that if multiple instances are scheduled to a
+        # single host, then all after the first will fail in the claim.
+        host_state.limits['vcpu'] = host_state.vcpus_total
         return True

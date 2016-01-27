@@ -25,14 +25,18 @@ class TestExactDiskFilter(test.NoDBTestCase):
     def test_exact_disk_filter_passes(self):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(root_gb=1, ephemeral_gb=1, swap=1024))
-        host = self._get_host({'free_disk_mb': 3 * 1024})
+        disk_gb = 3
+        host = self._get_host({'free_disk_mb': disk_gb * 1024,
+                               'total_usable_disk_gb': disk_gb})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        self.assertEqual(host.limits.get('disk_gb'), disk_gb)
 
     def test_exact_disk_filter_fails(self):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(root_gb=1, ephemeral_gb=1, swap=1024))
         host = self._get_host({'free_disk_mb': 2 * 1024})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+        self.assertNotIn('disk_gb', host.limits)
 
     def _get_host(self, host_attributes):
         return fakes.FakeHostState('host1', 'node1', host_attributes)
