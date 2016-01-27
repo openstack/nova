@@ -120,6 +120,14 @@ def main():
     logging.setup(CONF, "nova")
     global LOG
     LOG = logging.getLogger('nova.dhcpbridge')
+
+    if CONF.action.name == 'old':
+        # NOTE(sdague): old is the most frequent message sent, and
+        # it's a noop. We should just exit immediately otherwise we
+        # can stack up a bunch of requests in dnsmasq. A SIGHUP seems
+        # to dump this list, so actions queued up get lost.
+        return
+
     objects.register_all()
 
     if not CONF.conductor.use_local:
@@ -130,7 +138,7 @@ def main():
         LOG.warning(_LW('Conductor local mode is deprecated and will '
                         'be removed in a subsequent release'))
 
-    if CONF.action.name in ['add', 'del', 'old']:
+    if CONF.action.name in ['add', 'del']:
         LOG.debug("Called '%(action)s' for mac '%(mac)s' with IP '%(ip)s'",
                   {"action": CONF.action.name,
                    "mac": CONF.action.mac,
