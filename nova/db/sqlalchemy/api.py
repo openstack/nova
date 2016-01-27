@@ -350,7 +350,7 @@ def _sync_instances(context, project_id, user_id):
 
 def _sync_floating_ips(context, project_id, user_id):
     return dict(floating_ips=_floating_ip_count_by_project(
-                context, project_id, context.session))
+                context, project_id))
 
 
 def _sync_fixed_ips(context, project_id, user_id):
@@ -742,6 +742,7 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get(context, id):
     try:
         result = model_query(context, models.FloatingIp, project_only=True).\
@@ -759,6 +760,7 @@ def floating_ip_get(context, id):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get_pools(context):
     pools = []
     for result in model_query(context, models.FloatingIp,
@@ -770,54 +772,50 @@ def floating_ip_get_pools(context):
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
+@main_context_manager.writer
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
     nova.context.authorize_project_context(context, project_id)
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = model_query(context, models.FloatingIp,
-                                      session=session, read_deleted="no").\
-                                  filter_by(fixed_ip_id=None).\
-                                  filter_by(project_id=None).\
-                                  filter_by(pool=pool).\
-                                  first()
+    floating_ip_ref = model_query(context, models.FloatingIp,
+                                  read_deleted="no").\
+        filter_by(fixed_ip_id=None).\
+        filter_by(project_id=None).\
+        filter_by(pool=pool).\
+        first()
 
-        if not floating_ip_ref:
-            raise exception.NoMoreFloatingIps()
+    if not floating_ip_ref:
+        raise exception.NoMoreFloatingIps()
 
-        params = {'project_id': project_id, 'auto_assigned': auto_assigned}
+    params = {'project_id': project_id, 'auto_assigned': auto_assigned}
 
-        rows_update = model_query(context, models.FloatingIp,
-                                      session=session, read_deleted="no").\
-            filter_by(id=floating_ip_ref['id']).\
-            filter_by(fixed_ip_id=None).\
-            filter_by(project_id=None).\
-            filter_by(pool=pool).\
-            update(params, synchronize_session='evaluate')
+    rows_update = model_query(context, models.FloatingIp, read_deleted="no").\
+        filter_by(id=floating_ip_ref['id']).\
+        filter_by(fixed_ip_id=None).\
+        filter_by(project_id=None).\
+        filter_by(pool=pool).\
+        update(params, synchronize_session='evaluate')
 
-        if not rows_update:
-            LOG.debug('The row was updated in a concurrent transaction, '
-                      'we will fetch another one')
-            raise db_exc.RetryRequest(exception.FloatingIpAllocateFailed())
+    if not rows_update:
+        LOG.debug('The row was updated in a concurrent transaction, '
+                  'we will fetch another one')
+        raise db_exc.RetryRequest(exception.FloatingIpAllocateFailed())
 
     return floating_ip_ref['address']
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_bulk_create(context, ips, want_result=True):
-    session = get_session()
-    with session.begin():
-        try:
-            tab = models.FloatingIp().__table__
-            session.execute(tab.insert(), ips)
-        except db_exc.DBDuplicateEntry as e:
-            raise exception.FloatingIpExists(address=e.value)
+    try:
+        tab = models.FloatingIp().__table__
+        context.session.execute(tab.insert(), ips)
+    except db_exc.DBDuplicateEntry as e:
+        raise exception.FloatingIpExists(address=e.value)
 
-        if want_result:
-            return model_query(
-                context, models.FloatingIp, session=session).filter(
-                models.FloatingIp.address.in_(
-                    [ip['address'] for ip in ips])).all()
+    if want_result:
+        return model_query(context, models.FloatingIp).filter(
+            models.FloatingIp.address.in_(
+                [ip['address'] for ip in ips])).all()
 
 
 def _ip_range_splitter(ips, block_size=256):
@@ -838,24 +836,23 @@ def _ip_range_splitter(ips, block_size=256):
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_bulk_destroy(context, ips):
-    session = get_session()
-    with session.begin():
-        project_id_to_quota_count = collections.defaultdict(int)
-        for ip_block in _ip_range_splitter(ips):
-            # Find any floating IPs that were not auto_assigned and
-            # thus need quota released.
-            query = model_query(context, models.FloatingIp, session=session).\
-                filter(models.FloatingIp.address.in_(ip_block)).\
-                filter_by(auto_assigned=False)
-            for row in query.all():
-                # The count is negative since we release quota by
-                # reserving negative quota.
-                project_id_to_quota_count[row['project_id']] -= 1
-            # Delete the floating IPs.
-            model_query(context, models.FloatingIp, session=session).\
-                filter(models.FloatingIp.address.in_(ip_block)).\
-                soft_delete(synchronize_session='fetch')
+    project_id_to_quota_count = collections.defaultdict(int)
+    for ip_block in _ip_range_splitter(ips):
+        # Find any floating IPs that were not auto_assigned and
+        # thus need quota released.
+        query = model_query(context, models.FloatingIp).\
+            filter(models.FloatingIp.address.in_(ip_block)).\
+            filter_by(auto_assigned=False)
+        for row in query.all():
+            # The count is negative since we release quota by
+            # reserving negative quota.
+            project_id_to_quota_count[row['project_id']] -= 1
+        # Delete the floating IPs.
+        model_query(context, models.FloatingIp).\
+            filter(models.FloatingIp.address.in_(ip_block)).\
+            soft_delete(synchronize_session='fetch')
 
     # Delete the quotas, if needed.
     # Quota update happens in a separate transaction, so previous must have
@@ -873,21 +870,21 @@ def floating_ip_bulk_destroy(context, ips):
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
     try:
-        floating_ip_ref.save()
+        floating_ip_ref.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.FloatingIpExists(address=values['address'])
     return floating_ip_ref
 
 
-def _floating_ip_count_by_project(context, project_id, session=None):
+def _floating_ip_count_by_project(context, project_id):
     nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why leave auto_assigned floating IPs out?
-    return model_query(context, models.FloatingIp, read_deleted="no",
-                       session=session).\
+    return model_query(context, models.FloatingIp, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    filter_by(auto_assigned=False).\
                    count()
@@ -895,33 +892,33 @@ def _floating_ip_count_by_project(context, project_id, session=None):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
-    session = get_session()
-    with session.begin():
-        fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
-                         filter_by(address=fixed_address).\
-                         options(joinedload('network')).\
-                         first()
-        if not fixed_ip_ref:
-            raise exception.FixedIpNotFoundForAddress(address=fixed_address)
-        rows = model_query(context, models.FloatingIp, session=session).\
-                    filter_by(address=floating_address).\
-                    filter(models.FloatingIp.project_id ==
-                           context.project_id).\
-                    filter(or_(models.FloatingIp.fixed_ip_id ==
-                               fixed_ip_ref['id'],
-                               models.FloatingIp.fixed_ip_id.is_(None))).\
-                    update({'fixed_ip_id': fixed_ip_ref['id'], 'host': host})
+    fixed_ip_ref = model_query(context, models.FixedIp).\
+                     filter_by(address=fixed_address).\
+                     options(joinedload('network')).\
+                     first()
+    if not fixed_ip_ref:
+        raise exception.FixedIpNotFoundForAddress(address=fixed_address)
+    rows = model_query(context, models.FloatingIp).\
+                filter_by(address=floating_address).\
+                filter(models.FloatingIp.project_id ==
+                       context.project_id).\
+                filter(or_(models.FloatingIp.fixed_ip_id ==
+                           fixed_ip_ref['id'],
+                           models.FloatingIp.fixed_ip_id.is_(None))).\
+                update({'fixed_ip_id': fixed_ip_ref['id'], 'host': host})
 
-        if not rows:
-            raise exception.FloatingIpAssociateFailed(address=floating_address)
+    if not rows:
+        raise exception.FloatingIpAssociateFailed(address=floating_address)
 
-        return fixed_ip_ref
+    return fixed_ip_ref
 
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def floating_ip_deallocate(context, address):
     return model_query(context, models.FloatingIp).\
         filter_by(address=address).\
@@ -934,6 +931,7 @@ def floating_ip_deallocate(context, address):
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_destroy(context, address):
     model_query(context, models.FloatingIp).\
             filter_by(address=address).\
@@ -941,32 +939,30 @@ def floating_ip_destroy(context, address):
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_disassociate(context, address):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = model_query(context,
-                                      models.FloatingIp,
-                                      session=session).\
-                            filter_by(address=address).\
-                            first()
-        if not floating_ip_ref:
-            raise exception.FloatingIpNotFoundForAddress(address=address)
+    floating_ip_ref = model_query(context,
+                                  models.FloatingIp).\
+                        filter_by(address=address).\
+                        first()
+    if not floating_ip_ref:
+        raise exception.FloatingIpNotFoundForAddress(address=address)
 
-        fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
-                            filter_by(id=floating_ip_ref['fixed_ip_id']).\
-                            options(joinedload('network')).\
-                            first()
-        floating_ip_ref.fixed_ip_id = None
-        floating_ip_ref.host = None
+    fixed_ip_ref = model_query(context, models.FixedIp).\
+        filter_by(id=floating_ip_ref['fixed_ip_id']).\
+        options(joinedload('network')).\
+        first()
+    floating_ip_ref.fixed_ip_id = None
+    floating_ip_ref.host = None
 
     return fixed_ip_ref
 
 
-def _floating_ip_get_all(context, session=None):
-    return model_query(context, models.FloatingIp, read_deleted="no",
-                       session=session)
+def _floating_ip_get_all(context):
+    return model_query(context, models.FloatingIp, read_deleted="no")
 
 
+@main_context_manager.reader
 def floating_ip_get_all(context):
     floating_ip_refs = _floating_ip_get_all(context).\
                        options(joinedload('fixed_ip')).\
@@ -976,6 +972,7 @@ def floating_ip_get_all(context):
     return floating_ip_refs
 
 
+@main_context_manager.reader
 def floating_ip_get_all_by_host(context, host):
     floating_ip_refs = _floating_ip_get_all(context).\
                        filter_by(host=host).\
@@ -987,6 +984,7 @@ def floating_ip_get_all_by_host(context, host):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get_all_by_project(context, project_id):
     nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
@@ -998,17 +996,18 @@ def floating_ip_get_all_by_project(context, project_id):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get_by_address(context, address):
     return _floating_ip_get_by_address(context, address)
 
 
-def _floating_ip_get_by_address(context, address, session=None):
+def _floating_ip_get_by_address(context, address):
 
     # if address string is empty explicitly set it to None
     if not address:
         address = None
     try:
-        result = model_query(context, models.FloatingIp, session=session).\
+        result = model_query(context, models.FloatingIp).\
                     filter_by(address=address).\
                     options(joinedload_all('fixed_ip.instance')).\
                     first()
@@ -1029,6 +1028,7 @@ def _floating_ip_get_by_address(context, address, session=None):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get_by_fixed_address(context, fixed_address):
     return model_query(context, models.FloatingIp).\
                        outerjoin(models.FixedIp,
@@ -1039,6 +1039,7 @@ def floating_ip_get_by_fixed_address(context, fixed_address):
 
 
 @require_context
+@main_context_manager.reader
 def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
     return model_query(context, models.FloatingIp).\
                 filter_by(fixed_ip_id=fixed_ip_id).\
@@ -1046,16 +1047,15 @@ def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
 
 
 @require_context
+@main_context_manager.writer
 def floating_ip_update(context, address, values):
-    session = get_session()
-    with session.begin():
-        float_ip_ref = _floating_ip_get_by_address(context, address, session)
-        float_ip_ref.update(values)
-        try:
-            float_ip_ref.save(session=session)
-        except db_exc.DBDuplicateEntry:
-            raise exception.FloatingIpExists(address=values['address'])
-        return float_ip_ref
+    float_ip_ref = _floating_ip_get_by_address(context, address)
+    float_ip_ref.update(values)
+    try:
+        float_ip_ref.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        raise exception.FloatingIpExists(address=values['address'])
+    return float_ip_ref
 
 
 ###################
