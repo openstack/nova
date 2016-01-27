@@ -79,10 +79,6 @@ nova.tests.unit.compute.test_compute_cells.CellsComputeAPITestCase
 nova.tests.unit.compute.test_host_api.ComputeHostAPICellsTestCase
 nova.tests.unit.compute.test_resources.BaseTestCase
 nova.tests.unit.compute.test_tracker.TestMoveClaim
-nova.tests.unit.conductor.test_conductor.ConductorLocalComputeTaskAPITestCase
-nova.tests.unit.conductor.test_conductor.ConductorTaskAPITestCase
-nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase
-nova.tests.unit.conductor.test_conductor.ConductorTaskTestCase
 nova.tests.unit.console.test_websocketproxy.NovaProxyRequestHandlerBaseTestCase
 nova.tests.unit.consoleauth.test_consoleauth.ControlauthMemcacheEncodingTestCase
 nova.tests.unit.db.test_migrations.TestNovaMigrationsMySQL
