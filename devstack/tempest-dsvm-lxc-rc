@@ -30,6 +30,20 @@
 
 r="^(?!.*"
 r="$r(?:.*\[.*\bslow\b.*\])"
+
+# NOTE(thomasem): Skipping these tests due to Ubuntu bug:
+# https://bugs.launchpad.net/ubuntu/+source/libvirt/+bug/1536280.
+# These exclusions should be able to be removed once that bug is addressed.
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_personality\.ServerPersonalityTestJSON\.test_rebuild_server_with_personality)"
+r="$r|(?:tempest\.api\.compute\.admin\.test_servers\.ServersAdminTestJSON\.test_rebuild_server_in_error_state)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_list_server_filters\.ListServerFiltersTestJSON\.test_list_servers_filter_by_shutoff_status)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_lock_unlock_server)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_rebuild_server)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_rebuild_server_in_stop_state)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_stop_start_server)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_get_console_output_server_id_in_shutoff_status)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_servers\.ServersTestJSON\.test_update_server_name_in_stop_state)"
+r="$r|(?:tempest\.api\.compute\.servers\.test_disk_config\.ServerDiskConfigTestJSON*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_delete_server\.DeleteServersTestJSON*)"
 r="$r).*$"
 
