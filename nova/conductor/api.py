@@ -127,7 +127,8 @@ class LocalComputeTaskAPI(object):
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
-                         preserve_ephemeral=False, host=None, kwargs=None):
+                         preserve_ephemeral=False, host=None,
+                         request_spec=None, kwargs=None):
         # kwargs unused but required for cell compatibility.
         utils.spawn_n(self._manager.rebuild_instance, context,
                 instance=instance,
@@ -140,7 +141,8 @@ class LocalComputeTaskAPI(object):
                 recreate=recreate,
                 on_shared_storage=on_shared_storage,
                 host=host,
-                preserve_ephemeral=preserve_ephemeral)
+                preserve_ephemeral=preserve_ephemeral,
+                request_spec=request_spec)
 
 
 class API(LocalAPI):
@@ -234,7 +236,8 @@ class ComputeTaskAPI(object):
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
-                         preserve_ephemeral=False, host=None, kwargs=None):
+                         preserve_ephemeral=False, host=None,
+                         request_spec=None, kwargs=None):
         # kwargs unused but required for cell compatibility
         self.conductor_compute_rpcapi.rebuild_instance(context,
                 instance=instance,
@@ -247,4 +250,5 @@ class ComputeTaskAPI(object):
                 recreate=recreate,
                 on_shared_storage=on_shared_storage,
                 preserve_ephemeral=preserve_ephemeral,
-                host=host)
+                host=host,
+                request_spec=request_spec)

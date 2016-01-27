@@ -144,7 +144,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.11')
+    target = messaging.Target(namespace='compute_task', version='1.12')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -505,18 +505,32 @@ class ComputeTaskManager(base.Base):
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
-                         preserve_ephemeral=False, host=None):
+                         preserve_ephemeral=False, host=None,
+                         request_spec=None):
 
         with compute_utils.EventReporter(context, 'rebuild_server',
                                           instance.uuid):
             node = limits = None
             if not host:
-                # NOTE(lcostantino): Retrieve scheduler filters for the
-                # instance when the feature is available
-                filter_properties = {'ignore_hosts': [instance.host]}
-                try:
+                if not request_spec:
+                    # NOTE(sbauza): We were unable to find an original
+                    # RequestSpec object - probably because the instance is old
+                    # We need to mock that the old way
+                    filter_properties = {'ignore_hosts': [instance.host]}
                     request_spec = scheduler_utils.build_request_spec(
                             context, image_ref, [instance])
+                else:
+                    # NOTE(sbauza): Augment the RequestSpec object by excluding
+                    # the source host for avoiding the scheduler to pick it
+                    request_spec.ignore_hosts = request_spec.ignore_hosts or []
+                    request_spec.ignore_hosts.append(instance.host)
+                    # TODO(sbauza): Provide directly the RequestSpec object
+                    # when _schedule_instances() and _set_vm_state_and_notify()
+                    # accept it
+                    filter_properties = request_spec.\
+                        to_legacy_filter_properties_dict()
+                    request_spec = request_spec.to_legacy_request_spec_dict()
+                try:
                     hosts = self._schedule_instances(
                             context, request_spec, filter_properties)
                     host_dict = hosts.pop(0)
