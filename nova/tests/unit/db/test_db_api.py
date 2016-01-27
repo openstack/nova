@@ -4203,6 +4203,27 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
         self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
 
+    def test_fixed_ip_associate_pool_order(self):
+        """Test that fixed_ip always uses oldest fixed_ip.
+
+        We should always be using the fixed ip with the oldest
+        updated_at.
+        """
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+        self.addCleanup(timeutils.clear_time_override)
+        start = timeutils.utcnow()
+        for i in range(1, 4):
+            now = start - datetime.timedelta(hours=i)
+            timeutils.set_time_override(now)
+            address = self.create_fixed_ip(
+                updated_at=now,
+                address='10.1.0.%d' % i,
+                network_id=network['id'])
+        db.fixed_ip_associate_pool(self.ctxt, network['id'], instance_uuid)
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
+        self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
+
     def test_fixed_ip_associate_pool_succeeds_fip_ref_network_id_is_none(self):
         instance_uuid = self._create_instance()
         network = db.network_create_safe(self.ctxt, {})

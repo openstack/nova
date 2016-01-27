@@ -1191,6 +1191,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                                filter_by(reserved=False).\
                                filter_by(instance_uuid=None).\
                                filter_by(host=None).\
+                               order_by(asc(models.FixedIp.updated_at)).\
                                first()
 
         if not fixed_ip_ref:
