@@ -394,13 +394,8 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_attach_volume_serial(self):
         fake_bdm = objects.BlockDeviceMapping(context=self.context,
                                               **self.fake_volume)
-
-        with test.nested(
-            mock.patch.object(cinder.API, 'get_volume_encryption_metadata'),
-            mock.patch.object(self.compute.driver, 'get_volume_connector')
-        ) as (mock_encryptor, mock_connector):
-            mock_encryptor.return_value = {}
-            mock_connector.return_value = {'host': 'fake_host'}
+        with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
+                                return_value={})):
             instance = self._create_fake_instance_obj()
             self.compute.attach_volume(self.context, instance, bdm=fake_bdm)
             self.assertEqual(self.cinfo.get('serial'), uuids.volume_id)
@@ -525,12 +520,9 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(1, attempts)
 
     def test_boot_volume_serial(self):
-
-        with test.nested(
-            mock.patch.object(objects.BlockDeviceMapping, 'save'),
-            mock.patch.object(self.compute.driver, 'get_volume_connector')
-        ) as (mock_save, mock_connector):
-            mock_connector.return_value = {'host': 'fake_host'}
+        with (
+            mock.patch.object(objects.BlockDeviceMapping, 'save')
+        ) as mock_save:
             block_device_mapping = [
             block_device.BlockDeviceDict({
                 'id': 1,
@@ -785,10 +777,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
                        fake_get_volume_encryption_metadata)
 
-        with (mock.patch.object(self.compute.driver, 'get_volume_connector')
-        ) as mock_connector:
-            mock_connector.return_value = {'host': 'fake_host'}
-            self.compute.attach_volume(self.context, instance, bdm)
+        self.compute.attach_volume(self.context, instance, bdm)
 
         # Poll volume usage & then detach the volume. This will update the
         # total fields in the volume usage cache.
@@ -4675,14 +4664,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
 
         def fake_attach(self, context, volume_id, instance_uuid, device_name,
-                        mode='rw', host='fake_host'):
+                        mode='rw'):
             volume['instance_uuid'] = instance_uuid
             volume['device_name'] = device_name
         self.stubs.Set(cinder.API, "attach", fake_attach)
 
         # stub out virt driver attach
         def fake_get_volume_connector(*args, **kwargs):
-            return {'host': 'fake_host'}
+            return {}
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        fake_get_volume_connector)
 

@@ -300,10 +300,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             # detach.
             self.save()
             try:
-                host = connector.get('host')
                 volume_api.attach(context, volume_id, instance.uuid,
-                                  self['mount_device'], mode=mode,
-                                  host=host)
+                                  self['mount_device'], mode=mode)
             except Exception:
                 with excutils.save_and_reraise_exception():
                     if do_driver_attach:
