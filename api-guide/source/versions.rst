@@ -101,13 +101,7 @@ You can also obtain additional information about a specific version by
 performing a **GET** on the base version URL (such as,
 ``https://servers.api.openstack.org/v2.1/``). Version request URLs must
 always end with a trailing slash (``/``). If you omit the slash, the
-server might respond with a 302 redirection request. Format extensions
-can be placed after the slash (such as,
-``https://servers.api.openstack.org/v2.1/.json``).
-
-.. note:: This special case does not hold true for other API requests. In
-   general, requests such as ``/servers.json`` and ``/servers/.json`` are
-   handled equivalently.
+server might respond with a 302 redirection request.
 
 For examples of the list versions and get version details requests and
 responses, see `*API versions*
@@ -117,4 +111,3 @@ The detailed version response contains pointers to both a human-readable
 and a machine-processable description of the API service. The
 machine-processable description is written in the Web Application
 Description Language (WADL).
-
