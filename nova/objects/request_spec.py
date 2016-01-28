@@ -184,6 +184,13 @@ class RequestSpec(base.NovaObject):
     def from_primitives(cls, context, request_spec, filter_properties):
         """Returns a new RequestSpec object by hydrating it from legacy dicts.
 
+        Deprecated.  A RequestSpec object is created early in the boot process
+        using the from_components method.  That object will either be passed to
+        places that require it, or it can be looked up with
+        get_by_instance_uuid.  This method can be removed when there are no
+        longer any callers.  Because the method is not remotable it is not tied
+        to object versioning.
+
         That helper is not intended to leave the legacy dicts kept in the nova
         codebase, but is rather just for giving a temporary solution for
         populating the Spec object until we get rid of scheduler_utils'
@@ -317,6 +324,45 @@ class RequestSpec(base.NovaObject):
             filt_props['scheduler_hints'] = {hint: self.get_scheduler_hint(
                 hint) for hint in self.scheduler_hints}
         return filt_props
+
+    @classmethod
+    def from_components(cls, context, instance_uuid, image, flavor,
+            numa_topology, pci_requests, filter_properties, instance_group,
+            availability_zone):
+        """Returns a new RequestSpec object hydrated by various components.
+
+        This helper is useful in creating the RequestSpec from the various
+        objects that are assembled early in the boot process.  This method
+        creates a complete RequestSpec object with all properties set or
+        intentionally left blank.
+
+        :param context: a context object
+        :param instance_uuid: the uuid of the instance to schedule
+        :param image: a dict of properties for an image or volume
+        :param flavor: a flavor NovaObject
+        :param numa_topology: InstanceNUMATopology or None
+        :param pci_requests: InstancePCIRequests
+        :param filter_properties: a dict of properties for scheduling
+        :param instance_group: None or an instance group NovaObject
+        :param availability_zone: an availability_zone string
+        """
+        spec_obj = cls(context)
+        spec_obj.num_instances = 1
+        spec_obj.instance_uuid = instance_uuid
+        spec_obj.instance_group = instance_group
+        spec_obj.project_id = context.project_id
+        spec_obj._image_meta_from_image(image)
+        spec_obj._from_flavor(flavor)
+        spec_obj._from_instance_pci_requests(pci_requests)
+        spec_obj._from_instance_numa_topology(numa_topology)
+        spec_obj.ignore_hosts = filter_properties.get('ignore_hosts')
+        spec_obj.force_hosts = filter_properties.get('force_hosts')
+        spec_obj.force_nodes = filter_properties.get('force_nodes')
+        spec_obj._from_retry(filter_properties.get('retry', {}))
+        spec_obj._from_limits(filter_properties.get('limits', {}))
+        spec_obj._from_hints(filter_properties.get('scheduler_hints', {}))
+        spec_obj.availability_zone = availability_zone
+        return spec_obj
 
     @staticmethod
     def _from_db_object(context, spec, db_spec):

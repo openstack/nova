@@ -1,0 +1,19 @@
+---
+upgrade:
+  - |
+    The commit with change-id Idd4bbbe8eea68b9e538fa1567efd304e9115a02a
+    requires that the nova_api database is setup and Nova is configured to use
+    it.  Instructions on doing that are provided below.
+
+    Nova now requires that two databases are available and configured.  The
+    existing nova database needs no changes, but a new nova_api database needs
+    to be setup.  It is configured and managed very similarly to the nova
+    database.  A new connection string configuration option is available in the
+    api_database group.  An example::
+
+        [api_database]
+        connection = mysql+pymysql://user:secret@127.0.0.1/nova_api?charset=utf8
+
+    And a new nova-manage command has been added to manage db migrations for
+    this database.  "nova-manage api_db sync" and "nova-manage api_db version"
+    are available and function like the parallel "nova-manage db ..." version.

@@ -255,6 +255,12 @@ class BaseTestCase(test.TestCase):
                        fake_allocate_for_instance)
         self.compute_api = compute.API()
 
+        def fake_spec_create(*args, **kwargs):
+            pass
+
+        # Tests in this module do not depend on this running.
+        self.stub_out('nova.objects.RequestSpec.create', fake_spec_create)
+
         # Just to make long lines short
         self.rt = self.compute._get_resource_tracker(NODENAME)
 
@@ -7753,7 +7759,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_populate_instance_for_create(self):
         base_options = {'image_ref': self.fake_image['id'],
-                        'system_metadata': {'fake': 'value'}}
+                        'system_metadata': {'fake': 'value'},
+                        'uuid': uuids.instance}
         instance = objects.Instance()
         instance.update(base_options)
         inst_type = flavors.get_flavor_by_name("m1.tiny")

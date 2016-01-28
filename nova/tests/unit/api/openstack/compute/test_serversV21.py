@@ -2392,6 +2392,7 @@ class ServersControllerCreateTest(test.TestCase):
                 server_update_and_get_original)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
+        self.stub_out('nova.objects.RequestSpec.create', fake_method)
         self.body = {
             'server': {
                 'name': 'server_test',

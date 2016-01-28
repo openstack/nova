@@ -906,7 +906,7 @@ class API(base.Base):
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
-            instance_group, check_server_group_quota):
+            instance_group, check_server_group_quota, filter_properties):
         # Reserve quotas
         num_instances, quotas = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -914,7 +914,18 @@ class API(base.Base):
         instances = []
         try:
             for i in range(num_instances):
+                # Create a uuid for the instance so we can store the
+                # RequestSpec before the instance is created.
+                instance_uuid = str(uuid.uuid4())
+                # Store the RequestSpec that will be used for scheduling.
+                req_spec = objects.RequestSpec.from_components(context,
+                        instance_uuid, boot_meta, instance_type,
+                        base_options['numa_topology'],
+                        base_options['pci_requests'], filter_properties,
+                        instance_group, base_options['availability_zone'])
+                req_spec.create()
                 instance = objects.Instance(context=context)
+                instance.uuid = instance_uuid
                 instance.update(base_options)
                 instance = self.create_db_entry_for_new_instance(
                         context, instance_type, boot_meta, instance,
@@ -1096,7 +1107,7 @@ class API(base.Base):
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
                 block_device_mapping, shutdown_terminate,
-                instance_group, check_server_group_quota)
+                instance_group, check_server_group_quota, filter_properties)
 
         for instance in instances:
             self._record_action_start(context, instance,
@@ -1307,11 +1318,6 @@ class API(base.Base):
     def _populate_instance_for_create(self, context, instance, image,
                                       index, security_groups, instance_type):
         """Build the beginning of a new instance."""
-
-        if not instance.obj_attr_is_set('uuid'):
-            # Generate the instance_uuid here so we can use it
-            # for additional setup before creating the DB entry.
-            instance.uuid = str(uuid.uuid4())
 
         instance.launch_index = index
         instance.vm_state = vm_states.BUILDING
