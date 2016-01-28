@@ -134,3 +134,17 @@ class NotificationBase(base.NovaObject):
                                 (self.publisher.binary,
                                  self.publisher.host),
                    payload=self.payload.obj_to_primitive())
+
+
+def notification_sample(sample):
+    """Class decorator to attach the notification sample information
+    to the notification object for documentation generation purposes.
+
+    :param sample: the path of the sample json file relative to the
+                   doc/notification_samples/ directory in the nova repository
+                   root.
+    """
+    def wrap(cls):
+        cls.sample = sample
+        return cls
+    return wrap

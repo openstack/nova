@@ -98,6 +98,10 @@ notification payload:
 * a major version bump indicates a backward incompatible change of the payload
   which can mean removed fields, type change, etc in the payload.
 
+There is a Nova configuration parameter `notification_format` that can be used
+to specify which notifications are emitted by Nova. The possible values are
+`unversioned`, `versioned`, `both` and the default value is `both`.
+
 How to add a new versioned notification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -115,6 +119,7 @@ in [3]_.
 The following code example defines the necessary model classes for a new
 notification `myobject.update`::
 
+    @notification.notification_sample('myobject-update.json')
     @base.NovaObjectRegistry.register
     class MyObjectNotification(notification.NotificationBase):
         # Version 1.0: Initial version
@@ -172,6 +177,7 @@ between the fields of existing objects and the fields of the new payload
 object. For example the service.status notification reuses the existing
 `nova.objects.service.Service` object when defines the notification's payload::
 
+    @notification.notification_sample('service-update.json')
     @base.NovaObjectRegistry.register
     class ServiceStatusNotification(notification.NotificationBase):
         # Version 1.0: Initial version
@@ -180,7 +186,6 @@ object. For example the service.status notification reuses the existing
         fields = {
             'payload': fields.ObjectField('ServiceStatusPayload')
         }
-
 
     @base.NovaObjectRegistry.register
     class ServiceStatusPayload(notification.NotificationPayloadBase):
@@ -254,9 +259,18 @@ with a `host` and a `binary` string parameter or it can be generated from a
 `Service` object by calling `NotificationPublisher.from_service_obj` function.
 
 Versioned notifications shall have a sample file stored under
-`doc/sample_notifications` directory. For example the `service.update`
-notification has a sample file stored in
-`doc/sample_notifications/service-update.json`.
+`doc/sample_notifications` directory and the notification object shall be
+decorated with the `notification_sample` decorator. For example the
+`service.update` notification has a sample file stored in
+`doc/sample_notifications/service-update.json` and the
+ServiceUpdateNotification class is decorated accordingly.
+
+Existing versioned notifications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versioned_notifications::
+
+
 
 .. [1] http://docs.openstack.org/developer/oslo.messaging/notifier.html
 .. [2] http://docs.openstack.org/developer/oslo.versionedobjects

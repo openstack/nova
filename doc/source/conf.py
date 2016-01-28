@@ -35,6 +35,7 @@ extensions = ['sphinx.ext.autodoc',
               'oslosphinx',
               "ext.support_matrix",
               'oslo_config.sphinxconfiggen',
+              'ext.versioned_notifications'
               ]
 
 config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
