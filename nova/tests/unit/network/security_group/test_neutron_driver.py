@@ -25,6 +25,7 @@ from nova import exception
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
+from nova import objects
 from nova import test
 
 
@@ -413,6 +414,12 @@ class TestNeutronDriverWithoutMock(test.NoDBTestCase):
                           'a' * 256, 'name', None)
         self.assertRaises(exception.Invalid, sg_api.validate_property,
                           None, 'name', None)
+
+    def test_populate_security_groups(self):
+        sg_api = neutron_driver.SecurityGroupAPI()
+        r = sg_api.populate_security_groups('ignore')
+        self.assertIsInstance(r, objects.SecurityGroupList)
+        self.assertEqual(0, len(r))
 
 
 class TestGetter(test.NoDBTestCase):
