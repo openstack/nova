@@ -691,7 +691,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
             delete.side_effect = processutils.ProcessExecutionError
-            d.unplug(self.instance, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ivs)
 
     def _test_plug_ovs_hybrid(self, ipv6_exists):
         calls = {
