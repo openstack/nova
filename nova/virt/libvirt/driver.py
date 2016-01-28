@@ -1188,8 +1188,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         guest = self._host.get_guest(instance)
 
         disk_dev = mountpoint.rpartition("/")[2]
@@ -1214,7 +1212,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidHypervisorType(msg)
 
         disk_info = blockinfo.get_info_from_bdm(
-            instance, CONF.libvirt.virt_type, image_meta, bdm)
+            instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
         self._connect_volume(connection_info, disk_info)
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
@@ -1320,14 +1318,13 @@ class LibvirtDriver(driver.ComputeDriver):
             guest = self._host.get_guest(instance)
             xml = guest.get_xml_desc()
         except exception.InstanceNotFound:
-            image_meta = objects.ImageMeta.from_instance(instance)
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance,
-                                                image_meta,
+                                                instance.image_meta,
                                                 block_device_info)
             xml = self._get_guest_xml(nova_context.get_admin_context(),
                                       instance, network_info, disk_info,
-                                      image_meta,
+                                      instance.image_meta,
                                       block_device_info=block_device_info)
         return xml
 
@@ -1397,9 +1394,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance_uuid=instance.uuid)
 
     def detach_interface(self, instance, vif):
-        image_meta = objects.ImageMeta.from_instance(instance)
         guest = self._host.get_guest(instance)
-        cfg = self.vif_driver.get_config(instance, vif, image_meta,
+        cfg = self.vif_driver.get_config(instance, vif,
+                                         instance.image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type, self._host)
         try:
@@ -1463,8 +1460,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         snapshot = self._image_api.get(context, image_id)
 
         # source_format is an on-disk format
@@ -1489,7 +1484,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_format == 'lvm' or image_format == 'rbd':
             image_format = 'raw'
 
-        metadata = self._create_snapshot_metadata(image_meta,
+        metadata = self._create_snapshot_metadata(instance.image_meta,
                                                   instance,
                                                   image_format,
                                                   snapshot['name'])
@@ -1589,7 +1584,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         os.chmod(tmpdir, 0o701)
                         self._live_snapshot(context, instance, guest,
                                             disk_path, out_path, source_format,
-                                            image_format, image_meta)
+                                            image_format, instance.image_meta)
                     else:
                         snapshot_backend.snapshot_extract(out_path,
                                                           image_format)
@@ -1645,11 +1640,10 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.QemuGuestAgentNotEnabled()
 
     def set_admin_password(self, instance, new_pass):
-        image_meta = objects.ImageMeta.from_instance(instance)
-        self._can_set_admin_password(image_meta)
+        self._can_set_admin_password(instance.image_meta)
 
         guest = self._host.get_guest(instance)
-        user = image_meta.properties.get("os_admin_user")
+        user = instance.image_meta.properties.get("os_admin_user")
         if not user:
             if instance.os_type == "windows":
                 user = "Administrator"
@@ -2332,14 +2326,12 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
 
         # Convert the system metadata to image metadata
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         instance_dir = libvirt_utils.get_instance_path(instance)
         fileutils.ensure_tree(instance_dir)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            image_meta,
+                                            instance.image_meta,
                                             block_device_info)
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
@@ -2348,7 +2340,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             does we need to (re)generate the xml after the images
         #             are in place.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta,
+                                  instance.image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
 
@@ -2508,10 +2500,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance, image_meta,
+                CONF.libvirt.virt_type, instance, instance.image_meta,
                 block_device_info=block_device_info)
 
         xml = self._get_existing_domain_xml(instance, network_info,
@@ -2564,9 +2554,8 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
         rescue_image_id = None
-        if image_meta is not None:
-            if image_meta.obj_attr_is_set("id"):
-                rescue_image_id = image_meta.id
+        if image_meta.obj_attr_is_set("id"):
+            rescue_image_id = image_meta.id
 
         rescue_images = {
             'image_id': (rescue_image_id or
@@ -3262,12 +3251,11 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         if self._has_sriov_port(network_info):
-            image_meta = objects.ImageMeta.from_instance(instance)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
-                                                     image_meta,
+                                                     instance.image_meta,
                                                      instance.flavor,
                                                      CONF.libvirt.virt_type,
                                                      self._host)
@@ -3292,12 +3280,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceDetachFailed(reason=reason,
                                                       dev=network_info)
 
-            image_meta = objects.ImageMeta.from_instance(instance)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
-                                                     image_meta,
+                                                     instance.image_meta,
                                                      instance.flavor,
                                                      CONF.libvirt.virt_type,
                                                      self._host)
@@ -4735,7 +4722,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-        image_meta = objects.ImageMeta.from_instance(instance)
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
@@ -4770,7 +4756,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            network_info)
                 self.firewall_driver.prepare_instance_filter(instance,
                                                              network_info)
-                with self._lxc_disk_handler(instance, image_meta,
+                with self._lxc_disk_handler(instance, instance.image_meta,
                                             block_device_info, disk_info):
                     guest = self._create_domain(
                         xml, pause=pause, power_on=power_on)
@@ -6417,8 +6403,6 @@ class LibvirtDriver(driver.ComputeDriver):
             is_shared_instance_path = migrate_data.is_shared_instance_path
             is_block_migration = migrate_data.block_migration
 
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         if configdrive.required_by(instance):
                 # NOTE(sileht): configdrive is stored into the block storage
                 # kvm is a block device, live migration will work
@@ -6480,7 +6464,8 @@ class LibvirtDriver(driver.ComputeDriver):
         for bdm in block_device_mapping:
             connection_info = bdm['connection_info']
             disk_info = blockinfo.get_info_from_bdm(
-                instance, CONF.libvirt.virt_type, image_meta, bdm)
+                instance, CONF.libvirt.virt_type,
+                instance.image_meta, bdm)
             self._connect_volume(connection_info, disk_info)
 
         # We call plug_vifs before the compute manager calls
@@ -6518,7 +6503,8 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             if connection_info.get('serial'):
                 disk_info = blockinfo.get_info_from_bdm(
-                    instance, CONF.libvirt.virt_type, image_meta, vol)
+                    instance, CONF.libvirt.virt_type,
+                    instance.image_meta, vol)
 
                 bdmi = objects.LibvirtLiveMigrateBDMInfo()
                 bdmi.serial = connection_info['serial']
@@ -6678,15 +6664,14 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_migration: if true, post operation of block_migration.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
-        image_meta = objects.ImageMeta.from_instance(instance)
         # In case of block migration, destination does not have
         # libvirt.xml
         disk_info = blockinfo.get_disk_info(
             CONF.libvirt.virt_type, instance,
-            image_meta, block_device_info)
+            instance.image_meta, block_device_info)
         xml = self._get_guest_xml(context, instance,
                                   network_info, disk_info,
-                                  image_meta,
+                                  instance.image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         self._host.write_instance_config(xml)
@@ -7151,8 +7136,6 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_failed_migration(inst_base)
             utils.execute('mv', inst_base_resize, inst_base)
 
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         backend = self.image_backend.image(instance, 'disk')
         # Once we rollback, the snapshot is no longer needed, so remove it
         # TODO(nic): Remove the try/except/finally in a future release
@@ -7174,10 +7157,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            image_meta,
+                                            instance.image_meta,
                                             block_device_info)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta,
+                                  instance.image_meta,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
@@ -7441,8 +7424,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def default_device_names_for_instance(self, instance, root_device_name,
                                           *block_device_lists):
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         block_device_mapping = list(itertools.chain(*block_device_lists))
         # NOTE(ndipanov): Null out the device names so that blockinfo code
         #                 will assign them
@@ -7459,15 +7440,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                        nova_context.get_admin_context(),
                                        instance,
                                        block_device_info,
-                                       image_meta)
+                                       instance.image_meta)
 
     def get_device_name_for_instance(self, instance, bdms, block_device_obj):
-        image_meta = objects.ImageMeta.from_instance(instance)
-
         block_device_info = driver.get_block_device_info(instance, bdms)
         instance_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance,
-                image_meta, block_device_info=block_device_info)
+                instance.image_meta, block_device_info=block_device_info)
 
         suggested_dev_name = block_device_obj.device_name
         if suggested_dev_name is not None:
@@ -7478,7 +7457,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #                 only when it's actually not set on the bd object
         block_device_obj.device_name = None
         disk_info = blockinfo.get_info_from_bdm(
-            instance, CONF.libvirt.virt_type, image_meta,
+            instance, CONF.libvirt.virt_type, instance.image_meta,
             block_device_obj, mapping=instance_info['mapping'])
         return block_device.prepend_dev(disk_info['dev'])
 
