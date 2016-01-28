@@ -1,11 +1,12 @@
 {
     "server": {
+        "OS-DCF:diskConfig": "AUTO",
         "accessIPv4": "%(access_ip_v4)s",
         "accessIPv6": "%(access_ip_v6)s",
         "addresses": {
             "private": [
                 {
-                    "addr": "%(ip)s",
+                    "addr": "192.168.0.3",
                     "version": 4
                 }
             ]
@@ -33,11 +34,11 @@
         },
         "links": [
             {
-                "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",
+                "href": "%(versioned_compute_endpoint)s/servers/%(id)s",
                 "rel": "self"
             },
             {
-                "href": "%(compute_endpoint)s/servers/%(uuid)s",
+                "href": "%(compute_endpoint)s/servers/%(id)s",
                 "rel": "bookmark"
             }
         ],

@@ -93,18 +93,3 @@ class AccessIPsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs['id'] = uuid
         self._verify_response('server-action-rebuild-resp',
                               subs, response, 202)
-
-    def test_servers_update(self):
-        subs = {
-            'image_id': fake.get_valid_image_id(),
-            'compute_endpoint': self._get_compute_endpoint(),
-            'access_ip_v4': '1.2.3.4',
-            'access_ip_v6': 'fe80::'
-        }
-        uuid = self._servers_post(subs)
-        subs['access_ip_v4'] = "4.3.2.1"
-        subs['access_ip_v6'] = '80fe::'
-        response = self._do_put('servers/%s' % uuid, 'server-put-req', subs)
-        subs['hostid'] = '[a-f0-9]+'
-        subs['id'] = uuid
-        self._verify_response('server-put-resp', subs, response, 200)

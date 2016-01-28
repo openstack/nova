@@ -1,8 +1,8 @@
 {
     "server": {
         "OS-DCF:diskConfig": "AUTO",
-        "accessIPv4": "",
-        "accessIPv6": "",
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
         "addresses": {
             "private": [
                 {
@@ -11,34 +11,34 @@
                 }
             ]
         },
-        "created": "%(isotime)s",
+        "created": "2012-12-02T02:11:57Z",
         "flavor": {
             "id": "1",
             "links": [
                 {
-                    "href": "%(compute_endpoint)s/flavors/1",
+                    "href": "http://openstack.example.com/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
         },
-        "hostId": "%(hostid)s",
-        "id": "%(id)s",
+        "hostId": "6e84af987b4e7ec1c039b16d21f508f4a505672bd94fb0218b668d07",
+        "id": "324dfb7d-f4a9-419a-9a19-237df04b443b",
         "image": {
-            "id": "%(uuid)s",
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "%(compute_endpoint)s/images/%(uuid)s",
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
         },
         "links": [
             {
-                "href": "%(versioned_compute_endpoint)s/servers/%(id)s",
+                "href": "http://openstack.example.com/v2/openstack/servers/324dfb7d-f4a9-419a-9a19-237df04b443b",
                 "rel": "self"
             },
             {
-                "href": "%(compute_endpoint)s/servers/%(id)s",
+                "href": "http://openstack.example.com/openstack/servers/324dfb7d-f4a9-419a-9a19-237df04b443b",
                 "rel": "bookmark"
             }
         ],
@@ -49,7 +49,7 @@
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "%(isotime)s",
+        "updated": "2012-12-02T02:11:58Z",
         "user_id": "fake"
     }
 }

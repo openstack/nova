@@ -42,13 +42,22 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::'
         }
+        # TODO(gmann): Remove this hack once all tests using this common
+        # _post_server method are enabled with all extension.
+        # This is added to avoid all tests updates together.
+        post_req_template = 'server-post-req'
+        post_resp_template = 'server-post-resp'
+        if self.all_extensions and use_common_server_api_samples:
+            post_req_template = 'server-create-req'
+            post_resp_template = 'server-create-resp'
+
         orig_value = self.__class__._use_common_server_api_samples
         orig_sample_dir = self.__class__.sample_dir
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
-            response = self._do_post('servers', 'server-post-req', subs)
-            status = self._verify_response('server-post-resp', subs,
+            response = self._do_post('servers', post_req_template, subs)
+            status = self._verify_response(post_resp_template, subs,
                                            response, 202)
             return status
         finally:
@@ -136,6 +145,24 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
             'access_ip_v6': '80fe::'
         }
         self._verify_response('server-put-resp', subs, response, 200)
+
+
+class ServersUpdateSampleJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
 
 
 class ServerSortKeysJsonTests(ServersSampleBase):

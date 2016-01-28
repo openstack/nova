@@ -61,16 +61,6 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         subs['access_ip_v6'] = ''
         self._verify_response('server-get-resp', subs, response, 200)
 
-    def test_update_server(self):
-        uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_put('servers/%s' % uuid,
-                                'server-update-put-req', {})
-        subs = {}
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = ''
-        subs['access_ip_v6'] = ''
-        self._verify_response('server-update-put-resp', subs, response, 200)
-
     def test_resize_server(self):
         self.flags(allow_resize_to_same_host=True)
         uuid = self._post_server(use_common_server_api_samples=False)
