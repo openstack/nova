@@ -669,6 +669,27 @@ class LibvirtDriver(driver.ComputeDriver):
                      'qemu_ver': self._version_to_string(
                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
 
+    def _check_required_migration_flags(self, migration_flags, config_name):
+        if CONF.libvirt.virt_type == 'xen':
+            if (migration_flags & libvirt.VIR_MIGRATE_PEER2PEER) != 0:
+                LOG.warning(_LW('Removing the VIR_MIGRATE_PEER2PEER flag from '
+                                '%(config_name)s because peer-to-peer '
+                                'migrations are not supported by the "xen" '
+                                'virt type'),
+                            {'config_name': config_name})
+                migration_flags &= ~libvirt.VIR_MIGRATE_PEER2PEER
+        else:
+            if (migration_flags & libvirt.VIR_MIGRATE_PEER2PEER) == 0:
+                LOG.warning(_LW('Adding the VIR_MIGRATE_PEER2PEER flag to '
+                                '%(config_name)s because direct migrations '
+                                'are not supported by the %(virt_type)s '
+                                'virt type'),
+                            {'config_name': config_name,
+                             'virt_type': CONF.libvirt.virt_type})
+                migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
+
+        return migration_flags
+
     def _check_block_migration_flags(self, live_migration_flags,
                                      block_migration_flags):
         if (live_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) != 0:
@@ -700,6 +721,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         live_migration_flags = str2sum(CONF.libvirt.live_migration_flag)
         block_migration_flags = str2sum(CONF.libvirt.block_migration_flag)
+
+        live_config_name = 'live_migration_flag'
+        block_config_name = 'block_migration_flag'
+
+        live_migration_flags = self._check_required_migration_flags(
+            live_migration_flags, live_config_name)
+        block_migration_flags = self._check_required_migration_flags(
+            block_migration_flags, block_config_name)
 
         (live_migration_flags,
          block_migration_flags) = self._check_block_migration_flags(
