@@ -7844,7 +7844,8 @@ class ComputeAPITestCase(BaseTestCase):
                 security_group=['testgroup'])
 
         db.instance_destroy(self.context, ref[0]['uuid'])
-        group = db.security_group_get(self.context, group['id'])
+        group = db.security_group_get(self.context, group['id'],
+                                      columns_to_join=['instances'])
         self.assertEqual(0, len(group['instances']))
 
     def test_destroy_security_group_disassociates_instances(self):
@@ -7860,7 +7861,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.security_group_destroy(self.context, group['id'])
         admin_deleted_context = context.get_admin_context(
                 read_deleted="only")
-        group = db.security_group_get(admin_deleted_context, group['id'])
+        group = db.security_group_get(admin_deleted_context, group['id'],
+                                      columns_to_join=['instances'])
         self.assertEqual(0, len(group['instances']))
 
     def _test_rebuild(self, vm_state):
