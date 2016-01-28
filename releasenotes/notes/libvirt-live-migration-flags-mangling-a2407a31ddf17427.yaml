@@ -1,0 +1,8 @@
+---
+upgrade:
+  - The libvirt driver will now correct unsafe and invalid
+    values for the live_migration_flag and block_migration_flag
+    configuration options. The live_migration_flag must not
+    contain VIR_MIGRATE_SHARED_INC but block_migration_flag
+    must contain it.
+
