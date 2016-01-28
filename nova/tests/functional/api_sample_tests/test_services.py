@@ -18,7 +18,6 @@ from oslo_utils import fixture as utils_fixture
 
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
-from nova.tests.unit import fake_notifier
 
 
 CONF = cfg.CONF
@@ -52,18 +51,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         self.stub_out("nova.db.service_update",
                       test_services.fake_service_update)
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
-        fake_notifier.stub_notifier(self.stubs)
-        self.addCleanup(fake_notifier.reset)
-
-    def _verify_notification(self, **kwargs):
-        # TODO(gibi): store notification sample and start using that for
-        # verification instead
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        payload = fake_notifier.VERSIONED_NOTIFICATIONS[0]['payload']
-        fields = payload['nova_object.data']
-        for key, value in kwargs.items():
-            self.assertEqual(value, fields[key],
-                             'Mismatch in key %s' % key)
 
     def test_services_list(self):
         """Return a list of all agent builds."""
@@ -75,7 +62,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'status': 'disabled',
                 'state': 'up'}
         self._verify_response('services-list-get-resp', subs, response, 200)
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
     def test_service_enable(self):
         """Enable an existing agent build."""
@@ -85,7 +71,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                 'service-enable-put-req', subs,
                                 api_version=self.microversion)
         self._verify_response('service-enable-put-resp', subs, response, 200)
-        self._verify_notification(disabled=False, disabled_reason=None)
 
     def test_service_disable(self):
         """Disable an existing agent build."""
@@ -95,7 +80,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                 'service-disable-put-req', subs,
                                 api_version=self.microversion)
         self._verify_response('service-disable-put-resp', subs, response, 200)
-        self._verify_notification(disabled=True, disabled_reason=None)
 
     def test_service_disable_log_reason(self):
         """Disable an existing service and log the reason."""
@@ -107,7 +91,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                 api_version=self.microversion)
         self._verify_response('service-disable-log-put-resp',
                               subs, response, 200)
-        self._verify_notification(disabled=True, disabled_reason='test2')
 
     def test_service_delete(self):
         """Delete an existing service."""
@@ -115,7 +98,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                    api_version=self.microversion)
         self.assertEqual(204, response.status_code)
         self.assertEqual("", response.content)
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
 
 class ServicesV211JsonTest(ServicesJsonTest):
@@ -135,7 +117,6 @@ class ServicesV211JsonTest(ServicesJsonTest):
                 'status': 'disabled',
                 'state': 'up'}
         self._verify_response('services-list-get-resp', subs, response, 200)
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
     def test_force_down(self):
         """Set forced_down flag"""
@@ -147,4 +128,3 @@ class ServicesV211JsonTest(ServicesJsonTest):
                                 api_version=self.microversion)
         self._verify_response('service-force-down-put-resp', subs,
                               response, 200)
-        self._verify_notification(forced_down=True)

@@ -210,12 +210,15 @@ class TestOpenStackClient(object):
         kwargs.setdefault('check_response_status', [200, 202])
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
-    def api_put(self, relative_uri, body, **kwargs):
+    def api_put(self, relative_uri, body, api_version=None, **kwargs):
         kwargs['method'] = 'PUT'
         if body:
             headers = kwargs.setdefault('headers', {})
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = jsonutils.dumps(body)
+
+        if api_version:
+            headers['X-OpenStack-Nova-API-Version'] = api_version
 
         kwargs.setdefault('check_response_status', [200, 202, 204])
         return APIResponse(self.api_request(relative_uri, **kwargs))
