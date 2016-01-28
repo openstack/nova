@@ -22,6 +22,12 @@ syslog_tag='rotate_xen_guest_logs'
 
 log_file_base="${log_dir}/console."
 
+# Only delete log files older than this number of minutes
+# to avoid a race where Xen creates the domain and starts
+# logging before the XAPI VM start returns (and allows us
+# to preserve the log file using last_dom_id)
+min_logfile_age=10
+
 # Ensure logging is setup correctly for all domains
 xenstore-write /local/logconsole/@ "${log_file_base}%d"
 
@@ -39,9 +45,9 @@ done
 valid_last_dom_ids=$(xe vm-list params=other-config --minimal | tr ';,' '\n\n' | grep last_dom_id | sed -e 's/last_dom_id: //g' | xargs)
 echo "Valid dom IDs: $valid_last_dom_ids" | /usr/bin/logger -t $syslog_tag
 
-# Remove console files that do not correspond to valid last_dom_id's
+# Remove old console files that do not correspond to valid last_dom_id's
 allowed_consoles=".*console.\(${valid_last_dom_ids// /\\|}\)$"
-delete_logs=`find "$log_dir" -type f -not -regex "$allowed_consoles"`
+delete_logs=`find "$log_dir" -type f -mmin +${min_logfile_age} -not -regex "$allowed_consoles"`
 for log in $delete_logs; do
     if echo "$current_logs" | grep -q -w "$log"; then
         echo "Deleting: $log" | /usr/bin/logger -t $syslog_tag
