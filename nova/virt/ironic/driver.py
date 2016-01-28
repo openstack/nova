@@ -87,19 +87,6 @@ def map_power_state(state):
         return power_state.NOSTATE
 
 
-def _validate_instance_and_node(ironicclient, instance):
-    """Get the node associated with the instance.
-
-    Check with the Ironic service that this instance is associated with a
-    node, and return the node.
-    """
-    try:
-        return ironicclient.call('node.get_by_instance_uuid', instance.uuid,
-                                 fields=_NODE_FIELDS)
-    except ironic.exc.NotFound:
-        raise exception.InstanceNotFound(instance_id=instance.uuid)
-
-
 def _get_nodes_supported_instances(cpu_arch=None):
     """Return supported instances for a node."""
     if not cpu_arch:
@@ -168,6 +155,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Get a node by its UUID."""
         return self.ironicclient.call('node.get', node_uuid,
                                       fields=_NODE_FIELDS)
+
+    def _validate_instance_and_node(self, instance):
+        """Get the node associated with the instance.
+
+        Check with the Ironic service that this instance is associated with a
+        node, and return the node.
+        """
+        try:
+            return self.ironicclient.call('node.get_by_instance_uuid',
+                                          instance.uuid, fields=_NODE_FIELDS)
+        except ironic.exc.NotFound:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def _node_resources_unavailable(self, node_obj):
         """Determine whether the node's resources are in an acceptable state.
@@ -385,7 +384,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # on the next cycle (M).
         patch.append({'op': 'remove', 'path': '/instance_uuid'})
         try:
-            _validate_instance_and_node(self.ironicclient, instance)
+            self._validate_instance_and_node(instance)
             self.ironicclient.call('node.update', node.uuid, patch)
         except exception.InstanceNotFound:
             LOG.debug("Instance already removed from Ironic node %s. Skip "
@@ -400,7 +399,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         self._unplug_vifs(node, instance, network_info)
         self._stop_firewall(instance, network_info)
 
-    def _wait_for_active(self, ironicclient, instance):
+    def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
         instance.refresh()
         if (instance.task_state == task_states.DELETING or
@@ -408,7 +407,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             raise exception.InstanceDeployFailure(
                 _("Instance %s provisioning was aborted") % instance.uuid)
 
-        node = _validate_instance_and_node(ironicclient, instance)
+        node = self._validate_instance_and_node(instance)
         if node.provision_state == ironic_states.ACTIVE:
             # job is done
             LOG.debug("Ironic node %(node)s is now ACTIVE",
@@ -433,9 +432,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         _log_ironic_polling('become ACTIVE', node, instance)
 
-    def _wait_for_power_state(self, ironicclient, instance, message):
+    def _wait_for_power_state(self, instance, message):
         """Wait for the node to complete a power state change."""
-        node = _validate_instance_and_node(ironicclient, instance)
+        node = self._validate_instance_and_node(instance)
 
         if node.target_power_state == ironic_states.NOSTATE:
             raise loopingcall.LoopingCallDone()
@@ -469,7 +468,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         try:
-            _validate_instance_and_node(self.ironicclient, instance)
+            self._validate_instance_and_node(instance)
             return True
         except exception.InstanceNotFound:
             return False
@@ -608,7 +607,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :returns: a InstanceInfo object
         """
         try:
-            node = _validate_instance_and_node(self.ironicclient, instance)
+            node = self._validate_instance_and_node(instance)
         except exception.InstanceNotFound:
             return hardware.InstanceInfo(
                 state=map_power_state(ironic_states.NOSTATE))
@@ -791,7 +790,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                                      flavor=flavor)
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
-                                                     self.ironicclient,
                                                      instance)
         try:
             timer.start(interval=CONF.ironic.api_retry_interval).wait()
@@ -804,12 +802,13 @@ class IronicDriver(virt_driver.ComputeDriver):
                              {'instance': instance.uuid,
                               'node': node_uuid})
 
-    def _unprovision(self, ironicclient, instance, node):
+    def _unprovision(self, instance, node):
         """This method is called from destroy() to unprovision
         already provisioned node after required checks.
         """
         try:
-            ironicclient.call("node.set_provision_state", node.uuid, "deleted")
+            self.ironicclient.call("node.set_provision_state", node.uuid,
+                                   "deleted")
         except Exception as e:
             # if the node is already in a deprovisioned state, continue
             # This should be fixed in Ironic.
@@ -824,7 +823,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         def _wait_for_provision_state():
             try:
-                node = _validate_instance_and_node(ironicclient, instance)
+                node = self._validate_instance_and_node(instance)
             except exception.InstanceNotFound:
                 LOG.debug("Instance already removed from Ironic",
                           instance=instance)
@@ -875,7 +874,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         LOG.debug('Destroy called for instance', instance=instance)
         try:
-            node = _validate_instance_and_node(self.ironicclient, instance)
+            node = self._validate_instance_and_node(instance)
         except exception.InstanceNotFound:
             LOG.warning(_LW("Destroy called on non-existing instance %s."),
                         instance.uuid)
@@ -886,7 +885,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             return
 
         if node.provision_state in _UNPROVISION_STATES:
-            self._unprovision(self.ironicclient, instance, node)
+            self._unprovision(instance, node)
 
         self._cleanup_deploy(context, node, instance, network_info)
         LOG.info(_LI('Successfully unprovisioned Ironic node %s'),
@@ -914,12 +913,11 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         LOG.debug('Reboot called for instance', instance=instance)
-        node = _validate_instance_and_node(self.ironicclient, instance)
+        node = self._validate_instance_and_node(instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'reboot')
 
         timer = loopingcall.FixedIntervalLoopingCall(
-                    self._wait_for_power_state,
-                    self.ironicclient, instance, 'reboot')
+                    self._wait_for_power_state, instance, 'reboot')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info(_LI('Successfully rebooted Ironic node %s'),
                  node.uuid, instance=instance)
@@ -939,12 +937,11 @@ class IronicDriver(virt_driver.ComputeDriver):
             for it to shutdown. Ignored by this driver.
         """
         LOG.debug('Power off called for instance', instance=instance)
-        node = _validate_instance_and_node(self.ironicclient, instance)
+        node = self._validate_instance_and_node(instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'off')
 
         timer = loopingcall.FixedIntervalLoopingCall(
-                    self._wait_for_power_state,
-                    self.ironicclient, instance, 'power off')
+                    self._wait_for_power_state, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info(_LI('Successfully powered off Ironic node %s'),
                  node.uuid, instance=instance)
@@ -965,12 +962,11 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         LOG.debug('Power on called for instance', instance=instance)
-        node = _validate_instance_and_node(self.ironicclient, instance)
+        node = self._validate_instance_and_node(instance)
         self.ironicclient.call("node.set_power_state", node.uuid, 'on')
 
         timer = loopingcall.FixedIntervalLoopingCall(
-                    self._wait_for_power_state,
-                    self.ironicclient, instance, 'power on')
+                    self._wait_for_power_state, instance, 'power on')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info(_LI('Successfully powered on Ironic node %s'),
                  node.uuid, instance=instance)
@@ -1163,7 +1159,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         # Although the target provision state is REBUILD, it will actually go
         # to ACTIVE once the redeploy is finished.
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
-                                                     self.ironicclient,
                                                      instance)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info(_LI('Instance was successfully rebuilt'), instance=instance)
