@@ -268,3 +268,9 @@ Three sections are left intentionally unexplained (``prelude``, ``issues`` and
 ``other``). Those are targeted to be filled in close to the release time for
 providing details about the soon-ish release. Don't use them unless you know
 exactly what you are doing.
+
+
+Notifications
+=============
+* Every new notification type shall use the new versioned notification
+  infrastructure documented in :doc:`notifications`
