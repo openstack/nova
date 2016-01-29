@@ -19,7 +19,6 @@ import nova.cmd.novnc
 import nova.cmd.novncproxy
 import nova.cmd.serialproxy
 import nova.cmd.spicehtml5proxy
-import nova.conductor.api
 import nova.conductor.rpcapi
 import nova.conductor.tasks.live_migrate
 import nova.conf
@@ -96,7 +95,6 @@ def list_opts():
         ('barbican', nova.keymgr.barbican.barbican_opts),
         ('cinder', nova.volume.cinder.cinder_opts),
         ('api_database', nova.db.sqlalchemy.api.api_db_opts),
-        ('conductor', nova.conductor.api.conductor_opts),
         ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
         ('glance', nova.image.glance.glance_opts),
         ('image_file_url', [nova.image.download.file.opt_group]),

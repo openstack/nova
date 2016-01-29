@@ -26,9 +26,9 @@ continue attempting to launch the rest of the services.
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import config
 from nova.i18n import _LE
 from nova import objects
@@ -37,9 +37,7 @@ from nova import utils
 from nova.vnc import xvp_proxy
 
 
-CONF = cfg.CONF
-CONF.import_opt('manager', 'nova.conductor.api', group='conductor')
-CONF.import_opt('topic', 'nova.conductor.api', group='conductor')
+CONF = nova.conf.CONF
 CONF.import_opt('enabled_apis', 'nova.service')
 CONF.import_opt('enabled_ssl_apis', 'nova.service')
 
