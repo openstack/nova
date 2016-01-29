@@ -22,6 +22,7 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
 
+from nova import cache_utils
 from nova import context
 from nova import exception
 from nova.i18n import _
@@ -29,7 +30,6 @@ from nova.i18n import _LI
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import memorycache
 
 LOG = logging.getLogger(__name__)
 # NOTE(vish): cache mapping for one week
@@ -42,13 +42,13 @@ def memoize(func):
     def memoizer(context, reqid):
         global _CACHE
         if not _CACHE:
-            _CACHE = memorycache.get_client()
+            _CACHE = cache_utils.get_client(expiration_time=_CACHE_TIME)
         key = "%s:%s" % (func.__name__, reqid)
         key = str(key)
         value = _CACHE.get(key)
         if value is None:
             value = func(context, reqid)
-            _CACHE.set(key, value, time=_CACHE_TIME)
+            _CACHE.set(key, value)
         return value
     return memoizer
 

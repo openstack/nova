@@ -19,8 +19,8 @@ import collections
 
 from oslo_config import cfg
 
+from nova import cache_utils
 from nova import objects
-from nova.openstack.common import memorycache
 
 # NOTE(vish): azs don't change that often, so cache them for an hour to
 #             avoid hitting the db multiple times on every request.
@@ -44,7 +44,7 @@ def _get_cache():
     global MC
 
     if MC is None:
-        MC = memorycache.get_client()
+        MC = cache_utils.get_client(expiration_time=AZ_CACHE_SECONDS)
 
     return MC
 
@@ -113,7 +113,7 @@ def update_host_availability_zone_cache(context, host, availability_zone=None):
     cache = _get_cache()
     cache_key = _make_cache_key(host)
     cache.delete(cache_key)
-    cache.set(cache_key, availability_zone, AZ_CACHE_SECONDS)
+    cache.set(cache_key, availability_zone)
 
 
 def get_availability_zones(context, get_only_available=False,
@@ -195,5 +195,5 @@ def get_instance_availability_zone(context, instance):
     if not az:
         elevated = context.elevated()
         az = get_host_availability_zone(elevated, host)
-        cache.set(cache_key, az, AZ_CACHE_SECONDS)
+        cache.set(cache_key, az)
     return az

@@ -32,6 +32,7 @@ import mock
 import os
 
 import fixtures
+from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
@@ -60,6 +61,7 @@ CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v21')
 logging.register_options(CONF)
 CONF.set_override('use_stderr', False)
 logging.setup(CONF, 'nova')
+cache.configure(CONF)
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 

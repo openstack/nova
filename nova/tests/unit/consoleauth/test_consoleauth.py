@@ -58,9 +58,9 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
                                          self.instance_uuid)
-        self.assertTrue(self.manager_api.check_token(self.context, token))
+        self.assertIsNotNone(self.manager_api.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
-        self.assertFalse(self.manager_api.check_token(self.context, token))
+        self.assertIsNone(self.manager_api.check_token(self.context, token))
 
     def _stub_validate_console_port(self, result):
         def fake_validate_console_port(ctxt, instance, port, console_type):
@@ -84,7 +84,8 @@ class ConsoleauthTestCase(test.NoDBTestCase):
                                           self.instance_uuid)
 
         for token in tokens:
-            self.assertTrue(self.manager_api.check_token(self.context, token))
+            self.assertIsNotNone(
+                    self.manager_api.check_token(self.context, token))
 
     def test_delete_tokens_for_instance(self):
         tokens = [u"token" + str(i) for i in range(10)]
@@ -100,7 +101,8 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.assertEqual(len(stored_tokens), 0)
 
         for token in tokens:
-            self.assertFalse(self.manager_api.check_token(self.context, token))
+            self.assertIsNone(
+                self.manager_api.check_token(self.context, token))
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_wrong_token_has_port(self, mock_get):
@@ -113,7 +115,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.manager_api.authorize_console(self.context, token, 'novnc',
                                         '127.0.0.1', '8080', 'host',
                                         instance_uuid=self.instance_uuid)
-        self.assertFalse(self.manager_api.check_token(self.context, token))
+        self.assertIsNone(self.manager_api.check_token(self.context, token))
 
     def test_delete_expired_tokens(self):
         self.useFixture(test.TimeOverride())
@@ -126,7 +128,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
                                          '127.0.0.1', '8080', 'host',
                                          self.instance_uuid)
         timeutils.advance_time_seconds(1)
-        self.assertFalse(self.manager_api.check_token(self.context, token))
+        self.assertIsNone(self.manager_api.check_token(self.context, token))
 
         token1 = u'mytok2'
         self.manager_api.authorize_console(self.context, token1, 'novnc',
@@ -148,18 +150,31 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
         self.u_instance = u"instance"
 
     def test_authorize_console_encoding(self):
-        self.mox.StubOutWithMock(self.manager.mc, "set")
-        self.mox.StubOutWithMock(self.manager.mc, "get")
-        self.manager.mc.set(mox.IsA(str), mox.IgnoreArg(), mox.IgnoreArg()
-                           ).AndReturn(True)
-        self.manager.mc.get(mox.IsA(str)).AndReturn(None)
-        self.manager.mc.set(mox.IsA(str), mox.IgnoreArg()).AndReturn(True)
-
-        self.mox.ReplayAll()
-
-        self.manager.authorize_console(self.context, self.u_token, 'novnc',
-                                       '127.0.0.1', '8080', 'host',
-                                       self.u_instance)
+        with test.nested(
+                mock.patch.object(self.manager.mc_instance,
+                                  'set', return_value=True),
+                mock.patch.object(self.manager.mc_instance,
+                                  'get', return_value='["token"]'),
+                mock.patch.object(self.manager.mc,
+                                  'set', return_value=True),
+                mock.patch.object(self.manager.mc,
+                                  'get', return_value=None),
+                mock.patch.object(self.manager.mc,
+                                  'get_multi', return_value=["token1"]),
+        ) as (
+                mock_instance_set,
+                mock_instance_get,
+                mock_set,
+                mock_get,
+                mock_get_multi):
+            self.manager.authorize_console(self.context, self.u_token,
+                                           'novnc', '127.0.0.1', '8080',
+                                           'host', self.u_instance)
+            mock_set.assert_has_calls([mock.call('token', mock.ANY)])
+            mock_instance_get.assert_has_calls([mock.call('instance')])
+            mock_get_multi.assert_has_calls([mock.call(['token'])])
+            mock_instance_set.assert_has_calls(
+                    [mock.call('instance', mock.ANY)])
 
     def test_check_token_encoding(self):
         self.mox.StubOutWithMock(self.manager.mc, "get")
@@ -170,15 +185,25 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
         self.manager.check_token(self.context, self.u_token)
 
     def test_delete_tokens_for_instance_encoding(self):
-        self.mox.StubOutWithMock(self.manager.mc, "delete")
-        self.mox.StubOutWithMock(self.manager.mc, "get")
-        self.manager.mc.get(mox.IsA(str)).AndReturn('["token"]')
-        self.manager.mc.delete(mox.IsA(str)).AndReturn(True)
-        self.manager.mc.delete(mox.IsA(str)).AndReturn(True)
-
-        self.mox.ReplayAll()
-
-        self.manager.delete_tokens_for_instance(self.context, self.u_instance)
+        with test.nested(
+                mock.patch.object(self.manager.mc_instance,
+                                  'get', return_value='["token"]'),
+                mock.patch.object(self.manager.mc_instance,
+                                  'delete', return_value=True),
+                mock.patch.object(self.manager.mc,
+                                  'get'),
+                mock.patch.object(self.manager.mc,
+                                  'delete_multi', return_value=True),
+        ) as (
+                mock_instance_get,
+                mock_instance_delete,
+                mock_get,
+                mock_delete_multi):
+            self.manager.delete_tokens_for_instance(self.context,
+                                                    self.u_instance)
+            mock_instance_get.assert_has_calls([mock.call('instance')])
+            mock_instance_delete.assert_has_calls([mock.call('instance')])
+            mock_delete_multi.assert_has_calls([mock.call(['token'])])
 
 
 class CellsConsoleauthTestCase(ConsoleauthTestCase):

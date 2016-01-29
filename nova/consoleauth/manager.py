@@ -23,12 +23,12 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+from nova import cache_utils
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 from nova.i18n import _LI, _LW
 from nova import manager
 from nova import objects
-from nova.openstack.common import memorycache
 
 
 LOG = logging.getLogger(__name__)
@@ -52,9 +52,22 @@ class ConsoleAuthManager(manager.Manager):
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(service_name='consoleauth',
                                                  *args, **kwargs)
-        self.mc = memorycache.get_client()
+        self._mc = None
+        self._mc_instance = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
+
+    @property
+    def mc(self):
+        if self._mc is None:
+            self._mc = cache_utils.get_client(CONF.console_token_ttl)
+        return self._mc
+
+    @property
+    def mc_instance(self):
+        if self._mc_instance is None:
+            self._mc_instance = cache_utils.get_client()
+        return self._mc_instance
 
     def reset(self):
         LOG.info(_LI('Reloading compute RPC API'))
@@ -62,7 +75,7 @@ class ConsoleAuthManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def _get_tokens_for_instance(self, instance_uuid):
-        tokens_str = self.mc.get(instance_uuid.encode('UTF-8'))
+        tokens_str = self.mc_instance.get(instance_uuid.encode('UTF-8'))
         if not tokens_str:
             tokens = []
         else:
@@ -86,17 +99,19 @@ class ConsoleAuthManager(manager.Manager):
         # We need to log the warning message if the token is not cached
         # successfully, because the failure will cause the console for
         # instance to not be usable.
-        if not self.mc.set(token.encode('UTF-8'),
-                           data, CONF.console_token_ttl):
+        if not self.mc.set(token.encode('UTF-8'), data):
             LOG.warning(_LW("Token: %(token)s failed to save into memcached."),
                         {'token': token})
         tokens = self._get_tokens_for_instance(instance_uuid)
 
         # Remove the expired tokens from cache.
-        tokens = [tok for tok in tokens if self.mc.get(tok.encode('UTF-8'))]
+        token_values = self.mc.get_multi(
+            [tok.encode('UTF-8') for tok in tokens])
+        tokens = [name for name, value in zip(tokens, token_values)
+                  if value is not None]
         tokens.append(token)
 
-        if not self.mc.set(instance_uuid.encode('UTF-8'),
+        if not self.mc_instance.set(instance_uuid.encode('UTF-8'),
                            jsonutils.dumps(tokens)):
             LOG.warning(_LW("Instance: %(instance_uuid)s failed to save "
                             "into memcached"),
@@ -136,6 +151,6 @@ class ConsoleAuthManager(manager.Manager):
 
     def delete_tokens_for_instance(self, context, instance_uuid):
         tokens = self._get_tokens_for_instance(instance_uuid)
-        for token in tokens:
-            self.mc.delete(token.encode('UTF-8'))
-        self.mc.delete(instance_uuid.encode('UTF-8'))
+        self.mc.delete_multi(
+                [tok.encode('UTF-8') for tok in tokens])
+        self.mc_instance.delete(instance_uuid.encode('UTF-8'))
