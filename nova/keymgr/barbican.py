@@ -24,9 +24,10 @@ import binascii
 from barbicanclient import client as barbican_client
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import session
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+
+import nova.conf
 
 from nova import exception
 from nova.i18n import _
@@ -34,26 +35,8 @@ from nova.i18n import _LE
 from nova.keymgr import key as keymgr_key
 from nova.keymgr import key_mgr
 
-barbican_opts = [
-     cfg.StrOpt('catalog_info',
-                default='key-manager:barbican:public',
-                help='Info to match when looking for barbican in the service '
-                     'catalog. Format is: separated values of the form: '
-                     '<service_type>:<service_name>:<endpoint_type>'),
-    cfg.StrOpt('endpoint_template',
-               help='Override service catalog lookup with template for '
-                    'barbican endpoint e.g. '
-                    'http://localhost:9311/v1/%(project_id)s'),
-    cfg.StrOpt('os_region_name',
-               help='Region name of this node'),
-]
 
-CONF = cfg.CONF
-BARBICAN_OPT_GROUP = 'barbican'
-
-CONF.register_opts(barbican_opts, group=BARBICAN_OPT_GROUP)
-
-ks_loading.register_session_conf_options(CONF, BARBICAN_OPT_GROUP)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -92,7 +75,7 @@ class BarbicanKeyManager(key_mgr.KeyManager):
         try:
             _SESSION = ks_loading.load_session_from_conf_options(
                 CONF,
-                BARBICAN_OPT_GROUP)
+                nova.conf.barbican.barbican_group)
 
             auth = ctxt.get_auth_plugin()
             service_type, service_name, interface = (CONF.

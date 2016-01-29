@@ -31,18 +31,12 @@ encrypted with a key provided by this key manager actually share the same
 encryption key so *any* volume can be decrypted once the fixed key is known.
 """
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.i18n import _
 from nova.keymgr import single_key_mgr
 
-key_mgr_opts = [
-    cfg.StrOpt('fixed_key',
-            help='Fixed key returned by key manager, specified in hex'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(key_mgr_opts, group='keymgr')
+CONF = nova.conf.CONF
 
 
 class ConfKeyManager(single_key_mgr.SingleKeyManager):

@@ -35,9 +35,6 @@ import nova.exception
 import nova.image.download.file
 import nova.image.glance
 import nova.ipv6.api
-import nova.keymgr
-import nova.keymgr.barbican
-import nova.keymgr.conf_key_mgr
 import nova.netconf
 import nova.notifications
 import nova.objects.network
@@ -80,17 +77,11 @@ def list_opts():
              nova.utils.utils_opts,
              nova.volume._volume_opts,
          )),
-        ('barbican', nova.keymgr.barbican.barbican_opts),
         ('cinder', nova.volume.cinder.cinder_opts),
         ('api_database', nova.db.sqlalchemy.api.api_db_opts),
         ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
         ('glance', nova.image.glance.glance_opts),
         ('image_file_url', [nova.image.download.file.opt_group]),
-        ('keymgr',
-         itertools.chain(
-             nova.keymgr.conf_key_mgr.key_mgr_opts,
-             nova.keymgr.keymgr_opts,
-         )),
         ('spice',
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
