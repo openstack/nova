@@ -37,7 +37,6 @@ from nova import utils
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('keys_path', 'nova.crypto')
 
 LOG = logging.getLogger(__name__)
 

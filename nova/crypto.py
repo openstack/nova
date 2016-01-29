@@ -34,56 +34,23 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import fileutils
 import paramiko
 import six
 
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _, _LE
-from nova import paths
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
-crypto_opts = [
-    cfg.StrOpt('ca_file',
-               default='cacert.pem',
-               help=_('Filename of root CA')),
-    cfg.StrOpt('key_file',
-               default=os.path.join('private', 'cakey.pem'),
-               help=_('Filename of private key')),
-    cfg.StrOpt('crl_file',
-               default='crl.pem',
-               help=_('Filename of root Certificate Revocation List')),
-    cfg.StrOpt('keys_path',
-               default=paths.state_path_def('keys'),
-               help=_('Where we keep our keys')),
-    cfg.StrOpt('ca_path',
-               default=paths.state_path_def('CA'),
-               help=_('Where we keep our root CA')),
-    cfg.BoolOpt('use_project_ca',
-                default=False,
-                help=_('Should we use a CA for each project?')),
-    cfg.StrOpt('user_cert_subject',
-               default='/C=US/ST=California/O=OpenStack/'
-                       'OU=NovaDev/CN=%.16s-%.16s-%s',
-               help=_('Subject for certificate for users, %s for '
-                      'project, user, timestamp')),
-    cfg.StrOpt('project_cert_subject',
-               default='/C=US/ST=California/O=OpenStack/'
-                       'OU=NovaDev/CN=project-ca-%.16s-%s',
-               help=_('Subject for certificate for projects, %s for '
-                      'project, timestamp')),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(crypto_opts)
+CONF = nova.conf.CONF
 
 
 def ca_folder(project_id=None):

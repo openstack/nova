@@ -25,7 +25,6 @@ import nova.console.rpcapi
 import nova.console.serial
 import nova.console.xvp
 import nova.consoleauth.rpcapi
-import nova.crypto
 import nova.db.api
 import nova.db.base
 import nova.db.sqlalchemy.api
@@ -55,7 +54,6 @@ def list_opts():
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
              nova.console.xvp.xvp_opts,
-             nova.crypto.crypto_opts,
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,

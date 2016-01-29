@@ -14,7 +14,6 @@
 
 """Connect your vlan to the world."""
 
-from oslo_config import cfg
 from oslo_utils import fileutils
 from webob import exc
 
@@ -26,14 +25,14 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import network
 from nova import objects
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('keys_path', 'nova.crypto')
+CONF = nova.conf.CONF
 
 ALIAS = 'os-cloudpipe'
 authorize = extensions.os_compute_authorizer(ALIAS)
