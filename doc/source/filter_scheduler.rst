@@ -379,6 +379,9 @@ The Filter Scheduler weighs hosts based on the config option
   Sort with the largest weight winning. If the multiplier is negative, the
   host with least RAM available will win (useful for stacking hosts, instead
   of spreading).
+* |DiskWeigher| Hosts are weighted and sorted by free disk space with the largest
+  weight winning.  If the multiplier is negative, the host with less disk space available
+  will win (useful for stacking hosts, instead of spreading).
 * |MetricsWeigher| This weigher can compute the weight based on the compute node
   host's various metrics. The to-be weighed metrics and their weighing ratio
   are specified in the configuration file as the followings::
@@ -455,3 +458,4 @@ in :mod:`nova.tests.scheduler`.
 .. |IoOpsWeigher| replace:: :class:`IoOpsWeigher <nova.scheduler.weights.io_ops.IoOpsWeigher>`
 .. |ServerGroupSoftAffinityWeigher| replace:: :class:`ServerGroupSoftAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher>`
 .. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
+.. |DiskWeigher| replace:: :class:`DiskWeigher <nova.scheduler.weights.disk.DiskWeigher>`
