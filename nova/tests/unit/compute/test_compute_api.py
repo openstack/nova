@@ -1011,8 +1011,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
 
         db.block_device_mapping_get_all_by_instance(self.context,
-                                                 inst.uuid,
-                                                 use_slave=False).AndReturn([])
+                                                 inst.uuid).AndReturn([])
         inst.save()
         self.compute_api._create_reservations(self.context,
                                               inst, inst.task_state,
@@ -1147,7 +1146,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.useFixture(utils_fixture.TimeFixture(delete_time))
 
         db.block_device_mapping_get_all_by_instance(
-            self.context, inst.uuid, use_slave=False).AndReturn([])
+            self.context, inst.uuid).AndReturn([])
         inst.save().AndRaise(test.TestingException)
 
         self.mox.ReplayAll()

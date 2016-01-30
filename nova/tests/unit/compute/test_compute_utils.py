@@ -104,7 +104,7 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         self.data = []
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance, use_slave=False: self.data)
+                       lambda context, instance: self.data)
 
     def _validate_device(self, device=None):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(

@@ -1197,20 +1197,16 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
     return IMPL.block_device_mapping_update_or_create(context, values, legacy)
 
 
-def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids,
-                                                   use_slave=False):
+def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids):
     """Get all block device mapping belonging to a list of instances."""
     return IMPL.block_device_mapping_get_all_by_instance_uuids(context,
-                                                               instance_uuids,
-                                                               use_slave)
+                                                               instance_uuids)
 
 
-def block_device_mapping_get_all_by_instance(context, instance_uuid,
-                                             use_slave=False):
+def block_device_mapping_get_all_by_instance(context, instance_uuid):
     """Get all block device mapping belonging to an instance."""
     return IMPL.block_device_mapping_get_all_by_instance(context,
-                                                         instance_uuid,
-                                                         use_slave)
+                                                         instance_uuid)
 
 
 def block_device_mapping_get_all_by_volume_id(context, volume_id,
