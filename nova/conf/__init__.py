@@ -60,6 +60,7 @@ from nova.conf import network
 # from nova.conf import osapi_v21
 from nova.conf import pci
 from nova.conf import rdp
+from nova.conf import remote_debug
 from nova.conf import scheduler
 # from nova.conf import security
 from nova.conf import serial_console
@@ -136,3 +137,5 @@ wsgi.register_opts(CONF)
 xenserver.register_opts(CONF)
 # xvp.register_opts(CONF)
 # zookeeper.register_opts(CONF)
+
+remote_debug.register_cli_opts(CONF)
