@@ -106,16 +106,14 @@ def service_destroy(context, service_id):
     return IMPL.service_destroy(context, service_id)
 
 
-def service_get(context, service_id, use_slave=False):
+def service_get(context, service_id):
     """Get a service or raise if it does not exist."""
-    return IMPL.service_get(context, service_id,
-                            use_slave=use_slave)
+    return IMPL.service_get(context, service_id)
 
 
-def service_get_minimum_version(context, binary, use_slave=False):
+def service_get_minimum_version(context, binary):
     """Get the minimum service version in the database."""
-    return IMPL.service_get_minimum_version(context, binary,
-                                            use_slave=use_slave)
+    return IMPL.service_get_minimum_version(context, binary)
 
 
 def service_get_by_host_and_topic(context, host, topic):
@@ -148,13 +146,12 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
-def service_get_by_compute_host(context, host, use_slave=False):
+def service_get_by_compute_host(context, host):
     """Get the service entry for a given compute host.
 
     Returns the service entry joined with the compute_node entry.
     """
-    return IMPL.service_get_by_compute_host(context, host,
-                                            use_slave=use_slave)
+    return IMPL.service_get_by_compute_host(context, host)
 
 
 def service_create(context, values):

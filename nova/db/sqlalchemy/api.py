@@ -423,28 +423,25 @@ class InequalityCondition(object):
 ###################
 
 
+@main_context_manager.writer
 def service_destroy(context, service_id):
-    session = get_session()
-    with session.begin():
-        service = _service_get(context, service_id)
+    service = service_get(context, service_id)
 
-        model_query(context, models.Service, session=session).\
-                    filter_by(id=service_id).\
-                    soft_delete(synchronize_session=False)
+    model_query(context, models.Service).\
+                filter_by(id=service_id).\
+                soft_delete(synchronize_session=False)
 
-        # TODO(sbauza): Remove the service_id filter in a later release
-        # once we are sure that all compute nodes report the host field
-        model_query(context, models.ComputeNode, session=session).\
-                    filter(or_(models.ComputeNode.service_id == service_id,
-                               models.ComputeNode.host == service['host'])).\
-                    soft_delete(synchronize_session=False)
+    # TODO(sbauza): Remove the service_id filter in a later release
+    # once we are sure that all compute nodes report the host field
+    model_query(context, models.ComputeNode).\
+                filter(or_(models.ComputeNode.service_id == service_id,
+                           models.ComputeNode.host == service['host'])).\
+                soft_delete(synchronize_session=False)
 
 
-def _service_get(context, service_id, session=None,
-                 use_slave=False):
-    query = model_query(context, models.Service, session=session,
-                        use_slave=use_slave).\
-                     filter_by(id=service_id)
+@main_context_manager.reader
+def service_get(context, service_id):
+    query = model_query(context, models.Service).filter_by(id=service_id)
 
     result = query.first()
     if not result:
@@ -453,22 +450,17 @@ def _service_get(context, service_id, session=None,
     return result
 
 
-def service_get(context, service_id, use_slave=False):
-    return _service_get(context, service_id,
-                        use_slave=use_slave)
-
-
-def service_get_minimum_version(context, binary, use_slave=False):
-    session = get_session(use_slave=use_slave)
-    with session.begin():
-        min_version = session.query(
-            func.min(models.Service.version)).\
-                             filter(models.Service.binary == binary).\
-                             filter(models.Service.forced_down == false()).\
-                             scalar()
+@main_context_manager.reader.allow_async
+def service_get_minimum_version(context, binary):
+    min_version = context.session.query(
+        func.min(models.Service.version)).\
+                         filter(models.Service.binary == binary).\
+                         filter(models.Service.forced_down == false()).\
+                         scalar()
     return min_version
 
 
+@main_context_manager.reader
 def service_get_all(context, disabled=None):
     query = model_query(context, models.Service)
 
@@ -478,6 +470,7 @@ def service_get_all(context, disabled=None):
     return query.all()
 
 
+@main_context_manager.reader
 def service_get_all_by_topic(context, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -485,6 +478,7 @@ def service_get_all_by_topic(context, topic):
                 all()
 
 
+@main_context_manager.reader
 def service_get_by_host_and_topic(context, host, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -493,6 +487,7 @@ def service_get_by_host_and_topic(context, host, topic):
                 first()
 
 
+@main_context_manager.reader
 def service_get_all_by_binary(context, binary):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -500,6 +495,7 @@ def service_get_all_by_binary(context, binary):
                 all()
 
 
+@main_context_manager.reader
 def service_get_by_host_and_binary(context, host, binary):
     result = model_query(context, models.Service, read_deleted="no").\
                     filter_by(host=host).\
@@ -512,15 +508,16 @@ def service_get_by_host_and_binary(context, host, binary):
     return result
 
 
+@main_context_manager.reader
 def service_get_all_by_host(context, host):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
                 all()
 
 
-def service_get_by_compute_host(context, host, use_slave=False):
-    result = model_query(context, models.Service, read_deleted="no",
-                         use_slave=use_slave).\
+@main_context_manager.reader.allow_async
+def service_get_by_compute_host(context, host):
+    result = model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
                 filter_by(binary='nova-compute').\
                 first()
@@ -531,13 +528,14 @@ def service_get_by_compute_host(context, host, use_slave=False):
     return result
 
 
+@main_context_manager.writer
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
     if not CONF.enable_new_services:
         service_ref.disabled = True
     try:
-        service_ref.save()
+        service_ref.save(context.session)
     except db_exc.DBDuplicateEntry as e:
         if 'binary' in e.columns:
             raise exception.ServiceBinaryExists(host=values.get('host'),
@@ -548,17 +546,16 @@ def service_create(context, values):
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def service_update(context, service_id, values):
-    session = get_session()
-    with session.begin():
-        service_ref = _service_get(context, service_id, session=session)
-        # Only servicegroup.drivers.db.DbDriver._report_state() updates
-        # 'report_count', so if that value changes then store the timestamp
-        # as the last time we got a state report.
-        if 'report_count' in values:
-            if values['report_count'] > service_ref.report_count:
-                service_ref.last_seen_up = timeutils.utcnow()
-        service_ref.update(values)
+    service_ref = service_get(context, service_id)
+    # Only servicegroup.drivers.db.DbDriver._report_state() updates
+    # 'report_count', so if that value changes then store the timestamp
+    # as the last time we got a state report.
+    if 'report_count' in values:
+        if values['report_count'] > service_ref.report_count:
+            service_ref.last_seen_up = timeutils.utcnow()
+    service_ref.update(values)
 
     return service_ref
 
