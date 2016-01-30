@@ -29,7 +29,6 @@ from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
 import six
-from testtools import matchers
 
 from nova import context
 from nova import exception
@@ -257,17 +256,6 @@ class _BaseTestCase(test.TestCase):
         a simple coercion on the object field value.
         """
         self.assertEqual(expected, str(obj_val))
-
-    def assertNotIsInstance(self, obj, cls, msg=None):
-        """Python < v2.7 compatibility.  Assert 'not isinstance(obj, cls)."""
-        try:
-            f = super(_BaseTestCase, self).assertNotIsInstance
-        except AttributeError:
-            self.assertThat(obj,
-                            matchers.Not(matchers.IsInstance(cls)),
-                            message=msg or '')
-        else:
-            f(obj, cls, msg=msg)
 
 
 class _LocalTest(_BaseTestCase):
