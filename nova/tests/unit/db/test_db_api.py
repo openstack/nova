@@ -904,7 +904,7 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(context=ctxt, metadata=None)
 
         def counted():
-            def get_query(context, id, session, read_deleted):
+            def get_query(context, id, read_deleted):
                 get_query.counter += 1
                 raise db_exc.DBDuplicateEntry
             get_query.counter = 0
