@@ -5615,7 +5615,8 @@ class ComputeManager(manager.Manager):
                 try:
                     inst = objects.Instance.get_by_uuid(
                             context, instance_uuids.pop(0),
-                            expected_attrs=['system_metadata', 'info_cache'],
+                            expected_attrs=['system_metadata', 'info_cache',
+                                            'flavor'],
                             use_slave=True)
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
