@@ -452,7 +452,9 @@ class TestUpdateAvailableResources(BaseTestCase):
                                          'fake-node',
                                          expected_attrs=[
                                              'system_metadata',
-                                             'numa_topology'])
+                                             'numa_topology',
+                                             'flavor',
+                                             'migration_context'])
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         migr_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
