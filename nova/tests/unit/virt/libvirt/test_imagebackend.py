@@ -107,8 +107,8 @@ class _ImageTestCase(object):
             return
 
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: True)
+        self.stub_out('os.path.exists', lambda _: True)
+        self.stub_out('os.access', lambda p, w: True)
 
         # Call twice to verify testing fallocate is only called once.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -132,8 +132,8 @@ class _ImageTestCase(object):
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, '_can_fallocate', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: False)
+        self.stub_out('os.path.exists', lambda _: True)
+        self.stub_out('os.access', lambda p, w: False)
 
         # Testing fallocate is only called when user has write access.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -765,7 +765,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1138,7 +1138,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1326,7 +1326,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1636,7 +1636,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 

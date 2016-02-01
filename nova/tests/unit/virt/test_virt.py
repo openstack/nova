@@ -14,7 +14,6 @@
 #    under the License.
 
 import io
-import os
 
 import mock
 import six
@@ -203,7 +202,7 @@ class TestVirtDisk(test.NoDBTestCase):
         def fake_instance_for_format(image, mountdir, partition):
             return FakeMount(image, mountdir, partition)
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
         self.stubs.Set(mount.Mount, 'instance_for_format',
                        staticmethod(fake_instance_for_format))
@@ -222,7 +221,7 @@ class TestVirtDisk(test.NoDBTestCase):
             }
             return mount_points[mount_point]
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
         expected_commands = []
 
@@ -266,7 +265,7 @@ class TestVirtDisk(test.NoDBTestCase):
         def proc_mounts(self, mount_point):
             return None
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
         expected_commands = []
 

@@ -527,7 +527,7 @@ disk size: 4.4M
             self.path = path
             return FakeStatResult()
 
-        self.stubs.Set(os, 'statvfs', fake_statvfs)
+        self.stub_out('os.statvfs', fake_statvfs)
 
         fs_info = libvirt_utils.get_fs_info('/some/file/path')
         self.assertEqual('/some/file/path', self.path)
@@ -606,8 +606,8 @@ disk size: 4.4M
             return FakeImgInfo()
 
         self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(os, 'rename', fake_rename)
-        self.stubs.Set(os, 'unlink', fake_unlink)
+        self.stub_out('os.rename', fake_rename)
+        self.stub_out('os.unlink', fake_unlink)
         self.stubs.Set(images, 'fetch', lambda *_, **__: None)
         self.stubs.Set(images, 'qemu_img_info', fake_qemu_img_info)
         self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_error)
@@ -677,7 +677,7 @@ disk size: 4.4M
             return True
 
         self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(os.path, 'exists', return_true)
+        self.stub_out('os.path.exists', return_true)
 
         out = libvirt_utils.get_disk_backing_file('')
         self.assertEqual(out, 'baz')
