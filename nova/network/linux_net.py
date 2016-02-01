@@ -1376,9 +1376,10 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
     _set_device_mtu(dev)
 
 
-def delete_ovs_vif_port(bridge, dev):
+def delete_ovs_vif_port(bridge, dev, delete_dev=True):
     _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
-    delete_net_dev(dev)
+    if delete_dev:
+        delete_net_dev(dev)
 
 
 def ovs_set_vhostuser_port_type(dev):
