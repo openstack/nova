@@ -51,6 +51,7 @@ VIF_TYPE_BINDING_FAILED = 'binding_failed'
 VIF_DETAILS_PORT_FILTER = 'port_filter'
 VIF_DETAILS_OVS_HYBRID_PLUG = 'ovs_hybrid_plug'
 VIF_DETAILS_PHYSICAL_NETWORK = 'physical_network'
+VIF_DETAILS_BRIDGE_NAME = 'bridge_name'
 
 # The following constant defines an SR-IOV related parameter in the
 # 'vif_details'. 'profileid' should be used for VIF_TYPE_802_QBH

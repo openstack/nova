@@ -49,11 +49,10 @@ neutron_opts = [
                help='URL for connecting to neutron'),
     cfg.StrOpt('region_name',
                help='Region name for connecting to neutron in admin context'),
-    # TODO(berrange) temporary hack until Neutron can pass over the
-    # name of the OVS bridge it is configured with
     cfg.StrOpt('ovs_bridge',
                default='br-int',
-               help='Name of Integration Bridge used by Open vSwitch'),
+               help='Default OVS bridge name to use if not specified '
+                    'by Neutron'),
     cfg.IntOpt('extension_sync_interval',
                 default=600,
                 help='Number of seconds before querying neutron for'
@@ -1554,14 +1553,14 @@ class API(base_api.NetworkAPI):
         # Network model metadata
         should_create_bridge = None
         vif_type = port.get('binding:vif_type')
-        port_details = port.get('binding:vif_details')
-        # TODO(berrange) Neutron should pass the bridge name
-        # in another binding metadata field
+        port_details = port.get('binding:vif_details', {})
         if vif_type == network_model.VIF_TYPE_OVS:
-            bridge = CONF.neutron.ovs_bridge
+            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
+                                      CONF.neutron.ovs_bridge)
             ovs_interfaceid = port['id']
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
-            bridge = "brq" + port['network_id']
+            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
+                                      "brq" + port['network_id'])
             should_create_bridge = True
         elif vif_type == network_model.VIF_TYPE_DVS:
             # The name of the DVS port group will contain the neutron
@@ -1570,7 +1569,8 @@ class API(base_api.NetworkAPI):
         elif (vif_type == network_model.VIF_TYPE_VHOSTUSER and
          port_details.get(network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
                           False)):
-            bridge = CONF.neutron.ovs_bridge
+            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
+                                      CONF.neutron.ovs_bridge)
             ovs_interfaceid = port['id']
 
         # Prune the bridge name if necessary. For the DVS this is not done
