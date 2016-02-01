@@ -71,7 +71,8 @@ def get_instance_by_floating_ip_addr(self, context, address):
         raise webob.exc.HTTPConflict(explanation=ex.format_message())
 
     if instance_id:
-        return common.get_instance(self.compute_api, context, instance_id)
+        return common.get_instance(self.compute_api, context, instance_id,
+                                   expected_attrs=['flavor'])
 
 
 def disassociate_floating_ip(self, context, instance, address):
@@ -193,7 +194,8 @@ class FloatingIPActionController(wsgi.Controller):
 
         address = body['addFloatingIp']['address']
 
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['flavor'])
         cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
         if not cached_nwinfo:
             LOG.warning(
