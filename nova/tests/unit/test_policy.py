@@ -737,7 +737,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
     def test_rule_missing(self):
         rules = policy.get_rules()
         # eliqiao os_compute_api:os-quota-class-sets:show requires
-        # admin=True or quota_class match, this rule wont' belone to
+        # admin=True or quota_class match, this rule won't belong to
         # admin_only, non_admin, admin_or_user, empty_rule
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show')
