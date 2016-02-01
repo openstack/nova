@@ -53,12 +53,12 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def _build_tcp_udp_rule(self, rule, version):
-        if rule['from_port'] == rule['to_port']:
-            return ['--dport', '%s' % (rule['from_port'],)]
+        if rule.from_port == rule.to_port:
+            return ['--dport', '%s' % (rule.from_port,)]
         else:
             #  No multiport needed for XS!
-            return ['--dport', '%s:%s' % (rule['from_port'],
-                                           rule['to_port'])]
+            return ['--dport', '%s:%s' % (rule.from_port,
+                                           rule.to_port)]
 
     def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6.
@@ -72,28 +72,28 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         ipv6_rules = []
         rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
-            LOG.debug('Adding provider rule: %s', rule['cidr'])
-            version = netutils.get_ip_version(rule['cidr'])
+            LOG.debug('Adding provider rule: %s', rule.cidr)
+            version = netutils.get_ip_version(rule.cidr)
             if version == 4:
                 fw_rules = ipv4_rules
             else:
                 fw_rules = ipv6_rules
 
-            protocol = rule['protocol']
+            protocol = rule.protocol
             if version == 6 and protocol == 'icmp':
                 protocol = 'icmpv6'
 
-            args = ['-p', protocol, '-s', rule['cidr']]
+            args = ['-p', protocol, '-s', rule.cidr]
 
             if protocol in ['udp', 'tcp']:
-                if rule['from_port'] == rule['to_port']:
-                    args += ['--dport', '%s' % (rule['from_port'],)]
+                if rule.from_port == rule.to_port:
+                    args += ['--dport', '%s' % (rule.from_port,)]
                 else:
-                    args += ['--dport', '%s:%s' % (rule['from_port'],
-                                                    rule['to_port'])]
+                    args += ['--dport', '%s:%s' % (rule.from_port,
+                                                    rule.to_port)]
             elif protocol == 'icmp':
-                icmp_type = rule['from_port']
-                icmp_code = rule['to_port']
+                icmp_type = rule.from_port
+                icmp_code = rule.to_port
 
                 if icmp_type == -1:
                     icmp_type_arg = None

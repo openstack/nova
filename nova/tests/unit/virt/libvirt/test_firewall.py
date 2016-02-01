@@ -453,24 +453,26 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(rules))
 
         # add a rule angd send the update message, check for 1 rule
-        mock_fwrules.return_value = [{'protocol': 'tcp',
-                                      'cidr': '10.99.99.99/32',
-                                      'from_port': 1,
-                                      'to_port': 65535}]
+        sec_grp_rule_obj = objects.SecurityGroupRule(protocol='tcp',
+                                                     cidr='10.99.99.99/32',
+                                                     from_port=1,
+                                                     to_port=65535)
+        mock_fwrules.return_value = [sec_grp_rule_obj]
         self.fw.refresh_provider_fw_rules()
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
         self.assertEqual(1, len(rules))
 
         # Add another, refresh, and make sure number of rules goes to two
-        mock_fwrules.return_value = [{'protocol': 'tcp',
-                                      'cidr': '10.99.99.99/32',
-                                      'from_port': 1,
-                                      'to_port': 65535},
-                                     {'protocol': 'udp',
-                                      'cidr': '10.99.99.99/32',
-                                      'from_port': 1,
-                                      'to_port': 65535}]
+        sec_grp_rule_obj1 = objects.SecurityGroupRule(protocol='tcp',
+                                                     cidr='10.99.99.99/32',
+                                                     from_port=1,
+                                                     to_port=65535)
+        sec_grp_rule_obj2 = objects.SecurityGroupRule(protocol='udp',
+                                                     cidr='10.99.99.99/32',
+                                                     from_port=1,
+                                                     to_port=65535)
+        mock_fwrules.return_value = [sec_grp_rule_obj1, sec_grp_rule_obj2]
         self.fw.refresh_provider_fw_rules()
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
@@ -490,10 +492,11 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(provjump_rules))
 
         # remove a rule from the db, cast to compute to refresh rule
-        mock_fwrules.return_value = [{'protocol': 'udp',
-                                      'cidr': '10.99.99.99/32',
-                                      'from_port': 1,
-                                      'to_port': 65535}]
+        sec_grp_rule_obj = objects.SecurityGroupRule(protocol='udp',
+                                                     cidr='10.99.99.99/32',
+                                                     from_port=1,
+                                                     to_port=65535)
+        mock_fwrules.return_value = [sec_grp_rule_obj]
         self.fw.refresh_provider_fw_rules()
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
