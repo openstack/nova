@@ -700,7 +700,7 @@ class Host(object):
         :param only_running: True to only return running instances
         :param only_guests: True to filter out any host domain (eg Dom-0)
 
-        See method "list_instance_domains" for more informations.
+        See method "list_instance_domains" for more information.
 
         :returns: list of Guest objects
         """
