@@ -40,7 +40,7 @@ import eventlet.event
 from eventlet import greenthread
 import eventlet.semaphore
 import eventlet.timeout
-from keystoneclient import exceptions as keystone_exception
+from keystoneauth1 import exceptions as keystone_exception
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging

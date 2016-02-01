@@ -22,7 +22,8 @@ import base64
 import binascii
 
 from barbicanclient import client as barbican_client
-from keystoneclient import session
+from keystoneauth1 import loading as ks_loading
+from keystoneauth1 import session
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -52,7 +53,7 @@ BARBICAN_OPT_GROUP = 'barbican'
 
 CONF.register_opts(barbican_opts, group=BARBICAN_OPT_GROUP)
 
-session.Session.register_conf_options(CONF, BARBICAN_OPT_GROUP)
+ks_loading.register_session_conf_options(CONF, BARBICAN_OPT_GROUP)
 
 LOG = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class BarbicanKeyManager(key_mgr.KeyManager):
             return self._barbican_client
 
         try:
-            _SESSION = session.Session.load_from_conf_options(
+            _SESSION = ks_loading.load_session_from_conf_options(
                 CONF,
                 BARBICAN_OPT_GROUP)
 

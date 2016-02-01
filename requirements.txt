@@ -26,7 +26,7 @@ Babel>=1.3 # BSD
 iso8601>=0.1.9 # MIT
 jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
 python-cinderclient>=1.3.1 # Apache-2.0
-python-keystoneclient!=1.8.0,!=2.1.0,>=1.6.0 # Apache-2.0
+keystoneauth1>=2.1.0 # Apache-2.0
 python-neutronclient>=2.6.0 # Apache-2.0
 python-glanceclient>=1.2.0 # Apache-2.0
 requests!=2.9.0,>=2.8.1 # Apache-2.0

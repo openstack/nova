@@ -19,8 +19,8 @@
 
 import copy
 
-from keystoneclient import auth
-from keystoneclient import service_catalog
+from keystoneauth1.access import service_catalog as ksa_service_catalog
+from keystoneauth1 import plugin
 from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
@@ -35,8 +35,8 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
-class _ContextAuthPlugin(auth.BaseAuthPlugin):
-    """A keystoneclient auth plugin that uses the values from the Context.
+class _ContextAuthPlugin(plugin.BaseAuthPlugin):
+    """A keystoneauth auth plugin that uses the values from the Context.
 
     Ideally we would use the plugin provided by auth_token middleware however
     this plugin isn't serialized yet so we construct one from the serialized
@@ -47,8 +47,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
         super(_ContextAuthPlugin, self).__init__()
 
         self.auth_token = auth_token
-        sc = {'serviceCatalog': sc}
-        self.service_catalog = service_catalog.ServiceCatalogV2(sc)
+        self.service_catalog = ksa_service_catalog.ServiceCatalogV2(sc)
 
     def get_token(self, *args, **kwargs):
         return self.auth_token
@@ -57,7 +56,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
                      region_name=None, service_name=None, **kwargs):
         return self.service_catalog.url_for(service_type=service_type,
                                             service_name=service_name,
-                                            endpoint_type=interface,
+                                            interface=interface,
                                             region_name=region_name)
 
 
