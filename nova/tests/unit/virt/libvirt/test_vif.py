@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 from lxml import etree
 import mock
 from oslo_concurrency import processutils
@@ -672,7 +674,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             delete.side_effect = processutils.ProcessExecutionError
             d.unplug_ivs_ethernet(None, self.vif_ovs)
 
-    def test_plug_ovs_hybrid(self):
+    def _test_plug_ovs_hybrid(self, ipv6_exists):
         calls = {
             'device_exists': [mock.call('qbrvif-xxx-yyy'),
                               mock.call('qvovif-xxx-yyy')],
@@ -687,29 +689,45 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                         mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
                                           '/bridge/multicast_snooping'),
                                   process_input='0', run_as_root=True,
-                                  check_exit_code=[0, 1]),
-                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
-                                  run_as_root=True),
-                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
-                                  'qvbvif-xxx-yyy', run_as_root=True)],
+                                  check_exit_code=[0, 1])],
             'create_ovs_vif_port': [mock.call(
                                     'br0', 'qvovif-xxx-yyy', 'aaa-bbb-ccc',
                                     'ca:fe:de:ad:be:ef',
                                     'f0000000-0000-0000-0000-000000000001')]
         }
+        # The disable_ipv6 call needs to be added in the middle, if required
+        if ipv6_exists:
+            calls['execute'].extend([
+                mock.call('tee', ('/proc/sys/net/ipv6/conf'
+                                  '/qbrvif-xxx-yyy/disable_ipv6'),
+                          process_input='1', run_as_root=True,
+                          check_exit_code=[0, 1])])
+        calls['execute'].extend([
+            mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
+                      run_as_root=True),
+            mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                      'qvbvif-xxx-yyy', run_as_root=True)])
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
-                mock.patch.object(linux_net, 'create_ovs_vif_port')
-        ) as (device_exists, execute, _create_veth_pair, create_ovs_vif_port):
+                mock.patch.object(linux_net, 'create_ovs_vif_port'),
+                mock.patch.object(os.path, 'exists', return_value=ipv6_exists)
+        ) as (device_exists, execute, _create_veth_pair, create_ovs_vif_port,
+              path_exists):
             d = vif.LibvirtGenericVIFDriver()
             d.plug_ovs_hybrid(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
             execute.assert_has_calls(calls['execute'])
             create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+
+    def test_plug_ovs_hybrid_ipv6(self):
+        self._test_plug_ovs_hybrid(ipv6_exists=True)
+
+    def test_plug_ovs_hybrid_no_ipv6(self):
+        self._test_plug_ovs_hybrid(ipv6_exists=False)
 
     def test_unplug_ovs_hybrid(self):
         calls = {
@@ -806,6 +824,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                           '/bridge/multicast_snooping'),
                                   process_input='0', run_as_root=True,
                                   check_exit_code=[0, 1]),
+                        mock.call('tee', ('/proc/sys/net/ipv6/conf'
+                                          '/qbrvif-xxx-yyy/disable_ipv6'),
+                                  process_input='1', run_as_root=True,
+                                  check_exit_code=[0, 1]),
                         mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
                                   run_as_root=True),
                         mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
@@ -819,8 +841,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
-                mock.patch.object(linux_net, 'create_ivs_vif_port')
-        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port):
+                mock.patch.object(linux_net, 'create_ivs_vif_port'),
+                mock.patch.object(os.path, 'exists', return_value=True)
+        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port,
+              path_exists):
             d = vif.LibvirtGenericVIFDriver()
             d.plug_ivs_hybrid(self.instance, self.vif_ivs)
             device_exists.assert_has_calls(calls['device_exists'])
