@@ -107,9 +107,9 @@ class TestDbSync(test.NoDBTestCase):
             mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(database=database)
-        mock_version.assert_called_once_with(database)
+        mock_version.assert_called_once_with(database, context=None)
         mock_find_repo.assert_called_once_with(database)
-        mock_get_engine.assert_called_once_with(database)
+        mock_get_engine.assert_called_once_with(database, context=None)
         mock_upgrade.assert_called_once_with('engine', 'repo', None)
         self.assertFalse(mock_downgrade.called)
 
@@ -117,9 +117,9 @@ class TestDbSync(test.NoDBTestCase):
             mock_find_repo, mock_version):
         database = 'fake'
         migration.db_sync(1, database=database)
-        mock_version.assert_called_once_with(database)
+        mock_version.assert_called_once_with(database, context=None)
         mock_find_repo.assert_called_once_with(database)
-        mock_get_engine.assert_called_once_with(database)
+        mock_get_engine.assert_called_once_with(database, context=None)
         mock_downgrade.assert_called_once_with('engine', 'repo', 1)
         self.assertFalse(mock_upgrade.called)
 
@@ -149,10 +149,12 @@ class TestDbVersion(test.NoDBTestCase):
                 metadata), mock.patch.object(migration,
                         'db_version_control') as mock_version_control:
             migration.db_version(database)
-            mock_version_control.assert_called_once_with(0, database)
+            mock_version_control.assert_called_once_with(0,
+                                                         database,
+                                                         context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
-        engine_calls = [mock.call(database)] * 3
+        engine_calls = [mock.call(database, context=None)] * 3
         self.assertEqual(engine_calls, mock_get_engine.call_args_list)
 
 
@@ -176,7 +178,7 @@ class TestGetEngine(test.NoDBTestCase):
                 return_value='engine') as mock_get_engine:
             engine = migration.get_engine()
             self.assertEqual('engine', engine)
-            mock_get_engine.assert_called_once_with()
+            mock_get_engine.assert_called_once_with(context=None)
 
     def test_get_api_engine(self):
         with mock.patch.object(db_api, 'get_api_engine',

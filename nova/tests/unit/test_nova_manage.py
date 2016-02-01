@@ -544,12 +544,38 @@ class DBCommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(sqla_migration, 'db_version', return_value=2)
     def test_version(self, sqla_migrate):
         self.commands.version()
-        sqla_migrate.assert_called_once_with(database='main')
+        sqla_migrate.assert_called_once_with(context=None, database='main')
 
     @mock.patch.object(sqla_migration, 'db_sync')
     def test_sync(self, sqla_sync):
-        self.commands.sync(version=4)
-        sqla_sync.assert_called_once_with(version=4, database='main')
+        self.commands.sync(version=4, local_cell=True)
+        sqla_sync.assert_called_once_with(context=None,
+                                          version=4, database='main')
+
+    @mock.patch('nova.db.migration.db_sync')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid', return_value='map')
+    def test_sync_cell0(self, mock_get_by_uuid, mock_db_sync):
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+        with test.nested(
+                mock.patch('nova.context.RequestContext',
+                           return_value=ctxt),
+                mock.patch('nova.context.target_cell')) \
+                                   as (mock_get_context,
+                                       mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+            self.commands.sync(version=4)
+            mock_get_by_uuid.assert_called_once_with(ctxt,
+                                        objects.CellMapping.CELL0_UUID)
+            mock_target_cell.assert_called_once_with(ctxt, 'map')
+
+            db_sync_calls = [
+                    mock.call(4, context=ctxt),
+                    mock.call(4)
+            ]
+            mock_db_sync.assert_has_calls(db_sync_calls)
 
     def _fake_db_command(self, migrations=None):
         if migrations is None:
@@ -635,12 +661,14 @@ class ApiDbCommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(sqla_migration, 'db_version', return_value=2)
     def test_version(self, sqla_migrate):
         self.commands.version()
-        sqla_migrate.assert_called_once_with(database='api')
+        sqla_migrate.assert_called_once_with(context=None,
+                                             database='api')
 
     @mock.patch.object(sqla_migration, 'db_sync')
     def test_sync(self, sqla_sync):
         self.commands.sync(version=4)
-        sqla_sync.assert_called_once_with(version=4, database='api')
+        sqla_sync.assert_called_once_with(context=None,
+                                          version=4, database='api')
 
 
 class CellCommandsTestCase(test.NoDBTestCase):

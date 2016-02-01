@@ -797,8 +797,26 @@ class DbCommands(object):
         pass
 
     @args('--version', metavar='<version>', help='Database version')
-    def sync(self, version=None):
+    @args('--local_cell', action='store_true',
+          help='Only sync db in the local cell: do not attempt to fan-out'
+               'to all cells')
+    def sync(self, version=None, local_cell=False):
         """Sync the database up to the most recent version."""
+        if not local_cell:
+            ctxt = context.RequestContext()
+            # NOTE(mdoff): Multiple cells not yet implemented. Currently
+            # fanout only looks for cell0.
+            try:
+                cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
+                                            objects.CellMapping.CELL0_UUID)
+                with context.target_cell(ctxt, cell_mapping):
+                    migration.db_sync(version, context=ctxt)
+            except exception.CellMappingNotFound:
+                print(_('WARNING: cell0 mapping not found - not'
+                        ' syncing cell0.'))
+            except Exception:
+                print(_('ERROR: could not access cell mapping database - has'
+                        ' api db been created?'))
         return migration.db_sync(version)
 
     def version(self):
