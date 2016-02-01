@@ -834,7 +834,7 @@ class ComputeDriver(object):
         :param block_device_info: instance block device information
         :param network_info: instance network information
         :param disk_info: instance disk information
-        :param migrate_data: implementation specific data dict.
+        :param migrate_data: a LiveMigrateData object
         """
         raise NotImplementedError()
 
@@ -855,7 +855,7 @@ class ComputeDriver(object):
             recovery method when any exception occurs.
             expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, migrate VM disk.
-        :param migrate_data: implementation specific params.
+        :param migrate_data: a LiveMigrateData object
 
         """
         raise NotImplementedError()
@@ -873,7 +873,7 @@ class ComputeDriver(object):
         :param block_device_info: instance block device information
         :param destroy_disks:
             if true, destroy disks at destination during cleanup
-        :param migrate_data: implementation specific params
+        :param migrate_data: a LiveMigrateData object
 
         """
         raise NotImplementedError()
@@ -885,7 +885,7 @@ class ComputeDriver(object):
         :param context: security context
         :instance: instance object that was migrated
         :block_device_info: instance block device information
-        :param migrate_data: if not None, it is a dict which has data
+        :param migrate_data: a LiveMigrateData object
         """
         pass
 
@@ -978,7 +978,7 @@ class ComputeDriver(object):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
         :param block_device_info: result of _get_instance_block_device_info
-        :returns: a dict containing migration info (hypervisor-dependent)
+        :returns: a LiveMigrateData object
         """
         raise NotImplementedError()
 

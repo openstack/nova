@@ -5360,11 +5360,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
-        :returns: a dict containing:
-             :filename: name of the tmpfile under CONF.instances_path
-             :block_migration: whether this is block migration
-             :disk_over_commit: disk-over-commit factor on dest host
-             :disk_available_mb: available disk space on dest host
+        :returns: a LibvirtLiveMigrateData object
         """
         disk_available_mb = None
         if block_migration:
@@ -5411,7 +5407,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
         :param block_device_info: result of _get_instance_block_device_info
-        :returns: a dict containing migration info
+        :returns: a LibvirtLiveMigrateData object
         """
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.
@@ -5686,7 +5682,7 @@ class LibvirtDriver(driver.ComputeDriver):
             recovery method when any exception occurs.
             expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, do block migration.
-        :param migrate_data: implementation specific params
+        :param migrate_data: a LibvirtLiveMigrateData object
 
         """
 
@@ -5846,7 +5842,7 @@ class LibvirtDriver(driver.ComputeDriver):
             instance object that is migrated.
         :param dest: destination host
         :param block_migration: if true, do block migration.
-        :param migrate_data: implementation specific params
+        :param migrate_data: a LibvirtLiveMigrateData object
         :param dom: the libvirt domain object
 
         This method is intended to be run in a background thread and will
@@ -6298,7 +6294,7 @@ class LibvirtDriver(driver.ComputeDriver):
             recovery method when any exception occurs.
             expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, do block migration.
-        :param migrate_data: implementation specific params
+        :param migrate_data: a LibvirtLiveMigrateData object
 
         This fires off a new thread to run the blocking migration
         operation, and then this thread monitors the progress of
