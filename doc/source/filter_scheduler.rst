@@ -168,24 +168,6 @@ There are many standard filter classes which may be used
   the available metrics are passed.
 * |NUMATopologyFilter| - filters hosts based on the NUMA topology requested by the
   instance, if any.
-* |AggregateTypeExtraSpecsAffinityFilter| - filters only hosts aggregated inside
-  host aggregates containing "flavor_extra_spec" metadata. Keys inside this
-  variable must match with the instance extra specs.
-
-  The content of the list will be formatted as follows. The entries in the list
-  will be separated by commas without white space. Each entry will comprise of
-  an instance type extra spec key followed by and equals "=" followed by a
-  value: <key>=<value>.
-
-  Eg. 'flavor_extra_spec=hw:mem_page_size=any,hw:mem_page_size=~,hw:mem_page_size=small'
-
-  Valid sentinel values are:
-::
-
-  * (asterisk): may be used to specify that any value is valid.
-  ~ (tilde): may be used to specify that a key may optionally be omitted.
-  ! (exclamation): may be used to specify that the key must not be present.
-::
 
 Now we can focus on these standard filter classes in some detail. We'll skip the
 simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter|,
@@ -464,7 +446,6 @@ in :mod:`nova.tests.scheduler`.
 .. |TrustedFilter| replace:: :class:`TrustedFilter <nova.scheduler.filters.trusted_filter.TrustedFilter>`
 .. |TypeAffinityFilter| replace:: :class:`TypeAffinityFilter <nova.scheduler.filters.type_filter.TypeAffinityFilter>`
 .. |AggregateTypeAffinityFilter| replace:: :class:`AggregateTypeAffinityFilter <nova.scheduler.filters.type_filter.AggregateTypeAffinityFilter>`
-.. |AggregateTypeExtraSpecsAffinityFilter| replace:: :class:`AggregateTypeExtraSpecsAffinityFilter <nova.scheduler.filters.type_filter.AggregateTypeExtraSpecsAffinityFilter>`
 .. |ServerGroupAntiAffinityFilter| replace:: :class:`ServerGroupAntiAffinityFilter <nova.scheduler.filters.affinity_filter.ServerGroupAntiAffinityFilter>`
 .. |ServerGroupAffinityFilter| replace:: :class:`ServerGroupAffinityFilter <nova.scheduler.filters.affinity_filter.ServerGroupAffinityFilter>`
 .. |AggregateInstanceExtraSpecsFilter| replace:: :class:`AggregateInstanceExtraSpecsFilter <nova.scheduler.filters.aggregate_instance_extra_specs.AggregateInstanceExtraSpecsFilter>`
