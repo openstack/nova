@@ -22,7 +22,9 @@ ironic_group = cfg.OptGroup(
 api_version = cfg.IntOpt(
     'api_version',
     default=1,
-    help='Version of Ironic API service endpoint.')
+    deprecated_for_removal=True,
+    help='Version of Ironic API service endpoint. '
+         'DEPRECATED: Setting the API version is not possible anymore.')
 
 api_endpoint = cfg.StrOpt(
     'api_endpoint',

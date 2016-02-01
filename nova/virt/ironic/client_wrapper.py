@@ -30,6 +30,9 @@ CONF = cfg.CONF
 
 ironic = None
 
+# The API version required by the Ironic driver
+IRONIC_API_VERSION = (1, 8)
+
 
 class IronicClientWrapper(object):
     """Ironic client wrapper class that encapsulates retry logic."""
@@ -82,8 +85,9 @@ class IronicClientWrapper(object):
         # Retries for Conflict exception
         kwargs['max_retries'] = max_retries
         kwargs['retry_interval'] = retry_interval
+        kwargs['os_ironic_api_version'] = '%d.%d' % IRONIC_API_VERSION
         try:
-            cli = ironic.client.get_client(CONF.ironic.api_version, **kwargs)
+            cli = ironic.client.get_client(IRONIC_API_VERSION[0], **kwargs)
             # Cache the client so we don't have to reconstruct and
             # reauthenticate it every time we need it.
             if retry_on_conflict:
