@@ -21,14 +21,19 @@ Scheduler base class that all Schedulers should inherit from
 
 import abc
 
+from oslo_log import log as logging
 from oslo_utils import importutils
 import six
+from stevedore import driver
 
 import nova.conf
+from nova.i18n import _, _LW
 from nova import objects
 from nova import servicegroup
 
 CONF = nova.conf.CONF
+
+LOG = logging.getLogger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -36,8 +41,29 @@ class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
-        self.host_manager = importutils.import_object(
-                CONF.scheduler_host_manager)
+        try:
+            self.host_manager = driver.DriverManager(
+                    "nova.scheduler.host_manager",
+                    CONF.scheduler_host_manager,
+                    invoke_on_load=True).driver
+        # TODO(Yingxin): Change to catch stevedore.exceptions.NoMatches
+        # after stevedore v1.9.0
+        except RuntimeError:
+            # NOTE(Yingxin): Loading full class path is deprecated and
+            # should be removed in the N release.
+            try:
+                self.host_manager = importutils.import_object(
+                    CONF.scheduler_host_manager)
+                LOG.warning(_LW("DEPRECATED: scheduler_host_manager uses "
+                                "classloader to load %(path)s. This legacy "
+                                "loading style will be removed in the "
+                                "N release."),
+                            {'path': CONF.scheduler_host_manager})
+            except (ImportError, ValueError):
+                raise RuntimeError(
+                        _("Cannot load host manager from configuration "
+                          "scheduler_host_manager = %(conf)s."),
+                        {'conf': CONF.scheduler_host_manager})
         self.servicegroup_api = servicegroup.API()
 
     def run_periodic_tasks(self, context):

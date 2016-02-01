@@ -21,7 +21,9 @@ import mock
 
 from nova import context
 from nova import objects
+from nova.scheduler import driver
 from nova.scheduler import host_manager
+from nova.scheduler import ironic_host_manager
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
@@ -115,6 +117,54 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             mock_sync.assert_called_once_with(mock.sentinel.context,
                                               mock.sentinel.host_name,
                                               mock.sentinel.instance_uuids)
+
+
+class SchedulerInitTestCase(test.NoDBTestCase):
+    """Test case for base scheduler driver initiation."""
+
+    driver_cls = fakes.FakeScheduler
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_default_hostmanager(self,
+                                            mock_init_agg,
+                                            mock_init_inst):
+        manager = self.driver_cls().host_manager
+        self.assertIsInstance(manager, host_manager.HostManager)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_ironic_hostmanager(self,
+                                           mock_init_agg,
+                                           mock_init_inst):
+        self.flags(scheduler_host_manager='ironic_host_manager')
+        manager = self.driver_cls().host_manager
+        self.assertIsInstance(manager, ironic_host_manager.IronicHostManager)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_nonexist_hostmanager(self,
+                                       mock_init_agg,
+                                       mock_init_inst):
+        self.flags(scheduler_host_manager='nonexist_host_manager')
+        self.assertRaises(RuntimeError, self.driver_cls)
+
+    # NOTE(Yingxin): Loading full class path is deprecated and should be
+    # removed in the N release.
+    @mock.patch.object(driver.LOG, 'warning')
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_using_classpath_to_hostmanager(self,
+                                                 mock_init_agg,
+                                                 mock_init_inst,
+                                                 mock_warning):
+        self.flags(
+            scheduler_host_manager=
+            'nova.scheduler.ironic_host_manager.IronicHostManager')
+        manager = self.driver_cls().host_manager
+        self.assertIsInstance(manager, ironic_host_manager.IronicHostManager)
+        warn_args, kwargs = mock_warning.call_args
+        self.assertIn("DEPRECATED", warn_args[0])
 
 
 class SchedulerTestCase(test.NoDBTestCase):
