@@ -1194,7 +1194,8 @@ class API(base.Base):
             bdm.instance_uuid = instance_uuid
             bdm.update_or_create()
 
-    def _validate_bdm(self, context, instance, instance_type, all_mappings):
+    def _validate_bdm(self, context, instance, instance_type,
+                      block_device_mappings):
         def _subsequent_list(l):
             # Each device which is capable of being used as boot device should
             # be given a unique boot index, starting from 0 in ascending order.
@@ -1204,17 +1205,18 @@ class API(base.Base):
         # Setting a negative value or None indicates that the device should not
         # be used for booting.
         boot_indexes = sorted([bdm.boot_index
-                               for bdm in all_mappings
+                               for bdm in block_device_mappings
                                if bdm.boot_index is not None
                                and bdm.boot_index >= 0])
 
         if 0 not in boot_indexes or not _subsequent_list(boot_indexes):
             # Convert the BlockDeviceMappingList to a list for repr details.
             LOG.debug('Invalid block device mapping boot sequence for '
-                      'instance: %s', list(all_mappings), instance=instance)
+                      'instance: %s', list(block_device_mappings),
+                      instance=instance)
             raise exception.InvalidBDMBootSequence()
 
-        for bdm in all_mappings:
+        for bdm in block_device_mappings:
             # NOTE(vish): For now, just make sure the volumes are accessible.
             # Additionally, check that the volume can be attached to this
             # instance.
@@ -1261,13 +1263,13 @@ class API(base.Base):
                     "size"))
 
         ephemeral_size = sum(bdm.volume_size or 0
-                for bdm in all_mappings
+                for bdm in block_device_mappings
                 if block_device.new_format_is_ephemeral(bdm))
         if ephemeral_size > instance_type['ephemeral_gb']:
             raise exception.InvalidBDMEphemeralSize()
 
         # There should be only one swap
-        swap_list = block_device.get_bdm_swap_list(all_mappings)
+        swap_list = block_device.get_bdm_swap_list(block_device_mappings)
         if len(swap_list) > 1:
             msg = _("More than one swap drive requested.")
             raise exception.InvalidBDMFormat(details=msg)
@@ -1279,7 +1281,7 @@ class API(base.Base):
 
         max_local = CONF.max_local_block_devices
         if max_local >= 0:
-            num_local = len([bdm for bdm in all_mappings
+            num_local = len([bdm for bdm in block_device_mappings
                              if bdm.destination_type == 'local'])
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()

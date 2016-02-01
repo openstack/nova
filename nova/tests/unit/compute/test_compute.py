@@ -1066,7 +1066,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
-        all_mappings = [fake_block_device.FakeDbBlockDeviceDict({
+        bdms = [fake_block_device.FakeDbBlockDeviceDict({
                          'id': 1,
                          'no_device': None,
                          'source_type': 'volume',
@@ -1076,8 +1076,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                          'device_name': 'vda',
                          'boot_index': 0,
                          'delete_on_termination': False}, anon=True)]
-        all_mappings = block_device_obj.block_device_make_list_from_dicts(
-                self.context, all_mappings)
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+                 self.context, bdms)
 
         # First we test a list of invalid status values that should result
         # in an InvalidVolume exception being raised.
@@ -1107,7 +1107,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._validate_bdm,
                               self.context, self.instance,
-                              instance_type, all_mappings)
+                              instance_type, bdms)
 
         # Now we test a 404 case that results in InvalidBDMVolume.
         def fake_volume_get_not_found(self, context, volume_id):
@@ -1117,7 +1117,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMVolume,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
-                          instance_type, all_mappings)
+                          instance_type, bdms)
 
         # Check that the volume status is 'available' and attach_status is
         # 'detached' and accept the request if so
@@ -1129,7 +1129,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, 'get', fake_volume_get_ok)
 
         self.compute_api._validate_bdm(self.context, self.instance,
-                                       instance_type, all_mappings)
+                                       instance_type, bdms)
 
     def test_volume_snapshot_create(self):
         self.assertRaises(messaging.ExpectedException,
