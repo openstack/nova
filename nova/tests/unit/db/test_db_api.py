@@ -1322,6 +1322,14 @@ class MigrationTestCase(test.TestCase):
             hosts = [migration['source_compute'], migration['dest_compute']]
             self.assertIn(filters["host"], hosts)
 
+    def test_get_migrations_by_filters_with_multiple_statuses(self):
+        filters = {"status": ["reverted", "confirmed"],
+                   "migration_type": None, "hidden": False}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        self.assertEqual(2, len(migrations))
+        for migration in migrations:
+            self.assertIn(migration['status'], filters['status'])
+
     def test_get_migrations_by_filters_with_type(self):
         self._create(status="special", source_compute="host9",
                      migration_type="evacuation")
