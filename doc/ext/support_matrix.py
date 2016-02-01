@@ -115,9 +115,8 @@ class SupportMatrixTarget(object):
 
 class SupportMatrixDirective(rst.Directive):
 
-    option_spec = {
-        'support-matrix': six.text_type,
-    }
+    # The argument is the filename, e.g. support-matrix.ini
+    required_arguments = 1
 
     def run(self):
         matrix = self._load_support_matrix()
@@ -132,8 +131,7 @@ class SupportMatrixDirective(rst.Directive):
 
         cfg = configparser.SafeConfigParser()
         env = self.state.document.settings.env
-        fname = self.options.get("support-matrix",
-                                 "support-matrix.ini")
+        fname = self.arguments[0]
         rel_fpath, fpath = env.relfn2path(fname)
         with open(fpath) as fp:
             cfg.readfp(fp)
