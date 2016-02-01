@@ -1,0 +1,10 @@
+---
+features:
+  - Add a new scheduler filter, AggregateTypeExtraSpecsAffinityFilter, which
+    filters only hosts aggregated inside host aggregates containing
+    "flavor_extra_spec" metadata. Keys inside this variable must match with the
+    instance extra specs. The entries in the list will be separated by commas
+    without white space. Each entry will comprise of an instance type extra
+    spec key followed by an equals "=" followed by a value (<key>=<value>).
+    Documentation can be find in doc folder (doc/source/filter_scheduler.rst)
+    and online (http://docs.openstack.org/developer/nova/filter_scheduler.html).
