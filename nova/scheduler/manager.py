@@ -19,17 +19,22 @@
 Scheduler Service
 """
 
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
 from oslo_utils import importutils
+from stevedore import driver
 
 import nova.conf
 from nova import exception
+from nova.i18n import _, _LW
 from nova import manager
 from nova import objects
 from nova import quota
 
+
+LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
@@ -46,7 +51,28 @@ class SchedulerManager(manager.Manager):
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
             scheduler_driver = CONF.scheduler_driver
-        self.driver = importutils.import_object(scheduler_driver)
+        try:
+            self.driver = driver.DriverManager(
+                    "nova.scheduler.driver",
+                    scheduler_driver,
+                    invoke_on_load=True).driver
+        # TODO(Yingxin): Change to catch stevedore.exceptions.NoMatches after
+        # stevedore v1.9.0
+        except RuntimeError:
+            # NOTE(Yingxin): Loading full class path is deprecated and should
+            # be removed in the N release.
+            try:
+                self.driver = importutils.import_object(scheduler_driver)
+                LOG.warning(_LW("DEPRECATED: scheduler_driver uses "
+                                "classloader to load %(path)s. This legacy "
+                                "loading style will be removed in the "
+                                "N release."),
+                            {'path': scheduler_driver})
+            except (ImportError, ValueError):
+                raise RuntimeError(
+                        _("Cannot load scheduler driver from configuration "
+                          "%(conf)s."),
+                        {'conf': scheduler_driver})
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
 

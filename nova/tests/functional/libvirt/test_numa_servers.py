@@ -79,8 +79,7 @@ class NUMAServersTest(ServersTestBase):
     def _setup_scheduler_service(self):
         self.flags(compute_driver='nova.virt.libvirt.LibvirtDriver')
 
-        self.flags(scheduler_driver='nova.scheduler.'
-                    'filter_scheduler.FilterScheduler')
+        self.flags(scheduler_driver='filter_scheduler')
         self.flags(scheduler_default_filters=CONF.scheduler_default_filters
                    + ['NUMATopologyFilter'])
         return self.start_service('scheduler')
