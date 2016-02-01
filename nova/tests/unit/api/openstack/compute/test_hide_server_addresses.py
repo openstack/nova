@@ -19,7 +19,6 @@ import webob
 
 from nova import compute
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -50,7 +49,7 @@ class HideServerAddressesTestV21(test.TestCase):
         super(HideServerAddressesTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
         return_server = fakes.fake_instance_get()
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
         self._setup_wsgi()
 
     def _make_request(self, url):

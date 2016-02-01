@@ -31,7 +31,6 @@ from nova.compute import resources
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -522,11 +521,11 @@ class MissingComputeNodeTestCase(BaseTestCase):
         super(MissingComputeNodeTestCase, self).setUp()
         self.tracker = self._tracker()
 
-        self.stubs.Set(db, 'service_get_by_compute_host',
+        self.stub_out('nova.db.service_get_by_compute_host',
                 self._fake_service_get_by_compute_host)
-        self.stubs.Set(db, 'compute_node_get_by_host_and_nodename',
+        self.stub_out('nova.db.compute_node_get_by_host_and_nodename',
                 self._fake_compute_node_get_by_host_and_nodename)
-        self.stubs.Set(db, 'compute_node_create',
+        self.stub_out('nova.db.compute_node_create',
                 self._fake_create_compute_node)
         self.tracker.scheduler_client.update_resource_stats = mock.Mock()
 
@@ -563,17 +562,17 @@ class BaseTrackerTestCase(BaseTestCase):
         self.tracker = self._tracker()
         self._migrations = {}
 
-        self.stubs.Set(db, 'service_get_by_compute_host',
+        self.stub_out('nova.db.service_get_by_compute_host',
                 self._fake_service_get_by_compute_host)
-        self.stubs.Set(db, 'compute_node_get_by_host_and_nodename',
+        self.stub_out('nova.db.compute_node_get_by_host_and_nodename',
                 self._fake_compute_node_get_by_host_and_nodename)
-        self.stubs.Set(db, 'compute_node_update',
+        self.stub_out('nova.db.compute_node_update',
                 self._fake_compute_node_update)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 self._fake_compute_node_delete)
-        self.stubs.Set(db, 'migration_update',
+        self.stub_out('nova.db.migration_update',
                 self._fake_migration_update)
-        self.stubs.Set(db, 'migration_get_in_progress_by_host_and_node',
+        self.stub_out('nova.db.migration_get_in_progress_by_host_and_node',
                 self._fake_migration_get_in_progress_by_host_and_node)
 
         # Note that this must be called before the call to _init_tracker()

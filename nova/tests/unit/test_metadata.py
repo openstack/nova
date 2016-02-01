@@ -248,7 +248,7 @@ class MetadataTestCase(test.TestCase):
                      'device_name': '/dev/sdb'})]
 
         self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
-                       fake_bdm_get)
+                      fake_bdm_get)
 
         expected = {'ami': 'sda1',
                     'root': '/dev/sda1',

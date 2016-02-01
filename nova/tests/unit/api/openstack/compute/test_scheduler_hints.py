@@ -25,7 +25,6 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions
 import nova.compute.api
 from nova.compute import flavors
-from nova import db
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -199,7 +198,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             return instance
 
         fake.stub_out_image_service(self)
-        self.stubs.Set(db, 'instance_create', instance_create)
+        self.stub_out('nova.db.instance_create', instance_create)
 
     def _set_up_controller(self):
         ext_info = extension_info.LoadedExtensionInfo()

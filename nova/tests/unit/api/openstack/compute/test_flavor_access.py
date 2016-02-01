@@ -26,7 +26,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
         as flavor_access_v2
 from nova.api.openstack.compute.legacy_v2 import flavors as flavors_api
 from nova import context
-from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -139,12 +138,12 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         self.req = FakeRequest()
         self.req.environ = {"nova.context": context.RequestContext('fake_user',
                                                                    'fake')}
-        self.stubs.Set(db, 'flavor_get_by_flavor_id',
-                       fake_get_flavor_by_flavor_id)
-        self.stubs.Set(db, 'flavor_get_all',
-                       fake_get_all_flavors_sorted_list)
-        self.stubs.Set(db, 'flavor_access_get_by_flavor_id',
-                       fake_get_flavor_access_by_flavor_id)
+        self.stub_out('nova.db.flavor_get_by_flavor_id',
+                      fake_get_flavor_by_flavor_id)
+        self.stub_out('nova.db.flavor_get_all',
+                      fake_get_all_flavors_sorted_list)
+        self.stub_out('nova.db.flavor_access_get_by_flavor_id',
+                      fake_get_flavor_access_by_flavor_id)
 
         self.flavor_access_controller = self.FlavorAccessController()
         self.flavor_action_controller = self.FlavorActionController()
@@ -288,8 +287,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         def stub_add_flavor_access(context, flavorid, projectid):
             self.assertEqual('3', flavorid, "flavorid")
             self.assertEqual("proj2", projectid, "projectid")
-        self.stubs.Set(db, 'flavor_access_add',
-                       stub_add_flavor_access)
+        self.stub_out('nova.db.flavor_access_add',
+                      stub_add_flavor_access)
         expected = {'flavor_access':
             [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
         body = {'addTenantAccess': {'tenant': 'proj2'}}
@@ -325,8 +324,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         def stub_add_flavor_access(context, flavorid, projectid):
             raise exception.FlavorAccessExists(flavor_id=flavorid,
                                                project_id=projectid)
-        self.stubs.Set(db, 'flavor_access_add',
-                       stub_add_flavor_access)
+        self.stub_out('nova.db.flavor_access_add',
+                      stub_add_flavor_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
         add_access = self._get_add_access()
         self.assertRaises(exc.HTTPConflict,
@@ -336,8 +335,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         def stub_remove_flavor_access(context, flavorid, projectid):
             raise exception.FlavorAccessNotFound(flavor_id=flavorid,
                                                  project_id=projectid)
-        self.stubs.Set(db, 'flavor_access_remove',
-                       stub_remove_flavor_access)
+        self.stub_out('nova.db.flavor_access_remove',
+                      stub_remove_flavor_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
         remove_access = self._get_remove_access()
         self.assertRaises(exc.HTTPNotFound,

@@ -208,7 +208,7 @@ class BaseTestCase(test.TestCase):
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(
@@ -394,8 +394,8 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.cinfo = jsonutils.loads(args[-1].get('connection_info'))
             return self.fake_volume
 
-        self.stubs.Set(db, 'block_device_mapping_create', store_cinfo)
-        self.stubs.Set(db, 'block_device_mapping_update', store_cinfo)
+        self.stub_out('nova.db.block_device_mapping_create', store_cinfo)
+        self.stub_out('nova.db.block_device_mapping_update', store_cinfo)
 
     def test_attach_volume_serial(self):
         fake_bdm = objects.BlockDeviceMapping(context=self.context,
@@ -6055,7 +6055,7 @@ class ComputeTestCase(BaseTestCase):
         except NotImplementedError:
             exc_info = sys.exc_info()
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6090,7 +6090,7 @@ class ComputeTestCase(BaseTestCase):
             raised_exc = exc
             exc_info = sys.exc_info()
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6119,7 +6119,7 @@ class ComputeTestCase(BaseTestCase):
         except exception.Invalid:
             exc_info = sys.exc_info()
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6139,7 +6139,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(expected, values)
             return self._fill_fault(expected)
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6162,7 +6162,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(expected, values)
             return self._fill_fault(expected)
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6191,7 +6191,7 @@ class ComputeTestCase(BaseTestCase):
         except NotImplementedError:
             exc_info = sys.exc_info()
 
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6369,9 +6369,9 @@ class ComputeTestCase(BaseTestCase):
                 raise exception.InstanceInfoCacheNotFound(
                                                 instance_uuid=instance['uuid'])
 
-        self.stubs.Set(db, 'instance_get_all_by_host',
+        self.stub_out('nova.db.instance_get_all_by_host',
                 fake_instance_get_all_by_host)
-        self.stubs.Set(db, 'instance_get_by_uuid',
+        self.stub_out('nova.db.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
                 fake_get_instance_nw_info)
@@ -6589,11 +6589,11 @@ class ComputeTestCase(BaseTestCase):
                         migration['instance_uuid']):
                     migration2['status'] = 'confirmed'
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
+        self.stub_out('nova.db.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
-        self.stubs.Set(db, 'migration_get_unconfirmed_by_dest_compute',
+        self.stub_out('nova.db.migration_get_unconfirmed_by_dest_compute',
                 fake_migration_get_unconfirmed_by_dest_compute)
-        self.stubs.Set(db, 'migration_update', fake_migration_update)
+        self.stub_out('nova.db.migration_update', fake_migration_update)
         self.stubs.Set(self.compute.compute_api, 'confirm_resize',
                 fake_confirm_resize)
 
@@ -6877,8 +6877,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(instance, 'destroy', fake_destroy)
 
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda *a, **k: None)
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+                      lambda *a, **k: None)
 
         self.stubs.Set(self.compute,
                        '_complete_deletion',

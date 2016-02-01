@@ -177,10 +177,10 @@ class ControllerTest(test.TestCase):
                        lambda api, *a, **k: return_servers(*a, **k))
         self.stubs.Set(compute_api.API, 'get',
                        lambda api, *a, **k: return_server(*a, **k))
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_security_group)
-        self.stubs.Set(db, 'instance_update_and_get_original',
-                       instance_update_and_get_original)
+        self.stub_out('nova.db.instance_add_security_group',
+                      return_security_group)
+        self.stub_out('nova.db.instance_update_and_get_original',
+                      instance_update_and_get_original)
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
@@ -1441,9 +1441,9 @@ class ServersControllerUpdateTest(ControllerTest):
             filtered_dict['uuid'] = id
             return filtered_dict
 
-        self.stubs.Set(db, 'instance_update', server_update)
+        self.stub_out('nova.db.instance_update', server_update)
         # FIXME (comstud)
-        #        self.stubs.Set(db, 'instance_get',
+        #        self.stub_out('nova.db.instance_get',
         #                return_server_with_attributes(name='server_test'))
 
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
@@ -1469,7 +1469,7 @@ class ServersControllerUpdateTest(ControllerTest):
         def fake_update(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stubs.Set(db, 'instance_update_and_get_original', fake_update)
+        self.stub_out('nova.db.instance_update_and_get_original', fake_update)
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
@@ -1559,7 +1559,7 @@ class ServersControllerDeleteTest(ControllerTest):
     def test_delete_server_instance_while_deleting_host_down(self):
         fake_network.stub_out_network_cleanup(self)
         req = self._create_delete_request(FAKE_UUID)
-        self.stubs.Set(db, 'instance_get_by_uuid',
+        self.stub_out('nova.db.instance_get_by_uuid',
             fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                     task_state=task_states.DELETING,
                                     host='fake_host'))
@@ -1579,7 +1579,7 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_server_instance_while_resize(self):
         req = self._create_delete_request(FAKE_UUID)
-        self.stubs.Set(db, 'instance_get_by_uuid',
+        self.stub_out('nova.db.instance_get_by_uuid',
             fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                     task_state=task_states.RESIZE_PREP))
 
@@ -1603,7 +1603,7 @@ class ServersControllerDeleteTest(ControllerTest):
             self.server_delete_called = True
             deleted_at = timeutils.utcnow()
             return fake_instance.fake_db_instance(deleted_at=deleted_at)
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+        self.stub_out('nova.db.instance_destroy', instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
@@ -1936,16 +1936,14 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_security_group)
-        self.stubs.Set(db, 'project_get_networks',
-                       project_get_networks)
-        self.stubs.Set(db, 'instance_create', instance_create)
-        self.stubs.Set(db, 'instance_system_metadata_update',
-                       fake_method)
-        self.stubs.Set(db, 'instance_get', instance_get)
-        self.stubs.Set(db, 'instance_update', instance_update)
-        self.stubs.Set(db, 'instance_update_and_get_original',
+        self.stub_out('nova.db.instance_add_security_group',
+                      return_security_group)
+        self.stub_out('nova.db.project_get_networks', project_get_networks)
+        self.stub_out('nova.db.instance_create', instance_create)
+        self.stub_out('nova.db.instance_system_metadata_update', fake_method)
+        self.stub_out('nova.db.instance_get', instance_get)
+        self.stub_out('nova.db.instance_update', instance_update)
+        self.stub_out('nova.db.instance_update_and_get_original',
                        server_update_and_get_original)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
@@ -2171,7 +2169,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(kwargs['security_group'], [group])
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(db, 'security_group_get_by_name', sec_group_get)
+        self.stub_out('nova.db.security_group_get_by_name', sec_group_get)
         # negative test
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra,
@@ -2646,7 +2644,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(key_name, kwargs['key_name'])
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(db, 'key_pair_get', key_pair_get)
+        self.stub_out('nova.db.key_pair_get', key_pair_get)
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
@@ -2899,7 +2897,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.stubs.Set(fakes.QUOTAS, 'count', fake_count)
         self.stubs.Set(fakes.QUOTAS, 'limit_check', fake_limit_check)
-        self.stubs.Set(db, 'instance_destroy', fake_instance_destroy)
+        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
         self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake',
                                    'os-server-group-quotas': 'fake'}
         self.body['server']['scheduler_hints'] = {'group': fake_group.uuid}
@@ -2923,7 +2921,7 @@ class ServersControllerCreateTest(test.TestCase):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stubs.Set(db, 'instance_destroy', fake_instance_destroy)
+        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
         self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake',
                                    'os-server-group-quotas': 'fake'}
         self.body['server']['scheduler_hints'] = {'group': test_group.uuid}

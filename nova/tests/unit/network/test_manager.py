@@ -1688,7 +1688,7 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return vifs[0]
 
-        self.stubs.Set(db, 'virtual_interface_get', vif_get)
+        self.stub_out('nova.db.virtual_interface_get', vif_get)
         context1 = context.RequestContext('user', 'project1')
 
         instance = db.instance_create(context1,
@@ -1814,7 +1814,7 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return None
 
-        self.stubs.Set(db, 'virtual_interface_get', vif_get)
+        self.stub_out('nova.db.virtual_interface_get', vif_get)
         context1 = context.RequestContext('user', 'project1')
 
         instance = db.instance_create(context1,
@@ -1946,7 +1946,7 @@ class CommonNetworkTestCase(test.TestCase):
         def dnsdomain_get(context, instance_domain):
             return domains.get(instance_domain)
 
-        self.stubs.Set(db, 'dnsdomain_get', dnsdomain_get)
+        self.stub_out('nova.db.dnsdomain_get', dnsdomain_get)
         fake_instance = {'uuid': FAKEUUID,
                          'availability_zone': az}
 

@@ -24,7 +24,6 @@ from oslo_db import exception as db_exc
 import six
 
 from nova.cells import state
-from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
@@ -104,8 +103,8 @@ class TestCellsStateManager(test.NoDBTestCase):
                        _fake_compute_node_get_all)
         self.stubs.Set(objects.ServiceList, 'get_by_binary',
                        _fake_service_get_all_by_binary)
-        self.stubs.Set(db, 'flavor_get_all', _fake_instance_type_all)
-        self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
+        self.stub_out('nova.db.flavor_get_all', _fake_instance_type_all)
+        self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
 
     def test_cells_config_not_found(self):
         self.flags(cells_config='no_such_file_exists.conf', group='cells')

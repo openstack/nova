@@ -20,7 +20,6 @@ import webob
 from nova.api.openstack.compute.legacy_v2.contrib import shelve as shelve_v2
 from nova.api.openstack.compute import shelve as shelve_v21
 from nova.compute import api as compute_api
-from nova import db
 from nova import exception
 from nova import policy
 from nova import test
@@ -52,7 +51,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                 self.req, str(uuid.uuid4()), {})
 
     def test_shelve_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
@@ -66,7 +66,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                 self.req, str(uuid.uuid4()), {})
 
     def test_unshelve_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
@@ -82,7 +83,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                 str(uuid.uuid4()), {})
 
     def test_shelve_offload_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
@@ -100,7 +102,8 @@ class ShelvePolicyTestV2(ShelvePolicyTestV21):
         rules = {'compute:get': '',
                  'compute_extension:%sshelve' % self.prefix: ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.assertRaises(exception.Forbidden, self.controller._shelve,
                 self.req, str(uuid.uuid4()), {})
 
@@ -109,7 +112,8 @@ class ShelvePolicyTestV2(ShelvePolicyTestV21):
                  'compute_extension:%sunshelve' % self.prefix: ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 self.req, str(uuid.uuid4()), {})
 
@@ -118,7 +122,8 @@ class ShelvePolicyTestV2(ShelvePolicyTestV21):
                  'compute_extension:%s%s' % (self.prefix, self.offload): ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
         self.assertRaises(exception.Forbidden,
                 self.controller._shelve_offload,
                 self.req,

@@ -1717,20 +1717,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        fake_vol_unreserve)
         self.stubs.Set(self.compute.volume_api, 'terminate_connection',
                        fake_vol_api_func)
-        self.stubs.Set(db,
-                       'block_device_mapping_get_by_instance_and_volume_id',
-                       lambda x, y, z, v: fake_bdm)
+        self.stub_out('nova.db.'
+                      'block_device_mapping_get_by_instance_and_volume_id',
+                      lambda x, y, z, v: fake_bdm)
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda x: {})
         self.stubs.Set(self.compute.driver, 'swap_volume',
                        fake_swap_volume)
         self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
                       fake_vol_migrate_volume_completion)
-        self.stubs.Set(db, 'block_device_mapping_update',
-                       fake_block_device_mapping_update)
-        self.stubs.Set(db,
-                       'instance_fault_create',
-                       lambda x, y:
+        self.stub_out('nova.db.block_device_mapping_update',
+                      fake_block_device_mapping_update)
+        self.stub_out('nova.db.instance_fault_create',
+                      lambda x, y:
                            test_instance_fault.fake_faults['fake-uuid'][0])
         self.stubs.Set(self.compute, '_instance_update',
                        lambda c, u, **k: {})

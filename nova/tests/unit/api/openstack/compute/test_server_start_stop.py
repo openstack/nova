@@ -24,7 +24,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import server_start_stop \
 from nova.api.openstack.compute import servers \
         as server_v21
 from nova.compute import api as compute_api
-from nova import db
 from nova import exception
 from nova import policy
 from nova import test
@@ -70,7 +69,7 @@ class ServerStartStopTestV21(test.TestCase):
                               extension_info=ext_info)
 
     def test_start(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.mox.StubOutWithMock(compute_api.API, 'start')
         compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -83,7 +82,7 @@ class ServerStartStopTestV21(test.TestCase):
             self.start_policy: "project_id:non_fake"
         }
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         body = dict(start="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._start_server,
@@ -91,21 +90,21 @@ class ServerStartStopTestV21(test.TestCase):
         self.assertIn(self.start_policy, exc.format_message())
 
     def test_start_not_ready(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, self.req, 'test_inst', body)
 
     def test_start_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_locked_server)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, self.req, 'test_inst', body)
 
     def test_start_invalid_state(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_invalid_state)
         body = dict(start="")
         ex = self.assertRaises(webob.exc.HTTPConflict,
@@ -113,7 +112,7 @@ class ServerStartStopTestV21(test.TestCase):
         self.assertIn('is locked', six.text_type(ex))
 
     def test_stop(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.mox.StubOutWithMock(compute_api.API, 'stop')
         compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -126,7 +125,7 @@ class ServerStartStopTestV21(test.TestCase):
             self.stop_policy: "project_id:non_fake"
         }
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         body = dict(stop="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._stop_server,
@@ -134,14 +133,14 @@ class ServerStartStopTestV21(test.TestCase):
         self.assertIn(self.stop_policy, exc.format_message())
 
     def test_stop_not_ready(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, self.req, 'test_inst', body)
 
     def test_stop_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_locked_server)
         body = dict(stop="")
         ex = self.assertRaises(webob.exc.HTTPConflict,
@@ -149,7 +148,7 @@ class ServerStartStopTestV21(test.TestCase):
         self.assertIn('is locked', six.text_type(ex))
 
     def test_stop_invalid_state(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        self.stub_out('nova.db.instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_invalid_state)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,

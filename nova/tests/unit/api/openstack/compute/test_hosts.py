@@ -139,11 +139,11 @@ class HostTestCaseV21(test.TestCase):
 
     def _setup_stubs(self):
         # Pretend we have fake_hosts.HOST_LIST in the DB
-        self.stubs.Set(db, 'service_get_all',
-                       stub_service_get_all)
+        self.stub_out('nova.db.service_get_all',
+                      stub_service_get_all)
         # Only hosts in our fake DB exist
-        self.stubs.Set(db, 'service_get_by_host_and_binary',
-                       stub_service_get_by_host_and_binary)
+        self.stub_out('nova.db.service_get_by_host_and_binary',
+                      stub_service_get_by_host_and_binary)
         # 'host_c1' always succeeds, and 'host_c2'
         self.stubs.Set(self.hosts_api, 'set_host_enabled',
                        stub_set_host_enabled)
@@ -193,8 +193,8 @@ class HostTestCaseV21(test.TestCase):
         def stub_service_get_all_notimpl(self, req):
             return [{'host': 'notimplemented', 'topic': None,
                      'availability_zone': None}]
-        self.stubs.Set(db, 'service_get_all',
-                       stub_service_get_all_notimpl)
+        self.stub_out('nova.db.service_get_all',
+                      stub_service_get_all_notimpl)
         body = {key: val}
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self.controller.update,

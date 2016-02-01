@@ -20,7 +20,6 @@ from oslo_serialization import jsonutils
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
 from nova.compute import flavors
-from nova import db
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -63,7 +62,7 @@ class DiskConfigTestCaseV21(test.TestCase):
                 if id_ == instance['id']:
                     return instance
 
-        self.stubs.Set(db, 'instance_get', fake_instance_get)
+        self.stub_out('nova.db.instance_get', fake_instance_get)
 
         def fake_instance_get_by_uuid(context, uuid,
                                       columns_to_join=None, use_slave=False):
@@ -71,15 +70,15 @@ class DiskConfigTestCaseV21(test.TestCase):
                 if uuid == instance['uuid']:
                     return instance
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fake_instance_get_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
 
         def fake_instance_get_all(context, *args, **kwargs):
             return FAKE_INSTANCES
 
-        self.stubs.Set(db, 'instance_get_all', fake_instance_get_all)
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                       fake_instance_get_all)
+        self.stub_out('nova.db.instance_get_all', fake_instance_get_all)
+        self.stub_out('nova.db.instance_get_all_by_filters',
+                      fake_instance_get_all)
 
         self.stubs.Set(objects.Instance, 'save',
                        lambda *args, **kwargs: None)
@@ -107,27 +106,26 @@ class DiskConfigTestCaseV21(test.TestCase):
             def fake_instance_get_for_create(context, id_, *args, **kwargs):
                 return (inst, inst)
 
-            self.stubs.Set(db, 'instance_update_and_get_original',
+            self.stub_out('nova.db.instance_update_and_get_original',
                           fake_instance_get_for_create)
 
             def fake_instance_get_all_for_create(context, *args, **kwargs):
                 return [inst]
-            self.stubs.Set(db, 'instance_get_all',
+            self.stub_out('nova.db.instance_get_all',
                            fake_instance_get_all_for_create)
-            self.stubs.Set(db, 'instance_get_all_by_filters',
+            self.stub_out('nova.db.instance_get_all_by_filters',
                            fake_instance_get_all_for_create)
 
             def fake_instance_add_security_group(context, instance_id,
                                                  security_group_id):
                 pass
 
-            self.stubs.Set(db,
-                           'instance_add_security_group',
-                           fake_instance_add_security_group)
+            self.stub_out('nova.db.instance_add_security_group',
+                          fake_instance_add_security_group)
 
             return inst
 
-        self.stubs.Set(db, 'instance_create', fake_instance_create)
+        self.stub_out('nova.db.instance_create', fake_instance_create)
 
     def _set_up_app(self):
         self.app = compute.APIRouterV21(init_only=('servers', 'images',

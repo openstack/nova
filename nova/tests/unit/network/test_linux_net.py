@@ -394,9 +394,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def get_instance(_context, instance_id):
             return instances[instance_id]
 
-        self.stubs.Set(db, 'virtual_interface_get_by_instance', get_vifs)
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.stubs.Set(db, 'network_get_associated_fixed_ips', get_associated)
+        self.stub_out('nova.db.virtual_interface_get_by_instance', get_vifs)
+        self.stub_out('nova.db.instance_get', get_instance)
+        self.stub_out('nova.db.network_get_associated_fixed_ips',
+                      get_associated)
 
     def _test_add_snat_rule(self, expected, is_external):
 

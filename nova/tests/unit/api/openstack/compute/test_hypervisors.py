@@ -25,7 +25,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
 from nova.api.openstack import extensions
 from nova.cells import utils as cells_utils
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
@@ -208,8 +207,8 @@ class HypervisorsTestV21(test.NoDBTestCase):
                        fake_compute_node_search_by_hypervisor)
         self.stubs.Set(self.controller.host_api, 'compute_node_get',
                        fake_compute_node_get)
-        self.stubs.Set(db, 'compute_node_statistics',
-                       fake_compute_node_statistics)
+        self.stub_out('nova.db.compute_node_statistics',
+                      fake_compute_node_statistics)
 
     def test_view_hypervisor_nodetail_noservers(self):
         result = self.controller._view_hypervisor(

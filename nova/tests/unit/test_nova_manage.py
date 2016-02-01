@@ -36,7 +36,7 @@ from nova.tests.unit import test_flavors
 class FixedIpCommandsTestCase(test.TestCase):
     def setUp(self):
         super(FixedIpCommandsTestCase, self).setUp()
-        db_fakes.stub_out_db_network_api(self.stubs)
+        db_fakes.stub_out_db_network_api(self)
         self.commands = manage.FixedIpCommands()
 
     def test_reserve(self):
@@ -79,7 +79,7 @@ class FixedIpCommandsTestCase(test.TestCase):
 class FloatingIpCommandsTestCase(test.TestCase):
     def setUp(self):
         super(FloatingIpCommandsTestCase, self).setUp()
-        db_fakes.stub_out_db_network_api(self.stubs)
+        db_fakes.stub_out_db_network_api(self)
         self.commands = manage.FloatingIpCommands()
 
     def test_address_to_hosts(self):
@@ -211,7 +211,7 @@ class NetworkCommandsTestCase(test.TestCase):
 
         def fake_network_get_all(context):
             return [db_fakes.FakeModel(self.net)]
-        self.stubs.Set(db, 'network_get_all', fake_network_get_all)
+        self.stub_out('nova.db.network_get_all', fake_network_get_all)
         output = StringIO()
         sys.stdout = output
         self.commands.list()
@@ -245,35 +245,35 @@ class NetworkCommandsTestCase(test.TestCase):
         self.fake_net = self.net
         self.fake_net['project_id'] = None
         self.fake_net['host'] = None
-        self.stubs.Set(db, 'network_get_by_uuid',
-                       self.fake_network_get_by_uuid)
+        self.stub_out('nova.db.network_get_by_uuid',
+                      self.fake_network_get_by_uuid)
 
         def fake_network_delete_safe(context, network_id):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(network_id, self.fake_net['id'])
-        self.stubs.Set(db, 'network_delete_safe', fake_network_delete_safe)
+        self.stub_out('nova.db.network_delete_safe', fake_network_delete_safe)
         self.commands.delete(uuid=self.fake_net['uuid'])
 
     def test_delete_by_cidr(self):
         self.fake_net = self.net
         self.fake_net['project_id'] = None
         self.fake_net['host'] = None
-        self.stubs.Set(db, 'network_get_by_cidr',
-                       self.fake_network_get_by_cidr)
+        self.stub_out('nova.db.network_get_by_cidr',
+                      self.fake_network_get_by_cidr)
 
         def fake_network_delete_safe(context, network_id):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(network_id, self.fake_net['id'])
-        self.stubs.Set(db, 'network_delete_safe', fake_network_delete_safe)
+        self.stub_out('nova.db.network_delete_safe', fake_network_delete_safe)
         self.commands.delete(fixed_range=self.fake_net['cidr'])
 
     def _test_modify_base(self, update_value, project, host, dis_project=None,
                           dis_host=None):
         self.fake_net = self.net
         self.fake_update_value = update_value
-        self.stubs.Set(db, 'network_get_by_cidr',
-                       self.fake_network_get_by_cidr)
-        self.stubs.Set(db, 'network_update', self.fake_network_update)
+        self.stub_out('nova.db.network_get_by_cidr',
+                      self.fake_network_get_by_cidr)
+        self.stub_out('nova.db.network_update', self.fake_network_update)
         self.commands.modify(self.fake_net['cidr'], project=project, host=host,
                              dis_project=dis_project, dis_host=dis_host)
 

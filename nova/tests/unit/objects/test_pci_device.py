@@ -232,7 +232,7 @@ class _TestPciDeviceObject(object):
             return return_dev
 
         ctxt = context.get_admin_context()
-        self.stubs.Set(db, 'pci_device_update', _fake_update)
+        self.stub_out('nova.db.pci_device_update', _fake_update)
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device._context = ctxt
         self.pci_device.save()
@@ -255,8 +255,8 @@ class _TestPciDeviceObject(object):
 
         def _fake_update(ctxt, node_id, addr, updates):
             self.called = True
-        self.stubs.Set(db, 'pci_device_destroy', _fake_destroy)
-        self.stubs.Set(db, 'pci_device_update', _fake_update)
+        self.stub_out('nova.db.pci_device_destroy', _fake_destroy)
+        self.stub_out('nova.db.pci_device_update', _fake_update)
         self._create_fake_pci_device()
         self.pci_device.status = fields.PciDeviceStatus.DELETED
         self.called = False

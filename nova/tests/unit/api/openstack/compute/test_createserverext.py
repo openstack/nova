@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.compute import api as compute_api
-from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -238,10 +237,10 @@ class CreateserverextTest(test.TestCase):
 
     def test_create_instance_with_security_group_json(self):
         security_groups = ['test', 'test1']
-        self.stubs.Set(db, 'security_group_get_by_name',
-                       return_security_group_get_by_name)
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_instance_add_security_group)
+        self.stub_out('nova.db.security_group_get_by_name',
+                      return_security_group_get_by_name)
+        self.stub_out('nova.db.instance_add_security_group',
+                      return_instance_add_security_group)
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app(
@@ -250,8 +249,9 @@ class CreateserverextTest(test.TestCase):
         self.assertJsonEqual(self.security_group, security_groups)
 
     def test_get_server_by_id_verify_security_groups_json(self):
-        self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
-        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
+        self.stub_out('nova.db.instance_get', fakes.fake_instance_get())
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(

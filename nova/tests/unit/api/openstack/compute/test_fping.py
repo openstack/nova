@@ -40,10 +40,10 @@ class FpingTestV21(test.TestCase):
         self.flags(verbose=True, use_ipv6=False)
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
-        self.stubs.Set(nova.db, "instance_get_all_by_filters",
-                       return_servers)
-        self.stubs.Set(nova.db, "instance_get_by_uuid",
-                       return_server)
+        self.stub_out("nova.db.instance_get_all_by_filters",
+                      return_servers)
+        self.stub_out("nova.db.instance_get_by_uuid",
+                      return_server)
         self.stubs.Set(nova.utils, "execute",
                        execute)
         self.stubs.Set(self.controller_cls, "check_fping",

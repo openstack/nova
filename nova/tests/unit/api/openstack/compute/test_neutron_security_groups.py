@@ -147,8 +147,8 @@ class TestNeutronSecurityGroupsV21(
             device_id=test_security_groups.FAKE_UUID1)
         expected = [{'rules': [], 'tenant_id': 'fake', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       test_security_groups.return_server_by_uuid)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      test_security_groups.return_server_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
                                       % test_security_groups.FAKE_UUID1)
         res_dict = self.server_controller.index(
@@ -214,8 +214,8 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=test_security_groups.FAKE_UUID1)
 
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -231,8 +231,8 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg1['id']],
             device_id=test_security_groups.FAKE_UUID1)
 
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="sg1"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -247,8 +247,8 @@ class TestNeutronSecurityGroupsV21(
             port_security_enabled=True,
             device_id=test_security_groups.FAKE_UUID1)
 
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -261,8 +261,8 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], port_security_enabled=False,
             device_id=test_security_groups.FAKE_UUID1)
 
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -271,8 +271,8 @@ class TestNeutronSecurityGroupsV21(
                           req, '1', body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -298,8 +298,8 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=test_security_groups.FAKE_UUID1)
 
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
+        self.stub_out('nova.db.instance_get',
+                      test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
