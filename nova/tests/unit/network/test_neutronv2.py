@@ -3631,6 +3631,38 @@ class TestNeutronv2WithMock(test.TestCase):
                                                         port_req_body)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_migration_profile(
+        self, get_client_mock):
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+
+        # We pass in a port profile which has a migration attribute and also
+        # a second port profile attribute 'fake_profile' this can be
+        # an sriov port profile attribute or a pci_slot attribute, but for
+        # now we are just using a fake one to show that the code does not
+        # remove the portbinding_profile it there is one.
+        binding_profile = {'fake_profile': 'fake_data',
+                           neutronapi.MIGRATING_ATTR: 'my-dest-host'}
+        fake_ports = {'ports': [
+                        {'id': 'fake-port-1',
+                          neutronapi.BINDING_PROFILE: binding_profile,
+                         'binding:host_id': instance.host}]}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(self.context, instance,
+                                                   'my-host')
+        # Assert that update_port was called on the port with a
+        # different host and also the migration profile from the port is
+        # removed since it does not match with the current host.
+        update_port_mock.assert_called_once_with(
+            'fake-port-1', {'port': {'binding:host_id': 'my-host',
+                                     neutronapi.BINDING_PROFILE: {
+                                         'fake_profile': 'fake_data'}}})
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_same_host(self,
                                                          get_client_mock):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -3807,6 +3839,126 @@ class TestNeutronv2WithMock(test.TestCase):
             self.context, instance, migration)
         self.assertEqual(
             {new_pci_devices[0].address: old_pci_devices[0]}, pci_mapping)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_profile_for_migration_teardown_false(
+        self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+        # We test with an instance host and destination_host where the
+        # port will be moving.
+        get_ports = {'ports': [
+                        {'id': uuids.port_id,
+                         neutronapi.BINDING_HOST_ID: instance.host}]}
+        self.api.list_ports = mock.Mock(return_value=get_ports)
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+        migrate_profile = {neutronapi.MIGRATING_ATTR: 'my-new-host'}
+        port_data = {'port':
+                        {neutronapi.BINDING_PROFILE: migrate_profile}}
+
+        self.api.setup_networks_on_host(self.context,
+                                        instance,
+                                        host='my-new-host',
+                                        teardown=False)
+        update_port_mock.assert_called_once_with(
+            uuids.port_id,
+            port_data)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test__setup_migration_port_profile_called_on_teardown_false(
+        self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+        port_id = uuids.port_id
+        get_ports = {'ports': [
+                        {'id': port_id,
+                         neutronapi.BINDING_HOST_ID: instance.host}]}
+        self.api.list_ports = mock.Mock(return_value=get_ports)
+        self.api._setup_migration_port_profile = mock.Mock()
+        self.api.setup_networks_on_host(self.context,
+                                        instance,
+                                        host='my-new-host',
+                                        teardown=False)
+        self.api._setup_migration_port_profile.assert_called_once_with(
+            self.context, instance, 'my-new-host',
+            mock.ANY, get_ports['ports'])
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test__setup_migration_port_profile_not_called_with_host_match(
+        self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+        get_ports = {'ports': [
+                        {'id': uuids.port_id,
+                         neutronapi.BINDING_HOST_ID: instance.host}]}
+        self.api.list_ports = mock.Mock(return_value=get_ports)
+        self.api._setup_migration_port_profile = mock.Mock()
+        self.api._clear_migration_port_profile = mock.Mock()
+        self.api.setup_networks_on_host(self.context,
+                                        instance,
+                                        host=instance.host,
+                                        teardown=False)
+        self.api._setup_migration_port_profile.assert_not_called()
+        self.api._clear_migration_port_profile.assert_not_called()
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_profile_for_migration_teardown_true_with_profile(
+        self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+        migrate_profile = {neutronapi.MIGRATING_ATTR: instance.host}
+        # Pass a port with an migration porfile attribute.
+        port_id = uuids.port_id
+        get_ports = {'ports': [
+                        {'id': port_id,
+                         neutronapi.BINDING_PROFILE: migrate_profile,
+                         neutronapi.BINDING_HOST_ID: instance.host}]}
+        self.api.list_ports = mock.Mock(return_value=get_ports)
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+        self.api.setup_networks_on_host(self.context,
+                                        instance,
+                                        host=instance.host,
+                                        teardown=True)
+        update_port_mock.assert_called_once_with(
+            port_id, {'port': {neutronapi.BINDING_PROFILE: migrate_profile}})
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_profile_for_migration_teardown_true_no_profile(
+        self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+        # Pass a port without any migration porfile attribute.
+        get_ports = {'ports': [
+                        {'id': uuids.port_id,
+                         neutronapi.BINDING_HOST_ID: instance.host}]}
+        self.api.list_ports = mock.Mock(return_value=get_ports)
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+        self.api.setup_networks_on_host(self.context,
+                                        instance,
+                                        host=instance.host,
+                                        teardown=True)
+        update_port_mock.assert_not_called()
+
+    def test__update_port_with_migration_profile_raise_exception(self):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        port_id = uuids.port_id
+        migrate_profile = {'fake-attribute': 'my-new-host'}
+        port_profile = {'port': {neutronapi.BINDING_PROFILE: migrate_profile}}
+        update_port_mock = mock.Mock(side_effect=test.TestingException())
+        admin_client = mock.Mock(update_port=update_port_mock)
+        self.assertRaises(test.TestingException,
+                          self.api._update_port_with_migration_profile,
+                          instance, port_id, migrate_profile, admin_client)
+        update_port_mock.assert_called_once_with(port_id, port_profile)
 
     @mock.patch('nova.network.neutronv2.api.compute_utils')
     def test_get_preexisting_port_ids(self, mocked_comp_utils):

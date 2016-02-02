@@ -49,6 +49,9 @@ _SESSION = None
 _ADMIN_AUTH = None
 
 DEFAULT_SECGROUP = 'default'
+BINDING_PROFILE = 'binding:profile'
+BINDING_HOST_ID = 'binding:host_id'
+MIGRATING_ATTR = 'migrating_to'
 
 
 def reset_state():
@@ -242,9 +245,82 @@ class API(base_api.NetworkAPI):
         self.last_neutron_extension_sync = None
         self.extensions = {}
 
+    def _update_port_with_migration_profile(
+            self, instance, port_id, port_profile, admin_client):
+        try:
+            updated_port = admin_client.update_port(
+                port_id, {'port': {BINDING_PROFILE: port_profile}})
+            return updated_port
+        except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE("Unable to update binding profile "
+                              "for port: %(port)s due to failure: %(error)s"),
+                          {'port': port_id, 'error': ex},
+                          instance=instance)
+
+    def _clear_migration_port_profile(
+            self, context, instance, admin_client, ports):
+        for p in ports:
+            # If the port already has a migration profile and if
+            # it is to be torn down, then we need to clean up
+            # the migration profile.
+            port_profile = p.get(BINDING_PROFILE)
+            if not port_profile:
+                continue
+            if MIGRATING_ATTR in port_profile:
+                del port_profile[MIGRATING_ATTR]
+                LOG.debug("Removing port %s migration profile", p['id'],
+                          instance=instance)
+                self._update_port_with_migration_profile(
+                    instance, p['id'], port_profile, admin_client)
+
+    def _setup_migration_port_profile(
+            self, context, instance, host, admin_client, ports):
+        # Migrating to a new host
+        for p in ports:
+            # If the host hasn't changed, there is nothing to do.
+            # But if the destination host is different than the
+            # current one, please update the port_profile with
+            # the 'migrating_to'(MIGRATING_ATTR) key pointing to
+            # the given 'host'.
+            host_id = p.get(BINDING_HOST_ID)
+            if host_id != host:
+                port_profile = p.get(BINDING_PROFILE, {})
+                port_profile[MIGRATING_ATTR] = host
+                self._update_port_with_migration_profile(
+                    instance, p['id'], port_profile, admin_client)
+                LOG.debug("Port %(port_id)s updated with migration "
+                          "profile %(profile_data)s successfully",
+                          {'port_id': p['id'],
+                           'profile_data': port_profile},
+                          instance=instance)
+
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
         """Setup or teardown the network structures."""
+        if not self._has_port_binding_extension(context, refresh_cache=True):
+            return
+        # Check if the instance is migrating to a new host.
+        port_migrating = host and (instance.host != host)
+        # If the port is migrating to a new host or if it is a
+        # teardown on the original host, then proceed.
+        if port_migrating or teardown:
+            search_opts = {'device_id': instance.uuid,
+                           'tenant_id': instance.project_id,
+                           BINDING_HOST_ID: instance.host}
+            # Now get the port details to process the ports
+            # binding profile info.
+            data = self.list_ports(context, **search_opts)
+            ports = data['ports']
+            admin_client = get_client(context, admin=True)
+            if teardown:
+                # Reset the port profile
+                self._clear_migration_port_profile(
+                    context, instance, admin_client, ports)
+            elif port_migrating:
+                # Setup the port profile
+                self._setup_migration_port_profile(
+                    context, instance, host, admin_client, ports)
 
     def _get_available_networks(self, context, project_id,
                                 net_ids=None, neutron=None,
@@ -2286,11 +2362,17 @@ class API(base_api.NetworkAPI):
         ports = data['ports']
         for p in ports:
             updates = {}
+            binding_profile = p.get(BINDING_PROFILE, {})
 
             # If the host hasn't changed, like in the case of resizing to the
             # same host, there is nothing to do.
-            if p.get('binding:host_id') != host:
-                updates['binding:host_id'] = host
+            if p.get(BINDING_HOST_ID) != host:
+                updates[BINDING_HOST_ID] = host
+                # NOTE: Before updating the port binding make sure we
+                # remove the pre-migration status from the binding profile
+                if binding_profile.get(MIGRATING_ATTR):
+                    del binding_profile[MIGRATING_ATTR]
+                    updates[BINDING_PROFILE] = binding_profile
 
             # Update port with newly allocated PCI devices.  Even if the
             # resize is happening on the same host, a new PCI device can be
@@ -2301,12 +2383,11 @@ class API(base_api.NetworkAPI):
                     pci_mapping = self._get_pci_mapping_for_migration(context,
                         instance, migration)
 
-                binding_profile = p.get('binding:profile', {})
                 pci_slot = binding_profile.get('pci_slot')
                 new_dev = pci_mapping.get(pci_slot)
                 if new_dev:
-                    updates['binding:profile'] = \
-                        get_pci_device_profile(new_dev)
+                    binding_profile.update(get_pci_device_profile(new_dev))
+                    updates[BINDING_PROFILE] = binding_profile
                 else:
                     raise exception.PortUpdateFailed(port_id=p['id'],
                         reason=_("Unable to correlate PCI slot %s") %
