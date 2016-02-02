@@ -68,6 +68,7 @@ import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import uuidutils
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
@@ -1113,6 +1114,46 @@ class CellCommands(object):
 
 class CellV2Commands(object):
     """Commands for managing cells v2."""
+
+    @args('--database_connection',
+          metavar='<database_connection>',
+          help='The database connection url for cell0. '
+               'This is optional. If not provided, a standard database '
+               'connection will be used based on the API database connection '
+               'from the Nova configuration.'
+         )
+    def map_cell0(self, database_connection=None):
+        """Create a cell mapping for cell0.
+
+        cell0 is used for instances that have not been scheduled to any cell.
+        This generally applies to instances that have encountered an error
+        before they have been scheduled.
+
+        This command creates a cell mapping for this special cell which
+        requires a database to store the instance data.
+        """
+        def cell0_default_connection():
+            # If no database connection is provided one is generated
+            # based on the API database connection url.
+            # The cell0 database will use the same database scheme and
+            # netloc as the API database, with a related path.
+            scheme, netloc, path, query, fragment = \
+                urlparse.urlsplit(CONF.api_database.connection)
+            root, ext = os.path.splitext(path)
+            path = root + "_cell0" + ext
+            return urlparse.urlunsplit((scheme, netloc, path, query,
+                                        fragment))
+
+        dbc = database_connection or cell0_default_connection()
+        ctxt = context.RequestContext()
+        # A transport url of 'none://' is provided for cell0. RPC should not
+        # be used to access cell0 objects. Cells transport switching will
+        # ignore any 'none' transport type.
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=objects.CellMapping.CELL0_UUID, name="cell0",
+                transport_url="none:///",
+                database_connection=dbc)
+        cell_mapping.create()
 
     @args('--cell_uuid', metavar='<cell_uuid>', required=True,
             help='Unmigrated instances will be mapped to the cell with the '
