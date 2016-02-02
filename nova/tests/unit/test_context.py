@@ -229,14 +229,37 @@ class ContextTestCase(test.NoDBTestCase):
         self.assertEqual(values, values2)
 
     @mock.patch('nova.db.create_context_manager')
-    def test_target_cell(self, mock_create_ctxt_mgr):
+    @mock.patch('nova.rpc.create_transport')
+    def test_target_cell(self, mock_create_transport, mock_create_ctxt_mgr):
         mock_create_ctxt_mgr.return_value = mock.sentinel.cm
+        mock_create_transport.return_value = mock.sentinel.tp
         ctxt = context.RequestContext('111',
                                       '222',
                                       roles=['admin', 'weasel'])
         # Verify the existing db_connection, if any, is restored
         ctxt.db_connection = mock.sentinel.db_conn
-        mapping = objects.CellMapping(database_connection='fake://')
+        ctxt.mq_connection = mock.sentinel.mq_conn
+        mapping = objects.CellMapping(database_connection='fake://',
+                                      transport_url='anotherfake://')
         with context.target_cell(ctxt, mapping):
             self.assertEqual(ctxt.db_connection, mock.sentinel.cm)
+            self.assertEqual(ctxt.mq_connection, mock.sentinel.tp)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
+        self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
+        mock_create_transport.assert_called_once_with(mapping.transport_url)
+
+    @mock.patch('nova.db.create_context_manager')
+    @mock.patch('nova.rpc.create_transport')
+    def test_target_cell_transport_url_sentinel(self, mock_create_transport,
+                                                mock_create_ctxt_mgr):
+        mock_create_ctxt_mgr.return_value = mock.sentinel.cm
+        mock_create_transport.return_value = mock.sentinel.tp
+        ctxt = context.RequestContext('111',
+                                      '222',
+                                      roles=['admin', 'weasel'])
+        mapping = objects.CellMapping(database_connection='fake://',
+                                      transport_url='none://')
+        with context.target_cell(ctxt, mapping):
+            self.assertEqual(ctxt.db_connection, mock.sentinel.cm)
+            self.assertIsNone(ctxt.mq_connection)
+        self.assertFalse(mock_create_transport.called)

@@ -606,7 +606,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             mock_client.can_send_version.return_value = can_send
             call = getattr(mock_client.prepare.return_value, calltype)
             call.return_value = callret
-            ctxt = mock.MagicMock()
+            ctxt = context.RequestContext()
             result = getattr(rpc, method)(ctxt, **inargs)
             call.assert_called_once_with(ctxt, method, **callargs)
             return result
