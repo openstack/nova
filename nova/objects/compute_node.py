@@ -66,6 +66,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         'free_disk_gb': fields.IntegerField(nullable=True),
         'current_workload': fields.IntegerField(nullable=True),
         'running_vms': fields.IntegerField(nullable=True),
+        # TODO(melwitt): cpu_info is non-nullable in the schema but we must
+        # wait until version 2.0 of ComputeNode to change it to non-nullable
         'cpu_info': fields.StringField(nullable=True),
         'disk_available_least': fields.IntegerField(nullable=True),
         'metrics': fields.StringField(nullable=True),
