@@ -173,7 +173,7 @@ Server actions
    spawned in the virt layer and revert all changes, the original server
    will still be used from then on.
 
-   Also, there there is a periodic task configured by configuration option
+   Also, there is a periodic task configured by configuration option
    resize_confirm_window(in seconds), if this value is not 0, nova compute
    will check whether the server is in resized state longer than
    value of resize_confirm_window, it will automatically confirm the resize
