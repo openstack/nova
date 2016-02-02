@@ -985,10 +985,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
-    def refresh_provider_fw_rules(self):
-        """Triggers a firewall update based on database changes."""
-        self.firewall_driver.refresh_provider_fw_rules()
-
     def refresh_instance_security_rules(self, instance):
         """Refresh security group rules from data store.
 

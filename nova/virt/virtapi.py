@@ -16,12 +16,6 @@ import contextlib
 
 
 class VirtAPI(object):
-    def provider_fw_rule_get_all(self, context):
-        """Get the provider firewall rules
-        :param context: security context
-        """
-        raise NotImplementedError()
-
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
                                 error_callback=None):

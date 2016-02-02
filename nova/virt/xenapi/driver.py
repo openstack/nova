@@ -628,9 +628,6 @@ class XenAPIDriver(driver.ComputeDriver):
         """
         return self._vmops.refresh_instance_security_rules(instance)
 
-    def refresh_provider_fw_rules(self):
-        return self._vmops.refresh_provider_fw_rules()
-
     def get_available_nodes(self, refresh=False):
         stats = self.host_state.get_host_stats(refresh=refresh)
         return [stats["hypervisor_hostname"]]

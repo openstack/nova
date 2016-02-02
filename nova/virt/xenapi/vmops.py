@@ -157,7 +157,6 @@ class VMOps(object):
         self._volumeops = volumeops.VolumeOps(self._session)
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
-            self._virtapi,
             xenapi_session=self._session)
         vif_impl = importutils.import_class(CONF.xenserver.vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
@@ -2057,9 +2056,6 @@ class VMOps(object):
     def refresh_instance_security_rules(self, instance):
         """recreates security group rules for specified instance."""
         self.firewall_driver.refresh_instance_security_rules(instance)
-
-    def refresh_provider_fw_rules(self):
-        self.firewall_driver.refresh_provider_fw_rules()
 
     def unfilter_instance(self, instance_ref, network_info):
         """Removes filters for each VIF of the specified instance."""
