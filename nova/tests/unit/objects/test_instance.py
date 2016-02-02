@@ -863,7 +863,11 @@ class _TestInstanceObject(object):
         vals = {'host': 'foo-host',
                 'memory_mb': 128,
                 'system_metadata': {'foo': 'bar'},
-                'extra': {}}
+                'extra': {
+                    'vcpu_model': None,
+                    'numa_topology': None,
+                    'pci_requests': None,
+                }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         db.instance_create(self.context, vals).AndReturn(fake_inst)
         self.mox.ReplayAll()
@@ -885,7 +889,11 @@ class _TestInstanceObject(object):
         vals = {'host': 'foo-host',
                 'memory_mb': 128,
                 'system_metadata': {'foo': 'bar'},
-                'extra': {}}
+                'extra': {
+                    'vcpu_model': None,
+                    'numa_topology': None,
+                    'pci_requests': None,
+                }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         db.instance_create(self.context, vals).AndReturn(fake_inst)
         self.mox.ReplayAll()
@@ -896,7 +904,10 @@ class _TestInstanceObject(object):
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'instance_create')
-        db.instance_create(self.context, {'extra': {}}).AndReturn(
+        extras = {'vcpu_model': None,
+                  'numa_topology': None,
+                  'pci_requests': None}
+        db.instance_create(self.context, {'extra': extras}).AndReturn(
             self.fake_instance)
         self.mox.ReplayAll()
         inst = objects.Instance(context=self.context)
@@ -954,7 +965,11 @@ class _TestInstanceObject(object):
                            {'host': 'foo-host',
                             'security_groups': ['foo', 'bar'],
                             'info_cache': {'network_info': '[]'},
-                            'extra': {},
+                            'extra': {
+                                'vcpu_model': None,
+                                'numa_topology': None,
+                                'pci_requests': None,
+                            },
                             }
                            ).AndReturn(fake_inst)
         self.mox.ReplayAll()

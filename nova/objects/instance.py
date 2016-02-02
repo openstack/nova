@@ -427,14 +427,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 }
         updates['extra'] = {}
         numa_topology = updates.pop('numa_topology', None)
+        expected_attrs.append('numa_topology')
         if numa_topology:
-            expected_attrs.append('numa_topology')
             updates['extra']['numa_topology'] = numa_topology._to_json()
+        else:
+            updates['extra']['numa_topology'] = None
         pci_requests = updates.pop('pci_requests', None)
+        expected_attrs.append('pci_requests')
         if pci_requests:
-            expected_attrs.append('pci_requests')
             updates['extra']['pci_requests'] = (
                 pci_requests.to_json())
+        else:
+            updates['extra']['pci_requests'] = None
         flavor = updates.pop('flavor', None)
         if flavor:
             expected_attrs.append('flavor')
@@ -451,10 +455,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             }
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
         vcpu_model = updates.pop('vcpu_model', None)
+        expected_attrs.append('vcpu_model')
         if vcpu_model:
-            expected_attrs.append('vcpu_model')
             updates['extra']['vcpu_model'] = (
                 jsonutils.dumps(vcpu_model.obj_to_primitive()))
+        else:
+            updates['extra']['vcpu_model'] = None
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
 
