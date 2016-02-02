@@ -7431,9 +7431,9 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         node = db.compute_node_create(self.ctxt, compute_node_another_host)
 
-        result = db.compute_node_get_all_by_host(self.ctxt, 'host1', False)
+        result = db.compute_node_get_all_by_host(self.ctxt, 'host1')
         self._assertEqualListsOfObjects([self.item], result)
-        result = db.compute_node_get_all_by_host(self.ctxt, 'host2', False)
+        result = db.compute_node_get_all_by_host(self.ctxt, 'host2')
         self._assertEqualListsOfObjects([node], result)
 
     def test_compute_node_get_all_by_host_with_same_host(self):
@@ -7446,7 +7446,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         expected = [self.item, node]
         result = sorted(db.compute_node_get_all_by_host(
-                        self.ctxt, 'host1', False),
+                        self.ctxt, 'host1'),
                         key=lambda n: n['hypervisor_hostname'])
 
         self._assertEqualListsOfObjects(expected, result,
