@@ -83,7 +83,7 @@ def _resume_compute(session, compute_ref, compute_uuid):
     except XenAPI.Failure, e:
         # if session is invalid, e.g. xapi has restarted, then the pool
         # join has been successful, wait for xapi to become alive again
-        for c in xrange(0, DEFAULT_TRIES):
+        for c in range(0, DEFAULT_TRIES):
             try:
                 _run_command(["xe", "vm-start", "uuid=%s" % compute_uuid])
                 return

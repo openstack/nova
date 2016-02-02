@@ -2316,7 +2316,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             call takes to return.
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
-        for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
+        for x in range(CONF.libvirt.wait_soft_reboot_seconds):
             guest = self._host.get_guest(instance)
 
             state = guest.get_power_state(self._host)
