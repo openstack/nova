@@ -42,9 +42,10 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         # stack. We default to the v2.1 case.
         template = 'extensions-list-resp'
         if self.api_major_version == 'v2':
-            template = 'extensions-list-resp-v21-compatible'
-        if self.api_major_version == 'v2' and self._legacy_v2_code:
-            template = 'extensions-list-resp-v2'
+            if self._legacy_v2_code:
+                template = 'extensions-list-resp-v2'
+            else:
+                template = 'extensions-list-resp-v21-compatible'
 
         self._verify_response(template, {}, response, 200)
 
