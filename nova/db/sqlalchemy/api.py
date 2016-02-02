@@ -1164,6 +1164,13 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 @main_context_manager.writer
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None, virtual_interface_id=None):
+    """allocate a fixed ip out of a fixed ip network pool.
+
+    This allocates an unallocated fixed ip out of a specified
+    network. We sort by updated_at to hand out the oldest address in
+    the list.
+
+    """
     if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
@@ -1175,6 +1182,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                            filter_by(instance_uuid=None).\
                            filter_by(host=None).\
                            filter_by(leased=False).\
+                           order_by(asc(models.FixedIp.updated_at)).\
                            first()
 
     if not fixed_ip_ref:
