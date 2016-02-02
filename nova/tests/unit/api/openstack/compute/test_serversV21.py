@@ -328,7 +328,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get(_self, *args, **kwargs):
             expected_attrs = kwargs['expected_attrs']
             self.assertEqual(['flavor', 'info_cache', 'metadata',
-                              'pci_devices'], expected_attrs)
+                              'numa_topology', 'pci_devices'], expected_attrs)
             ctxt = context.RequestContext('fake', 'fake')
             return fake_instance.fake_instance_obj(
                 ctxt, expected_attrs=expected_attrs)
