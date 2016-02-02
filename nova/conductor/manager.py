@@ -318,7 +318,8 @@ class ComputeTaskManager(base.Base):
                 exception.HypervisorUnavailable,
                 exception.InstanceInvalidState,
                 exception.MigrationPreCheckError,
-                exception.LiveMigrationWithOldNovaNotSafe) as ex:
+                exception.LiveMigrationWithOldNovaNotSafe,
+                exception.MigrationSchedulerRPCError) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
                 _set_vm_state(context, instance, ex, instance.vm_state)
