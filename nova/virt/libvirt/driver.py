@@ -687,6 +687,20 @@ class LibvirtDriver(driver.ComputeDriver):
                              'virt_type': CONF.libvirt.virt_type})
                 migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
 
+        if (migration_flags & libvirt.VIR_MIGRATE_UNDEFINE_SOURCE) == 0:
+            LOG.warning(_LW('Adding the VIR_MIGRATE_UNDEFINE_SOURCE flag to '
+                            '%(config_name)s because, without it, migrated '
+                            'VMs will remain defined on the source host'),
+                        {'config_name': config_name})
+            migration_flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+
+        if (migration_flags & libvirt.VIR_MIGRATE_PERSIST_DEST) != 0:
+            LOG.warning(_LW('Removing the VIR_MIGRATE_PERSIST_DEST flag from '
+                            '%(config_name)s as Nova ensures the VM is '
+                            'persisted on the destination host'),
+                        {'config_name': config_name})
+            migration_flags &= ~libvirt.VIR_MIGRATE_PERSIST_DEST
+
         return migration_flags
 
     def _check_block_migration_flags(self, live_migration_flags,
