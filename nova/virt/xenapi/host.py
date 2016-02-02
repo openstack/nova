@@ -168,7 +168,7 @@ class HostState(object):
             """Exctract information from the device string about the slot, the
             vendor and the product ID. The string is as follow:
                 "Slot:\tBDF\nClass:\txxxx\nVendor:\txxxx\nDevice:\txxxx\n..."
-            Return a dictionary with informations about the device.
+            Return a dictionary with information about the device.
             """
             slot_regex = _compile_hex(r"Slot:\t"
                                       r"((?:hex{4}:)?"  # Domain: (optional)
@@ -207,7 +207,7 @@ class HostState(object):
         pci_list = lspci_out.split("\n\n")
 
         # For each device of the list, check if it uses the pciback
-        # kernel driver and if it does, get informations and add it
+        # kernel driver and if it does, get information and add it
         # to the list of passthrough_devices. Ignore it if the driver
         # is not pciback.
         passthrough_devices = []

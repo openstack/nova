@@ -243,7 +243,7 @@ class HostState(object):
         self.ram_allocation_ratio = compute.ram_allocation_ratio
 
     def consume_from_request(self, spec_obj):
-        """Incrementally update host state from an RequestSpec object."""
+        """Incrementally update host state from a RequestSpec object."""
 
         @utils.synchronized(self._lock_name)
         @set_update_time_on_success
