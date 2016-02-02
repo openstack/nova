@@ -65,6 +65,7 @@ from nova.objects import fields
 from nova import quota
 from nova import test
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel
 from nova import utils
 
 CONF = cfg.CONF
@@ -7305,6 +7306,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                             disabled=False)
         self.service = db.service_create(self.ctxt, self.service_dict)
         self.compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
+                                 uuid=uuidsentinel.fake_compute_node,
                                  vcpus_used=0, memory_mb_used=0,
                                  local_gb_used=0, free_ram_mb=1024,
                                  free_disk_gb=2048, hypervisor_type="xen",
@@ -8344,7 +8346,11 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             # NOTE(snikitin): migration 266 introduced a new table 'tags',
             #                 which have no shadow table and it's
             #                 completely OK, so we should skip it here
-            if table_name == 'tags':
+            # NOTE(cdent): migration 314 introduced three new
+            # ('resource_providers', 'allocations' and 'inventories')
+            # with no shadow table and it's OK, so skip.
+            if table_name in ['tags', 'resource_providers', 'allocations',
+                              'inventories']:
                 continue
 
             if table_name.startswith("shadow_"):
@@ -8421,6 +8427,11 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _test_archive_deleted_rows_for_one_uuid_table(self, tablename):
         """:returns: 0 on success, 1 if no uuid column, 2 if insert failed."""
+        # NOTE(cdent): migration 314 adds the resource_providers
+        # table with a uuid column that does not archive, so skip.
+        skip_tables = ['resource_providers']
+        if tablename in skip_tables:
+            return 1
         main_table = sqlalchemyutils.get_table(self.engine, tablename)
         if not hasattr(main_table.c, "uuid"):
             # Not a uuid table, so skip it.
