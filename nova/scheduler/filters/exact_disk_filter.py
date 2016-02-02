@@ -38,4 +38,8 @@ class ExactDiskFilter(filters.BaseHostFilter):
                        'usable_disk_mb': host_state.free_disk_mb})
             return False
 
+        # NOTE(mgoddard): Setting the limit ensures that it is enforced in
+        # compute. This ensures that if multiple instances are scheduled to a
+        # single host, then all after the first will fail in the claim.
+        host_state.limits['disk_gb'] = host_state.total_usable_disk_gb
         return True

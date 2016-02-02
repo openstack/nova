@@ -25,20 +25,24 @@ class TestExactCoreFilter(test.NoDBTestCase):
     def test_exact_core_filter_passes(self):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(vcpus=1))
-        host = self._get_host({'vcpus_total': 3, 'vcpus_used': 2})
+        vcpus = 3
+        host = self._get_host({'vcpus_total': vcpus, 'vcpus_used': vcpus - 1})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        self.assertEqual(host.limits.get('vcpu'), vcpus)
 
     def test_exact_core_filter_fails(self):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(vcpus=2))
         host = self._get_host({'vcpus_total': 3, 'vcpus_used': 2})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+        self.assertNotIn('vcpu', host.limits)
 
     def test_exact_core_filter_fails_host_vcpus_not_set(self):
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(vcpus=1))
         host = self._get_host({})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+        self.assertNotIn('vcpu', host.limits)
 
     def _get_host(self, host_attributes):
         return fakes.FakeHostState('host1', 'node1', host_attributes)
