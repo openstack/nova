@@ -183,5 +183,5 @@ def get_wsgi_server():
     return wsgi.Server("XCP VNC Proxy",
                        XCPVNCProxy(),
                        protocol=SafeHttpProtocol,
-                       host=CONF.xvpvncproxy_host,
-                       port=CONF.xvpvncproxy_port)
+                       host=CONF.vnc.xvpvncproxy_host,
+                       port=CONF.vnc.xvpvncproxy_port)
