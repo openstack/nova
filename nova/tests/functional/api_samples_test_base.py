@@ -290,7 +290,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             self._write_sample(name, response_data)
             sample_data = response_data
         else:
-            with file(self._get_sample(name,
+            with open(self._get_sample(name,
                                        self.microversion)) as sample:
                 sample_data = sample.read()
                 if update_links:

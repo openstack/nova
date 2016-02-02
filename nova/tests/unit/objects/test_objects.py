@@ -1200,7 +1200,7 @@ class TestObjectVersions(test.NoDBTestCase):
         fingerprints = checker.get_hashes(extra_data_func=get_extra_data)
 
         if os.getenv('GENERATE_HASHES'):
-            file('object_hashes.txt', 'w').write(
+            open('object_hashes.txt', 'w').write(
                 pprint.pformat(fingerprints))
             raise test.TestingException(
                 'Generated hashes in object_hashes.txt')

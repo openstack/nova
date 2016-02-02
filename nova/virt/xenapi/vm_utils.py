@@ -2211,7 +2211,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
 
 
 def _get_sys_hypervisor_uuid():
-    with file('/sys/hypervisor/uuid') as f:
+    with open('/sys/hypervisor/uuid') as f:
         return f.readline().strip()
 
 
