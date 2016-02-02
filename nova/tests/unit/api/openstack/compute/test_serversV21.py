@@ -3244,6 +3244,13 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, body=self.body)
 
     @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidBDM)
+    def test_create_instance_raise_invalid_bdm(self, mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.ImageBadRequest(
                         image_id='dummy', response='dummy'))
     def test_create_instance_raise_image_bad_request(self, mock_create):
