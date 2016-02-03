@@ -107,7 +107,9 @@ class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
 class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added target_connect_addr
-    VERSION = '1.1'
+    # Version 1.2: Added 'serial_listen_ports' to allow live migration with
+    #              serial console.
+    VERSION = '1.2'
 
     fields = {
         'filename': fields.StringField(),
@@ -122,6 +124,7 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'graphics_listen_addr_vnc': fields.IPAddressField(nullable=True),
         'graphics_listen_addr_spice': fields.IPAddressField(nullable=True),
         'serial_listen_addr': fields.StringField(nullable=True),
+        'serial_listen_ports': fields.ListOfIntegersField(),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
         'target_connect_addr': fields.StringField(nullable=True),
     }
@@ -130,6 +133,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'serial_listen_ports' in primitive:
+                del primitive['serial_listen_ports']
         if target_version < (1, 1) and 'target_connect_addr' in primitive:
             del primitive['target_connect_addr']
 

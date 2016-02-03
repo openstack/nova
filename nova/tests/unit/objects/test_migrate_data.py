@@ -70,6 +70,18 @@ class _TestLiveMigrateData(object):
             migrate_data.LiveMigrateData.detect_implementation(legacy),
             migrate_data.XenapiLiveMigrateData)
 
+    def test_obj_make_compatible(self):
+        props = {
+            'serial_listen_addr': '127.0.0.1',
+            'serial_listen_ports': [1000, 10001, 10002, 10003],
+        }
+
+        obj = migrate_data.LibvirtLiveMigrateData(**props)
+        primitive = obj.obj_to_primitive()
+        self.assertIn('serial_listen_ports', primitive['nova_object.data'])
+        obj.obj_make_compatible(primitive['nova_object.data'], '1.1')
+        self.assertNotIn('serial_listen_ports', primitive['nova_object.data'])
+
 
 class TestLiveMigrateData(test_objects._LocalTest,
                           _TestLiveMigrateData):
