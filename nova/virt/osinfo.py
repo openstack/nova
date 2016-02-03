@@ -124,10 +124,12 @@ class HardwareProperties(object):
 
     @property
     def network_model(self):
-        return self.img_props.get('hw_vif_model',
-                                  self.os_info_obj.network_model)
+        model = self.img_props.get('hw_vif_model',
+                                    self.os_info_obj.network_model)
+        return 'virtio' if model == 'virtio-net' else model
 
     @property
     def disk_model(self):
-        return self.img_props.get('hw_disk_bus',
-                                  self.os_info_obj.disk_model)
+        model = self.img_props.get('hw_disk_bus',
+                                    self.os_info_obj.disk_model)
+        return 'virtio' if model == 'virtio-block' else model
