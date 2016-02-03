@@ -10148,8 +10148,7 @@ class ComputeAPITestCase(BaseTestCase):
                 admin_password=None)
 
     def test_get_migrations(self):
-        migration = test_migration.fake_db_migration(
-                      uuid=uuids.migration_instance)
+        migration = test_migration.fake_db_migration()
         filters = {'host': 'host1'}
         self.mox.StubOutWithMock(db, "migration_get_all_by_filters")
         db.migration_get_all_by_filters(self.context,
