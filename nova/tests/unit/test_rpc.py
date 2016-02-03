@@ -285,7 +285,7 @@ class TestRPC(testtools.TestCase):
                          "the legacy and versioned notifiers properly.")
 
 
-class TestJsonPayloadSerializer(test.TestCase):
+class TestJsonPayloadSerializer(test.NoDBTestCase):
     def test_serialize_entity(self):
         with mock.patch.object(jsonutils, 'to_primitive') as mock_prim:
             rpc.JsonPayloadSerializer.serialize_entity('context', 'entity')
@@ -293,7 +293,7 @@ class TestJsonPayloadSerializer(test.TestCase):
         mock_prim.assert_called_once_with('entity', convert_instances=True)
 
 
-class TestRequestContextSerializer(test.TestCase):
+class TestRequestContextSerializer(test.NoDBTestCase):
     def setUp(self):
         super(TestRequestContextSerializer, self).setUp()
         self.mock_base = mock.Mock()
