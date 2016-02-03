@@ -2129,10 +2129,25 @@ class VMOps(object):
         :param ctxt: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param block_migration: if true, prepare for block migration
+                                if None, calculate it from driver
         :param disk_over_commit: if true, allow disk over commit
 
         """
         dest_check_data = objects.XenapiLiveMigrateData()
+
+        # Notes(eliqiao): if block_migration is None, we calculate it
+        # by checking if src and dest node are in same aggregate
+        if block_migration is None:
+            src = instance_ref['host']
+            try:
+                self._ensure_host_in_aggregate(ctxt, src)
+            except exception.MigrationPreCheckError:
+                block_migration = True
+            else:
+                sr_ref = vm_utils.safe_find_sr(self._session)
+                sr_rec = self._session.get_rec('SR', sr_ref)
+                block_migration = not sr_rec["shared"]
+
         if block_migration:
             dest_check_data.block_migration = True
             dest_check_data.migrate_send_data = self._migrate_receive(ctxt)
@@ -2141,6 +2156,9 @@ class VMOps(object):
         else:
             dest_check_data.block_migration = False
             src = instance_ref['host']
+            # TODO(eilqiao): There is still one case that block_migration is
+            # passed from admin user, so we need this check until
+            # block_migration flag is removed from API
             self._ensure_host_in_aggregate(ctxt, src)
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination
