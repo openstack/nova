@@ -5028,13 +5028,13 @@ def _instance_metadata_get_multi(context, instance_uuids):
         models.InstanceMetadata.instance_uuid.in_(instance_uuids))
 
 
-def _instance_metadata_get_query(context, instance_uuid, session=None):
-    return model_query(context, models.InstanceMetadata, session=session,
-                       read_deleted="no").\
+def _instance_metadata_get_query(context, instance_uuid):
+    return model_query(context, models.InstanceMetadata, read_deleted="no").\
                     filter_by(instance_uuid=instance_uuid)
 
 
 @require_context
+@main_context_manager.reader
 def instance_metadata_get(context, instance_uuid):
     rows = _instance_metadata_get_query(context, instance_uuid).all()
     return {row['key']: row['value'] for row in rows}
@@ -5042,6 +5042,7 @@ def instance_metadata_get(context, instance_uuid):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
@@ -5050,34 +5051,31 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
-    session = get_session()
-    with session.begin(subtransactions=True):
-        if delete:
-            _instance_metadata_get_query(context, instance_uuid,
-                                         session=session).\
-                filter(~models.InstanceMetadata.key.in_(all_keys)).\
-                soft_delete(synchronize_session=False)
+    if delete:
+        _instance_metadata_get_query(context, instance_uuid).\
+            filter(~models.InstanceMetadata.key.in_(all_keys)).\
+            soft_delete(synchronize_session=False)
 
-        already_existing_keys = []
-        meta_refs = _instance_metadata_get_query(context, instance_uuid,
-                                                 session=session).\
-            filter(models.InstanceMetadata.key.in_(all_keys)).\
-            all()
+    already_existing_keys = []
+    meta_refs = _instance_metadata_get_query(context, instance_uuid).\
+        filter(models.InstanceMetadata.key.in_(all_keys)).\
+        all()
 
-        for meta_ref in meta_refs:
-            already_existing_keys.append(meta_ref.key)
-            meta_ref.update({"value": metadata[meta_ref.key]})
+    for meta_ref in meta_refs:
+        already_existing_keys.append(meta_ref.key)
+        meta_ref.update({"value": metadata[meta_ref.key]})
 
-        new_keys = set(all_keys) - set(already_existing_keys)
-        for key in new_keys:
-            meta_ref = models.InstanceMetadata()
-            meta_ref.update({"key": key, "value": metadata[key],
-                             "instance_uuid": instance_uuid})
-            session.add(meta_ref)
+    new_keys = set(all_keys) - set(already_existing_keys)
+    for key in new_keys:
+        meta_ref = models.InstanceMetadata()
+        meta_ref.update({"key": key, "value": metadata[key],
+                         "instance_uuid": instance_uuid})
+        context.session.add(meta_ref)
 
-        return metadata
+    return metadata
 
 
 #######################
@@ -5092,47 +5090,44 @@ def _instance_system_metadata_get_multi(context, instance_uuids):
         models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
 
 
-def _instance_system_metadata_get_query(context, instance_uuid, session=None):
-    return model_query(context, models.InstanceSystemMetadata,
-                       session=session).\
+def _instance_system_metadata_get_query(context, instance_uuid):
+    return model_query(context, models.InstanceSystemMetadata).\
                     filter_by(instance_uuid=instance_uuid)
 
 
 @require_context
+@main_context_manager.reader
 def instance_system_metadata_get(context, instance_uuid):
     rows = _instance_system_metadata_get_query(context, instance_uuid).all()
     return {row['key']: row['value'] for row in rows}
 
 
 @require_context
+@main_context_manager.writer
 def instance_system_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
-    session = get_session()
-    with session.begin(subtransactions=True):
-        if delete:
-            _instance_system_metadata_get_query(context, instance_uuid,
-                                                session=session).\
-                filter(~models.InstanceSystemMetadata.key.in_(all_keys)).\
-                soft_delete(synchronize_session=False)
+    if delete:
+        _instance_system_metadata_get_query(context, instance_uuid).\
+            filter(~models.InstanceSystemMetadata.key.in_(all_keys)).\
+            soft_delete(synchronize_session=False)
 
-        already_existing_keys = []
-        meta_refs = _instance_system_metadata_get_query(context, instance_uuid,
-                                                        session=session).\
-            filter(models.InstanceSystemMetadata.key.in_(all_keys)).\
-            all()
+    already_existing_keys = []
+    meta_refs = _instance_system_metadata_get_query(context, instance_uuid).\
+        filter(models.InstanceSystemMetadata.key.in_(all_keys)).\
+        all()
 
-        for meta_ref in meta_refs:
-            already_existing_keys.append(meta_ref.key)
-            meta_ref.update({"value": metadata[meta_ref.key]})
+    for meta_ref in meta_refs:
+        already_existing_keys.append(meta_ref.key)
+        meta_ref.update({"value": metadata[meta_ref.key]})
 
-        new_keys = set(all_keys) - set(already_existing_keys)
-        for key in new_keys:
-            meta_ref = models.InstanceSystemMetadata()
-            meta_ref.update({"key": key, "value": metadata[key],
-                             "instance_uuid": instance_uuid})
-            session.add(meta_ref)
+    new_keys = set(all_keys) - set(already_existing_keys)
+    for key in new_keys:
+        meta_ref = models.InstanceSystemMetadata()
+        meta_ref.update({"key": key, "value": metadata[key],
+                         "instance_uuid": instance_uuid})
+        context.session.add(meta_ref)
 
-        return metadata
+    return metadata
 
 
 ####################
