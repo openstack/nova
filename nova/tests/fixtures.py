@@ -524,3 +524,26 @@ class EngineFacadeFixture(fixtures.Fixture):
 
     def cleanup(self):
         self._ctx_manager._root_factory = self._existing_factory
+
+
+class ForbidNewLegacyNotificationFixture(fixtures.Fixture):
+    """Make sure the test fails if new legacy notification is added"""
+    def __init__(self):
+        super(ForbidNewLegacyNotificationFixture, self).__init__()
+        self.notifier = rpc.LegacyValidatingNotifier
+
+    def setUp(self):
+        super(ForbidNewLegacyNotificationFixture, self).setUp()
+        self.notifier.fatal = True
+
+        # allow the special test value used in
+        # nova.tests.unit.test_notifications.NotificationsTestCase
+        self.notifier.allowed_legacy_notification_event_types.append(
+                '_decorated_function')
+
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        self.notifier.fatal = False
+        self.notifier.allowed_legacy_notification_event_types.remove(
+                '_decorated_function')

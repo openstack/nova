@@ -222,7 +222,8 @@ class TestRPC(testtools.TestCase):
         notifier = rpc.get_notifier('service', publisher_id='foo')
 
         mock_prep.assert_called_once_with(publisher_id='foo')
-        self.assertEqual('notifier', notifier)
+        self.assertIsInstance(notifier, rpc.LegacyValidatingNotifier)
+        self.assertEqual('notifier', notifier.notifier)
 
     def test_get_notifier_null_publisher(self):
         rpc.LEGACY_NOTIFIER = mock.Mock()
@@ -233,7 +234,8 @@ class TestRPC(testtools.TestCase):
         notifier = rpc.get_notifier('service', host='bar')
 
         mock_prep.assert_called_once_with(publisher_id='service.bar')
-        self.assertEqual('notifier', notifier)
+        self.assertIsInstance(notifier, rpc.LegacyValidatingNotifier)
+        self.assertEqual('notifier', notifier.notifier)
 
     def test_get_versioned_notifier(self):
         rpc.NOTIFIER = mock.Mock()
