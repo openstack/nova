@@ -85,7 +85,7 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
 
 
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
-                            ex, request_spec, db):
+                            ex, request_spec):
     """changes VM state and notifies."""
     LOG.warning(_LW("Failed to %(service)s_%(method)s: %(ex)s"),
                 {'service': service, 'method': method, 'ex': ex})

@@ -250,7 +250,7 @@ class ComputeTaskManager(base.Base):
                                  ex, request_spec):
         scheduler_utils.set_vm_state_and_notify(
                 context, instance_uuid, 'compute_task', method, updates,
-                ex, request_spec, self.db)
+                ex, request_spec)
 
     def _cleanup_allocated_networks(
             self, context, instance, requested_networks):
@@ -272,7 +272,7 @@ class ComputeTaskManager(base.Base):
                 dict(vm_state=vm_state,
                      task_state=task_state,
                      expected_task_state=task_states.MIGRATING,),
-                ex, request_spec, self.db)
+                ex, request_spec)
 
         migration = objects.Migration(context=context.elevated())
         migration.dest_compute = destination
