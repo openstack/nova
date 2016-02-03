@@ -125,8 +125,260 @@ operations on the server.
 Server query
 ~~~~~~~~~~~~
 
-TODO: We should introduce that there are multiple methods to filter the
-response of list servers.
+Nova allows both general user and administrator to filter the server
+query result by using query options.
+
+For general user, ``reservation_id``, ``name``, ``status``, ``image``,
+``flavor``, ``ip``, ``changes-since``, ``all_tenants``,
+``ip6 (microversion 2.5)`` are supported options to be used. The other
+options will be ignored by nova silently only with a debug log.
+
+For administrator, there are more fields can be used.
+Usually the filter is operated on the database schema definition of
+``class Instance``, e.g there is a field named 'locked' in the schema
+then the filter can use 'locked' as search options to filter servers.
+Also, there are some special options such as ``changes-since`` can
+be used and interpreted by nova.
+
+-  **General user & Administrator supported options**
+   General user supported options are listed above and administrator can
+   use almost all the options except the options parameters for sorting
+   and pagination.
+
+.. code::
+   Precondition:
+   there are 2 servers existing in cloud with following info:
+
+   "servers":[
+   {
+       "name": "t1",
+       "locked": "true",
+       ...
+   }
+   {
+       "name":"t2",
+       "locked": "false",
+       ...
+   }
+
+   **Example: General user query server with administrator only options**
+
+.. code::
+   Request with non-administrator context:
+   GET /servers/detail?locked=1
+   Note that 'locked' is not returned through API layer
+
+   Response:
+   {
+       "servers":[
+       {
+          "name": "t1",
+          ...
+       }
+       {
+          "name":"t2",
+          ...
+       }
+       ]
+   }
+
+   **Example: Administrator query server with administrator only options**
+
+.. code::
+   Request with administrator context:
+   GET /servers/detail?locked=1
+
+   Response:
+   {
+       "servers":[
+       {
+          "name": "t1",
+          ...
+       }
+       ]
+   }
+
+-  **Exact matching and regex matching of the search options**
+
+   Depending on the name of a filter, matching for that filter is performed
+   using either exact matching or as regular expression matching.
+   ``project_id``, ``user_id``, ``image_ref``, ``vm_state``,
+   ``instance_type_id``, ``uuid``, ``metadata``, ``host``, ``system_metadata``
+   are the options that are applied by exact matching when filtering.
+
+   **Example: User query server using exact matching on host**
+
+.. code::
+   Precondition:
+   Request with administrator context:
+   GET /servers/detail
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "t1",
+           "OS-EXT-SRV-ATTR:host": "devstack"
+           ...
+       }
+       {
+           "name": "t2",
+           "OS-EXT-SRV-ATTR:host": "devstack1"
+           ...
+       }
+       ]
+   }
+
+   Request with administrator context:
+   GET /servers/detail?host=devstack
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "t1",
+           "OS-EXT-SRV-ATTR:host": "devstack"
+           ...
+       }
+       ]
+   }
+   
+   **Example: Query server using regex matching on name**
+
+.. code::
+   Precondition:
+   Request with administrator context:
+   GET /servers/detail
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "test11",
+           ...
+       }
+       {
+           "name": "test21",
+           ...
+       }
+       {
+           "name": "t1",
+           ...
+       }
+       {
+           "name": "t14",
+           ...
+       }
+       ]
+   }
+
+   Request with administrator context:
+   GET /servers/detail?name=t1
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "test11",
+           ...
+       }
+       {
+           "name": "t1",
+           ...
+       }
+       {
+           "name": "t14",
+           ...
+       }
+       ]
+   }
+
+   **Example: User query server using exact matching on host and
+   regex matching on name**
+
+.. code::
+   Precondition:
+   Request with administrator context:
+   GET /servers/detail
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "test1",
+           "OS-EXT-SRV-ATTR:host": "devstack"
+           ...
+       }
+       {
+           "name": "t2",
+           "OS-EXT-SRV-ATTR:host": "devstack1"
+           ...
+       }
+       {
+           "name": "test3",
+           "OS-EXT-SRV-ATTR:host": "devstack1"
+           ...
+       }
+       ]
+   }
+
+   Request with administrator context:
+   GET /servers/detail?host=devstack1&name=test
+
+   Response:
+
+   {
+       "servers":[
+       {
+           "name": "test3",
+           "OS-EXT-SRV-ATTR:host": "devstack1"
+           ...
+       }
+       ]
+   }
+
+-  **Speical keys are used to tweek the query**
+   ``changes-since`` returns instances updated after the given time,
+   ``deleted`` return (or exclude) deleted instances and ``soft_deleted``
+   modify behavior of 'deleted' to either include or exclude instances whose
+   vm_state is SOFT_DELETED. Please see: :doc:`polling_changes-since_parameter`
+
+   **Example: User query server with special keys changes-since**
+
+.. code::
+   Precondition:
+   GET /servers/detail
+
+   Response:
+   {
+       "servers":[
+       {
+           "name": "t1"
+           "updated": "2015-12-15T15:55:52Z"
+           ...
+       }
+       {
+           "name": "t2",
+           "updated": "2015-12-17T15:55:52Z"
+           ...
+       }
+   }    
+
+   GET /servers/detail?changes-since='2015-12-16T15:55:52Z'
+
+   Response:
+   {
+       {
+           "name": "t2",
+           "updated": "2015-12-17T15:55:52Z"
+           ...
+       }
+   }
 
 Server actions
 ~~~~~~~~~~~~~~~
