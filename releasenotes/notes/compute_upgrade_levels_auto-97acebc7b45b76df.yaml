@@ -5,4 +5,8 @@ features:
     ``upgrade_levels.compute`` is accepted, that allows automatic determination
     of the compute service version to use for RPC communication. By default, we
     still use the newest version if not set in the config, a specific version
-    if asked, and only do this automatic behavior if 'auto' is configured.
+    if asked, and only do this automatic behavior if 'auto' is
+    configured. When 'auto' is used, sending a SIGHUP to the service
+    will cause the value to be re-calculated. Thus, after an upgrade
+    is complete, sending SIGHUP to all services will cause them to
+    start sending messages compliant with the newer RPC version.
