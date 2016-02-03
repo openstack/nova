@@ -25,7 +25,6 @@ from nova import objects
 from nova.objects import fields
 from nova.pci import manager
 from nova import test
-from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.pci import fakes as pci_fakes
 
 
@@ -385,28 +384,18 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(free_devs), 3)
 
 
-class PciGetInstanceDevs(test.TestCase):
-    def setUp(self):
-        super(PciGetInstanceDevs, self).setUp()
-        self.fake_context = context.get_admin_context()
+class PciGetInstanceDevs(test.NoDBTestCase):
 
-    @mock.patch('nova.db.instance_get')
-    def test_get_devs_object(self, mock_instance_get):
+    def test_get_devs_object(self):
         def _fake_obj_load_attr(foo, attrname):
             if attrname == 'pci_devices':
                 self.load_attr_called = True
                 foo.pci_devices = objects.PciDeviceList()
 
-        inst = fakes.stub_instance(id='1')
-        mock_instance_get.return_value = inst
-        inst = objects.Instance.get_by_id(self.fake_context, '1',
-                                          expected_attrs=[])
         self.stub_out(
                 'nova.objects.Instance.obj_load_attr',
                 _fake_obj_load_attr)
 
         self.load_attr_called = False
-        manager.get_instance_pci_devs(inst)
+        manager.get_instance_pci_devs(objects.Instance())
         self.assertTrue(self.load_attr_called)
-        mock_instance_get.assert_called_with(self.fake_context, '1',
-                columns_to_join=[])
