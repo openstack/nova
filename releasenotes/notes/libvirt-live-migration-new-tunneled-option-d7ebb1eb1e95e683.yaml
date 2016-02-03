@@ -1,0 +1,7 @@
+---
+features:
+  - The libvirt driver now has a live_migration_tunnelled
+    configuration option which should be used where the
+    VIR_MIGRATE_TUNNELLED flag would previously have been
+    set or unset in the live_migration_flag and
+    block_migration_flag configuration options.
