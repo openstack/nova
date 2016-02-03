@@ -159,7 +159,7 @@ class CPUAllocationPolicy(Enum):
 class CPUThreadAllocationPolicy(Enum):
 
     # prefer (default): The host may or may not have hyperthreads. This
-    #  retains the legacy behavior, whereby siblings are prefered when
+    #  retains the legacy behavior, whereby siblings are preferred when
     #  available. This is the default if no policy is specified.
     PREFER = "prefer"
     # isolate: The host may or many not have hyperthreads. If hyperthreads are

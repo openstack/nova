@@ -110,7 +110,7 @@ With little testing there are likely to be many unknown bugs.
 For a feature to be considered complete, we must have:
 
 * Complete API docs (concept and REST call definition)
-* Complete Adminstrator docs
+* Complete Administrator docs
 * Tempest tests that define if the feature works correctly
 * Has enough functionality, and works reliably enough to be useful
   in real world scenarios

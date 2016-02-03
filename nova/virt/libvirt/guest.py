@@ -374,7 +374,7 @@ class Guest(object):
         """Returns information on Guest
 
         :param host: a host.Host object with current
-                     connection. Unfortunatly we need to pass it
+                     connection. Unfortunately we need to pass it
                      because of a workaround with < version 1.2..11
 
         :returns list: [state, maxMem, memory, nrVirtCpu, cpuTime]
