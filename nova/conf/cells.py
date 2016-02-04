@@ -435,18 +435,74 @@ Related options:
 cell_messaging_opts = [
     cfg.IntOpt('max_hop_count',
             default=10,
-            help='Maximum number of hops for cells routing.'),
+            help="""
+Maximum hop count
+
+When processing a targeted message, if the local cell is not the
+target, a route is defined between neighbouring cells. And the
+message is processed across the whole routing path. This option
+defines the maximum hop counts until reaching the target.
+
+Possible values:
+
+* Positive integer value
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.StrOpt('scheduler',
             default='nova.cells.scheduler.CellsScheduler',
-            help='Cells scheduler to use')
+            help="""
+Cells scheduler
+
+The class of the driver used by the cells scheduler. This should be
+the full Python path to the class to be used. If nothing is specified
+in this option, the CellsScheduler is used.
+
+
+Possible values:
+
+* 'nova.cells.scheduler.CellsScheduler' is the default option
+* Otherwise it should be the full Python path to the class to be used
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+""")
 ]
 
 cell_rpc_driver_opts = [
         cfg.StrOpt('rpc_driver_queue_base',
                    default='cells.intercell',
-                   help="Base queue name to use when communicating between "
-                        "cells.  Various topics by message type will be "
-                        "appended to this.")
+                   help="""
+RPC driver queue base
+
+When sending a message to another cell by JSON-ifying the message
+and making an RPC cast to 'process_message', a base queue is used.
+This option defines the base queue name to be used when communicating
+between cells. Various topics by message type will be appended to this.
+
+Possible values:
+
+* The base queue name to be used when communicating between cells.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+""")
 ]
 
 cell_scheduler_opts = [
