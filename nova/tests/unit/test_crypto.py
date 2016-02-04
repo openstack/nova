@@ -91,7 +91,7 @@ class X509Test(test.TestCase):
             self.assertEqual(start, os.getcwd())
 
 
-class RevokeCertsTest(test.TestCase):
+class RevokeCertsTest(test.NoDBTestCase):
 
     @mock.patch('nova.crypto.revoke_cert')
     def test_revoke_certs_by_user_and_project(self, mock_revoke):
@@ -160,7 +160,7 @@ class RevokeCertsTest(test.TestCase):
                           str(uuid.uuid4()), 'test_file')
 
 
-class CertExceptionTests(test.TestCase):
+class CertExceptionTests(test.NoDBTestCase):
     def test_fetch_ca_file_not_found(self):
         with utils.tempdir() as tmpdir:
             self.flags(ca_path=tmpdir)
@@ -178,7 +178,7 @@ class CertExceptionTests(test.TestCase):
                               crypto.fetch_crl, project_id='fake')
 
 
-class EncryptionTests(test.TestCase):
+class EncryptionTests(test.NoDBTestCase):
     pubkey = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDArtgrfBu/g2o28o+H2ng/crv"
               "zgES91i/NNPPFTOutXelrJ9QiPTPTm+B8yspLsXifmbsmXztNOlBQgQXs6usxb4"
               "fnJKNUZ84Vkp5esbqK/L7eyRqwPvqo7btKBMoAMVX/kUyojMpxb7Ssh6M6Y8cpi"
@@ -255,7 +255,7 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
                           crypto.ssh_encrypt_text, '', self.text)
 
 
-class KeyPairTest(test.TestCase):
+class KeyPairTest(test.NoDBTestCase):
     rsa_prv = (
         "-----BEGIN RSA PRIVATE KEY-----\n"
         "MIIEowIBAAKCAQEA5G44D6lEgMj6cRwCPydsMl1VRN2B9DVyV5lmwssGeJClywZM\n"
