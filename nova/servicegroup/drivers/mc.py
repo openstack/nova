@@ -21,8 +21,8 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+from nova import cache_utils
 from nova.i18n import _, _LI, _LW
-from nova.openstack.common import memorycache
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -37,9 +37,8 @@ LOG = logging.getLogger(__name__)
 class MemcachedDriver(base.Driver):
 
     def __init__(self, *args, **kwargs):
-        if not CONF.memcached_servers:
-            raise RuntimeError(_('memcached_servers not defined'))
-        self.mc = memorycache.get_client()
+        self.mc = cache_utils.get_memcached_client(
+                expiration_time=CONF.service_down_time)
 
     def join(self, member_id, group_id, service=None):
         """Join the given service with its group."""
@@ -77,8 +76,7 @@ class MemcachedDriver(base.Driver):
             # set(..., time=CONF.service_down_time) uses it and
             # reduces key-deleting code.
             self.mc.set(str(key),
-                        timeutils.utcnow(),
-                        time=CONF.service_down_time)
+                        timeutils.utcnow())
 
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):
