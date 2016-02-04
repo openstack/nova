@@ -39,6 +39,7 @@ from nova.objects import pci_device_pool
 from nova import rpc
 from nova import test
 from nova.tests.unit.pci import fakes as pci_fakes
+from nova.tests import uuidsentinel
 from nova.virt import driver
 
 
@@ -1005,18 +1006,45 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                                                     "fakenode")
 
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_instances_with_live_migrations(self, mock_migration_list):
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_instances_with_live_migrations(self, mock_instance_list,
+                                            mock_migration_list):
         instance = self._fake_instance_obj()
         migration = objects.Migration(context=self.context,
                                       migration_type='live-migration',
                                       instance_uuid=instance.uuid)
         mock_migration_list.return_value = [migration]
-        self.tracker.update_available_resource(self.context)
-        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+        mock_instance_list.return_value = [instance]
+        with mock.patch.object(self.tracker, '_pair_instances_to_migrations'
+                           ) as mock_pair:
+            self.tracker.update_available_resource(self.context)
+            self.assertTrue(mock_pair.called)
+            self.assertEqual(
+                instance.uuid,
+                mock_pair.call_args_list[0][0][0][0].instance_uuid)
+            self.assertEqual(instance.uuid,
+                             mock_pair.call_args_list[0][0][1][0].uuid)
+            self.assertEqual(
+                ['system_metadata', 'numa_topology', 'flavor',
+                 'migration_context'],
+                mock_instance_list.call_args_list[0][1]['expected_attrs'])
+        self.assertEqual(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(ROOT_GB + EPHEMERAL_GB,
+                         self.tracker.compute_node['local_gb_used'])
         mock_migration_list.assert_called_once_with(self.context,
                                                     "fakehost",
                                                     "fakenode")
+
+    def test_pair_instances_to_migrations(self):
+        migrations = [objects.Migration(instance_uuid=uuidsentinel.instance1),
+                      objects.Migration(instance_uuid=uuidsentinel.instance2)]
+        instances = [objects.Instance(uuid=uuidsentinel.instance2),
+                     objects.Instance(uuid=uuidsentinel.instance1)]
+        self.tracker._pair_instances_to_migrations(migrations, instances)
+        order = [uuidsentinel.instance1, uuidsentinel.instance2]
+        for i, migration in enumerate(migrations):
+            self.assertEqual(order[i], migration.instance.uuid)
 
     @mock.patch('nova.compute.claims.Claim')
     @mock.patch('nova.objects.Instance.save')

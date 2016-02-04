@@ -119,7 +119,14 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
 
     @property
     def instance(self):
-        return objects.Instance.get_by_uuid(self._context, self.instance_uuid)
+        if not hasattr(self, '_cached_instance'):
+            self._cached_instance = objects.Instance.get_by_uuid(
+                self._context, self.instance_uuid)
+        return self._cached_instance
+
+    @instance.setter
+    def instance(self, instance):
+        self._cached_instance = instance
 
 
 @base.NovaObjectRegistry.register

@@ -22,6 +22,7 @@ from nova import objects
 from nova.objects import migration
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -141,6 +142,16 @@ class _TestMigrationObject(object):
         mig._context = ctxt
         self.mox.ReplayAll()
         self.assertEqual(mig.instance.host, fake_inst['host'])
+
+    def test_instance_setter(self):
+        migration = objects.Migration(instance_uuid=uuidsentinel.instance)
+        inst = objects.Instance(uuid=uuidsentinel.instance)
+        with mock.patch('nova.objects.Instance.get_by_uuid') as mock_get:
+            migration.instance = inst
+            migration.instance
+            self.assertFalse(mock_get.called)
+        self.assertEqual(inst, migration._cached_instance)
+        self.assertEqual(inst, migration.instance)
 
     def test_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
