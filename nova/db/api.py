@@ -1645,16 +1645,14 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 
-def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
+def bw_usage_get(context, uuid, start_period, mac):
     """Return bw usage for instance and mac in a given audit period."""
-    return IMPL.bw_usage_get(context, uuid, start_period, mac,
-                             use_slave=use_slave)
+    return IMPL.bw_usage_get(context, uuid, start_period, mac)
 
 
-def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
+def bw_usage_get_by_uuids(context, uuids, start_period):
     """Return bw usages for instance(s) in a given audit period."""
-    return IMPL.bw_usage_get_by_uuids(context, uuids, start_period,
-                                      use_slave=use_slave)
+    return IMPL.bw_usage_get_by_uuids(context, uuids, start_period)
 
 
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
