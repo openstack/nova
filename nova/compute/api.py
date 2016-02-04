@@ -2040,7 +2040,10 @@ class API(base.Base):
                     # We already know we can't match the filter, so
                     # return an empty list
                     except ValueError:
-                        return []
+                        if want_objects:
+                            return objects.InstanceList()
+                        else:
+                            return []
 
         # IP address filtering cannot be applied at the DB layer, remove any DB
         # limit so that it can be applied after the IP filter.
