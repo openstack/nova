@@ -48,7 +48,7 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 
 
-class CellsMessageClassesTestCase(test.TestCase):
+class CellsMessageClassesTestCase(test.NoDBTestCase):
     """Test case for the main Cells Message classes."""
     def setUp(self):
         super(CellsMessageClassesTestCase, self).setUp()
@@ -647,7 +647,33 @@ class CellsMessageClassesTestCase(test.TestCase):
             self.assertRaises(test.TestingException, response.value_or_raise)
 
 
-class CellsTargetedMethodsTestCase(test.TestCase):
+class CellsTargetedMethodsWithDatabaseTestCase(test.TestCase):
+    """These tests access the database unlike the others."""
+
+    def setUp(self):
+        super(CellsTargetedMethodsWithDatabaseTestCase, self).setUp()
+        fakes.init(self)
+        self.ctxt = context.RequestContext('fake', 'fake')
+        self._setup_attrs('api-cell', 'api-cell!child-cell2')
+
+    def _setup_attrs(self, source_cell, target_cell):
+        self.tgt_cell_name = target_cell
+        self.src_msg_runner = fakes.get_message_runner(source_cell)
+
+    def test_service_delete(self):
+        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
+                            topic='compute')
+
+        ctxt = self.ctxt.elevated()
+        db.service_create(ctxt, fake_service)
+
+        self.src_msg_runner.service_delete(
+            ctxt, self.tgt_cell_name, fake_service['id'])
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_get, ctxt, fake_service['id'])
+
+
+class CellsTargetedMethodsTestCase(test.NoDBTestCase):
     """Test case for _TargetedMessageMethods class.  Most of these
     tests actually test the full path from the MessageRunner through
     to the functionality of the message method.  Hits 2 birds with 1
@@ -863,18 +889,6 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         # check the fields by primitiving them first
         self.assertEqual(jsonutils.to_primitive(fake_service),
                          jsonutils.to_primitive(result))
-
-    def test_service_delete(self):
-        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
-                            topic='compute')
-
-        ctxt = self.ctxt.elevated()
-        db.service_create(ctxt, fake_service)
-
-        self.src_msg_runner.service_delete(
-            ctxt, self.tgt_cell_name, fake_service['id'])
-        self.assertRaises(exception.ServiceNotFound,
-                          db.service_get, ctxt, fake_service['id'])
 
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'
@@ -1408,7 +1422,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 {}, False)
 
 
-class CellsBroadcastMethodsTestCase(test.TestCase):
+class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
     tests actually test the full path from the MessageRunner through
     to the functionality of the message method.  Hits 2 birds with 1
@@ -2121,7 +2135,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.assertEqual(fake_process.return_value, responses)
 
 
-class CellsPublicInterfacesTestCase(test.TestCase):
+class CellsPublicInterfacesTestCase(test.NoDBTestCase):
     """Test case for the public interfaces into cells messaging."""
     def setUp(self):
         super(CellsPublicInterfacesTestCase, self).setUp()
