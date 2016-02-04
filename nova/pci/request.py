@@ -44,6 +44,7 @@ import six
 
 import nova.conf
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils
@@ -105,7 +106,7 @@ def _get_alias_from_config():
                 if aliases[name][0]["dev_type"] == spec["dev_type"]:
                     aliases[name].append(spec)
                 else:
-                    reason = "Device type mismatch for alias '%s'" % name
+                    reason = _("Device type mismatch for alias '%s'") % name
                     raise exception.PciInvalidAlias(reason=reason)
 
     except exception.PciInvalidAlias:
