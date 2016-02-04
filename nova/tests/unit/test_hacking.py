@@ -660,3 +660,75 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(0, len(list(checks.check_python3_no_itervalues(
             "six.itervalues(ob))"))))
+
+    def test_cfg_help_with_enough_text(self):
+        errors = [(1, 0, 'N347')]
+
+        # Doesn't have help text at all => should raise error
+        code1 = """
+        opt = cfg.StrOpt("opt1")
+        """
+        self._assert_has_errors(code1, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Explicitly sets an empty string => should raise error
+        code2 = """
+        opt = cfg.StrOpt("opt2", help="")
+        """
+        self._assert_has_errors(code2, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Has help text but too few characters => should raise error
+        code3 = """
+        opt = cfg.StrOpt("opt3", help="meh")
+        """
+        self._assert_has_errors(code3, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Has long enough help text => should *not* raise an error
+        code4 = """
+        opt = cfg.StrOpt("opt4", help="This option does stuff")
+        """
+        self._assert_has_no_errors(code4, checks.cfg_help_with_enough_text)
+
+        # OptGroup objects help is optional => should *not* raise error
+        code5 = """
+        opt_group = cfg.OptGroup(name="group1", title="group title")
+        """
+        self._assert_has_no_errors(code5, checks.cfg_help_with_enough_text)
+
+        # The help text gets translated
+        code6 = """
+        opt = cfg.StrOpt("opt6",
+                         help=_("help with translation usage"))
+        """
+        self._assert_has_no_errors(code6, checks.cfg_help_with_enough_text)
+
+        # The help text uses a paranthesis (weird, but produces a valid string)
+        code7 = """
+        opt = cfg.StrOpt("opt7",
+                         help=("help text uses extra paranthesis"))
+        """
+        self._assert_has_no_errors(code7, checks.cfg_help_with_enough_text)
+
+        # Ignore deprecated options. They should be in the release notes
+        code8 = """
+        opt = cfg.DeprecatedOpt('opt8')
+        """
+        self._assert_has_no_errors(code8, checks.cfg_help_with_enough_text)
+
+        code9 = """
+        opt = cfg.StrOpt("opt9",
+                     help=\"\"\"
+        This
+
+        is
+
+        multiline
+
+        help
+
+        text.
+        \"\"\")
+        """
+        self._assert_has_no_errors(code9, checks.cfg_help_with_enough_text)
