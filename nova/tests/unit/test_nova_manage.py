@@ -76,7 +76,7 @@ class FixedIpCommandsTestCase(test.TestCase):
         self.assertNotEqual(1, sys.stdout.getvalue().find('192.168.0.100'))
 
 
-class FloatingIpCommandsTestCase(test.TestCase):
+class FloatingIpCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIpCommandsTestCase, self).setUp()
         db_fakes.stub_out_db_network_api(self)
@@ -117,7 +117,7 @@ class FloatingIpCommandsTestCase(test.TestCase):
                           '192.168.100.1/12')
 
 
-class NetworkCommandsTestCase(test.TestCase):
+class NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
         self.commands = manage.NetworkCommands()
@@ -291,7 +291,7 @@ class NetworkCommandsTestCase(test.TestCase):
                                dis_host=True)
 
 
-class NeutronV2NetworkCommandsTestCase(test.TestCase):
+class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NeutronV2NetworkCommandsTestCase, self).setUp()
         self.flags(network_api_class='nova.network.neutronv2.api.API')
@@ -332,7 +332,7 @@ class ProjectCommandsTestCase(test.TestCase):
         self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))
 
 
-class VmCommandsTestCase(test.TestCase):
+class VmCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VmCommandsTestCase, self).setUp()
         self.commands = manage.VmCommands()
@@ -460,7 +460,7 @@ class DBCommandsTestCase(test.NoDBTestCase):
         sqla_sync.assert_called_once_with(version=4, database='main')
 
 
-class ApiDbCommandsTestCase(test.TestCase):
+class ApiDbCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ApiDbCommandsTestCase, self).setUp()
         self.commands = manage.ApiDbCommands()
@@ -488,7 +488,7 @@ class ServiceCommandsTestCase(test.TestCase):
         self.assertEqual(2, self.commands.disable('nohost', 'noservice'))
 
 
-class CellCommandsTestCase(test.TestCase):
+class CellCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CellCommandsTestCase, self).setUp()
         self.commands = manage.CellCommands()
