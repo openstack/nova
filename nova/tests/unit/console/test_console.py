@@ -127,7 +127,7 @@ class ConsoleTestCase(test.TestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
 
-class ConsoleAPITestCase(test.TestCase):
+class ConsoleAPITestCase(test.NoDBTestCase):
     """Test case for console API."""
     def setUp(self):
         super(ConsoleAPITestCase, self).setUp()
