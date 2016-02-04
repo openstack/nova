@@ -208,8 +208,8 @@ class RawTGZTestCase(test.NoDBTestCase):
     def test_stream_to_without_size_retrieved(self):
         source_tar = self.mox.CreateMock(tarfile.TarFile)
         first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(file)
-        source_file = self.mox.CreateMock(file)
+        target_file = self.mox.CreateMock(open)
+        source_file = self.mox.CreateMock(open)
 
         image = utils.RawTGZImage(None)
         image._image_service_and_image_id = ('service', 'id')
@@ -230,8 +230,8 @@ class RawTGZTestCase(test.NoDBTestCase):
     def test_stream_to_with_size_retrieved(self):
         source_tar = self.mox.CreateMock(tarfile.TarFile)
         first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(file)
-        source_file = self.mox.CreateMock(file)
+        target_file = self.mox.CreateMock(open)
+        source_file = self.mox.CreateMock(open)
         first_tarinfo.size = 124
 
         image = utils.RawTGZImage(None)
