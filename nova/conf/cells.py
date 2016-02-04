@@ -646,21 +646,136 @@ Related options:
 cell_state_manager_opts = [
         cfg.IntOpt('db_check_interval',
                default=60,
-               help='Interval, in seconds, for getting fresh cell '
-               'information from the database.'),
+               help="""
+DB check interval
+
+Cell state manager updates cell status for all cells from the DB
+only after this particular interval time is passed. Otherwise cached
+status are used. If this value is 0 or negative all cell status are
+updated from the DB whenever a state is needed.
+
+Possible values:
+
+* Interval time, in seconds.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
         cfg.StrOpt('cells_config',
-               help='Configuration file from which to read cells '
-               'configuration.  If given, overrides reading cells '
-               'from the database.')
+               help="""
+Optional cells configuration
+
+Configuration file from which to read cells configuration. If given,
+overrides reading cells from the database.
+
+Cells store all inter-cell communication data, including user names
+and passwords, in the database. Because the cells data is not updated
+very frequently, use this option to specify a JSON file to store
+cells data. With this configuration, the database is no longer
+consulted when reloading the cells data. The file must have columns
+present in the Cell model (excluding common database fields and the
+id column). You must specify the queue connection information through
+a transport_url field, instead of username, password, and so on.
+
+The transport_url has the following form:
+rabbit://USERNAME:PASSWORD@HOSTNAME:PORT/VIRTUAL_HOST
+
+Possible values:
+
+The scheme can be either qpid or rabbit, the following sample shows
+this optional configuration:
+
+    {
+        "parent": {
+            "name": "parent",
+            "api_url": "http://api.example.com:8774",
+            "transport_url": "rabbit://rabbit.example.com",
+            "weight_offset": 0.0,
+            "weight_scale": 1.0,
+            "is_parent": true
+        },
+        "cell1": {
+            "name": "cell1",
+            "api_url": "http://api.example.com:8774",
+            "transport_url": "rabbit://rabbit1.example.com",
+            "weight_offset": 0.0,
+            "weight_scale": 1.0,
+            "is_parent": false
+        },
+        "cell2": {
+            "name": "cell2",
+            "api_url": "http://api.example.com:8774",
+            "transport_url": "rabbit://rabbit2.example.com",
+            "weight_offset": 0.0,
+            "weight_scale": 1.0,
+            "is_parent": false
+        }
+    }
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+""")
 ]
 
 
 rpcapi_cap_intercell_opt = cfg.StrOpt('intercell',
-        help='Set a version cap for messages sent between cells services')
+        help="""
+Intercell version
+
+Intercell RPC API is the client side of the Cell<->Cell RPC API.
+Use this option to set a version cap for messages sent between
+cells services.
+
+Possible values:
+
+* None: This is the default value.
+* grizzly: message version 1.0.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+""")
 
 
 rpcapi_cap_cells_opt = cfg.StrOpt('cells',
-        help='Set a version cap for messages sent to local cells services')
+        help="""
+Cells version
+
+Cells client-side RPC API version. Use this option to set a version
+cap for messages sent to local cells services.
+
+Possible values:
+
+* None: This is the default value.
+* grizzly: message version 1.6.
+* havana: message version 1.24.
+* icehouse: message version 1.27.
+* juno: message version 1.29.
+* kilo: message version 1.34.
+* liberty: message version 1.37.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+""")
 
 
 ALL_CELLS_OPTS = list(itertools.chain(
