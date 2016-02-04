@@ -19,7 +19,6 @@ Tests For IronicHostManager
 
 import mock
 
-import nova
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -64,24 +63,20 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
                                                 "dummy")
         )
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
-    def test_get_all_host_states(self, mock_gbh):
-        # Ensure .service is set and we have the values we expect to.
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
+                                 mock_get_by_binary):
+        mock_get_all.return_value = ironic_fakes.COMPUTE_NODES
+        mock_get_by_binary.return_value = ironic_fakes.SERVICES
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(ironic_fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(
-            ironic_fakes.COMPUTE_NODES)
-        self.mox.ReplayAll()
-
         self.host_manager.get_all_host_states(context)
-        self.assertEqual(0, mock_gbh.call_count)
+        self.assertEqual(0, mock_get_by_host.call_count)
         host_states_map = self.host_manager.host_state_map
-
         self.assertEqual(len(host_states_map), 4)
+
         for i in range(4):
             compute_node = ironic_fakes.COMPUTE_NODES[i]
             host = compute_node.host
@@ -139,51 +134,48 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
                                                       compute=compute)
         self.assertIs(host_manager.HostState, type(host_state))
 
-    def test_get_all_host_states_after_delete_one(self):
-        context = 'fake_context'
-
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        # all nodes active for first call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(ironic_fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(
-            ironic_fakes.COMPUTE_NODES)
-        # remove node4 for second call
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    def test_get_all_host_states_after_delete_one(self, mock_get_all,
+                                                  mock_get_by_binary):
         running_nodes = [n for n in ironic_fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4uuid']
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(ironic_fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
-        self.mox.ReplayAll()
 
-        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
-            self.host_manager.get_all_host_states(context)
-            self.host_manager.get_all_host_states(context)
+        mock_get_all.side_effect = [
+            ironic_fakes.COMPUTE_NODES, running_nodes]
+        mock_get_by_binary.side_effect = [
+            ironic_fakes.SERVICES, ironic_fakes.SERVICES]
+        context = 'fake_context'
+
+        # first call: all nodes
+        self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(4, len(host_states_map))
+
+        # second call: just running nodes
+        self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(3, len(host_states_map))
 
-    def test_get_all_host_states_after_delete_all(self):
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    def test_get_all_host_states_after_delete_all(self, mock_get_all,
+                                                  mock_get_by_binary):
+        mock_get_all.side_effect = [
+            ironic_fakes.COMPUTE_NODES, []]
+        mock_get_by_binary.side_effect = [
+            ironic_fakes.SERVICES, ironic_fakes.SERVICES]
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        # all nodes active for first call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(ironic_fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(
-            ironic_fakes.COMPUTE_NODES)
-        # remove all nodes for second call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(ironic_fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn([])
-        self.mox.ReplayAll()
-
-        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
-            self.host_manager.get_all_host_states(context)
-            self.host_manager.get_all_host_states(context)
+        # first call: all nodes
+        self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
-        self.assertEqual(0, len(host_states_map))
+        self.assertEqual(len(host_states_map), 4)
+
+        # second call: no nodes
+        self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 0)
 
     def test_update_from_compute_node(self):
         host = ironic_host_manager.IronicNodeState("fakehost", "fakenode")
@@ -319,7 +311,8 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
             info['got_fprops'].append(filter_props)
             return True
 
-        self.stubs.Set(FakeFilterClass1, '_filter_one', fake_filter_one)
+        self.stub_out(__name__ + '.FakeFilterClass1._filter_one',
+                      fake_filter_one)
 
     def _verify_result(self, info, result, filters=True):
         for x in info['got_fprops']:

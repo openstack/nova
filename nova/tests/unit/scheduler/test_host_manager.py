@@ -198,7 +198,8 @@ class HostManagerTestCase(test.NoDBTestCase):
             info['got_fprops'].append(filter_props)
             return True
 
-        self.stubs.Set(FakeFilterClass1, '_filter_one', fake_filter_one)
+        self.stub_out(__name__ + '.FakeFilterClass1._filter_one',
+                      fake_filter_one)
 
     def _verify_result(self, info, result, filters=True):
         for x in info['got_fprops']:
@@ -405,32 +406,34 @@ class HostManagerTestCase(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result, False)
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
-    def test_get_all_host_states(self, mock_get_by_host):
+    @mock.patch('nova.scheduler.host_manager.LOG')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
+                                 mock_get_by_binary, mock_log):
         mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_all.return_value = fakes.COMPUTE_NODES
+        mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        self.mox.StubOutWithMock(host_manager.LOG, 'warning')
 
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
-        # node 3 host physical disk space is greater than database
-        host_manager.LOG.warning("Host %(hostname)s has more disk space "
-                                 "than database expected (%(physical)s GB >"
-                                 " %(database)s GB)",
-                                 {'physical': 3333, 'database': 3072,
-                                  'hostname': 'node3'})
-        # Invalid service
-        host_manager.LOG.warning("No compute service record found for "
-                                 "host %(host)s",
-                                 {'host': 'fake'})
-        self.mox.ReplayAll()
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
-
         self.assertEqual(len(host_states_map), 4)
+
+        calls = [
+            mock.call(
+                "Host %(hostname)s has more disk space than database "
+                "expected (%(physical)s GB > %(database)s GB)",
+                {'physical': 3333, 'database': 3072, 'hostname': 'node3'}
+            ),
+            mock.call(
+                "No compute service record found for host %(host)s",
+                {'host': 'fake'}
+            )
+        ]
+        self.assertEqual(calls, mock_log.warning.call_args_list)
+
         # Check that .service is set properly
         for i in range(4):
             compute_node = fakes.COMPUTE_NODES[i]
@@ -439,6 +442,7 @@ class HostManagerTestCase(test.NoDBTestCase):
             state_key = (host, node)
             self.assertEqual(host_states_map[state_key].service,
                     obj_base.obj_to_primitive(fakes.get_service_by_host(host)))
+
         self.assertEqual(host_states_map[('host1', 'node1')].free_ram_mb,
                          512)
         # 511GB
@@ -735,64 +739,61 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
               host_manager.HostState('host4', 'node4')
             ]
 
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    def test_get_all_host_states(self, mock_get_by_host):
+    def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
+                                 mock_get_by_binary):
         mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_all.return_value = fakes.COMPUTE_NODES
+        mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
-
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
-        self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 4)
 
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    def test_get_all_host_states_after_delete_one(self, mock_get_by_host):
-        mock_get_by_host.return_value = objects.InstanceList()
-        context = 'fake_context'
-
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        # all nodes active for first call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
-        # remove node4 for second call
+    def test_get_all_host_states_after_delete_one(self, mock_get_by_host,
+                                                  mock_get_all,
+                                                  mock_get_by_binary):
         running_nodes = [n for n in fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4']
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
-        self.mox.ReplayAll()
 
+        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_all.side_effect = [fakes.COMPUTE_NODES, running_nodes]
+        mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
+        context = 'fake_context'
+
+        # first call: all nodes
         self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 4)
+
+        # second call: just running nodes
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 3)
 
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    def test_get_all_host_states_after_delete_all(self, mock_get_by_host):
+    def test_get_all_host_states_after_delete_all(self, mock_get_by_host,
+                                                  mock_get_all,
+                                                  mock_get_by_binary):
         mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
+        mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
-        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        # all nodes active for first call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
-        # remove all nodes for second call
-        objects.ServiceList.get_by_binary(
-            context, 'nova-compute').AndReturn(fakes.SERVICES)
-        objects.ComputeNodeList.get_all(context).AndReturn([])
-        self.mox.ReplayAll()
-
+        # first call: all nodes
         self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 4)
+
+        # second call: no nodes
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 0)

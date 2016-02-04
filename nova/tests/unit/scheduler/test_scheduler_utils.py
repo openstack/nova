@@ -18,7 +18,6 @@ Tests For Scheduler Utils
 import uuid
 
 import mock
-from mox3 import mox
 from oslo_config import cfg
 import six
 
@@ -42,20 +41,16 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         super(SchedulerUtilsTestCase, self).setUp()
         self.context = 'fake-context'
 
-    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
-    def test_build_request_spec_without_image(self, mock_get):
-        image = None
+    def test_build_request_spec_without_image(self):
         instance = {'uuid': 'fake-uuid'}
         instance_type = objects.Flavor(**test_flavor.fake_flavor)
 
-        mock_get.return_value = objects.Flavor(extra_specs={})
-
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        flavors.extract_flavor(mox.IgnoreArg()).AndReturn(instance_type)
-        self.mox.ReplayAll()
-
-        request_spec = scheduler_utils.build_request_spec(self.context, image,
-                                                          [instance])
+        with mock.patch.object(flavors, 'extract_flavor') as mock_extract:
+            mock_extract.return_value = instance_type
+            request_spec = scheduler_utils.build_request_spec(self.context,
+                                                              None,
+                                                              [instance])
+            mock_extract.assert_called_once_with({'uuid': 'fake-uuid'})
         self.assertEqual({}, request_spec['image'])
 
     def test_build_request_spec_with_object(self):
