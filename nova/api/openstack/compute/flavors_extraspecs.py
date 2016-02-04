@@ -52,7 +52,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(
                           explanation=error.format_message())
 
-    @extensions.expected_errors(())
+    @extensions.expected_errors(404)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
