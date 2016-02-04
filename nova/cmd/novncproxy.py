@@ -29,16 +29,18 @@ from nova import config
 opts = [
     cfg.StrOpt('novncproxy_host',
                default='0.0.0.0',
-               help='Host on which to listen for incoming requests'),
+               help='Host on which to listen for incoming requests',
+               deprecated_group='DEFAULT'),
     cfg.IntOpt('novncproxy_port',
                default=6080,
                min=1,
                max=65535,
-               help='Port on which to listen for incoming requests'),
+               help='Port on which to listen for incoming requests',
+               deprecated_group='DEFAULT'),
     ]
 
 CONF = cfg.CONF
-CONF.register_cli_opts(opts)
+CONF.register_cli_opts(opts, 'vnc')
 
 
 def main():
@@ -47,5 +49,5 @@ def main():
     config.parse_args(sys.argv)
 
     baseproxy.proxy(
-        host=CONF.novncproxy_host,
-        port=CONF.novncproxy_port)
+        host=CONF.vnc.novncproxy_host,
+        port=CONF.vnc.novncproxy_port)
