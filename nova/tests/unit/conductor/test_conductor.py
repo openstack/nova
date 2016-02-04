@@ -262,7 +262,7 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
         pass
 
 
-class ConductorImportTest(test.TestCase):
+class ConductorImportTest(test.NoDBTestCase):
     def test_import_conductor_local(self):
         self.flags(use_local=True, group='conductor')
         self.assertIsInstance(conductor.API(), conductor_api.LocalAPI)
