@@ -16,7 +16,6 @@ import nova.availability_zones
 import nova.baserpc
 import nova.cloudpipe.pipelib
 import nova.cmd.novnc
-import nova.cmd.novncproxy
 import nova.cmd.serialproxy
 import nova.cmd.spicehtml5proxy
 import nova.conductor.api
@@ -52,8 +51,6 @@ import nova.servicegroup.api
 import nova.servicegroup.drivers.zk
 import nova.spice
 import nova.utils
-import nova.vnc
-import nova.vnc.xvp_proxy
 import nova.volume
 import nova.volume.cinder
 import nova.wsgi
@@ -71,7 +68,6 @@ def list_opts():
              nova.availability_zones.availability_zone_opts,
              nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
-             nova.cmd.novncproxy.opts,
              nova.cmd.spicehtml5proxy.opts,
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
@@ -116,11 +112,6 @@ def list_opts():
              [nova.conductor.rpcapi.rpcapi_cap_opt],
              [nova.console.rpcapi.rpcapi_cap_opt],
              [nova.consoleauth.rpcapi.rpcapi_cap_opt],
-         )),
-        ('vnc',
-         itertools.chain(
-             nova.vnc.vnc_opts,
-             nova.vnc.xvp_proxy.xvp_proxy_opts,
          )),
         ('workarounds', nova.utils.workarounds_opts),
         ('zookeeper', nova.servicegroup.drivers.zk.zk_driver_opts)

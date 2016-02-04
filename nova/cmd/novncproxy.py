@@ -20,27 +20,13 @@ noVNC consoles. Leverages websockify.py by Joel Martin
 
 import sys
 
-from oslo_config import cfg
 
 from nova.cmd import baseproxy
+import nova.conf
 from nova import config
 
 
-opts = [
-    cfg.StrOpt('novncproxy_host',
-               default='0.0.0.0',
-               help='Host on which to listen for incoming requests',
-               deprecated_group='DEFAULT'),
-    cfg.IntOpt('novncproxy_port',
-               default=6080,
-               min=1,
-               max=65535,
-               help='Port on which to listen for incoming requests',
-               deprecated_group='DEFAULT'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_cli_opts(opts, 'vnc')
+CONF = nova.conf.CONF
 
 
 def main():

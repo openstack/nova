@@ -22,10 +22,10 @@ import eventlet
 import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
-from oslo_config import cfg
 from oslo_log import log as logging
 import webob
 
+import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.i18n import _LI
@@ -35,22 +35,7 @@ from nova import wsgi
 
 
 LOG = logging.getLogger(__name__)
-
-xvp_proxy_opts = [
-    cfg.IntOpt('xvpvncproxy_port',
-               default=6081,
-               min=1,
-               max=65535,
-               help='Port that the XCP VNC proxy should bind to',
-               deprecated_group='DEFAULT'),
-    cfg.StrOpt('xvpvncproxy_host',
-               default='0.0.0.0',
-               help='Address that the XCP VNC proxy should bind to',
-               deprecated_group='DEFAULT'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xvp_proxy_opts, group='vnc')
+CONF = nova.conf.CONF
 
 
 class XCPVNCProxy(object):
