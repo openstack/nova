@@ -1,6 +1,4 @@
 ---
-prelude: >
-    The disk_weight_multiplier option is now available.
 features:
   - A disk space scheduling filter is now available,
     which prefers compute nodes with the most available
