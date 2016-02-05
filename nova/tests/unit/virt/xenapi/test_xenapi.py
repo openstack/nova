@@ -1691,8 +1691,15 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
 
+    def _create_instance(self, **kw):
+        values = self.instance_values.copy()
+        values.update(kw)
+        instance = objects.Instance(context=self.context, **values)
+        instance.create()
+        return instance
+
     def test_migrate_disk_and_power_off(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
                                              ephemeral_gb=0)
@@ -1705,7 +1712,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                                         '127.0.0.1', flavor, None)
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=80,
                                              ephemeral_gb=0)
@@ -1721,7 +1728,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           '127.0.0.1', flavor, None)
 
     def test_migrate_disk_and_power_off_throws_on_zero_gb_resize_down(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = self._create_instance()
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
                                              ephemeral_gb=0)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -1733,10 +1740,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self):
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
                                              ephemeral_gb=0)
-        values = copy.copy(self.instance_values)
-        values["root_gb"] = 0
-        values["ephemeral_gb"] = 0
-        instance = db.instance_create(self.context, values)
+        instance = self._create_instance(root_gb=0, ephemeral_gb=0)
         xenapi_fake.create_vm(instance['name'], 'Running')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(conn._session, instance['name'])
@@ -1872,8 +1876,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     @stub_vm_utils_with_vdi_attached_here
     def test_migrate_too_many_partitions_no_resize_down(self):
-        instance_values = self.instance_values
-        instance = db.instance_create(self.context, instance_values)
+        instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = db.flavor_get_by_name(self.context, 'm1.small')
         flavor = fake_flavor.fake_flavor_obj(self.context, **flavor)
@@ -1891,8 +1894,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     @stub_vm_utils_with_vdi_attached_here
     def test_migrate_bad_fs_type_no_resize_down(self):
-        instance_values = self.instance_values
-        instance = db.instance_create(self.context, instance_values)
+        instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = db.flavor_get_by_name(self.context, 'm1.small')
         flavor = fake_flavor.fake_flavor_obj(self.context, **flavor)

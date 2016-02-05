@@ -169,15 +169,6 @@ def get_api_engine():
     return api_context_manager.get_legacy_facade().get_engine()
 
 
-def get_session(use_slave=False, **kwargs):
-    return main_context_manager.get_legacy_facade().get_session(
-        use_slave=use_slave, **kwargs)
-
-
-def get_api_session(**kwargs):
-    return api_context_manager.get_legacy_facade().get_session(**kwargs)
-
-
 _SHADOW_TABLE_PREFIX = 'shadow_'
 _DEFAULT_QUOTA_NAME = 'default'
 PER_PROJECT_QUOTAS = ['fixed_ips', 'floating_ips', 'networks']
@@ -264,8 +255,6 @@ def select_db_reader_mode(f):
 
 def model_query(context, model,
                 args=None,
-                session=None,
-                use_slave=False,
                 read_deleted=None,
                 project_only=False):
     """Query helper that accounts for context's `read_deleted` field.
@@ -273,9 +262,6 @@ def model_query(context, model,
     :param context:     NovaContext of the query.
     :param model:       Model to query. Must be a subclass of ModelBase.
     :param args:        Arguments to query. If None - model is used.
-    :param session:     If present, the session to use.
-    :param use_slave:   If true, use a slave connection to the DB if creating a
-                        session.
     :param read_deleted: If not None, overrides context's read_deleted field.
                         Permitted values are 'no', which does not return
                         deleted values; 'only', which only returns deleted
@@ -285,14 +271,6 @@ def model_query(context, model,
                         query to match the context's project_id. If set to
                         'allow_none', restriction includes project_id = None.
     """
-
-    if hasattr(context, 'session'):
-        session = context.session
-
-    if session is None:
-        if CONF.database.slave_connection == '':
-            use_slave = False
-        session = get_session(use_slave=use_slave)
 
     if read_deleted is None:
         read_deleted = context.read_deleted
@@ -308,7 +286,8 @@ def model_query(context, model,
         raise ValueError(_("Unrecognized read_deleted value '%s'")
                            % read_deleted)
 
-    query = sqlalchemyutils.model_query(model, session, args, **query_kwargs)
+    query = sqlalchemyutils.model_query(
+        model, context.session, args, **query_kwargs)
 
     # We can't use oslo.db model_query's project_id here, as it doesn't allow
     # us to return both our projects and unowned projects.
@@ -2123,15 +2102,13 @@ def _tag_instance_filter(context, query, filters):
             or_query = subq if or_query is None else or_(or_query, subq)
 
         elif filter_name.startswith('tag:'):
-            subq = model_query(context, model_metadata, (model_uuid,),
-                session=query.session).\
+            subq = model_query(context, model_metadata, (model_uuid,)).\
                 filter_by(key=tag_name).\
                 filter(model_metadata.value.in_(tag_val))
             query = query.filter(model.uuid.in_(subq))
 
     if or_query is not None:
-        subq = model_query(context, model_metadata, (model_uuid,),
-                session=query.session).\
+        subq = model_query(context, model_metadata, (model_uuid,)).\
                 filter(or_query)
         query = query.filter(model.uuid.in_(subq))
 
@@ -2758,7 +2735,7 @@ def key_pair_create(context, values):
     try:
         key_pair_ref = models.KeyPair()
         key_pair_ref.update(values)
-        key_pair_ref.save(session=context.session)
+        key_pair_ref.save(context.session)
         return key_pair_ref
     except db_exc.DBDuplicateEntry:
         raise exception.KeyPairExists(key_name=values['name'])
@@ -3352,7 +3329,7 @@ def _quota_usage_create(project_id, user_id, resource, in_use,
     # updated_at is needed for judgement of max_age
     quota_usage_ref.updated_at = timeutils.utcnow()
 
-    quota_usage_ref.save(session=session)
+    quota_usage_ref.save(session)
 
     return quota_usage_ref
 
@@ -3389,7 +3366,7 @@ def _reservation_create(uuid, usage, project_id, user_id, resource,
     reservation_ref.resource = resource
     reservation_ref.delta = delta
     reservation_ref.expire = expire
-    reservation_ref.save(session=session)
+    reservation_ref.save(session)
     return reservation_ref
 
 
@@ -4982,7 +4959,7 @@ def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)
     try:
-        cell.save(session=context.session)
+        cell.save(context.session)
     except db_exc.DBDuplicateEntry:
         raise exception.CellExists(name=values['name'])
     return cell
