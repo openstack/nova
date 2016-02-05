@@ -224,8 +224,8 @@ class API(base_api.NetworkAPI):
                             instance_id=orig_instance_uuid)
             LOG.info(_LI('re-assign floating IP %(address)s from '
                          'instance %(instance_id)s'), msg_dict)
-            orig_instance = objects.Instance.get_by_uuid(context,
-                                                         orig_instance_uuid)
+            orig_instance = objects.Instance.get_by_uuid(
+                context, orig_instance_uuid, expected_attrs=['flavor'])
 
             # purge cached nw info for the original instance
             base_api.update_instance_cache_with_nw_info(self, context,
