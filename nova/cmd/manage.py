@@ -234,7 +234,7 @@ def _db_error(caught_exception):
     print(_("The above error may show that the database has not "
             "been created.\nPlease create a database using "
             "'nova-manage db sync' before running this command."))
-    exit(1)
+    sys.exit(1)
 
 
 class ProjectCommands(object):
