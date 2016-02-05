@@ -197,8 +197,8 @@ class FloatingIPActionController(wsgi.Controller):
         cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
         if not cached_nwinfo:
             LOG.warning(
-                _LW('Info cache is %r during associate') % instance.info_cache,
-                instance=instance)
+                _LW('Info cache is %r during associate with no nw_info cache'),
+                    instance.info_cache, instance=instance)
             msg = _('No nw_info cache associated with instance')
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
