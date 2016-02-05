@@ -29,7 +29,5 @@ oslo_config.cfg.CONF.register_opts(_network_opts)
 
 def API(skip_policy_check=False):
     network_api_class = oslo_config.cfg.CONF.network_api_class
-    if 'quantumv2' in network_api_class:
-        network_api_class = network_api_class.replace('quantumv2', 'neutronv2')
     cls = importutils.import_class(network_api_class)
     return cls(skip_policy_check=skip_policy_check)

@@ -1303,7 +1303,7 @@ class ComputeDriver(object):
 
         This is called during spawn_instance by the compute manager.
 
-        Note that the format of the return value is specific to Quantum
+        Note that the format of the return value is specific to the Neutron
         client API.
 
         :return: None, or a set of DHCP options, eg:

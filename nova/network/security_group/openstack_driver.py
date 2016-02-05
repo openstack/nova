@@ -51,4 +51,4 @@ def get_openstack_security_group_driver(skip_policy_check=False):
 
 
 def is_neutron_security_groups():
-    return CONF.security_group_api.lower() in ('neutron', 'quantum')
+    return CONF.security_group_api.lower() == 'neutron'

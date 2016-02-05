@@ -971,10 +971,6 @@ class ValidateNeutronConfiguration(test.NoDBTestCase):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         self.assertTrue(utils.is_neutron())
 
-    def test_quantum(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
-        self.assertTrue(utils.is_neutron())
-
 
 class AutoDiskConfigUtilTestCase(test.NoDBTestCase):
     def test_is_auto_disk_config_disabled(self):

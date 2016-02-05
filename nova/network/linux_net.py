@@ -1963,8 +1963,6 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         bridge = self.BRIDGE_NAME_PREFIX + str(network['uuid'][0:11])
         return bridge
 
-# provide compatibility with existing configs
-QuantumLinuxBridgeInterfaceDriver = NeutronLinuxBridgeInterfaceDriver
 
 iptables_manager = IptablesManager()
 
