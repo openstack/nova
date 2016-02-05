@@ -156,6 +156,12 @@ libvirt_opts = [
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
+    cfg.StrOpt('live_migration_inbound_addr',
+               default=None,
+               help='Live migration target ip or hostname '
+                    '(if this option is set to be None,'
+                    'the hostname of the migration target'
+                    'compute node will be used)'),
     cfg.StrOpt('live_migration_uri',
                default="qemu+tcp://%s/system",
                help='Migration target URI '
@@ -5927,6 +5933,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 listen_addrs['spice'] = str(
                     migrate_data.graphics_listen_addr_spice)
             serial_listen_addr = migrate_data.serial_listen_addr
+            if migrate_data.target_connect_addr is not None:
+                dest = migrate_data.target_connect_addr
 
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
@@ -6585,6 +6593,9 @@ class LibvirtDriver(driver.ComputeDriver):
         migrate_data.graphics_listen_addr_spice = CONF.spice.server_listen
         migrate_data.serial_listen_addr = \
             CONF.serial_console.proxyclient_address
+        # Store live_migration_inbound_addr
+        migrate_data.target_connect_addr = \
+            CONF.libvirt.live_migration_inbound_addr
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']

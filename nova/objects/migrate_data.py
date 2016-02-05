@@ -14,6 +14,7 @@
 
 from oslo_log import log
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import objects
 from nova.objects import base as obj_base
@@ -104,7 +105,9 @@ class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
 
 @obj_base.NovaObjectRegistry.register
 class LibvirtLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added target_connect_addr
+    VERSION = '1.1'
 
     fields = {
         'filename': fields.StringField(),
@@ -120,7 +123,15 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'graphics_listen_addr_spice': fields.IPAddressField(nullable=True),
         'serial_listen_addr': fields.StringField(nullable=True),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
+        'target_connect_addr': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(LibvirtLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'target_connect_addr' in primitive:
+            del primitive['target_connect_addr']
 
     def _bdms_to_legacy(self, legacy):
         if not self.obj_attr_is_set('bdms'):
@@ -157,12 +168,14 @@ class LibvirtLiveMigrateData(LiveMigrateData):
 
         graphics_vnc = legacy.pop('graphics_listen_addr_vnc', None)
         graphics_spice = legacy.pop('graphics_listen_addr_spice', None)
+        transport_target = legacy.pop('target_connect_addr', None)
         live_result = {
             'graphics_listen_addrs': {
                 'vnc': graphics_vnc and str(graphics_vnc),
                 'spice': graphics_spice and str(graphics_spice),
                 },
             'serial_listen_addr': legacy.pop('serial_listen_addr', None),
+            'target_connect_addr': transport_target,
         }
 
         if pre_migration_result:
@@ -185,6 +198,7 @@ class LibvirtLiveMigrateData(LiveMigrateData):
                 pre_result['graphics_listen_addrs'].get('vnc')
             self.graphics_listen_addr_spice = \
                 pre_result['graphics_listen_addrs'].get('spice')
+            self.target_connect_addr = pre_result.get('target_connect_addr')
             if 'serial_listen_addr' in pre_result:
                 self.serial_listen_addr = pre_result['serial_listen_addr']
             self._bdms_from_legacy(pre_result)

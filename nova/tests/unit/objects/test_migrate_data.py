@@ -165,6 +165,7 @@ class _TestLibvirtLiveMigrateData(object):
         expected = {
             'graphics_listen_addrs': {'vnc': '127.0.0.1',
                                       'spice': None},
+            'target_connect_addr': None,
             'serial_listen_addr': '127.0.0.1',
             'volume': {
                 '123': {
