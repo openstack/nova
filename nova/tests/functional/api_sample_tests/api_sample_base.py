@@ -25,6 +25,9 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_utils
 
 CONF = cfg.CONF
+CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.legacy_v2.extensions')
 
 # API samples heavily uses testscenarios. This allows us to use the
 # same tests, with slight variations in configuration to ensure our
