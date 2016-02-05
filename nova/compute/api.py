@@ -3328,6 +3328,33 @@ class API(base.Base):
         self.compute_rpcapi.live_migration_force_complete(
             context, instance, migration.id)
 
+    @check_instance_lock
+    @check_instance_cell
+    @check_instance_state(task_state=[task_states.MIGRATING])
+    def live_migrate_abort(self, context, instance, migration_id):
+        """Abort an in-progress live migration.
+
+        :param context: Security context
+        :param instance: The instance that is being migrated
+        :param migration_id: ID of in-progress live migration
+
+        """
+        migration = objects.Migration.get_by_id_and_instance(context,
+                    migration_id, instance.uuid)
+        LOG.debug("Going to cancel live migration %s",
+                  migration.id, instance=instance)
+
+        if migration.status != 'running':
+            raise exception.InvalidMigrationState(migration_id=migration_id,
+                    instance_uuid=instance.uuid,
+                    state=migration.status,
+                    method='abort live migration')
+        self._record_action_start(context, instance,
+                                  instance_actions.LIVE_MIGRATION_CANCEL)
+
+        self.compute_rpcapi.live_migration_abort(context,
+                instance, migration.id)
+
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,

@@ -5815,6 +5815,23 @@ class LibvirtDriver(driver.ComputeDriver):
                              post_method, recover_method, block_migration,
                              migrate_data)
 
+    def live_migration_abort(self, instance):
+        """Aborting a running live-migration.
+
+        :param instance: instance object that is in migration
+
+        """
+
+        guest = self._host.get_guest(instance)
+        dom = guest._domain
+
+        try:
+            dom.abortJob()
+        except libvirt.libvirtError as e:
+            LOG.error(_LE("Failed to cancel migration %s"),
+                      e, instance=instance)
+            raise
+
     def _update_xml(self, xml_str, migrate_bdm_info, listen_addrs,
                     serial_listen_addr):
         xml_doc = etree.fromstring(xml_str)
@@ -6428,7 +6445,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(_LW("Migration operation was cancelled"),
                          instance=instance)
                 recover_method(context, instance, dest, block_migration,
-                               migrate_data)
+                               migrate_data, migration_status='cancelled')
                 break
             else:
                 LOG.warn(_LW("Unexpected migration job type: %d"),

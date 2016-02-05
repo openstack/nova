@@ -309,6 +309,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj,
                 migration_id='1', version='4.9')
 
+    def test_live_migration_abort(self):
+        self._test_compute_api('live_migration_abort', 'cast',
+                instance=self.fake_instance_obj,
+                migration_id='1', version='4.10')
+
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'cast',
                 instance=self.fake_instance_obj,

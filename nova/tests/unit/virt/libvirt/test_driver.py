@@ -7677,7 +7677,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         mock_mig_save,
                                         mock_job_info,
                                         mock_sleep,
-                                        mock_time):
+                                        mock_time,
+                                        expected_mig_status=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
@@ -7746,8 +7747,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                  'abortJob not called when failure expected')
             self.assertFalse(fake_post_method.called,
                              'Post method called when success not expected')
-            fake_recover_method.assert_called_once_with(
-                self.context, instance, dest, False, migrate_data)
+            if expected_mig_status:
+                fake_recover_method.assert_called_once_with(
+                    self.context, instance, dest, False, migrate_data,
+                    migration_status=expected_mig_status)
+            else:
+                fake_recover_method.assert_called_once_with(
+                    self.context, instance, dest, False, migrate_data)
 
     def test_live_migration_monitor_success(self):
         # A normal sequence where see all the normal job states
@@ -7847,7 +7853,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ]
 
         self._test_live_migration_monitoring(domain_info_records, [],
-                                             self.EXPECT_FAILURE)
+                                             self.EXPECT_FAILURE,
+                                             expected_mig_status='cancelled')
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateSetMaxDowntime")
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -7929,7 +7936,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ]
 
         self._test_live_migration_monitoring(domain_info_records,
-                                             fake_times, self.EXPECT_ABORT)
+                                             fake_times, self.EXPECT_ABORT,
+                                             expected_mig_status='cancelled')
 
     def test_live_migration_monitor_progress(self):
         self.flags(live_migration_completion_timeout=1000000,
@@ -7960,7 +7968,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ]
 
         self._test_live_migration_monitoring(domain_info_records,
-                                             fake_times, self.EXPECT_ABORT)
+                                             fake_times, self.EXPECT_ABORT,
+                                             expected_mig_status='cancelled')
 
     def test_live_migration_downtime_steps(self):
         self.flags(live_migration_downtime=400, group='libvirt')
@@ -13328,6 +13337,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.live_migration_force_complete(self.test_instance)
         pause.assert_called_once_with(self.test_instance)
+
+    @mock.patch.object(fakelibvirt.virDomain, "abortJob")
+    def test_live_migration_abort(self, mock_abort):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
+        guest = libvirt_guest.Guest(dom)
+        with mock.patch.object(nova.virt.libvirt.host.Host, 'get_guest',
+                               return_value=guest):
+            drvr.live_migration_abort(self.test_instance)
+            self.assertTrue(mock_abort.called)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('tempfile.mkstemp')

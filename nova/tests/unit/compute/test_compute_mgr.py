@@ -4526,6 +4526,68 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _do_test()
 
+    def _get_migration(self, migration_id, status, migration_type):
+        migration = objects.Migration()
+        migration.id = migration_id
+        migration.status = status
+        migration.migration_type = migration_type
+        return migration
+
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
+    def test_live_migration_abort(self,
+                                  mock_driver,
+                                  mock_get_migration,
+                                  mock_notify):
+        instance = objects.Instance(id=123, uuid=uuids.instance)
+        migration = self._get_migration(10, 'running', 'live-migration')
+        mock_get_migration.return_value = migration
+        self.compute.live_migration_abort(self.context, instance, migration.id)
+
+        mock_driver.assert_called_with(instance)
+        _notify_usage_calls = [mock.call(self.context,
+                                         instance,
+                                         'live.migration.abort.start'),
+                               mock.call(self.context,
+                                         instance,
+                                        'live.migration.abort.end')]
+
+        mock_notify.assert_has_calls(_notify_usage_calls)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
+    def test_live_migration_abort_not_supported(self,
+                                                mock_driver,
+                                                mock_get_migration,
+                                                mock_notify,
+                                                mock_instance_fault):
+        instance = objects.Instance(id=123, uuid=uuids.instance)
+        migration = self._get_migration(10, 'running', 'live-migration')
+        mock_get_migration.return_value = migration
+        mock_driver.side_effect = NotImplementedError()
+        self.assertRaises(NotImplementedError,
+                          self.compute.live_migration_abort,
+                          self.context,
+                          instance,
+                          migration.id)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    def test_live_migration_abort_wrong_migration_state(self,
+                                                        mock_get_migration,
+                                                        mock_instance_fault):
+        instance = objects.Instance(id=123, uuid=uuids.instance)
+        migration = self._get_migration(10, 'completed', 'live-migration')
+        mock_get_migration.return_value = migration
+        self.assertRaises(exception.InvalidMigrationState,
+                          self.compute.live_migration_abort,
+                          self.context,
+                          instance,
+                          migration.id)
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):

@@ -674,7 +674,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.9')
+    target = messaging.Target(version='4.10')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5278,6 +5278,30 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, 'live.migration.force.complete.end')
 
+    @wrap_exception()
+    @wrap_instance_event
+    @wrap_instance_fault
+    def live_migration_abort(self, context, instance, migration_id):
+        """Abort an in-progress live migration.
+
+        :param context: Security context
+        :param instance: The instance that is being migrated
+        :param migration_id: ID of in-progress live migration
+
+        """
+        migration = objects.Migration.get_by_id(context, migration_id)
+        if migration.status != 'running':
+            raise exception.InvalidMigrationState(migration_id=migration_id,
+                    instance_uuid=instance.uuid,
+                    state=migration.status,
+                    method='abort live migration')
+
+        self._notify_about_instance_usage(
+            context, instance, 'live.migration.abort.start')
+        self.driver.live_migration_abort(instance)
+        self._notify_about_instance_usage(
+            context, instance, 'live.migration.abort.end')
+
     def _live_migration_cleanup_flags(self, block_migration, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after
         live migration (at source on success, at destination on rollback)
@@ -5509,7 +5533,8 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
-                                 dest, block_migration, migrate_data=None):
+                                 dest, block_migration, migrate_data=None,
+                                 migration_status='error'):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
@@ -5520,6 +5545,8 @@ class ComputeManager(manager.Manager):
         :param block_migration: if true, prepare for block migration
         :param migrate_data:
             if not none, contains implementation specific data.
+        :param migration_status:
+            Contains the status we want to set for the migration object
 
         """
         instance.task_state = None
@@ -5559,7 +5586,8 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
-        self._set_migration_status(migration, 'error')
+
+        self._set_migration_status(migration, migration_status)
 
     @wrap_exception()
     @wrap_instance_event
