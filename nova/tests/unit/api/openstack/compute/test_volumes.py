@@ -23,6 +23,7 @@ from six.moves import urllib
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute import assisted_volume_snapshots \
         as assisted_snaps_v21
 from nova.api.openstack.compute.legacy_v2.contrib import \
@@ -32,6 +33,7 @@ from nova.api.openstack.compute import volumes as volumes_v21
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova import objects
@@ -460,6 +462,40 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             status_int = result.status_int
         self.assertEqual(202, status_int)
 
+    @mock.patch.object(common, 'get_instance')
+    def test_detach_vol_shelved_not_supported(self, mock_get_instance):
+        inst = fake_instance.fake_instance_obj(self.context,
+                                               **{'uuid': FAKE_UUID})
+        inst.vm_state = vm_states.SHELVED
+        mock_get_instance.return_value = inst
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid', version='2.19')
+        req.method = 'DELETE'
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.attachments.delete,
+                          req,
+                          FAKE_UUID,
+                          FAKE_UUID_A)
+
+    @mock.patch.object(compute_api.API, 'detach_volume')
+    @mock.patch.object(common, 'get_instance')
+    def test_detach_vol_shelved_supported(self,
+                                          mock_get_instance,
+                                          mock_detach):
+        inst = fake_instance.fake_instance_obj(self.context,
+                                               **{'uuid': FAKE_UUID})
+        inst.vm_state = vm_states.SHELVED
+        mock_get_instance.return_value = inst
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid', version='2.20')
+        req.method = 'DELETE'
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.attachments.delete(req, FAKE_UUID, FAKE_UUID_A)
+        self.assertTrue(mock_detach.called)
+
     def test_detach_vol_not_found(self):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
@@ -522,6 +558,51 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         result = self.attachments.create(req, FAKE_UUID, body=body)
         self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
                          result['volumeAttachment']['id'])
+
+    @mock.patch.object(common, 'get_instance')
+    def test_attach_vol_shelved_not_supported(self, mock_get_instance):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake'}}
+
+        inst = fake_instance.fake_instance_obj(self.context,
+                                               **{'uuid': FAKE_UUID})
+        inst.vm_state = vm_states.SHELVED
+        mock_get_instance.return_value = inst
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments',
+                                      version='2.19')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.attachments.create,
+                          req,
+                          FAKE_UUID,
+                          body=body)
+
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       return_value='/dev/myfake')
+    @mock.patch.object(common, 'get_instance')
+    def test_attach_vol_shelved_supported(self,
+                                          mock_get_instance,
+                                          mock_attach):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake'}}
+
+        inst = fake_instance.fake_instance_obj(self.context,
+                                               **{'uuid': FAKE_UUID})
+        inst.vm_state = vm_states.SHELVED
+        mock_get_instance.return_value = inst
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments',
+                                      version='2.20')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
+                         result['volumeAttachment']['id'])
+        self.assertEqual('/dev/myfake', result['volumeAttachment']['device'])
 
     @mock.patch.object(compute_api.API, 'attach_volume',
                        return_value='/dev/myfake')
