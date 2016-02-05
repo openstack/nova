@@ -1726,10 +1726,20 @@ class ComputeManager(manager.Manager):
                 'swap': swap,
                 'block_device_mapping': mapping})
 
+    def _check_dev_name(self, bdms, instance):
+        bdms_no_device_name = [x for x in bdms if x.device_name is None]
+        for bdm in bdms_no_device_name:
+            device_name = self._get_device_name_for_instance(instance,
+                                                             bdms,
+                                                             bdm)
+            values = {'device_name': device_name}
+            bdm.update(values)
+
     def _prep_block_device(self, context, instance, bdms,
                            do_check_attach=True):
         """Set up the block device for an instance with error logging."""
         try:
+            self._check_dev_name(bdms, instance)
             block_device_info = driver.get_block_device_info(instance, bdms)
             mapping = driver.block_device_info_get_mapping(block_device_info)
             driver_block_device.attach_block_devices(

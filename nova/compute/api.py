@@ -1714,6 +1714,33 @@ class API(base.Base):
                        ram=-instance_memory_mb)
         return quotas
 
+    def _local_cleanup_bdm_volumes(self, bdms, instance, context):
+        """The method deletes the bdm records and, if a bdm is a volume, call
+        the terminate connection and the detach volume via the Volume API.
+        Note that at this point we do not have the information about the
+        correct connector so we pass a fake one.
+        """
+        elevated = context.elevated()
+        for bdm in bdms:
+            if bdm.is_volume:
+                # NOTE(vish): We don't have access to correct volume
+                #             connector info, so just pass a fake
+                #             connector. This can be improved when we
+                #             expose get_volume_connector to rpc.
+                connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
+                try:
+                    self.volume_api.terminate_connection(context,
+                                                         bdm.volume_id,
+                                                         connector)
+                    self.volume_api.detach(elevated, bdm.volume_id,
+                                           instance.uuid)
+                    if bdm.delete_on_termination:
+                        self.volume_api.delete(context, bdm.volume_id)
+                except Exception as exc:
+                    err_str = _LW("Ignoring volume cleanup failure due to %s")
+                    LOG.warn(err_str % exc, instance=instance)
+            bdm.destroy()
+
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
             LOG.info(_LI("instance is in SHELVED_OFFLOADED state, cleanup"
@@ -1747,25 +1774,7 @@ class API(base.Base):
                 instance.host = orig_host
 
         # cleanup volumes
-        for bdm in bdms:
-            if bdm.is_volume:
-                # NOTE(vish): We don't have access to correct volume
-                #             connector info, so just pass a fake
-                #             connector. This can be improved when we
-                #             expose get_volume_connector to rpc.
-                connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
-                try:
-                    self.volume_api.terminate_connection(context,
-                                                         bdm.volume_id,
-                                                         connector)
-                    self.volume_api.detach(elevated, bdm.volume_id,
-                                           instance.uuid)
-                    if bdm.delete_on_termination:
-                        self.volume_api.delete(context, bdm.volume_id)
-                except Exception as exc:
-                    err_str = _LW("Ignoring volume cleanup failure due to %s")
-                    LOG.warn(err_str % exc, instance=instance)
-            bdm.destroy()
+        self._local_cleanup_bdm_volumes(bdms, instance, context)
         cb(context, instance, bdms, local=True)
         sys_meta = instance.system_metadata
         instance.destroy()
@@ -2965,6 +2974,38 @@ class API(base.Base):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)
 
+    def _create_volume_bdm(self, context, instance, device, volume_id,
+                           disk_bus, device_type, is_local_creation=False):
+        if is_local_creation:
+            # when the creation is done locally we can't specify the device
+            # name as we do not have a way to check that the name specified is
+            # a valid one.
+            # We leave the setting of that value when the actual attach
+            # happens on the compute manager
+            volume_bdm = objects.BlockDeviceMapping(
+                context=context,
+                source_type='volume', destination_type='volume',
+                instance_uuid=instance.uuid, boot_index=None,
+                volume_id=volume_id or 'reserved',
+                device_name=None, guest_format=None,
+                disk_bus=disk_bus, device_type=device_type)
+            volume_bdm.create()
+        else:
+            # NOTE(vish): This is done on the compute host because we want
+            #             to avoid a race where two devices are requested at
+            #             the same time. When db access is removed from
+            #             compute, the bdm will be created here and we will
+            #             have to make sure that they are assigned atomically.
+            volume_bdm = self.compute_rpcapi.reserve_block_device_name(
+                context, instance, device, volume_id, disk_bus=disk_bus,
+                device_type=device_type)
+        return volume_bdm
+
+    def _check_attach_and_reserve_volume(self, context, volume_id, instance):
+        volume = self.volume_api.get(context, volume_id)
+        self.volume_api.check_attach(context, volume, instance=instance)
+        self.volume_api.reserve_volume(context, volume_id)
+
     def _attach_volume(self, context, instance, volume_id, device,
                        disk_bus, device_type):
         """Attach an existing volume to an existing instance.
@@ -2972,19 +3013,40 @@ class API(base.Base):
         This method is separated to make it possible for cells version
         to override it.
         """
-        # NOTE(vish): This is done on the compute host because we want
-        #             to avoid a race where two devices are requested at
-        #             the same time. When db access is removed from
-        #             compute, the bdm will be created here and we will
-        #             have to make sure that they are assigned atomically.
-        volume_bdm = self.compute_rpcapi.reserve_block_device_name(
+        volume_bdm = self._create_volume_bdm(
             context, instance, device, volume_id, disk_bus=disk_bus,
             device_type=device_type)
         try:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.check_attach(context, volume, instance=instance)
-            self.volume_api.reserve_volume(context, volume_id)
+            self._check_attach_and_reserve_volume(context, volume_id, instance)
             self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                volume_bdm.destroy()
+
+        return volume_bdm.device_name
+
+    def _attach_volume_shelved_offloaded(self, context, instance, volume_id,
+                                         device, disk_bus, device_type):
+        """Attach an existing volume to an instance in shelved offloaded state.
+
+        Attaching a volume for an instance in shelved offloaded state requires
+        to perform the regular check to see if we can attach and reserve the
+        volume then we need to call the attach method on the volume API
+        to mark the volume as 'in-use'.
+        The instance at this stage is not managed by a compute manager
+        therefore the actual attachment will be performed once the
+        instance will be unshelved.
+        """
+
+        volume_bdm = self._create_volume_bdm(
+            context, instance, device, volume_id, disk_bus=disk_bus,
+            device_type=device_type, is_local_creation=True)
+        try:
+            self._check_attach_and_reserve_volume(context, volume_id, instance)
+            self.volume_api.attach(context,
+                                   volume_id,
+                                   instance.uuid,
+                                   device)
         except Exception:
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy()
@@ -3005,8 +3067,22 @@ class API(base.Base):
         #             a valid device.
         if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
+
+        is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
+        if is_shelved_offloaded:
+            return self._attach_volume_shelved_offloaded(context,
+                                                         instance,
+                                                         volume_id,
+                                                         device,
+                                                         disk_bus,
+                                                         device_type)
+
         return self._attach_volume(context, instance, volume_id, device,
                                    disk_bus, device_type)
+
+    def _check_and_begin_detach(self, context, volume, instance):
+        self.volume_api.check_detach(context, volume, instance=instance)
+        self.volume_api.begin_detaching(context, volume['id'])
 
     def _detach_volume(self, context, instance, volume):
         """Detach volume from instance.
@@ -3014,14 +3090,27 @@ class API(base.Base):
         This method is separated to make it easier for cells version
         to override.
         """
-        self.volume_api.check_detach(context, volume, instance=instance)
-        self.volume_api.begin_detaching(context, volume['id'])
+        self._check_and_begin_detach(context, volume, instance)
         attachments = volume.get('attachments', {})
         attachment_id = None
         if attachments and instance.uuid in attachments:
             attachment_id = attachments[instance.uuid]['attachment_id']
         self.compute_rpcapi.detach_volume(context, instance=instance,
                 volume_id=volume['id'], attachment_id=attachment_id)
+
+    def _detach_volume_shelved_offloaded(self, context, instance, volume):
+        """Detach a volume from an instance in shelved offloaded state.
+
+        If the instance is shelved offloaded we just need to cleanup volume
+        calling the volume api detach, the volume api terminte_connection
+        and delete the bdm record.
+        If the volume has delete_on_termination option set then we call the
+        volume api delete as well.
+        """
+        self._check_and_begin_detach(context, volume, instance)
+        bdms = [objects.BlockDeviceMapping.get_by_volume_id(
+                context, volume['id'], instance.uuid)]
+        self._local_cleanup_bdm_volumes(bdms, instance, context)
 
     @wrap_check_policy
     @check_instance_lock
@@ -3030,8 +3119,10 @@ class API(base.Base):
                                     vm_states.SOFT_DELETED])
     def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
-
-        self._detach_volume(context, instance, volume)
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            self._detach_volume_shelved_offloaded(context, instance, volume)
+        else:
+            self._detach_volume(context, instance, volume)
 
     @wrap_check_policy
     @check_instance_lock
