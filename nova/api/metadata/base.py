@@ -544,7 +544,8 @@ def get_metadata_by_address(address):
 def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     ctxt = ctxt or context.get_admin_context()
     instance = objects.Instance.get_by_uuid(
-        ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache'])
+        ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
+                                           'metadata', 'system_metadata'])
     return InstanceMetadata(instance, address)
 
 
