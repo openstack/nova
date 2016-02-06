@@ -33,6 +33,7 @@ from nova import objects
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
+from nova.virt import osinfo
 
 LOG = logging.getLogger(__name__)
 
@@ -108,9 +109,7 @@ class LibvirtGenericVIFDriver(object):
         # If the user has specified a 'vif_model' against the
         # image then honour that model
         if image_meta:
-            vif_model = image_meta.properties.get('hw_vif_model')
-            if vif_model is not None:
-                model = vif_model
+            model = osinfo.HardwareProperties(image_meta).network_model
 
         # Else if the virt type is KVM/QEMU, use virtio according
         # to the global config parameter

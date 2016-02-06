@@ -14,6 +14,7 @@
 
 import os
 
+import fixtures
 from lxml import etree
 import mock
 from oslo_concurrency import processutils
@@ -26,6 +27,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
 from nova import test
+from nova.tests.unit.virt import fakelibosinfo
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import host
@@ -575,6 +577,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 xml = self._get_instance_xml(d, self.vif_bridge,
                                              image_meta)
                 self._assertModel(xml, model)
+
+    @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config')
+    def test_model_with_osinfo(self, mock_set):
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo.libosinfo',
+            fakelibosinfo))
+        d = vif.LibvirtGenericVIFDriver()
+        image_meta = {'properties': {'os_name': 'fedora22'}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        d.get_base_config(None, self.vif_bridge, image_meta,
+                          None, 'kvm')
+        mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
+                                         'virtio', None, None)
 
     def _test_model_qemu(self, *vif_objs, **kw):
         libvirt_version = kw.get('libvirt_version')
