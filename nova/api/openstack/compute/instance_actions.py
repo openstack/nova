@@ -20,6 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.i18n import _
+from nova import utils
 
 ALIAS = "os-instance-actions"
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -49,11 +50,20 @@ class InstanceActionsController(wsgi.Controller):
             event[key] = event_raw.get(key)
         return event
 
+    @wsgi.Controller.api_version("2.1", "2.20")
+    def _get_instance(self, req, context, server_id):
+        return common.get_instance(self.compute_api, context, server_id)
+
+    @wsgi.Controller.api_version("2.21")  # noqa
+    def _get_instance(self, req, context, server_id):
+        with utils.temporary_mutation(context, read_deleted='yes'):
+            return common.get_instance(self.compute_api, context, server_id)
+
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = self._get_instance(req, context, server_id)
         authorize(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
@@ -63,7 +73,7 @@ class InstanceActionsController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = self._get_instance(req, context, server_id)
         authorize(context, target=instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)

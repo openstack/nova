@@ -193,8 +193,11 @@ class TestOpenStackClient(object):
             resp.body = jsonutils.loads(response.content)
         return resp
 
-    def api_get(self, relative_uri, **kwargs):
+    def api_get(self, relative_uri, api_version=None, **kwargs):
         kwargs.setdefault('check_response_status', [200])
+        if api_version:
+            headers = kwargs.setdefault('headers', {})
+            headers['X-OpenStack-Nova-API-Version'] = api_version
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
     def api_post(self, relative_uri, body, api_version=None, **kwargs):
@@ -360,6 +363,6 @@ class TestOpenStackClient(object):
     def delete_server_group(self, group_id):
         self.api_delete('/os-server-groups/%s' % group_id)
 
-    def get_instance_actions(self, server_id):
+    def get_instance_actions(self, server_id, api_version=None):
         return self.api_get('/servers/%s/os-instance-actions' %
-                            (server_id)).body['instanceActions']
+                            (server_id), api_version).body['instanceActions']
