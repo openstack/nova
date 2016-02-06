@@ -4001,6 +4001,16 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                                  ignored_keys)
         self._assertEqualObjects(extra_specs, flavor['extra_specs'])
 
+    @mock.patch('sqlalchemy.orm.query.Query.all', return_value=[])
+    def test_flavor_create_with_extra_specs_duplicate(self, mock_all):
+        extra_specs = dict(key='value')
+        flavorid = 'flavorid'
+        self._create_flavor({'flavorid': flavorid, 'extra_specs': extra_specs})
+
+        self.assertRaises(exception.FlavorExtraSpecUpdateCreateFailed,
+                          db.flavor_extra_specs_update_or_create,
+                          self.ctxt, flavorid, extra_specs)
+
     def test_flavor_get_all(self):
         # NOTE(boris-42): Remove base instance types
         for it in db.flavor_get_all(self.ctxt):
@@ -4283,7 +4293,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
     def test_flavor_extra_specs_update_or_create_retry(self):
 
         def counted():
-            def get_id(context, flavorid, session):
+            def get_id(context, flavorid):
                 get_id.counter += 1
                 raise db_exc.DBDuplicateEntry
             get_id.counter = 0
