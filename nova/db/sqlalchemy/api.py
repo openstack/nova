@@ -1853,6 +1853,7 @@ def _manual_join_columns(columns_to_join):
 
 
 @require_context
+@main_context_manager.reader
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join_new = ['info_cache', 'security_groups']
@@ -6406,6 +6407,7 @@ def pci_device_get_all_by_node(context, node_id):
                        all()
 
 
+@main_context_manager.reader
 def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
     return model_query(context, models.PciDevice).\
                        filter_by(compute_node_id=node_id).\
