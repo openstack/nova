@@ -129,14 +129,18 @@ Nova allows both general user and administrator to filter the server
 query result by using query options.
 
 For general user, ``reservation_id``, ``name``, ``status``, ``image``,
-``flavor``, ``ip``, ``changes-since``, ``all_tenants``,
-``ip6 (microversion 2.5)`` are supported options to be used. The other
-options will be ignored by nova silently only with a debug log.
+``flavor``, ``ip``, ``changes-since``, ``ip6 (microversion 2.5)`` are
+supported options to be used. The other options will be ignored by nova
+silently only with a debug log.
 
-For administrator, there are more fields can be used.
-Usually the filter is operated on the database schema definition of
-``class Instance``, e.g there is a field named 'locked' in the schema
-then the filter can use 'locked' as search options to filter servers.
+For administrator, there are more fields can be used. The ``all_tenants``
+option allows the servers owned by all tenants to be reported (otherwise
+only the servers associated with the calling tenant are included in
+the response). Additionally, the filter is applied to the database schema
+definition of ``class Instance``, e.g there is a field named 'locked' in
+the schema then the filter can use 'locked' as search options to filter
+servers.
+
 Also, there are some special options such as ``changes-since`` can
 be used and interpreted by nova.
 
