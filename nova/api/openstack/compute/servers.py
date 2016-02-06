@@ -434,7 +434,7 @@ class ServersController(wsgi.Controller):
         :param is_detail: True if you plan on showing the details of the
             instance in the response, False otherwise.
         """
-        expected_attrs = ['flavor', 'pci_devices']
+        expected_attrs = ['flavor', 'pci_devices', 'numa_topology']
         if is_detail:
             expected_attrs = self._view_builder.get_show_expected_attrs(
                                                             expected_attrs)

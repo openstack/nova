@@ -128,7 +128,8 @@ class ServerActionsControllerTestV21(test.TestCase):
             self.context, objects.Instance(), instance)
 
         self.compute_api.get(self.context, uuid,
-                             expected_attrs=['flavor', 'pci_devices'],
+                             expected_attrs=['flavor', 'pci_devices',
+                                             'numa_topology'],
                              want_objects=True).AndReturn(instance)
         return instance
 
