@@ -77,7 +77,7 @@ class FlavorSwapTestV21(test.NoDBTestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app_v21(init_only=('flavors')))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('flavors',)))
         return res
 
     def _get_flavor(self, body):
@@ -111,5 +111,5 @@ class FlavorSwapTestV2(FlavorSwapTestV21):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
         return res
