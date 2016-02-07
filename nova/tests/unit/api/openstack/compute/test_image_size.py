@@ -88,7 +88,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v21()
+        return fakes.wsgi_app_v21(init_only=('images', 'image-size'))
 
     def _get_image(self, body):
         return jsonutils.loads(body).get('image')
@@ -119,4 +119,4 @@ class ImageSizeTestV21(test.NoDBTestCase):
 
 class ImageSizeTestV2(ImageSizeTestV21):
     def _get_app(self):
-        return fakes.wsgi_app()
+        return fakes.wsgi_app(init_only=('images',))
