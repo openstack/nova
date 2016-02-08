@@ -1249,6 +1249,36 @@ def numa_fit_instance_to_host(
                     return objects.InstanceNUMATopology(cells=cells)
 
 
+def numa_get_reserved_huge_pages():
+    """Returns reserved memory pages from host option
+
+    Based from the compute node option reserved_huge_pages, this
+    method will return a well formatted list of dict which can be used
+    to build NUMATopology.
+
+    :raises: exceptionInvalidReservedMemoryPagesOption is option is
+             not corretly set.
+
+    :returns: a list of dict ordered by NUMA node ids; keys of dict
+              are pages size where values are the number reserved.
+    """
+    bucket = {}
+    if CONF.reserved_huge_pages:
+        try:
+            bucket = collections.defaultdict(dict)
+            for cfg in CONF.reserved_huge_pages:
+                try:
+                    pagesize = int(cfg['size'])
+                except ValueError:
+                    pagesize = strutils.string_to_bytes(
+                        cfg['size'], return_int=True) / units.Ki
+                bucket[int(cfg['node'])][pagesize] = int(cfg['count'])
+        except (ValueError, TypeError, KeyError):
+            raise exception.InvalidReservedMemoryPagesOption(
+                conf=CONF.reserved_huge_pages)
+    return bucket
+
+
 def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
     topo = []
     for pages in hostcell.mempages:
@@ -1258,7 +1288,8 @@ def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
                 total=pages.total,
                 used=max(0, pages.used +
                          instancecell.memory * units.Ki /
-                         pages.size_kb * sign)))
+                         pages.size_kb * sign),
+                reserved=pages.reserved if 'reserved' in pages else 0))
         else:
             topo.append(pages)
     return topo

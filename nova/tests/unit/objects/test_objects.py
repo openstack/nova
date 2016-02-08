@@ -1163,7 +1163,7 @@ object_data = {
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
-    'NUMAPagesTopology': '1.0-c71d86317283266dc8364c149155e48e',
+    'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',

@@ -2137,3 +2137,9 @@ class BuildRequestNotFound(NotFound):
 class AttachInterfaceNotSupported(Invalid):
     msg_fmt = _("Attaching interfaces is not supported for "
                 "instance %(instance)s.")
+
+
+class InvalidReservedMemoryPagesOption(Invalid):
+    msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
+                "(found '%(conf)s') Please refer to the nova "
+                "config-reference.")
