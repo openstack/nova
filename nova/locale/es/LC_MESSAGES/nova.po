@@ -15,11 +15,12 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"POT-Creation-Date: 2016-02-08 05:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -434,6 +435,14 @@ msgstr ""
 msgid "Binary"
 msgstr "Binario"
 
+#, python-format
+msgid ""
+"Binding failed for port %(port_id)s, please check neutron logs for more "
+"information."
+msgstr ""
+"El enlace ha fallado para el puerto %(port_id)s, compruebe los registros de "
+"neutron para más información."
+
 msgid "Blank components"
 msgstr "Componentes en blanco"
 
@@ -543,6 +552,14 @@ msgstr "El numero de CPU %(cpuset)s no esta asignado a ningún nodo"
 #, python-format
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "el host no soporta anclaje de CPU: %(reason)s"
+
+#, python-format
+msgid ""
+"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
+"%(cpuset)s"
+msgstr ""
+"La CPU establecida para anclar/desanclar %(requested)s debe ser un "
+"subconjunto de CPU conocido %(cpuset)s"
 
 msgid "Can not add access to a public flavor."
 msgstr "No se puede añadir acceso al sabor público."
@@ -1453,14 +1470,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Flavor %(id)d extra spec cannot be updated or created after %(retries)d "
-"retries."
-msgstr ""
-"No se puede crear o actualizar el tipo %(id)d de especificaciones "
-"adicionales después de %(retries)d intentos."
-
-#, python-format
-msgid ""
 "Flavor access already exists for flavor %(flavor_id)s and project "
 "%(project_id)s combination."
 msgstr ""
@@ -1513,6 +1522,14 @@ msgstr ""
 "El disco del sabor es más pequeño que el tamaño mínimo especificado en los "
 "metadatos del imagen. El disco del sabor es %(flavor_size)i bytes, tamaño "
 "mínimo es %(image_min_disk)i bytes."
+
+#, python-format
+msgid ""
+"Flavor's disk is too small for requested image. Flavor disk is "
+"%(flavor_size)i bytes, image is %(image_size)i bytes."
+msgstr ""
+"El disco Flavor es demasiado pequeño para la imagen solicitada. El disco "
+"Flavor tiene %(flavor_size)i bytes, la imagen tiene %(image_size)i bytes."
 
 msgid "Flavor's memory is too small for requested image."
 msgstr "La memoria del tipo es demasiado pequeña para la imagen solicitada."
@@ -2385,6 +2402,14 @@ msgstr ""
 "Lista de los sistemas de archivo que estan configurados en este archivo en "
 "la image_file_url: secciones <list entry name>"
 
+msgid ""
+"Live migration can not be used without shared storage except a booted from "
+"volume VM which does not have a local disk."
+msgstr ""
+"No se puede utilizar la migración en directo sin el almacenamiento "
+"compartido excepto si arranca desde VM de volumen que no tiene un disco "
+"local."
+
 msgid "Live migration is supported starting with Hyper-V Server 2012"
 msgstr "la migración en vivo está soportada a partir de Hyper-V server 2012"
 
@@ -3125,6 +3150,10 @@ msgstr "La acción watchdog proporcionada (%(action)s) no está soportada."
 msgid "QEMU guest agent is not enabled"
 msgstr "Agente invitado QEMU no está habilitado"
 
+#, python-format
+msgid "Quiescing is not supported in instance %(instance_id)s"
+msgstr "No hay soporte para la desactivación en la instancia %(instance_id)s"
+
 msgid "Quota"
 msgstr "Cuota"
 
@@ -3134,6 +3163,14 @@ msgstr "No se ha encontrado la clase de cuota %(class_name)s."
 
 msgid "Quota could not be found"
 msgstr "No se ha podido encontrar la cuota"
+
+#, python-format
+msgid ""
+"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)s "
+"of %(allowed)s %(overs)s"
+msgstr ""
+"Se ha superado la cuota para %(overs)s: Solicitado %(req)s, pero ya se "
+"utiliza %(used)s de %(allowed)s %(overs)s"
 
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
@@ -3661,6 +3698,9 @@ msgstr ""
 "Por favor crea una base de datos usando 'nova-manage db sync' antes de "
 "ejecutar este comando."
 
+msgid "The backlog must be more than 0"
+msgstr "El retraso debe ser mayor que 0"
+
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr ""
@@ -3679,6 +3719,11 @@ msgstr "La política PBM por defecto no existe en el backend."
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr "El filtro de cortafuegos para %s no existe "
+
+msgid "The floating IP request failed with a BadRequest"
+msgstr ""
+"La solicitud de la IP flotante ha fallado con BadRequest (Solicitud "
+"incorrecta)"
 
 #, python-format
 msgid "The group %(group_name)s must be configured with an id."
@@ -3787,6 +3832,10 @@ msgid ""
 msgstr ""
 "El servicio del controlador servicegroup %(driver)s está temporalmente no "
 "disponible."
+
+#, python-format
+msgid "The specified cluster '%s' was not found in vCenter"
+msgstr "El clúster especificado '%s' no se ha encontrado en vCenter"
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "
@@ -3926,6 +3975,12 @@ msgstr "Se ha excedido el tiempo esperando a que se creara el dispositivo %s"
 
 msgid "Timeout waiting for response from cell"
 msgstr "Se ha excedido el tiempo de espera de respuesta de la célula"
+
+#, python-format
+msgid "Timeout while checking if we can live migrate to host: %s"
+msgstr ""
+"Se ha agotado el tiempo de espera mientras se comprobaba si se puede migrar "
+"en directo al host: %s"
 
 msgid "To and From ports must be integers"
 msgstr "Puertos De y Hacia deben ser enteros"
@@ -4071,6 +4126,12 @@ msgstr "No es posible obtener dominio dns"
 
 msgid "Unable to get dns entry"
 msgstr "No es posible obtener ingreso dns"
+
+msgid "Unable to get host UUID: /etc/machine-id does not exist"
+msgstr "No se puede obtener el UUID de host: /etc/machine-id no existe"
+
+msgid "Unable to get host UUID: /etc/machine-id is empty"
+msgstr "No se puede obtener el UUID de host: /etc/machine-id está vacío"
 
 msgid "Unable to get rdp console, functionality not implemented"
 msgstr "Incapaz de obtener consola rdp, funcionalidad no implementada"
@@ -4566,6 +4627,17 @@ msgstr ""
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
 "your destination node does not support retrieving listen addresses.  In "
+"order for live migration to work properly you must either disable serial "
+"console or upgrade your libvirt version."
+msgstr ""
+"La versión de libvirt no da soporte al distintivo VIR_DOMAIN_XML_MIGRATABLE "
+"o el nodo de destino no da soporte a la recuperación de las direcciones de "
+"escucha. Para que la migración en directo funcione correctamente, debe "
+"inhabilitar la consola serie o actualizar la versión de libvirt."
+
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
+"your destination node does not support retrieving listen addresses.  In "
 "order for live migration to work properly, you must configure the graphics "
 "(VNC and/or SPICE) listen addresses to be either the catch-all address "
 "(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
@@ -4823,6 +4895,16 @@ msgstr "nodo"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "No es posible ejecutar comando ssh: %s"
+
+msgid ""
+"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
+"for use with linux user namespaces.  This tool can only be used with linux "
+"lxc containers.  See the man page for details."
+msgstr ""
+"nova-idmapshift es una herramienta que establece correctamente la propiedad "
+"de un sistema de archivos para su uso con espacios de nombres de usuarios "
+"linux. Esta herramienta sólo se puede utilizar con contenedores linux lxc. "
+"Consulte la página man para obtener información."
 
 msgid "onSharedStorage must be specified."
 msgstr "Se debe especificar onSharedStorage."
