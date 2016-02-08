@@ -19,6 +19,7 @@ import uuid as stdlib_uuid
 from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack import api_version_request as avr
 from nova.api.openstack.compute import views
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -31,6 +32,7 @@ NS = {
     'ns': 'http://docs.openstack.org/common/api/v1.0'
 }
 
+MAX_API_VERSION = avr.max_api_version().get_string()
 
 EXP_LINKS = {
    'v2.0': {
@@ -66,7 +68,7 @@ EXP_VERSIONS = {
     "v2.1": {
         "id": "v2.1",
         "status": "CURRENT",
-        "version": "2.21",
+        "version": MAX_API_VERSION,
         "min_version": "2.1",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
@@ -128,7 +130,7 @@ class VersionsTestV20(test.NoDBTestCase):
             {
                 "id": "v2.1",
                 "status": "CURRENT",
-                "version": "2.21",
+                "version": MAX_API_VERSION,
                 "min_version": "2.1",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
