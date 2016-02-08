@@ -10,9 +10,9 @@
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-02-08 05:39+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -965,10 +965,6 @@ msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML�
 #, python-format
 msgid "Unable to parse rrd of %s"
 msgstr "不能解析 %s 的rrd"
-
-#, python-format
-msgid "Unable to preallocate image at path: %(path)s"
-msgstr "不能砸路径：%(path)s上面预分配镜像"
 
 #, python-format
 msgid "Unable to retrieve storage policy with name %s"

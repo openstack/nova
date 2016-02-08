@@ -12,9 +12,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-02-08 05:39+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1060,10 +1060,6 @@ msgstr ""
 #, python-format
 msgid "Unable to parse rrd of %s"
 msgstr "Impossible d’analyser %s de rrd"
-
-#, python-format
-msgid "Unable to preallocate image at path: %(path)s"
-msgstr "Impossible de pré-allouer une image à l'emplacement: %(path)s"
 
 #, python-format
 msgid "Unable to retrieve storage policy with name %s"

@@ -9,25 +9,26 @@
 # iLennart21 <a12s34d56f78@live.com>, 2013
 # Laera Loris <llaera@outlook.com>, 2013
 # matthew wagoner <zxkuqyb@gmail.com>, 2012
+# English translations for nova.
 # Andreas Jaeger <jaegerandi@gmail.com>, 2015. #zanata
 # Frank Kloeker <eumel@arcor.de>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:18+0000\n"
+"POT-Creation-Date: 2016-02-08 05:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2015-09-29 12:26+0000\n"
 "Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
 "Language: de\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.7.3\n"
 "Language-Team: German\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.2.0\n"
+"X-Generator: Zanata 3.7.3\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -1476,14 +1477,6 @@ msgstr ""
 msgid "Flavor %(flavor_id)s has no extra specs with key %(key)s."
 msgstr ""
 "Version %(flavor_id)s hat keine Sonderspezifikationen mit Schlüssel %(key)s."
-
-#, python-format
-msgid ""
-"Flavor %(id)d extra spec cannot be updated or created after %(retries)d "
-"retries."
-msgstr ""
-"Zusätzliche Spezifikation für Version %(id)d kann nach %(retries)d "
-"Neuversuchen nicht aktualisiert oder erstellt werden."
 
 #, python-format
 msgid ""
@@ -3396,14 +3389,6 @@ msgid "Running Nova with parallels virt_type requires libvirt version %s"
 msgstr ""
 "Für die Ausführung von Nova mit Parallel-virt_type ist libvirt-Version %s "
 "erforderlich"
-
-#, python-format
-msgid ""
-"Running Nova with qemu/kvm virt_type on s390/s390x requires libvirt version "
-"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
-msgstr ""
-"Starten Nova mit qemu/kvm virt_type an s390/s390x erfordert libvirt Version "
-"%(libvirt_ver)s und qemu Version %(qemu_ver)s, oder größer"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
