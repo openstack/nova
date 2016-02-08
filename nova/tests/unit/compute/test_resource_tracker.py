@@ -252,6 +252,7 @@ class BaseTestCase(test.TestCase):
         # This creates a db representation of a compute_node.
         compute = {
             "id": 1,
+            "uuid": uuidsentinel.fake_compute_node,
             "service_id": 1,
             "host": "fakehost",
             "vcpus": 1,

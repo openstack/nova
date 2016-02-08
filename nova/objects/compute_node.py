@@ -13,7 +13,9 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import db
@@ -26,6 +28,7 @@ from nova.objects import pci_device_pool
 CONF = cfg.CONF
 CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
 CONF.import_opt('ram_allocation_ratio', 'nova.compute.resource_tracker')
+LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -47,10 +50,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.12: HVSpec version 1.1
     # Version 1.13: Changed service_id field to be nullable
     # Version 1.14: Added cpu_allocation_ratio and ram_allocation_ratio
-    VERSION = '1.14'
+    # Version 1.15: Added uuid
+    VERSION = '1.15'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
+        'uuid': fields.UUIDField(read_only=True),
         'service_id': fields.IntegerField(nullable=True),
         'host': fields.StringField(nullable=True),
         'vcpus': fields.IntegerField(),
@@ -91,6 +96,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 15):
+            if 'uuid' in primitive:
+                del primitive['uuid']
         if target_version < (1, 14):
             if 'ram_allocation_ratio' in primitive:
                 del primitive['ram_allocation_ratio']
@@ -155,6 +163,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             'supported_hv_specs',
             'host',
             'pci_device_pools',
+            'uuid',
             ])
         fields = set(compute.fields) - special_cases
         for key in fields:
@@ -206,7 +215,24 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         # host column is present in the table or not
         compute._host_from_db_object(compute, db_compute)
 
+        # NOTE(danms): Remove this conditional load (and remove uuid from
+        # the list of special_cases above) once we're in Newton and have
+        # enforced that all UUIDs in the database are not NULL.
+        if db_compute.get('uuid'):
+            compute.uuid = db_compute['uuid']
+
         compute.obj_reset_changes()
+
+        # NOTE(danms): This needs to come after obj_reset_changes() to make
+        # sure we only save the uuid, if we generate one.
+        # FIXME(danms): Remove this in Newton once we have enforced that
+        # all compute nodes have uuids set in the database.
+        if 'uuid' not in compute:
+            compute.uuid = uuidutils.generate_uuid()
+            LOG.debug('Generated UUID %(uuid)s for compute node %(id)i',
+                      dict(uuid=compute.uuid, id=compute.id))
+            compute.save()
+
         return compute
 
     @base.remotable_classmethod
@@ -272,6 +298,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
+        if 'uuid' not in updates:
+            updates['uuid'] = uuidutils.generate_uuid()
+
         self._convert_stats_to_db_format(updates)
         self._convert_host_ip_to_db_format(updates)
         self._convert_supported_instances_to_db_format(updates)

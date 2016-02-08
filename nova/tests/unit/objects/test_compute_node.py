@@ -29,6 +29,7 @@ from nova.objects import hv_spec
 from nova.objects import service
 from nova.tests.unit import fake_pci_device_pools
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 fake_stats = {'num_foo': '10'}
@@ -61,6 +62,7 @@ fake_compute_node = {
     'deleted_at': None,
     'deleted': False,
     'id': 123,
+    'uuid': uuidsentinel.fake_compute_node,
     'service_id': None,
     'host': 'fake',
     'vcpus': 4,
@@ -154,6 +156,7 @@ class _TestComputeNodeObject(object):
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        self.assertNotIn('uuid', compute.obj_what_changed())
 
     @mock.patch.object(objects.Service, 'get_by_id')
     @mock.patch.object(db, 'compute_node_get')
@@ -229,26 +232,44 @@ class _TestComputeNodeObject(object):
                 'stats': fake_stats_db_format,
                 'host_ip': fake_host_ip,
                 'supported_instances': fake_supported_hv_specs_db_format,
+                'uuid': uuidsentinel.fake_compute_node,
             }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
+        compute.uuid = uuidsentinel.fake_compute_node
         compute.stats = fake_stats
         # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.supported_hv_specs = fake_supported_hv_specs
-        compute.create()
+        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_gu:
+            compute.create()
+            self.assertFalse(mock_gu.called)
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
 
+    @mock.patch('nova.db.compute_node_create')
+    @mock.patch('oslo_utils.uuidutils.generate_uuid')
+    def test_create_allocates_uuid(self, mock_gu, mock_create):
+        mock_create.return_value = fake_compute_node
+        mock_gu.return_value = fake_compute_node['uuid']
+        obj = objects.ComputeNode(context=self.context)
+        obj.create()
+        mock_gu.assert_called_once_with()
+        mock_create.assert_called_once_with(
+            self.context, {'uuid': fake_compute_node['uuid']})
+
     def test_recreate_fails(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(self.context, {'service_id': 456}).AndReturn(
+        db.compute_node_create(
+            self.context, {'service_id': 456,
+                           'uuid': uuidsentinel.fake_compute_node}).AndReturn(
             fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
+        compute.uuid = uuidsentinel.fake_compute_node
         compute.create()
         self.assertRaises(exception.ObjectActionError, compute.create)
 
@@ -261,12 +282,14 @@ class _TestComputeNodeObject(object):
                 'stats': fake_stats_db_format,
                 'host_ip': fake_host_ip,
                 'supported_instances': fake_supported_hv_specs_db_format,
+                'uuid': uuidsentinel.fake_compute_node,
             }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
         compute.vcpus_used = 3
         compute.stats = fake_stats
+        compute.uuid = uuidsentinel.fake_compute_node
         # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.supported_hv_specs = fake_supported_hv_specs
@@ -274,6 +297,21 @@ class _TestComputeNodeObject(object):
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+
+    def test_query_allocates_uuid(self):
+        fake = dict(fake_compute_node)
+        fake.pop('uuid')
+        db.compute_node_create(self.context, fake)
+        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_gu:
+            mock_gu.return_value = uuidsentinel.fake_compute_node
+            obj = objects.ComputeNode.get_by_id(self.context, fake['id'])
+            mock_gu.assert_called_once_with()
+            self.assertEqual(uuidsentinel.fake_compute_node, obj.uuid)
+            self.assertNotIn('uuid', obj.obj_get_changes())
+        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_gu:
+            obj = objects.ComputeNode.get_by_id(self.context, fake['id'])
+            self.assertEqual(uuidsentinel.fake_compute_node, obj.uuid)
+            self.assertFalse(mock_gu.called)
 
     @mock.patch.object(db, 'compute_node_create',
                        return_value=fake_compute_node)

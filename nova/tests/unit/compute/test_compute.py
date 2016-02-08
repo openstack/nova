@@ -172,6 +172,7 @@ class BaseTestCase(test.TestCase):
 
         def fake_get_compute_nodes_in_db(context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,
+                                   'uuid': uuids.fake_compute_node,
                                    'vcpus_used': 0,
                                    'deleted': 0,
                                    'hypervisor_type': 'powervm',
