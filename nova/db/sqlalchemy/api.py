@@ -4540,7 +4540,8 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
                        and_(models.Migration.dest_compute == host,
                             models.Migration.dest_node == node))).\
             filter(~models.Migration.status.in_(['accepted', 'confirmed',
-                                                 'reverted', 'error'])).\
+                                                 'reverted', 'error',
+                                                 'failed'])).\
             options(joinedload_all('instance.system_metadata')).\
             all()
 
