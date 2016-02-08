@@ -41,6 +41,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
+import nova.conf
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
@@ -74,10 +75,9 @@ xenapi_vmops_opts = [
                help='Dom0 plugin driver used to handle image uploads.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,

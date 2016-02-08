@@ -33,6 +33,7 @@ from oslo_vmware import vim_util
 
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
 from nova.virt import driver
@@ -109,7 +110,7 @@ spbm_opts = [
                     'request then this policy will be used.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(vmwareapi_opts, 'vmware')
 CONF.register_opts(spbm_opts, 'vmware')
 

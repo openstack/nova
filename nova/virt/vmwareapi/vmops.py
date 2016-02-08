@@ -40,6 +40,7 @@ from nova.api.metadata import base as instance_metadata
 from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
+import nova.conf
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
@@ -71,12 +72,11 @@ vmops_opts = [
                     'system.'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(vmops_opts, 'vmware')
 
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
-CONF.import_opt('enabled', 'nova.vnc', group='vnc')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
