@@ -76,6 +76,7 @@ r="$r|(?:tempest\.scenario\.test_encrypted_cinder_volumes\.TestEncryptedCinderVo
 r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_network\.EC2NetworkTest\.test_disassociate_not_associated_floating_ip)"
 r="$r|(?:tempest\.scenario\.test_server_basic_ops\.TestServerBasicOps\.test_server_basicops)"
 r="$r|(?:tempest\.scenario\.test_snapshot_pattern\.TestSnapshotPattern\.test_snapshot_pattern)"
+r="$r|(?:tempest\.scenario\.test_rebuild_instance_with_volume\.TestRebuildInstanceWithVolume\.test_rebuild_instance_with_volume)"
 r="$r|(?:tempest\.api\.compute\.admin\.test_hosts\.HostsAdminTestJSON\.test_show_host_detail)"
 r="$r|(?:tempest\.api\.compute\.test_tenant_networks\.ComputeTenantNetworksTest\.test_list_show_tenant_networks)"
 # https://bugs.launchpad.net/nova/+bug/1489581
