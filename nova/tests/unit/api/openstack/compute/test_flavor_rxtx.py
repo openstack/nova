@@ -113,4 +113,4 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
 class FlavorRxtxTestV20(FlavorRxtxTestV21):
 
     def _get_app(self):
-        return fakes.wsgi_app()
+        return fakes.wsgi_app(init_only=('flavors',))
