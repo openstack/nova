@@ -662,6 +662,11 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                        lambda *a: None, lambda *a: None)
 
     @catch_notimplementederror
+    def test_live_migration_force_complete(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.live_migration_force_complete(instance_ref)
+
+    @catch_notimplementederror
     def _check_available_resource_fields(self, host_status):
         keys = ['vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
                 'memory_mb_used', 'hypervisor_type', 'hypervisor_version',

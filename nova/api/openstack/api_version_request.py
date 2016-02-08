@@ -64,7 +64,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.20 - Add attach and detach volume operations for instances in shelved
              and shelved_offloaded state
     * 2.21 - Make os-instance-actions read deleted instances
-
+    * 2.22 - Add API to force live migration to complete
 """
 
 # The minimum and maximum versions of the API supported
@@ -73,7 +73,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.21"
+_MAX_API_VERSION = "2.22"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

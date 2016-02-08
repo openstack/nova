@@ -6413,6 +6413,12 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Live migration monitoring is all done",
                       instance=instance)
 
+    def live_migration_force_complete(self, instance):
+        # NOTE(pkoniszewski): currently only pause during live migration is
+        # supported to force live migration to complete, so just try to pause
+        # the instance
+        self.pause(instance)
+
     def _try_fetch_image(self, context, path, image_id, instance,
                          fallback_from_host=None):
         try:

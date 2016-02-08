@@ -468,6 +468,9 @@ class FakeDriver(driver.ComputeDriver):
                             migrate_data)
         return
 
+    def live_migration_force_complete(self, instance):
+        return
+
     def check_can_live_migrate_destination_cleanup(self, context,
                                                    dest_check_data):
         return

@@ -13015,6 +13015,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           lambda x: x,
                           lambda x: x)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "pause")
+    def test_live_migration_force_complete(self, pause):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.live_migration_force_complete(self.test_instance)
+        pause.assert_called_once_with(self.test_instance)
+
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('tempfile.mkstemp')
     @mock.patch('os.close', return_value=None)

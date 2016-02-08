@@ -671,7 +671,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.8')
+    target = messaging.Target(version='4.9')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5249,6 +5249,29 @@ class ComputeManager(manager.Manager):
                       context, dest, instance,
                       block_migration, migration,
                       migrate_data)
+
+    @wrap_exception()
+    @wrap_instance_fault
+    def live_migration_force_complete(self, context, instance, migration_id):
+        """Force live migration to complete.
+
+        :param context: Security context
+        :param instance: The instance that is being migrated
+        :param migration_id: ID of ongoing migration
+
+        """
+        migration = objects.Migration.get_by_id(context, migration_id)
+        if migration.status != 'running':
+            raise exception.InvalidMigrationState(migration_id=migration_id,
+                                                  instance_uuid=instance.uuid,
+                                                  state=migration.status,
+                                                  method='force complete')
+
+        self._notify_about_instance_usage(
+            context, instance, 'live.migration.force.complete.start')
+        self.driver.live_migration_force_complete(instance)
+        self._notify_about_instance_usage(
+            context, instance, 'live.migration.force.complete.end')
 
     def _live_migration_cleanup_flags(self, block_migration, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after

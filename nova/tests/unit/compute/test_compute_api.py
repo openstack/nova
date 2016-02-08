@@ -3212,6 +3212,55 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(expect_statuses[instance.uuid],
                              host_statuses[instance.uuid])
 
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def test_live_migrate_force_complete_succeeded(
+            self, get_by_id_and_instance):
+
+        if self.cell_type == 'api':
+            # cell api has not been implemented.
+            return
+        rpcapi = self.compute_api.compute_rpcapi
+
+        instance = self._create_instance_obj()
+        instance.task_state = task_states.MIGRATING
+
+        migration = objects.Migration()
+        migration.id = 0
+        migration.status = 'running'
+        get_by_id_and_instance.return_value = migration
+
+        with mock.patch.object(
+                rpcapi, 'live_migration_force_complete') as lm_force_complete:
+            self.compute_api.live_migrate_force_complete(
+                self.context, instance, migration.id)
+
+            lm_force_complete.assert_called_once_with(self.context,
+                                                      instance,
+                                                      0)
+
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def test_live_migrate_force_complete_invalid_migration_state(
+            self, get_by_id_and_instance):
+        instance = self._create_instance_obj()
+        instance.task_state = task_states.MIGRATING
+
+        migration = objects.Migration()
+        migration.id = 0
+        migration.status = 'error'
+        get_by_id_and_instance.return_value = migration
+
+        self.assertRaises(exception.InvalidMigrationState,
+                          self.compute_api.live_migrate_force_complete,
+                          self.context, instance, migration.id)
+
+    def test_live_migrate_force_complete_invalid_vm_state(self):
+        instance = self._create_instance_obj()
+        instance.task_state = None
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.live_migrate_force_complete,
+                          self.context, instance, '1')
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

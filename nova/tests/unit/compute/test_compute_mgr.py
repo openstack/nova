@@ -4356,3 +4356,50 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                   'foo', False, {})
             self.assertIsInstance(mock_lmcf.call_args_list[0][0][1],
                                   migrate_data_obj.LiveMigrateData)
+
+    def test_live_migration_force_complete_succeeded(self):
+
+        instance = objects.Instance(uuid=str(uuid.uuid4()))
+        migration = objects.Migration()
+        migration.status = 'running'
+        migration.id = 0
+
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(objects.Migration, 'get_by_id',
+                           return_value=migration)
+        @mock.patch.object(self.compute.driver,
+                           'live_migration_force_complete')
+        def _do_test(force_complete, get_by_id, _notify_about_instance_usage):
+            self.compute.live_migration_force_complete(
+                self.context, instance, migration.id)
+
+            force_complete.assert_called_once_with(instance)
+
+            _notify_usage_calls = [
+                mock.call(self.context, instance,
+                          'live.migration.force.complete.start'),
+                mock.call(self.context, instance,
+                          'live.migration.force.complete.end')
+            ]
+
+            _notify_about_instance_usage.assert_has_calls(_notify_usage_calls)
+
+        _do_test()
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_live_migration_pause_vm_invalid_migration_state(
+            self, add_instance_fault_from_exc):
+
+        instance = objects.Instance(id=1234, uuid=str(uuid.uuid4()))
+        migration = objects.Migration()
+        migration.status = 'aborted'
+        migration.id = 0
+
+        @mock.patch.object(objects.Migration, 'get_by_id',
+                           return_value=migration)
+        def _do_test(get_by_id):
+            self.assertRaises(exception.InvalidMigrationState,
+                              self.compute.live_migration_force_complete,
+                              self.context, instance, migration.id)
+
+        _do_test()
