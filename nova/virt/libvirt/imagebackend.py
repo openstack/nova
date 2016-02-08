@@ -264,9 +264,9 @@ class Image(object):
         """
         can_fallocate = getattr(self.__class__, 'can_fallocate', None)
         if can_fallocate is None:
-            _out, err = utils.trycmd('fallocate', '-n', '-l', '1',
-                                     self.path + '.fallocate_test')
-            fileutils.delete_if_exists(self.path + '.fallocate_test')
+            test_path = self.path + '.fallocate_test'
+            _out, err = utils.trycmd('fallocate', '-l', '1', test_path)
+            fileutils.delete_if_exists(test_path)
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
