@@ -145,6 +145,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         }
         host_state.cpu_allocation_ratio = 16.0
         host_state.ram_allocation_ratio = 1.5
+        host_state.disk_allocation_ratio = 1.0
         host_state.metrics = objects.MonitorMetricList(objects=[])
         return host_state
 

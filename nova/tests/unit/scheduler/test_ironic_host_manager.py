@@ -116,7 +116,8 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
             hypervisor_type='ironic',
             hypervisor_version=1,
             hypervisor_hostname='fake_host',
-            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5)
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
+            disk_allocation_ratio=1.0)
 
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):

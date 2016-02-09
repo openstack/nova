@@ -59,6 +59,7 @@ class IronicNodeState(host_manager.HostState):
         # update allocation ratios given by the ComputeNode object
         self.cpu_allocation_ratio = compute.cpu_allocation_ratio
         self.ram_allocation_ratio = compute.ram_allocation_ratio
+        self.disk_allocation_ratio = compute.disk_allocation_ratio
 
         self.updated = compute.updated_at
 
