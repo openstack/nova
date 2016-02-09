@@ -379,15 +379,13 @@ class RequestSpec(base.NovaObject):
         return spec
 
     @staticmethod
+    @db.api_context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
-        session = db.get_api_session()
-
-        with session.begin():
-            db_spec = session.query(api_models.RequestSpec).filter_by(
-                    instance_uuid=instance_uuid).first()
-            if not db_spec:
-                raise exception.RequestSpecNotFound(
-                        instance_uuid=instance_uuid)
+        db_spec = context.session.query(api_models.RequestSpec).filter_by(
+            instance_uuid=instance_uuid).first()
+        if not db_spec:
+            raise exception.RequestSpecNotFound(
+                    instance_uuid=instance_uuid)
         return db_spec
 
     @base.remotable_classmethod
