@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ast
 import contextlib
 
 try:
@@ -291,8 +292,7 @@ class XenAPISession(object):
                     exc.details[2] == 'Failure'):
                 params = None
                 try:
-                    # FIXME(comstud): eval is evil.
-                    params = eval(exc.details[3])
+                    params = ast.literal_eval(exc.details[3])
                 except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
