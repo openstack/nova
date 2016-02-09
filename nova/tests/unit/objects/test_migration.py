@@ -229,6 +229,14 @@ class _TestMigrationObject(object):
         self.assertEqual('migration', mig.migration_type)
         self.assertTrue(mig.obj_attr_is_set('migration_type'))
 
+    @mock.patch('nova.db.migration_get_by_id_and_instance')
+    def test_get_by_id_and_instance(self, fake_get):
+        ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
+        fake_get.return_value = fake_migration
+        migration = objects.Migration.get_by_id_and_instance(ctxt, '1', '1')
+        self.compare_obj(migration, fake_migration)
+
 
 class TestMigrationObject(test_objects._LocalTest,
                           _TestMigrationObject):

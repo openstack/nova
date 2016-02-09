@@ -4483,6 +4483,20 @@ def migration_get(context, id):
 
 
 @main_context_manager.reader
+def migration_get_by_id_and_instance(context, id, instance_uuid):
+    result = model_query(context, models.Migration).\
+                     filter_by(id=id).\
+                     filter_by(instance_uuid=instance_uuid).\
+                     first()
+
+    if not result:
+        raise exception.MigrationNotFoundForInstance(migration_id=id,
+                                                     instance_id=instance_uuid)
+
+    return result
+
+
+@main_context_manager.reader
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(instance_uuid=instance_uuid).\

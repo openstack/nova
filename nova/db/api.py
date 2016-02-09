@@ -472,6 +472,13 @@ def migration_get(context, migration_id):
     return IMPL.migration_get(context, migration_id)
 
 
+def migration_get_by_id_and_instance(context, migration_id, instance_uuid):
+    """Finds a migration by the migration id and the instance uuid."""
+    return IMPL.migration_get_by_id_and_instance(context,
+                                                 migration_id,
+                                                 instance_uuid)
+
+
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     """Finds a migration by the instance uuid its migrating."""
     return IMPL.migration_get_by_instance_and_status(context, instance_uuid,

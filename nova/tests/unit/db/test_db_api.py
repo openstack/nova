@@ -1523,6 +1523,20 @@ class MigrationTestCase(test.TestCase):
         self.assertRaises(exception.MigrationNotFound,
                           db.migration_update, self.ctxt, 42, {})
 
+    def test_get_migration_for_instance(self):
+        migrations = db.migration_get_all_by_filters(self.ctxt, [])
+        migration_id = migrations[0].id
+        instance_uuid = migrations[0].instance_uuid
+        instance_migration = db.migration_get_by_id_and_instance(
+            self.ctxt, migration_id, instance_uuid)
+        self.assertEqual(migration_id, instance_migration.id)
+        self.assertEqual(instance_uuid, instance_migration.instance_uuid)
+
+    def test_get_migration_for_instance_not_found(self):
+        self.assertRaises(exception.MigrationNotFoundForInstance,
+                          db.migration_get_by_id_and_instance, self.ctxt,
+                          '500', '501')
+
 
 class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
