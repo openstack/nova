@@ -268,6 +268,7 @@ class ComputeTaskAPI(object):
     1.10 - Made migrate_server() and build_instances() send flavor objects
     1.11 - Added clean_shutdown to migrate_server()
     1.12 - Added request_spec to rebuild_instance()
+    1.13 - Added request_spec to migrate_server()
     """
 
     def __init__(self):
@@ -280,14 +281,19 @@ class ComputeTaskAPI(object):
 
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
-                  reservations=None, clean_shutdown=True):
+                  reservations=None, clean_shutdown=True, request_spec=None):
         kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
               'live': live, 'rebuild': rebuild, 'flavor': flavor,
               'block_migration': block_migration,
               'disk_over_commit': disk_over_commit,
               'reservations': reservations,
-              'clean_shutdown': clean_shutdown}
-        version = '1.11'
+              'clean_shutdown': clean_shutdown,
+              'request_spec': request_spec,
+              }
+        version = '1.13'
+        if not self.client.can_send_version(version):
+            del kw['request_spec']
+            version = '1.11'
         if not self.client.can_send_version(version):
             del kw['clean_shutdown']
             version = '1.10'

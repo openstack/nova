@@ -3283,10 +3283,17 @@ class API(base.Base):
 
         self._record_action_start(context, instance,
                                   instance_actions.LIVE_MIGRATION)
-
+        try:
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+        except exception.RequestSpecNotFound:
+            # Some old instances can still have no RequestSpec object attached
+            # to them, we need to support the old way
+            request_spec = None
         self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
+                disk_over_commit=disk_over_commit,
+                request_spec=request_spec)
 
     @check_instance_lock
     @check_instance_cell
