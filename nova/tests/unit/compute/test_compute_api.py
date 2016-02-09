@@ -2867,13 +2867,16 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(self.compute_api, '_validate_bdm')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
-        def do_test(mock_from_components, _mock_create_bdm, _mock_validate_bdm,
-                _mock_ensure_default, _mock_create, mock_check_num_inst_quota):
+        @mock.patch.object(objects, 'BuildRequest')
+        def do_test(_mock_build_req,
+                mock_req_spec_from_components, _mock_create_bdm,
+                _mock_validate_bdm, _mock_ensure_default, _mock_create,
+                mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
             req_spec_mock = mock.MagicMock()
 
             mock_check_num_inst_quota.return_value = (1, quota_mock)
-            mock_from_components.return_value = req_spec_mock
+            mock_req_spec_from_components.return_value = req_spec_mock
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
             flavor = self._create_flavor()
@@ -2887,6 +2890,11 @@ class _ComputeAPIUnitTestMixIn(object):
                             'display_name': 'fake-name',
                             'project_id': 'fake-project',
                             'availability_zone': None,
+                            'metadata': {},
+                            'access_ip_v4': None,
+                            'access_ip_v6': None,
+                            'config_drive': None,
+                            'key_name': None,
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
@@ -2913,11 +2921,121 @@ class _ComputeAPIUnitTestMixIn(object):
                     filter_properties)
             self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
 
-            mock_from_components.assert_called_once_with(ctxt, mock.ANY,
-                    boot_meta, flavor, base_options['numa_topology'],
+            mock_req_spec_from_components.assert_called_once_with(ctxt,
+                    mock.ANY, boot_meta, flavor, base_options['numa_topology'],
                     base_options['pci_requests'], filter_properties,
                     instance_group, base_options['availability_zone'])
             req_spec_mock.create.assert_called_once_with()
+
+        do_test()
+
+    def test_provision_instances_creates_destroys_build_request(self):
+        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch.object(objects.Instance, 'create')
+        @mock.patch.object(objects.Instance, 'save')
+        @mock.patch.object(self.compute_api.security_group_api,
+                'ensure_default')
+        @mock.patch.object(self.compute_api, '_validate_bdm')
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
+        @mock.patch.object(objects.RequestSpec, 'from_components')
+        @mock.patch.object(objects, 'BuildRequest')
+        def do_test(mock_build_req, mock_req_spec_from_components,
+                _mock_create_bdm, _mock_validate_bdm, _mock_ensure_default,
+                _mock_inst_create, _mock_inst_save, mock_check_num_inst_quota):
+            quota_mock = mock.MagicMock()
+            req_spec_mock = mock.MagicMock()
+            build_req_mock = mock.MagicMock()
+
+            mock_check_num_inst_quota.return_value = (2, quota_mock)
+            mock_req_spec_from_components.return_value = req_spec_mock
+            mock_build_req.return_value = build_req_mock
+
+            ctxt = context.RequestContext('fake-user', 'fake-project')
+            flavor = self._create_flavor()
+            min_count = 1
+            max_count = 2
+            boot_meta = {
+                'id': 'fake-image-id',
+                'properties': {'mappings': []},
+                'status': 'fake-status',
+                'location': 'far-away'}
+            base_options = {'image_ref': 'fake-ref',
+                            'display_name': 'fake-name',
+                            'project_id': 'fake-project',
+                            'availability_zone': None,
+                            'metadata': {},
+                            'access_ip_v4': None,
+                            'access_ip_v6': None,
+                            'config_drive': None,
+                            'key_name': None,
+                            'numa_topology': None,
+                            'pci_requests': None}
+            security_groups = {}
+            block_device_mapping = [objects.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                    {
+                     'id': 1,
+                     'volume_id': 1,
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'device_name': 'vda',
+                     'boot_index': 0,
+                     }))]
+            shutdown_terminate = True
+            instance_group = None
+            check_server_group_quota = False
+            filter_properties = {'scheduler_hints': None,
+                    'instance_type': flavor}
+
+            instances = self.compute_api._provision_instances(ctxt, flavor,
+                    min_count, max_count, base_options, boot_meta,
+                    security_groups, block_device_mapping, shutdown_terminate,
+                    instance_group, check_server_group_quota,
+                    filter_properties)
+            self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
+
+            display_names = ['fake-name-1', 'fake-name-2']
+            build_req_calls = [
+                    mock.call(ctxt,
+                              request_spec=req_spec_mock,
+                              project_id=ctxt.project_id,
+                              user_id=ctxt.user_id,
+                              display_name=display_names[0],
+                              instance_metadata=base_options['metadata'],
+                              progress=0,
+                              vm_state=vm_states.BUILDING,
+                              task_state=task_states.SCHEDULING,
+                              image_ref=base_options['image_ref'],
+                              access_ip_v4=base_options['access_ip_v4'],
+                              access_ip_v6=base_options['access_ip_v6'],
+                              info_cache=mock.ANY,
+                              security_groups=mock.ANY,
+                              config_drive=False,
+                              key_name=base_options['config_drive'],
+                              locked_by=None),
+                    mock.call().create(),
+                    mock.call().destroy(),
+                    mock.call(ctxt,
+                              request_spec=req_spec_mock,
+                              project_id=ctxt.project_id,
+                              user_id=ctxt.user_id,
+                              display_name=display_names[1],
+                              instance_metadata=base_options['metadata'],
+                              progress=0,
+                              vm_state=vm_states.BUILDING,
+                              task_state=task_states.SCHEDULING,
+                              image_ref=base_options['image_ref'],
+                              access_ip_v4=base_options['access_ip_v4'],
+                              access_ip_v6=base_options['access_ip_v6'],
+                              info_cache=mock.ANY,
+                              security_groups=mock.ANY,
+                              config_drive=False,
+                              key_name=base_options['config_drive'],
+                              locked_by=None),
+                    mock.call().create(),
+                    mock.call().destroy()
+                    ]
+            mock_build_req.assert_has_calls(build_req_calls)
 
         do_test()
 

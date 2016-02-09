@@ -83,6 +83,9 @@ class CellsScheduler(base.Base):
 
         instances = []
         num_instances = len(instance_uuids)
+        security_groups = (
+            self.compute_api.security_group_api.populate_security_groups(
+                security_groups))
         for i, instance_uuid in enumerate(instance_uuids):
             instance = objects.Instance(context=ctxt)
             instance.update(instance_values)
