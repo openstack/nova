@@ -249,7 +249,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.15')
+    target = messaging.Target(version='1.16')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -1505,7 +1505,7 @@ class NetworkManager(manager.Manager):
         """Calls allocate_fixed_ip once for each network."""
         raise NotImplementedError()
 
-    def setup_networks_on_host(self, context, instance_id, host,
+    def setup_networks_on_host(self, context, instance_id, host, instance=None,
                                teardown=False):
         """calls setup/teardown on network hosts for an instance."""
         green_threads = []
@@ -1514,8 +1514,8 @@ class NetworkManager(manager.Manager):
             call_func = self._teardown_network_on_host
         else:
             call_func = self._setup_network_on_host
-
-        instance = objects.Instance.get_by_id(context, instance_id)
+        if instance is None:
+            instance = objects.Instance.get_by_id(context, instance_id)
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
                 context, instance.uuid)
         LOG.debug('Setup networks on host', instance=instance)

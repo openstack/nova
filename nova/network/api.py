@@ -486,7 +486,8 @@ class API(base_api.NetworkAPI):
         # and instance.host is not yet or is no longer equal to
         args = {'instance_id': instance.id,
                 'host': host,
-                'teardown': teardown}
+                'teardown': teardown,
+                'instance': instance}
 
         self.network_rpcapi.setup_networks_on_host(context, **args)
 
