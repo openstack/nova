@@ -1338,13 +1338,6 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
     _set_device_mtu(dev)
 
 
-def create_ovs_vif_port_colo(bridge, dev, vlan_id):
-    tag = 'tag=' + str(vlan_id)
-    _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
-                'add-port', bridge, dev, tag])
-    _set_device_mtu(dev)
-
-
 def delete_ovs_vif_port(bridge, dev):
     _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
     delete_net_dev(dev)
