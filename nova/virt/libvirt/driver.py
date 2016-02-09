@@ -3965,11 +3965,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 not utils.ft_secondary(instance)):
                 qemu_cmdline = ('-drive if=virtio,driver=quorum'
                                 ',read-pattern=fifo,cache=none'
-                                ',aio=native'
                                 ',id=colo1'
                                 ',children.0.file.filename=' +
                                 config.source_path +
-                                ',children.0.driver=' + config.driver_format)
+                                ',children.0.driver=' + config.driver_format +
+                                ',vote-threshold=1')
                 guest.add_qemu_cmdline(
                     vconfig.LibvirtConfigQEMUCommandline(qemu_cmdline))
             else:
