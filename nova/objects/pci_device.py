@@ -113,7 +113,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     }
 
     @staticmethod
-    def _migrate_parent_addr():
+    def should_migrate_data():
         # NOTE(ndipanov): Only migrate parent_addr if all services are up to at
         # least version 4 - this should only ever be called from save()
         services = ('conductor', 'api')
@@ -231,7 +231,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                   self.address)
         elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
-            if not self._migrate_parent_addr():
+            if not self.should_migrate_data():
                 # NOTE(ndipanov): If we are not migrating data yet, make sure
                 # that any changes to parent_addr are also in the old location
                 # in extra_info

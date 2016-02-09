@@ -274,7 +274,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                               dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
 
-    @mock.patch.object(objects.PciDevice, '_migrate_parent_addr',
+    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
                        return_value=False)
     def test_save(self, migrate_mock):
         self.stub_out(
