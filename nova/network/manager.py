@@ -1281,9 +1281,9 @@ class NetworkManager(manager.Manager):
         used_subnets = [net.cidr for net in nets]
 
         def find_next(subnet):
-            next_subnet = next(subnet)
+            next_subnet = subnet.next()
             while next_subnet in subnets_v4:
-                next_subnet = next(next_subnet)
+                next_subnet = next_subnet.next()
             if next_subnet in fixed_net_v4:
                 return next_subnet
 
