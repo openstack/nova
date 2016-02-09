@@ -72,14 +72,6 @@ class NovaBase(models.TimestampMixin,
         session.expunge(copy)
         return copy
 
-    def save(self, session=None):
-        from nova.db.sqlalchemy import api
-
-        if session is None:
-            session = api.get_session()
-
-        super(NovaBase, self).save(session=session)
-
 
 class Service(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a running service on a host."""
