@@ -64,12 +64,6 @@ nova.tests.unit.api.openstack.compute.test_volumes.VolumeApiTestV21
 nova.tests.unit.api.test_compute_req_id.RequestIdTest
 nova.tests.unit.api.test_validator.ValidatorTestCase
 nova.tests.unit.api.test_wsgi.Test
-nova.tests.unit.cells.test_cells_messaging.CellsBroadcastMethodsTestCase
-nova.tests.unit.cells.test_cells_messaging.CellsMessageClassesTestCase
-nova.tests.unit.cells.test_cells_scheduler.CellsSchedulerTestCase
-nova.tests.unit.cells.test_cells_state_manager.TestCellsGetCapacity
-nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManager
-nova.tests.unit.cells.test_cells_state_manager.TestCellsStateManagerNToOne
 nova.tests.unit.compute.test_compute.ComputeAPITestCase.test_create_with_base64_user_data
 nova.tests.unit.compute.test_compute.ComputeInjectedFilesTestCase.test_injected_invalid
 nova.tests.unit.compute.test_compute.ComputeTestCase.test_finish_resize_with_volumes
