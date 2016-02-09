@@ -49,7 +49,7 @@ LOG = logging.getLogger(__name__)
 class Server(service.ServiceBase):
     """Server class to manage a WSGI server, serving a WSGI application."""
 
-    default_pool_size = CONF.wsgi.wsgi_default_pool_size
+    default_pool_size = CONF.wsgi.default_pool_size
 
     def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
                        protocol=eventlet.wsgi.HttpProtocol, backlog=128,
@@ -183,7 +183,7 @@ class Server(service.ServiceBase):
             'log': self._logger,
             'log_format': CONF.wsgi.wsgi_log_format,
             'debug': False,
-            'keepalive': CONF.wsgi.wsgi_keep_alive,
+            'keepalive': CONF.wsgi.keep_alive,
             'socket_timeout': self.client_socket_timeout
             }
 
