@@ -74,6 +74,7 @@ _COMPUTE_NODE_FIXTURES = [
         numa_topology=None,
         cpu_allocation_ratio=16.0,
         ram_allocation_ratio=1.5,
+        disk_allocation_ratio=1.0,
         ),
 ]
 

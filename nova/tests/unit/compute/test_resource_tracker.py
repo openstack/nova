@@ -280,6 +280,7 @@ class BaseTestCase(test.TestCase):
             'deleted': False,
             'cpu_allocation_ratio': None,
             'ram_allocation_ratio': None,
+            'disk_allocation_ratio': None,
         }
         if values:
             compute.update(values)

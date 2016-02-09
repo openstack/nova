@@ -28,6 +28,7 @@ from nova.objects import pci_device_pool
 CONF = cfg.CONF
 CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
 CONF.import_opt('ram_allocation_ratio', 'nova.compute.resource_tracker')
+CONF.import_opt('disk_allocation_ratio', 'nova.compute.resource_tracker')
 LOG = logging.getLogger(__name__)
 
 
@@ -51,7 +52,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.13: Changed service_id field to be nullable
     # Version 1.14: Added cpu_allocation_ratio and ram_allocation_ratio
     # Version 1.15: Added uuid
-    VERSION = '1.15'
+    # Version 1.16: Added disk_allocation_ratio
+    VERSION = '1.16'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -91,11 +93,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                                                nullable=True),
         'cpu_allocation_ratio': fields.FloatField(),
         'ram_allocation_ratio': fields.FloatField(),
+        'disk_allocation_ratio': fields.FloatField(),
         }
 
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 16):
+            if 'disk_allocation_ratio' in primitive:
+                del primitive['disk_allocation_ratio']
         if target_version < (1, 15):
             if 'uuid' in primitive:
                 del primitive['uuid']
@@ -174,11 +180,13 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             # As we want to care about our operators and since we don't want to
             # ask them to change their configuration files before upgrading, we
             # prefer to hardcode the default values for the ratios here until
-            # the next release (Mitaka) where the opt default values will be
-            # restored for both cpu (16.0) and ram (1.5) allocation ratios.
+            # the next release (Newton) where the opt default values will be
+            # restored for both cpu (16.0), ram (1.5) and disk (1.0)
+            # allocation ratios.
             # TODO(sbauza): Remove that in the next major version bump where
-            # we break compatibilility with old Kilo computes
-            if key == 'cpu_allocation_ratio' or key == 'ram_allocation_ratio':
+            # we break compatibilility with old Liberty computes
+            if (key == 'cpu_allocation_ratio' or key == 'ram_allocation_ratio'
+                or key == 'disk_allocation_ratio'):
                 if value == 0.0:
                     # Operator has not yet provided a new value for that ratio
                     # on the compute node
@@ -194,6 +202,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                     if value == 0.0 and key == 'ram_allocation_ratio':
                         # It's not specified either on the controller
                         value = 1.5
+                    if value == 0.0 and key == 'disk_allocation_ratio':
+                        # It's not specified either on the controller
+                        value = 1.0
             compute[key] = value
 
         stats = db_compute['stats']

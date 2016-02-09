@@ -7332,6 +7332,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  extra_resources='',
                                  cpu_allocation_ratio=16.0,
                                  ram_allocation_ratio=1.5,
+                                 disk_allocation_ratio=1.0,
                                  stats='', numa_topology='')
         # add some random stats
         self.stats = dict(num_instances=3, num_proj_12345=2,

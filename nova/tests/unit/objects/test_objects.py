@@ -1106,7 +1106,7 @@ object_data = {
     'BlockDeviceMapping': '1.16-12319f6f47f740a67a88a23f7c7ee6ef',
     'BlockDeviceMappingList': '1.17-1e568eecb91d06d4112db9fd656de235',
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
-    'ComputeNode': '1.15-71bd34f7ababb634e9b4e8b51aa9ddef',
+    'ComputeNode': '1.16-2436e5b836fa0306a3c4e6d9e5ddacec',
     'ComputeNodeList': '1.14-3b6f4f5ade621c40e70cb116db237844',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
