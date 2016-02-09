@@ -240,8 +240,8 @@ class BaseTestCase(test.NoDBTestCase):
         self._initialize_used_res_counter()
         result = self.r_handler.test_resources(flavor, limits)
         expected = ['Free 4 < requested 5 ', None]
-        self.assertEqual(sorted(expected),
-                             sorted(result))
+        self.assertEqual(sorted(expected, key=str),
+                         sorted(result, key=str))
 
     def test_empty_resource_handler(self):
         """An empty resource handler has no resource extensions,

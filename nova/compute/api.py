@@ -677,8 +677,8 @@ class API(base.Base):
             image_defined_bdms = block_device.from_legacy_mapping(
                 image_defined_bdms, None, root_device_name)
         else:
-            image_defined_bdms = map(block_device.BlockDeviceDict,
-                                     image_defined_bdms)
+            image_defined_bdms = list(map(block_device.BlockDeviceDict,
+                                          image_defined_bdms))
 
         if image_mapping:
             image_mapping = self._prepare_image_mapping(instance_type,

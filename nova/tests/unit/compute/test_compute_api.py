@@ -3313,6 +3313,7 @@ class SecurityGroupAPITest(test.NoDBTestCase):
         mock_get.return_value = groups
         names = self.secgroup_api.get_instance_security_groups(self.context,
                     uuids.instance)
-        self.assertEqual([{'name': 'bar'}, {'name': 'foo'}], sorted(names))
+        self.assertEqual(sorted([{'name': 'bar'}, {'name': 'foo'}], key=str),
+                         sorted(names, key=str))
         self.assertEqual(1, mock_get.call_count)
         self.assertEqual(uuids.instance, mock_get.call_args_list[0][0][1].uuid)
