@@ -316,8 +316,8 @@ class XenAPIBasedAgent(object):
         LOG.debug('Injecting file path: %r', path, instance=self.instance)
 
         # Files/paths must be base64-encoded for transmission to agent
-        b64_path = base64.b64encode(path)
-        b64_contents = base64.b64encode(contents)
+        b64_path = base64.b64encode(path.encode('utf-8'))
+        b64_contents = base64.b64encode(contents.encode('utf-8'))
 
         args = {'b64_path': b64_path, 'b64_contents': b64_contents}
         return self._call_agent('inject_file', args)

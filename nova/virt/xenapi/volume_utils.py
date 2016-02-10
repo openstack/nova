@@ -19,7 +19,6 @@ and storage repositories
 """
 
 import re
-import string
 import uuid
 
 from eventlet import greenthread
@@ -290,7 +289,7 @@ def _mountpoint_to_number(mountpoint):
     elif re.match('^x?vd[a-p]$', mountpoint):
         return (ord(mountpoint[-1]) - ord('a'))
     elif re.match('^[0-9]+$', mountpoint):
-        return string.atoi(mountpoint, 10)
+        return int(mountpoint, 10)
     else:
         LOG.warning(_LW('Mountpoint cannot be translated: %s'), mountpoint)
         return -1

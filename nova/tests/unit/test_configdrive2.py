@@ -34,6 +34,7 @@ CONF = cfg.CONF
 class FakeInstanceMD(object):
     def metadata_for_config_drive(self):
         yield ('this/is/a/path/hello', 'This is some content')
+        yield ('this/is/a/path/hi', b'This is some other content')
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):

@@ -330,8 +330,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_inject_file(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.inject_file(instance_ref,
-                                    base64.b64encode('/testfile'),
-                                    base64.b64encode('testcontents'))
+                                    base64.b64encode(b'/testfile'),
+                                    base64.b64encode(b'testcontents'))
 
     @catch_notimplementederror
     def test_resume_state_on_host_boot(self):

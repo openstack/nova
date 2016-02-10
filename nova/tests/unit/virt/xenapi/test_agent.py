@@ -165,8 +165,8 @@ class FileInjectionTestCase(AgentTestCaseBase):
         instance = _get_fake_instance()
         agent = self._create_agent(instance)
 
-        b64_path = base64.b64encode('path')
-        b64_contents = base64.b64encode('contents')
+        b64_path = base64.b64encode(b'path')
+        b64_contents = base64.b64encode(b'contents')
 
         agent.inject_file("path", "contents")
         mock_call_agent.assert_called_once_with('inject_file',
