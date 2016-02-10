@@ -195,7 +195,7 @@ class BarbicanKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         returned_uuid = self.key_mgr.store_key(self.ctxt, _key, bit_length=32)
 
         self.create.assert_called_once_with('Nova Compute Key',
-                                            'AQKgsw==',
+                                            b'AQKgsw==',
                                             'application/octet-stream',
                                             'base64',
                                             'AES', 32, 'CBC',

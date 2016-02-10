@@ -18,6 +18,7 @@ Test cases for the conf key manager.
 """
 
 import array
+import codecs
 
 from oslo_config import cfg
 
@@ -28,6 +29,7 @@ from nova.tests.unit.keymgr import test_single_key_mgr
 
 CONF = cfg.CONF
 CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')
+decode_hex = codecs.getdecoder("hex_codec")
 
 
 class ConfKeyManagerTestCase(test_single_key_mgr.SingleKeyManagerTestCase):
@@ -43,7 +45,7 @@ class ConfKeyManagerTestCase(test_single_key_mgr.SingleKeyManagerTestCase):
     def setUp(self):
         super(ConfKeyManagerTestCase, self).setUp()
 
-        encoded_key = array.array('B', self._hex_key.decode('hex')).tolist()
+        encoded_key = array.array('B', decode_hex(self._hex_key)[0]).tolist()
         self.key = key.SymmetricKey('AES', encoded_key)
 
     def test_init(self):
