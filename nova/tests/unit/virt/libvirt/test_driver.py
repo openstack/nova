@@ -6574,6 +6574,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
 
+    @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -6583,15 +6584,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 'get_instance_disk_info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_shared_block_storage')
+                '_is_shared_block_storage', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_check_shared_storage_test_file')
-    def test_check_can_live_migrate_source_block_migration_with_bdm(
+                '_check_shared_storage_test_file', return_value=False)
+    def test_check_can_live_migrate_source_block_migration_with_bdm_error(
             self, mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local, mock_enough):
+            mock_booted_from_volume, mock_has_local, mock_enough,
+            mock_min_version):
 
-        mock_check.return_value = False
-        mock_shared_block.return_value = False
         bdi = {'block_device_mapping': ['bdm']}
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6605,6 +6605,40 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data,
                           block_device_info=bdi)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_assert_dest_node_has_enough_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_has_local_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_booted_from_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                'get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_shared_block_storage', return_value=False)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_check_shared_storage_test_file', return_value=False)
+    def test_check_can_live_migrate_source_block_migration_with_bdm_success(
+            self, mock_check, mock_shared_block, mock_get_bdi,
+            mock_booted_from_volume, mock_has_local, mock_enough,
+            mock_min_version):
+
+        bdi = {'block_device_mapping': ['bdm']}
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        migrate_data = objects.LibvirtLiveMigrateData(
+            disk_over_commit=False,
+            filename='file',
+            disk_available_mb=100,
+            image_type='default',
+            block_migration=True)
+
+        return_value = drvr.check_can_live_migrate_source(
+            self.context, instance, migrate_data, block_device_info=bdi)
+
+        self.assertEqual(migrate_data, return_value)
 
     def _is_shared_block_storage_test_create_mocks(self, disks):
         # Test data
@@ -6847,7 +6881,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
 
     def test_live_migration_update_volume_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -6896,7 +6930,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             test_mock.XMLDesc.return_value = target_xml
             self.assertFalse(drvr._live_migration_operation(
                              self.context, instance_ref, 'dest', False,
-                             migrate_data, test_mock))
+                             migrate_data, test_mock, []))
             mupdate.assert_called_once_with(target_xml, migrate_data.bdms,
                                             {}, '')
 
@@ -6940,7 +6974,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             test_mock.XMLDesc.return_value = target_xml
             drvr._live_migration_operation(self.context, instance_ref,
                                            'dest', False, migrate_data,
-                                           test_mock)
+                                           test_mock, [])
             test_mock.migrateToURI2.assert_called_once_with(
                 'qemu+tcp://127.0.0.2/system',
                 None, mupdate(), None, None, 0)
@@ -7112,7 +7146,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, dom)
+                          False, migrate_data, dom, [])
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrate.assert_called_once_with(
@@ -7134,7 +7168,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.MigrationError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, dom)
+                          False, migrate_data, dom, [])
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
@@ -7168,7 +7202,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
 
     def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -7198,7 +7232,42 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._update_xml',
+                return_value='')
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc', return_value='')
+    def test_live_migration_uses_migrateToURI3(
+            self, mock_old_xml, mock_new_xml, mock_migrateToURI3,
+            mock_min_version):
+        # Preparing mocks
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': ['vda', 'vdb'],
+            'bandwidth': CONF.libvirt.live_migration_bandwidth,
+            'destination_xml': '',
+        }
+        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
+
+        # Start test
+        migrate_data = objects.LibvirtLiveMigrateData(
+            graphics_listen_addr_vnc='0.0.0.0',
+            graphics_listen_addr_spice='0.0.0.0',
+            serial_listen_addr='127.0.0.1',
+            target_connect_addr=None,
+            bdms=[])
+
+        dom = fakelibvirt.virDomain
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        self.assertRaises(fakelibvirt.libvirtError,
+                          drvr._live_migration_operation,
+                          self.context, instance, 'dest',
+                          False, migrate_data, dom, disk_paths)
+        mock_migrateToURI3.assert_called_once_with(
+                CONF.libvirt.live_migration_uri % 'dest', params, None)
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
@@ -7226,7 +7295,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.MigrationError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
 
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
@@ -7271,7 +7340,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
 
         self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
         self.assertEqual(power_state.RUNNING, instance_ref.power_state)
@@ -7323,7 +7392,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock)
+                          False, migrate_data, vdmock, [])
 
     @mock.patch('shutil.rmtree')
     @mock.patch('os.path.exists', return_value=True)
@@ -7373,8 +7442,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)
 
+    @mock.patch.object(host.Host, "has_min_version", return_value=False)
     @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
-    def test_live_migration_copy_disk_paths(self, mock_xml):
+    def test_live_migration_copy_disk_paths(self, mock_xml, mock_version):
         xml = """
         <domain>
           <name>dummy</name>
@@ -7382,17 +7452,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
           <devices>
             <disk type="file">
                <source file="/var/lib/nova/instance/123/disk.root"/>
+               <target dev="vda"/>
             </disk>
             <disk type="file">
                <source file="/var/lib/nova/instance/123/disk.shared"/>
+               <target dev="vdb"/>
                <shareable/>
             </disk>
             <disk type="file">
                <source file="/var/lib/nova/instance/123/disk.config"/>
+               <target dev="vdc"/>
                <readonly/>
             </disk>
             <disk type="block">
                <source dev="/dev/mapper/somevol"/>
+               <target dev="vdd"/>
             </disk>
             <disk type="network">
                <source protocol="https" name="url_path">
@@ -7407,9 +7481,101 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dom = fakelibvirt.Domain(drvr._get_connection(), xml, False)
         guest = libvirt_guest.Guest(dom)
 
-        paths = drvr._live_migration_copy_disk_paths(guest)
-        self.assertEqual(["/var/lib/nova/instance/123/disk.root",
-                          "/dev/mapper/somevol"], paths)
+        paths = drvr._live_migration_copy_disk_paths(None, None, guest)
+        self.assertEqual((["/var/lib/nova/instance/123/disk.root",
+                          "/dev/mapper/somevol"], ['vda', 'vdd']), paths)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    @mock.patch('nova.virt.driver.get_block_device_info')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
+    def test_live_migration_copy_disk_paths_selective_block_migration(
+            self, mock_xml, mock_get_instance,
+            mock_block_device_info, mock_version):
+        xml = """
+        <domain>
+          <name>dummy</name>
+          <uuid>d4e13113-918e-42fe-9fc9-861693ffd432</uuid>
+          <devices>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.root"/>
+               <target dev="vda"/>
+            </disk>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.shared"/>
+               <target dev="vdb"/>
+            </disk>
+            <disk type="file">
+               <source file="/var/lib/nova/instance/123/disk.config"/>
+               <target dev="vdc"/>
+            </disk>
+            <disk type="block">
+               <source dev="/dev/mapper/somevol"/>
+               <target dev="vdd"/>
+            </disk>
+            <disk type="network">
+               <source protocol="https" name="url_path">
+                 <host name="hostname" port="443"/>
+               </source>
+            </disk>
+          </devices>
+        </domain>"""
+        mock_xml.return_value = xml
+        instance = objects.Instance(**self.test_instance)
+        instance.root_device_name = '/dev/vda'
+        block_device_info = {
+            'swap': {
+                'disk_bus': u'virtio',
+                'swap_size': 10,
+                'device_name': u'/dev/vdc'
+            },
+            'root_device_name': u'/dev/vda',
+            'ephemerals': [{
+                'guest_format': u'ext3',
+                'device_name': u'/dev/vdb',
+                'disk_bus': u'virtio',
+                'device_type': u'disk',
+                'size': 1
+            }],
+            'block_device_mapping': [{
+                'guest_format': None,
+                'boot_index': None,
+                'mount_device': u'/dev/vdd',
+                'connection_info': {
+                    u'driver_volume_type': u'iscsi',
+                    'serial': u'147df29f-aec2-4851-b3fe-f68dad151834',
+                    u'data': {
+                        u'access_mode': u'rw',
+                        u'target_discovered': False,
+                        u'encrypted': False,
+                        u'qos_specs': None,
+                        u'target_iqn': u'iqn.2010-10.org.openstack:'
+                                       u'volume-147df29f-aec2-4851-b3fe-'
+                                       u'f68dad151834',
+                        u'target_portal': u'10.102.44.141:3260', u'volume_id':
+                            u'147df29f-aec2-4851-b3fe-f68dad151834',
+                        u'target_lun': 1,
+                        u'auth_password': u'cXELT66FngwzTwpf',
+                        u'auth_username': u'QbQQjj445uWgeQkFKcVw',
+                        u'auth_method': u'CHAP'
+                    }
+                },
+                'disk_bus': None,
+                'device_type': None,
+                'delete_on_termination': False
+            }]
+        }
+        mock_block_device_info.return_value = block_device_info
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dom = fakelibvirt.Domain(drvr._get_connection(), xml, False)
+        guest = libvirt_guest.Guest(dom)
+        return_value = drvr._live_migration_copy_disk_paths(context, instance,
+                                                            guest)
+        expected = (['/var/lib/nova/instance/123/disk.root',
+                     '/var/lib/nova/instance/123/disk.shared',
+                     '/var/lib/nova/instance/123/disk.config'],
+                    ['vda', 'vdb', 'vdc'])
+        self.assertEqual(expected, return_value)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_live_migration_copy_disk_paths")
@@ -7788,8 +7954,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                  "<domain><name>demo</name></domain>", True)
         guest = libvirt_guest.Guest(dom)
         migrate_data = {}
-        disk_paths = ['/dev/vda', '/dev/vdb']
-        mock_copy_disk_path.return_value = disk_paths
+        disks_to_copy = (['/some/path/one', '/test/path/two'],
+                         ['vda', 'vdb'])
+        mock_copy_disk_path.return_value = disks_to_copy
 
         mock_guest.return_value = guest
 
@@ -7802,7 +7969,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._live_migration(self.context, instance, "fakehost",
                              fake_post, fake_recover, True,
                              migrate_data)
-        mock_copy_disk_path.assert_called_once_with(guest)
+        mock_copy_disk_path.assert_called_once_with(self.context, instance,
+                                                    guest)
 
         class AnyEventletEvent(object):
             def __eq__(self, other):
@@ -7811,11 +7979,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_thread.assert_called_once_with(
             drvr._live_migration_operation,
             self.context, instance, "fakehost", True,
-            migrate_data, dom)
+            migrate_data, dom, disks_to_copy[1])
         mock_monitor.assert_called_once_with(
             self.context, instance, guest, "fakehost",
             fake_post, fake_recover, True,
-            migrate_data, dom, AnyEventletEvent(), disk_paths)
+            migrate_data, dom, AnyEventletEvent(), disks_to_copy[0])
 
     def _do_test_create_images_and_backing(self, disk_type):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
