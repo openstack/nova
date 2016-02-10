@@ -2928,18 +2928,11 @@ class LibvirtDriver(driver.ComputeDriver):
         return hasDirectIO
 
     @staticmethod
-    def _create_local(target, local_size, unit='G',
-                      fs_format=None, label=None):
-        """Create a blank image of specified size."""
-
-        libvirt_utils.create_image('raw', target,
-                                    '%d%c' % (local_size, unit))
-
-    def _create_ephemeral(self, target, ephemeral_size,
+    def _create_ephemeral(target, ephemeral_size,
                           fs_label, os_type, is_block_dev=False,
                           max_size=None, context=None, specified_fs=None):
         if not is_block_dev:
-            self._create_local(target, ephemeral_size)
+            libvirt_utils.create_image('raw', target, '%dG' % ephemeral_size)
 
         # Run as root only for block devices.
         disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
