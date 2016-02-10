@@ -2126,17 +2126,19 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_snapshot_volume_backed(self, quiesce_required, quiesce_fails,
                                      vm_state=vm_states.ACTIVE):
+        fake_sys_meta = {'image_min_ram': '11',
+                         'image_min_disk': '22',
+                         'image_container_format': 'ami',
+                         'image_disk_format': 'ami',
+                         'image_ram_disk': 'fake_ram_disk_id',
+                         'image_bdm_v2': 'True',
+                         'image_block_device_mapping': '[]',
+                         'image_mappings': '[]',
+                         'image_cache_in_nova': 'True'}
+        if quiesce_required:
+            fake_sys_meta['image_os_require_quiesce'] = 'yes'
         params = dict(locked=True, vm_state=vm_state,
-                      system_metadata={'image_min_ram': '11',
-                                       'image_min_disk': '22',
-                                       'image_container_format': 'ami',
-                                       'image_disk_format': 'ami',
-                                       'image_ram_disk': 'fake_ram_disk_id',
-                                       'image_bdm_v2': 'True',
-                                       'image_block_device_mapping': '[]',
-                                       'image_mappings': '[]',
-                                       'image_cache_in_nova': 'True',
-                                       })
+                      system_metadata=fake_sys_meta)
         instance = self._create_instance_obj(params=params)
         instance['root_device_name'] = 'vda'
 
@@ -2151,13 +2153,11 @@ class _ComputeAPIUnitTestMixIn(object):
             'is_public': False,
             'min_ram': '11',
         }
+        if quiesce_required:
+            expect_meta['properties']['os_require_quiesce'] = 'yes'
 
         quiesced = [False, False]
         quiesce_expected = not quiesce_fails and vm_state == vm_states.ACTIVE
-
-        if quiesce_required:
-            instance.system_metadata['image_os_require_quiesce'] = 'yes'
-            expect_meta['properties']['os_require_quiesce'] = 'yes'
 
         def fake_get_all_by_instance(context, instance, use_slave=False):
             return copy.deepcopy(instance_bdms)
@@ -2192,6 +2192,7 @@ class _ComputeAPIUnitTestMixIn(object):
                        fake_quiesce_instance)
         self.stubs.Set(self.compute_api.compute_rpcapi, 'unquiesce_instance',
                        fake_unquiesce_instance)
+        fake_image.stub_out_image_service(self)
 
         # No block devices defined
         self.compute_api.snapshot_volume_backed(

@@ -5456,10 +5456,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
             instance = objects.Instance(**self.test_instance)
             image_meta = objects.ImageMeta.from_dict(
-                {"properties": {"hw_qemu_guest_agent": "yes",
-                                "os_require_quiesce": "yes"}})
-            self.assertIsNone(drvr.quiesce(self.context, instance,
-                                           image_meta))
+                {"properties": {"hw_qemu_guest_agent": "yes"}})
+            self.assertIsNone(drvr.quiesce(self.context, instance, image_meta))
             mock_fsfreeze.assert_called_once_with()
 
     def test_quiesce_not_supported(self):
@@ -5477,8 +5475,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
             instance = objects.Instance(**self.test_instance)
             image_meta = objects.ImageMeta.from_dict(
-                {"properties": {"hw_qemu_guest_agent": "yes",
-                                "os_require_quiesce": "yes"}})
+                {"properties": {"hw_qemu_guest_agent": "yes"}})
             self.assertIsNone(drvr.unquiesce(self.context, instance,
                                              image_meta))
             mock_fsthaw.assert_called_once_with()
@@ -12945,10 +12942,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
         volume_save.assert_called_once_with()
 
-    def test_live_snapshot(self):
+    def _test_live_snapshot(self, can_quiesce=False, require_quiesce=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-
         mock_dom = mock.MagicMock()
+        test_image_meta = self.test_image_meta.copy()
+        if require_quiesce:
+            test_image_meta = {'properties': {'os_require_quiesce': 'yes'}}
 
         with test.nested(
                 mock.patch.object(drvr._conn, 'defineXML', create=True),
@@ -12957,8 +12956,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(fake_libvirt_utils, 'create_cow_image'),
                 mock.patch.object(fake_libvirt_utils, 'chown'),
                 mock.patch.object(fake_libvirt_utils, 'extract_snapshot'),
+                mock.patch.object(drvr, '_set_quiesced')
         ) as (mock_define, mock_size, mock_backing, mock_create_cow,
-              mock_chown, mock_snapshot):
+              mock_chown, mock_snapshot, mock_quiesce):
 
             xmldoc = "<domain/>"
             srcfile = "/first/path"
@@ -12972,7 +12972,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_backing.return_value = bckfile
             guest = libvirt_guest.Guest(mock_dom)
 
-            image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+            if not can_quiesce:
+                mock_quiesce.side_effect = (
+                    exception.InstanceQuiesceNotSupported(
+                        instance_id=self.test_instance['id'], reason='test'))
+
+            image_meta = objects.ImageMeta.from_dict(test_image_meta)
             drvr._live_snapshot(self.context, self.test_instance, guest,
                                 srcfile, dstfile, "qcow2", "qcow2", image_meta)
 
@@ -12993,6 +12998,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_snapshot.assert_called_once_with(dltfile, "qcow2",
                                                   dstfile, "qcow2")
             mock_define.assert_called_once_with(xmldoc)
+            mock_quiesce.assert_any_call(mock.ANY, self.test_instance,
+                                         mock.ANY, True)
+            if can_quiesce:
+                mock_quiesce.assert_any_call(mock.ANY, self.test_instance,
+                                             mock.ANY, False)
+
+    def test_live_snapshot(self):
+        self._test_live_snapshot()
+
+    def test_live_snapshot_with_quiesce(self):
+        self._test_live_snapshot(can_quiesce=True)
+
+    def test_live_snapshot_with_require_quiesce(self):
+        self._test_live_snapshot(can_quiesce=True, require_quiesce=True)
+
+    def test_live_snapshot_with_require_quiesce_fails(self):
+        self.assertRaises(exception.InstanceQuiesceNotSupported,
+                          self._test_live_snapshot,
+                          can_quiesce=False, require_quiesce=True)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration")
     def test_live_migration_hostname_valid(self, mock_lm):
