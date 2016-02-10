@@ -14,9 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 from eventlet import tpool
+from six.moves import urllib
 
 try:
     import rados
@@ -168,7 +167,7 @@ class RBDDriver(object):
         if not url.startswith(prefix):
             reason = _('Not stored in rbd')
             raise exception.ImageUnacceptable(image_id=url, reason=reason)
-        pieces = map(urllib.unquote, url[len(prefix):].split('/'))
+        pieces = map(urllib.parse.unquote, url[len(prefix):].split('/'))
         if '' in pieces:
             reason = _('Blank components')
             raise exception.ImageUnacceptable(image_id=url, reason=reason)

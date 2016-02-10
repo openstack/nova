@@ -12,9 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 from oslo_utils import netutils
+from six.moves import urllib
 import webob
 
 from nova.api.openstack import common
@@ -68,7 +67,7 @@ def _unquote_domain(domain):
     but Routes tends to choke on them, so we need an extra level of
     by-hand quoting here.
     """
-    return urllib.unquote(domain).replace('%2E', '.')
+    return urllib.parse.unquote(domain).replace('%2E', '.')
 
 
 def _create_dns_entry(ip, name, domain):
