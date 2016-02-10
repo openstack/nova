@@ -1352,6 +1352,12 @@ class ServersControllerUpdateTest(ControllerTest):
         req.body = jsonutils.dump_as_bytes(body)
         return req
 
+    @property
+    def wsgi_app(self):
+        with mock.patch.object(extensions.ExtensionManager, 'load_extension'):
+            # patch load_extension because it's expensive in fakes.wsgi_app
+            return fakes.wsgi_app(init_only=('servers',))
+
     def test_update_server_all_attributes(self):
         body = {'server': {
                   'name': 'server_test',
@@ -1374,7 +1380,7 @@ class ServersControllerUpdateTest(ControllerTest):
             xmlns="http://docs.openstack.org/compute/api/v1.1"
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(400, res.status_int)
 
     def test_update_server_invalid_xml_raises_expat(self):
@@ -1383,7 +1389,7 @@ class ServersControllerUpdateTest(ControllerTest):
             xmlns="http://docs.openstack.org/compute/api/v1.1"
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.wsgi_app)
         self.assertEqual(400, res.status_int)
 
     def test_update_server_name(self):
