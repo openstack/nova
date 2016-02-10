@@ -437,23 +437,190 @@ compute, which are routinely upgraded in a rolling fashion.
 # These opts are registered as a separate OptGroup
 trusted_opts = [
     cfg.StrOpt("attestation_server",
-            help="Attestation server HTTP"),
+            help="""
+The host to use as the attestation server.
+
+Cloud computing pools can involve thousands of compute nodes located at
+different geographical locations, making it difficult for cloud providers to
+identify a node's trustworthiness. When using the Trusted filter, users can
+request that their VMs only be placed on nodes that have been verified by the
+attestation server specified in this option.
+
+The value is a string, and can be either an IP address or FQDN.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server_ca_file
+    attestation_port
+    attestation_api_url
+    attestation_auth_blob
+    attestation_auth_timeout
+    attestation_insecure_ssl
+"""),
     cfg.StrOpt("attestation_server_ca_file",
-            help="Attestation server Cert file for Identity verification"),
+            help="""
+The absolute path to the certificate to use for authentication when connecting
+to the attestation server. See the `attestation_server` help text for more
+information about host verification.
+
+The value is a string, and must point to a file that is readable by the
+scheduler.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_port
+    attestation_api_url
+    attestation_auth_blob
+    attestation_auth_timeout
+    attestation_insecure_ssl
+"""),
     cfg.StrOpt("attestation_port",
             default="8443",
-            help="Attestation server port"),
+            help="""
+The port to use when connecting to the attestation server. See the
+`attestation_server` help text for more information about host verification.
+
+Valid values are strings, not integers, but must be digits only.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_server_ca_file
+    attestation_api_url
+    attestation_auth_blob
+    attestation_auth_timeout
+    attestation_insecure_ssl
+"""),
     cfg.StrOpt("attestation_api_url",
             default="/OpenAttestationWebServices/V1.0",
-            help="Attestation web API URL"),
+            help="""
+The URL on the attestation server to use. See the `attestation_server` help
+text for more information about host verification.
+
+This value must be just that path portion of the full URL, as it will be joined
+to the host specified in the attestation_server option.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_server_ca_file
+    attestation_port
+    attestation_auth_blob
+    attestation_auth_timeout
+    attestation_insecure_ssl
+"""),
     cfg.StrOpt("attestation_auth_blob",
-            help="Attestation authorization blob - must change"),
+            help="""
+Attestation servers require a specific blob that is used to authenticate. The
+content and format of the blob are determined by the particular attestation
+server being used. There is no default value; you must supply the value as
+specified by your attestation service. See the `attestation_server` help text
+for more information about host verification.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_server_ca_file
+    attestation_port
+    attestation_api_url
+    attestation_auth_timeout
+    attestation_insecure_ssl
+"""),
     cfg.IntOpt("attestation_auth_timeout",
             default=60,
-            help="Attestation status cache valid period length"),
+            help="""
+This value controls how long a successful attestation is cached. Once this
+period has elapsed, a new attestation request will be made. See the
+`attestation_server` help text for more information about host verification.
+
+The value is in seconds. Valid values must be positive integers for any
+caching; setting this to zero or a negative value will result in calls to the
+attestation_server for every request, which may impact performance.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_server_ca_file
+    attestation_port
+    attestation_api_url
+    attestation_auth_blob
+    attestation_insecure_ssl
+"""),
     cfg.BoolOpt("attestation_insecure_ssl",
             default=False,
-            help="Disable SSL cert verification for Attestation service")
+            help="""
+When set to True, the SSL certificate verification is skipped for the
+attestation service. See the `attestation_server` help text for more
+information about host verification.
+
+Valid values are True or False. The default is False.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'TrustedFilter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    attestation_server
+    attestation_server_ca_file
+    attestation_port
+    attestation_api_url
+    attestation_auth_blob
+    attestation_auth_timeout
+"""),
 ]
 
 max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
