@@ -52,7 +52,6 @@ import nova.spice
 import nova.utils
 import nova.volume
 import nova.volume.cinder
-import nova.wsgi
 
 
 def list_opts():
@@ -85,7 +84,6 @@ def list_opts():
              nova.utils.monkey_patch_opts,
              nova.utils.utils_opts,
              nova.volume._volume_opts,
-             nova.wsgi.wsgi_opts,
          )),
         ('barbican', nova.keymgr.barbican.barbican_opts),
         ('cinder', nova.volume.cinder.cinder_opts),

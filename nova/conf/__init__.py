@@ -72,7 +72,7 @@ from nova.conf import virt
 from nova.conf import vnc
 # from nova.conf import volume
 # from nova.conf import workarounds
-# from nova.conf import wsgi
+from nova.conf import wsgi
 # from nova.conf import xenserver
 # from nova.conf import xvp
 # from nova.conf import zookeeper
@@ -132,7 +132,7 @@ virt.register_opts(CONF)
 vnc.register_opts(CONF)
 # volume.register_opts(CONF)
 # workarounds.register_opts(CONF)
-# wsgi.register_opts(CONF)
+wsgi.register_opts(CONF)
 # xenserver.register_opts(CONF)
 # xvp.register_opts(CONF)
 # zookeeper.register_opts(CONF)

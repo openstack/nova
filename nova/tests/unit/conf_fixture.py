@@ -32,7 +32,6 @@ CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('floating_ip_dns_manager', 'nova.network.floating_ips')
 CONF.import_opt('instance_dns_manager', 'nova.network.floating_ips')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('api_paste_config', 'nova.wsgi')
 
 
 class ConfFixture(config_fixture.Config):
