@@ -38,7 +38,7 @@ class DeleteFromSelect(UpdateBase):
         self.column = column
 
 
-# NOTE(guochbo): some verions of MySQL doesn't yet support subquery with
+# NOTE(guochbo): some versions of MySQL doesn't yet support subquery with
 # 'LIMIT & IN/ALL/ANY/SOME' We need work around this with nesting select .
 @compiles(DeleteFromSelect)
 def visit_delete_from_select(element, compiler, **kw):
