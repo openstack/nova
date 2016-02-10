@@ -240,10 +240,10 @@ class VolumeApiTestV21(test.NoDBTestCase):
             osapi_compute_ext_list=['Volumes'])
 
         self.context = context.get_admin_context()
-        self.app = self._get_app()
 
-    def _get_app(self):
-        return fakes.wsgi_app_v21()
+    @property
+    def app(self):
+        return fakes.wsgi_app_v21(init_only=('os-volumes', 'servers'))
 
     def test_volume_create(self):
         self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)
@@ -348,18 +348,9 @@ class VolumeApiTestV21(test.NoDBTestCase):
 
 class VolumeApiTestV2(VolumeApiTestV21):
 
-    def setUp(self):
-        super(VolumeApiTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Volumes'])
-
-        self.context = context.get_admin_context()
-        self.app = self._get_app()
-
-    def _get_app(self):
-        return fakes.wsgi_app()
+    @property
+    def app(self):
+        return fakes.wsgi_app(init_only=('os-volumes', 'servers'))
 
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
