@@ -126,17 +126,12 @@ class TestCompareResult(test.NoDBTestCase):
                 observed=result,
                 message='Check _compare_result of 2 bare ints')
 
-    # TODO(auggy): _compare_result should throw NoMatch for ints
-    # this gets to objectify() and it throws a TypeError
-    # versions are a case where ints are compared,
-    # currently if the version in the json sample doesn't match what's in the
-    # template, this throws a confusing "TypeError"
     def test_bare_int_no_match(self):
         """check 2 bare ints that don't match"""
         sample_data = 42
         response_data = 43
 
-        with testtools.ExpectedException(TypeError):
+        with testtools.ExpectedException(api_samples_test_base.NoMatch):
             self.ast._compare_result(
                     subs=self.ast._get_regexes(),
                     expected=sample_data,
@@ -172,7 +167,6 @@ class TestCompareResult(test.NoDBTestCase):
                     result=response_data,
                     result_str="Test")
 
-    # TODO(auggy): _compare_result should throw TypeError early for non-strings
     def test_template_int_value(self):
         """check an int value of a template int throws exception"""
         template_data = u'%(int_test)'
@@ -182,17 +176,17 @@ class TestCompareResult(test.NoDBTestCase):
         subs = self.ast._get_regexes()
         subs.update({'int_test': 42})
 
+        # TODO(auggy): this should be a TypeError
         # gets to expected = expected % subs
         # throws ValueError: incomplete format
         # If a string is required for that functionality,
         # the method should typecheck before it gets that deep in the code
-        self.assertRaises(
-                excClass=ValueError,  # this should be a TypeError
-                callableObj=self.ast._compare_result,
-                subs=subs,  # subs can be defined by the caller, needs checking
-                expected=template_data,
-                result=response_data,
-                result_str="Test")
+        with testtools.ExpectedException(ValueError):
+            self.ast._compare_result(
+                    subs=subs,  # can be defined by the caller, needs checking
+                    expected=template_data,
+                    result=response_data,
+                    result_str="Test")
 
     # TODO(auggy): _compare_result needs a consistent return value
     def test_dict_match(self):
@@ -405,5 +399,85 @@ class TestCompareResult(test.NoDBTestCase):
             self.ast._compare_result(
                     subs=self.ast._get_regexes(),
                     expected=template_data,
+                    result=response_data,
+                    result_str="Test")
+
+    def test_list_no_match(self):
+        """check 2 matching lists"""
+        template_data = {
+            u'things':
+            [
+                {
+                    u'foo': u'bar',
+                    u'baz': 0
+                },
+                {
+                    u'foo': u'zod',
+                    u'baz': 1
+                }
+            ]
+        }
+        response_data = {
+            u'things':
+            [
+                {
+                    u'foo': u'bar',
+                    u'baz': u'0'
+                },
+                {
+                    u'foo': u'zod',
+                    u'baz': 1
+                }
+            ]
+        }
+
+        # TODO(auggy): This error returns "extra list items"
+        # it should show the item/s in the list that didn't match
+        with testtools.ExpectedException(api_samples_test_base.NoMatch):
+            self.ast._compare_result(
+                    subs=self.ast._get_regexes(),
+                    expected=template_data,
+                    result=response_data,
+                    result_str="Test")
+
+    def test_none_match(self):
+        """check that None matches"""
+        sample_data = None
+        response_data = None
+        result = self.ast._compare_result(
+                subs=self.ast._get_regexes(),
+                expected=sample_data,
+                result=response_data,
+                result_str="Test")
+
+        # NOTE(auggy): _compare_result will not return a matched value in the
+        # case of bare strings. If they don't match it will throw an exception,
+        # otherwise it returns "None".
+        self.assertEqual(
+                expected=None,
+                observed=result,
+                message='Check _compare_result of None')
+
+    def test_none_no_match(self):
+        """check expected none and non-None response don't match"""
+        sample_data = None
+        response_data = u'bar'
+
+        with testtools.ExpectedException(api_samples_test_base.NoMatch):
+            self.ast._compare_result(
+                    subs=self.ast._get_regexes(),
+                    expected=sample_data,
+                    result=response_data,
+                    result_str="Test")
+
+    def test_none_result_no_match(self):
+        """check result none and expected non-None response don't match"""
+        sample_data = u'foo'
+        response_data = None
+
+        with testtools.ExpectedException(api_samples_test_base.NoMatch):
+            self.ast._compare_result(
+                    subs=self.ast._get_regexes(),
+                    expected=sample_data,
                     result=response_data,
                     result_str="Test")
