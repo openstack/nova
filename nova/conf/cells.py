@@ -21,22 +21,153 @@ from oslo_config import cfg
 cells_opts = [
     cfg.BoolOpt('enable',
                 default=False,
-                help='Enable cell functionality'),
+                help="""
+Enable cell functionality
+
+When this functionality is enabled, it lets you to scale an OpenStack
+Compute cloud in a more distributed fashion without having to use
+complicated technologies like database and message queue clustering.
+Cells are configured as a tree. The top-level cell should have a host
+that runs a nova-api service, but no nova-compute services. Each
+child cell should run all of the typical nova-* services in a regular
+Compute cloud except for nova-api. You can think of cells as a normal
+Compute deployment in that each cell has its own database server and
+message queue broker.
+
+Possible values:
+
+* True: Enables the feature
+* False: Disables the feature
+
+Services which consume this:
+
+* nova-api
+* nova-cells
+* nova-compute
+
+Related options:
+
+* name: A unique cell name must be given when this functionality
+  is enabled.
+* cell_type: Cell type should be defined for all cells.
+"""),
     cfg.StrOpt('topic',
                 default='cells',
-                help='The topic cells nodes listen on'),
+                help="""
+Topic
+
+This is the message queue topic that cells nodes listen on. It is
+used when the cells service is started up to configure the queue,
+and whenever an RPC call to the scheduler is made.
+
+Possible values:
+
+* cells: This is the recommended and the default value.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.StrOpt('manager',
                default='nova.cells.manager.CellsManager',
-               help='Manager for cells'),
+               help="""
+Manager for cells
+
+The nova-cells manager class. This class defines RPC methods that
+the local cell may call. This class is NOT used for messages coming
+from other cells. That communication is driver-specific.
+
+Communication to other cells happens via the nova.cells.messaging module.
+The MessageRunner from that module will handle routing the message to
+the correct cell via the communication driver. Most methods below
+create 'targeted' (where we want to route a message to a specific cell)
+or 'broadcast' (where we want a message to go to multiple cells)
+messages.
+
+Scheduling requests get passed to the scheduler class.
+
+Possible values:
+
+* 'nova.cells.manager.CellsManager' is the only possible value for
+  this option as of the Mitaka release
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.StrOpt('name',
                 default='nova',
-                help='Name of this cell'),
+                help="""
+Name of the current cell
+
+This value must be unique for each cell. Name of a cell is used as
+its id, leaving this option unset or setting the same name for
+two or more cells may cause unexpected behaviour.
+
+Possible values:
+
+* Unique name string
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* enabled: This option is meaningful only when cells service
+  is enabled
+"""),
     cfg.ListOpt('capabilities',
                 default=['hypervisor=xenserver;kvm', 'os=linux;windows'],
-                help='Key/Multi-value list with the capabilities of the cell'),
+                help="""
+Cell capabilities
+
+List of arbitrary key=value pairs defining capabilities of the
+current cell to be sent to the parent cells. These capabilities
+are intended to be used in cells scheduler filters/weighers.
+
+Possible values:
+
+* key=value pairs list for example;
+  ``hypervisor=xenserver;kvm,os=linux;windows``
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.IntOpt('call_timeout',
                 default=60,
-                help='Seconds to wait for response from a call to a cell.'),
+                help="""
+Call timeout
+
+Cell messaging module waits for response(s) to be put into the
+eventlet queue. This option defines the seconds waited for
+response from a call to a cell.
+
+Possible values:
+
+* Time in seconds.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.FloatOpt('reserve_percent',
                  default=10.0,
                  help='Percentage of cell capacity to hold in reserve. '
