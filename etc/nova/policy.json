@@ -270,7 +270,6 @@
     "os_compute_api:servers:start": "rule:admin_or_owner",
     "os_compute_api:servers:stop": "rule:admin_or_owner",
     "os_compute_api:servers:trigger_crash_dump": "rule:admin_or_owner",
-    "os_compute_api:servers:migrations:discoverable": "",
     "os_compute_api:servers:migrations:force_complete": "rule:admin_api",
     "os_compute_api:os-access-ips:discoverable": "",
     "os_compute_api:os-access-ips": "",
