@@ -17,26 +17,14 @@
 """
 Cells RPC Communication Driver
 """
-from oslo_config import cfg
 import oslo_messaging as messaging
 
 from nova.cells import driver
+import nova.conf
 from nova import rpc
 
-cell_rpc_driver_opts = [
-        cfg.StrOpt('rpc_driver_queue_base',
-                   default='cells.intercell',
-                   help="Base queue name to use when communicating between "
-                        "cells.  Various topics by message type will be "
-                        "appended to this.")]
 
-CONF = cfg.CONF
-CONF.register_opts(cell_rpc_driver_opts, group='cells')
-CONF.import_opt('call_timeout', 'nova.cells.opts', group='cells')
-
-rpcapi_cap_opt = cfg.StrOpt('intercell',
-        help='Set a version cap for messages sent between cells services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class CellsRPCDriver(driver.BaseCellsDriver):
@@ -133,7 +121,7 @@ class InterCellRPCAPI(object):
         """
         transport_url = next_hop.db_info['transport_url']
         if transport_url not in self.transports:
-            transport = messaging.get_transport(cfg.CONF, transport_url,
+            transport = messaging.get_transport(nova.conf.CONF, transport_url,
                                                 rpc.TRANSPORT_ALIASES)
             self.transports[transport_url] = transport
         else:

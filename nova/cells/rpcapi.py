@@ -23,11 +23,11 @@ services.  That communication is handled by the cells driver via the
 messaging module.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _LE
 from nova import objects
@@ -35,13 +35,8 @@ from nova.objects import base as objects_base
 from nova import rpc
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('enable', 'nova.cells.opts', group='cells')
-CONF.import_opt('topic', 'nova.cells.opts', group='cells')
 
-rpcapi_cap_opt = cfg.StrOpt('cells',
-        help='Set a version cap for messages sent to local cells services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class CellsAPI(object):

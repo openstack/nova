@@ -25,7 +25,7 @@ from oslo_config import cfg
 # from nova.conf import aws
 # from nova.conf import barbican
 # from nova.conf import base
-# from nova.conf import cells
+from nova.conf import cells
 from nova.conf import cert
 # from nova.conf import cinder
 # from nova.conf import cloudpipe
@@ -85,7 +85,7 @@ CONF = cfg.CONF
 # aws.register_opts(CONF)
 # barbican.register_opts(CONF)
 # base.register_opts(CONF)
-# cells.register_opts(CONF)
+cells.register_opts(CONF)
 cert.register_opts(CONF)
 # cinder.register_opts(CONF)
 # cloudpipe.register_opts(CONF)

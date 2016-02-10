@@ -18,25 +18,16 @@ If a child cell hasn't sent capacity or capability updates in a while,
 downgrade its likelihood of being chosen for scheduling requests.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova.cells import weights
+import nova.conf
 from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
-mute_weigher_opts = [
-        cfg.FloatOpt('mute_weight_multiplier',
-                default=-10000.0,
-                help='Multiplier used to weigh mute children. (The value '
-                     'should be negative.)'),
-]
-
-CONF = cfg.CONF
-CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
-CONF.register_opts(mute_weigher_opts, group='cells')
+CONF = nova.conf.CONF
 
 
 class MuteChildWeigher(weights.BaseCellWeigher):

@@ -19,9 +19,9 @@ Cells Utility Methods
 import random
 import sys
 
-from oslo_config import cfg
 import six
 
+import nova.conf
 from nova import objects
 from nova.objects import base as obj_base
 
@@ -36,9 +36,7 @@ BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
 
-CONF = cfg.CONF
-CONF.import_opt('instance_update_sync_database_limit', 'nova.cells.opts',
-        group='cells')
+CONF = nova.conf.CONF
 
 
 class ProxyObjectSerializer(obj_base.NovaObjectSerializer):

@@ -31,6 +31,7 @@ from oslo_utils import units
 import six
 
 from nova.cells import rpc_driver
+import nova.conf
 from nova import context
 from nova.db import base
 from nova import exception
@@ -39,25 +40,10 @@ from nova import objects
 from nova import rpc
 from nova import utils
 
-cell_state_manager_opts = [
-    cfg.IntOpt('db_check_interval',
-               default=60,
-               help='Interval, in seconds, for getting fresh cell '
-               'information from the database.'),
-    cfg.StrOpt('cells_config',
-               help='Configuration file from which to read cells '
-               'configuration.  If given, overrides reading cells '
-               'from the database.'),
-]
-
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
-CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
-CONF.register_opts(cell_state_manager_opts, group='cells')
+CONF = nova.conf.CONF
 
 
 class CellState(object):
