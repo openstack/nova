@@ -1,0 +1,13 @@
+---
+upgrade:
+  - Upgrade the rootwrap configuration for the compute service,
+    so that patches requiring new rootwrap configuration can be
+    tested with grenade.
+fixes:
+  - In a race condition if base image is deleted by ImageCacheManager
+    while imagebackend is copying the image to instance path, then the
+    instance goes in to error state. In this case when libvirt has
+    changed the base file ownership to libvirt-qemu while imagebackend
+    is copying the image, then we get permission denied error on updating
+    the file access time using os.utime. Fixed this issue by updating the
+    base file access time with root user privileges using 'touch' command.

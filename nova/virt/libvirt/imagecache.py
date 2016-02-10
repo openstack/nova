@@ -449,10 +449,18 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         if not exists:
             return
 
-        if age < maxage:
-            LOG.info(_LI('Base or swap file too young to remove: %s'),
-                         base_file)
-        else:
+        lock_file = os.path.split(base_file)[-1]
+
+        @utils.synchronized(lock_file, external=True,
+                            lock_path=self.lock_path)
+        def _inner_remove_old_enough_file():
+            # NOTE(mikal): recheck that the file is old enough, as a new
+            # user of the file might have come along while we were waiting
+            # for the lock
+            exists, age = self._get_age_of_file(base_file)
+            if not exists or age < maxage:
+                return
+
             LOG.info(_LI('Removing base or swap file: %s'), base_file)
             try:
                 os.remove(base_file)
@@ -466,6 +474,11 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'base_file': base_file,
                            'error': e})
 
+        if age < maxage:
+            LOG.info(_LI('Base or swap file too young to remove: %s'),
+                         base_file)
+        else:
+            _inner_remove_old_enough_file()
             if remove_lock:
                 try:
                     # NOTE(jichenjc) The lock file will be constructed first
@@ -473,7 +486,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     # like nova-9e881789030568a317fad9daae82c5b1c65e0d4a
                     # or nova-03d8e206-6500-4d91-b47d-ee74897f9b4e
                     # according to the original file name
-                    lock_file = os.path.split(base_file)[-1]
                     lockutils.remove_external_lock_file(lock_file,
                         lock_file_prefix='nova-', lock_path=self.lock_path)
                 except OSError as e:
@@ -562,8 +574,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
-                    libvirt_utils.chown(base_file, os.getuid())
-                    os.utime(base_file, None)
+                    libvirt_utils.update_mtime(base_file)
 
     def _age_and_verify_swap_images(self, context, base_dir):
         LOG.debug('Verify swap images')
@@ -571,8 +582,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         for ent in self.back_swap_images:
             base_file = os.path.join(base_dir, ent)
             if ent in self.used_swap_images and os.path.exists(base_file):
-                    libvirt_utils.chown(base_file, os.getuid())
-                    os.utime(base_file, None)
+                libvirt_utils.update_mtime(base_file)
             elif self.remove_unused_base_images:
                 self._remove_swap_file(base_file)
 

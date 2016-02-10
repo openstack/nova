@@ -25,7 +25,7 @@ from nova.virt import images
 
 class QemuTestCase(test.NoDBTestCase):
     def test_qemu_info_with_bad_path(self):
-        self.assertRaises(exception.InvalidDiskInfo,
+        self.assertRaises(exception.DiskNotFound,
                           images.qemu_img_info,
                           '/path/that/does/not/exist')
 

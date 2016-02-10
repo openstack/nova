@@ -20,6 +20,7 @@ import os
 import time
 
 import mock
+from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import formatters
@@ -461,34 +462,32 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                              [fname])
             self.assertEqual(image_cache_manager.corrupt_base_files, [])
 
-    def test_handle_base_image_used(self):
-        self.stubs.Set(libvirt_utils, 'chown', lambda x, y: None)
+    @mock.patch.object(libvirt_utils, 'update_mtime')
+    def test_handle_base_image_used(self, mock_mtime):
         img = '123'
 
         with self._make_base_file() as fname:
-            os.utime(fname, (-1, time.time() - 3601))
-
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
             image_cache_manager._handle_base_image(img, fname)
 
+            mock_mtime.assert_called_once_with(fname)
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files, [])
             self.assertEqual(image_cache_manager.corrupt_base_files, [])
 
-    def test_handle_base_image_used_remotely(self):
-        self.stubs.Set(libvirt_utils, 'chown', lambda x, y: None)
+    @mock.patch.object(libvirt_utils, 'update_mtime')
+    def test_handle_base_image_used_remotely(self, mock_mtime):
         img = '123'
 
         with self._make_base_file() as fname:
-            os.utime(fname, (-1, time.time() - 3601))
-
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
             image_cache_manager.used_images = {'123': (0, 1, ['banana-42'])}
             image_cache_manager._handle_base_image(img, fname)
 
+            mock_mtime.assert_called_once_with(fname)
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files, [])
             self.assertEqual(image_cache_manager.corrupt_base_files, [])
@@ -527,9 +526,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertEqual(image_cache_manager.removable_base_files, [])
             self.assertEqual(image_cache_manager.corrupt_base_files, [])
 
-    def test_handle_base_image_checksum_fails(self):
+    @mock.patch.object(libvirt_utils, 'update_mtime')
+    def test_handle_base_image_checksum_fails(self, mock_mtime):
         self.flags(checksum_base_images=True, group='libvirt')
-        self.stubs.Set(libvirt_utils, 'chown', lambda x, y: None)
 
         img = '123'
 
@@ -546,12 +545,15 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
             image_cache_manager._handle_base_image(img, fname)
 
+            mock_mtime.assert_called_once_with(fname)
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files, [])
             self.assertEqual(image_cache_manager.corrupt_base_files,
                              [fname])
 
-    def test_verify_base_images(self):
+    @mock.patch.object(libvirt_utils, 'update_mtime')
+    @mock.patch.object(lockutils, 'external_lock')
+    def test_verify_base_images(self, mock_lock, mock_mtime):
         hashed_1 = '356a192b7913b04c54574d18c28d46e6395428ab'
         hashed_21 = '472b07b9fcf2c2451e8781e944bf5f77cd8457c8'
         hashed_22 = '12c6fc06c99a462375eeb3f43dfd832b08ca9e17'
@@ -606,11 +608,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.fail('Unexpected path existence check: %s' % path)
 
         self.stub_out('os.path.exists', lambda x: exists(x))
-
-        self.stubs.Set(libvirt_utils, 'chown', lambda x, y: None)
-
-        # We need to stub utime as well
-        self.stub_out('os.utime', lambda x, y: None)
 
         # Fake up some instances in the instances directory
         orig_listdir = os.listdir
@@ -857,13 +854,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         expect_set = set(['swap_123', 'swap_456'])
         self.assertEqual(image_cache_manager.back_swap_images, expect_set)
 
-    @mock.patch.object(libvirt_utils, 'chown')
+    @mock.patch.object(lockutils, 'external_lock')
+    @mock.patch.object(libvirt_utils, 'update_mtime')
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('os.utime')
     @mock.patch('os.path.getmtime')
     @mock.patch('os.remove')
     def test_age_and_verify_swap_images(self, mock_remove, mock_getmtime,
-            mock_utime, mock_exist, mock_chown):
+            mock_exist, mock_mtime, mock_lock):
         image_cache_manager = imagecache.ImageCacheManager()
         expected_remove = set()
         expected_exist = set(['swap_128', 'swap_256'])
@@ -893,6 +890,20 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(expected_remove))
         self.assertIn('swap_128', expected_exist)
         self.assertIn('swap_256', expected_remove)
+
+    @mock.patch.object(utils, 'synchronized')
+    @mock.patch.object(imagecache.ImageCacheManager, '_get_age_of_file',
+                       return_value=(True, 100))
+    def test_lock_acquired_on_removing_old_enough_files(self, mock_get_age,
+                                                        mock_synchronized):
+        base_file = '/tmp_age_test'
+        lock_path = os.path.join(CONF.instances_path, 'locks')
+        lock_file = os.path.split(base_file)[-1]
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._remove_old_enough_file(
+            base_file, 60, remove_sig=False, remove_lock=False)
+        mock_synchronized.assert_called_once_with(lock_file, external=True,
+                                                  lock_path=lock_path)
 
 
 class VerifyChecksumTestCase(test.NoDBTestCase):

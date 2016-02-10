@@ -54,8 +54,7 @@ def qemu_img_info(path, format=None):
     CONF.import_opt('images_type', 'nova.virt.libvirt.imagebackend',
                     group='libvirt')
     if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
-        msg = (_("Path does not exist %(path)s") % {'path': path})
-        raise exception.InvalidDiskInfo(reason=msg)
+        raise exception.DiskNotFound(location=path)
 
     try:
         cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
