@@ -948,6 +948,10 @@ class DbCommands(object):
             if max_rows < 0:
                 print(_("Must supply a positive value for max_rows"))
                 return(1)
+            if max_rows > db.MAX_INT:
+                print(_('max rows must be <= %(max_value)d') %
+                      {'max_value': db.MAX_INT})
+                return(1)
         table_to_rows_archived = db.archive_deleted_rows(max_rows)
         if verbose:
             if table_to_rows_archived:
