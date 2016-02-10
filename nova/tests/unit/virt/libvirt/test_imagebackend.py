@@ -115,7 +115,7 @@ class _ImageTestCase(object):
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
         self.assertEqual(fake_processutils.fake_execute_get_log(),
-            ['fallocate -n -l 1 %s.fallocate_test' % self.PATH,
+            ['fallocate -l 1 %s.fallocate_test' % self.PATH,
              'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
              'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
 
