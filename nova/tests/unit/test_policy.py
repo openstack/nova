@@ -673,7 +673,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-usage:discoverable",
 "os_compute_api:os-server-groups",
 "os_compute_api:os-server-groups:discoverable",
-"os_compute_api:servers:migrations:discoverable",
 "os_compute_api:os-services:discoverable",
 "os_compute_api:server-metadata:discoverable",
 "os_compute_api:servers:discoverable",
