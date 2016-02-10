@@ -84,14 +84,6 @@ class _BaseTestCase(object):
 
         fake_utils.stub_out_utils_spawn_n(self.stubs)
 
-    def test_provider_fw_rule_get_all(self):
-        fake_rules = ['a', 'b', 'c']
-        self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
-        db.provider_fw_rule_get_all(self.context).AndReturn(fake_rules)
-        self.mox.ReplayAll()
-        result = self.conductor.provider_fw_rule_get_all(self.context)
-        self.assertEqual(result, fake_rules)
-
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
@@ -195,6 +187,10 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                ) as mock_clear_cache:
             self.conductor.reset()
             mock_clear_cache.assert_called_once_with()
+
+    def test_provider_fw_rule_get_all(self):
+        result = self.conductor.provider_fw_rule_get_all(self.context)
+        self.assertEqual([], result)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

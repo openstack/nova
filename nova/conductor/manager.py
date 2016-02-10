@@ -19,7 +19,6 @@ import copy
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 import six
 
@@ -68,9 +67,10 @@ class ConductorManager(manager.Manager):
         self.compute_task_mgr = ComputeTaskManager()
         self.additional_endpoints.append(self.compute_task_mgr)
 
+    # NOTE(hanlind): This can be removed in version 4.0 of the RPC API
     def provider_fw_rule_get_all(self, context):
-        rules = self.db.provider_fw_rule_get_all(context)
-        return jsonutils.to_primitive(rules)
+        # NOTE(hanlind): Simulate an empty db result for compat reasons.
+        return []
 
     def _object_dispatch(self, target, method, args, kwargs):
         """Dispatch a call to an object method.

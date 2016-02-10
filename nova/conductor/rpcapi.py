@@ -196,6 +196,8 @@ class ConductorAPI(object):
     ... Liberty supports message version 3.0.  So, any changes to
     existing methods in 3.x after that point should be done such
     that they can handle the version_cap being set to 3.0.
+
+    * Remove provider_fw_rule_get_all()
     """
 
     VERSION_ALIASES = {
@@ -216,10 +218,6 @@ class ConductorAPI(object):
         self.client = rpc.get_client(target,
                                      version_cap=version_cap,
                                      serializer=serializer)
-
-    def provider_fw_rule_get_all(self, context):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'provider_fw_rule_get_all')
 
     # TODO(hanlind): This method can be removed once oslo.versionedobjects
     # has been converted to use version_manifests in remotable_classmethod
