@@ -181,5 +181,17 @@ user documentation.
 
 2.21
 ----
+
   The ``os-instance-actions`` API now returns information from deleted
   instances.
+
+2.22
+----
+
+  A new resource servers:migrations added. A new API to force live migration
+  to complete added::
+
+    POST /servers/<uuid>/migrations/<id>/action
+    {
+      "force_complete": null
+    }

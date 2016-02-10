@@ -3287,6 +3287,35 @@ class API(base.Base):
                 host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
+    @check_instance_lock
+    @check_instance_cell
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[task_states.MIGRATING])
+    def live_migrate_force_complete(self, context, instance, migration_id):
+        """Force live migration to complete.
+
+        :param context: Security context
+        :param instance: The instance that is being migrated
+        :param migration_id: ID of ongoing migration
+
+        """
+        LOG.debug("Going to try to force live migration to complete",
+                  instance=instance)
+
+        # NOTE(pkoniszewski): Get migration object to check if there is ongoing
+        # live migration for particular instance. Also pass migration id to
+        # compute to double check and avoid possible race condition.
+        migration = objects.Migration.get_by_id_and_instance(
+            context, migration_id, instance.uuid)
+        if migration.status != 'running':
+            raise exception.InvalidMigrationState(migration_id=migration_id,
+                                                  instance_uuid=instance.uuid,
+                                                  state=migration.status,
+                                                  method='force complete')
+
+        self.compute_rpcapi.live_migration_force_complete(
+            context, instance, migration.id)
+
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,

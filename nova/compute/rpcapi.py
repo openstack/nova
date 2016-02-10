@@ -325,6 +325,7 @@ class ComputeAPI(object):
                  rollback_live_migration_at_destination, and
                  pre_live_migration.
         * ...  - Remove refresh_provider_fw_rules()
+        * 4.9  - Add live_migration_force_complete()
     '''
 
     VERSION_ALIASES = {
@@ -635,6 +636,13 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'live_migration', instance=instance,
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data, **args)
+
+    def live_migration_force_complete(self, ctxt, instance, migration_id):
+        version = '4.9'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        cctxt.cast(ctxt, 'live_migration_force_complete', instance=instance,
+                   migration_id=migration_id)
 
     def pause_instance(self, ctxt, instance):
         version = '4.0'

@@ -1127,6 +1127,12 @@ class MigrationNotFoundForInstance(MigrationNotFound):
                 "%(instance_id)s")
 
 
+class InvalidMigrationState(Invalid):
+    msg_fmt = _("Migration %(migration_id)s state of instance "
+                "%(instance_uuid)s is %(state)s. Cannot %(method)s while the "
+                "migration is in this state.")
+
+
 class ConsoleLogOutputException(NovaException):
     msg_fmt = _("Console log output could not be retrieved for instance "
                 "%(instance_id)s. Reason: %(reason)s")

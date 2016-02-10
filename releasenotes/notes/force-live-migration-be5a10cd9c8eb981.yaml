@@ -1,0 +1,4 @@
+---
+features:
+  - A new REST API to force live migration to complete has been added
+    in microversion 2.22.

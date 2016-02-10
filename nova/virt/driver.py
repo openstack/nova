@@ -860,6 +860,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def live_migration_force_complete(self, instance):
+        """Force live migration to complete
+
+        :param instance: Instance being live migrated
+
+        """
+        raise NotImplementedError()
+
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
                                                block_device_info,
