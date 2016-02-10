@@ -290,6 +290,40 @@ class OSType(Enum):
         return super(OSType, self).coerce(obj, attr, value)
 
 
+class ResourceClass(Enum):
+    """Classes of resources provided to consumers."""
+
+    VCPU = 'VCPU'
+    MEMORY_MB = 'MEMORY_MB'
+    DISK_GB = 'DISK_GB'
+    PCI_DEVICE = 'PCI_DEVICE'
+    SRIOV_NET_VF = 'SRIOV_NET_VF'
+    NUMA_SOCKET = 'NUMA_SOCKET'
+    NUMA_CORE = 'NUMA_CORE'
+    NUMA_THREAD = 'NUMA_THREAD'
+    NUMA_MEMORY_MB = 'NUMA_MEMORY_MB'
+    IPV4_ADDRESS = 'IPV4_ADDRESS'
+
+    # The ordering here is relevant. If you must add a value, only
+    # append.
+    ALL = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
+           NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
+
+    def __init__(self):
+        super(ResourceClass, self).__init__(
+            valid_values=ResourceClass.ALL)
+
+    @classmethod
+    def index(cls, value):
+        """Return an index into the Enum given a value."""
+        return cls.ALL.index(value)
+
+    @classmethod
+    def from_index(cls, index):
+        """Return the Enum value at a given index."""
+        return cls.ALL[index]
+
+
 class RNGModel(Enum):
 
     VIRTIO = "virtio"
@@ -765,6 +799,18 @@ class ImageSignatureKeyTypeField(BaseEnumField):
 
 class OSTypeField(BaseEnumField):
     AUTO_TYPE = OSType()
+
+
+class ResourceClassField(BaseEnumField):
+    AUTO_TYPE = ResourceClass()
+
+    def index(self, value):
+        """Return an index into the Enum given a value."""
+        return self._type.index(value)
+
+    def from_index(self, index):
+        """Return the Enum value at a given index."""
+        return self._type.from_index(index)
 
 
 class RNGModelField(BaseEnumField):
