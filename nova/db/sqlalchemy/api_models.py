@@ -60,7 +60,7 @@ class InstanceMapping(API_BASE):
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
-            nullable=False)
+            nullable=True)
     project_id = Column(String(255), nullable=False)
 
 
