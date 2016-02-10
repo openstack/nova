@@ -12,14 +12,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import oslo_config.cfg
 
 from nova.conductor import api as conductor_api
+import nova.conf
+
+CONF = nova.conf.CONF
 
 
 def API(*args, **kwargs):
     use_local = kwargs.pop('use_local', False)
-    if oslo_config.cfg.CONF.conductor.use_local or use_local:
+    if CONF.conductor.use_local or use_local:
         api = conductor_api.LocalAPI
     else:
         api = conductor_api.API
@@ -28,7 +30,7 @@ def API(*args, **kwargs):
 
 def ComputeTaskAPI(*args, **kwargs):
     use_local = kwargs.pop('use_local', False)
-    if oslo_config.cfg.CONF.conductor.use_local or use_local:
+    if CONF.conductor.use_local or use_local:
         api = conductor_api.LocalComputeTaskAPI
     else:
         api = conductor_api.ComputeTaskAPI

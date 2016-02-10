@@ -20,10 +20,11 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import base as ovo_base
 
+import nova.conf
 from nova.objects import base as objects_base
 from nova import rpc
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 rpcapi_cap_opt = cfg.StrOpt('conductor',
         help='Set a version cap for messages sent to conductor services')

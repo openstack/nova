@@ -18,11 +18,11 @@
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
 from nova.conductor import rpcapi as conductor_rpcapi
+import nova.conf
 from nova import config
 from nova import objects
 from nova.objects import base as objects_base
@@ -31,9 +31,8 @@ from nova import utils
 from nova import version
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('enabled_ssl_apis', 'nova.service')
-CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
 
 def main():

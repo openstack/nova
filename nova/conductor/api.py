@@ -14,7 +14,6 @@
 
 """Handles all requests to the conductor service."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_versionedobjects import base as ovo_base
@@ -22,33 +21,11 @@ from oslo_versionedobjects import base as ovo_base
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
+import nova.conf
 from nova.i18n import _LI, _LW
 from nova import utils
 
-conductor_opts = [
-    cfg.BoolOpt('use_local',
-                default=False,
-                help='DEPRECATED: Perform nova-conductor operations locally. '
-                     'This legacy mode was introduced to bridge a gap during '
-                     'the transition to the conductor service. It no longer '
-                     'represents a reasonable alternative for deployers. '
-                     'Removal may be as early as 14.0',
-                deprecated_for_removal=True),
-    cfg.StrOpt('topic',
-               default='conductor',
-               help='The topic on which conductor nodes listen'),
-    cfg.StrOpt('manager',
-               default='nova.conductor.manager.ConductorManager',
-               help='Full class name for the Manager for conductor'),
-    cfg.IntOpt('workers',
-               help='Number of workers for OpenStack Conductor service. '
-                    'The default will be the number of CPUs available.')
-]
-conductor_group = cfg.OptGroup(name='conductor',
-                               title='Conductor Options')
-CONF = cfg.CONF
-CONF.register_group(conductor_group)
-CONF.register_opts(conductor_opts, conductor_group)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 

@@ -30,7 +30,7 @@ from nova.conf import cert
 # from nova.conf import cinder
 # from nova.conf import cloudpipe
 from nova.conf import compute
-# from nova.conf import conductor
+from nova.conf import conductor
 # from nova.conf import configdrive
 # from nova.conf import console
 # from nova.conf import cors
@@ -90,7 +90,7 @@ cert.register_opts(CONF)
 # cinder.register_opts(CONF)
 # cloudpipe.register_opts(CONF)
 compute.register_opts(CONF)
-# conductor.register_opts(CONF)
+conductor.register_opts(CONF)
 # configdrive.register_opts(CONF)
 # console.register_opts(CONF)
 # cors.register_opts(CONF)

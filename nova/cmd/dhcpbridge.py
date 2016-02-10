@@ -30,6 +30,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import importutils
 
 from nova.conductor import rpcapi as conductor_rpcapi
+import nova.conf
 from nova import config
 from nova import context
 import nova.db.api
@@ -40,10 +41,9 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova import rpc
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
-CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 LOG = logging.getLogger(__name__)
 
 
