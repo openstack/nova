@@ -49,7 +49,7 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def _add_tenant(self):
         subs = {
             'tenant_id': 'fake_tenant',
-            'flavor_id': 10,
+            'flavor_id': '10',
         }
         response = self._do_post('flavors/10/action',
                                  'flavor-access-add-tenant-req',
@@ -59,7 +59,7 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def _create_flavor(self):
         subs = {
-            'flavor_id': 10,
+            'flavor_id': '10',
             'flavor_name': 'test_flavor'
         }
         response = self._do_post("flavors",
@@ -78,7 +78,7 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def test_flavor_access_list(self):
         self._create_flavor()
         self._add_tenant()
-        flavor_id = 10
+        flavor_id = '10'
         response = self._do_get('flavors/%s/os-flavor-access' % flavor_id)
         subs = {
             'flavor_id': flavor_id,
@@ -87,7 +87,7 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self._verify_response('flavor-access-list-resp', subs, response, 200)
 
     def test_flavor_access_show(self):
-        flavor_id = 1
+        flavor_id = '1'
         response = self._do_get('flavors/%s' % flavor_id)
         subs = {
             'flavor_id': flavor_id

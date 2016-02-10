@@ -49,7 +49,7 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def _create_flavor(self):
         """Create a flavor."""
         subs = {
-            'flavor_id': 10,
+            'flavor_id': '10',
             'flavor_name': "test_flavor"
         }
         response = self._do_post("flavors",

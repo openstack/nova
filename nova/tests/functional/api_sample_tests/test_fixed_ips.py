@@ -123,4 +123,4 @@ class FixedIpV24Test(FixedIpTest):
     scenarios = [('v2_4', {'api_major_version': 'v2.1'})]
 
     def test_get_fixed_ip(self):
-        self._test_get_fixed_ip(reserved=False)
+        self._test_get_fixed_ip(reserved='False')

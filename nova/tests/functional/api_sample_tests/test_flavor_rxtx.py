@@ -50,7 +50,7 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return f
 
     def test_flavor_rxtx_get(self):
-        flavor_id = 1
+        flavor_id = '1'
         response = self._do_get('flavors/%s' % flavor_id)
         subs = {
             'flavor_id': flavor_id,
@@ -64,7 +64,7 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_flavors_rxtx_create(self):
         subs = {
-            'flavor_id': 100,
+            'flavor_id': '100',
             'flavor_name': 'flavortest'
         }
         response = self._do_post('flavors',
