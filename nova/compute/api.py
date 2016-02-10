@@ -3329,6 +3329,13 @@ class API(base.Base):
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "evacuate")
 
+        try:
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+        except exception.RequestSpecNotFound:
+            # Some old instances can still have no RequestSpec object attached
+            # to them, we need to support the old way
+            request_spec = None
         return self.compute_task_api.rebuild_instance(context,
                        instance=instance,
                        new_pass=admin_password,
@@ -3339,7 +3346,9 @@ class API(base.Base):
                        bdms=None,
                        recreate=True,
                        on_shared_storage=on_shared_storage,
-                       host=host)
+                       host=host,
+                       request_spec=request_spec,
+                       )
 
     def get_migrations(self, context, filters):
         """Get all migrations for the given filters."""

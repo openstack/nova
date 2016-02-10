@@ -10140,22 +10140,44 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(services=True)
         self.assertIsNone(instance.task_state)
 
-        def fake_service_is_up(*args, **kwargs):
-            return False
+        ctxt = self.context.elevated()
+
+        fake_spec = objects.RequestSpec()
 
         def fake_rebuild_instance(*args, **kwargs):
             instance.host = kwargs['host']
             instance.save()
 
-        self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
-                fake_service_is_up)
-        self.stubs.Set(self.compute_api.compute_task_api, 'rebuild_instance',
-                fake_rebuild_instance)
-        self.compute_api.evacuate(self.context.elevated(),
-                                  instance,
-                                  host='fake_dest_host',
-                                  on_shared_storage=True,
-                                  admin_password=None)
+        @mock.patch.object(self.compute_api.compute_task_api,
+                           'rebuild_instance')
+        @mock.patch.object(objects.RequestSpec,
+                           'get_by_instance_uuid')
+        @mock.patch.object(self.compute_api.servicegroup_api, 'service_is_up')
+        def do_test(service_is_up, get_by_instance_uuid, rebuild_instance):
+            service_is_up.return_value = False
+            get_by_instance_uuid.return_value = fake_spec
+            rebuild_instance.side_effect = fake_rebuild_instance
+
+            self.compute_api.evacuate(ctxt,
+                                      instance,
+                                      host='fake_dest_host',
+                                      on_shared_storage=True,
+                                      admin_password=None)
+
+            rebuild_instance.assert_called_once_with(
+                ctxt,
+                instance=instance,
+                new_pass=None,
+                injected_files=None,
+                image_ref=None,
+                orig_image_ref=None,
+                orig_sys_metadata=None,
+                bdms=None,
+                recreate=True,
+                on_shared_storage=True,
+                request_spec=fake_spec,
+                host='fake_dest_host')
+        do_test()
 
         instance.refresh()
         self.assertEqual(instance.task_state, task_states.REBUILDING)

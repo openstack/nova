@@ -93,7 +93,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
-                host='testHost')
+                host='testHost', request_spec=mock.ANY)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate_find_host(self, rebuild_mock):
@@ -109,7 +109,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
-                host=None)
+                host=None, request_spec=mock.ANY)
 
 
 class EvacuateJsonTestV214(EvacuateJsonTest):
@@ -130,7 +130,7 @@ class EvacuateJsonTestV214(EvacuateJsonTest):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=None, preserve_ephemeral=mock.ANY,
-                host='testHost')
+                host='testHost', request_spec=mock.ANY)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate_find_host(self, rebuild_mock):
@@ -145,4 +145,4 @@ class EvacuateJsonTestV214(EvacuateJsonTest):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=None, preserve_ephemeral=mock.ANY,
-                host=None)
+                host=None, request_spec=mock.ANY)

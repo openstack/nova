@@ -312,13 +312,18 @@ class _BaseTaskTestCase(object):
                         'recreate': False,
                         'on_shared_storage': False,
                         'preserve_ephemeral': False,
-                        'host': 'compute-host'}
+                        'host': 'compute-host',
+                        'request_spec': None}
         if update_args:
             rebuild_args.update(update_args)
         compute_rebuild_args = copy.deepcopy(rebuild_args)
         compute_rebuild_args['migration'] = migration
         compute_rebuild_args['node'] = node
         compute_rebuild_args['limits'] = limits
+
+        # Args that are passed in to the method but don't get passed to RPC
+        compute_rebuild_args.pop('request_spec')
+
         return rebuild_args, compute_rebuild_args
 
     @mock.patch('nova.objects.Migration')
@@ -954,6 +959,53 @@ class _BaseTaskTestCase(object):
             rebuild_mock.assert_called_once_with(self.context,
                                instance=inst_obj,
                                **compute_args)
+
+    def test_rebuild_instance_with_request_spec(self):
+        inst_obj = self._create_fake_instance_obj()
+        inst_obj.host = 'noselect'
+        expected_host = 'thebesthost'
+        expected_node = 'thebestnode'
+        expected_limits = 'fake-limits'
+        request_spec = {}
+        filter_properties = {'ignore_hosts': [(inst_obj.host)]}
+        fake_spec = objects.RequestSpec(ignore_hosts=[])
+        augmented_spec = objects.RequestSpec(ignore_hosts=[inst_obj.host])
+        rebuild_args, compute_args = self._prepare_rebuild_args(
+            {'host': None, 'node': expected_node, 'limits': expected_limits,
+             'request_spec': fake_spec})
+        with test.nested(
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'rebuild_instance'),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
+            mock.patch.object(objects.RequestSpec, 'from_primitives',
+                              return_value=augmented_spec),
+            mock.patch.object(self.conductor_manager.scheduler_client,
+                              'select_destinations',
+                              return_value=[{'host': expected_host,
+                                             'nodename': expected_node,
+                                             'limits': expected_limits}]),
+            mock.patch.object(fake_spec, 'to_legacy_request_spec_dict',
+                       return_value=request_spec),
+            mock.patch.object(fake_spec, 'to_legacy_filter_properties_dict',
+                       return_value=filter_properties),
+        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, to_reqspec,
+              to_filtprops):
+            self.conductor_manager.rebuild_instance(context=self.context,
+                                            instance=inst_obj,
+                                            **rebuild_args)
+            to_reqspec.assert_called_once_with()
+            to_filtprops.assert_called_once_with()
+            fp_mock.assert_called_once_with(self.context, request_spec,
+                                            filter_properties)
+            select_dest_mock.assert_called_once_with(self.context,
+                                                     augmented_spec)
+            compute_args['host'] = expected_host
+            rebuild_mock.assert_called_once_with(self.context,
+                                            instance=inst_obj,
+                                            **compute_args)
+        self.assertEqual('compute.instance.rebuild.scheduled',
+                         fake_notifier.NOTIFICATIONS[0].event_type)
 
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
