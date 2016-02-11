@@ -98,7 +98,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.17: ComputeNode version 1.13
     # Version 1.18: ComputeNode version 1.14
     # Version 1.19: Added get_minimum_version()
-    VERSION = '1.19'
+    # Version 1.20: Added get_minimum_version_multi()
+    VERSION = '1.20'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -330,31 +331,45 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     @db.select_db_reader_mode
-    def _db_service_get_minimum_version(context, binary, use_slave=False):
-        return db.service_get_minimum_version(context, binary)
+    def _db_service_get_minimum_version(context, binaries, use_slave=False):
+        return db.service_get_minimum_version(context, binaries)
 
     @base.remotable_classmethod
-    def get_minimum_version(cls, context, binary, use_slave=False):
-        if not binary.startswith('nova-'):
+    def get_minimum_version_multi(cls, context, binaries, use_slave=False):
+        if not all(binary.startswith('nova-') for binary in binaries):
             LOG.warning(_LW('get_minimum_version called with likely-incorrect '
-                            'binary `%s\''), binary)
+                            'binaries `%s\''), ','.join(binaries))
             raise exception.ObjectActionError(action='get_minimum_version',
                                               reason='Invalid binary prefix')
 
-        if cls._SERVICE_VERSION_CACHING:
-            cached_version = cls._MIN_VERSION_CACHE.get(binary)
-            if cached_version:
-                return cached_version
-        version = cls._db_service_get_minimum_version(context, binary,
-                                                      use_slave=use_slave)
-        if version is None:
-            return 0
+        if (not cls._SERVICE_VERSION_CACHING or
+              any(binary not in cls._MIN_VERSION_CACHE
+                  for binary in binaries)):
+            min_versions = cls._db_service_get_minimum_version(
+                context, binaries, use_slave=use_slave)
+            if min_versions:
+                min_versions = {binary: version or 0
+                                for binary, version in
+                                min_versions.items()}
+                cls._MIN_VERSION_CACHE.update(min_versions)
+        else:
+            min_versions = {binary: cls._MIN_VERSION_CACHE[binary]
+                            for binary in binaries}
+
+        if min_versions:
+            version = min(min_versions.values())
+        else:
+            version = 0
         # NOTE(danms): Since our return value is not controlled by object
         # schema, be explicit here.
         version = int(version)
-        cls._MIN_VERSION_CACHE[binary] = version
 
         return version
+
+    @base.remotable_classmethod
+    def get_minimum_version(cls, context, binary, use_slave=False):
+        return cls.get_minimum_version_multi(context, [binary],
+                                             use_slave=use_slave)
 
 
 @base.NovaObjectRegistry.register

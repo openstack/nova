@@ -304,15 +304,15 @@ class _TestServiceObject(object):
         self.assertEqual(0,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
-        mock_get.assert_called_once_with(self.context, 'nova-compute')
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
     @mock.patch('nova.db.service_get_minimum_version')
     def test_get_minimum_version(self, mock_get):
-        mock_get.return_value = 123
+        mock_get.return_value = {'nova-compute': 123}
         self.assertEqual(123,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
-        mock_get.assert_called_once_with(self.context, 'nova-compute')
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
     @mock.patch('nova.db.service_get_minimum_version')
     @mock.patch('nova.objects.service.LOG')
@@ -331,7 +331,7 @@ class _TestServiceObject(object):
     @mock.patch('nova.db.service_get_minimum_version')
     def test_get_minimum_version_with_caching(self, mock_get):
         objects.Service.enable_min_version_cache()
-        mock_get.return_value = 123
+        mock_get.return_value = {'nova-compute': 123}
         self.assertEqual(123,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
@@ -340,25 +340,52 @@ class _TestServiceObject(object):
         self.assertEqual(123,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
-        mock_get.assert_called_once_with(self.context, 'nova-compute')
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
         objects.Service._SERVICE_VERSION_CACHING = False
         objects.Service.clear_min_version_cache()
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_min_version_multiple_with_old(self, mock_gmv):
+        mock_gmv.return_value = {'nova-api': None,
+                                 'nova-scheduler': 2,
+                                 'nova-conductor': 3}
+
+        binaries = ['nova-api', 'nova-api', 'nova-conductor',
+                    'nova-conductor', 'nova-api']
+        minimum = objects.Service.get_minimum_version_multi(self.context,
+                                                            binaries)
+        self.assertEqual(0, minimum)
+
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_min_version_multiple(self, mock_gmv):
+        mock_gmv.return_value = {'nova-api': 1,
+                                 'nova-scheduler': 2,
+                                 'nova-conductor': 3}
+
+        binaries = ['nova-api', 'nova-api', 'nova-conductor',
+                    'nova-conductor', 'nova-api']
+        minimum = objects.Service.get_minimum_version_multi(self.context,
+                                                            binaries)
+        self.assertEqual(1, minimum)
+
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_above_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=3):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_equal_to_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=2):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_below_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=1):
