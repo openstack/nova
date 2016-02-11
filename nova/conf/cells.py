@@ -170,25 +170,118 @@ Related options:
 """),
     cfg.FloatOpt('reserve_percent',
                  default=10.0,
-                 help='Percentage of cell capacity to hold in reserve. '
-                      'Affects both memory and disk utilization'),
+                 help="""
+Reserve percentage
+
+Percentage of cell capacity to hold in reserve, so the minimum
+amount of free resource is considered to be;
+  min_free = total * (reserve_percent / 100.0)
+This option affects both memory and disk utilization.
+The primary purpose of this reserve is to ensure some space is
+available for users who want to resize their instance to be larger.
+Note that currently once the capacity expands into this reserve
+space this option is ignored.
+
+Possible values:
+
+* Float percentage value
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.StrOpt('cell_type',
                default='compute',
                choices=('api', 'compute'),
-               help='Type of cell'),
+               help="""
+Type of cell
+
+When cells feature is enabled the hosts in the OpenStack Compute
+cloud are partitioned into groups. Cells are configured as a tree.
+The top-level cell's cell_type must be set to ``api``. All other
+cells are defined as a ``compute cell`` by default.
+
+Possible values:
+
+* api: Cell type of top-level cell.
+* compute: Cell type of all child cells. (Default)
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* compute_api_class: This option must be set to cells api driver
+  for the top-level cell (nova.compute.cells_api.ComputeCellsAPI)
+* quota_driver: Disable quota checking for the child cells.
+  (nova.quota.NoopQuotaDriver)
+"""),
     cfg.IntOpt("mute_child_interval",
                default=300,
-               help='Number of seconds after which a lack of capability and '
-                     'capacity updates signals the child cell is to be '
-                     'treated as a mute.'),
+               help="""
+Mute child interval
+
+Number of seconds after which a lack of capability and capacity
+update the child cell is to be treated as a mute cell. Then the
+child cell will be weighed as recommend highly that it be skipped.
+
+Possible values:
+
+* Time in seconds.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
     cfg.IntOpt('bandwidth_update_interval',
                 default=600,
-                help='Seconds between bandwidth updates for cells.'),
+                help="""
+Bandwidth update interval
+
+Seconds between bandwidth usage cache updates for cells.
+
+Possible values:
+
+* Time in seconds.
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
+"""),
     cfg.IntOpt('instance_update_sync_database_limit',
             default=100,
-            help='Number of instances to pull from the database at one '
-                 'time for a sync.  If there are more instances to update '
-                 'the results will be paged through'),
+            help="""
+Instance update sync database limit
+
+Number of instances to pull from the database at one time for
+a sync. If there are more instances to update the results will
+be paged through.
+
+Possible values:
+
+* Number of instances.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
 ]
 
 mute_weigher_opts = [
