@@ -425,6 +425,9 @@ MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
 MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
+# Libvirt version 1.2.17 is required for successfull block live migration
+# of vm booted from image with attached devices
+MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # libvirt discard feature
 MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
@@ -5510,18 +5513,27 @@ class LibvirtDriver(driver.ComputeDriver):
                                     block_device_info)
             if block_device_info:
                 bdm = block_device_info.get('block_device_mapping')
-                # NOTE(stpierre): if this instance has mapped volumes,
-                # we can't do a block migration, since that will
-                # result in volumes being copied from themselves to
-                # themselves, which is a recipe for disaster.
-                if bdm and len(bdm):
-                    LOG.error(_LE('Cannot block migrate instance %s with '
-                                  'mapped volumes'),
-                              instance.uuid, instance=instance)
-                    msg = (_('Cannot block migrate instance %s with mapped '
-                             'volumes') % instance.uuid)
+                # NOTE(pkoniszewski): libvirt from version 1.2.17 upwards
+                # supports selective block device migration. It means that it
+                # is possible to define subset of block devices to be copied
+                # during migration. If they are not specified - block devices
+                # won't be migrated. However, it does not work when live
+                # migration is tunnelled through libvirt.
+                if bdm and not self._host.has_min_version(
+                        MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
+                    # NOTE(stpierre): if this instance has mapped volumes,
+                    # we can't do a block migration, since that will result
+                    # in volumes being copied from themselves to themselves,
+                    # which is a recipe for disaster.
+                    ver = ".".join([str(x) for x in
+                                    MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION])
+                    msg = (_('Cannot block migrate instance %(uuid)s with'
+                             ' mapped volumes. Selective block device'
+                             ' migration feature requires libvirt version'
+                             ' %(libvirt_ver)s') %
+                           {'uuid': instance.uuid, 'libvirt_ver': ver})
+                    LOG.error(msg, instance=instance)
                     raise exception.MigrationPreCheckError(reason=msg)
-
         elif not (dest_check_data.is_shared_block_storage or
                   dest_check_data.is_shared_instance_path or
                   (booted_from_volume and not has_local_disk)):
@@ -5899,7 +5911,8 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.MigrationError(reason=msg)
 
     def _live_migration_operation(self, context, instance, dest,
-                                  block_migration, migrate_data, dom):
+                                  block_migration, migrate_data, dom,
+                                  device_names):
         """Invoke the live migration operation
 
         :param context: security context
@@ -5910,6 +5923,8 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_migration: if true, do block migration.
         :param migrate_data: a LibvirtLiveMigrateData object
         :param dom: the libvirt domain object
+        :param device_names: list of device names that are being migrated with
+            instance
 
         This method is intended to be run in a background thread and will
         block that thread until the migration is finished or failed.
@@ -5954,12 +5969,25 @@ class LibvirtDriver(driver.ComputeDriver):
                                                listen_addrs,
                                                serial_listen_addr)
                 try:
-                    dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
-                                      None,
-                                      new_xml_str,
-                                      migration_flags,
-                                      None,
-                                      CONF.libvirt.live_migration_bandwidth)
+                    if self._host.has_min_version(
+                            MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
+                        params = {
+                            'bandwidth': CONF.libvirt.live_migration_bandwidth,
+                            'destination_xml': new_xml_str,
+                            'migrate_disks': device_names,
+                        }
+                        dom.migrateToURI3(
+                            CONF.libvirt.live_migration_uri % dest,
+                            params,
+                            migration_flags)
+                    else:
+                        dom.migrateToURI2(
+                            CONF.libvirt.live_migration_uri % dest,
+                            None,
+                            new_xml_str,
+                            migration_flags,
+                            None,
+                            CONF.libvirt.live_migration_bandwidth)
                 except libvirt.libvirtError as ex:
                     # NOTE(mriedem): There is a bug in older versions of
                     # libvirt where the VIR_DOMAIN_XML_MIGRATABLE flag causes
@@ -6084,37 +6112,48 @@ class LibvirtDriver(driver.ComputeDriver):
         for i in range(steps + 1):
             yield (int(delay * i), int(offset + base ** i))
 
-    def _live_migration_copy_disk_paths(self, guest):
+    def _live_migration_copy_disk_paths(self, context, instance, guest):
         '''Get list of disks to copy during migration
 
+        :param context: security context
+        :param instance: the instance being migrated
         :param guest: the Guest instance being migrated
 
         Get the list of disks to copy during migration.
 
-        :returns: a list of local disk paths to copy
+        :returns: a list of local source paths and a list of device names to
+            copy
         '''
 
-        disks = []
+        disk_paths = []
+        device_names = []
+        block_devices = []
+
+        # TODO(pkoniszewski): Remove this if-statement when we bump min libvirt
+        # version to >= 1.2.17
+        if self._host.has_min_version(
+                MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
+            bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+            block_device_info = driver.get_block_device_info(instance,
+                                                             bdm_list)
+
+            block_device_mappings = driver.block_device_info_get_mapping(
+                block_device_info)
+            for bdm in block_device_mappings:
+                device_name = str(bdm['mount_device'].rsplit('/', 1)[1])
+                block_devices.append(device_name)
+
         for dev in guest.get_all_disks():
-            # TODO(berrange) This is following the current
-            # (stupid) default logic in libvirt for selecting
-            # which disks are copied. In the future, when we
-            # can use a libvirt which accepts a list of disks
-            # to copy, we will need to adjust this to use a
-            # different rule.
-            #
-            # Our future goal is that a disk needs to be copied
-            # if it is a non-cinder volume which is not backed
-            # by shared storage. eg it may be an LVM block dev,
-            # or a raw/qcow2 file on a local filesystem. We
-            # never want to copy disks on NFS, or RBD or any
-            # cinder volume
             if dev.readonly or dev.shareable:
                 continue
             if dev.source_type not in ["file", "block"]:
                 continue
-            disks.append(dev.source_path)
-        return disks
+            if dev.target_dev in block_devices:
+                continue
+            disk_paths.append(dev.source_path)
+            device_names.append(dev.target_dev)
+        return (disk_paths, device_names)
 
     def _live_migration_data_gb(self, instance, disk_paths):
         '''Calculate total amount of data to be transferred
@@ -6372,8 +6411,10 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = self._host.get_guest(instance)
 
         disk_paths = []
+        device_names = []
         if block_migration:
-            disk_paths = self._live_migration_copy_disk_paths(guest)
+            disk_paths, device_names = self._live_migration_copy_disk_paths(
+                context, instance, guest)
 
         # TODO(sahid): We are converting all calls from a
         # virDomain object to use nova.virt.libvirt.Guest.
@@ -6383,7 +6424,8 @@ class LibvirtDriver(driver.ComputeDriver):
         opthread = utils.spawn(self._live_migration_operation,
                                      context, instance, dest,
                                      block_migration,
-                                     migrate_data, dom)
+                                     migrate_data, dom,
+                                     device_names)
 
         finish_event = eventlet.event.Event()
 

@@ -592,6 +592,13 @@ class Domain(object):
                 error_code=VIR_ERR_INTERNAL_ERROR,
                 error_domain=VIR_FROM_QEMU)
 
+    def migrateToURI3(self, dconnuri, params, logical_sum):
+        raise make_libvirtError(
+                libvirtError,
+                "Migration always fails for fake libvirt!",
+                error_code=VIR_ERR_INTERNAL_ERROR,
+                error_domain=VIR_FROM_QEMU)
+
     def migrateSetMaxDowntime(self, downtime):
         pass
 
