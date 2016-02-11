@@ -302,7 +302,7 @@ class Image(object):
                               'base_size': base_size,
                               'size': size})
             raise exception.FlavorDiskSmallerThanImage(
-                flavor_size=base_size, image_size=size)
+                flavor_size=size, image_size=base_size)
 
     def get_disk_size(self, name):
         return disk.get_disk_size(name)
