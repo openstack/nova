@@ -16,7 +16,7 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LW, _LI
 
 libosinfo = None
 LOG = logging.getLogger(__name__)
@@ -35,19 +35,18 @@ class _OsInfoDatabase(object):
     def __init__(self):
 
         global libosinfo
-        if libosinfo is None:
-            try:
+        try:
+            if libosinfo is None:
                 libosinfo = importutils.import_module(
                                              'gi.repository.Libosinfo')
-            except ImportError as exp:
-                raise exception.NovaException(
-                                _("Cannot load Libosinfo: (%s)") % exp)
+        except ImportError as exp:
+            LOG.info(_LI("Cannot load Libosinfo: (%s)"), exp)
+        else:
+            self.loader = libosinfo.Loader()
+            self.loader.process_default_path()
 
-        self.loader = libosinfo.Loader()
-        self.loader.process_default_path()
-
-        self.db = self.loader.get_db()
-        self.oslist = self.db.get_os_list()
+            self.db = self.loader.get_db()
+            self.oslist = self.db.get_os_list()
 
     @classmethod
     def get_instance(cls):
@@ -69,6 +68,8 @@ class _OsInfoDatabase(object):
            :returns: The operation system object Libosinfo.Os
            :raise exception.OsInfoNotFound: If os hasn't been found
         """
+        if libosinfo is None:
+            return
         if not os_name:
             raise exception.OsInfoNotFound(os_name='Empty')
         fltr = libosinfo.Filter.new()
@@ -92,7 +93,7 @@ class OsInfo(object):
         try:
             return _OsInfoDatabase.get_instance().get_os(os_name)
         except exception.NovaException as e:
-            LOG.error(_LE("Cannot find OS information - Reason: (%s)"), e)
+            LOG.warning(_LW("Cannot find OS information - Reason: (%s)"), e)
 
     @property
     def network_model(self):

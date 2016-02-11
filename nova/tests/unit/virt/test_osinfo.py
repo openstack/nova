@@ -35,6 +35,9 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.osinfo.libosinfo',
             fakelibosinfo))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo._OsInfoDatabase._instance',
+            None))
 
     def test_get_os(self):
         os_info_db = osinfo._OsInfoDatabase.get_instance()
@@ -46,6 +49,22 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
         self.assertRaises(exception.OsInfoNotFound,
                           os_info_db.get_os,
                           'test33')
+
+    def test_module_load_failed(self):
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo.libosinfo',
+            None))
+        with test.nested(
+            mock.patch.object(osinfo.importutils, 'import_module',
+                        side_effect=ImportError('gi.repository.Libosinfo')),
+            mock.patch.object(osinfo.LOG, 'info')) as (mock_import, mock_log):
+
+            os_info_db = osinfo._OsInfoDatabase.get_instance()
+            self.assertIsNone(os_info_db.get_os('fedora22'))
+
+            os_info_db = osinfo._OsInfoDatabase.get_instance()
+            self.assertIsNone(os_info_db.get_os('fedora19'))
+            self.assertEqual(1, mock_log.call_count)
 
     def test_hardware_properties_from_osinfo(self):
         """Verifies that HardwareProperties attributes are being set
