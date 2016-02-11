@@ -53,12 +53,10 @@ nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.disk.mount.test_nbd.NbdTestCase
 nova.tests.unit.virt.ironic.test_driver.IronicDriverTestCase
 nova.tests.unit.virt.ironic.test_patcher.IronicDriverFieldsTestCase
-nova.tests.unit.virt.libvirt.storage.test_lvm.LvmTestCase
 nova.tests.unit.virt.libvirt.storage.test_rbd.RbdTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtConnTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtDriverTestCase
 nova.tests.unit.virt.libvirt.test_driver.LibvirtVolumeSnapshotTestCase
-nova.tests.unit.virt.libvirt.test_fakelibvirt.FakeLibvirtTests.test_numa_topology_generation
 nova.tests.unit.virt.libvirt.test_firewall.IptablesFirewallTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.EncryptedLvmTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.LvmTestCase
@@ -66,7 +64,6 @@ nova.tests.unit.virt.libvirt.test_imagebackend.FlatTestCase
 nova.tests.unit.virt.libvirt.test_imagebackend.RbdTestCase
 nova.tests.unit.virt.libvirt.test_imagecache.ImageCacheManagerTestCase
 nova.tests.unit.virt.libvirt.test_imagecache.VerifyChecksumTestCase
-nova.tests.unit.virt.libvirt.test_utils.LibvirtUtilsTestCase
 nova.tests.unit.virt.libvirt.test_vif.LibvirtVifTestCase
 nova.tests.unit.virt.test_hardware.CPUPinningCellTestCase
 nova.tests.unit.virt.test_hardware.CPUPinningTestCase
