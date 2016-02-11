@@ -25,7 +25,7 @@ from oslo_log import log as logging
 
 from nova.compute import task_states
 from nova import exception
-from nova.i18n import _LW
+from nova.i18n import _LE
 from nova.image import glance
 from nova import utils
 from nova.virt.hyperv import pathutils
@@ -129,10 +129,9 @@ class SnapshotOps(object):
             try:
                 LOG.debug("Removing snapshot %s", image_id)
                 self._vmutils.remove_vm_snapshot(snapshot_path)
-            except Exception as ex:
-                LOG.exception(ex)
-                LOG.warning(_LW('Failed to remove snapshot for VM %s'),
-                            instance_name)
+            except Exception:
+                LOG.exception(_LE('Failed to remove snapshot for VM %s'),
+                              instance_name, instance=instance)
             if export_dir:
                 LOG.debug('Removing directory: %s', export_dir)
                 self._pathutils.rmtree(export_dir)
