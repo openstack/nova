@@ -819,6 +819,20 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                         'ix_pci_devices_compute_node_id_parent_addr_deleted',
                         ['compute_node_id', 'parent_addr', 'deleted'])
 
+    def _check_314(self, engine, data):
+        self.assertColumnExists(engine, 'inventories', 'resource_class_id')
+        self.assertColumnExists(engine, 'allocations', 'resource_class_id')
+
+        self.assertColumnExists(engine, 'resource_providers', 'id')
+        self.assertColumnExists(engine, 'resource_providers', 'uuid')
+
+        self.assertColumnExists(engine, 'compute_nodes', 'uuid')
+        self.assertColumnExists(engine, 'shadow_compute_nodes', 'uuid')
+
+        self.assertIndexMembers(engine, 'allocations',
+                        'allocations_resource_provider_class_id_idx',
+                        ['resource_provider_id', 'resource_class_id'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
