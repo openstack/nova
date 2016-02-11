@@ -3116,6 +3116,24 @@ class ServersControllerCreateTest(test.TestCase):
         test_group = objects.InstanceGroup.get_by_uuid(ctxt, test_group.uuid)
         self.assertIn(server['id'], test_group.members)
 
+    def test_create_instance_with_group_hint_group_not_found(self):
+        def fake_instance_destroy(context, uuid, constraint):
+            return fakes.stub_instance(1)
+
+        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
+        self.body['os:scheduler_hints'] = {
+            'group': '5b674f73-c8cf-40ef-9965-3b6fe4b304b1'}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_instance_with_group_hint_wrong_uuid_format(self):
+        self.body['os:scheduler_hints'] = {
+            'group': 'non-uuid'}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
     def test_create_instance_with_neutronv2_port_in_use(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'

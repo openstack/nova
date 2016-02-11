@@ -689,7 +689,8 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyCPUOutOfRange,
                 exception.ImageNUMATopologyCPUDuplicates,
                 exception.ImageNUMATopologyCPUsUnassigned,
-                exception.ImageNUMATopologyMemoryOutOfRange) as error:
+                exception.ImageNUMATopologyMemoryOutOfRange,
+                exception.InstanceGroupNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
