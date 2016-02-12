@@ -13,18 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova.scheduler import filters
 from nova.scheduler import utils
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('weight_setting',
-                'nova.scheduler.weights.metrics',
-                group='metrics')
+CONF = nova.conf.CONF
 
 
 class MetricsFilter(filters.BaseHostFilter):

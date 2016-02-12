@@ -273,8 +273,6 @@ CONF.import_opt('html5_proxy_base_url', 'nova.rdp', group='rdp')
 CONF.import_opt('enabled', 'nova.mks', group='mks')
 CONF.import_opt('mksproxy_base_url', 'nova.mks', group='mks')
 CONF.import_opt('destroy_after_evacuate', 'nova.utils', group='workarounds')
-CONF.import_opt('scheduler_tracks_instance_changes',
-                'nova.scheduler.host_manager')
 
 LOG = logging.getLogger(__name__)
 
