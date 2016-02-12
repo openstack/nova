@@ -9122,7 +9122,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'numa_node': 1,
                 'dev_type': fields.PciDeviceType.SRIOV_VF,
                 'dev_id': 'pci_0000:0f:08.7',
-                'extra_info': None,
+                'extra_info': '{}',
                 'label': 'label_8086_1520',
                 'status': fields.PciDeviceStatus.AVAILABLE,
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
@@ -9137,7 +9137,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'numa_node': 0,
                 'dev_type': fields.PciDeviceType.SRIOV_VF,
                 'dev_id': 'pci_0000:0f:08.7',
-                'extra_info': None,
+                'extra_info': '{}',
                 'label': 'label_8086_1520',
                 'status': fields.PciDeviceStatus.AVAILABLE,
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
@@ -9277,6 +9277,56 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.admin_context,
                           v1['compute_node_id'],
                           v1['address'])
+
+    def _create_fake_pci_devs_old_format(self):
+        v1, v2 = self._get_fake_pci_devs()
+
+        for v in (v1, v2):
+            v['parent_addr'] = None
+            v['extra_info'] = jsonutils.dumps(
+                {'phys_function': 'fake-phys-func'})
+
+            db.pci_device_update(self.admin_context, v['compute_node_id'],
+                                 v['address'], v)
+
+    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
+                       return_value=False)
+    def test_pcidevice_online_mig_not_ready(self, mock_should_migrate):
+        self._create_fake_pci_devs_old_format()
+
+        found, done = db.pcidevice_online_data_migration(self.admin_context,
+                                                         None)
+        self.assertEqual(0, found)
+        self.assertEqual(0, done)
+
+    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
+                       return_value=True)
+    def test_pcidevice_online_mig_data_migrated_limit(self,
+                                                      mock_should_migrate):
+        self._create_fake_pci_devs_old_format()
+
+        found, done = db.pcidevice_online_data_migration(self.admin_context, 1)
+        self.assertEqual(1, found)
+        self.assertEqual(1, done)
+
+    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
+                       return_value=True)
+    def test_pcidevice_online_mig(self, mock_should_migrate):
+        self._create_fake_pci_devs_old_format()
+
+        found, done = db.pcidevice_online_data_migration(self.admin_context,
+                                                         50)
+        self.assertEqual(2, found)
+        self.assertEqual(2, done)
+        results = db.pci_device_get_all_by_node(self.admin_context,
+                                                self.compute_node['id'])
+        for result in results:
+            self.assertEqual('fake-phys-func', result['parent_addr'])
+
+        found, done = db.pcidevice_online_data_migration(self.admin_context,
+                                                         50)
+        self.assertEqual(0, found)
+        self.assertEqual(0, done)
 
 
 class RetryOnDeadlockTestCase(test.TestCase):

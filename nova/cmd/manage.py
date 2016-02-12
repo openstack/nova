@@ -923,7 +923,9 @@ class HostCommands(object):
 class DbCommands(object):
     """Class for managing the main database."""
 
-    online_migrations = ()
+    online_migrations = (
+        db.pcidevice_online_data_migration,
+    )
 
     def __init__(self):
         pass
