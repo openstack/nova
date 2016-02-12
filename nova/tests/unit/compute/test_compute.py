@@ -254,12 +254,6 @@ class BaseTestCase(test.TestCase):
                        fake_allocate_for_instance)
         self.compute_api = compute.API()
 
-        def fake_spec_create(*args, **kwargs):
-            pass
-
-        # Tests in this module do not depend on this running.
-        self.stub_out('nova.objects.RequestSpec.create', fake_spec_create)
-
         # Just to make long lines short
         self.rt = self.compute._get_resource_tracker(NODENAME)
 
