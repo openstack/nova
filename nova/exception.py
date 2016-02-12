@@ -843,6 +843,12 @@ class PortNotUsable(Invalid):
     msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s.")
 
 
+class PortNotUsableDNS(Invalid):
+    msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s. "
+                "Value %(value)s assigned to dns_name attribute does not "
+                "match instance's hostname %(hostname)s")
+
+
 class PortNotFree(Invalid):
     msg_fmt = _("No free port available for instance %(instance)s.")
 

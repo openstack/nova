@@ -378,6 +378,8 @@ class API(base_api.NetworkAPI):
             port's MAC address is not in that set.
         :raises nova.exception.PortInUse: If a requested port is already
             attached to another instance.
+        :raises nova.exception.PortNotUsableDNS: If a requested port has a
+            value assigned to its dns_name attribute.
         """
 
         available_macs = None
@@ -407,6 +409,15 @@ class API(base_api.NetworkAPI):
                     # instance.
                     if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
+
+                    # Make sure the user didn't assign a value to the port's
+                    # dns_name attribute.
+                    if port.get('dns_name'):
+                        if port['dns_name'] != instance.hostname:
+                            raise exception.PortNotUsableDNS(
+                                port_id=request.port_id,
+                                instance=instance.uuid, value=port['dns_name'],
+                                hostname=instance.hostname)
 
                     # Make sure the port is usable
                     if (port.get('binding:vif_type') ==
@@ -626,7 +637,8 @@ class API(base_api.NetworkAPI):
             try:
                 self._populate_neutron_extension_values(
                     context, instance, request.pci_request_id, port_req_body,
-                    neutron=neutron, bind_host_id=bind_host_id)
+                    network=network, neutron=neutron,
+                    bind_host_id=bind_host_id)
                 if request.port_id:
                     port = ports[request.port_id]
                     port_client.update_port(port['id'], port_req_body)
@@ -639,6 +651,9 @@ class API(base_api.NetworkAPI):
                             security_group_ids, available_macs, dhcp_opts)
                     created_port_ids.append(created_port)
                     ports_in_requested_order.append(created_port)
+                self._update_port_dns_name(context, instance, network,
+                                           ports_in_requested_order[-1],
+                                           neutron)
             except Exception:
                 with excutils.save_and_reraise_exception():
                     self._unbind_ports(context,
@@ -699,7 +714,8 @@ class API(base_api.NetworkAPI):
 
     def _populate_neutron_extension_values(self, context, instance,
                                            pci_request_id, port_req_body,
-                                           neutron=None, bind_host_id=None):
+                                           network=None, neutron=None,
+                                           bind_host_id=None):
         """Populate neutron extension values for the instance.
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
@@ -709,11 +725,53 @@ class API(base_api.NetworkAPI):
             flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
-        if self._has_port_binding_extension(context, neutron=neutron):
+        has_port_binding_extension = (
+            self._has_port_binding_extension(context, neutron=neutron))
+        if has_port_binding_extension:
             port_req_body['port']['binding:host_id'] = bind_host_id
             self._populate_neutron_binding_profile(instance,
                                                    pci_request_id,
                                                    port_req_body)
+        if constants.DNS_INTEGRATION in self.extensions:
+            # If the DNS integration extension is enabled in Neutron, most
+            # ports will get their dns_name attribute set in the port create or
+            # update requests in allocate_for_instance. So we just add the
+            # dns_name attribute to the payload of those requests. The
+            # exception is when the port binding extension is enabled in
+            # Neutron and the port is on a network that has a non-blank
+            # dns_domain attribute. This case requires to be processed by
+            # method _update_port_dns_name
+            if (not has_port_binding_extension
+                or not network.get('dns_domain')):
+                port_req_body['port']['dns_name'] = instance.hostname
+
+    def _update_port_dns_name(self, context, instance, network, port_id,
+                              neutron):
+        """Update an instance port dns_name attribute with instance.hostname.
+
+        The dns_name attribute of a port on a network with a non-blank
+        dns_domain attribute will be sent to the external DNS service
+        (Designate) if DNS integration is enabled in Neutron. This requires the
+        assignment of the dns_name to the port to be done with a Neutron client
+        using the user's context. allocate_for_instance uses a port with admin
+        context if the port binding extensions is enabled in Neutron. In this
+        case, we assign in this method the dns_name attribute to the port with
+        an additional update request. Only a very small fraction of ports will
+        require this additional update request.
+        """
+        if (constants.DNS_INTEGRATION in self.extensions and
+            self._has_port_binding_extension(context) and
+            network.get('dns_domain')):
+            try:
+                port_req_body = {'port': {'dns_name': instance.hostname}}
+                neutron.update_port(port_id, port_req_body)
+            except neutron_client_exc.BadRequest:
+                LOG.warning(_LW('Neutron error: Instance hostname '
+                                '%(hostname)s is not a valid DNS name'),
+                            {'hostname': instance.hostname}, instance=instance)
+                msg = (_('Instance hostname %(hostname)s is not a valid DNS '
+                         'name') % {'hostname': instance.hostname})
+                raise exception.InvalidInput(reason=msg)
 
     def _delete_ports(self, neutron, instance, ports, raise_if_fail=False):
         exceptions = []

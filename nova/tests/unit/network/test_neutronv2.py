@@ -511,7 +511,8 @@ class TestNeutronv2Base(test.TestCase):
             if not has_portbinding:
                 api._populate_neutron_extension_values(mox.IgnoreArg(),
                     self.instance, mox.IgnoreArg(),
-                    mox.IgnoreArg(), neutron=self.moxed_client,
+                    mox.IgnoreArg(), network=network,
+                    neutron=self.moxed_client,
                     bind_host_id=None).AndReturn(None)
             else:
                 # since _populate_neutron_extension_values() will call
@@ -1140,7 +1141,7 @@ class TestNeutronv2(TestNeutronv2Base):
             port = {'id': 'portid_' + network['id']}
 
             api._populate_neutron_extension_values(self.context,
-                self.instance, None, binding_port_req_body,
+                self.instance, None, binding_port_req_body, network=network,
                 neutron=self.moxed_client, bind_host_id=None).AndReturn(None)
             if index == 0:
                 self.moxed_client.create_port(
@@ -1195,7 +1196,8 @@ class TestNeutronv2(TestNeutronv2Base):
         }
         api._populate_neutron_extension_values(self.context,
             self.instance, None, binding_port_req_body,
-            neutron=self.moxed_client, bind_host_id=None).AndReturn(None)
+            network=self.nets2[0], neutron=self.moxed_client,
+            bind_host_id=None).AndReturn(None)
         self.moxed_client.create_port(
             MyComparator(port_req_body)).AndRaise(
                 Exception("fail to create port"))
