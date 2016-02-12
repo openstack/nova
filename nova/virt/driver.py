@@ -22,46 +22,15 @@ Driver base-classes:
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
+import nova.conf
 from nova.i18n import _, _LE, _LI
 from nova import utils
 from nova.virt import event as virtevent
 
-driver_opts = [
-    cfg.StrOpt('compute_driver',
-               help='Driver to use for controlling virtualization. Options '
-                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
-                    'fake.FakeDriver, ironic.IronicDriver, '
-                    'vmwareapi.VMwareVCDriver, hyperv.HyperVDriver'),
-    cfg.StrOpt('default_ephemeral_format',
-               help='The default format an ephemeral_volume will be '
-                    'formatted with on creation.'),
-    cfg.StrOpt('preallocate_images',
-               default='none',
-               choices=('none', 'space'),
-               help='VM image preallocation mode: '
-                    '"none" => no storage provisioning is done up front, '
-                    '"space" => storage is fully allocated at instance start'),
-    cfg.BoolOpt('use_cow_images',
-                default=True,
-                help='Whether to use cow images'),
-    cfg.BoolOpt('vif_plugging_is_fatal',
-                default=True,
-                help="Fail instance boot if vif plugging fails"),
-    cfg.IntOpt('vif_plugging_timeout',
-               default=300,
-               help='Number of seconds to wait for neutron vif plugging '
-                    'events to arrive before continuing or failing (see '
-                    'vif_plugging_is_fatal). If this is set to zero and '
-                    'vif_plugging_is_fatal is False, events should not '
-                    'be expected to arrive at all.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(driver_opts)
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 

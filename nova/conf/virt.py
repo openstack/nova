@@ -37,8 +37,52 @@ Related options:
 
 * None""")
 
+compute_driver = cfg.StrOpt(
+    'compute_driver',
+    help='Driver to use for controlling virtualization. Options '
+         'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
+         'fake.FakeDriver, ironic.IronicDriver, '
+         'vmwareapi.VMwareVCDriver, hyperv.HyperVDriver')
 
-ALL_OPTS = [vcpu_pin_set]
+default_ephemeral_format = cfg.StrOpt(
+    'default_ephemeral_format',
+    help='The default format an ephemeral_volume will be '
+         'formatted with on creation.')
+
+preallocate_images = cfg.StrOpt(
+    'preallocate_images',
+    default='none',
+    choices=('none', 'space'),
+    help='VM image preallocation mode: '
+         '"none" => no storage provisioning is done up front, '
+         '"space" => storage is fully allocated at instance start')
+
+use_cow_images = cfg.BoolOpt(
+    'use_cow_images',
+    default=True,
+    help='Whether to use cow images')
+
+vif_plugging_is_fatal = cfg.BoolOpt(
+    'vif_plugging_is_fatal',
+    default=True,
+    help='Fail instance boot if vif plugging fails')
+
+vif_plugging_timeout = cfg.IntOpt(
+    'vif_plugging_timeout',
+    default=300,
+    help='Number of seconds to wait for neutron vif plugging '
+         'events to arrive before continuing or failing (see '
+         'vif_plugging_is_fatal). If this is set to zero and '
+         'vif_plugging_is_fatal is False, events should not '
+         'be expected to arrive at all.')
+
+ALL_OPTS = [vcpu_pin_set,
+            compute_driver,
+            default_ephemeral_format,
+            preallocate_images,
+            use_cow_images,
+            vif_plugging_is_fatal,
+            vif_plugging_timeout]
 
 
 def register_opts(conf):
@@ -47,4 +91,4 @@ def register_opts(conf):
 
 def list_opts():
     # TODO(sfinucan): This should be moved to a virt or hardware group
-    return ('DEFAULT', ALL_OPTS)
+    return {'DEFAULT': ALL_OPTS}

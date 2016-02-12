@@ -20,12 +20,12 @@
 Helper classes for Ironic HTTP PATCH creation.
 """
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
-CONF = cfg.CONF
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
+import nova.conf
+
+CONF = nova.conf.CONF
 
 
 def create(node):

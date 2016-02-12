@@ -16,13 +16,13 @@
 
 import datetime
 
-from oslo_config import cfg
 from oslo_db.sqlalchemy import enginefacade
 from oslo_utils import timeutils
 from six.moves import range
 
 from nova import compute
 from nova.compute import flavors
+import nova.conf
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqa_api
@@ -32,8 +32,7 @@ from nova import quota
 from nova import test
 import nova.tests.unit.image.fake
 
-CONF = cfg.CONF
-CONF.import_opt('compute_driver', 'nova.virt.driver')
+CONF = nova.conf.CONF
 
 
 class QuotaIntegrationTestCase(test.TestCase):

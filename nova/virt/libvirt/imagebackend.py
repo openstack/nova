@@ -29,6 +29,7 @@ from oslo_utils import strutils
 from oslo_utils import units
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE, _LI, _LW
@@ -70,10 +71,9 @@ __imagebackend_opts = [
                     ' format)'),
         ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(__imagebackend_opts, 'libvirt')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
-CONF.import_opt('preallocate_images', 'nova.virt.driver')
 CONF.import_opt('enabled', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
 CONF.import_opt('cipher', 'nova.compute.api',

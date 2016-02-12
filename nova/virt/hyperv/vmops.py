@@ -37,6 +37,7 @@ from oslo_utils import uuidutils
 import six
 
 from nova.api.metadata import base as instance_metadata
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
 from nova import utils
@@ -86,9 +87,8 @@ hyperv_opts = [
                     ' if instance does not shutdown within this window.'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('network_api_class', 'nova.network')
 
 SHUTDOWN_TIME_INCREMENT = 5

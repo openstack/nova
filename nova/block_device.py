@@ -15,18 +15,17 @@
 
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
 from nova.virt import driver
 
-CONF = cfg.CONF
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
