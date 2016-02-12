@@ -1353,8 +1353,9 @@ class API(base.Base):
 
         instance.system_metadata.update(system_meta)
 
-        self.security_group_api.populate_security_groups(instance,
-                                                         security_groups)
+        pop_sec_groups = self.security_group_api.populate_security_groups
+        instance.security_groups = pop_sec_groups(security_groups)
+
         return instance
 
     # NOTE(bcwaldon): No policy check since this is only used by scheduler and
@@ -4279,9 +4280,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         groups = objects.SecurityGroupList.get_by_instance(context, instance)
         return [{'name': group.name} for group in groups]
 
-    def populate_security_groups(self, instance, security_groups):
+    def populate_security_groups(self, security_groups):
         if not security_groups:
-            # Make sure it's an empty list and not None
-            security_groups = []
-        instance.security_groups = security_group_obj.make_secgroup_list(
-            security_groups)
+            # Make sure it's an empty SecurityGroupList and not None
+            return objects.SecurityGroupList()
+        return security_group_obj.make_secgroup_list(security_groups)

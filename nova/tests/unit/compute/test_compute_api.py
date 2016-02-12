@@ -3367,3 +3367,9 @@ class SecurityGroupAPITest(test.NoDBTestCase):
                          sorted(names, key=str))
         self.assertEqual(1, mock_get.call_count)
         self.assertEqual(uuids.instance, mock_get.call_args_list[0][0][1].uuid)
+
+    @mock.patch('nova.objects.security_group.make_secgroup_list')
+    def test_populate_security_groups(self, mock_msl):
+        r = self.secgroup_api.populate_security_groups([mock.sentinel.group])
+        mock_msl.assert_called_once_with([mock.sentinel.group])
+        self.assertEqual(r, mock_msl.return_value)

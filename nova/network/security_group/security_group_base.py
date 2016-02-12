@@ -173,7 +173,7 @@ class SecurityGroupBase(object):
         """
         pass
 
-    def populate_security_groups(self, instance, security_groups):
+    def populate_security_groups(self, security_groups):
         """Called when populating the database for an instances
         security groups.
         """
