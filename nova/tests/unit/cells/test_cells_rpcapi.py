@@ -16,17 +16,16 @@
 Tests For Cells RPCAPI
 """
 
-from oslo_config import cfg
 import six
 
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 
-CONF = cfg.CONF
-CONF.import_opt('topic', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
 class CellsAPITestCase(test.NoDBTestCase):

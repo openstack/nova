@@ -20,7 +20,6 @@ import inspect
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 from oslo_utils import timeutils
 
 from nova import block_device
@@ -30,6 +29,7 @@ from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -43,7 +43,7 @@ from nova.tests import uuidsentinel as uuids
 
 
 ORIG_COMPUTE_API = None
-cfg.CONF.import_opt('enable', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
 def stub_call_to_cells(context, instance, method, *args, **kwargs):

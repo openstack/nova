@@ -29,6 +29,7 @@ from webob import exc
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -49,13 +50,11 @@ osapi_opts = [
                help='Base URL that will be presented to users in links '
                     'to glance resources'),
 ]
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(osapi_opts)
 
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
-
-CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 
 _STATE_MAP = {

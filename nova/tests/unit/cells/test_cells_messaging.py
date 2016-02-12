@@ -21,7 +21,6 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 import oslo_messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -32,6 +31,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -44,8 +44,7 @@ from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
 class CellsMessageClassesTestCase(test.NoDBTestCase):

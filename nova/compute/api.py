@@ -89,7 +89,6 @@ wrap_exception = functools.partial(exception.wrap_exception,
 
 CONF = nova.conf.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 MAX_USERDATA_SIZE = 65535
 RO_SECURITY_GROUPS = ['default']

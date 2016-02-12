@@ -18,13 +18,13 @@ Tests For CellsScheduler
 import copy
 import time
 
-from oslo_config import cfg
 from oslo_utils import uuidutils
 
 from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -35,12 +35,7 @@ from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('scheduler_retries', 'nova.cells.scheduler', group='cells')
-CONF.import_opt('scheduler_filter_classes', 'nova.cells.scheduler',
-                group='cells')
-CONF.import_opt('scheduler_weight_classes', 'nova.cells.scheduler',
-                group='cells')
+CONF = nova.conf.CONF
 
 
 class FakeFilterClass1(filters.BaseCellFilter):

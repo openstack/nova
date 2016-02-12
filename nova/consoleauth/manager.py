@@ -26,6 +26,7 @@ from oslo_serialization import jsonutils
 from nova import cache_utils
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova.i18n import _LI, _LW
 from nova import manager
 from nova import objects
@@ -39,9 +40,8 @@ consoleauth_opts = [
                help='How many seconds before deleting tokens')
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(consoleauth_opts)
-CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 
 class ConsoleAuthManager(manager.Manager):

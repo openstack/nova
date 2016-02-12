@@ -16,19 +16,17 @@
 Fakes For Cells tests.
 """
 
-from oslo_config import cfg
-
 from nova.cells import driver
 from nova.cells import manager as cells_manager
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
+import nova.conf
 import nova.db
 from nova.db import base
 from nova import exception
 from nova import objects
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
 # Fake Cell Hierarchy
