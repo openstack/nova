@@ -135,9 +135,9 @@ main_context_manager = enginefacade.transaction_context()
 api_context_manager = enginefacade.transaction_context()
 
 
-def _get_db_conf(conf_group):
+def _get_db_conf(conf_group, connection=None):
     kw = dict(
-        connection=conf_group.connection,
+        connection=connection or conf_group.connection,
         slave_connection=conf_group.slave_connection,
         sqlite_fk=False,
         __autocommit=True,
@@ -155,14 +155,45 @@ def _get_db_conf(conf_group):
     return kw
 
 
+def _context_manager_from_context(context):
+    if context:
+        try:
+            return context.db_connection
+        except AttributeError:
+            pass
+
+
 def configure(conf):
     main_context_manager.configure(**_get_db_conf(conf.database))
     api_context_manager.configure(**_get_db_conf(conf.api_database))
 
 
-def get_engine(use_slave=False):
-    return main_context_manager.get_legacy_facade().get_engine(
-        use_slave=use_slave)
+def create_context_manager(connection=None):
+    """Create a database context manager object.
+
+    : param connection: The database connection string
+    """
+    ctxt_mgr = enginefacade.transaction_context()
+    ctxt_mgr.configure(**_get_db_conf(CONF.database, connection=connection))
+    return ctxt_mgr
+
+
+def get_context_manager(context):
+    """Get a database context manager object.
+
+    :param context: The request context that can contain a context manager
+    """
+    return _context_manager_from_context(context) or main_context_manager
+
+
+def get_engine(use_slave=False, context=None):
+    """Get a database engine object.
+
+    :param use_slave: Whether to use the slave connection
+    :param context: The request context that can contain a context manager
+    """
+    ctxt_mgr = _context_manager_from_context(context) or main_context_manager
+    return ctxt_mgr.get_legacy_facade().get_engine(use_slave=use_slave)
 
 
 def get_api_engine():
