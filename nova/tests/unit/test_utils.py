@@ -127,6 +127,14 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         hostname = "a" * 64
         self.assertEqual(63, len(utils.sanitize_hostname(hostname)))
 
+    def test_hostname_truncated_no_hyphen(self):
+        hostname = "a" * 62
+        hostname = hostname + '-' + 'a'
+        res = utils.sanitize_hostname(hostname)
+        # we trim to 63 and then trim the trailing dash
+        self.assertEqual(62, len(res))
+        self.assertFalse(res.endswith('-'), 'The hostname ends with a -')
+
     def test_generate_password(self):
         password = utils.generate_password()
         self.assertTrue([c for c in password if c in '0123456789'])

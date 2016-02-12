@@ -802,6 +802,7 @@ def sanitize_hostname(hostname, default_name=None):
         if six.PY3:
             hostname = hostname.decode('latin-1')
 
+    hostname = truncate_hostname(hostname)
     hostname = re.sub('[ _]', '-', hostname)
     hostname = re.sub('[^\w.-]+', '', hostname)
     hostname = hostname.lower()
@@ -810,8 +811,7 @@ def sanitize_hostname(hostname, default_name=None):
     # empty hostname
     if hostname == "" and default_name is not None:
         return truncate_hostname(default_name)
-
-    return truncate_hostname(hostname)
+    return hostname
 
 
 @contextlib.contextmanager
