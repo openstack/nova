@@ -584,6 +584,11 @@ class API(base_api.NetworkAPI):
         # pci_request_id=None):
         if (not requested_networks
             or requested_networks.is_single_unspecified):
+            # If no networks were requested and none are available, consider
+            # it a bad request.
+            if not nets:
+                raise exception.InterfaceAttachFailedNoNetwork(
+                    project_id=instance.project_id)
             # bug/1267723 - if no network is requested and more
             # than one is available then raise NetworkAmbiguous Exception
             if len(nets) > 1:

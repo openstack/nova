@@ -3568,6 +3568,30 @@ class TestNeutronv2WithMock(test.TestCase):
                                             mock.ANY,
                                             mock.ANY)
 
+    @mock.patch('nova.network.neutronv2.api.API._process_requested_networks')
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
+    @mock.patch('nova.network.neutronv2.api.API._get_available_networks')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_allocate_port_for_instance_no_networks(self,
+                                                    mock_getclient,
+                                                    mock_avail_nets,
+                                                    mock_has_pbe,
+                                                    mock_process_request_net):
+        """Tests that if no networks are requested and no networks are
+        available, we fail with InterfaceAttachFailedNoNetwork.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_has_pbe.return_value = False
+        mock_process_request_net.return_value = ({}, [], [], None)
+        mock_avail_nets.return_value = []
+        api = neutronapi.API()
+        ex = self.assertRaises(exception.InterfaceAttachFailedNoNetwork,
+                               api.allocate_port_for_instance,
+                               self.context, instance, port_id=None)
+        self.assertEqual(
+            "No specific network was requested and none are available for "
+            "project 'fake-project'.", six.text_type(ex))
+
     @mock.patch('nova.objects.network_request.utils')
     @mock.patch('nova.network.neutronv2.api.LOG')
     @mock.patch('nova.network.neutronv2.api.base_api')

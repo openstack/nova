@@ -124,6 +124,7 @@ class InterfaceAttachmentController(object):
                 exception.NetworkNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.FixedIpAlreadyInUse,
+                exception.InterfaceAttachFailedNoNetwork,
                 exception.NoMoreFixedIps,
                 exception.PortInUse,
                 exception.NetworkDuplicated,
