@@ -4185,7 +4185,7 @@ class LibvirtDriver(driver.ComputeDriver):
             video.type = 'xen'
         elif CONF.libvirt.virt_type == 'parallels':
             video.type = 'vga'
-        elif guestarch in (arch.PPC, arch.PPC64):
+        elif guestarch in (arch.PPC, arch.PPC64, arch.PPC64LE):
             # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
             # so use 'vga' instead when running on Power hardware.
             video.type = 'vga'
