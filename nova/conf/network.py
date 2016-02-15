@@ -20,22 +20,136 @@ from oslo_config import cfg
 
 network_opts = [
     cfg.StrOpt("flat_network_bridge",
-               help="Bridge for simple network instances"),
+            help="""
+This option determines the bridge used for simple network interfaces when no
+bridge is specified in the VM creation request.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any string representing a valid network bridge, such as 'br100'
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``use_neutron``
+"""),
     cfg.StrOpt("flat_network_dns",
-               default="8.8.4.4",
-               help="DNS server for simple network"),
+            default="8.8.4.4",
+            help="""
+This is the address of the DNS server for a simple network. If this option is
+not specified, the default of '8.8.4.4' is used.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid IP address.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``use_neutron``
+"""),
     cfg.BoolOpt("flat_injected",
-                default=False,
-                help="Whether to attempt to inject network setup into guest"),
+            default=False,
+            help="""
+This option determines whether the network setup information is injected into
+the VM before it is booted.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``use_neutron``
+"""),
     cfg.StrOpt("flat_interface",
-               help="FlatDhcp will bridge into this interface if set"),
+            help="""
+This option is the name of the virtual interface of the VM on which the bridge
+will be built.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid virtual interface name, such as 'eth0'
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``use_neutron``
+"""),
     cfg.IntOpt("vlan_start",
-               default=100,
-               min=1,
-               max=4094,
-               help="First VLAN for private networks"),
+            default=100,
+            min=1,
+            max=4094,
+            help="""
+This is the VLAN number used for private networks. Note that the when creating
+the networks, if the specified number has already been assigned, nova-network
+will increment this number until it finds an available VLAN.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment. It also will be ignored if the configuration option
+for `network_manager` is not set to the default of
+'nova.network.manager.VlanManager'.
+
+Possible values:
+
+    Any integer between 1 and 4094. Values outside of that range will raise a
+    ValueError exception. Default = 100.
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``network_manager``, ``use_neutron``
+"""),
     cfg.StrOpt("vlan_interface",
-               help="VLANs will bridge into this interface if set"),
+            help="""
+This option is the name of the virtual interface of the VM on which the VLAN
+bridge will be built.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment. It also will be ignored if the configuration option
+for `network_manager` is not set to the default of
+'nova.network.manager.VlanManager'.
+
+Possible values:
+
+    Any valid virtual interface name, such as 'eth0'
+
+* Services that use this:
+
+    ``nova-network``
+
+* Related options:
+
+    ``use_neutron``
+"""),
     cfg.IntOpt("num_networks",
                default=1,
                help="Number of networks to support"),
