@@ -361,7 +361,7 @@ class KeyPairTest(test.NoDBTestCase):
         keyin.seek(0)
         key = paramiko.RSAKey.from_private_key(keyin)
 
-        with mock.patch.object(paramiko.RSAKey, 'generate') as mock_generate:
+        with mock.patch.object(crypto, 'generate_key') as mock_generate:
             mock_generate.return_value = key
             (private_key, public_key, fingerprint) = crypto.generate_key_pair()
             self.assertEqual(self.rsa_pub, public_key)
