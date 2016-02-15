@@ -50,7 +50,7 @@ The Compute API includes all end user and operator API calls.
 The API works with keystone and oslo.policy to deliver RBAC (Role-based access
 control).
 The default policy file gives suggestions on what APIs should not
-be made available to most end users, but this is fully configurable.
+be made available to most end users but this is fully configurable.
 
 API Versions
 ============

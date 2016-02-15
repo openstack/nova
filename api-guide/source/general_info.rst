@@ -1,6 +1,6 @@
-=========================
+========================
 Key Compute API Concepts
-=========================
+========================
 
 The OpenStack Compute API is defined as a RESTful HTTP service. The API
 takes advantage of all aspects of the HTTP protocol (methods, URIs,
@@ -10,7 +10,7 @@ connections, and content compression among others.
 
 Providers can return information identifying requests in HTTP response
 headers, for example, to facilitate communication between the provider
-and client users.
+and client applications.
 
 OpenStack Compute is a compute service that provides server capacity in
 the cloud. Compute Servers come in different flavors of memory, cores,
@@ -19,23 +19,23 @@ with Compute Servers can happen programmatically with the OpenStack
 Compute API.
 
 User Concepts
-==============
+=============
 
 To use the OpenStack Compute API effectively, you should understand
 several key concepts:
 
 -  **Server**
 
-   A virtual machine (VM) instance in the compute system. Flavor and
-   image are requisite elements when creating a server. A name for the server
-   is also required.
+   A virtual machine (VM) instance, physical machine or a container in the
+   compute system. Flavor and image are requisite elements when creating a
+   server. A name for the server is also required.
 
    For more details, such as server actions and server metadata,
    please see: :doc:`server_concepts`
 
 -  **Flavor**
 
-   An available hardware configuration for a server. Each flavor has a
+   Virtual hardware configuration for the requested server. Each flavor has a
    unique combination of disk space, memory capacity and priority for
    CPU time.
 
@@ -60,10 +60,11 @@ several key concepts:
 
 -  **Key Pair**
 
-   An ssh or x509 keypair that can be injected into a server. This allows you
-   to connect to your server once it has been created without having to use a
-   password. If you don't specify a key pair, Nova will create a root password
-   for you, and return it in plain text in the server create response.
+   An ssh or x509 keypair that can be injected into a server at it's boot time.
+   This allows you to connect to your server once it has been created without
+   having to use a password. If you don't specify a key pair, Nova will create
+   a root password for you, and return it in plain text in the server create
+   response.
 
 -  **Volume**
 
@@ -76,7 +77,7 @@ several key concepts:
 
 -  **Quotas**
 
-   An upper bound on the amount of resources any individual tenant may consume.
+   An upper limit on the amount of resources any individual tenant may consume.
    Quotas can be used to limit the number of servers a tenant creates, or the
    amount of disk space consumed, so that no one tenant can overwhelm the
    system and prevent normal operation for others. Changing quotas is an
@@ -123,14 +124,14 @@ In this section we focus on this related to networking.
 
 
 Administrator Concepts
-=======================
+======================
 
 Some APIs are largely focused on administration of Nova, and generally focus
 on compute hosts rather than servers.
 
 -  **Services**
 
-   Services are provide by Nova components. Normally, the Nova component runs
+   Services are provided by Nova components. Normally, the Nova component runs
    as a process on the controller/compute node to provide the service. These
    services may be end-user facing, such as the the OpenStack Compute REST API
    service, but most just work with other Nova services. The status of each
@@ -141,7 +142,8 @@ on compute hosts rather than servers.
 
    - **nova-osapi_compute**
 
-     This service provides the OpenStack Compute REST API to end users.
+     This service provides the OpenStack Compute REST API to end users and
+     application clients.
 
    - **nova-metadata**
 
@@ -155,10 +157,10 @@ on compute hosts rather than servers.
 
    - **nova-conductor**
 
-     This service provides database access for the other services, and handles
-     internal version compatibility when different services are running
-     different versions of code. The conductor service also handles
-     long-running requests.
+     This service provides database access for Nova and the other OpenStack
+     services, and handles internal version compatibility when different
+     services are running different versions of code. The conductor service
+     also handles long-running requests.
 
    - **nova-compute**
 
@@ -176,7 +178,7 @@ on compute hosts rather than servers.
 
    - **nova-consoleauth**
 
-     This service provides authorization for consoles.
+     This service provides authorization for compute instances consoles.
 
    - **nova-cert**
 
@@ -186,9 +188,8 @@ on compute hosts rather than servers.
 
    - **enable, disable, disable-log-reason**
 
-     The service can be disabled to indicate the service didn't provided
-     service anymore. This is used by administrator to stop service for
-     maintenance.
+     The service can be disabled to indicate the service is not available anymore.
+     This is used by administrator to stop service for maintenance.
      For example, when Administrator wants to maintain a specific compute node,
      Administrator can disable nova-compute service on that compute node. Then
      nova won't dispatch any new compute request to that compute node anymore.
@@ -199,9 +200,9 @@ on compute hosts rather than servers.
      This action allows you set the state of service down immediately. Actually
      Nova only provides the health monitor of service status, there isn't any
      guarantee about health status of other parts of infrastructure, like the
-     health status of data network, storage network and other hardwares. The
+     health status of data network, storage network and other components. The
      more complete health monitor of infrastructure is provided by external
-     system normally. An external health monitor system can marks the service
+     system normally. An external health monitor system can mark the service
      down for notifying the fault.
      `(This action is enabled in Microversion 2.11)`
 
@@ -243,7 +244,7 @@ on compute hosts rather than servers.
    currently running, as well as detailed info about the hypervisor, such as
    CPU, memory, or disk related configuration.
 
-   Currently nova-compute also support Ironic and LXC, but they don't have
+   Currently nova-compute also supports Ironic and LXC, but they don't have
    a hypervisor running.
 
 -  **Aggregates**
@@ -266,16 +267,16 @@ on compute hosts rather than servers.
    are used to generate certificates for euca-bundle-image.
 
 Relationship with Volume API
-=============================
+============================
 
-Here we discuss about Cinder's API and how Nova users volume uuids.
+Here we discuss about Cinder's API and how Nova users volume UUIDs.
 
 TODO - add more details.
 
 Relationship with Image API
-=============================
+===========================
 
-Here we discuss about Glance's API and how Nova users image uuids.
+Here we discuss about Glance's API and how Nova uses image UUIDs.
 We also discuss how Nova proxies setting image metadata.
 
 TODO - add more details.
@@ -283,9 +284,9 @@ TODO - add more details.
 Interactions with Neutron and Nova-Network
 ==========================================
 
-We talk about how networking can be provided be either by Nova or Neutron.
+We talk about how networking can be provided be either Nova or Neutron.
 
-Here we discuss about Neutron's API an how Nova users port uuids.
+Here we discuss about Neutron's API and how Nova users port UUIDs.
 We also discuss Nova automatically creating ports, proxying security groups,
 and proxying floating IPs. Also talk about the APIs we do not proxy.
 
