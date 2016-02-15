@@ -1531,14 +1531,23 @@ class VMOps(object):
                 return
             for bdm in bdms:
                 volume_id = bdm['connection_info']['data']['volume_id']
+                # Note(bobba): Check for the old-style SR first; if this
+                # doesn't find the SR, also look for the new-style from
+                # parse_sr_info
                 sr_uuid = 'FA15E-D15C-%s' % volume_id
                 sr_ref = None
                 try:
                     sr_ref = volume_utils.find_sr_by_uuid(self._session,
-                            sr_uuid)
+                                                          sr_uuid)
+                    if not sr_ref:
+                        connection_data = bdm['connection_info']['data']
+                        (sr_uuid, _, _) = volume_utils.parse_sr_info(
+                            connection_data)
+                        sr_ref = volume_utils.find_sr_by_uuid(self._session,
+                                                              sr_uuid)
                 except Exception:
                     LOG.exception(_LE('Failed to find an SR for volume %s'),
-                            volume_id, instance=instance)
+                                  volume_id, instance=instance)
 
                 try:
                     if sr_ref:
