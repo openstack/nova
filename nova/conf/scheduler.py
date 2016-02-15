@@ -322,30 +322,6 @@ be sure to test this with your selected scheduler.
     ``nova-service service_down_time``
 """)
 
-disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio",
-        default=1.0,
-        help="""
-This is the virtual disk to physical disk allocation ratio used by the
-disk_filter.py script to determine if a host has sufficient disk space to fit a
-requested instance. A ratio greater than 1.0 will result in over-subscription
-of the available physical disk, which can be useful for more efficiently
-packing instances created with images that don't use the entire virtual disk,
-such as sparse or compressed images. It can be set to a value between 0.0 and
-1.0 in order to preserve a percentage of the disk for uses other than
-instances.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-* Services that use this:
-
-    ``nova-scheduler``
-
-* Related options:
-
-    None
-""")
-
 isolated_img_opt = cfg.ListOpt("isolated_images",
         default=[],
         help="""
@@ -723,7 +699,6 @@ default_opts = [host_subset_size_opt,
                driver_opt,
                driver_period_opt,
                scheduler_json_config_location_opt,
-               disk_allocation_ratio_opt,
                isolated_img_opt,
                isolated_host_opt,
                restrict_iso_host_img_opt,
