@@ -20,6 +20,7 @@ import nova.conf
 from nova import context
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel
 from nova.virt import fake
 
 
@@ -72,6 +73,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         def fake_get_compute_nodes_in_db(context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,
+                                   'uuid': uuidsentinel.fake_compute,
                                    'vcpus_used': 0,
                                    'deleted': 0,
                                    'hypervisor_type': 'powervm',
