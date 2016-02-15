@@ -90,6 +90,14 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
         self.assertEqual(0, len(res_dict['extra_specs']))
 
+    def test_index_flavor_not_found(self):
+        req = self._get_request('1/os-extra_specs',
+                                use_admin_context=True)
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.index,
+                              req, 1)
+
     def test_show(self):
         flavor = dict(test_flavor.fake_flavor,
                       extra_specs={'key5': 'value5'})
