@@ -24,7 +24,6 @@ from oslo_context import fixture as o_fixture
 from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
-import nova.conf
 from nova import context
 from nova import exception
 from nova import notifications
@@ -33,8 +32,6 @@ from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-
-CONF = nova.conf.CONF
 
 
 class NotificationsTestCase(test.TestCase):

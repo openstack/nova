@@ -33,7 +33,6 @@ import os
 
 from migrate.versioning import repository
 import mock
-from oslo_config import cfg
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
@@ -45,9 +44,6 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
-
-
-CONF = cfg.CONF
 
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):

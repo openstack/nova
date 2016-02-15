@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
@@ -30,8 +29,6 @@ from nova.tests.unit import fake_network_cache_model
 
 from webob import exc
 
-
-CONF = cfg.CONF
 
 FAKE_UUID1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'

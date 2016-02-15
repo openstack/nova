@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import stevedore.driver
 import stevedore.extension
 
 from nova.i18n import _LE
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
