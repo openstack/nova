@@ -33,6 +33,7 @@ from nova import availability_zones as az
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova import context
 from nova import network
 from nova.network.security_group import openstack_driver
@@ -54,9 +55,8 @@ metadata_opts = [
                deprecated_for_removal=True),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(metadata_opts)
-CONF.import_opt('dhcp_domain', 'nova.network.manager')
 
 VERSIONS = [
     '1.0',
