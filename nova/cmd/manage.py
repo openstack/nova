@@ -1399,7 +1399,7 @@ def main():
             print(_("Could not read %s. Re-running with sudo") % cfgfile)
             try:
                 os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
-            except Exception:
+            except OSError:
                 print(_('sudo failed, continuing as if nothing happened'))
 
         print(_('Please re-run nova-manage as root.'))
