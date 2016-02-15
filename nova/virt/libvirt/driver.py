@@ -3013,6 +3013,9 @@ class LibvirtDriver(driver.ComputeDriver):
                           user_id=instance['user_id'],
                           project_id=instance['project_id'])
 
+            # Temporal solution due to missing quorum integration at libvirt
+            libvirt_utils.chown(backend.path, 'qemu:qemu')
+
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
                                                           instance['os_type'])
