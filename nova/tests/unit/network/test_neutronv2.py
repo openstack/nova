@@ -192,6 +192,7 @@ class TestNeutronv2Base(test.TestCase):
         self.instance = {'project_id': self.tenant_id,
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance',
+                         'hostname': 'test-instance',
                          'availability_zone': 'nova',
                          'host': 'some_host',
                          'info_cache': {'network_info': []},
@@ -240,10 +241,16 @@ class TestNeutronv2Base(test.TestCase):
         # A network that is both shared and external
         self.nets10 = [{'id': 'net_id', 'name': 'net_name',
                         'router:external': True, 'shared': True}]
+        # A network with non-blank dns_domain to test _update_port_dns_name
+        self.nets11 = [{'id': 'my_netid1',
+                      'name': 'my_netname1',
+                      'subnets': ['mysubnid1'],
+                      'tenant_id': 'my_tenantid',
+                      'dns_domain': 'my-domain.org.'}]
 
         self.nets = [self.nets1, self.nets2, self.nets3, self.nets4,
                      self.nets5, self.nets6, self.nets7, self.nets8,
-                     self.nets9, self.nets10]
+                     self.nets9, self.nets10, self.nets11]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -383,6 +390,11 @@ class TestNeutronv2Base(test.TestCase):
         if dhcp_options is not None:
             has_extra_dhcp_opts = True
 
+        has_dns_extension = False
+        if kwargs.get('dns_extension'):
+            has_dns_extension = True
+            api.extensions[constants.DNS_INTEGRATION] = 1
+
         if kwargs.get('portbinding'):
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
@@ -398,6 +410,10 @@ class TestNeutronv2Base(test.TestCase):
             api._has_port_binding_extension(mox.IgnoreArg(),
                 neutron=self.moxed_client,
                 refresh_cache=True).AndReturn(has_portbinding)
+        elif has_dns_extension:
+            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
+            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
+                neutron=self.moxed_client)
         else:
             self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
             api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
@@ -444,7 +460,9 @@ class TestNeutronv2Base(test.TestCase):
                                       'mac_address': 'my_mac1',
                                       'device_id': kwargs.get('_device') and
                                                    self.instance2.uuid or
-                                                   ''}})
+                                                   '',
+                                      'dns_name': kwargs.get('_dns_name') or
+                                                  ''}})
                         ports[request.port_id] = self.port_data1[0]
                         request.network_id = 'my_netid1'
                         if macs is not None:
@@ -508,18 +526,23 @@ class TestNeutronv2Base(test.TestCase):
             if has_portbinding:
                 port_req_body['port']['binding:host_id'] = (
                     self.instance.get('host'))
-            if not has_portbinding:
+            if has_dns_extension and not network.get('dns_domain'):
+                port_req_body['port']['dns_name'] = self.instance.hostname
+            if not has_portbinding and not has_dns_extension:
                 api._populate_neutron_extension_values(mox.IgnoreArg(),
                     self.instance, mox.IgnoreArg(),
                     mox.IgnoreArg(), network=network,
                     neutron=self.moxed_client,
                     bind_host_id=None).AndReturn(None)
-            else:
+            elif has_portbinding:
                 # since _populate_neutron_extension_values() will call
                 # _has_port_binding_extension()
                 api._has_port_binding_extension(mox.IgnoreArg(),
                     neutron=self.moxed_client).\
                     AndReturn(has_portbinding)
+            else:
+                api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
+                    neutron=self.moxed_client)
             if request.port_id:
                 port = ports[request.port_id]
                 self.moxed_client.update_port(request.port_id,
@@ -552,6 +575,24 @@ class TestNeutronv2Base(test.TestCase):
                     MyComparator(port_req_body)).AndReturn(res_port)
                 ports_in_requested_net_order.append(res_port['port']['id'])
 
+            if has_portbinding and has_dns_extension:
+                api._has_port_binding_extension(mox.IgnoreArg()).\
+                    AndReturn(has_portbinding)
+                if net_idx == 11:
+                    port_req_body_dns = {
+                        'port': {
+                            'dns_name': self.instance.hostname
+                        }
+                    }
+                    res_port_dns = {
+                        'port': {
+                            'id': ports_in_requested_net_order[-1]
+                        }
+                    }
+                    self.moxed_client.update_port(
+                        ports_in_requested_net_order[-1],
+                        MyComparator(port_req_body_dns)
+                        ).AndReturn(res_port_dns)
             nets_in_requested_net_order.append(network)
 
         api.get_instance_nw_info(mox.IgnoreArg(),
@@ -3957,6 +3998,89 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
                           'opt_value': '123.123.123.456'}]
 
         self._allocate_for_instance(1, dhcp_options=dhcp_opts)
+
+
+class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
+    def setUp(self):
+        super(TestNeutronv2NeutronHostnameDNS, self).setUp()
+        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            self.moxed_client)
+
+    def test_allocate_for_instance_create_port(self):
+        # The port's dns_name attribute should be set by the port create
+        # request in allocate_for_instance
+        self._allocate_for_instance(1, dns_extension=True)
+
+    def test_allocate_for_instance_with_requested_port(self):
+        # The port's dns_name attribute should be set by the port update
+        # request in allocate_for_instance
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        self._allocate_for_instance(net_idx=1, dns_extension=True,
+                                    requested_networks=requested_networks)
+
+    def test_allocate_for_instance_port_dns_name_preset_equal_hostname(self):
+        # The port's dns_name attribute should be set by the port update
+        # request in allocate_for_instance. The port's dns_name was preset by
+        # the user with a value equal to the instance's hostname
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        self._allocate_for_instance(net_idx=1, dns_extension=True,
+                                    requested_networks=requested_networks,
+                                    _dns_name='test-instance')
+
+    def test_allocate_for_instance_port_dns_name_preset_noteq_hostname(self):
+        # If a pre-existing port has dns_name set, an exception should be
+        # raised if dns_name is not equal to the instance's hostname
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        api = self._stub_allocate_for_instance(
+            requested_networks=requested_networks,
+            dns_extension=True,
+            _break='pre_list_networks',
+            _dns_name='my-instance')
+        self.assertRaises(exception.PortNotUsableDNS,
+                          api.allocate_for_instance, self.context,
+                          self.instance, requested_networks=requested_networks)
+
+
+class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
+
+    def test_allocate_for_instance_create_port(self):
+        # The port's dns_name attribute should be set by the port create
+        # request in allocate_for_instance
+        self._allocate_for_instance(1, portbinding=True, dns_extension=True,
+                                    bind_host_id=self.instance.get('host'))
+
+    def test_allocate_for_instance_with_requested_port(self):
+        # The port's dns_name attribute should be set by the port update
+        # request in allocate_for_instance
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        self._allocate_for_instance(net_idx=1, dns_extension=True,
+                                    portbinding=True,
+                                    bind_host_id=self.instance.get('host'),
+                                    requested_networks=requested_networks)
+
+    def test_allocate_for_instance_create_port_with_dns_domain(self):
+        # The port's dns_name attribute should be set by the port update
+        # request in _update_port_dns_name. This should happen only when the
+        # port binding extension is enabled and the port's network has a
+        # non-blank dns_domain attribute
+        self._allocate_for_instance(11, portbinding=True, dns_extension=True,
+                                    bind_host_id=self.instance.get('host'))
+
+    def test_allocate_for_instance_with_requested_port_with_dns_domain(self):
+        # The port's dns_name attribute should be set by the port update
+        # request in _update_port_dns_name. This should happen only when the
+        # port binding extension is enabled and the port's network has a
+        # non-blank dns_domain attribute
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        self._allocate_for_instance(net_idx=11, dns_extension=True,
+                                    portbinding=True,
+                                    bind_host_id=self.instance.get('host'),
+                                    requested_networks=requested_networks)
 
 
 class TestNeutronClientForAdminScenarios(test.NoDBTestCase):

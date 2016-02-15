@@ -410,8 +410,9 @@ class API(base_api.NetworkAPI):
                     if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
 
-                    # Make sure the user didn't assign a value to the port's
-                    # dns_name attribute.
+                    # Make sure that if the user assigned a value to the port's
+                    # dns_name attribute, it is equal to the instance's
+                    # hostname
                     if port.get('dns_name'):
                         if port['dns_name'] != instance.hostname:
                             raise exception.PortNotUsableDNS(
