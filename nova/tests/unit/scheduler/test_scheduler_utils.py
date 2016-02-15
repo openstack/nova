@@ -18,7 +18,6 @@ Tests For Scheduler Utils
 import uuid
 
 import mock
-from oslo_config import cfg
 import six
 
 from nova.compute import flavors
@@ -31,8 +30,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
-
-CONF = cfg.CONF
 
 
 class SchedulerUtilsTestCase(test.NoDBTestCase):

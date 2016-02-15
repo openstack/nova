@@ -17,7 +17,6 @@ import sys
 
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import uuidutils
@@ -33,7 +32,6 @@ from nova import objects
 from nova import utils
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 # NOTE: Neutron client has a max URL length of 8192, so we have

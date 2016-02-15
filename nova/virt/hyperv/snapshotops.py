@@ -20,7 +20,6 @@ import os
 
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import task_states
@@ -30,7 +29,6 @@ from nova.image import glance
 from nova import utils
 from nova.virt.hyperv import pathutils
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

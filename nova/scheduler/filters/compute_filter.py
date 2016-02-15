@@ -13,14 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.i18n import _LW
 from nova.scheduler import filters
 from nova import servicegroup
-
-CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 

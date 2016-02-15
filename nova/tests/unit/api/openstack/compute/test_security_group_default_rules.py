@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import \
@@ -25,9 +24,6 @@ import nova.db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-
-CONF = cfg.CONF
 
 
 class AttrDict(dict):

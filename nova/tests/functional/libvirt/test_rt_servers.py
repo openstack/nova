@@ -16,7 +16,6 @@
 import mock
 
 import fixtures
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.tests.functional.api import client
@@ -26,7 +25,6 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

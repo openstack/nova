@@ -15,7 +15,6 @@
 
 import copy
 
-from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute import console_auth_tokens \
@@ -25,8 +24,6 @@ from nova.api.openstack.compute.legacy_v2.contrib import console_auth_tokens \
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-CONF = cfg.CONF
 
 _FAKE_CONNECT_INFO = {'instance_uuid': 'fake_instance_uuid',
                       'host': 'fake_host',
