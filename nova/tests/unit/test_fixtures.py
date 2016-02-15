@@ -162,6 +162,7 @@ class TestOSAPIFixture(testtools.TestCase):
         self.useFixture(fixtures.OutputStreamCapture())
         self.useFixture(fixtures.StandardLogging())
         self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
         # request the API root, which provides us the versions of the API
