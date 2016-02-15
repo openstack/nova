@@ -2010,10 +2010,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_deallocate_network',
                 _fake_deallocate_network)
 
-        try:
-            self.compute.terminate_instance(self.context, instance, [], [])
-        except test.TestingException:
-            pass
+        self.assertRaises(test.TestingException,
+                          self.compute.terminate_instance,
+                          self.context, instance, [], [])
 
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
