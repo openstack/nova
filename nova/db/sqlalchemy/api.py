@@ -4957,6 +4957,9 @@ def migration_get_all_by_filters(context, filters):
     if "hidden" in filters:
         hidden = filters["hidden"]
         query = query.filter(models.Migration.hidden == hidden)
+    if "instance_uuid" in filters:
+        uuid = filters["instance_uuid"]
+        query = query.filter(models.Migration.instance_uuid == uuid)
     return query.all()
 
 
