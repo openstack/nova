@@ -344,8 +344,12 @@ def reverts_task_state(function):
                 # have utils.expects_func_args('instance') decorating this
                 # method.
                 instance = keyed_args['instance']
+                original_task_state = instance.task_state
                 try:
                     self._instance_update(context, instance, task_state=None)
+                    LOG.info(_LI("Successfully reverted task state from %s on "
+                                 "failure for instance."), original_task_state,
+                                                           instance=instance)
                 except exception.InstanceNotFound:
                     # We might delete an instance that failed to build shortly
                     # after it errored out this is an expected case and we

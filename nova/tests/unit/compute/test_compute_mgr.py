@@ -2784,7 +2784,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_reverts_task_state_instance_not_found(self):
         # Tests that the reverts_task_state decorator in the compute manager
         # will not trace when an InstanceNotFound is raised.
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = objects.Instance(uuid=uuids.instance, task_state="FAKE")
         instance_update_mock = mock.Mock(
             side_effect=exception.InstanceNotFound(instance_id=instance.uuid))
         self.compute._instance_update = instance_update_mock
