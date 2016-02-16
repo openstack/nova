@@ -79,7 +79,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 vmFolder='fake_vm_folder')
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
         self._instance_values = {
-            'display_name': 'fake_display_name',
             'name': 'fake_name',
             'display_name': 'fake_display_name',
             'uuid': 'fake_uuid',
