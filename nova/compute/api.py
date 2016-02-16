@@ -2687,7 +2687,15 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.UNSHELVE)
 
-        self.compute_task_api.unshelve_instance(context, instance)
+        try:
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+        except exception.RequestSpecNotFound:
+            # Some old instances can still have no RequestSpec object attached
+            # to them, we need to support the old way
+            request_spec = None
+        self.compute_task_api.unshelve_instance(context, instance,
+                                                request_spec)
 
     @wrap_check_policy
     @check_instance_lock

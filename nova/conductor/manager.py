@@ -144,7 +144,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.13')
+    target = messaging.Target(namespace='compute_task', version='1.14')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -433,7 +433,7 @@ class ComputeTaskManager(base.Base):
         hosts = self.scheduler_client.select_destinations(context, spec_obj)
         return hosts
 
-    def unshelve_instance(self, context, instance):
+    def unshelve_instance(self, context, instance, request_spec=None):
         sys_meta = instance.system_metadata
 
         def safe_image_show(ctx, image_id):
@@ -471,11 +471,24 @@ class ComputeTaskManager(base.Base):
             try:
                 with compute_utils.EventReporter(context, 'schedule_instances',
                                                  instance.uuid):
-                    filter_properties = {}
+                    if not request_spec:
+                        # NOTE(sbauza): We were unable to find an original
+                        # RequestSpec object - probably because the instance is
+                        # old. We need to mock that the old way
+                        filter_properties = {}
+                        request_spec = scheduler_utils.build_request_spec(
+                            context, image, [instance])
+                    else:
+                        # TODO(sbauza): Provide directly the RequestSpec object
+                        # when _schedule_instances(),
+                        # populate_filter_properties and populate_retry()
+                        # accept it
+                        filter_properties = request_spec.\
+                            to_legacy_filter_properties_dict()
+                        request_spec = request_spec.\
+                            to_legacy_request_spec_dict()
                     scheduler_utils.populate_retry(filter_properties,
                                                    instance.uuid)
-                    request_spec = scheduler_utils.build_request_spec(
-                            context, image, [instance])
                     hosts = self._schedule_instances(
                             context, request_spec, filter_properties)
                     host_state = hosts[0]
