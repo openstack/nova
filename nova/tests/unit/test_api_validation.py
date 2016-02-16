@@ -15,6 +15,9 @@
 import copy
 import re
 
+import fixtures
+import six
+
 from nova.api.openstack import api_version_request as api_version
 from nova.api import validation
 from nova.api.validation import parameter_types
@@ -29,6 +32,62 @@ class FakeRequest(object):
 
     def is_legacy_v2(self):
         return self.legacy_v2
+
+
+class ValidationRegex(test.NoDBTestCase):
+    def test_cell_names(self):
+        cellre = re.compile(parameter_types.valid_cell_name_regex)
+        self.assertTrue(cellre.search('foo'))
+        self.assertFalse(cellre.search('foo.bar'))
+        self.assertFalse(cellre.search('foo@bar'))
+        self.assertFalse(cellre.search('foo!bar'))
+        self.assertFalse(cellre.search(' foo!bar'))
+        self.assertFalse(cellre.search('\nfoo!bar'))
+
+    def test_build_regex_range(self):
+        # this is much easier to think about if we only use the ascii
+        # subset because it's a printable range we can think
+        # about. The algorithm works for all ranges.
+        def _get_all_chars():
+            for i in range(0x7F):
+                yield six.unichr(i)
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.api.validation.parameter_types._get_all_chars',
+            _get_all_chars))
+
+        r = parameter_types._build_regex_range(ws=False)
+        self.assertEqual(r, re.escape('!') + '-' + re.escape('~'))
+
+        # if we allow whitespace the range starts earlier
+        r = parameter_types._build_regex_range(ws=True)
+        self.assertEqual(r, re.escape(' ') + '-' + re.escape('~'))
+
+        # excluding a character will give us 2 ranges
+        r = parameter_types._build_regex_range(ws=True, exclude=['A'])
+        self.assertEqual(r,
+                         re.escape(' ') + '-' + re.escape('@') +
+                         'B' + '-' + re.escape('~'))
+
+        # inverting which gives us all the initial unprintable characters.
+        r = parameter_types._build_regex_range(ws=False, invert=True)
+        self.assertEqual(r,
+                         re.escape('\x00') + '-' + re.escape(' '))
+
+        # excluding characters that create a singleton. Naively this would be:
+        # ' -@B-BD-~' which seems to work, but ' -@BD-~' is more natural.
+        r = parameter_types._build_regex_range(ws=True, exclude=['A', 'C'])
+        self.assertEqual(r,
+                         re.escape(' ') + '-' + re.escape('@') +
+                         'B' + 'D' + '-' + re.escape('~'))
+
+        # ws=True means the positive regex has printable whitespaces,
+        # so the inverse will not. The inverse will include things we
+        # exclude.
+        r = parameter_types._build_regex_range(
+            ws=True, exclude=['A', 'B', 'C', 'Z'], invert=True)
+        self.assertEqual(r,
+                         re.escape('\x00') + '-' + re.escape('\x1f') + 'A-CZ')
 
 
 class APIValidationTestCase(test.NoDBTestCase):
