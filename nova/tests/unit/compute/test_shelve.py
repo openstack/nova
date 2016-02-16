@@ -148,6 +148,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'cleanup_instance_network_on_host')
+        self.mox.StubOutWithMock(self.compute, '_update_resource_tracker')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
@@ -161,6 +162,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, instance.host)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
+        self.compute._update_resource_tracker(self.context, instance)
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.end')
         self.mox.ReplayAll()

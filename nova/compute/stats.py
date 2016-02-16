@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.i18n import _
@@ -105,7 +106,7 @@ class Stats(dict):
         (vm_state, task_state, os_type, project_id) = \
                 self._extract_state_from_instance(instance)
 
-        if vm_state == vm_states.DELETED:
+        if vm_state in resource_tracker._REMOVED_STATES:
             self._decrement("num_instances")
             self.states.pop(uuid)
 

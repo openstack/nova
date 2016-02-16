@@ -195,6 +195,19 @@ class StatsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.stats.num_os_type("Linux"))
         self.assertEqual(0, self.stats["num_vm_" + vm_states.BUILDING])
 
+    def test_update_stats_for_instance_offloaded(self):
+        instance = self._create_instance()
+        self.stats.update_stats_for_instance(instance)
+        self.assertEqual(1, self.stats["num_proj_1234"])
+
+        instance["vm_state"] = vm_states.SHELVED_OFFLOADED
+        self.stats.update_stats_for_instance(instance)
+
+        self.assertEqual(0, self.stats.num_instances)
+        self.assertEqual(0, self.stats.num_instances_for_project("1234"))
+        self.assertEqual(0, self.stats.num_os_type("Linux"))
+        self.assertEqual(0, self.stats["num_vm_" + vm_states.BUILDING])
+
     def test_io_workload(self):
         vms = [vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED]
         tasks = [task_states.RESIZE_MIGRATING, task_states.REBUILDING,
