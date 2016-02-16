@@ -91,7 +91,7 @@ class TestConversions(test.NoDBTestCase):
             'id': 1,
             'name': None,
             'is_public': None,
-            'size': None,
+            'size': 0,
             'min_disk': None,
             'min_ram': None,
             'disk_format': None,
