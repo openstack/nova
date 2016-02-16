@@ -62,7 +62,6 @@ api_opts = [
                     'After that point you have to run all of the API.',
                     deprecated_for_removal=True, deprecated_group='osapi_v21'),
         cfg.StrOpt('project_id_regex',
-                   default=None,
                    help='DEPRECATED: The validation regex for project_ids '
                    'used in urls. This defaults to [0-9a-f\-]+ if not set, '
                    'which matches normal uuids created by keystone.',
