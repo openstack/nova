@@ -759,7 +759,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance, address=address)
 
-    def remove_volume_connection(self, ctxt, instance, volume_id, host):
+    def remove_volume_connection(self, ctxt, volume_id, instance, host):
         version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',

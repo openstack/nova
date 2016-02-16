@@ -5591,9 +5591,9 @@ class ComputeTestCase(BaseTestCase):
         objects.BlockDeviceMappingList.get_by_instance_uuid(c,
                 instance.uuid).MultipleTimes().AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, instance, uuids.volume_id_1, dest_host)
+                c, uuids.volume_id_1, instance, dest_host)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, instance, uuids.volume_id_2, dest_host)
+                c, uuids.volume_id_2, instance, dest_host)
         self.compute.compute_rpcapi.rollback_live_migration_at_destination(
                 c, instance, dest_host, destroy_disks=True,
                 migrate_data=mox.IsA(migrate_data_obj.LiveMigrateData))
