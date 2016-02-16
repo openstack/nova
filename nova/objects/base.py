@@ -71,6 +71,16 @@ class NovaObject(ovoo_base.VersionedObject):
     OBJ_SERIAL_NAMESPACE = 'nova_object'
     OBJ_PROJECT_NAMESPACE = 'nova'
 
+    # NOTE(ndipanov): This is nova-specific
+    @staticmethod
+    def should_migrate_data():
+        """A check that can be used to inhibit online migration behavior
+
+        This is usually used to check if all services that will be accessing
+        the db directly are ready for the new format.
+        """
+        raise NotImplementedError()
+
     # NOTE(danms): This has some minor change between the nova and o.vo
     # version, so avoid inheriting it for the moment so we can make that
     # transition separately for clarity.
