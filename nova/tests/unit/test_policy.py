@@ -405,9 +405,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-simple-tenant-usage:show",
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
-"os_compute_api:os-tenant-networks")
-
-        self.empty_rules = (
+"os_compute_api:os-tenant-networks",
 "compute:create",
 "compute:create:attach_network",
 "compute:create:attach_volume",
@@ -465,7 +463,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:extensions",
 "os_compute_api:extensions:discoverable",
 "os_compute_api:os-config-drive",
-"os_compute_api:os-quota-sets:defaults",
 "os_compute_api:servers:confirm_resize",
 "os_compute_api:servers:create",
 "os_compute_api:servers:create:attach_network",
@@ -703,6 +700,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:hide_server_addresses",
 "os_compute_api:os-hide-server-addresses")
 
+        self.allow_all_rules = (
+"os_compute_api:os-quota-sets:defaults",
+)
+
     def test_all_rules_in_sample_file(self):
         special_rules = ["context_is_admin", "admin_or_owner", "default"]
         for (name, rule) in self.fake_policy.items():
@@ -729,11 +730,16 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             policy.enforce(self.non_admin_context, rule,
                            {'project_id': 'fake', 'user_id': 'fake'})
 
-    def test_empty_rules(self):
+    def test_no_empty_rules(self):
         rules = policy.get_rules()
-        for rule in self.empty_rules:
-            self.assertEqual('@', str(rules[rule]),
-                             "%s isn't empty rule" % rule)
+        for rule in rules:
+            self.assertNotEqual('', str(rule),
+                    '%s should not be empty, use "@" instead if the policy '
+                    'should allow everything' % rule)
+
+    def test_allow_all_rules(self):
+        for rule in self.allow_all_rules:
+            policy.enforce(self.non_admin_context, rule, self.target)
 
     def test_rule_missing(self):
         rules = policy.get_rules()
@@ -743,6 +749,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show')
         result = set(rules.keys()) - set(self.admin_only_rules +
-            self.admin_or_owner_rules + self.empty_rules +
-            self.non_admin_only_rules + special_rules)
+            self.admin_or_owner_rules + self.non_admin_only_rules +
+            self.allow_all_rules + special_rules)
         self.assertEqual(set([]), result)
