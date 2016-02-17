@@ -123,6 +123,15 @@ class InstanceNUMACell(base.NovaObject,
         for vcpu, pcpu in cpu_pairs:
             self.pin(vcpu, pcpu)
 
+    def clear_host_pinning(self):
+        """Clear any data related to how this cell is pinned to the host.
+
+        Needed for aborting claims as we do not want to keep stale data around.
+        """
+        self.id = -1
+        self.cpu_pinning = {}
+        return self
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
@@ -224,3 +233,12 @@ class InstanceNUMATopology(base.NovaObject,
     @property
     def cpu_pinning_requested(self):
         return all(cell.cpu_pinning_requested for cell in self.cells)
+
+    def clear_host_pinning(self):
+        """Clear any data related to how instance is pinned to the host.
+
+        Needed for aborting claims as we do not want to keep stale data around.
+        """
+        for cell in self.cells:
+            cell.clear_host_pinning()
+        return self
