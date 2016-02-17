@@ -5078,6 +5078,7 @@ class ComputeManager(manager.Manager):
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.MIGRATING)
 
     @wrap_exception()
