@@ -21,6 +21,14 @@ import unicodedata
 
 import six
 
+from nova.i18n import _
+
+
+class ValidationRegex(object):
+    def __init__(self, regex, reason):
+        self.regex = regex
+        self.reason = reason
+
 
 def _is_printable(char):
     """determine if a unicode code point is printable.
@@ -110,10 +118,12 @@ def _build_regex_range(ws=True, invert=False, exclude=None):
 valid_name_regex_base = '^(?![%s])[%s]*(?<![%s])$'
 
 
-valid_name_regex = valid_name_regex_base % (
-    _build_regex_range(ws=False, invert=True),
-    _build_regex_range(),
-    _build_regex_range(ws=False, invert=True))
+valid_name_regex = ValidationRegex(
+    valid_name_regex_base % (
+        _build_regex_range(ws=False, invert=True),
+        _build_regex_range(),
+        _build_regex_range(ws=False, invert=True)),
+    _("printable characters. Can not start or end with whitespace."))
 
 
 # This regex allows leading/trailing whitespace
@@ -122,26 +132,32 @@ valid_name_leading_trailing_spaces_regex_base = (
     "^[%(ws)s]*[%(no_ws)s][%(no_ws)s%(ws)s]+[%(no_ws)s][%(ws)s]*$")
 
 
-valid_cell_name_regex = valid_name_regex_base % (
-    _build_regex_range(ws=False, invert=True),
-    _build_regex_range(exclude=['!', '.', '@']),
-    _build_regex_range(ws=False, invert=True))
+valid_cell_name_regex = ValidationRegex(
+    valid_name_regex_base % (
+        _build_regex_range(ws=False, invert=True),
+        _build_regex_range(exclude=['!', '.', '@']),
+        _build_regex_range(ws=False, invert=True)),
+    _("printable characters except !, ., @. "
+      "Can not start or end with whitespace."))
 
 
 # cell's name disallow '!',  '.' and '@'.
-valid_cell_name_leading_trailing_spaces_regex = (
+valid_cell_name_leading_trailing_spaces_regex = ValidationRegex(
     valid_name_leading_trailing_spaces_regex_base % {
         'ws': _build_regex_range(exclude=['!', '.', '@']),
-        'no_ws': _build_regex_range(ws=False, exclude=['!', '.', '@'])})
+        'no_ws': _build_regex_range(ws=False, exclude=['!', '.', '@'])},
+    _("printable characters except !, ., @, "
+      "with at least one non space character"))
 
 
-valid_name_leading_trailing_spaces_regex = (
+valid_name_leading_trailing_spaces_regex = ValidationRegex(
     valid_name_leading_trailing_spaces_regex_base % {
         'ws': _build_regex_range(),
-        'no_ws': _build_regex_range(ws=False)})
+        'no_ws': _build_regex_range(ws=False)},
+    _("printable characters with at least one non space character"))
 
 
-valid_name_regex_obj = re.compile(valid_name_regex, re.UNICODE)
+valid_name_regex_obj = re.compile(valid_name_regex.regex, re.UNICODE)
 
 
 valid_description_regex_base = '^[%s]*$'
@@ -201,25 +217,25 @@ name = {
     # stored in the DB and Nova specific parameters.
     # This definition is used for all their parameters.
     'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'pattern': valid_name_regex,
+    'format': 'name'
 }
 
 
 cell_name = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'pattern': valid_cell_name_regex,
+    'format': 'cell_name'
 }
 
 
 cell_name_leading_trailing_spaces = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'pattern': valid_cell_name_leading_trailing_spaces_regex,
+    'format': 'cell_name_with_leading_trailing_spaces'
 }
 
 
 name_with_leading_trailing_spaces = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'pattern': valid_name_leading_trailing_spaces_regex,
+    'format': 'name_with_leading_trailing_spaces'
 }
 
 

@@ -16,11 +16,11 @@ import copy
 
 from nova.api.validation import parameter_types
 
-availability_zone = copy.deepcopy(parameter_types.name)
-availability_zone['type'] = ['string', 'null']
-availability_zone_with_leading_trailing_spaces = copy.deepcopy(parameter_types.
-    name_with_leading_trailing_spaces)
-availability_zone_with_leading_trailing_spaces['type'] = ['string', 'null']
+availability_zone = {'oneOf': [parameter_types.name, {'type': 'null'}]}
+availability_zone_with_leading_trailing_spaces = {
+    'oneOf': [parameter_types.name_with_leading_trailing_spaces,
+              {'type': 'null'}]
+}
 
 
 create = {
