@@ -441,21 +441,9 @@ class ConductorManager(manager.Manager):
     def object_backport(self, context, objinst, target_version):
         return objinst.obj_to_primitive(target_version=target_version)
 
-    def colo_deallocate_vlan(self, context, instance_uuid):
-        LOG.debug("Releasing COLO VLAN ID allocated for instance %s." %
-                  instance_uuid)
-        self.db.colo_deallocate_vlan(context, instance_uuid)
-
     def ft_failover(self, context, instance_uuid):
         ft_tasks = fault_tolerance.FaultToleranceTasks()
         ft_tasks.failover(context, instance_uuid)
-        # NOTE(ORBIT): We are currently cleaning up everything colo related
-        #              when doing a failover. We can therefore release the
-        #              VLAN ID.
-        #              When COLO is supporting the possibility to recover we
-        #              should probably keep the VLAN allocation by updating
-        #              the instance_uuid to the new primary.
-        self.colo_deallocate_vlan(context, instance_uuid)
 
 
 class ComputeTaskManager(base.Base):
@@ -655,27 +643,6 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
-            if utils.ft_enabled(instance):
-                colo_tasks = colo.COLOTasks()
-
-                # TODO(ORBIT): If the final way of handling allocated vlan tags
-                #              that are outside of the range is by keeping
-                #              them until they get unallocated it might even
-                #              be a good idea to incorporate a sync before
-                #              each allocation.
-                #
-                #              Otherwise it should probably be enough to just
-                #              sync once everytime the conductor service is
-                #              started.
-                colo_tasks.sync_vlan_range()
-
-                vlan_id = colo_tasks.get_vlan_id(context, instance)
-
-                system_metadata = instance.system_metadata
-                system_metadata['colo_vlan_id'] = vlan_id
-                instance.system_metadata = system_metadata
-                instance.save()
-
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,
                     request_spec=request_spec,
@@ -707,7 +674,7 @@ class ComputeTaskManager(base.Base):
 
                     # TODO(ORBIT): Some or all of the actions below should
                     #              probably be moved.
-                    colo_tasks.wait_for_ready(instance)
+                    ft_tasks.wait_for_ready(instance)
                     ft_secondary_instance.vm_state = vm_states.ACTIVE
                     ft_secondary_instance.task_state = task_states.MIGRATING
                     ft_secondary_instance.save(expected_task_state=[None])

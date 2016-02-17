@@ -87,10 +87,6 @@ class FaultServerToleranceController(servers.Controller):
                           relation.secondary_instance_uuid)
 
                 relation.destroy()
-
-            # TODO(ORBIT): Investigate if this could happen even though the
-            #              instance remain undeleted.
-            self.conductor_api.colo_deallocate_vlan(context, id)
         except exception.FaultToleranceRelationByPrimaryNotFound as e:
             try:
                 relation = (objects.FaultToleranceRelation.

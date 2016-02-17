@@ -16,10 +16,12 @@
 from nova import compute
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova import exception
 from nova import network
 from nova import objects
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -98,8 +100,6 @@ class FaultToleranceTasks(object):
     #              Right now, we just change the role in the extra_specs.
     def _get_secondary_flavor(self, flavor, primary_instance):
         flavor['extra_specs']['ft:secondary'] = '1'
-        vlan_id = primary_instance['system_metadata']['colo_vlan_id']
-        flavor['extra_specs']['ft:colo_vlan_id'] = vlan_id
         return flavor
 
     def create_secondary_instance(self, context, primary_instance_uuid,
@@ -157,3 +157,18 @@ class FaultToleranceTasks(object):
         relation.create(context)
 
         return secondary_instance
+
+    # TODO(ORBIT): Handle timeout?
+    def wait_for_ready(self, instance):
+        def _wait():
+            """Called at an interval until the VM is running."""
+            instance.refresh()
+            LOG.error("waiting")
+
+            if instance.vm_state == vm_states.ACTIVE:
+                LOG.info("Instance ready for COLO migration.",
+                         instance=instance)
+                raise loopingcall.LoopingCallDone()
+
+        timer = loopingcall.FixedIntervalLoopingCall(_wait)
+        timer.start(interval=0.5).wait()
