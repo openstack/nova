@@ -178,7 +178,7 @@ class ResourceTracker(object):
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # set the 'host' and node fields and continue the build:
-            self._set_instance_host_and_node(context, instance_ref)
+            self._set_instance_host_and_node(instance_ref)
             return claims.NopClaim()
 
         # sanity checks:
@@ -206,7 +206,7 @@ class ResourceTracker(object):
         # that numa_topology is saved while under COMPUTE_RESOURCE_SEMAPHORE
         # so that the resource audit knows about any cpus we've pinned.
         instance_ref.numa_topology = claim.claimed_numa_topology
-        self._set_instance_host_and_node(context, instance_ref)
+        self._set_instance_host_and_node(instance_ref)
 
         # Mark resources in-use and update stats
         self._update_usage_from_instance(context, instance_ref)
@@ -326,14 +326,15 @@ class ResourceTracker(object):
         migration.status = 'pre-migrating'
         migration.save()
 
-    def _set_instance_host_and_node(self, context, instance):
+    def _set_instance_host_and_node(self, instance, clear=False):
         """Tag the instance as belonging to this host.  This should be done
         while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
         """
-        instance.host = self.host
-        instance.launched_on = self.host
-        instance.node = self.nodename
+        instance.host = None if clear else self.host
+        if not clear:
+            instance.launched_on = self.host
+        instance.node = None if clear else self.nodename
         instance.save()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
@@ -341,8 +342,15 @@ class ResourceTracker(object):
         """Remove usage from the given instance."""
         # flag the instance as deleted to revert the resource usage
         # and associated stats:
-        instance['vm_state'] = vm_states.DELETED
-        self._update_usage_from_instance(context, instance)
+        real_vm_state = instance.vm_state
+        instance.vm_state = vm_states.DELETED
+        try:
+            self._update_usage_from_instance(context, instance)
+        finally:
+            instance.vm_state = real_vm_state
+
+        instance.clear_numa_topology()
+        self._set_instance_host_and_node(instance, clear=True)
 
         self._update(context.elevated())
 
