@@ -3297,9 +3297,6 @@ class API(base.Base):
     def colo_failover(self, context, instance):
         self.compute_rpcapi.colo_failover(context, instance)
 
-    def colo_cleanup(self, context, instance):
-        self.compute_rpcapi.colo_cleanup(context, instance)
-
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""

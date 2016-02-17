@@ -71,8 +71,6 @@ class FaultToleranceTasks(object):
             self.compute_api.colo_failover(context, p_instance)
 
             self.compute_api.delete(context, s_instance)
-
-            self.compute_api.colo_cleanup(context, p_instance)
         else:
             relations = objects.FaultToleranceRelationList.\
                     get_by_primary_instance_uuid(context, instance.uuid)

@@ -6544,10 +6544,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             LOG.error("QEMU monitor command failed: %s", cmd)
 
-    def colo_cleanup(self, instance, network_info):
-        for vif in network_info:
-            self.vif_driver.cleanup_colo_plug(instance, vif)
-
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
