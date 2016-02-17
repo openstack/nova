@@ -32,7 +32,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
-
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -55,7 +55,7 @@ class ConfigDriveTestV21(test.TestCase):
                       fakes.fake_instance_get())
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
-        req = webob.Request.blank(self.base_url + '1')
+        req = webob.Request.blank(self.base_url + uuids.sentinel)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app)
         self.assertEqual(response.status_int, 200)

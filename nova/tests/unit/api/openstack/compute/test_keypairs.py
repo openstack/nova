@@ -31,6 +31,7 @@ from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_keypair
+from nova.tests import uuidsentinel as uuids
 
 
 QUOTAS = quota.QUOTAS
@@ -286,7 +287,7 @@ class KeypairsTestV21(test.TestCase):
                       fakes.fake_instance_get())
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
-        req = webob.Request.blank(self.base_url + '/servers/1')
+        req = webob.Request.blank(self.base_url + '/servers/' + uuids.server)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app_server)
         self.assertEqual(response.status_int, 200)

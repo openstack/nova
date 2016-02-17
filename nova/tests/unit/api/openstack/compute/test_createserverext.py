@@ -22,6 +22,7 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 FAKE_UUID = fakes.FAKE_UUID
 
@@ -252,7 +253,8 @@ class CreateserverextTest(test.TestCase):
         self.stub_out('nova.db.instance_get', fakes.fake_instance_get())
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
-        req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
+        req = webob.Request.blank('/v2/fake/os-create-server-ext/' +
+                                  uuids.server)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(
             init_only=('os-create-server-ext', 'servers')))

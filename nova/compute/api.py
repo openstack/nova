@@ -1950,10 +1950,6 @@ class API(base.Base):
                            instance_uuid=instance_id)
                 instance = objects.Instance.get_by_uuid(
                     context, instance_id, expected_attrs=expected_attrs)
-            elif strutils.is_int_like(instance_id):
-                LOG.debug("Fetching instance by numeric id %s", instance_id)
-                instance = objects.Instance.get_by_id(
-                    context, instance_id, expected_attrs=expected_attrs)
             else:
                 LOG.debug("Failed to fetch instance by id %s", instance_id)
                 raise exception.InstanceNotFound(instance_id=instance_id)
