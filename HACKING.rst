@@ -58,6 +58,7 @@ Nova Specific Commandments
 - [N345] Python 3: do not use dict.iterkeys.
 - [N346] Python 3: do not use dict.itervalues.
 - [N347] Provide enough help text for config options
+- [N348] Deprecated library function os.popen()
 
 Creating Unit Tests
 -------------------

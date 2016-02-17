@@ -683,6 +683,20 @@ def cfg_help_with_enough_text(logical_line, tokens):
         yield(0, msg)
 
 
+def no_os_popen(logical_line):
+    """Disallow 'os.popen('
+
+    Deprecated library function os.popen() Replace it using subprocess
+    https://bugs.launchpad.net/tempest/+bug/1529836
+
+    N348
+    """
+
+    if 'os.popen(' in logical_line:
+        yield(0, 'N348 Deprecated library function os.popen(). '
+                 'Replace it using subprocess module. ')
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -717,3 +731,4 @@ def factory(register):
     register(check_python3_no_iterkeys)
     register(check_python3_no_itervalues)
     register(cfg_help_with_enough_text)
+    register(no_os_popen)
