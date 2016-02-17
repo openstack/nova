@@ -69,12 +69,12 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                                side_effect=fake_read_handle),
              mock.patch.object(rw_handles, 'FileWriteHandle',
                                side_effect=fake_write_handle),
-             mock.patch.object(images, 'start_transfer'),
+             mock.patch.object(images, 'image_transfer'),
              mock.patch.object(images.IMAGE_API, 'get',
                 return_value=image_data),
              mock.patch.object(images.IMAGE_API, 'download',
                      return_value=read_iter),
-        ) as (glance_read, http_write, start_transfer, image_show,
+        ) as (glance_read, http_write, image_transfer, image_show,
                 image_download):
             images.fetch_image(context, instance,
                                host, port, dc_name,
@@ -83,10 +83,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         glance_read.assert_called_once_with(read_iter)
         http_write.assert_called_once_with(host, port, dc_name, ds_name, None,
                                            file_path, image_data['size'])
-        start_transfer.assert_called_once_with(
-                context, read_file_handle,
-                image_data['size'],
-                write_file_handle=write_file_handle)
+        image_transfer.assert_called_once_with(read_file_handle,
+                                               write_file_handle)
         image_download.assert_called_once_with(context, instance['image_ref'])
         image_show.assert_called_once_with(context, instance['image_ref'])
 
@@ -118,13 +116,13 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         with test.nested(
              mock.patch.object(images.IMAGE_API, 'get'),
              mock.patch.object(images.IMAGE_API, 'download'),
-             mock.patch.object(images, 'start_transfer'),
+             mock.patch.object(images, 'image_transfer'),
              mock.patch.object(images, '_build_shadow_vm_config_spec'),
              mock.patch.object(session, '_call_method'),
              mock.patch.object(vm_util, 'get_vmdk_info')
         ) as (mock_image_api_get,
               mock_image_api_download,
-              mock_start_transfer,
+              mock_image_transfer,
               mock_build_shadow_vm_config_spec,
               mock_call_method,
               mock_get_vmdk_info):
@@ -171,8 +169,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
 
             mock_tar_open.assert_called_once_with(mode='r|',
                                                   fileobj=mock_read_handle)
-            mock_start_transfer.assert_called_once_with(context,
-                    mock_read_handle, 512, write_file_handle=mock_write_handle)
+            mock_image_transfer.assert_called_once_with(mock_read_handle,
+                                                        mock_write_handle)
             mock_get_vmdk_info.assert_called_once_with(
                     session, mock.sentinel.vm_ref, 'fake-vm')
             mock_call_method.assert_called_once_with(
@@ -189,13 +187,13 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         with test.nested(
              mock.patch.object(images.IMAGE_API, 'get'),
              mock.patch.object(images.IMAGE_API, 'download'),
-             mock.patch.object(images, 'start_transfer'),
+             mock.patch.object(images, 'image_transfer'),
              mock.patch.object(images, '_build_shadow_vm_config_spec'),
              mock.patch.object(session, '_call_method'),
              mock.patch.object(vm_util, 'get_vmdk_info')
         ) as (mock_image_api_get,
               mock_image_api_download,
-              mock_start_transfer,
+              mock_image_transfer,
               mock_build_shadow_vm_config_spec,
               mock_call_method,
               mock_get_vmdk_info):
@@ -221,9 +219,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                     context, instance, session, 'fake-vm', 'fake-datastore',
                     vm_folder_ref, res_pool_ref)
 
-            mock_start_transfer.assert_called_once_with(context,
-                    mock_read_handle, 512, write_file_handle=mock_write_handle)
-
+            mock_image_transfer.assert_called_once_with(mock_read_handle,
+                                                        mock_write_handle)
             mock_call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
             mock_get_vmdk_info.assert_called_once_with(
