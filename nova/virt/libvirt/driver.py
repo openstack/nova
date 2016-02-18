@@ -3366,7 +3366,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if self._has_sriov_port(network_info):
             for vif in network_info:
-                if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV:
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
                                                      instance.image_meta,
@@ -3394,15 +3394,26 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceDetachFailed(reason=reason,
                                                       dev=network_info)
 
-            for vif in network_info:
-                if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
-                    cfg = self.vif_driver.get_config(instance,
-                                                     vif,
-                                                     instance.image_meta,
-                                                     instance.flavor,
-                                                     CONF.libvirt.virt_type,
-                                                     self._host)
-                    guest.detach_device(cfg, live=True)
+            image_meta = objects.ImageMeta.from_instance(instance)
+            sriov_pci_addresses = [
+                self.vif_driver.get_config(instance,
+                                           vif,
+                                           image_meta,
+                                           instance.flavor,
+                                           CONF.libvirt.virt_type,
+                                           self._host).source_dev
+                for vif in network_info
+                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV
+            ]
+
+            # use detach_pci_devices to avoid failure in case of
+            # multiple guest SRIOV ports with the same MAC
+            # (protection use-case, ports are on different physical
+            # interfaces)
+            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
+            sriov_devs = [pci_dev for pci_dev in pci_devs
+                          if pci_dev.address in sriov_pci_addresses]
+            self._detach_pci_devices(guest, sriov_devs)
 
     def _set_host_enabled(self, enabled,
                           disable_reason=DISABLE_REASON_UNDEFINED):
