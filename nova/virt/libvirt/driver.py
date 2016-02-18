@@ -164,8 +164,8 @@ libvirt_opts = [
                     'the hostname of the migration target'
                     'compute node will be used)'),
     cfg.StrOpt('live_migration_uri',
-               default="qemu+tcp://%s/system",
-               help='Migration target URI '
+               help='Override the default libvirt live migration target URI '
+                    '(which is dependent on virt_type) '
                     '(any included "%s" is replaced with '
                     'the migration target hostname)'),
     cfg.StrOpt('live_migration_flag',
@@ -835,6 +835,21 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             uri = CONF.libvirt.connection_uri or 'qemu:///system'
         return uri
+
+    @staticmethod
+    def _live_migration_uri(dest):
+        # Only Xen and QEMU support live migration, see
+        # https://libvirt.org/migration.html#scenarios for reference
+        uris = {
+            'kvm': 'qemu+tcp://%s/system',
+            'qemu': 'qemu+tcp://%s/system',
+            'xen': 'xenmigr://%s/system',
+        }
+        virt_type = CONF.libvirt.virt_type
+        uri = CONF.libvirt.live_migration_uri or uris.get(virt_type)
+        if uri is None:
+            raise exception.LiveMigrationURINotAvailable(virt_type=virt_type)
+        return uri % dest
 
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
@@ -5956,7 +5971,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # check_can_live_migrate_destination/source phase
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
                 self._verify_serial_console_is_disabled()
-                dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
+                dom.migrateToURI(self._live_migration_uri(dest),
                                  migration_flags,
                                  None,
                                  CONF.libvirt.live_migration_bandwidth)
@@ -5975,12 +5990,12 @@ class LibvirtDriver(driver.ComputeDriver):
                             'migrate_disks': device_names,
                         }
                         dom.migrateToURI3(
-                            CONF.libvirt.live_migration_uri % dest,
+                            self._live_migration_uri(dest),
                             params,
                             migration_flags)
                     else:
                         dom.migrateToURI2(
-                            CONF.libvirt.live_migration_uri % dest,
+                            self._live_migration_uri(dest),
                             None,
                             new_xml_str,
                             migration_flags,
@@ -6008,7 +6023,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             listen_addrs)
                         self._verify_serial_console_is_disabled()
                         dom.migrateToURI(
-                            CONF.libvirt.live_migration_uri % dest,
+                            self._live_migration_uri(dest),
                             migration_flags,
                             None,
                             CONF.libvirt.live_migration_bandwidth)
