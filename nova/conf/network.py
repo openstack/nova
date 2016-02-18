@@ -56,7 +56,7 @@ Possible values:
 
     Any valid IP address.
 
-* Related options:
+Related options:
 
     ``use_neutron``
 """),
@@ -161,7 +161,9 @@ This is the public IP address for the cloudpipe VPN servers. It defaults to the
 IP address of the host.
 
 Please note that this option is only used when using nova-network instead of
-Neutron in your deployment.
+Neutron in your deployment. It also will be ignored if the configuration option
+for `network_manager` is not set to the default of
+'nova.network.manager.VlanManager'.
 
 Possible values:
 
@@ -169,7 +171,7 @@ Possible values:
 
 Related options:
 
-    ``use_neutron``, ``vpn_start``
+    ``network_manager``, ``use_neutron``, ``vpn_start``
 """),
     cfg.IntOpt("vpn_start",
             default=1000,
@@ -322,23 +324,68 @@ Related options:
     ``use_neutron``, ``vpn_ip``, ``fake_network``
 """),
     cfg.BoolOpt("force_dhcp_release",
-                default=True,
-                help="If True, send a dhcp release on instance termination"),
+            default=True,
+            help="""
+When this option is True, a call is made to release the DHCP for the instance
+when that instance is terminated.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.BoolOpt("update_dns_entries",
-                default=False,
-                help="If True, when a DNS entry must be updated, it sends a "
-                     "fanout cast to all network hosts to update their DNS "
-                     "entries in multi host mode"),
+            default=False,
+            help="""
+When this option is True, whenever a DNS entry must be updated, a fanout cast
+message is sent to all network hosts to update their DNS entries in multi-host
+mode.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.IntOpt("dns_update_periodic_interval",
-               default=-1,
-               help="Number of seconds to wait between runs of updates to DNS "
-                    "entries."),
+            default=-1,
+            help="""
+This option determines the time, in seconds, to wait between refreshing DNS
+entries for the network.
+
+Possible values:
+
+    Either -1 (default), or any positive integer. A negative value will disable
+    the updates.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.StrOpt("dhcp_domain",
-               default="novalocal",
-               help="Domain to use for building the hostnames"),
+            default="novalocal",
+            help="""
+This option allows you to specify the domain for the DHCP server.
+
+Possible values:
+
+    Any string that is a valid domain name.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.StrOpt("l3_lib",
-               default="nova.network.l3.LinuxNetL3",
-               help="Indicates underlying L3 management library"),
+            default="nova.network.l3.LinuxNetL3",
+            help="""
+This option allows you to specify the L3 management library to be used.
+
+Possible values:
+
+    Any dot-separated string that represents the import path to an L3
+    networking library.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.BoolOpt("share_dhcp_address",
             default=False,
             deprecated_for_removal=True,
