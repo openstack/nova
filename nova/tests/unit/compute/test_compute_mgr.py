@@ -4402,4 +4402,121 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               self.compute.live_migration_force_complete,
                               self.context, instance, migration.id)
 
+    def test_post_live_migration_at_destination_success(self):
+
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
+                           return_value='test_network')
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_finish')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute, '_get_power_state', return_value=1)
+        @mock.patch.object(self.compute, '_get_compute_info')
+        @mock.patch.object(self.compute.driver,
+                           'post_live_migration_at_destination')
+        def _do_test(post_live_migration_at_destination, _get_compute_info,
+                     _get_power_state, _get_instance_block_device_info,
+                     _notify_about_instance_usage, migrate_instance_finish,
+                     setup_networks_on_host, get_instance_nw_info, save):
+
+            cn = mock.Mock(spec_set=['hypervisor_hostname'])
+            cn.hypervisor_hostname = 'test_host'
+            _get_compute_info.return_value = cn
+            cn_old = self.instance.host
+            instance_old = self.instance
+
+            self.compute.post_live_migration_at_destination(
+                self.context, self.instance, False)
+
+            setup_networks_calls = [
+                mock.call(self.context, self.instance, self.compute.host),
+                mock.call(self.context, self.instance, cn_old, teardown=True),
+                mock.call(self.context, self.instance, self.compute.host)
+            ]
+            setup_networks_on_host.assert_has_calls(setup_networks_calls)
+
+            notify_usage_calls = [
+                mock.call(self.context, instance_old,
+                          "live_migration.post.dest.start",
+                          network_info='test_network'),
+                mock.call(self.context, self.instance,
+                          "live_migration.post.dest.end",
+                          network_info='test_network')
+            ]
+            _notify_about_instance_usage.assert_has_calls(notify_usage_calls)
+
+            migrate_instance_finish.assert_called_once_with(
+                self.context, self.instance,
+                {'source_compute': cn_old,
+                 'dest_compute': self.compute.host})
+            _get_instance_block_device_info.assert_called_once_with(
+                self.context, self.instance
+            )
+            get_instance_nw_info.assert_called_once_with(self.context,
+                                                         self.instance)
+            _get_power_state.assert_called_once_with(self.context,
+                                                     self.instance)
+            _get_compute_info.assert_called_once_with(self.context,
+                                                      self.compute.host)
+
+            self.assertEqual(self.compute.host, self.instance.host)
+            self.assertEqual('test_host', self.instance.node)
+            self.assertEqual(1, self.instance.power_state)
+            self.assertIsNone(self.instance.task_state)
+            save.assert_called_once_with(
+                expected_task_state=task_states.MIGRATING)
+
+        _do_test()
+
+    def test_post_live_migration_at_destination_compute_not_found(self):
+
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute, '_get_power_state', return_value=1)
+        @mock.patch.object(self.compute, '_get_compute_info',
+                           side_effect=exception.ComputeHostNotFound(
+                               host='fake'))
+        @mock.patch.object(self.compute.driver,
+                           'post_live_migration_at_destination')
+        def _do_test(post_live_migration_at_destination, _get_compute_info,
+                     _get_power_state, _get_instance_block_device_info,
+                     _notify_about_instance_usage, network_api, save):
+            cn = mock.Mock(spec_set=['hypervisor_hostname'])
+            cn.hypervisor_hostname = 'test_host'
+            _get_compute_info.return_value = cn
+
+            self.compute.post_live_migration_at_destination(
+                self.context, self.instance, False)
+            self.assertIsNone(self.instance.node)
+
+        _do_test()
+
+    def test_post_live_migration_at_destination_unexpected_exception(self):
+
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute, '_get_power_state', return_value=1)
+        @mock.patch.object(self.compute, '_get_compute_info')
+        @mock.patch.object(self.compute.driver,
+                           'post_live_migration_at_destination',
+                           side_effect=exception.NovaException)
+        def _do_test(post_live_migration_at_destination, _get_compute_info,
+                     _get_power_state, _get_instance_block_device_info,
+                     _notify_about_instance_usage, network_api, save,
+                     add_instance_fault_from_exc):
+            cn = mock.Mock(spec_set=['hypervisor_hostname'])
+            cn.hypervisor_hostname = 'test_host'
+            _get_compute_info.return_value = cn
+
+            self.assertRaises(exception.NovaException,
+                              self.compute.post_live_migration_at_destination,
+                              self.context, self.instance, False)
+            self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+
         _do_test()

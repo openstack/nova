@@ -5465,24 +5465,32 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
 
-        self.driver.post_live_migration_at_destination(context, instance,
-                                            network_info,
-                                            block_migration, block_device_info)
-        # Restore instance state
-        current_power_state = self._get_power_state(context, instance)
-        node_name = None
-        prev_host = instance.host
         try:
-            compute_node = self._get_compute_info(context, self.host)
-            node_name = compute_node.hypervisor_hostname
-        except exception.ComputeHostNotFound:
-            LOG.exception(_LE('Failed to get compute_info for %s'), self.host)
+            self.driver.post_live_migration_at_destination(
+                context, instance, network_info, block_migration,
+                block_device_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                instance.vm_state = vm_states.ERROR
+                LOG.error(_LE('Unexpected error during post live migration at '
+                              'destination host.'), instance=instance)
         finally:
-            instance.host = self.host
-            instance.power_state = current_power_state
-            instance.task_state = None
-            instance.node = node_name
-            instance.save(expected_task_state=task_states.MIGRATING)
+            # Restore instance state and update host
+            current_power_state = self._get_power_state(context, instance)
+            node_name = None
+            prev_host = instance.host
+            try:
+                compute_node = self._get_compute_info(context, self.host)
+                node_name = compute_node.hypervisor_hostname
+            except exception.ComputeHostNotFound:
+                LOG.exception(_LE('Failed to get compute_info for %s'),
+                              self.host)
+            finally:
+                instance.host = self.host
+                instance.power_state = current_power_state
+                instance.task_state = None
+                instance.node = node_name
+                instance.save(expected_task_state=task_states.MIGRATING)
 
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(context, instance,
