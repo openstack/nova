@@ -94,12 +94,11 @@ class ServerMigrationsPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = server_migrations.ServerMigrationsController()
         self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
 
-    def test_migrate_live_policy_failed(self):
+    def test_force_complete_policy_failed(self):
         rule_name = "os_compute_api:servers:migrations:force_complete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body_args = {'force_complete': None}
-        exc = self.assertRaises(
-                                exception.PolicyNotAuthorized,
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._force_complete, self.req,
                                 fakes.FAKE_UUID, fakes.FAKE_UUID,
                                 body=body_args)
