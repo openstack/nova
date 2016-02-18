@@ -1,0 +1,9 @@
+---
+
+features:
+  - Added a `nova-manage db online_data_migrations` command for forcing online
+    data migrations, which
+    will run all registered migrations for the release, instead of there being
+    a separate command for each logical data migration. Operators need to make
+    sure all data is migrated before upgrading to the next release, and the new
+    command provides a unified interface for doing it.
