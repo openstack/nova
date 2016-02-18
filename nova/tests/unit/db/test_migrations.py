@@ -855,6 +855,31 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'aggregates', 'uuid')
         self.assertColumnExists(engine, 'shadow_aggregates', 'uuid')
 
+    def _check_318(self, engine, data):
+        self.assertColumnExists(engine, 'resource_providers', 'name')
+        self.assertColumnExists(engine, 'resource_providers', 'generation')
+        self.assertColumnExists(engine, 'resource_providers', 'can_host')
+        self.assertIndexMembers(engine, 'resource_providers',
+                                'resource_providers_name_idx',
+                                ['name'])
+
+        self.assertColumnExists(engine, 'resource_provider_aggregates',
+                                'resource_provider_id')
+        self.assertColumnExists(engine, 'resource_provider_aggregates',
+                                'aggregate_id')
+
+        self.assertIndexMembers(engine, 'resource_provider_aggregates',
+            'resource_provider_aggregates_aggregate_id_idx',
+            ['aggregate_id'])
+
+        self.assertIndexMembers(engine, 'resource_provider_aggregates',
+            'resource_provider_aggregates_aggregate_id_idx',
+            ['aggregate_id'])
+
+        self.assertIndexMembers(engine, 'inventories',
+            'inventories_resource_provider_resource_class_idx',
+            ['resource_provider_id', 'resource_class_id'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
