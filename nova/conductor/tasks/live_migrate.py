@@ -13,6 +13,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+import six
 
 from nova.compute import power_state
 from nova.conductor.tasks import base
@@ -177,8 +178,17 @@ class LiveMigrationTask(base.TaskBase):
             # scheduler.utils methods to directly use the RequestSpec object
             spec_obj = objects.RequestSpec.from_primitives(
                 self.context, request_spec, filter_properties)
-            host = self.scheduler_client.select_destinations(self.context,
-                            spec_obj)[0]['host']
+            try:
+                host = self.scheduler_client.select_destinations(self.context,
+                                spec_obj)[0]['host']
+            except messaging.RemoteError as ex:
+                # TODO(ShaoHe Feng) There maybe multi-scheduler, and the
+                # scheduling algorithm is R-R, we can let other scheduler try.
+                # Note(ShaoHe Feng) There are types of RemoteError, such as
+                # NoSuchMethod, UnsupportedVersion, we can distinguish it by
+                # ex.exc_type.
+                raise exception.MigrationSchedulerRPCError(
+                    reason=six.text_type(ex))
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)

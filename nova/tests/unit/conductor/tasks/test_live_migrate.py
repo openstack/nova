@@ -16,6 +16,7 @@ import oslo_messaging as messaging
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import objects
@@ -38,6 +39,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 host=self.instance_host,
                 uuid=self.instance_uuid,
                 power_state=power_state.RUNNING,
+                vm_state = vm_states.ACTIVE,
                 memory_mb=512,
                 image_ref=self.instance_image)
         self.instance = objects.Instance._from_db_object(
@@ -500,6 +502,24 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
+
+    @mock.patch("nova.utils.get_image_from_system_metadata")
+    @mock.patch("nova.scheduler.utils.build_request_spec")
+    @mock.patch("nova.scheduler.utils.setup_instance_group")
+    @mock.patch("nova.objects.RequestSpec.from_primitives")
+    def test_find_destination_with_remoteError(self,
+        m_from_primitives, m_setup_instance_group,
+        m_build_request_spec, m_get_image_from_system_metadata):
+        m_get_image_from_system_metadata.return_value = {'properties': {}}
+        m_build_request_spec.return_value = {}
+        fake_spec = objects.RequestSpec()
+        m_from_primitives.return_value = fake_spec
+        with mock.patch.object(self.task.scheduler_client,
+            'select_destinations') as m_select_destinations:
+            error = messaging.RemoteError()
+            m_select_destinations.side_effect = error
+            self.assertRaises(exception.MigrationSchedulerRPCError,
+                              self.task._find_destination)
 
     def test_call_livem_checks_on_host(self):
         with mock.patch.object(self.task.compute_rpcapi,

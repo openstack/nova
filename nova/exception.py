@@ -1321,6 +1321,10 @@ class MigrationPreCheckError(MigrationError):
     msg_fmt = _("Migration pre-check error: %(reason)s")
 
 
+class MigrationSchedulerRPCError(MigrationError):
+    msg_fmt = _("Migration select destinations error: %(reason)s")
+
+
 class MalformedRequestBody(NovaException):
     msg_fmt = _("Malformed message body: %(reason)s")
 
