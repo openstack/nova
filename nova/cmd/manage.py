@@ -923,6 +923,8 @@ class HostCommands(object):
 class DbCommands(object):
     """Class for managing the main database."""
 
+    online_migrations = ()
+
     def __init__(self):
         pass
 
@@ -984,6 +986,37 @@ class DbCommands(object):
         if not records_found:
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
+
+    @args('--max-count', metavar='<number>', dest='max_count',
+          help='Maximum number of objects to consider')
+    def online_data_migrations(self, max_count=None):
+        if max_count is not None:
+            max_count = int(max_count)
+            unlimited = False
+            if max_count < 0:
+                print(_('Must supply a positive value for max_number'))
+                return(1)
+        else:
+            unlimited = True
+
+        ran = 0
+        for migration_meth in self.online_migrations:
+            count = max_count - ran if not unlimited else None
+            try:
+                found, done = migration_meth(count)
+            except Exception:
+                print("Error attempting to run %(meth)s" % migration_meth)
+                found = done = 0
+
+            if found:
+                print(_('%(total)i rows matched query %(meth)s, %(done)i '
+                        'migrated'), {'total': found,
+                                      'meth': migration_meth.__name__,
+                                      'done': done})
+            if max_count is not None:
+                ran += done
+                if ran >= max_count:
+                    break
 
 
 class ApiDbCommands(object):
