@@ -1,0 +1,5 @@
+---
+features:
+  - It is possible to block live migrate instances with additional cinder
+    volumes attached. This requires libvirt version to be >=1.2.17 and does
+    not work when live_migration_tunnelled is set to True.
