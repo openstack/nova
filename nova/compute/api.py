@@ -953,7 +953,7 @@ class API(base.Base):
                 context, instance_type, min_count, max_count)
         security_groups = self.security_group_api.populate_security_groups(
                 security_groups)
-        LOG.debug("Going to run %s instances..." % num_instances)
+        LOG.debug("Going to run %s instances...", num_instances)
         instances = []
         try:
             for i in range(num_instances):
@@ -2052,7 +2052,7 @@ class API(base.Base):
         if search_opts is None:
             search_opts = {}
 
-        LOG.debug("Searching by: %s" % str(search_opts))
+        LOG.debug("Searching by: %s", str(search_opts))
 
         # Fixups for the DB call
         filters = {}

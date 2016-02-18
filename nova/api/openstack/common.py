@@ -291,7 +291,7 @@ def remove_trailing_version_from_href(href):
     # NOTE: this should match vX.X or vX
     expression = re.compile(r'^v([0-9]+|[0-9]+\.[0-9]+)(/.*|$)')
     if not expression.match(url_parts.pop()):
-        LOG.debug('href %s does not contain version' % href)
+        LOG.debug('href %s does not contain version', href)
         raise ValueError(_('href %s does not contain version') % href)
 
     new_path = url_join(*url_parts)

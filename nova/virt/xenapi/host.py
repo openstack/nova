@@ -259,7 +259,7 @@ class HostState(object):
             if (data['host_hostname'] !=
                     self._stats.get('host_hostname', data['host_hostname'])):
                 LOG.error(_LE('Hostname has changed from %(old)s to %(new)s. '
-                              'A restart is required to take effect.') %
+                              'A restart is required to take effect.'),
                           {'old': self._stats['host_hostname'],
                            'new': data['host_hostname']})
                 data['host_hostname'] = self._stats['host_hostname']

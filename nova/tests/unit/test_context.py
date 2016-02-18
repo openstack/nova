@@ -82,7 +82,9 @@ class ContextTestCase(test.NoDBTestCase):
     def test_extra_args_to_context_get_logged(self):
         info = {}
 
-        def fake_warn(log_msg):
+        def fake_warn(log_msg, *args):
+            if args:
+                log_msg = log_msg % args
             info['log_msg'] = log_msg
 
         self.stub_out('nova.context.LOG.warning', fake_warn)

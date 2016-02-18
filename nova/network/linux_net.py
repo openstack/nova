@@ -1222,7 +1222,7 @@ def _host_dhcp(fixedip):
     #            to truncate the hostname to only 63 characters.
     hostname = fixedip.instance.hostname
     if len(hostname) > 63:
-        LOG.warning(_LW('hostname %s too long, truncating.') % (hostname))
+        LOG.warning(_LW('hostname %s too long, truncating.'), hostname)
         hostname = fixedip.instance.hostname[:2] + '-' +\
                    fixedip.instance.hostname[-60:]
     if CONF.use_single_default_gateway:

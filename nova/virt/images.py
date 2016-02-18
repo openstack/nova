@@ -149,7 +149,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
-            LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
+            LOG.debug("%s was %s, converting to raw", image_href, fmt)
             with fileutils.remove_path_on_error(staged):
                 try:
                     convert_image(path_tmp, staged, fmt, 'raw')

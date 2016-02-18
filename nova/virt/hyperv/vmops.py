@@ -157,7 +157,7 @@ class VMOps(object):
                 instance_uuids.append(str(notes[0]))
             else:
                 LOG.debug("Notes not found or not resembling a GUID for "
-                          "instance: %s" % instance_name)
+                          "instance: %s", instance_name)
         return instance_uuids
 
     def list_instances(self):
@@ -235,7 +235,7 @@ class VMOps(object):
                 flavor_size=new_size, image_size=old_size)
         elif new_size > old_size:
             LOG.debug("Resizing VHD %(vhd_path)s to new "
-                      "size %(new_size)s" %
+                      "size %(new_size)s",
                       {'new_size': new_size,
                        'vhd_path': vhd_path},
                       instance=instance)

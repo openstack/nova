@@ -108,7 +108,7 @@ class RequestContext(context.RequestContext):
         # safely ignore this as we don't use it.
         kwargs.pop('user_identity', None)
         if kwargs:
-            LOG.warning(_LW('Arguments dropped when creating context: %s') %
+            LOG.warning(_LW('Arguments dropped when creating context: %s'),
                         str(kwargs))
 
         # FIXME(dims): user_id and project_id duplicate information that is

@@ -2224,7 +2224,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.NovaException(msg)
 
             # libgfapi delete
-            LOG.debug("XML: %s" % xml)
+            LOG.debug("XML: %s", xml)
 
             LOG.debug("active disk object: %s", active_disk_object)
 

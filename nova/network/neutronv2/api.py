@@ -286,7 +286,7 @@ class API(base_api.NetworkAPI):
             raise exception.NoMoreFixedIps(net=network_id)
         except neutron_client_exc.MacAddressInUseClient:
             LOG.warning(_LW('Neutron error: MAC address %(mac)s is already '
-                            'in use on network %(network)s.') %
+                            'in use on network %(network)s.'),
                         {'mac': mac_address, 'network': network_id},
                         instance=instance)
             raise exception.PortInUse(port_id=mac_address)

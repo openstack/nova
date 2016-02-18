@@ -183,9 +183,9 @@ class HostController(object):
         on the host
         """
         if enabled:
-            LOG.info(_LI("Enabling host %s.") % host_name)
+            LOG.info(_LI("Enabling host %s."), host_name)
         else:
-            LOG.info(_LI("Disabling host %s.") % host_name)
+            LOG.info(_LI("Disabling host %s."), host_name)
         try:
             result = self.api.set_host_enabled(context, host_name=host_name,
                     enabled=enabled)
