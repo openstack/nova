@@ -48,31 +48,72 @@ def _get_all_chars():
 # empty string is tested. Otherwise it is not deterministic which
 # constraint fails and this causes issues for some unittests when
 # PYTHONHASHSEED is set randomly.
-def _get_printable(exclude=None):
+
+def _build_regex_range(ws=True, invert=False, exclude=None):
+    """Build a range regex for a set of characters in utf8.
+
+    This builds a valid range regex for characters in utf8 by
+    iterating the entire space and building up a set of x-y ranges for
+    all the characters we find which are valid.
+
+    :param ws: should we include whitespace in this range.
+    :param exclude: any characters we want to exclude
+    :param invert: invert the logic
+
+    The inversion is useful when we want to generate a set of ranges
+    which is everything that's not a certain class. For instance,
+    produce all all the non printable characters as a set of ranges.
+    """
     if exclude is None:
         exclude = []
-    return ''.join(c for c in _get_all_chars()
-                       if _is_printable(c) and c not in exclude)
+    regex = ""
+    # are we currently in a range
+    in_range = False
+    # last character we found, for closing ranges
+    last = None
+    # last character we added to the regex, this lets us know that we
+    # already have B in the range, which means we don't need to close
+    # it out with B-B. While the later seems to work, it's kind of bad form.
+    last_added = None
 
+    def valid_char(char):
+        if char in exclude:
+            result = False
+        elif ws:
+            result = _is_printable(char)
+        else:
+            # Zs is the unicode class for space characters, of which
+            # there are about 10 in this range.
+            result = (_is_printable(char) and
+                      unicodedata.category(char) != "Zs")
+        if invert is True:
+            return not result
+        return result
 
-_printable_ws = ''.join(c for c in _get_all_chars()
-                        if unicodedata.category(c) == "Zs")
-
-
-def _get_printable_no_ws(exclude=None):
-    if exclude is None:
-        exclude = []
-    return ''.join(c for c in _get_all_chars()
-                   if _is_printable(c) and
-                       unicodedata.category(c) != "Zs" and
-                       c not in exclude)
+    # iterate through the entire character range. in_
+    for c in _get_all_chars():
+        if valid_char(c):
+            if not in_range:
+                regex += re.escape(c)
+                last_added = c
+            in_range = True
+        else:
+            if in_range and last != last_added:
+                regex += "-" + re.escape(last)
+            in_range = False
+        last = c
+    else:
+        if in_range:
+            regex += "-" + re.escape(c)
+    return regex
 
 valid_name_regex_base = '^(?![%s])[%s]*(?<![%s])$'
 
 
 valid_name_regex = valid_name_regex_base % (
-    re.escape(_printable_ws), re.escape(_get_printable()),
-    re.escape(_printable_ws))
+    _build_regex_range(ws=False, invert=True),
+    _build_regex_range(),
+    _build_regex_range(ws=False, invert=True))
 
 
 # This regex allows leading/trailing whitespace
@@ -82,22 +123,22 @@ valid_name_leading_trailing_spaces_regex_base = (
 
 
 valid_cell_name_regex = valid_name_regex_base % (
-    re.escape(_printable_ws),
-    re.escape(_get_printable(exclude=['!', '.', '@'])),
-    re.escape(_printable_ws))
+    _build_regex_range(ws=False, invert=True),
+    _build_regex_range(exclude=['!', '.', '@']),
+    _build_regex_range(ws=False, invert=True))
 
 
 # cell's name disallow '!',  '.' and '@'.
 valid_cell_name_leading_trailing_spaces_regex = (
     valid_name_leading_trailing_spaces_regex_base % {
-        'ws': re.escape(_printable_ws),
-        'no_ws': re.escape(_get_printable_no_ws(exclude=['!', '.', '@']))})
+        'ws': _build_regex_range(exclude=['!', '.', '@']),
+        'no_ws': _build_regex_range(ws=False, exclude=['!', '.', '@'])})
 
 
 valid_name_leading_trailing_spaces_regex = (
     valid_name_leading_trailing_spaces_regex_base % {
-        'ws': re.escape(_printable_ws),
-        'no_ws': re.escape(_get_printable_no_ws())})
+        'ws': _build_regex_range(),
+        'no_ws': _build_regex_range(ws=False)})
 
 
 valid_name_regex_obj = re.compile(valid_name_regex, re.UNICODE)
@@ -107,7 +148,7 @@ valid_description_regex_base = '^[%s]*$'
 
 
 valid_description_regex = valid_description_regex_base % (
-    re.escape(_get_printable()))
+    _build_regex_range())
 
 
 boolean = {
