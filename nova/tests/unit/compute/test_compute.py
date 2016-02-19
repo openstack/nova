@@ -4000,11 +4000,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "allocate_for_instance")
         self.compute.network_api.allocate_for_instance(
-            mox.IgnoreArg(),
-            mox.IgnoreArg(),
-            requested_networks=None,
-            vpn=False, macs=macs,
-            security_groups=[], dhcp_options=None).AndReturn(
+            self.context, instance, vpn=False,
+            requested_networks=None, macs=macs,
+            security_groups=[], dhcp_options=None,
+            bind_host_id=self.compute.host).AndReturn(
                 fake_network.fake_get_instance_nw_info(self, 1, 1))
 
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
@@ -4046,11 +4045,11 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "deallocate_for_instance")
         self.compute.network_api.allocate_for_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg(),
+                self.context, instance,
                 requested_networks=None,
                 vpn=False, macs=None,
-                security_groups=[], dhcp_options=None
+                security_groups=[], dhcp_options=None,
+                bind_host_id=self.compute.host
                 ).AndRaise(messaging.RemoteError())
         self.compute.network_api.deallocate_for_instance(
                 mox.IgnoreArg(),
