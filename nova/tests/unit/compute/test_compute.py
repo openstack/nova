@@ -8101,13 +8101,6 @@ class ComputeAPITestCase(BaseTestCase):
                                         want_objects=True)
         self.assertEqual(exp_instance.id, instance.id)
 
-    def test_get_with_integer_id(self):
-        # Test get instance with an integer id.
-        exp_instance = self._create_fake_instance_obj()
-        instance = self.compute_api.get(self.context, exp_instance['id'],
-                                        want_objects=True)
-        self.assertEqual(exp_instance.id, instance.id)
-
     def test_get_all_by_name_regexp(self):
         # Test searching instances by name (display_name).
         c = context.get_admin_context()

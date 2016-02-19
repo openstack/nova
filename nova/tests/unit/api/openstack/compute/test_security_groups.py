@@ -35,10 +35,12 @@ from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
 FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
+UUID_SERVER = uuids.server
 
 
 class AttrDict(dict):
@@ -91,10 +93,10 @@ def security_group_rule_db(rule, id=None):
 def return_server(context, server_id,
                   columns_to_join=None, use_slave=False):
     return fake_instance.fake_db_instance(
-        **{'id': int(server_id),
+        **{'id': 1,
            'power_state': 0x01,
            'host': "localhost",
-           'uuid': FAKE_UUID1,
+           'uuid': server_id,
            'name': 'asdf'})
 
 
@@ -111,13 +113,13 @@ def return_server_by_uuid(context, server_uuid,
 
 def return_non_running_server(context, server_id, columns_to_join=None):
     return fake_instance.fake_db_instance(
-        **{'id': server_id, 'power_state': power_state.SHUTDOWN,
-           'uuid': FAKE_UUID1, 'host': "localhost", 'name': 'asdf'})
+        **{'id': 1, 'power_state': power_state.SHUTDOWN,
+           'uuid': server_id, 'host': "localhost", 'name': 'asdf'})
 
 
 def return_security_group_by_name(context, project_id, group_name):
     return {'id': 1, 'name': group_name,
-            "instances": [{'id': 1, 'uuid': FAKE_UUID1}]}
+            "instances": [{'id': 1, 'uuid': UUID_SERVER}]}
 
 
 def return_security_group_without_instances(context, project_id, group_name):
@@ -659,7 +661,7 @@ class TestSecurityGroupsV21(test.TestCase):
                        return_security_group_without_instances)
         body = dict(addSecurityGroup=dict(name="test"))
 
-        self.manager._addSecurityGroup(self.req, '1', body)
+        self.manager._addSecurityGroup(self.req, UUID_SERVER, body)
 
     def test_associate_already_associated_security_group_to_instance(self):
         self.stub_out('nova.db.instance_get', return_server)
@@ -671,7 +673,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, self.req,
-                          '1', body)
+                          UUID_SERVER, body)
 
     def test_associate(self):
         self.stub_out('nova.db.instance_get', return_server)
@@ -687,7 +689,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         body = dict(addSecurityGroup=dict(name="test"))
 
-        self.manager._addSecurityGroup(self.req, '1', body)
+        self.manager._addSecurityGroup(self.req, UUID_SERVER, body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
         self.stub_out('nova.db.instance_get', return_server)
@@ -697,7 +699,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup, self.req,
-                          '1', body)
+                          UUID_SERVER, body)
 
     def test_disassociate_by_invalid_server_id(self):
         self.stub_out('nova.db.security_group_get_by_name',
@@ -750,7 +752,7 @@ class TestSecurityGroupsV21(test.TestCase):
                        return_security_group_by_name)
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        self.manager._removeSecurityGroup(self.req, '1', body)
+        self.manager._removeSecurityGroup(self.req, UUID_SERVER, body)
 
     def test_disassociate_already_associated_security_group_to_instance(self):
         self.stub_out('nova.db.instance_get', return_server)
@@ -762,7 +764,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, self.req,
-                          '1', body)
+                          UUID_SERVER, body)
 
     def test_disassociate(self):
         self.stub_out('nova.db.instance_get', return_server)
@@ -778,7 +780,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        self.manager._removeSecurityGroup(self.req, '1', body)
+        self.manager._removeSecurityGroup(self.req, UUID_SERVER, body)
 
 
 class TestSecurityGroupsV2(TestSecurityGroupsV21):
