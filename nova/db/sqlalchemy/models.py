@@ -1103,8 +1103,9 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
 class Aggregate(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
-    __table_args__ = ()
+    __table_args__ = (Index('aggregate_uuid_idx', 'uuid'),)
     id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36))
     name = Column(String(255))
     _hosts = orm.relationship(AggregateHost,
                           primaryjoin='and_('

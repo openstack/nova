@@ -851,6 +851,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'compute_nodes',
                                 'disk_allocation_ratio')
 
+    def _check_317(self, engine, data):
+        self.assertColumnExists(engine, 'aggregates', 'uuid')
+        self.assertColumnExists(engine, 'shadow_aggregates', 'uuid')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
