@@ -601,28 +601,128 @@ only affects scheduling if the 'TrustedFilter' filter is enabled.
 
 max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
         default=8,
-        help="Tells filters to ignore hosts that have this many or more "
-             "instances currently in build, resize, snapshot, migrate, rescue "
-             "or unshelve task states")
+        help="""
+This setting caps the number of instances on a host that can be actively
+performing IO (in a build, resize, snapshot, migrate, rescue, or unshelve task
+state) before that host becomes ineligible to build new instances.
+
+Valid values are positive integers: 1 or greater.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'io_ops_filter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 agg_img_prop_iso_namespace_opt = cfg.StrOpt(
         "aggregate_image_properties_isolation_namespace",
-        help="Force the filter to consider only keys matching the given "
-             "namespace.")
+        help="""
+Images and hosts can be configured so that certain images can only be scheduled
+to hosts in a particular aggregate. This is done with metadata values set on
+the host aggregate that are identified by beginning with the value of this
+option. If the host is part of an aggregate with such a metadata key, the image
+in the request spec must have the value of that metadata in its properties in
+order for the scheduler to consider the host as acceptable.
+
+Valid values are strings.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'aggregate_image_properties_isolation' filter is
+enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    aggregate_image_properties_isolation_separator
+""")
 
 agg_img_prop_iso_separator_opt = cfg.StrOpt(
         "aggregate_image_properties_isolation_separator",
         default=".",
-        help="The separator used between the namespace and keys")
+        help="""
+When using the aggregate_image_properties_isolation filter, the relevant
+metadata keys are prefixed with the namespace defined in the
+aggregate_image_properties_isolation_namespace configuration option plus a
+separator. This option defines the separator to be used. It defaults to a
+period ('.').
+
+Valid values are strings.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'aggregate_image_properties_isolation' filter is
+enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    aggregate_image_properties_isolation_namespace
+""")
 
 max_instances_per_host_opt = cfg.IntOpt("max_instances_per_host",
         default=50,
-        help="Ignore hosts that have too many instances")
+        help="""
+If you need to limit the number of instances on any given host, set this option
+to the maximum number of instances you want to allow. The num_instances_filter
+will reject any host that has at least as many instances as this option's
+value.
+
+Valid values are positive integers; setting it to zero will cause all hosts to
+be rejected if the num_instances_filter is active.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'num_instances_filter' filter is enabled.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 ram_weight_mult_opt = cfg.FloatOpt("ram_weight_multiplier",
         default=1.0,
-        help="Multiplier used for weighing ram. Negative numbers mean to "
-             "stack vs spread.")
+        help="""
+This option determines how hosts with more or less available RAM are weighed. A
+positive value will result in the scheduler preferring hosts with more
+available RAM, and a negative number will result in the scheduler preferring
+hosts with less available RAM. Another way to look at it is that positive
+values for this option will tend to spread instances across many hosts, while
+negative values will tend to fill up (stack) hosts as much as possible before
+scheduling to a less-used host. The absolute value, whether positive or
+negative, controls how strong the RAM weigher is relative to other weighers.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'ram' weigher is enabled.
+
+Valid values are numeric, either integer or float.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
@@ -631,8 +731,30 @@ disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
 
 io_ops_weight_mult_opt = cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
-        help="Multiplier used for weighing host io ops. Negative numbers mean "
-             "a preference to choose light workload compute hosts.")
+        help="""
+This option determines how hosts with differing workloads are weighed. Negative
+values, such as the default, will result in the scheduler preferring hosts with
+lighter workloads whereas positive values will prefer hosts with heavier
+workloads. Another way to look at it is that positive values for this option
+will tend to schedule instances onto hosts that are already busy, while
+negative values will tend to distribute the workload across more hosts. The
+absolute value, whether positive or negative, controls how strong the io_ops
+weigher is relative to other weighers.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'io_ops' weigher is enabled.
+
+Valid values are numeric, either integer or float.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 # These opts are registered as a separate OptGroup
 metrics_weight_opts = [
