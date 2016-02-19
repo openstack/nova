@@ -28,6 +28,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel
 
 
 def _make_agg_obj(agg_dict):
@@ -699,7 +700,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         # We would expect the dictionary that comes out is the same one
         # that we pump into the aggregate object in the first place
         agg = {'name': 'aggregate1',
-               'id': 1,
+               'id': 1, 'uuid': uuidsentinel.aggregate,
                'metadata': {'foo': 'bar', 'availability_zone': 'nova'},
                'hosts': ['host1', 'host2']}
         agg_obj = _make_agg_obj(agg)
@@ -708,6 +709,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         # _marshall_aggregate() puts all fields and obj_extra_fields in the
         # top-level dict, so we need to put availability_zone at the top also
         agg['availability_zone'] = 'nova'
+        del agg['uuid']
         self.assertEqual(agg, marshalled_agg['aggregate'])
 
     def _assert_agg_data(self, expected, actual):

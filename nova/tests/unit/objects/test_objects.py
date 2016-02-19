@@ -1099,7 +1099,7 @@ class TestRegistry(test.NoDBTestCase):
 object_data = {
     'Agent': '1.0-c0c092abaceb6f51efe5d82175f15eba',
     'AgentList': '1.0-5a7380d02c3aaf2a32fc8115ae7ca98c',
-    'Aggregate': '1.1-1ab35c4516f71de0bef7087026ab10d1',
+    'Aggregate': '1.2-fe9d8c93feb37919753e9e44fe6818a7',
     'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',

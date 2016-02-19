@@ -1,0 +1,7 @@
+---
+upgrade:
+  - Upon first startup of the scheduler service in Mitaka, all defined
+    aggregates will have UUIDs generated and saved back to the
+    database. If you have a significant number of aggregates, this may
+    delay scheduler start as that work is completed, but it should be
+    minor for most deployments.

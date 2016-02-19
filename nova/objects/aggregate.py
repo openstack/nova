@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+from oslo_utils import uuidutils
+
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
@@ -19,15 +22,19 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+LOG = logging.getLogger(__name__)
+
 
 @base.NovaObjectRegistry.register
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Added uuid field
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
+        'uuid': fields.UUIDField(nullable=False),
         'name': fields.StringField(),
         'hosts': fields.ListOfStringsField(nullable=True),
         'metadata': fields.DictOfStringsField(nullable=True),
@@ -40,11 +47,31 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         for key in aggregate.fields:
             if key == 'metadata':
                 db_key = 'metadetails'
+            elif key == 'uuid':
+                continue
             else:
                 db_key = key
             setattr(aggregate, key, db_aggregate[db_key])
+
+        # NOTE(danms): Remove this conditional load (and remove uuid
+        # special cases above) once we're in Newton and have enforced
+        # that all UUIDs in the database are not NULL.
+        if db_aggregate.get('uuid'):
+            aggregate.uuid = db_aggregate['uuid']
+
         aggregate._context = context
         aggregate.obj_reset_changes()
+
+        # NOTE(danms): This needs to come after obj_reset_changes() to make
+        # sure we only save the uuid, if we generate one.
+        # FIXME(danms): Remove this in Newton once we have enforced that
+        # all aggregates have uuids set in the database.
+        if 'uuid' not in aggregate:
+            aggregate.uuid = uuidutils.generate_uuid()
+            LOG.debug('Generating UUID %(uuid)s for aggregate %(agg)i',
+                      dict(uuid=aggregate.uuid, agg=aggregate.id))
+            aggregate.save()
+
         return aggregate
 
     def _assert_no_hosts(self, action):
@@ -69,6 +96,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         if 'metadata' in updates:
             # NOTE(danms): For some reason the notification format is weird
             payload['meta_data'] = payload.pop('metadata')
+        if 'uuid' not in updates:
+            updates['uuid'] = uuidutils.generate_uuid()
+            LOG.debug('Generated uuid %(uuid)s for aggregate',
+                      dict(uuid=updates['uuid']))
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "create.start",
                                                     payload)
