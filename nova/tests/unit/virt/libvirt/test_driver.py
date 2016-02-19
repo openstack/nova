@@ -15398,15 +15398,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                               cpumodel.POLICY_FORBID]),
                          set([f.policy for f in cpu.features]))
 
-    def test_inject_nmi(self):
+    def test_trigger_crash_dump(self):
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
-            self.drvr.inject_nmi(instance)
+            self.drvr.trigger_crash_dump(instance)
 
-    def test_inject_nmi_not_running(self):
+    def test_trigger_crash_dump_not_running(self):
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
                 'Requested operation is not valid: domain is not running',
@@ -15419,9 +15419,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
             self.assertRaises(exception.InstanceNotRunning,
-                              self.drvr.inject_nmi, instance)
+                              self.drvr.trigger_crash_dump, instance)
 
-    def test_inject_nmi_not_supported(self):
+    def test_trigger_crash_dump_not_supported(self):
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
                 '',
@@ -15433,10 +15433,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
-            self.assertRaises(exception.NMINotSupported,
-                              self.drvr.inject_nmi, instance)
+            self.assertRaises(exception.TriggerCrashDumpNotSupported,
+                              self.drvr.trigger_crash_dump, instance)
 
-    def test_inject_nmi_unexpected_error(self):
+    def test_trigger_crash_dump_unexpected_error(self):
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
                 'UnexpectedError',
@@ -15449,7 +15449,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
             self.assertRaises(fakelibvirt.libvirtError,
-                              self.drvr.inject_nmi, instance)
+                              self.drvr.trigger_crash_dump, instance)
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):

@@ -1039,7 +1039,7 @@ class ComputeAPI(object):
         version = '4.6'
 
         if not self.client.can_send_version(version):
-            raise exception.NMINotSupported()
+            raise exception.TriggerCrashDumpNotSupported()
 
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)

@@ -2136,7 +2136,7 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
                           self.req, FAKE_UUID, body=self.body)
 
     @mock.patch.object(compute_api.API, 'trigger_crash_dump',
-                       side_effect=exception.NMINotSupported)
+                       side_effect=exception.TriggerCrashDumpNotSupported)
     def test_trigger_crash_dump_not_supported(self, mock_trigger_crash_dump):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_trigger_crash_dump,

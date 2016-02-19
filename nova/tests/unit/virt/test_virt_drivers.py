@@ -393,9 +393,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.power_on(self.ctxt, instance_ref, network_info, None)
 
     @catch_notimplementederror
-    def test_inject_nmi(self):
+    def test_trigger_crash_dump(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.inject_nmi(instance_ref)
+        self.connection.trigger_crash_dump(instance_ref)
 
     @catch_notimplementederror
     def test_soft_delete(self):

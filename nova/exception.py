@@ -2077,8 +2077,8 @@ class UEFINotSupported(Invalid):
     msg_fmt = _("UEFI is not supported")
 
 
-class NMINotSupported(Invalid):
-    msg_fmt = _("Injecting NMI is not supported")
+class TriggerCrashDumpNotSupported(Invalid):
+    msg_fmt = _("Triggering crash dump is not supported")
 
 
 class UnsupportedHostCPUControlPolicy(Invalid):

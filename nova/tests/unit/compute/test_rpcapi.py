@@ -549,7 +549,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_trigger_crash_dump_incompatible(self):
         self.flags(compute='4.0', group='upgrade_levels')
-        self.assertRaises(exception.NMINotSupported,
+        self.assertRaises(exception.TriggerCrashDumpNotSupported,
                           self._test_compute_api,
                           'trigger_crash_dump', 'cast',
                           instance=self.fake_instance_obj, version='4.6')

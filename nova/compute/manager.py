@@ -2585,20 +2585,20 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
     @messaging.expected_exceptions(NotImplementedError,
-                                   exception.NMINotSupported,
+                                   exception.TriggerCrashDumpNotSupported,
                                    exception.InstanceNotRunning)
     @wrap_exception()
     @wrap_instance_event
     @wrap_instance_fault
     def trigger_crash_dump(self, context, instance):
-        """Trigger crash dump in an instance by injecting NMI."""
+        """Trigger crash dump in an instance."""
 
         self._notify_about_instance_usage(context, instance,
                                           "trigger_crash_dump.start")
 
         # This method does not change task_state and power_state because the
-        # effect of an NMI depends on user's configuration.
-        self.driver.inject_nmi(instance)
+        # effect of a trigger depends on user's configuration.
+        self.driver.trigger_crash_dump(instance)
 
         self._notify_about_instance_usage(context, instance,
                                           "trigger_crash_dump.end")
