@@ -349,14 +349,37 @@ class VMOps(object):
         secure_boot_enabled = self._requires_secure_boot(instance, image_meta,
                                                          vm_gen)
 
+        memory_per_numa_node, cpus_per_numa_node = (
+            self._get_instance_vnuma_config(instance, image_meta))
+
+        if memory_per_numa_node:
+            LOG.debug("Instance requires vNUMA topology. Host's NUMA spanning "
+                      "has to be disabled in order for the instance to "
+                      "benefit from it.", instance=instance)
+            if CONF.hyperv.dynamic_memory_ratio > 1.0:
+                LOG.warning(_LW(
+                    "Instance vNUMA topology requested, but dynamic memory "
+                    "ratio is higher than 1.0 in nova.conf. Ignoring dynamic "
+                    "memory ratio option."), instance=instance)
+            dynamic_memory_ratio = 1.0
+            vnuma_enabled = True
+        else:
+            dynamic_memory_ratio = CONF.hyperv.dynamic_memory_ratio
+            vnuma_enabled = False
+
         self._vmutils.create_vm(instance_name,
-                                instance.flavor.memory_mb,
-                                instance.flavor.vcpus,
-                                CONF.hyperv.limit_cpu_features,
-                                CONF.hyperv.dynamic_memory_ratio,
+                                vnuma_enabled,
                                 vm_gen,
                                 instance_path,
                                 [instance.uuid])
+
+        self._vmutils.update_vm(instance_name,
+                                instance.flavor.memory_mb,
+                                memory_per_numa_node,
+                                instance.flavor.vcpus,
+                                cpus_per_numa_node,
+                                CONF.hyperv.limit_cpu_features,
+                                dynamic_memory_ratio)
 
         self._configure_remotefx(instance, vm_gen)
 
@@ -391,6 +414,47 @@ class VMOps(object):
             certificate_required = self._requires_certificate(image_meta)
             self._vmutils.enable_secure_boot(
                 instance.name, msft_ca_required=certificate_required)
+
+    def _get_instance_vnuma_config(self, instance, image_meta):
+        """Returns the appropriate NUMA configuration for Hyper-V instances,
+        given the desired instance NUMA topology.
+
+        :param instance: instance containing the flavor and it's extra_specs,
+                         where the NUMA topology is defined.
+        :param image_meta: image's metadata, containing properties related to
+                           the instance's NUMA topology.
+        :returns: memory amount and number of vCPUs per NUMA node or
+                  (None, None), if instance NUMA topology was not requested.
+        :raises exception.InstanceUnacceptable:
+            If the given instance NUMA topology is not possible on Hyper-V.
+        """
+        instance_topology = hardware.numa_get_constraints(instance.flavor,
+                                                          image_meta)
+        if not instance_topology:
+            # instance NUMA topology was not requested.
+            return None, None
+
+        memory_per_numa_node = instance_topology.cells[0].memory
+        cpus_per_numa_node = len(instance_topology.cells[0].cpuset)
+
+        # validate that the requested NUMA topology is not asymetric.
+        # e.g.: it should be like: (X cpus, X cpus, Y cpus), where X == Y.
+        # same with memory.
+        for cell in instance_topology.cells:
+            if len(cell.cpuset) != cpus_per_numa_node:
+                reason = _("Hyper-V does not support NUMA topologies with "
+                           "uneven number of processors. (%(a)s != %(b)s)") % {
+                    'a': len(cell.cpuset), 'b': cpus_per_numa_node}
+                raise exception.InstanceUnacceptable(reason=reason,
+                                                     instance_id=instance.uuid)
+            if cell.memory != memory_per_numa_node:
+                reason = _("Hyper-V does not support NUMA topologies with "
+                           "uneven amounts of memory. (%(a)s != %(b)s)") % {
+                    'a': cell.memory, 'b': memory_per_numa_node}
+                raise exception.InstanceUnacceptable(reason=reason,
+                                                     instance_id=instance.uuid)
+
+        return memory_per_numa_node, cpus_per_numa_node
 
     def _configure_remotefx(self, instance, vm_gen):
         extra_specs = instance.flavor.extra_specs

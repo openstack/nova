@@ -530,6 +530,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch.object(vmops.VMOps, '_requires_secure_boot')
     @mock.patch.object(vmops.VMOps, '_requires_certificate')
+    @mock.patch.object(vmops.VMOps, '_get_instance_vnuma_config')
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.attach_volumes')
     @mock.patch.object(vmops.VMOps, '_set_instance_disk_qos_specs')
@@ -543,10 +544,13 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                               mock_create_pipes,
                               mock_set_qos_specs,
                               mock_attach_volumes,
+                              mock_get_vnuma_config,
                               mock_requires_certificate,
                               mock_requires_secure_boot,
                               enable_instance_metrics,
-                              vm_gen=constants.VM_GEN_1):
+                              vm_gen=constants.VM_GEN_1,
+                              vnuma_enabled=False):
+        self.flags(dynamic_memory_ratio=2.0, group='hyperv')
         self.flags(enable_instance_metrics_collection=enable_instance_metrics,
                    group='hyperv')
         root_device_info = mock.sentinel.ROOT_DEV_INFO
@@ -560,17 +564,33 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         flavor = flavor_obj.Flavor(**test_flavor.fake_flavor)
         mock_instance.flavor = flavor
 
+        if vnuma_enabled:
+            mock_get_vnuma_config.return_value = (
+                mock.sentinel.mem_per_numa, mock.sentinel.cpus_per_numa)
+            cpus_per_numa = mock.sentinel.cpus_per_numa
+            mem_per_numa = mock.sentinel.mem_per_numa
+            dynamic_memory_ratio = 1.0
+        else:
+            mock_get_vnuma_config.return_value = (None, None)
+            mem_per_numa, cpus_per_numa = (None, None)
+            dynamic_memory_ratio = CONF.hyperv.dynamic_memory_ratio
+
         self._vmops.create_instance(instance=mock_instance,
                                     network_info=[fake_network_info],
                                     root_device=root_device_info,
                                     block_device_info=block_device_info,
                                     vm_gen=vm_gen,
                                     image_meta=mock.sentinel.image_meta)
+
+        mock_get_vnuma_config.assert_called_once_with(mock_instance,
+                                                      mock.sentinel.image_meta)
         self._vmops._vmutils.create_vm.assert_called_once_with(
-            mock_instance.name, mock_instance.flavor.memory_mb,
-            mock_instance.flavor.vcpus, CONF.hyperv.limit_cpu_features,
-            CONF.hyperv.dynamic_memory_ratio, vm_gen, instance_path,
-            [mock_instance.uuid])
+            mock_instance.name, vnuma_enabled, vm_gen,
+            instance_path, [mock_instance.uuid])
+        self._vmops._vmutils.update_vm.assert_called_once_with(
+            mock_instance.name, mock_instance.flavor.memory_mb, mem_per_numa,
+            mock_instance.flavor.vcpus, cpus_per_numa,
+            CONF.hyperv.limit_cpu_features, dynamic_memory_ratio)
 
         mock_configure_remotefx.assert_called_once_with(mock_instance, vm_gen)
         mock_create_scsi_ctrl = self._vmops._vmutils.create_scsi_controller
@@ -607,6 +627,59 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     def test_create_instance_gen2(self):
         self._test_create_instance(enable_instance_metrics=False,
                                    vm_gen=constants.VM_GEN_2)
+
+    def test_create_instance_vnuma_enabled(self):
+        self._test_create_instance(enable_instance_metrics=False,
+                                   vnuma_enabled=True)
+
+    @mock.patch.object(vmops.hardware, 'numa_get_constraints')
+    def _check_get_instance_vnuma_config_exception(self, mock_get_numa,
+                                                   numa_cells):
+        flavor = {'extra_specs': {}}
+        mock_instance = mock.MagicMock(flavor=flavor)
+        image_meta = mock.MagicMock(properties={})
+        mock_get_numa.return_value.cells = numa_cells
+
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._vmops._get_instance_vnuma_config,
+                          mock_instance, image_meta)
+
+    def test_get_instance_vnuma_config_bad_cpuset(self):
+        cell1 = mock.MagicMock(cpuset=set([0]), memory=1024)
+        cell2 = mock.MagicMock(cpuset=set([1, 2]), memory=1024)
+        self._check_get_instance_vnuma_config_exception(
+            numa_cells=[cell1, cell2])
+
+    def test_get_instance_vnuma_config_bad_memory(self):
+        cell1 = mock.MagicMock(cpuset=set([0]), memory=1024)
+        cell2 = mock.MagicMock(cpuset=set([1]), memory=2048)
+        self._check_get_instance_vnuma_config_exception(
+            numa_cells=[cell1, cell2])
+
+    @mock.patch.object(vmops.hardware, 'numa_get_constraints')
+    def _check_get_instance_vnuma_config(
+                self, mock_get_numa, numa_topology=None,
+                expected_mem_per_numa=None, expected_cpus_per_numa=None):
+        mock_instance = mock.MagicMock()
+        image_meta = mock.MagicMock()
+        mock_get_numa.return_value = numa_topology
+
+        result_memory_per_numa, result_cpus_per_numa = (
+            self._vmops._get_instance_vnuma_config(mock_instance, image_meta))
+
+        self.assertEqual(expected_cpus_per_numa, result_cpus_per_numa)
+        self.assertEqual(expected_mem_per_numa, result_memory_per_numa)
+
+    def test_get_instance_vnuma_config(self):
+        cell1 = mock.MagicMock(cpuset=set([0]), memory=2048, cpu_pinning=None)
+        cell2 = mock.MagicMock(cpuset=set([1]), memory=2048, cpu_pinning=None)
+        mock_topology = mock.MagicMock(cells=[cell1, cell2])
+        self._check_get_instance_vnuma_config(numa_topology=mock_topology,
+                                              expected_cpus_per_numa=1,
+                                              expected_mem_per_numa=2048)
+
+    def test_get_instance_vnuma_config_no_topology(self):
+        self._check_get_instance_vnuma_config()
 
     @mock.patch.object(vmops.volumeops.VolumeOps, 'attach_volume')
     def test_attach_root_device_volume(self, mock_attach_volume):

@@ -28,6 +28,7 @@ from oslo_utils import units
 
 import nova.conf
 from nova.i18n import _
+from nova import objects
 from nova.objects import fields as obj_fields
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
@@ -120,6 +121,18 @@ class HostOps(object):
                 'used_video_ram': total_video_ram - available_video_ram,
                 'gpu_info': jsonutils.dumps(gpus)}
 
+    def _get_host_numa_topology(self):
+        numa_nodes = self._hostutils.get_numa_nodes()
+        cells = []
+        for numa_node in numa_nodes:
+            # Hyper-V does not support CPU pinning / mempages.
+            # initializing the rest of the fields.
+            numa_node.update(pinned_cpus=set(), mempages=[], siblings=[])
+            cell = objects.NUMACell(**numa_node)
+            cells.append(cell)
+
+        return objects.NUMATopology(cells=cells)
+
     def get_available_resource(self):
         """Retrieve resource info.
 
@@ -162,7 +175,7 @@ class HostOps(object):
                    (obj_fields.Architecture.X86_64,
                     obj_fields.HVType.HYPERV,
                     obj_fields.VMMode.HVM)],
-               'numa_topology': None,
+               'numa_topology': self._get_host_numa_topology()._to_json(),
                }
 
         gpu_info = self._get_remotefx_gpu_info()
