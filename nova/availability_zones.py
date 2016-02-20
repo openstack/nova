@@ -16,8 +16,7 @@
 """Availability zone helper functions."""
 
 import collections
-
-from oslo_config import cfg
+import nova.conf
 
 from nova import cache_utils
 from nova import objects
@@ -27,17 +26,7 @@ from nova import objects
 AZ_CACHE_SECONDS = 60 * 60
 MC = None
 
-availability_zone_opts = [
-    cfg.StrOpt('internal_service_availability_zone',
-               default='internal',
-               help='The availability_zone to show internal services under'),
-    cfg.StrOpt('default_availability_zone',
-               default='nova',
-               help='Default compute node availability_zone'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(availability_zone_opts)
+CONF = nova.conf.CONF
 
 
 def _get_cache():

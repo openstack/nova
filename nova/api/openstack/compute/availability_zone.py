@@ -12,16 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova.api.openstack.compute.schemas import availability_zone as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones
+import nova.conf
 from nova import objects
 from nova import servicegroup
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 ALIAS = "os-availability-zone"
 ATTRIBUTE_NAME = "availability_zone"
 authorize = extensions.os_compute_authorizer(ALIAS)

@@ -12,7 +12,6 @@
 
 import itertools
 
-import nova.availability_zones
 import nova.baserpc
 import nova.cloudpipe.pipelib
 import nova.cmd.novnc
@@ -63,7 +62,6 @@ def list_opts():
              [nova.db.base.db_driver_opt],
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
-             nova.availability_zones.availability_zone_opts,
              nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
              nova.cmd.spicehtml5proxy.opts,

@@ -77,7 +77,6 @@ CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('network_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('default_availability_zone', 'nova.availability_zones')
 CONF.import_opt('login_timeout', 'nova.virt.xenapi.client.session',
                 group="xenserver")
 
