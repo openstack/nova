@@ -69,6 +69,10 @@ def get_pci_address_fields(pci_addr):
     return (domain, bus, slot, func)
 
 
+def get_pci_address(domain, bus, slot, func):
+    return '%s:%s:%s.%s' % (domain, bus, slot, func)
+
+
 def get_function_by_ifname(ifname):
     """Given the device name, returns the PCI address of a device
     and returns True if the address in a physical function.
