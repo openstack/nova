@@ -29,6 +29,10 @@ def output(migrations_obj):
     From a MigrationsList's object this method returns a list of
     primitive objects with the only necessary fields.
     """
+    detail_keys = ['memory_total', 'memory_processed', 'memory_remaining',
+                   'disk_total', 'disk_processed', 'disk_remaining']
+    # Note(Shaohe Feng): We need to leverage the oslo.versionedobjects.
+    # Then we can pass the target version to it's obj_to_primitive.
     objects = obj_base.obj_to_primitive(migrations_obj)
     objects = [x for x in objects if not x['hidden']]
     for obj in objects:
@@ -36,6 +40,10 @@ def output(migrations_obj):
         del obj['deleted_at']
         del obj['migration_type']
         del obj['hidden']
+        if 'memory_total' in obj:
+            for key in detail_keys:
+                del obj[key]
+
     return objects
 
 
