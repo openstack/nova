@@ -6226,6 +6226,7 @@ class LibvirtDriver(driver.ComputeDriver):
         completion_timeout = int(
             CONF.libvirt.live_migration_completion_timeout * data_gb)
         progress_timeout = CONF.libvirt.live_migration_progress_timeout
+        migration = migrate_data.migration
 
         n = 0
         start = time.time()
@@ -6343,6 +6344,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 # admins see slow running migration operations
                 # when debug logs are off.
                 if (n % 10) == 0:
+                    # Note(Shaohe Feng) every 5 secs to update the migration
+                    # db, that keeps updates to the instance and migration
+                    # objects in sync.
+                    migration.memory_total = info.memory_total
+                    migration.memory_processed = info.memory_processed
+                    migration.memory_remaining = info.memory_remaining
+                    migration.disk_total = info.disk_total
+                    migration.disk_processed = info.disk_processed
+                    migration.disk_remaining = info.disk_remaining
+                    migration.save()
                     # Ignoring memory_processed, as due to repeated
                     # dirtying of data, this can be way larger than
                     # memory_total. Best to just look at what's
