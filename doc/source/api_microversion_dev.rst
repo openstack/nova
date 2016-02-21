@@ -88,10 +88,11 @@ changed. The user contract covers many kinds of information such as:
 
     Example: changing the return code of an API from 501 to 400.
 
-    .. note:: Fixing a bug so that a 400+ code is returned rather than a 500
-      does not require a microversion change. It's assumed that clients are not
-      expected to handle a 500 response and therefore should not need to opt-in
-      to microversion changes that fixes a 500 response from happening.
+    .. note:: Fixing a bug so that a 400+ code is returned rather than a 500 or
+      503 does not require a microversion change. It's assumed that clients are
+      not expected to handle a 500 or 503 response and therefore should not
+      need to opt-in to microversion changes that fixes a 500 or 503 response
+      from happening.
       According to the OpenStack API Working Group, a
       **500 Internal Server Error** should **not** be returned to the user for
       failures due to user error that can be fixed by changing the request on
