@@ -226,6 +226,8 @@ class TestCase(testtools.TestCase):
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
+        self.useFixture(nova_fixtures.StableObjectJsonFixture())
+
         # NOTE(mnaser): All calls to utils.is_neutron() are cached in
         # nova.utils._IS_NEUTRON.  We set it to None to avoid any
         # caching of that value.
