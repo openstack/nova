@@ -126,6 +126,9 @@ def _instance_in_resize_state(instance):
     return False
 
 
+_REMOVED_STATES = (vm_states.DELETED, vm_states.SHELVED_OFFLOADED)
+
+
 class ResourceTracker(object):
     """Compute helper class for keeping track of resource usage as instances
     are built and destroyed.
@@ -853,20 +856,20 @@ class ResourceTracker(object):
 
         uuid = instance['uuid']
         is_new_instance = uuid not in self.tracked_instances
-        is_deleted_instance = instance['vm_state'] == vm_states.DELETED
+        is_removed_instance = instance['vm_state'] in _REMOVED_STATES
 
         if is_new_instance:
             self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
             sign = 1
 
-        if is_deleted_instance:
+        if is_removed_instance:
             self.tracked_instances.pop(uuid)
             sign = -1
 
         self.stats.update_stats_for_instance(instance)
 
         # if it's a new or deleted instance:
-        if is_new_instance or is_deleted_instance:
+        if is_new_instance or is_removed_instance:
             if self.pci_tracker:
                 self.pci_tracker.update_pci_for_instance(context,
                                                          instance,
@@ -905,7 +908,7 @@ class ResourceTracker(object):
                                                    self.driver)
 
         for instance in instances:
-            if instance.vm_state != vm_states.DELETED:
+            if instance.vm_state not in _REMOVED_STATES:
                 self._update_usage_from_instance(context, instance)
 
     def _find_orphaned_instances(self):

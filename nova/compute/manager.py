@@ -4291,6 +4291,9 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.save(expected_task_state=[task_states.SHELVING,
                                            task_states.SHELVING_OFFLOADING])
+        # NOTE(ndipanov): This frees the resources with the resource_tracker
+        self._update_resource_tracker(context, instance)
+
         self._delete_scheduler_instance_info(context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.end')

@@ -1220,6 +1220,40 @@ class TestInstanceClaim(BaseTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_update_usage_removed(self, migr_mock, pci_mock):
+        # Test that RT.update_usage() removes the instance when update is
+        # called in a removed state
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        disk_used = self.instance.root_gb + self.instance.ephemeral_gb
+        expected.update({
+            'local_gb_used': disk_used,
+            'memory_mb_used': self.instance.memory_mb,
+            'free_disk_gb': expected['local_gb'] - disk_used,
+            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'running_vms': 1,
+            'vcpus_used': 1,
+            'pci_device_pools': objects.PciDevicePoolList(),
+        })
+        with mock.patch.object(self.rt, '_update') as update_mock:
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, None)
+            update_mock.assert_called_once_with(self.elevated)
+            self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                     self.rt.compute_node))
+
+        expected_updated = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_updated['pci_device_pools'] = objects.PciDevicePoolList()
+
+        self.instance.vm_state = vm_states.SHELVED_OFFLOADED
+        with mock.patch.object(self.rt, '_update') as update_mock:
+            self.rt.update_usage(self.ctx, self.instance)
+        self.assertTrue(obj_base.obj_equal_prims(expected_updated,
+                                                 self.rt.compute_node))
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     def test_claim(self, migr_mock, pci_mock):
         self.assertFalse(self.rt.disabled)
 
