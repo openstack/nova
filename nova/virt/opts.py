@@ -23,7 +23,6 @@ import nova.virt.hyperv.vif
 import nova.virt.hyperv.vmops
 import nova.virt.hyperv.volumeops
 import nova.virt.imagecache
-import nova.virt.images
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
@@ -58,7 +57,6 @@ def list_opts():
              nova.virt.disk.mount.nbd.nbd_opts,
              nova.virt.firewall.firewall_opts,
              nova.virt.imagecache.imagecache_opts,
-             nova.virt.images.image_opts,
              nova.virt.netutils.netutils_opts,
          )),
         ('guestfs', nova.virt.disk.vfs.guestfs.guestfs_opts),

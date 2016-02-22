@@ -182,13 +182,19 @@ Interdependencies to other options:
 * None
 """)
 
+force_raw_images = cfg.BoolOpt(
+    'force_raw_images',
+    default=True,
+    help='Force backing images to raw format')
+
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
             preallocate_images,
             use_cow_images,
             vif_plugging_is_fatal,
-            vif_plugging_timeout]
+            vif_plugging_timeout,
+            force_raw_images]
 
 
 def register_opts(conf):
