@@ -22,7 +22,6 @@ import six
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
-from nova import db
 from nova import exception
 from nova import objects
 from nova import rpc
@@ -88,8 +87,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                                 method,
                                                 updates,
                                                 exc_info,
-                                                request_spec,
-                                                db)
+                                                request_spec)
         mock_save.assert_called_once_with()
         mock_add.assert_called_once_with(self.context, mock.ANY,
                                          exc_info, mock.ANY)
