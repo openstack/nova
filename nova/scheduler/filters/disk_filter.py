@@ -29,7 +29,7 @@ class DiskFilter(filters.BaseHostFilter):
     """Disk Filter with over subscription flag."""
 
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
-        return CONF.disk_allocation_ratio
+        return host_state.disk_allocation_ratio
 
     def host_passes(self, host_state, spec_obj):
         """Filter based on disk usage."""
@@ -73,9 +73,10 @@ class AggregateDiskFilter(DiskFilter):
             'disk_allocation_ratio')
         try:
             ratio = utils.validate_num_values(
-                aggregate_vals, CONF.disk_allocation_ratio, cast_to=float)
+                aggregate_vals, host_state.disk_allocation_ratio,
+                cast_to=float)
         except ValueError as e:
             LOG.warning(_LW("Could not decode disk_allocation_ratio: '%s'"), e)
-            ratio = CONF.disk_allocation_ratio
+            ratio = host_state.disk_allocation_ratio
 
         return ratio

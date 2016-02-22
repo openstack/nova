@@ -150,6 +150,7 @@ class HostState(object):
         # Allocation ratios for this host
         self.ram_allocation_ratio = None
         self.cpu_allocation_ratio = None
+        self.disk_allocation_ratio = None
 
         self.updated = None
 
@@ -241,6 +242,7 @@ class HostState(object):
         # update allocation ratios given by the ComputeNode object
         self.cpu_allocation_ratio = compute.cpu_allocation_ratio
         self.ram_allocation_ratio = compute.ram_allocation_ratio
+        self.disk_allocation_ratio = compute.disk_allocation_ratio
 
     def consume_from_request(self, spec_obj):
         """Incrementally update host state from a RequestSpec object."""
