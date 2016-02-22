@@ -30,51 +30,157 @@ Possible values:
 
 Services which consume this:
 
-* nova-scheduler
-* nova-compute
+* ``nova-scheduler``
+* ``nova-compute``
 
-Related options:
+Interdependencies to other options:
 
-* None""")
+* None
+""")
 
 compute_driver = cfg.StrOpt(
     'compute_driver',
-    help='Driver to use for controlling virtualization. Options '
-         'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
-         'fake.FakeDriver, ironic.IronicDriver, '
-         'vmwareapi.VMwareVCDriver, hyperv.HyperVDriver')
+    help="""Defines which driver to use for controlling virtualization.
+
+Possible values:
+
+* ``libvirt.LibvirtDriver``
+* ``xenapi.XenAPIDriver``
+* ``fake.FakeDriver``
+* ``ironic.IronicDriver``
+* ``vmwareapi.VMwareVCDriver``
+* ``hyperv.HyperVDriver``
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 default_ephemeral_format = cfg.StrOpt(
     'default_ephemeral_format',
-    help='The default format an ephemeral_volume will be '
-         'formatted with on creation.')
+    help="""The default format an ephemeral_volume will be formatted
+with on creation.
+
+Possible values:
+
+* ``ext2``
+* ``ext3``
+* ``ext4``
+* ``xfs``
+* ``ntfs`` (only for Windows guests)
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 preallocate_images = cfg.StrOpt(
     'preallocate_images',
     default='none',
     choices=('none', 'space'),
-    help='VM image preallocation mode: '
-         '"none" => no storage provisioning is done up front, '
-         '"space" => storage is fully allocated at instance start')
+    help="""The image preallocation mode to use. Image preallocation allows
+storage for instance images to be allocated up front when the instance is
+initially provisioned. This ensures immediate feedback is given if enough
+space isn't available. In addition, it should significantly improve
+performance on writes to new blocks and may even improve I/O performance to
+prewritten blocks due to reduced fragmentation.
+
+Possible values:
+
+* "none"  => no storage provisioning is done up front
+* "space" => storage is fully allocated at instance start
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 use_cow_images = cfg.BoolOpt(
     'use_cow_images',
     default=True,
-    help='Whether to use cow images')
+    help="""Enable use of copy-on-write (cow) images.
+
+QEMU/KVM allow the use of qcow2 as backing files. By disabling this,
+backing files will not be used.
+
+Possible values:
+
+* True: Enable use of cow images
+* False: Disable use of cow images
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 vif_plugging_is_fatal = cfg.BoolOpt(
     'vif_plugging_is_fatal',
     default=True,
-    help='Fail instance boot if vif plugging fails')
+    help="""Determine if instance should boot or fail on VIF plugging timeout.
+
+Nova sends a port update to Neutron after an instance has been scheduled,
+providing Neutron with the necessary information to finish setup of the port.
+Once completed, Neutron notifies Nova that it has finished setting up the
+port, at which point Nova resumes the boot of the instance since network
+connectivity is now supposed to be present. A timeout will occur if the reply
+is not received after a given interval.
+
+This option determines what Nova does when the VIF plugging timeout event
+happens. When enabled, the instance will error out. When disabled, the
+instance will continue to boot on the assumption that the port is ready.
+
+Possible values:
+
+* True: Instances should fail after VIF plugging timeout
+* False: Instances should continue booting after VIF plugging timeout
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 vif_plugging_timeout = cfg.IntOpt(
     'vif_plugging_timeout',
     default=300,
-    help='Number of seconds to wait for neutron vif plugging '
-         'events to arrive before continuing or failing (see '
-         'vif_plugging_is_fatal). If this is set to zero and '
-         'vif_plugging_is_fatal is False, events should not '
-         'be expected to arrive at all.')
+    help="""Timeout for Neutron VIF plugging event message arrival.
+
+Number of seconds to wait for Neutron vif plugging events to
+arrive before continuing or failing (see 'vif_plugging_is_fatal'). If this is
+set to zero and 'vif_plugging_is_fatal' is False, events should not be
+expected to arrive at all.
+
+Possible values:
+
+* A time interval in seconds
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
