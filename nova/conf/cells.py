@@ -508,21 +508,139 @@ Related options:
 cell_scheduler_opts = [
         cfg.ListOpt('scheduler_filter_classes',
                 default=['nova.cells.filters.all_filters'],
-                help='Filter classes the cells scheduler should use.  '
-                        'An entry of "nova.cells.filters.all_filters" '
-                        'maps to all cells filters included with nova.'),
+                help="""
+Scheduler filter classes
+
+Filter classes the cells scheduler should use. An entry of
+"nova.cells.filters.all_filters" maps to all cells filters
+included with nova. As of the Mitaka release the following
+filter classes are available:
+
+Different cell filter: A scheduler hint of 'different_cell'
+with a value of a full cell name may be specified to route
+a build away from a particular cell.
+
+Image properties filter: Image metadata named
+'hypervisor_version_requires' with a version specification
+may be specified to ensure the build goes to a cell which
+has hypervisors of the required version. If either the version
+requirement on the image or the hypervisor capability of the
+cell is not present, this filter returns without filtering out
+the cells.
+
+Target cell filter: A scheduler hint of 'target_cell' with a
+value of a full cell name may be specified to route a build to
+a particular cell. No error handling is done as there's no way
+to know whether the full path is a valid.
+
+As an admin user, you can also add a filter that directs builds
+to a particular cell.
+
+
+Possible values:
+
+* 'nova.cells.filters.all_filters' is the default option
+* Otherwise it should be the full Python path to the class to be used
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
         cfg.ListOpt('scheduler_weight_classes',
                 default=['nova.cells.weights.all_weighers'],
-                help='Weigher classes the cells scheduler should use.  '
-                        'An entry of "nova.cells.weights.all_weighers" '
-                        'maps to all cell weighers included with nova.'),
+                help="""
+Scheduler weight classes
+
+Weigher classes the cells scheduler should use. An entry of
+"nova.cells.weights.all_weighers" maps to all cell weighers
+included with nova. As of the Mitaka release the following
+weight classes are available:
+
+mute_child: Downgrades the likelihood of child cells being
+chosen for scheduling requests, which haven't sent capacity
+or capability updates in a while. Options include
+mute_weight_multiplier (multiplier for mute children; value
+should be negative).
+
+ram_by_instance_type: Select cells with the most RAM capacity
+for the instance type being requested. Because higher weights
+win, Compute returns the number of available units for the
+instance type requested. The ram_weight_multiplier option defaults
+to 10.0 that adds to the weight by a factor of 10. Use a negative
+number to stack VMs on one host instead of spreading out new VMs
+to more hosts in the cell.
+
+weight_offset: Allows modifying the database to weight a particular
+cell. The highest weight will be the first cell to be scheduled for
+launching an instance. When the weight_offset of a cell is set to 0,
+it is unlikely to be picked but it could be picked if other cells
+have a lower weight, like if they're full. And when the weight_offset
+is set to a very high value (for example, '999999999999999'), it is
+likely to be picked if another cell do not have a higher weight.
+
+Possible values:
+
+* 'nova.cells.weights.all_weighers' is the default option
+* Otherwise it should be the full Python path to the class to be used
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
         cfg.IntOpt('scheduler_retries',
                 default=10,
-                help='How many retries when no cells are available.'),
+                help="""
+Scheduler retries
+
+How many retries when no cells are available. Specifies how many
+times the scheduler tries to launch a new instance when no cells
+are available.
+
+Possible values:
+
+* Positive integer value
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* This value is used with the ``scheduler_retry_delay`` value
+  while retrying to find a suitable cell.
+"""),
         cfg.IntOpt('scheduler_retry_delay',
                 default=2,
-                help='How often to retry in seconds when no cells are '
-                        'available.')
+                help="""
+Scheduler retry delay
+
+Specifies the delay (in seconds) between scheduling retries when no
+cell can be found to place the new instance on. When the instance
+could not be scheduled to a cell after ``scheduler_retries`` in
+combination with ``scheduler_retry_delay``, then the scheduling
+of the instance failed.
+
+Possible values:
+
+* Time in seconds.
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* This value is used with the ``scheduler_retries`` value
+  while retrying to find a suitable cell.
+""")
 ]
 
 cell_state_manager_opts = [
