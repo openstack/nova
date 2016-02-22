@@ -16,11 +16,13 @@
 Tests For CellStateManager
 """
 
+import datetime
 import time
 
 import mock
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_utils import timeutils
 import six
 
 from nova.cells import state
@@ -42,6 +44,13 @@ FAKE_COMPUTES_N_TO_ONE = [
     ('host1', 1024, 100, -1, -1),
     ('host2', 1024, 100, 1024, 100),
     ('host2', 1024, 100, 300, 30),
+]
+
+FAKE_SERVICES = [
+    ('host1', 0),
+    ('host2', 0),
+    ('host3', 0),
+    ('host4', 3600),
 ]
 
 # NOTE(alaski): It's important to have multiple types that end up having the
@@ -66,9 +75,26 @@ def _create_fake_node(host, total_mem, total_disk, free_mem, free_disk):
 @classmethod
 def _fake_service_get_all_by_binary(cls, context, binary):
     def _node(host, total_mem, total_disk, free_mem, free_disk):
-        return objects.Service(host=host, disabled=False)
+        now = timeutils.utcnow()
+        return objects.Service(host=host,
+                               disabled=False,
+                               forced_down=False,
+                               last_seen_up=now)
 
     return [_node(*fake) for fake in FAKE_COMPUTES]
+
+
+@classmethod
+def _fake_service_get_all_by_binary_nodedown(cls, context, binary):
+    def _service(host, noupdate_sec):
+        now = timeutils.utcnow()
+        last_seen = now - datetime.timedelta(seconds=noupdate_sec)
+        return objects.Service(host=host,
+                               disabled=False,
+                               forced_down=False,
+                               last_seen_up=last_seen)
+
+    return [_service(*fake) for fake in FAKE_SERVICES]
 
 
 @classmethod
@@ -226,6 +252,37 @@ class TestCellsStateManagerNToOne(TestCellsStateManager):
         sz = 25 * 1024
         units = 1  # 1 on host 2
         self.assertEqual(units, cap['disk_free']['units_by_mb'][str(sz)])
+
+
+class TestCellsStateManagerNodeDown(test.NoDBTestCase):
+    def setUp(self):
+        super(TestCellsStateManagerNodeDown, self).setUp()
+
+        self.stub_out('nova.objects.ComputeNodeList.get_all',
+                       _fake_compute_node_get_all)
+        self.stub_out('nova.objects.ServiceList.get_by_binary',
+               _fake_service_get_all_by_binary_nodedown)
+        self.stub_out('nova.db.flavor_get_all', _fake_instance_type_all)
+        self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
+
+    def test_capacity_no_reserve_nodedown(self):
+        cap = self._capacity(0.0)
+
+        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES[:-1])
+        self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
+
+        free_disk = sum(compute[4] for compute in FAKE_COMPUTES[:-1])
+        cell_free_disk = 1024 * free_disk
+        self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
+
+    def _get_state_manager(self, reserve_percent=0.0):
+        self.flags(reserve_percent=reserve_percent, group='cells')
+        return state.CellStateManager()
+
+    def _capacity(self, reserve_percent):
+        state_manager = self._get_state_manager(reserve_percent)
+        my_state = state_manager.get_my_state()
+        return my_state.capacities
 
 
 class TestCellStateManagerException(test.NoDBTestCase):

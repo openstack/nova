@@ -38,6 +38,7 @@ from nova import exception
 from nova.i18n import _LE
 from nova import objects
 from nova import rpc
+from nova import servicegroup
 from nova import utils
 
 
@@ -153,6 +154,7 @@ class CellStateManager(base.Base):
         self.parent_cells = {}
         self.child_cells = {}
         self.last_cell_db_check = datetime.datetime.min
+        self.servicegroup_api = servicegroup.API()
 
         attempts = 0
         while True:
@@ -261,6 +263,15 @@ class CellStateManager(base.Base):
                 host = compute.host
                 service = service_refs.get(host)
                 if not service or service['disabled']:
+                    continue
+
+                # NOTE: This works because it is only used for computes found
+                # in the cell this is run in. It can not be used to check on
+                # computes in a child cell from the api cell. If this is run
+                # in the api cell objects.ComputeNodeList.get_all() above will
+                # return an empty list.
+                alive = self.servicegroup_api.service_is_up(service)
+                if not alive:
                     continue
 
                 chost = compute_hosts[host]
