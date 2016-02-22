@@ -1212,13 +1212,14 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_dev = mountpoint.rpartition("/")[2]
         try:
             guest = self._host.get_guest(instance)
-            conf = guest.get_disk(disk_dev)
-            if not conf:
-                raise exception.DiskNotFound(location=disk_dev)
 
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
-            guest.detach_device(conf, persistent=True, live=live)
+
+            wait_for_detach = guest.detach_device_with_retry(guest.get_disk,
+                                                             disk_dev,
+                                                             persistent=True,
+                                                             live=live)
 
             if encryption:
                 # The volume must be detached from the VM before
@@ -1227,12 +1228,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 encryptor = self._get_volume_encryptor(connection_info,
                                                        encryption)
                 encryptor.detach_volume(**encryption)
+
+            wait_for_detach()
         except exception.InstanceNotFound:
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
             #                will throw InstanceNotFound exception. Need to
             #                disconnect volume under this circumstance.
             LOG.warn(_LW("During detach_volume, instance disappeared."),
                      instance=instance)
+        except exception.DeviceNotFound:
+            raise exception.DiskNotFound(location=disk_dev)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if

@@ -213,6 +213,56 @@ class GuestTestCase(test.NoDBTestCase):
             "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
+    def test_detach_device_with_retry_detach_success(self):
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+        get_config = mock.Mock()
+        # Force multiple retries of detach
+        get_config.side_effect = [conf, conf, conf, None]
+        dev_path = "/dev/vdb"
+
+        retry_detach = self.guest.detach_device_with_retry(
+            get_config, dev_path, persistent=True, live=True,
+            inc_sleep_time=.01)
+        # Ensure we've only done the initial detach call
+        self.domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+
+        get_config.assert_called_with(dev_path)
+
+        # Some time later, we can do the wait/retry to ensure detach succeeds
+        self.domain.detachDeviceFlags.reset_mock()
+        retry_detach()
+        # Should have two retries before we pretend device is detached
+        self.assertEqual(2, self.domain.detachDeviceFlags.call_count)
+
+    def test_detach_device_with_retry_detach_failure(self):
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+        # Continue to return some value for the disk config
+        get_config = mock.Mock(return_value=conf)
+
+        retry_detach = self.guest.detach_device_with_retry(
+            get_config, "/dev/vdb", persistent=True, live=True,
+            inc_sleep_time=.01, max_retry_count=3)
+        # Ensure we've only done the initial detach call
+        self.domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+
+        # Some time later, we can do the wait/retry to ensure detach
+        self.domain.detachDeviceFlags.reset_mock()
+        # Should hit max # of retries
+        self.assertRaises(exception.DeviceDetachFailed, retry_detach)
+        self.assertEqual(4, self.domain.detachDeviceFlags.call_count)
+
+    def test_detach_device_with_retry_device_not_found(self):
+        get_config = mock.Mock(return_value=None)
+        self.assertRaises(
+            exception.DeviceNotFound, self.guest.detach_device_with_retry,
+            get_config, "/dev/vdb", persistent=True, live=True)
+
     def test_get_xml_desc(self):
         self.guest.get_xml_desc()
         self.domain.XMLDesc.assert_called_once_with(flags=0)
