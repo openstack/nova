@@ -423,6 +423,8 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
         super(SpawnIsSynchronousFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.spawn', lambda f, *a, **k: f(*a, **k)))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):

@@ -282,7 +282,7 @@ class BaseTestCase(test.TestCase):
         inst.reservation_id = 'r-fakeres'
         inst.user_id = self.user_id
         inst.project_id = self.project_id
-        inst.host = 'fake_host'
+        inst.host = self.compute.host
         inst.node = NODENAME
         inst.instance_type_id = flavor.id
         inst.ami_launch_index = 0
@@ -4011,8 +4011,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.macs_for_instance(
             mox.IsA(instance_obj.Instance)).AndReturn(macs)
         self.mox.ReplayAll()
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
-                                            block_device_mapping=[])
+        self.compute._build_networks_for_instance(self.context, instance,
+                requested_networks=None, security_groups=None)
 
     def _create_server_group(self, policies, instance_host):
         group_instance = self._create_fake_instance_obj(
@@ -4040,35 +4040,21 @@ class ComputeTestCase(BaseTestCase):
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.
         instance = self._create_fake_instance_obj()
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 "allocate_for_instance")
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 "deallocate_for_instance")
-        self.compute.network_api.allocate_for_instance(
-                self.context, instance,
-                requested_networks=None,
-                vpn=False, macs=None,
-                security_groups=[], dhcp_options=None,
-                bind_host_id=self.compute.host
-                ).AndRaise(messaging.RemoteError())
-        self.compute.network_api.deallocate_for_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg(),
-                requested_networks=None).MultipleTimes()
-
         fake_network.unset_stub_network_methods(self)
 
-        self.mox.ReplayAll()
+        @mock.patch.object(self.compute.network_api, 'allocate_for_instance',
+                side_effect=messaging.RemoteError())
+        @mock.patch.object(self.compute.network_api, 'deallocate_for_instance')
+        def _do_test(mock_deallocate, mock_allocate):
+            self.compute.build_and_run_instance(self.context, instance, {},
+                    {}, {}, block_device_mapping=[])
 
-        self.compute.build_and_run_instance(
-            self.context, instance, {}, {}, {},
-            block_device_mapping=[])
+            instance.refresh()
+            self.assertEqual(vm_states.ERROR, instance.vm_state)
 
-        instance.refresh()
-        self.assertEqual(vm_states.ERROR, instance.vm_state)
+            self.compute.terminate_instance(self.context, instance, [], [])
 
-        self.compute.terminate_instance(self.context, instance, [], [])
+        _do_test()
 
     def test_delete_instance_keeps_net_on_power_off_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -10120,7 +10106,7 @@ class ComputeAPITestCase(BaseTestCase):
         migs = objects.MigrationList.get_by_filters(
             self.context, {'source_host': 'fake_host'})
         self.assertEqual(1, len(migs))
-        self.assertEqual('fake_host', migs[0].source_compute)
+        self.assertEqual(self.compute.host, migs[0].source_compute)
         self.assertEqual('accepted', migs[0].status)
         self.assertEqual('compute.instance.evacuate',
                          fake_notifier.NOTIFICATIONS[0].event_type)
