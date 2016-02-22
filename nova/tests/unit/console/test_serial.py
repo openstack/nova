@@ -92,7 +92,7 @@ class SerialTestCase(test.NoDBTestCase):
         for port in six.moves.range(start, stop):
             self.assertEqual(port, serial.acquire_port('127.0.0.2'))
 
-        self.assertTrue(10, len(serial.ALLOCATED_PORTS))
+        self.assertEqual(10, len(serial.ALLOCATED_PORTS))
 
     @mock.patch('nova.console.serial._verify_port')
     def test_acquire_port_in_use(self, fake_verify_port):

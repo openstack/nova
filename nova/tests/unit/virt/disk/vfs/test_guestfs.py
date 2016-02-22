@@ -296,7 +296,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs = vfsimpl.VFSGuestFS(self.rawfile)
         vfs.setup()
         self.assertIsNotNone(vfs.handle)
-        self.assertTrue('ext3', vfs.get_image_fs())
+        self.assertEqual('ext3', vfs.get_image_fs())
         vfs.teardown()
 
     @mock.patch.object(vfsimpl.VFSGuestFS, 'setup_os')

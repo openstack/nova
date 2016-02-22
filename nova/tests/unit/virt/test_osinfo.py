@@ -42,7 +42,7 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
     def test_get_os(self):
         os_info_db = osinfo._OsInfoDatabase.get_instance()
         os_name = os_info_db.get_os('fedora22').get_name()
-        self.assertTrue('Fedora 22', os_name)
+        self.assertEqual('Fedora 22', os_name)
 
     def test_get_os_fails(self):
         os_info_db = osinfo._OsInfoDatabase.get_instance()
