@@ -760,36 +760,140 @@ Valid values are numeric, either integer or float.
 metrics_weight_opts = [
      cfg.FloatOpt("weight_multiplier",
             default=1.0,
-            help="Multiplier used for weighing metrics."),
+            help="""
+When using metrics to weight the suitability of a host, you can use this option
+to change how the calculated weight influences the weight assigned to a host as
+follows:
+
+    * Greater than 1.0: increases the effect of the metric on overall weight.
+
+    * Equal to 1.0: No change to the calculated weight.
+
+    * Less than 1.0, greater than 0: reduces the effect of the metric on
+    overall weight.
+
+    * 0: The metric value is ignored, and the value of the
+    'weight_of_unavailable' option is returned instead.
+
+    * Greater than -1.0, less than 0: the effect is reduced and reversed.
+
+    * -1.0: the effect is reversed
+
+    * Less than -1.0: the effect is increased proportionally and reversed.
+
+Valid values are numeric, either integer or float.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    weight_of_unavailable
+"""),
      cfg.ListOpt("weight_setting",
             default=[],
-            help="How the metrics are going to be weighed. This should be in "
-                 "the form of '<name1>=<ratio1>, <name2>=<ratio2>, ...', "
-                 "where <nameX> is one of the metrics to be weighed, and "
-                 "<ratioX> is the corresponding ratio. So for "
-                 "'name1=1.0, name2=-1.0' The final weight would be "
-                 "name1.value * 1.0 + name2.value * -1.0."),
+            help="""
+This setting specifies the metrics to be weighed and the relative ratios for
+each metric. This should be a single string value, consisting of a series of
+one or more 'name=ratio' pairs, separated by commas, where 'name' is the name
+of the metric to be weighed, and 'ratio' is the relative weight for that
+metric.
+
+Note that if the ratio is set to 0, the metric value is ignored, and instead
+the weight will be set to the value of the 'weight_of_unavailable' option.
+
+As an example, let's consider the case where this option is set to:
+
+    ``name1=1.0, name2=-1.3``
+
+The final weight will be:
+
+    ``(name1.value * 1.0) + (name2.value * -1.3)``
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    weight_of_unavailable
+"""),
     cfg.BoolOpt("required",
             default=True,
-            help="How to treat the unavailable metrics. When a metric is NOT "
-                 "available for a host, if it is set to be True, it would "
-                 "raise an exception, so it is recommended to use the "
-                 "scheduler filter MetricFilter to filter out those hosts. If "
-                 "it is set to be False, the unavailable metric would be "
-                 "treated as a negative factor in weighing process, the "
-                 "returned value would be set by the option "
-                 "weight_of_unavailable."),
+            help="""
+This setting determines how any unavailable metrics are treated. If this option
+is set to True, any hosts for which a metric is unavailable will raise an
+exception, so it is recommended to also use the MetricFilter to filter out
+those hosts before weighing.
+
+When this option is False, any metric being unavailable for a host will set the
+host weight to 'weight_of_unavailable'.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    weight_of_unavailable
+"""),
     cfg.FloatOpt("weight_of_unavailable",
             default=float(-10000.0),
-            help="The final weight value to be returned if required is set to "
-                 "False and any one of the metrics set by weight_setting is "
-                 "unavailable."),
+            help="""
+When any of the following conditions are met, this value will be used in place
+of any actual metric value:
+
+    * One of the metrics named in 'weight_setting' is not available for a host,
+    and the value of 'required' is False.
+
+    * The ratio specified for a metric in 'weight_setting' is 0.
+
+    * The 'weight_multiplier' option is set to 0.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    weight_setting
+    required
+    weight_multiplier
+"""),
 ]
 
 scheduler_max_att_opt = cfg.IntOpt("scheduler_max_attempts",
-            default=3,
-            min=1,
-            help="Maximum number of attempts to schedule an instance")
+        default=3,
+        help="""
+This is the maximum number of attempts that will be made to schedule an
+instance before it is assumed that the failures aren't due to normal occasional
+race conflicts, but rather some other problem. When this is reached a
+MaxRetriesExceeded exception is raised, and the instance is set to an error
+state.
+
+Valid values are positive integers (1 or greater).
+
+* Services that use this:
+
+    ``nova-scheduler``
+
+* Related options:
+
+    None
+""")
 
 soft_affinity_weight_opt = cfg.FloatOpt('soft_affinity_weight_multiplier',
             default=1.0,
