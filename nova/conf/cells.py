@@ -287,34 +287,149 @@ Related options:
 mute_weigher_opts = [
         cfg.FloatOpt('mute_weight_multiplier',
                 default=-10000.0,
-                help='Multiplier used to weigh mute children. (The value '
-                     'should be negative.)'),
+                help="""
+Mute weight multiplier
+
+Multiplier used to weigh mute children. Mute children cells are
+recommended to be skipped so their weight is multiplied by this
+negative value.
+
+Possible values:
+
+* Negative numeric number
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
 ]
 
 ram_weigher_opts = [
         cfg.FloatOpt('ram_weight_multiplier',
                      default=10.0,
-                     help='Multiplier used for weighing ram.  Negative '
-                          'numbers mean to stack vs spread.'),
+                     help="""
+Ram weight multiplier
+
+Multiplier used for weighing ram. Negative numbers indicate that
+Compute should stack VMs on one host instead of spreading out new
+VMs to more hosts in the cell.
+
+Possible values:
+
+* Numeric multiplier
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
 ]
 
 weigher_opts = [
     cfg.FloatOpt('offset_weight_multiplier',
                  default=1.0,
-                 help='Multiplier used to weigh offset weigher.'),
+                 help="""
+Offset weight multiplier
+
+Multiplier used to weigh offset weigher. Cells with higher
+weight_offsets in the DB will be preferred. The weight_offset
+is a property of a cell stored in the database. It can be used
+by a deployer to have scheduling decisions favor or disfavor
+cells based on the setting.
+
+Possible values:
+
+* Numeric multiplier
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
 ]
 
 cell_manager_opts = [
         cfg.StrOpt('driver',
                 default='nova.cells.rpc_driver.CellsRPCDriver',
-                help='Cells communication driver to use'),
+                help="""
+Cells communication driver
+
+Driver for cell<->cell communication via RPC. This is used to
+setup the RPC consumers as well as to send a message to another cell.
+'nova.cells.rpc_driver.CellsRPCDriver' starts up 2 separate servers
+for handling inter-cell communication via RPC.
+
+Possible values:
+
+* 'nova.cells.rpc_driver.CellsRPCDriver' is the default driver
+* Otherwise it should be the full Python path to the class to be used
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* None
+"""),
         cfg.IntOpt("instance_updated_at_threshold",
                 default=3600,
-                help="Number of seconds after an instance was updated "
-                        "or deleted to continue to update cells"),
+                help="""
+Instance updated at threshold
+
+Number of seconds after an instance was updated or deleted to
+continue to update cells. This option lets cells manager to only
+attempt to sync instances that have been updated recently.
+i.e., a threshold of 3600 means to only update instances that
+have modified in the last hour.
+
+Possible values:
+
+* Threshold in seconds
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* This value is used with the ``instance_update_num_instances``
+  value in a periodic task run.
+"""),
         cfg.IntOpt("instance_update_num_instances",
                 default=1,
-                help="Number of instances to update per periodic task run")
+                help="""
+Instance update num instances
+
+On every run of the periodic task, nova cells manager will attempt to
+sync instance_updated_at_threshold number of instances. When the
+manager gets the list of instances, it shuffles them so that multiple
+nova-cells services do not attempt to sync the same instances in
+lockstep.
+
+Possible values:
+
+* Positive integer number
+
+Services which consume this:
+
+* nova-cells
+
+Related options:
+
+* This value is used with the ``instance_updated_at_threshold``
+  value in a periodic task run.
+""")
 ]
 
 cell_messaging_opts = [
