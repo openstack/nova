@@ -144,7 +144,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.12')
+    target = messaging.Target(namespace='compute_task', version='1.13')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -175,7 +175,7 @@ class ComputeTaskManager(base.Base):
                                    exception.UnsupportedPolicyException)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None,
-            clean_shutdown=True):
+            clean_shutdown=True, request_spec=None):
         if instance and not isinstance(instance, nova_object.NovaObject):
             # NOTE(danms): Until v2 of the RPC API, we need to tolerate
             # old-world instance objects here
@@ -191,7 +191,7 @@ class ComputeTaskManager(base.Base):
             flavor = objects.Flavor.get_by_id(context, flavor['id'])
         if live and not rebuild and not flavor:
             self._live_migrate(context, instance, scheduler_hint,
-                               block_migration, disk_over_commit)
+                               block_migration, disk_over_commit, request_spec)
         elif not live and not rebuild and flavor:
             instance_uuid = instance.uuid
             with compute_utils.EventReporter(context, 'cold_migrate',
@@ -272,7 +272,7 @@ class ComputeTaskManager(base.Base):
             pass
 
     def _live_migrate(self, context, instance, scheduler_hint,
-                      block_migration, disk_over_commit):
+                      block_migration, disk_over_commit, request_spec):
         destination = scheduler_hint.get("host")
 
         def _set_vm_state(context, instance, ex, vm_state=None,
@@ -304,7 +304,7 @@ class ComputeTaskManager(base.Base):
 
         task = self._build_live_migrate_task(context, instance, destination,
                                              block_migration, disk_over_commit,
-                                             migration)
+                                             migration, request_spec)
         try:
             task.execute()
         except (exception.NoValidHost,
@@ -337,13 +337,15 @@ class ComputeTaskManager(base.Base):
             raise exception.MigrationError(reason=six.text_type(ex))
 
     def _build_live_migrate_task(self, context, instance, destination,
-                                 block_migration, disk_over_commit, migration):
+                                 block_migration, disk_over_commit, migration,
+                                 request_spec=None):
         return live_migrate.LiveMigrationTask(context, instance,
                                               destination, block_migration,
                                               disk_over_commit, migration,
                                               self.compute_rpcapi,
                                               self.servicegroup_api,
-                                              self.scheduler_client)
+                                              self.scheduler_client,
+                                              request_spec)
 
     def _build_cold_migrate_task(self, context, instance, flavor,
                                  filter_properties, request_spec, reservations,

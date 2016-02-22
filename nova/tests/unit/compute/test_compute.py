@@ -10046,21 +10046,29 @@ class ComputeAPITestCase(BaseTestCase):
         instance, instance_uuid = self._run_instance()
 
         rpcapi = self.compute_api.compute_task_api
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(rpcapi, 'live_migrate_instance')
-        self.compute_api._record_action_start(self.context, instance,
-                                              'live-migration')
-        rpcapi.live_migrate_instance(self.context, instance, 'fake_dest_host',
-                                     block_migration=True,
-                                     disk_over_commit=True)
+        fake_spec = objects.RequestSpec()
 
-        self.mox.ReplayAll()
+        @mock.patch.object(rpcapi, 'live_migrate_instance')
+        @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+        @mock.patch.object(self.compute_api, '_record_action_start')
+        def do_test(record_action_start, get_by_instance_uuid,
+                    live_migrate_instance):
+            get_by_instance_uuid.return_value = fake_spec
 
-        self.compute_api.live_migrate(self.context, instance,
-                                      block_migration=True,
-                                      disk_over_commit=True,
-                                      host_name='fake_dest_host')
+            self.compute_api.live_migrate(self.context, instance,
+                                          block_migration=True,
+                                          disk_over_commit=True,
+                                          host_name='fake_dest_host')
 
+            record_action_start.assert_called_once_with(self.context, instance,
+                                                        'live-migration')
+            live_migrate_instance.assert_called_once_with(
+                self.context, instance, 'fake_dest_host',
+                block_migration=True,
+                disk_over_commit=True,
+                request_spec=fake_spec)
+
+        do_test()
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
 

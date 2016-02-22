@@ -1788,9 +1788,10 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(params=paused_state)
         self._live_migrate_instance(instance)
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceAction, 'action_start')
-    def _live_migrate_instance(self, instance, _save, _action):
+    def _live_migrate_instance(self, instance, _save, _action, get_spec):
         # TODO(gilliard): This logic is upside-down (different
         # behaviour depending on which class this method is mixed-into. Once
         # we have cellsv2 we can remove this kind of logic from this test
@@ -1798,6 +1799,8 @@ class _ComputeAPIUnitTestMixIn(object):
             api = self.compute_api.cells_rpcapi
         else:
             api = conductor.api.ComputeTaskAPI
+        fake_spec = objects.RequestSpec()
+        get_spec.return_value = fake_spec
         with mock.patch.object(api, 'live_migrate_instance') as task:
             self.compute_api.live_migrate(self.context, instance,
                                           block_migration=True,
@@ -1807,7 +1810,8 @@ class _ComputeAPIUnitTestMixIn(object):
             task.assert_called_once_with(self.context, instance,
                                          'fake_dest_host',
                                          block_migration=True,
-                                         disk_over_commit=True)
+                                         disk_over_commit=True,
+                                         request_spec=fake_spec)
 
     def test_swap_volume_volume_api_usage(self):
         # This test ensures that volume_id arguments are passed to volume_api

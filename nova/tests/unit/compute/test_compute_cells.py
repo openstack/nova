@@ -370,9 +370,10 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
         self.compute_api.resize(self.context, instance)
         self.assertTrue(self.cells_rpcapi.resize_instance.called)
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(objects.Instance, 'save')
-    def test_live_migrate_instance(self, instance_save, _record):
+    def test_live_migrate_instance(self, instance_save, _record, _get_spec):
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
