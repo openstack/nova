@@ -108,7 +108,6 @@ import nova.scheduler.weights.metrics
 import nova.scheduler.weights.ram
 import nova.service
 import nova.servicegroup.api
-import nova.servicegroup.drivers.zk
 import nova.spice
 import nova.utils
 import nova.vnc

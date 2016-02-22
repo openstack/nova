@@ -26,7 +26,6 @@ LOG = logging.getLogger(__name__)
 
 _driver_name_class_mapping = {
     'db': 'nova.servicegroup.drivers.db.DbDriver',
-    'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver',
     'mc': 'nova.servicegroup.drivers.mc.MemcachedDriver'
 }
 _default_driver = 'db'

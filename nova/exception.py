@@ -1607,11 +1607,6 @@ class InstanceRecreateNotSupported(Invalid):
     msg_fmt = _('Instance recreate is not supported.')
 
 
-class ServiceGroupUnavailable(NovaException):
-    msg_fmt = _("The service from servicegroup driver %(driver)s is "
-                "temporarily unavailable.")
-
-
 class DBNotAllowed(NovaException):
     msg_fmt = _('%(binary)s attempted direct database access which is '
                 'not allowed by policy')
