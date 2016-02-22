@@ -1527,10 +1527,28 @@ class LibvirtDriver(driver.ComputeDriver):
                              "instance disappeared."),
                          instance=instance)
             else:
-                LOG.error(_LE('detaching network adapter failed.'),
-                         instance=instance, exc_info=True)
-                raise exception.InterfaceDetachFailed(
-                        instance_uuid=instance.uuid)
+                # NOTE(mriedem): When deleting an instance and using Neutron,
+                # we can be racing against Neutron deleting the port and
+                # sending the vif-deleted event which then triggers a call to
+                # detach the interface, so we might have failed because the
+                # network device no longer exists. Libvirt will fail with
+                # "operation failed: no matching network device was found"
+                # which unfortunately does not have a unique error code so we
+                # need to look up the interface by MAC and if it's not found
+                # then we can just log it as a warning rather than tracing an
+                # error.
+                mac = vif.get('address')
+                interface = guest.get_interface_by_mac(mac)
+                if interface:
+                    LOG.error(_LE('detaching network adapter failed.'),
+                             instance=instance, exc_info=True)
+                    raise exception.InterfaceDetachFailed(
+                            instance_uuid=instance.uuid)
+
+                # The interface is gone so just log it as a warning.
+                LOG.warning(_LW('Detaching interface %(mac)s failed  because '
+                                'the device is no longer found on the guest.'),
+                            {'mac': mac}, instance=instance)
 
     def _create_snapshot_metadata(self, image_meta, instance,
                                   img_fmt, snp_name):

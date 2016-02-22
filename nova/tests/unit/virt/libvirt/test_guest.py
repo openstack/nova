@@ -411,6 +411,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(devs))
         self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestInterface)
 
+        self.assertIsNotNone(
+            self.guest.get_interface_by_mac('fa:16:3e:f9:af:ae'))
+        self.assertIsNone(self.guest.get_interface_by_mac(None))
+
     def test_get_info(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)
         self.domain.ID.return_value = 6
