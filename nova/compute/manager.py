@@ -1948,7 +1948,13 @@ class ComputeManager(manager.Manager):
             retry['exc_reason'] = e.kwargs['reason']
             # NOTE(comstud): Deallocate networks if the driver wants
             # us to do so.
-            if self.driver.deallocate_networks_on_reschedule(instance):
+            # NOTE(vladikr): SR-IOV ports should be deallocated to
+            # allow new sriov pci devices to be allocated on a new host.
+            # Otherwise, if devices with pci addresses are already allocated
+            # on the destination host, the instance will fail to spawn.
+            # info_cache.network_info should be present at this stage.
+            if (self.driver.deallocate_networks_on_reschedule(instance) or
+                self.deallocate_sriov_ports_on_reschedule(instance)):
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
             else:
@@ -2001,6 +2007,24 @@ class ComputeManager(manager.Manager):
             self._set_instance_obj_error_state(context, instance,
                                                clean_task_state=True)
             return build_results.FAILED
+
+    def deallocate_sriov_ports_on_reschedule(self, instance):
+        """Determine if networks are needed to be deallocated before reschedule
+
+        Check the cached network info for any assigned SR-IOV ports.
+        SR-IOV ports should be deallocated prior to rescheduling
+        in order to allow new sriov pci devices to be allocated on a new host.
+        """
+        info_cache = instance.info_cache
+
+        def _has_sriov_port(vif):
+            return vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV
+
+        if (info_cache and info_cache.network_info):
+            for vif in info_cache.network_info:
+                if _has_sriov_port(vif):
+                    return True
+        return False
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
