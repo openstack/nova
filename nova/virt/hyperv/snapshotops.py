@@ -58,7 +58,7 @@ class SnapshotOps(object):
         try:
             instance_synchronized_snapshot()
         except os_win_exc.HyperVVMNotFoundException:
-            # the instance might dissapear before starting the operation.
+            # the instance might disappear before starting the operation.
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def _snapshot(self, context, instance, image_id, update_task_state):

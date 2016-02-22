@@ -121,7 +121,7 @@ This acts conceptually like the "Accept" header. Semantically this means:
 
 .. warning:: The ``latest`` value is mostly meant for integration testing and
   would be dangerous to rely on in client code since microversions are not
-  following semver and therefore backward compability is not guaranteed.
+  following semver and therefore backward compatibility is not guaranteed.
   Clients should always require a specific microversion but limit what is
   acceptable to the microversion range that it understands at the time.
 

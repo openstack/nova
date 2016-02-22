@@ -563,7 +563,7 @@ class Resource(wsgi.Application):
     # the DiskConfig and SchedulerHints from what I can see.
     #
     # pre_process_extensions can be removed when the legacyv2 code
-    # goes away. post_proccess_extensions can be massively simplified
+    # goes away. post_process_extensions can be massively simplified
     # at that point.
     def pre_process_extensions(self, extensions, request, action_args):
         # List of callables for post-processing extensions

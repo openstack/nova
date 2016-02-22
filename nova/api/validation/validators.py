@@ -80,7 +80,7 @@ def _soft_validate_additional_properties(validator,
                                          instance,
                                          schema):
     """This validator function is used for legacy v2 compatible mode in v2.1.
-    This will skip all the addtional properties checking but keep check the
+    This will skip all the additional properties checking but keep check the
     'patternProperties'. 'patternProperties' is used for metadata API.
 
     If there are not any properties on the instance that are not specified in
