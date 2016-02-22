@@ -82,7 +82,7 @@ allocation_ratio_opts = [
              'set on the scheduler node(s) will be used '
              'and defaulted to 1.5'),
     cfg.FloatOpt('disk_allocation_ratio',
-        default=1.0,
+        default=0.0,
         help='This is the virtual disk to physical disk allocation ratio used '
              'by the disk_filter.py script to determine if a host has '
              'sufficient disk space to fit a requested instance. A ratio '
@@ -92,7 +92,10 @@ allocation_ratio_opts = [
              'use the entire virtual disk,such as sparse or compressed '
              'images. It can be set to a value between 0.0 and 1.0 in order '
              'to preserve a percentage of the disk for uses other than '
-             'instances'),
+             'instances.'
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 1.0'),
 ]
 
 
@@ -151,6 +154,7 @@ class ResourceTracker(object):
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
+        self.disk_allocation_ratio = CONF.disk_allocation_ratio
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -445,6 +449,7 @@ class ResourceTracker(object):
         # update the allocation ratios for the related ComputeNode object
         self.compute_node.ram_allocation_ratio = self.ram_allocation_ratio
         self.compute_node.cpu_allocation_ratio = self.cpu_allocation_ratio
+        self.compute_node.disk_allocation_ratio = self.disk_allocation_ratio
 
         # now copy rest to compute_node
         self.compute_node.update_from_virt_driver(resources)
