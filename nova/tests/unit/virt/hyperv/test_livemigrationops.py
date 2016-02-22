@@ -72,15 +72,6 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
     def test_live_migration_exception(self):
         self._test_live_migration(side_effect=os_win_exc.HyperVException)
 
-    def test_live_migration_wrong_os_version(self):
-        self._livemigrops._livemigrutils = None
-        self.assertRaises(NotImplementedError,
-                          self._livemigrops.live_migration, self.context,
-                          instance_ref=mock.DEFAULT,
-                          dest=mock.sentinel.DESTINATION,
-                          post_method=mock.DEFAULT,
-                          recover_method=mock.DEFAULT)
-
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.ebs_root_in_block_devices')
     @mock.patch('nova.virt.hyperv.imagecache.ImageCache.get_cached_image')
