@@ -91,6 +91,8 @@ class FaultToleranceTasks(object):
             del s_instance.system_metadata['instance_type_extra_ft:secondary']
             s_instance.save()
 
+            self.compute_api.delete(context, p_instance)
+
         relation.destroy()
 
     # TODO(ORBIT): This might come in handy if the secondary VM need different

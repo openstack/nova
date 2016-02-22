@@ -6329,6 +6329,5 @@ class ComputeManager(manager.Manager):
                     instance.save(context)
 
     def colo_failover(self, context, instance):
-        ret = self.driver.exec_monitor_command(instance, "colo_lost_heartbeat")
-        # TODO(ORBIT): Handle qemu response
-        LOG.error("colo_lost_heartbeat response: %s", ret)
+        LOG.info("Executing COLO failover command", instance=instance)
+        self.driver.colo_failover(instance)
