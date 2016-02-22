@@ -4,7 +4,7 @@
         "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
         "OS-EXT-SRV-ATTR:instance_name": "%(instance_name)s",
         "OS-EXT-SRV-ATTR:hostname": "new-server-test",
-        "OS-EXT-SRV-ATTR:launch_index": "0",
+        "OS-EXT-SRV-ATTR:launch_index": 0,
         "OS-EXT-SRV-ATTR:reservation_id": "%(reservation_id)s",
         "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
         "OS-EXT-SRV-ATTR:kernel_id": null,

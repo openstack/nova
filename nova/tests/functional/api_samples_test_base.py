@@ -126,8 +126,19 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             outf.write(data)
 
     def _compare_result(self, subs, expected, result, result_str):
+
         matched_value = None
-        if isinstance(expected, dict):
+        # None
+        if expected is None:
+            if result is None:
+                pass
+            elif result == u'':
+                pass  # TODO(auggy): known issue Bug#1544720
+            else:
+                raise NoMatch('%(result_str)s: Expected None, got %(result)s.'
+                        % {'result_str': result_str, 'result': result})
+        # dictionary
+        elif isinstance(expected, dict):
             if not isinstance(result, dict):
                 raise NoMatch('%(result_str)s: %(result)s is not a dict.'
                         % {'result_str': result_str, 'result': result})
@@ -149,9 +160,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         {'ex_delta': ex_delta, 'result_str': result_str,
                            'res_delta': res_delta})
             for key in ex_keys:
+                # TODO(auggy): pass key name along as well for error reporting
                 res = self._compare_result(subs, expected[key], result[key],
                                            result_str)
                 matched_value = res or matched_value
+        # list
         elif isinstance(expected, list):
             if not isinstance(result, list):
                 raise NoMatch(
@@ -185,6 +198,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             if error:
                 raise NoMatch('\n'.join(error))
+        # template string
         elif isinstance(expected, six.string_types) and '%' in expected:
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
@@ -209,12 +223,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             except IndexError:
                 if match.groups():
                     matched_value = match.groups()[0]
-        else:
-            if isinstance(expected, six.string_types):
-                # NOTE(danms): Ignore whitespace in this comparison
-                expected = expected.strip()
-                if isinstance(result, six.string_types):
-                    result = result.strip()
+        # string
+        elif isinstance(expected, six.string_types):
+
+            # NOTE(danms): Ignore whitespace in this comparison
+            expected = expected.strip()
+            if isinstance(result, six.string_types):
+                result = result.strip()
+
             if expected != result:
                 # NOTE(tdurakov):this attempt to parse string as JSON
                 # is needed for correct comparison of hypervisor.cpu_info,
@@ -235,6 +251,21 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         '%(result)s' % {'expected': expected,
                                         'result_str': result_str,
                                         'result': result})
+        # int
+        elif isinstance(expected, (six.integer_types, float)):
+            if expected != result:
+                raise NoMatch(
+                        'Values do not match:\n'
+                        'Template: %(expected)s\n%(result_str)s: '
+                        '%(result)s' % {'expected': expected,
+                                        'result_str': result_str,
+                                        'result': result})
+
+        else:
+            raise ValueError(
+                'Unexpected type %(expected_type)s'
+                % {'expected_type': type(expected)})
+
         return matched_value
 
     def generalize_subs(self, subs, vanilla_regexes):
@@ -267,6 +298,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _verify_response(self, name, subs, response, exp_code,
                          update_links=True):
+
         # Always also include the laundry list of base regular
         # expressions for possible key values in our templates. Test
         # specific patterns (the value of ``subs``) can override
