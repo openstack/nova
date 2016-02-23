@@ -5866,7 +5866,8 @@ class ComputeManager(manager.Manager):
 
         instances = objects.InstanceList.get_active_by_window_joined(
             context, begin, end, host=self.host,
-            expected_attrs=['system_metadata', 'info_cache', 'metadata'],
+            expected_attrs=['system_metadata', 'info_cache', 'metadata',
+                            'flavor'],
             use_slave=True)
         num_instances = len(instances)
         errors = 0

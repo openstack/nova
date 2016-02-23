@@ -12,6 +12,7 @@
 
 """Unit tests for ComputeManager()."""
 
+import datetime
 import time
 import uuid
 
@@ -47,6 +48,7 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
@@ -4520,3 +4522,52 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual(vm_states.ERROR, self.instance.vm_state)
 
         _do_test()
+
+
+class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
+    def setUp(self):
+        super(ComputeManagerInstanceUsageAuditTestCase, self).setUp()
+        self.flags(use_local=True, group='conductor')
+        self.flags(instance_usage_audit=True)
+
+    @mock.patch('nova.objects.TaskLog')
+    def test_deleted_instance(self, mock_task_log):
+        mock_task_log.get.return_value = None
+
+        compute = importutils.import_object(CONF.compute_manager)
+        admin_context = context.get_admin_context()
+
+        fake_db_flavor = fake_flavor.fake_db_flavor()
+        flavor = objects.Flavor(admin_context, **fake_db_flavor)
+
+        updates = {'host': compute.host, 'flavor': flavor, 'root_gb': 0,
+                   'ephemeral_gb': 0}
+
+        # fudge beginning and ending time by a second (backwards and forwards,
+        # respectively) so they differ from the instance's launch and
+        # termination times when sub-seconds are truncated and fall within the
+        # audit period
+        one_second = datetime.timedelta(seconds=1)
+
+        begin = timeutils.utcnow() - one_second
+        instance = objects.Instance(admin_context, **updates)
+        instance.create()
+        instance.launched_at = timeutils.utcnow()
+        instance.save()
+        instance.destroy()
+        end = timeutils.utcnow() + one_second
+
+        def fake_last_completed_audit_period():
+            return (begin, end)
+
+        self.stub_out('nova.utils.last_completed_audit_period',
+                      fake_last_completed_audit_period)
+
+        compute._instance_usage_audit(admin_context)
+
+        self.assertEqual(1, mock_task_log().task_items,
+                         'the deleted test instance was not found in the audit'
+                         ' period')
+        self.assertEqual(0, mock_task_log().errors,
+                         'an error was encountered processing the deleted test'
+                         ' instance')
