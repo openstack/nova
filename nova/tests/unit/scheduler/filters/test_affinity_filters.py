@@ -136,10 +136,6 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
     def test_affinity_simple_cidr_filter_handles_none(self):
         host = fakes.FakeHostState('host1', 'node1', {})
 
-        affinity_ip = CONF.my_ip.split('.')[0:3]
-        affinity_ip.append('100')
-        affinity_ip = str.join('.', affinity_ip)
-
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             scheduler_hints=None)
