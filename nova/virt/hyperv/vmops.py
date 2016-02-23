@@ -22,6 +22,7 @@ import os
 import time
 
 from eventlet import timeout as etimeout
+from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from os_win.utils.io import ioutils
 from os_win import utilsfactory
@@ -130,6 +131,7 @@ class VMOps(object):
 
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
+        self._metricsutils = utilsfactory.get_metricsutils()
         self._vhdutils = utilsfactory.get_vhdutils()
         self._hostutils = utilsfactory.get_hostutils()
         self._pathutils = pathutils.PathUtils()
@@ -331,7 +333,7 @@ class VMOps(object):
             self._vif_driver.plug(instance, vif)
 
         if CONF.hyperv.enable_instance_metrics_collection:
-            self._vmutils.enable_vm_metrics_collection(instance_name)
+            self._metricsutils.enable_vm_metrics_collection(instance_name)
 
         self._create_vm_com_port_pipe(instance)
 
@@ -469,7 +471,7 @@ class VMOps(object):
                 return
 
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_REBOOT)
+                           os_win_const.HYPERV_VM_STATE_REBOOT)
 
     def _soft_shutdown(self, instance,
                        timeout=CONF.hyperv.wait_soft_reboot_seconds,
@@ -511,25 +513,25 @@ class VMOps(object):
         """Pause VM instance."""
         LOG.debug("Pause instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_PAUSED)
+                           os_win_const.HYPERV_VM_STATE_PAUSED)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
         LOG.debug("Unpause instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_ENABLED)
+                           os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
         LOG.debug("Suspend instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_SUSPENDED)
+                           os_win_const.HYPERV_VM_STATE_SUSPENDED)
 
     def resume(self, instance):
         """Resume the suspended VM instance."""
         LOG.debug("Resume instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_ENABLED)
+                           os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
@@ -544,7 +546,7 @@ class VMOps(object):
                 return
 
             self._set_vm_state(instance,
-                               constants.HYPERV_VM_STATE_DISABLED)
+                               os_win_const.HYPERV_VM_STATE_DISABLED)
         except os_win_exc.HyperVVMNotFoundException:
             # The manager can call the stop API after receiving instance
             # power off events. If this is triggered when the instance
@@ -561,7 +563,7 @@ class VMOps(object):
             self._volumeops.fix_instance_volume_disk_paths(instance.name,
                                                            block_device_info)
 
-        self._set_vm_state(instance, constants.HYPERV_VM_STATE_ENABLED)
+        self._set_vm_state(instance, os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, instance, req_state):
         instance_name = instance.name
@@ -570,11 +572,11 @@ class VMOps(object):
         try:
             self._vmutils.set_vm_state(instance_name, req_state)
 
-            if req_state in (constants.HYPERV_VM_STATE_DISABLED,
-                             constants.HYPERV_VM_STATE_REBOOT):
+            if req_state in (os_win_const.HYPERV_VM_STATE_DISABLED,
+                             os_win_const.HYPERV_VM_STATE_REBOOT):
                 self._delete_vm_console_log(instance)
-            if req_state in (constants.HYPERV_VM_STATE_ENABLED,
-                             constants.HYPERV_VM_STATE_REBOOT):
+            if req_state in (os_win_const.HYPERV_VM_STATE_ENABLED,
+                             os_win_const.HYPERV_VM_STATE_REBOOT):
                 self.log_vm_serial_output(instance_name,
                                           instance_uuid)
 
@@ -599,7 +601,7 @@ class VMOps(object):
                     False otherwise.
         """
 
-        desired_vm_states = [constants.HYPERV_VM_STATE_DISABLED]
+        desired_vm_states = [os_win_const.HYPERV_VM_STATE_DISABLED]
 
         def _check_vm_status(instance_name):
             if self._get_vm_state(instance_name) in desired_vm_states:
@@ -725,7 +727,7 @@ class VMOps(object):
                   given instance.
         """
         vm_state = self._get_vm_state(instance.name)
-        if vm_state == constants.HYPERV_VM_STATE_DISABLED:
+        if vm_state == os_win_const.HYPERV_VM_STATE_DISABLED:
             # can attach / detach interface to stopped VMs.
             return True
 

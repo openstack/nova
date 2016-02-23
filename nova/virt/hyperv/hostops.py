@@ -21,6 +21,7 @@ import os
 import platform
 import time
 
+from os_win import constants as os_win_const
 from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -67,7 +68,7 @@ class HostOps(object):
         cpu_info['topology'] = topology
 
         features = list()
-        for fkey, fname in constants.PROCESSOR_FEATURE.items():
+        for fkey, fname in os_win_const.PROCESSOR_FEATURE.items():
             if self._hostutils.is_cpu_feature_present(fkey):
                 features.append(fname)
         cpu_info['features'] = features

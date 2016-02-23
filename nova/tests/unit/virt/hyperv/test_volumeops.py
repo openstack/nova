@@ -416,7 +416,7 @@ class SMBFSVolumeDriverTestCase(test_base.HyperVBaseTestCase):
         super(SMBFSVolumeDriverTestCase, self).setUp()
         self._volume_driver = volumeops.SMBFSVolumeDriver()
         self._volume_driver._vmutils = mock.MagicMock()
-        self._volume_driver._pathutils = mock.MagicMock()
+        self._volume_driver._smbutils = mock.MagicMock()
         self._volume_driver._volutils = mock.MagicMock()
 
     @mock.patch.object(volumeops.SMBFSVolumeDriver, 'ensure_share_mounted')
@@ -510,8 +510,8 @@ class SMBFSVolumeDriverTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch.object(volumeops.SMBFSVolumeDriver, '_parse_credentials')
     def _test_ensure_mounted(self, mock_parse_credentials, is_mounted=False):
-        mock_mount_smb_share = self._volume_driver._pathutils.mount_smb_share
-        self._volume_driver._pathutils.check_smb_mapping.return_value = (
+        mock_mount_smb_share = self._volume_driver._smbutils.mount_smb_share
+        self._volume_driver._smbutils.check_smb_mapping.return_value = (
             is_mounted)
         mock_parse_credentials.return_value = (
             self._FAKE_USERNAME, self._FAKE_PASSWORD)
@@ -538,6 +538,6 @@ class SMBFSVolumeDriverTestCase(test_base.HyperVBaseTestCase):
         block_device_mapping = [
             {'connection_info': self._FAKE_CONNECTION_INFO}]
         self._volume_driver.disconnect_volumes(block_device_mapping)
-        mock_unmount_share = self._volume_driver._pathutils.unmount_smb_share
+        mock_unmount_share = self._volume_driver._smbutils.unmount_smb_share
         mock_unmount_share.assert_called_once_with(
             self._FAKE_SHARE_NORMALIZED)
