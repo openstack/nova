@@ -2278,9 +2278,8 @@ class ComputeManager(manager.Manager):
                                         trying to teardown networking
         """
         context = context.elevated()
-        LOG.info(_LI('%(action_str)s instance') %
-                 {'action_str': 'Terminating'},
-                  context=context, instance=instance)
+        LOG.info(_LI('Terminating instance'),
+                 context=context, instance=instance)
 
         if notify:
             self._notify_about_instance_usage(context, instance,
