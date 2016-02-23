@@ -1576,11 +1576,10 @@ class VMOps(object):
             self._destroy_vdis(instance, vm_ref)
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
-        vm_utils.destroy_vm(self._session, instance, vm_ref)
-
-        self.unplug_vifs(instance, network_info)
+        self.unplug_vifs(instance, network_info, vm_ref)
         self.firewall_driver.unfilter_instance(
                 instance, network_info=network_info)
+        vm_utils.destroy_vm(self._session, instance, vm_ref)
 
     def pause(self, instance):
         """Pause VM instance."""
@@ -1896,25 +1895,18 @@ class VMOps(object):
         self._session.call_xenapi("VM.get_domid", vm_ref)
 
         for device, vif in enumerate(network_info):
-            vif_rec = self.vif_driver.plug(instance, vif,
-                                           vm_ref=vm_ref, device=device)
-            network_ref = vif_rec['network']
-            LOG.debug('Creating VIF for network %s',
-                      network_ref, instance=instance)
-            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
-            LOG.debug('Created VIF %(vif_ref)s, network %(network_ref)s',
-                      {'vif_ref': vif_ref, 'network_ref': network_ref},
-                      instance=instance)
+            LOG.debug('Create VIF %s', vif, instance=instance)
+            self.vif_driver.plug(instance, vif, vm_ref=vm_ref, device=device)
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
         for device, vif in enumerate(network_info):
             self.vif_driver.plug(instance, vif, device=device)
 
-    def unplug_vifs(self, instance, network_info):
+    def unplug_vifs(self, instance, network_info, vm_ref):
         if network_info:
             for vif in network_info:
-                self.vif_driver.unplug(instance, vif)
+                self.vif_driver.unplug(instance, vif, vm_ref)
 
     def reset_network(self, instance, rescue=False):
         """Calls resetnetwork method in agent."""
