@@ -274,6 +274,35 @@ injected_network_template = cfg.StrOpt(
     default=paths.basedir_def('nova/virt/interfaces.template'),
     help='Template file for injected network')
 
+# NOTE(yamahata): ListOpt won't work because the command may include a comma.
+# For example:
+#
+#     mkfs.ext4 -O dir_index,extent -E stride=8,stripe-width=16
+#       --label %(fs_label)s %(target)s
+#
+# list arguments are comma separated and there is no way to escape such
+# commas.
+virt_mkfs = cfg.MultiStrOpt(
+    'virt_mkfs',
+    default=[],
+    help='Name of the mkfs commands for ephemeral device. '
+         'The format is <os_type>=<mkfs command>')
+
+resize_fs_using_block_device = cfg.BoolOpt(
+    'resize_fs_using_block_device',
+    default=False,
+    help='Attempt to resize the filesystem by accessing the '
+         'image over a block device. This is done by the host '
+         'and may not be necessary if the image contains a recent '
+         'version of cloud-init. Possible mechanisms require '
+         'the nbd driver (for qcow and raw), or loop (for raw).')
+
+timeout_nbd = cfg.IntOpt(
+    'timeout_nbd',
+    default=10,
+    help='Amount of time, in seconds, to wait for NBD '
+    'device start up.')
+
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
@@ -284,7 +313,10 @@ ALL_OPTS = [vcpu_pin_set,
             firewall_driver,
             allow_same_net_traffic,
             force_raw_images,
-            injected_network_template]
+            injected_network_template,
+            virt_mkfs,
+            resize_fs_using_block_device,
+            timeout_nbd]
 
 
 def register_opts(conf):

@@ -18,24 +18,16 @@ import random
 import re
 import time
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova.i18n import _, _LE, _LI, _LW
 from nova import utils
 from nova.virt.disk.mount import api
 
 LOG = logging.getLogger(__name__)
 
-nbd_opts = [
-    cfg.IntOpt('timeout_nbd',
-               default=10,
-               help='Amount of time, in seconds, to wait for NBD '
-               'device start up.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(nbd_opts)
+CONF = nova.conf.CONF
 
 NBD_DEVICE_RE = re.compile('nbd[0-9]+')
 
