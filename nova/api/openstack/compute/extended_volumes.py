@@ -35,6 +35,9 @@ class ExtendedVolumesController(wsgi.Controller):
                     volume_attached['delete_on_termination'] = (
                         bdm['delete_on_termination'])
                 volumes_attached.append(volume_attached)
+        # NOTE(mriedem): The os-extended-volumes prefix should not be used for
+        # new attributes after v2.1. They are only in v2.1 for backward compat
+        # with v2.0.
         key = "%s:volumes_attached" % ExtendedVolumes.alias
         server[key] = volumes_attached
 

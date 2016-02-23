@@ -24,6 +24,9 @@ authorize = extensions.os_compute_soft_authorizer(ALIAS)
 class ImageSizeController(wsgi.Controller):
 
     def _extend_image(self, image, image_cache):
+        # NOTE(mriedem): The OS-EXT-* prefix should not be used for new
+        # attributes after v2.1. They are only in v2.1 for backward compat
+        # with v2.0.
         key = "OS-EXT-IMG-SIZE:size"
         image[key] = image_cache['size']
 

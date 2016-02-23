@@ -30,6 +30,9 @@ class ExtendedStatusController(wsgi.Controller):
         # to make it same as V2. If needed it can be added with
         # microversion.
         for state in ['task_state', 'vm_state', 'power_state']:
+            # NOTE(mriedem): The OS-EXT-STS prefix should not be used for new
+            # attributes after v2.1. They are only in v2.1 for backward compat
+            # with v2.0.
             key = "%s:%s" % ('OS-EXT-STS', state)
             server[key] = instance[state]
 
