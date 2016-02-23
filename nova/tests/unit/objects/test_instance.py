@@ -191,6 +191,13 @@ class _TestInstanceObject(object):
             self.assertTrue(inst.obj_attr_is_set(attr))
         self.assertEqual(123, inst.services[0].id)
 
+    def test_lazy_load_services_on_deleted_instance(self):
+        # We should avoid trying to hit the database to reload the instance
+        # and just set the services attribute to an empty list.
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    deleted=True)
+        self.assertEqual(0, len(instance.services))
+
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'instance_get')
         db.instance_get(self.context, 'instid',
