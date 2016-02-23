@@ -1082,7 +1082,7 @@ class API(base.Base):
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
         # consideration of connections to each requested network
-        if max_net_count == 0:
+        if max_net_count < min_count:
             raise exception.PortLimitExceeded()
         elif max_net_count < max_count:
             LOG.info(_LI("max count reduced from %(max_count)d to "
