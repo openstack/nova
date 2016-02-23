@@ -85,22 +85,22 @@ _ADMIN_AUTH = None
 
 
 def list_opts():
-    list = copy.deepcopy(_neutron_options)
-    list.insert(0, ks_loading.get_auth_common_conf_options()[0])
+    opts = copy.deepcopy(_neutron_options)
+    opts.insert(0, ks_loading.get_auth_common_conf_options()[0])
     # NOTE(dims): There are a lot of auth plugins, we just generate
     # the config options for a few common ones
     plugins = ['password', 'v2password', 'v3password']
     for name in plugins:
         for plugin_option in ks_loading.get_plugin_loader(name).get_options():
             found = False
-            for option in list:
+            for option in opts:
                 if option.name == plugin_option.name:
                     found = True
                     break
             if not found:
-                list.append(plugin_option)
-    list.sort(key=lambda x: x.name)
-    return [(NEUTRON_GROUP, list)]
+                opts.append(plugin_option)
+    opts.sort(key=lambda x: x.name)
+    return [(NEUTRON_GROUP, opts)]
 
 
 def reset_state():
