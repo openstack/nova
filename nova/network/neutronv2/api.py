@@ -1602,10 +1602,12 @@ class API(base_api.NetworkAPI):
 
     def _nw_info_build_network(self, port, networks, subnets):
         network_name = None
+        network_mtu = None
         for net in networks:
             if port['network_id'] == net['id']:
                 network_name = net['name']
                 tenant_id = net['tenant_id']
+                network_mtu = net.get('mtu')
                 break
         else:
             tenant_id = port['tenant_id']
@@ -1648,7 +1650,8 @@ class API(base_api.NetworkAPI):
             bridge=bridge,
             injected=CONF.flat_injected,
             label=network_name,
-            tenant_id=tenant_id
+            tenant_id=tenant_id,
+            mtu=network_mtu
             )
         network['subnets'] = subnets
         port_profile = port.get('binding:profile')
