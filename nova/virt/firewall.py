@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import context
 from nova.i18n import _LI
 from nova.network import linux_net
@@ -29,17 +29,7 @@ from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
 
-firewall_opts = [
-    cfg.StrOpt('firewall_driver',
-               help='Firewall driver '
-                    '(defaults to hypervisor specific iptables driver)'),
-    cfg.BoolOpt('allow_same_net_traffic',
-                default=True,
-                help='Whether to allow network traffic from same network'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(firewall_opts)
+CONF = nova.conf.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
