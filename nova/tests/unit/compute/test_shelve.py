@@ -478,7 +478,8 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_unshelve(self):
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    def test_unshelve(self, get_by_instance_uuid):
         # Ensure instance can be unshelved.
         instance = self._create_fake_instance_obj()
 
@@ -490,7 +491,14 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         instance.vm_state = vm_states.SHELVED
         instance.save()
 
-        self.compute_api.unshelve(self.context, instance)
+        fake_spec = objects.RequestSpec()
+        get_by_instance_uuid.return_value = fake_spec
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'unshelve_instance') as unshelve:
+            self.compute_api.unshelve(self.context, instance)
+            get_by_instance_uuid.assert_called_once_with(self.context,
+                                                         instance.uuid)
+            unshelve.assert_called_once_with(self.context, instance, fake_spec)
 
         self.assertEqual(instance.task_state, task_states.UNSHELVING)
 

@@ -269,6 +269,7 @@ class ComputeTaskAPI(object):
     1.11 - Added clean_shutdown to migrate_server()
     1.12 - Added request_spec to rebuild_instance()
     1.13 - Added request_spec to migrate_server()
+    1.14 - Added request_spec to unshelve_instance()
     """
 
     def __init__(self):
@@ -337,9 +338,16 @@ class ComputeTaskAPI(object):
         cctxt = self.client.prepare(version=version)
         cctxt.cast(context, 'build_instances', **kw)
 
-    def unshelve_instance(self, context, instance):
-        cctxt = self.client.prepare(version='1.3')
-        cctxt.cast(context, 'unshelve_instance', instance=instance)
+    def unshelve_instance(self, context, instance, request_spec=None):
+        version = '1.14'
+        kw = {'instance': instance,
+              'request_spec': request_spec
+              }
+        if not self.client.can_send_version(version):
+            version = '1.3'
+            del kw['request_spec']
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(context, 'unshelve_instance', **kw)
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,

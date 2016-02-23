@@ -50,6 +50,7 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
+from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import fake_utils
 from nova import utils
@@ -638,6 +639,51 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
+
+    def test_unshelve_offload_instance_on_host_with_request_spec(self):
+        instance = self._create_fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = task_states.UNSHELVING
+        instance.save()
+        system_metadata = instance.system_metadata
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_image_id'] = 'fake_image_id'
+        system_metadata['shelved_host'] = 'fake-mini'
+
+        fake_spec = fake_request_spec.fake_spec_obj()
+        # FIXME(sbauza): Modify the fake RequestSpec object to either add a
+        # non-empty SchedulerRetries object or nullify the field
+        fake_spec.retry = None
+        # FIXME(sbauza): Modify the fake RequestSpec object to either add a
+        # non-empty SchedulerLimits object or nullify the field
+        fake_spec.limits = None
+        # FIXME(sbauza): Modify the fake RequestSpec object to either add a
+        # non-empty InstanceGroup object or nullify the field
+        fake_spec.instance_group = None
+
+        filter_properties = fake_spec.to_legacy_filter_properties_dict()
+        request_spec = fake_spec.to_legacy_request_spec_dict()
+
+        host = {'host': 'host1', 'nodename': 'node1', 'limits': []}
+
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                           'unshelve_instance')
+        @mock.patch.object(self.conductor_manager, '_schedule_instances')
+        def do_test(sched_instances, unshelve_instance):
+            sched_instances.return_value = [host]
+            self.conductor_manager.unshelve_instance(self.context, instance,
+                                                     fake_spec)
+            scheduler_utils.populate_retry(filter_properties, instance.uuid)
+            scheduler_utils.populate_filter_properties(filter_properties, host)
+            sched_instances.assert_called_once_with(self.context, request_spec,
+                                                    filter_properties)
+            unshelve_instance.assert_called_once_with(
+                self.context, instance, host['host'], image=mock.ANY,
+                filter_properties=filter_properties, node=host['nodename']
+            )
+
+        do_test()
 
     def test_unshelve_offloaded_instance_glance_image_not_found(self):
         shelved_image_id = "image_not_found"

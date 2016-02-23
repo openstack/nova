@@ -95,9 +95,9 @@ class LocalComputeTaskAPI(object):
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=legacy_bdm)
 
-    def unshelve_instance(self, context, instance):
+    def unshelve_instance(self, context, instance, request_spec=None):
         utils.spawn_n(self._manager.unshelve_instance, context,
-                instance=instance)
+                instance=instance, request_spec=request_spec)
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
@@ -205,9 +205,9 @@ class ComputeTaskAPI(object):
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=legacy_bdm)
 
-    def unshelve_instance(self, context, instance):
+    def unshelve_instance(self, context, instance, request_spec=None):
         self.conductor_compute_rpcapi.unshelve_instance(context,
-                instance=instance)
+                instance=instance, request_spec=None)
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
