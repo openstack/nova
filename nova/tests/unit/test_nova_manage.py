@@ -472,19 +472,23 @@ class DBCommandsTestCase(test.NoDBTestCase):
 
         return _CommandSub
 
-    def test_online_migrations(self):
+    @mock.patch('nova.context.get_admin_context')
+    def test_online_migrations(self, mock_get_context):
+        ctxt = mock_get_context.return_value
         command_cls = self._fake_db_command()
         command = command_cls()
         command.online_data_migrations(10)
-        command_cls.online_migrations[0].assert_called_once_with(10)
-        command_cls.online_migrations[1].assert_called_once_with(6)
+        command_cls.online_migrations[0].assert_called_once_with(ctxt, 10)
+        command_cls.online_migrations[1].assert_called_once_with(ctxt, 6)
 
-    def test_online_migrations_no_max_count(self):
+    @mock.patch('nova.context.get_admin_context')
+    def test_online_migrations_no_max_count(self, mock_get_context):
         total = [120]
         batches = [50, 40, 30, 0]
         runs = []
 
-        def fake_migration(count):
+        def fake_migration(context, count):
+            self.assertEqual(mock_get_context.return_value, context)
             runs.append(count)
             count = batches.pop(0)
             total[0] -= count
