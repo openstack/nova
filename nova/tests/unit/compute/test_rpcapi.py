@@ -666,3 +666,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                          'migrate_data': {}},
                                callret=None,
                                calltype='cast')
+
+    def test_check_can_live_migrate_destination_old_compute(self):
+        self.flags(compute='4.10', group='upgrade_levels')
+        self.assertRaises(exception.LiveMigrationWithOldNovaNotSupported,
+                          self._test_compute_api,
+                          'check_can_live_migrate_destination', 'call',
+                          instance=self.fake_instance_obj,
+                          block_migration=None,
+                          destination='dest',
+                          disk_over_commit=None, version='4.11')
