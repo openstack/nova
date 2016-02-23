@@ -4945,7 +4945,7 @@ class ComputeManager(manager.Manager):
                                        migrate_data)
 
         # TODO(ORBIT)
-        if colo_migration:
+        if not colo_migration:
             # NOTE(tr3buchet): setup networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
                                                     self.host)

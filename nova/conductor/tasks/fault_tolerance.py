@@ -38,18 +38,19 @@ class FaultToleranceTasks(object):
         p_instance.save()
         s_instance.save()
 
-    def _failover_floating_ip(self, context, p_instance, s_instance):
+    def _failover_network(self, context, p_instance, s_instance):
         p_nw_info = compute_utils.get_nw_info_for_instance(p_instance)
-        s_nw_info = compute_utils.get_nw_info_for_instance(s_instance)
-        floating_ips = p_nw_info[0].floating_ips()
-        if floating_ips:
-            # TODO(ORBIT): Multiple fixed/floating ips?
-            floating_ip = floating_ips[0]
-            fixed_ip = s_nw_info[0].fixed_ips()[0]
-            self.network_api.associate_floating_ip(
-                context, s_instance,
-                floating_address=floating_ip['address'],
-                fixed_address=fixed_ip['address'])
+        # TODO(ORBIT): Multiple nics
+        vif = p_nw_info[0]
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=vif["id"])])
+
+        self.network_api.deallocate_for_instance(
+            context, p_instance, requested_networks=requested_networks)
+
+        self.network_api.allocate_for_instance(
+            context, s_instance, requested_networks=requested_networks)
 
     def failover(self, context, instance_uuid):
         instance = self.compute_api.get(context, instance_uuid,
@@ -85,7 +86,7 @@ class FaultToleranceTasks(object):
 
             self.compute_api.colo_failover(context, s_instance)
 
-            self._failover_floating_ip(context, p_instance, s_instance)
+            self._failover_network(context, p_instance, s_instance)
             self._failover_name(context, p_instance, s_instance)
 
             del s_instance.system_metadata['instance_type_extra_ft:secondary']
