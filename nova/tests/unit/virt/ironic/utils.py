@@ -142,6 +142,9 @@ class FakeNodeClient(object):
     def vif_detach(self, node_uuid, port_id):
         pass
 
+    def inject_nmi(self, node_uuid):
+        pass
+
 
 class FakeClient(object):
 

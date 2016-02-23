@@ -1,0 +1,5 @@
+---
+features:
+  - Adds trigger crash dump support to ironic virt driver. This feature
+    requires the Ironic service to support API version 1.29 or later.
+    It also requires python-ironicclient >= 1.11.0.
