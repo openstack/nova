@@ -184,13 +184,69 @@ Interdependencies to other options:
 
 firewall_driver = cfg.StrOpt(
     'firewall_driver',
-    help='Firewall driver '
-         '(defaults to hypervisor specific iptables driver)')
+    help="""Firewall driver to use with ``nova-network`` service.
+
+This option only applies when using the ``nova-network`` service. When using
+another networking services, such as Neutron, this should be to set to the
+``NoopFirewallDriver``.
+
+If unset (the default), this will default to the hypervisor-specified
+default driver.
+
+Possible values:
+
+* nova.virt.firewall.IptablesFirewallDriver
+* nova.virt.firewall.NoopFirewallDriver
+* nova.virt.libvirt.firewall.IptablesFirewallDriver
+* [...]
+
+Services which consume this:
+
+* nova-network
+
+Interdependencies to other options:
+
+* ``network_api_class``: This must be set to ``nova.network.api.API`` to
+  enable ``nova-network`` networking
+* ``security_group_api``: This must be set to ``nova`` to enable
+  ``nova-network`` networking
+""")
 
 allow_same_net_traffic = cfg.BoolOpt(
     'allow_same_net_traffic',
     default=True,
-    help='Whether to allow network traffic from same network')
+    help="""Determine whether to allow network traffic from same network.
+
+When set to true, hosts on the same subnet are not filtered and are allowed
+to pass all types of traffic between them. On a flat network, this allows
+all instances from all projects unfiltered communication. With VLAN
+networking, this allows access between instances within the same project.
+
+This option only applies when using the ``nova-network`` service. When using
+another networking services, such as Neutron, security groups or other
+approaches should be used.
+
+Possible values:
+
+* True: Network traffic should be allowed pass between all instances on the
+  same network, regardless of their tenant and security policies
+* False: Network traffic should not be allowed pass between instances unless
+  it is unblocked in a security group
+
+Services which consume this:
+
+* nova-network
+
+Interdependencies to other options:
+
+* ``network_api_class``: This must be set to ``nova.network.api.API`` to
+  enable ``nova-network`` networking
+* ``security_group_api``: This must be set to ``nova`` to enable
+  ``nova-network`` networking
+* ``firewall_driver``: This must be set to
+  ``nova.virt.libvirt.firewall.IptablesFirewallDriver`` to ensure the
+  libvirt firewall driver is enabled.
+""")
 
 force_raw_images = cfg.BoolOpt(
     'force_raw_images',
