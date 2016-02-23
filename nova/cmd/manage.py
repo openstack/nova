@@ -987,21 +987,10 @@ class DbCommands(object):
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
 
-    @args('--max-count', metavar='<number>', dest='max_count',
-          help='Maximum number of objects to consider')
-    def online_data_migrations(self, max_count=None):
-        if max_count is not None:
-            max_count = int(max_count)
-            unlimited = False
-            if max_count < 0:
-                print(_('Must supply a positive value for max_number'))
-                return(1)
-        else:
-            unlimited = True
-
+    def _run_migration(self, max_count):
         ran = 0
         for migration_meth in self.online_migrations:
-            count = max_count - ran if not unlimited else None
+            count = max_count - ran
             try:
                 found, done = migration_meth(count)
             except Exception:
@@ -1017,6 +1006,27 @@ class DbCommands(object):
                 ran += done
                 if ran >= max_count:
                     break
+        return ran
+
+    @args('--max-count', metavar='<number>', dest='max_count',
+          help='Maximum number of objects to consider')
+    def online_data_migrations(self, max_count=None):
+        if max_count is not None:
+            max_count = int(max_count)
+            unlimited = False
+            if max_count < 0:
+                print(_('Must supply a positive value for max_number'))
+                return(1)
+        else:
+            unlimited = True
+            max_count = 50
+            print(_('Running batches of %i until complete') % max_count)
+
+        ran = None
+        while ran is None or ran != 0:
+            ran = self._run_migration(max_count)
+            if not unlimited:
+                break
 
 
 class ApiDbCommands(object):
