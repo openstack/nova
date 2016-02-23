@@ -23,20 +23,11 @@ import os
 
 import jinja2
 import netaddr
-from oslo_config import cfg
 
+import nova.conf
 from nova.network import model
-from nova import paths
 
-CONF = cfg.CONF
-
-netutils_opts = [
-    cfg.StrOpt('injected_network_template',
-               default=paths.basedir_def('nova/virt/interfaces.template'),
-               help='Template file for injected network'),
-]
-
-CONF.register_opts(netutils_opts)
+CONF = nova.conf.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 

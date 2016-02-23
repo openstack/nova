@@ -14,6 +14,8 @@
 
 from oslo_config import cfg
 
+from nova import paths
+
 vcpu_pin_set = cfg.StrOpt(
     'vcpu_pin_set',
     help="""Defines which physical CPUs (pCPUs) can be used by instance
@@ -267,6 +269,11 @@ Interdependencies to other options:
 * ``compute_driver``: Only the libvirt driver uses this option.
 """)
 
+injected_network_template = cfg.StrOpt(
+    'injected_network_template',
+    default=paths.basedir_def('nova/virt/interfaces.template'),
+    help='Template file for injected network')
+
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
@@ -276,7 +283,8 @@ ALL_OPTS = [vcpu_pin_set,
             vif_plugging_timeout,
             firewall_driver,
             allow_same_net_traffic,
-            force_raw_images]
+            force_raw_images,
+            injected_network_template]
 
 
 def register_opts(conf):
