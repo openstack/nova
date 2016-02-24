@@ -1012,13 +1012,16 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         if len(network_info) > 0:
             # not needed if no vif are defined
-            for vif, pif in zip(network_info, ports):
-                # attach what neutron needs directly to the port
-                port_id = six.text_type(vif['id'])
-                patch = [{'op': 'add',
-                          'path': '/extra/vif_port_id',
-                          'value': port_id}]
-                self.ironicclient.call("port.update", pif.uuid, patch)
+            for vif in network_info:
+                for pif in ports:
+                    if vif['address'] == pif.address:
+                        # attach what neutron needs directly to the port
+                        port_id = six.text_type(vif['id'])
+                        patch = [{'op': 'add',
+                                  'path': '/extra/vif_port_id',
+                                  'value': port_id}]
+                        self.ironicclient.call("port.update", pif.uuid, patch)
+                        break
 
     def _unplug_vifs(self, node, instance, network_info):
         # NOTE(PhilDay): Accessing network_info will block if the thread
@@ -1033,7 +1036,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                                       detail=True)
 
             # not needed if no vif are defined
-            for vif, pif in zip(network_info, ports):
+            for pif in ports:
                 if 'vif_port_id' in pif.extra:
                     # we can not attach a dict directly
                     patch = [{'op': 'remove', 'path': '/extra/vif_port_id'}]
