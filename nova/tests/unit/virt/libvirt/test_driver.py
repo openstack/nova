@@ -7631,6 +7631,43 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            fallback_from_host=instance.host)])
             self.assertIsInstance(res, dict)
 
+    def test_pre_live_migration_recreate_disk_info(self):
+
+        migrate_data = {'is_shared_block_storage': False,
+                        'is_shared_instance_path': False,
+                        'block_migration': True,
+                        'instance_relative_path': '/some/path/'}
+        disk_info = [{'disk_size': 5368709120, 'type': 'raw',
+                      'virt_disk_size': 5368709120,
+                      'path': '/some/path/disk',
+                      'backing_file': '', 'over_committed_disk_size': 0},
+                     {'disk_size': 1073741824, 'type': 'raw',
+                      'virt_disk_size': 1073741824,
+                      'path': '/some/path/disk.eph0',
+                      'backing_file': '', 'over_committed_disk_size': 0}]
+        image_disk_info = {'/some/path/disk': 'raw',
+                           '/some/path/disk.eph0': 'raw'}
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance_path = os.path.dirname(disk_info[0]['path'])
+        disk_info_path = os.path.join(instance_path, 'disk.info')
+
+        with test.nested(
+            mock.patch.object(os, 'mkdir'),
+            mock.patch.object(fake_libvirt_utils, 'write_to_file'),
+            mock.patch.object(drvr, '_create_images_and_backing')
+        ) as (
+            mkdir, write_to_file, create_images_and_backing
+        ):
+            drvr.pre_live_migration(self.context, instance,
+                                    block_device_info=None,
+                                    network_info=[],
+                                    disk_info=jsonutils.dumps(disk_info),
+                                    migrate_data=migrate_data)
+            write_to_file.assert_called_with(disk_info_path,
+                                             jsonutils.dumps(image_disk_info))
+
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
         instance = objects.Instance(**self.test_instance)
@@ -12822,6 +12859,44 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor = {'root_gb': 10, 'ephemeral_gb': 4}
         flavor_obj = objects.Flavor(**flavor)
         self._test_migrate_disk_and_power_off(flavor_obj)
+
+    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '._is_storage_shared_with')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '.get_instance_disk_info')
+    def test_migrate_disk_and_power_off_resize_copy_disk_info(self,
+                                                              mock_disk_info,
+                                                              mock_shared,
+                                                              mock_path,
+                                                              mock_destroy,
+                                                              mock_copy,
+                                                              mock_execuate):
+
+        instance = self._create_instance()
+        disk_info = self._disk_info()
+        disk_info_text = jsonutils.loads(disk_info)
+        instance_base = os.path.dirname(disk_info_text[0]['path'])
+        flavor = {'root_gb': 10, 'ephemeral_gb': 25}
+        flavor_obj = objects.Flavor(**flavor)
+
+        mock_disk_info.return_value = disk_info
+        mock_path.return_value = instance_base
+        mock_shared.return_value = False
+
+        self.drvr.migrate_disk_and_power_off(context.get_admin_context(),
+                                             instance, mock.sentinel,
+                                             flavor_obj, None)
+
+        src_disk_info_path = os.path.join(instance_base + '_resize',
+                                          'disk.info')
+        dst_disk_info_path = os.path.join(instance_base, 'disk.info')
+        mock_copy.assert_any_call(src_disk_info_path, dst_disk_info_path,
+                                  host=mock.sentinel, on_execute=mock.ANY,
+                                  on_completion=mock.ANY, compression=mock.ANY)
 
     def test_wait_for_running(self):
         def fake_get_info(instance):

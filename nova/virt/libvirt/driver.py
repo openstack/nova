@@ -6279,6 +6279,24 @@ class LibvirtDriver(driver.ComputeDriver):
                       instance=instance)
             os.mkdir(instance_dir)
 
+            # Recreate the disk.info file and in doing so stop the
+            # imagebackend from recreating it incorrectly by inspecting the
+            # contents of each file when using the Raw backend.
+            if disk_info:
+                image_disk_info = {}
+                for info in disk_info:
+                    image_file = os.path.basename(info['path'])
+                    image_path = os.path.join(instance_dir, image_file)
+                    image_disk_info[image_path] = info['type']
+
+                LOG.debug('Creating disk.info with the contents: %s',
+                          image_disk_info, instance=instance)
+
+                image_disk_info_path = os.path.join(instance_dir,
+                                                    'disk.info')
+                libvirt_utils.write_to_file(image_disk_info_path,
+                                            jsonutils.dumps(image_disk_info))
+
             if not is_shared_block_storage:
                 # Ensure images and backing files are present.
                 LOG.debug('Checking to make sure images and backing files are '
@@ -6823,6 +6841,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                              on_execute=on_execute,
                                              on_completion=on_completion,
                                              compression=compression)
+
+            # Ensure disk.info is written to the new path to avoid disks being
+            # reinspected and potentially changing format.
+            src_disk_info_path = os.path.join(inst_base_resize, 'disk.info')
+            dst_disk_info_path = os.path.join(inst_base, 'disk.info')
+            libvirt_utils.copy_image(src_disk_info_path, dst_disk_info_path,
+                                     host=dest, on_execute=on_execute,
+                                     on_completion=on_completion,
+                                     compression=compression)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
