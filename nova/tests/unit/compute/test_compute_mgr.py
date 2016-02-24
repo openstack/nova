@@ -2057,6 +2057,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             }
         }
         self.compute.instance_events.cancel_all_events()
+        # call it again to make sure we handle that gracefully
+        self.compute.instance_events.cancel_all_events()
         self.assertTrue(fake_eventlet_event.send.called)
         event = fake_eventlet_event.send.call_args_list[0][0][0]
         self.assertEqual('network-vif-plugged', event.name)
