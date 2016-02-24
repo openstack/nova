@@ -203,3 +203,7 @@ nova.tests.unit.virt.vmwareapi.test_configdrive.ConfigDriveTestCase
 nova.tests.unit.virt.vmwareapi.test_driver_api.VMwareAPIVMTestCase
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.SpawnTestCase
+
+# The XenAPI plugins run in a Python 2.4 environment, so avoid attempting
+# to run their unit tests in a Python 3 environment.
+nova.tests.unit.virt.xenapi.plugins
