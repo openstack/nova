@@ -52,6 +52,7 @@ from nova.tests.unit import test_flavors
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.tests import uuidsentinel
 from nova.virt import driver as v_driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
@@ -429,9 +430,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_instance_exists(self):
         self._create_vm()
         self.assertTrue(self.conn.instance_exists(self.instance))
-        invalid_instance = fake_instance.fake_instance_obj(None, uuid='foo',
-                                                           name='bar',
-                                                           node=self.node_name)
+        invalid_instance = fake_instance.fake_instance_obj(
+            None, uuid=uuidsentinel.foo, name='bar',
+            node=self.node_name)
         self.assertFalse(self.conn.instance_exists(invalid_instance))
 
     def test_list_instances_1(self):

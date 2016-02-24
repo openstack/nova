@@ -33,6 +33,7 @@ from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.tests import uuidsentinel
 from nova import utils
 from nova import version
 from nova.virt import hardware
@@ -78,10 +79,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 ref='fake_dc_ref', name='fake_dc',
                 vmFolder='fake_vm_folder')
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
+        self._uuid = uuidsentinel.foo
         self._instance_values = {
             'name': 'fake_name',
             'display_name': 'fake_display_name',
-            'uuid': 'fake_uuid',
+            'uuid': self._uuid,
             'vcpus': 1,
             'memory_mb': 512,
             'image_ref': self._image_id,
@@ -461,7 +463,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             uuid = self._instance.image_ref
             cache_path = ds.build_path('vmware_base', uuid, uuid + '.vmdk')
-            rescue_path = ds.build_path('fake_uuid', uuid + '-rescue.vmdk')
+            rescue_path = ds.build_path(self._uuid, uuid + '-rescue.vmdk')
 
             mock_disk_copy.assert_called_once_with(self._session, dc_info.ref,
                              cache_path, rescue_path)
@@ -1218,19 +1220,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         self._vmops._use_disk_image_as_full_clone("fake_vm_ref", vi)
 
+        fake_path = '[fake_ds] %(uuid)s/%(uuid)s.vmdk' % {'uuid': self._uuid}
         mock_copy_virtual_disk.assert_called_once_with(
                 self._session, self._dc_info.ref,
                 str(vi.cache_image_path),
-                '[fake_ds] fake_uuid/fake_uuid.vmdk')
+                fake_path)
 
         if not flavor_fits_image:
             mock_extend_virtual_disk.assert_called_once_with(
                     self._instance, vi.root_gb * units.Mi,
-                    '[fake_ds] fake_uuid/fake_uuid.vmdk', self._dc_info.ref)
+                    fake_path, self._dc_info.ref)
 
         mock_attach_disk_to_vm.assert_called_once_with(
                 "fake_vm_ref", self._instance, vi.ii.adapter_type,
-                vi.ii.disk_type, '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                vi.ii.disk_type, fake_path,
                 vi.root_gb * units.Mi, False,
                 disk_io_limits=vi._extra_specs.disk_io_limits)
 
@@ -1268,17 +1271,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 "fake_vm_ref", self._instance, self._ds.ref,
                 str(vi.cache_image_path))
 
+        fake_path = '[fake_ds] %(uuid)s/%(uuid)s.vmdk' % {'uuid': self._uuid}
         if with_root_disk:
             mock_create_virtual_disk.assert_called_once_with(
                     self._session, self._dc_info.ref,
                     vi.ii.adapter_type, vi.ii.disk_type,
-                    '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                    fake_path,
                     vi.root_gb * units.Mi)
             linked_clone = False
             mock_attach_disk_to_vm.assert_called_once_with(
                     "fake_vm_ref", self._instance,
                     vi.ii.adapter_type, vi.ii.disk_type,
-                    '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                    fake_path,
                     vi.root_gb * units.Mi, linked_clone,
                     disk_io_limits=vi._extra_specs.disk_io_limits)
 
@@ -1650,11 +1654,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         # _create_and_attach_thin_disk should be called for each ephemeral
         # and swap disk
-        eph0_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+        eph0_path = str(ds_obj.DatastorePath(vi.datastore.name,
+                                             self._uuid,
                                              'ephemeral_0.vmdk'))
-        eph1_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+        eph1_path = str(ds_obj.DatastorePath(vi.datastore.name,
+                                             self._uuid,
                                              'ephemeral_1.vmdk'))
-        swap_path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+        swap_path = str(ds_obj.DatastorePath(vi.datastore.name,
+                                             self._uuid,
                                              'swap.vmdk'))
         create_and_attach_thin_disk.assert_has_calls([
             mock.call(self._instance, 'fake-vm-ref', vi.dc_info,
@@ -1688,8 +1695,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
-        path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
-                                         'fake-filename'))
+        path = str(ds_obj.DatastorePath(vi.datastore.name, self._uuid,
+                                        'fake-filename'))
         self._vmops._create_and_attach_thin_disk(self._instance,
                                                  'fake-vm-ref',
                                                  vi.dc_info, 1,
@@ -1715,12 +1722,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                           self._instance,
                                           'fake-vm-ref',
                                           vi.dc_info, vi.datastore,
-                                          'fake_uuid',
+                                          self._uuid,
                                           vi.ii.adapter_type)
             mock_caa.assert_called_once_with(
                 self._instance, 'fake-vm-ref',
                 vi.dc_info, 1 * units.Mi, 'virtio',
-                '[fake_ds] fake_uuid/ephemeral_0.vmdk')
+                '[fake_ds] %s/ephemeral_0.vmdk' % self._uuid)
 
     def _test_create_ephemeral_from_instance(self, bdi):
         vi = self._get_fake_vi()
@@ -1730,12 +1737,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                           self._instance,
                                           'fake-vm-ref',
                                           vi.dc_info, vi.datastore,
-                                          'fake_uuid',
+                                          self._uuid,
                                           vi.ii.adapter_type)
             mock_caa.assert_called_once_with(
                 self._instance, 'fake-vm-ref',
                 vi.dc_info, 1 * units.Mi, constants.DEFAULT_ADAPTER_TYPE,
-                '[fake_ds] fake_uuid/ephemeral_0.vmdk')
+                '[fake_ds] %s/ephemeral_0.vmdk' % self._uuid)
 
     def test_create_ephemeral_with_bdi_but_no_ephemerals(self):
         block_device_info = {'ephemerals': []}
@@ -1755,13 +1762,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._vmops, '_create_and_attach_thin_disk'
         ) as create_and_attach:
             self._vmops._create_swap(bdi, self._instance, 'fake-vm-ref',
-                                     vi.dc_info, vi.datastore, 'fake_uuid',
+                                     vi.dc_info, vi.datastore, self._uuid,
                                      'lsiLogic')
             size = flavor.swap * units.Ki
             if bdi is not None:
                 swap = bdi.get('swap', {})
                 size = swap.get('swap_size', 0) * units.Ki
-            path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+            path = str(ds_obj.DatastorePath(vi.datastore.name, self._uuid,
                                              'swap.vmdk'))
             create_and_attach.assert_called_once_with(self._instance,
                 'fake-vm-ref', vi.dc_info, size, 'lsiLogic', path)

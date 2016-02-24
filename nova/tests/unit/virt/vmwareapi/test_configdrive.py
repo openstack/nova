@@ -26,6 +26,7 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.tests import uuidsentinel
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util
@@ -72,7 +73,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'task_state': 'scheduling',
             'reservation_id': 'r-3t8muvr0',
             'id': 1,
-            'uuid': 'fake-uuid',
+            'uuid': uuidsentinel.foo,
             'node': self.node_name,
             'metadata': [],
             'expected_attrs': ['system_metadata'],
