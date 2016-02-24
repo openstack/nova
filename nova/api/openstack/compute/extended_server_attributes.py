@@ -36,6 +36,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
 
         properties = ['host', 'name']
         if api_version_request.is_supported(req, min_version='2.3'):
+            # NOTE(mriedem): These will use the OS-EXT-SRV-ATTR prefix below
+            # and that's OK for microversion 2.3 which is being compatible
+            # with v2.0 for the ec2 API split out from Nova. After this,
+            # however, new microversoins should not be using the
+            # OS-EXT-SRV-ATTR prefix.
             properties += ['reservation_id', 'launch_index',
                            'hostname', 'kernel_id', 'ramdisk_id',
                            'root_device_name', 'user_data']
@@ -43,6 +48,8 @@ class ExtendedServerAttributesController(wsgi.Controller):
             if attr == 'name':
                 key = "OS-EXT-SRV-ATTR:instance_%s" % attr
             else:
+                # NOTE(mriedem): Nothing after microversion 2.3 should use the
+                # OS-EXT-SRV-ATTR prefix for the attribute key name.
                 key = "OS-EXT-SRV-ATTR:%s" % attr
             server[key] = instance[attr]
 
