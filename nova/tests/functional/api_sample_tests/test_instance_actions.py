@@ -83,10 +83,10 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                 api_version=self.microversion)
         subs = {}
         subs['action'] = '(reboot)|(resize)'
-        subs['instance_uuid'] = fake_uuid
+        subs['instance_uuid'] = str(fake_uuid)
         subs['integer_id'] = '[0-9]+'
-        subs['request_id'] = fake_action['request_id']
-        subs['start_time'] = fake_action['start_time']
+        subs['request_id'] = str(fake_action['request_id'])
+        subs['start_time'] = str(fake_action['start_time'])
         subs['result'] = '(Success)|(Error)'
         subs['event'] = '(schedule)|(compute_create)'
         self._verify_response('instance-action-get-resp', subs, response, 200)

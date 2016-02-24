@@ -67,6 +67,27 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     microversion = None
     _use_common_server_api_samples = False
 
+    def __init__(self, *args, **kwargs):
+        super(ApiSampleTestBase, self).__init__(*args, **kwargs)
+        self.subs = {}  # TODO(auggy): subs should really be a class
+
+    @property
+    def subs(self):
+        return self._subs
+
+    @subs.setter
+    def subs(self, value):
+        non_strings =  \
+            {k: v for k, v in value.items() if
+             (not k == 'compute_host') and
+             (not isinstance(v, six.string_types))}
+        if len(non_strings) > 0:
+            raise TypeError("subs can't contain non-string values:"
+                            "\n%(non_strings)s" %
+                            {'non_strings': non_strings})
+        else:
+            self._subs = value
+
     @classmethod
     def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
         parts = [dirname]
@@ -125,7 +146,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             name, self.microversion), 'w') as outf:
             outf.write(data)
 
-    def _compare_result(self, subs, expected, result, result_str):
+    def _compare_result(self, expected, result, result_str):
 
         matched_value = None
         # None
@@ -161,7 +182,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                            'res_delta': res_delta})
             for key in ex_keys:
                 # TODO(auggy): pass key name along as well for error reporting
-                res = self._compare_result(subs, expected[key], result[key],
+                res = self._compare_result(expected[key], result[key],
                                            result_str)
                 matched_value = res or matched_value
         # list
@@ -176,7 +197,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             for res_obj in result:
                 for i, ex_obj in enumerate(expected):
                     try:
-                        matched_value = self._compare_result(subs, ex_obj,
+                        matched_value = self._compare_result(ex_obj,
                                                              res_obj,
                                                              result_str)
                         del expected[i]
@@ -209,7 +230,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if expected.startswith("%(int:"):
                 result = str(result)
                 expected = expected.replace('int:', '')
-            expected = expected % subs
+
+            expected = expected % self.subs
             expected = '^%s$' % expected
             match = re.match(expected, result)
             if not match:
@@ -241,7 +263,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 try:
                     expected = objectify(expected)
                     result = objectify(result)
-                    return self._compare_result(subs, expected, result,
+                    return self._compare_result(expected, result,
                                                 result_str)
                 except ValueError:
                     pass
@@ -306,6 +328,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         regexes = self._get_regexes()
         regexes.update(subs)
         subs = regexes
+        self.subs = subs
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
         response_data = pretty_data(response_data)
@@ -331,7 +354,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         try:
             template_data = objectify(template_data)
             response_data = objectify(response_data)
-            response_result = self._compare_result(subs, template_data,
+            response_result = self._compare_result(template_data,
                                                    response_data, "Response")
             # NOTE(danms): replace some of the subs with patterns for the
             # doc/api_samples check, which won't have things like the
@@ -343,8 +366,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             subs['uuid'] = vanilla_regexes['uuid']
             subs['image_id'] = vanilla_regexes['uuid']
             subs = self.generalize_subs(subs, vanilla_regexes)
+            self.subs = subs
             sample_data = objectify(sample_data)
-            self._compare_result(subs, template_data, sample_data, "Sample")
+            self._compare_result(template_data, sample_data, "Sample")
             return response_result
         except NoMatch:
             raise
@@ -442,7 +466,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _do_post(self, url, name, subs, method='POST', api_version=None,
                  headers=None):
-        body = self._read_template(name) % subs
+        self.subs = subs
+        body = self._read_template(name) % self.subs
         sample = self._get_sample(name, self.microversion)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)

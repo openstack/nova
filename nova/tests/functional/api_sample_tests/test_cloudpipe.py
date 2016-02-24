@@ -79,7 +79,7 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_cloud_pipe_update(self):
         subs = {'vpn_ip': '192.168.1.1',
-                'vpn_port': 2000}
+                'vpn_port': '2000'}
         response = self._do_put('os-cloudpipe/configure-project',
                                 'cloud-pipe-update-req',
                                 subs)

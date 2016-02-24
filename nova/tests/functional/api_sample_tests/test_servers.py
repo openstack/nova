@@ -240,7 +240,7 @@ class ServersActionsJsonTest(ServersSampleBase):
         uuid = self._post_server()
         self._test_server_action(uuid, "resize",
                                  'server-action-resize',
-                                 {"id": 2,
+                                 {"id": '2',
                                   "host": self._get_host()})
         return uuid
 
