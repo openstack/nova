@@ -54,11 +54,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         return server
 
-    def _restart_compute_service(self, *args, **kwargs):
-        """restart compute service. NOTE: fake driver forgets all instances."""
-        self.compute.kill()
-        self.compute = self.start_service('compute', *args, **kwargs)
-
     def _wait_for_deletion(self, server_id):
         # Wait (briefly) for deletion
         for _retries in range(50):
