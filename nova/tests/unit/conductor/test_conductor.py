@@ -667,19 +667,30 @@ class _BaseTaskTestCase(object):
 
         host = {'host': 'host1', 'nodename': 'node1', 'limits': []}
 
+        # unshelve_instance() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                            'unshelve_instance')
+        @mock.patch.object(scheduler_utils, 'populate_filter_properties')
+        @mock.patch.object(scheduler_utils, 'populate_retry')
         @mock.patch.object(self.conductor_manager, '_schedule_instances')
-        def do_test(sched_instances, unshelve_instance):
+        @mock.patch.object(objects.RequestSpec, 'to_legacy_request_spec_dict')
+        @mock.patch.object(objects.RequestSpec,
+                           'to_legacy_filter_properties_dict')
+        def do_test(to_filtprops, to_reqspec, sched_instances,
+                    populate_retry, populate_filter_properties,
+                    unshelve_instance):
+            to_filtprops.return_value = filter_properties
+            to_reqspec.return_value = request_spec
             sched_instances.return_value = [host]
-            self.conductor_manager.unshelve_instance(self.context, instance,
-                                                     fake_spec)
-            scheduler_utils.populate_retry(filter_properties, instance.uuid)
-            scheduler_utils.populate_filter_properties(filter_properties, host)
+            self.conductor.unshelve_instance(self.context, instance, fake_spec)
             sched_instances.assert_called_once_with(self.context, request_spec,
                                                     filter_properties)
+            # NOTE(sbauza): Since the instance is dehydrated when passing thru
+            # the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
-                self.context, instance, host['host'], image=mock.ANY,
+                self.context, mock.ANY, host['host'], image=mock.ANY,
                 filter_properties=filter_properties, node=host['nodename']
             )
 
