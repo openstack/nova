@@ -169,6 +169,7 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
     def setUp(self):
         """setUp method for server usage."""
         super(ServerMigrationsSampleJsonTestV2_24, self).setUp()
+        self.api.microversion = '2.24'
         self.uuid = self._post_server()
         self.context = context.RequestContext('fake', 'fake')
         fake_migration = {
@@ -189,7 +190,7 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})
         uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
-        response = self._do_delete(uri, api_version='2.24')
+        response = self._do_delete(uri)
         self.assertEqual(202, response.status_code)
 
     @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
@@ -197,7 +198,7 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})
         uri = 'servers/%s/migrations/%s' % (self.uuid, '45')
-        response = self._do_delete(uri, api_version='2.24')
+        response = self._do_delete(uri)
         self.assertEqual(404, response.status_code)
 
     @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
@@ -207,5 +208,5 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})
         uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
-        response = self._do_delete(uri, api_version='2.24')
+        response = self._do_delete(uri)
         self.assertEqual(400, response.status_code)
