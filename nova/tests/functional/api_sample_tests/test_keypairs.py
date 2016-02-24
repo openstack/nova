@@ -39,6 +39,10 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
             'nova.api.openstack.compute.contrib.keypairs.Keypairs')
         return f
 
+    def setUp(self):
+        super(KeyPairsSampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
+
     # TODO(sdague): this is only needed because we randomly choose the
     # uuid each time.
     def generalize_subs(self, subs, vanilla_regexes):
@@ -52,8 +56,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         """Get api sample of key pairs post request."""
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = dict(keypair_name=key_name, **kwargs)
-        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
-                                 api_version=self.microversion)
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
         subs = {'keypair_name': key_name}
 
         self._verify_response('keypairs-post-resp', subs, response,
@@ -77,31 +80,28 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         params['public_key'] = public_key
         params.update(**kwargs)
         response = self._do_post('os-keypairs', 'keypairs-import-post-req',
-                                 params, api_version=self.microversion)
+                                 params)
         self._verify_response('keypairs-import-post-resp', subs, response,
                               self.expected_post_status_code)
 
     def test_keypairs_list(self):
         # Get api sample of key pairs list request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs',
-                                api_version=self.microversion)
+        response = self._do_get('os-keypairs')
         subs = {'keypair_name': key_name}
         self._verify_response('keypairs-list-resp', subs, response, 200)
 
     def test_keypairs_get(self):
         # Get api sample of key pairs get request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs/%s' % key_name,
-                                api_version=self.microversion)
+        response = self._do_get('os-keypairs/%s' % key_name)
         subs = {'keypair_name': key_name}
         self._verify_response('keypairs-get-resp', subs, response, 200)
 
     def test_keypairs_delete(self):
         # Get api sample of key pairs delete request.
         key_name = self.test_keypairs_post()
-        response = self._do_delete('os-keypairs/%s' % key_name,
-                                    api_version=self.microversion)
+        response = self._do_delete('os-keypairs/%s' % key_name)
         self.assertEqual(self.expected_delete_status_code,
                          response.status_code)
 
@@ -128,8 +128,7 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     def test_keypairs_post_invalid(self):
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = dict(keypair_name=key_name, keypair_type='fakey_type')
-        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
-                                 api_version=self.microversion)
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
 
         self.assertEqual(400, response.status_code)
 
@@ -154,7 +153,7 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
             'public_key': fake_crypto.get_ssh_public_key()
         }
         response = self._do_post('os-keypairs', 'keypairs-import-post-req',
-                                 subs, api_version=self.microversion)
+                                 subs)
 
         self.assertEqual(400, response.status_code)
 
@@ -203,8 +202,7 @@ class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
             'user_id': "fake"
         }
         key_name = self._check_keypairs_post(**subs)
-        response = self._do_delete('os-keypairs/%s?user_id=fake' % key_name,
-                                   api_version=self.microversion)
+        response = self._do_delete('os-keypairs/%s?user_id=fake' % key_name)
         self.assertEqual(self.expected_delete_status_code,
                          response.status_code)
 
@@ -222,8 +220,6 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
         subs = dict(keypair_name=key_name,
                     keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
                     user_id='fake1')
-        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
-                                 api_version=self.microversion,
-                                 )
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
 
         self.assertEqual(403, response.status_code)

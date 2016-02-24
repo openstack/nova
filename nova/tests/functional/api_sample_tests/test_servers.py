@@ -69,6 +69,10 @@ class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     microversion = None
 
+    def setUp(self):
+        super(ServersSampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
+
     def _get_flags(self):
         f = super(ServersSampleBase, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
@@ -86,8 +90,7 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_get(self):
         uuid = self.test_servers_post()
-        response = self._do_get('servers/%s' % uuid,
-                                api_version=self.microversion)
+        response = self._do_get('servers/%s' % uuid)
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -99,15 +102,13 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_list(self):
         uuid = self._post_server()
-        response = self._do_get('servers',
-                                api_version=self.microversion)
+        response = self._do_get('servers')
         subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
 
     def test_servers_details(self):
         uuid = self.test_servers_post()
-        response = self._do_get('servers/detail',
-                                api_version=self.microversion)
+        response = self._do_get('servers/detail')
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -349,7 +350,6 @@ class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-trigger-crash-dump',
-                                 {},
-                                 api_version=self.microversion)
+                                 {})
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, "")

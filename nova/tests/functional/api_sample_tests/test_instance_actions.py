@@ -47,6 +47,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(ServerActionsSampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance(obj=True)
@@ -79,8 +80,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         fake_action = self.actions[fake_uuid][fake_request_id]
 
         response = self._do_get('servers/%s/os-instance-actions/%s' %
-                                (fake_uuid, fake_request_id),
-                                api_version=self.microversion)
+                                (fake_uuid, fake_request_id))
         subs = {}
         subs['action'] = '(reboot)|(resize)'
         subs['instance_uuid'] = fake_uuid
@@ -93,8 +93,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_instance_actions_list(self):
         fake_uuid = fake_server_actions.FAKE_UUID
-        response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid),
-                                api_version=self.microversion)
+        response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
         subs = {}
         subs['action'] = '(reboot)|(resize)'
         subs['integer_id'] = '[0-9]+'

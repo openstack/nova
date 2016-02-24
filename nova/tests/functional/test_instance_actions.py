@@ -67,10 +67,13 @@ class InstanceActionsTestV21(InstanceActionsTestV2):
 class InstanceActionsTestV221(InstanceActionsTestV21):
     microversion = '2.21'
 
+    def setUp(self):
+        super(InstanceActionsTestV221, self).setUp()
+        self.api.microversion = self.microversion
+
     def test_get_instance_actions_deleted(self):
         server = self._create_server()
         self._delete_server(server['id'])
-        actions = self.api.get_instance_actions(server['id'],
-                                                api_version=self.microversion)
+        actions = self.api.get_instance_actions(server['id'])
         self.assertEqual('delete', actions[0]['action'])
         self.assertEqual('create', actions[1]['action'])
