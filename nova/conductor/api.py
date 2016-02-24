@@ -207,7 +207,7 @@ class ComputeTaskAPI(object):
 
     def unshelve_instance(self, context, instance, request_spec=None):
         self.conductor_compute_rpcapi.unshelve_instance(context,
-                instance=instance, request_spec=None)
+                instance=instance, request_spec=request_spec)
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
