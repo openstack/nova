@@ -27,7 +27,7 @@ use_local = cfg.BoolOpt(
          'the transition to the conductor service. It no longer '
          'represents a reasonable alternative for deployers. '
          'Removal may be as early as 14.0',
-    deprecated_for_removal='True')
+    deprecated_for_removal=True)
 
 topic = cfg.StrOpt(
     'topic',
@@ -37,7 +37,9 @@ topic = cfg.StrOpt(
 manager = cfg.StrOpt(
     'manager',
     default='nova.conductor.manager.ConductorManager',
-    help='Full class name for the Manager for conductor')
+    help=('DEPRECATED: Full class name for the Manager for conductor. '
+          'Removal in 14.0'),
+    deprecated_for_removal=True)
 
 workers = cfg.IntOpt(
     'workers',
