@@ -209,8 +209,11 @@ class AggregateController(wsgi.Controller):
     def _build_aggregate_items(self, aggregate):
         keys = aggregate.obj_fields
         for key in keys:
-            if (aggregate.obj_attr_is_set(key)
-                    or key in aggregate.obj_extra_fields):
+            # NOTE(danms): Skip the uuid field because we have no microversion
+            # to expose it
+            if ((aggregate.obj_attr_is_set(key)
+                    or key in aggregate.obj_extra_fields) and
+                  key != 'uuid'):
                 yield key, getattr(aggregate, key)
 
 
