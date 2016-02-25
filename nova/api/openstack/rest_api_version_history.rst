@@ -213,8 +213,8 @@ user documentation.
 
     DELETE /servers/<uuid>/migrations/<id>
 
-2.25
-----
+2.25 (Maximum in Mitaka)
+------------------------
 
   Modify input parameter for ``os-migrateLive``. The block_migration will
   support 'auto' value, and disk_over_commit flag will be removed.
