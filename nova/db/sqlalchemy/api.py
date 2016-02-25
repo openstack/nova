@@ -5491,7 +5491,7 @@ def aggregate_create(context, values, metadata=None):
     return aggregate
 
 
-@main_context_manager.writer
+@main_context_manager.reader
 def aggregate_get(context, aggregate_id):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
