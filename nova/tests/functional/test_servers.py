@@ -515,8 +515,7 @@ class ServersTestV219(ServersTestBase):
         if set_desc:
             server['description'] = desc
         post = {'server': server}
-        response = self.api.api_post('/servers', post,
-                                     headers=self._headers).body
+        response = self.api.api_post('/servers', post).body
         return (server, response['server'])
 
     def _update_server(self, server_id, set_desc = True, desc = None):
@@ -524,8 +523,7 @@ class ServersTestV219(ServersTestBase):
         server = {'server': {'name': new_name}}
         if set_desc:
             server['server']['description'] = desc
-        self.api.api_put('/servers/%s' % server_id, server,
-                         headers=self._headers)
+        self.api.api_put('/servers/%s' % server_id, server)
 
     def _rebuild_server(self, server_id, set_desc = True, desc = None):
         new_name = integrated_helpers.generate_random_alphanumeric(8)
@@ -540,8 +538,7 @@ class ServersTestV219(ServersTestBase):
         post['rebuild'].update(self._get_access_ips_params())
         if set_desc:
             post['rebuild']['description'] = desc
-        self.api.api_post('/servers/%s/action' % server_id, post,
-                          headers=self._headers)
+        self.api.api_post('/servers/%s/action' % server_id, post)
 
     def _create_server_and_verify(self, set_desc = True, expected_desc = None):
         # Creates a server with a description and verifies it is
@@ -569,8 +566,7 @@ class ServersTestV219(ServersTestBase):
                                    desc_in_resp = True):
         # Calls GET on the servers and verifies that the description
         # is set as expected in the response, or not set at all.
-        response = self.api.api_get('/servers/%s' % server_id,
-                                    headers=self._headers)
+        response = self.api.api_get('/servers/%s' % server_id)
         found_server = response.body['server']
         self.assertEqual(server_id, found_server['id'])
         if desc_in_resp:
@@ -580,8 +576,7 @@ class ServersTestV219(ServersTestBase):
             # Verify the description is not included in the response.
             self.assertNotIn('description', found_server)
 
-        servers = self.api.api_get('/servers/detail',
-                                    headers=self._headers).body['servers']
+        servers = self.api.api_get('/servers/detail').body['servers']
         server_map = {server['id']: server for server in servers}
         found_server = server_map.get(server_id)
         self.assertTrue(found_server)
@@ -616,9 +611,7 @@ class ServersTestV219(ServersTestBase):
     def test_create_server_with_description(self):
         fake_network.set_stub_network_methods(self)
 
-        self._headers = {}
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
-
+        self.api.microversion = '2.19'
         # Create and get a server with a description
         self._create_server_and_verify(True, 'test description')
         # Create and get a server with an empty description
@@ -631,9 +624,7 @@ class ServersTestV219(ServersTestBase):
     def test_update_server_with_description(self):
         fake_network.set_stub_network_methods(self)
 
-        self._headers = {}
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
-
+        self.api.microversion = '2.19'
         # Create a server with an initial description
         server_id = self._create_server(True, 'test desc 1')[1]['id']
 
@@ -654,8 +645,7 @@ class ServersTestV219(ServersTestBase):
     def test_rebuild_server_with_description(self):
         fake_network.set_stub_network_methods(self)
 
-        self._headers = {}
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+        self.api.microversion = '2.19'
 
         # Create a server with an initial description
         server = self._create_server(True, 'test desc 1')[1]
@@ -680,11 +670,10 @@ class ServersTestV219(ServersTestBase):
         fake_network.set_stub_network_methods(self)
 
         # Create a server with microversion v2.19 and a description.
-        self._headers = {}
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+        self.api.microversion = '2.19'
         server_id = self._create_server(True, 'test desc 1')[1]['id']
         # Verify that the description is not included on V2.18 GETs
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
+        self.api.microversion = '2.18'
         self._verify_server_description(server_id, desc_in_resp = False)
         # Verify that updating the server with description on V2.18
         # results in a 400 error
@@ -698,10 +687,9 @@ class ServersTestV219(ServersTestBase):
 
         # Create a server on V2.18 and verify that the description
         # defaults to the name on a V2.19 GET
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
         server_req, response = self._create_server(False)
         server_id = response['id']
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
+        self.api.microversion = '2.19'
         self._verify_server_description(server_id, server_req['name'])
 
         # Cleanup
@@ -709,15 +697,13 @@ class ServersTestV219(ServersTestBase):
 
         # Verify that creating a server with description on V2.18
         # results in a 400 error
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.18'
+        self.api.microversion = '2.18'
         self._create_assertRaisesRegex('test create 2.18')
 
     def test_description_errors(self):
         fake_network.set_stub_network_methods(self)
 
-        self._headers = {}
-        self._headers['X-OpenStack-Nova-API-Version'] = '2.19'
-
+        self.api.microversion = '2.19'
         # Create servers with invalid descriptions.  These throw 400.
         # Invalid unicode with non-printable control char
         self._create_assertRaisesRegex(u'invalid\0dstring')
