@@ -67,10 +67,6 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                  subs)
         self._verify_response("flavor-access-create-resp", subs, response, 200)
 
-    # TODO(sdague): remove tests that are duplicative
-    def test_flavor_access_create(self):
-        self._create_flavor()
-
     def test_flavor_access_detail(self):
         response = self._do_get('flavors/detail')
         self._verify_response('flavor-access-detail-resp', {}, response, 200)
