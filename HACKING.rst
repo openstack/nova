@@ -59,6 +59,7 @@ Nova Specific Commandments
 - [N346] Python 3: do not use dict.itervalues.
 - [N347] Provide enough help text for config options
 - [N348] Deprecated library function os.popen()
+- [N349] Check for closures in tests which are not used
 
 Creating Unit Tests
 -------------------

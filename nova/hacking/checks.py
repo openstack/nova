@@ -14,6 +14,7 @@
 # under the License.
 
 import ast
+import os
 import re
 
 import pep8
@@ -469,6 +470,77 @@ class CheckForTransAdd(BaseASTChecker):
         super(CheckForTransAdd, self).generic_visit(node)
 
 
+class _FindVariableReferences(ast.NodeVisitor):
+    def __init__(self):
+        super(_FindVariableReferences, self).__init__()
+        self._references = []
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Load):
+            # This means the value of a variable was loaded. For example a
+            # variable 'foo' was used like:
+            # mocked_thing.bar = foo
+            # foo()
+            # self.assertRaises(excepion, foo)
+            self._references.append(node.id)
+        super(_FindVariableReferences, self).generic_visit(node)
+
+
+class CheckForUncalledTestClosure(BaseASTChecker):
+    """Look for closures that are never called in tests.
+
+    A recurring pattern when using multiple mocks is to create a closure
+    decorated with mocks like:
+
+    def test_thing(self):
+            @mock.patch.object(self.compute, 'foo')
+            @mock.patch.object(self.compute, 'bar')
+            def _do_test(mock_bar, mock_foo):
+                # Test things
+        _do_test()
+
+    However it is easy to leave off the _do_test() and have the test pass
+    because nothing runs. This check looks for methods defined within a test
+    method and ensures that there is a reference to them. Only methods defined
+    one level deep are checked. Something like:
+
+    def test_thing(self):
+        class FakeThing:
+            def foo(self):
+
+    would not ensure that foo is referenced.
+
+    N349
+    """
+
+    def __init__(self, tree, filename):
+        super(CheckForUncalledTestClosure, self).__init__(tree, filename)
+        self._filename = filename
+
+    def visit_FunctionDef(self, node):
+        # self._filename is 'stdin' in the unit test for this check.
+        if (not os.path.basename(self._filename).startswith('test_') and
+            not 'stdin'):
+            return
+
+        closures = []
+        references = []
+        # Walk just the direct nodes of the test method
+        for child_node in ast.iter_child_nodes(node):
+            if isinstance(child_node, ast.FunctionDef):
+                closures.append(child_node.name)
+
+        # Walk all nodes to find references
+        find_references = _FindVariableReferences()
+        find_references.generic_visit(node)
+        references = find_references._references
+
+        missed = set(closures) - set(references)
+        if missed:
+            self.add_error(node, 'N349: Test closures not called: %s'
+                    % ','.join(missed))
+
+
 def assert_true_or_false_with_in(logical_line):
     """Check for assertTrue/False(A in B), assertTrue/False(A not in B),
     assertTrue/False(A in B, message) or assertTrue/False(A not in B, message)
@@ -732,3 +804,4 @@ def factory(register):
     register(check_python3_no_itervalues)
     register(cfg_help_with_enough_text)
     register(no_os_popen)
+    register(CheckForUncalledTestClosure)

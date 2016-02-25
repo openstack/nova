@@ -750,3 +750,30 @@ class HackingTestCase(test.NoDBTestCase):
         errors = [(4, 0, 'N348'), (8, 8, 'N348')]
         self._assert_has_errors(code, checks.no_os_popen,
                                 expected_errors=errors)
+
+    def test_uncalled_closures(self):
+
+        checker = checks.CheckForUncalledTestClosure
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+               """
+        self._assert_has_errors(code, checker,
+                expected_errors=[(1, 0, 'N349')])
+
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+                   _test()
+               """
+        self._assert_has_no_errors(code, checker)
+
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+                   self.assertRaises(FakeExcepion, _test)
+               """
+        self._assert_has_no_errors(code, checker)
