@@ -571,7 +571,12 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def live_migrate_instance(self, ctxt, instance, host_name,
-                              block_migration, disk_over_commit):
+                              block_migration, disk_over_commit,
+                              request_spec=None):
+        # NOTE(sbauza): Since Cells v1 is quite feature-freeze, we don't want
+        # to pass down request_spec to the manager and rather keep the
+        # cell conductor providing a new RequestSpec like the original
+        # behaviour
         cctxt = self.client.prepare(version='1.20')
         cctxt.cast(ctxt, 'live_migrate_instance',
                    instance=instance,
@@ -620,7 +625,12 @@ class CellsAPI(object):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
                          image_ref, orig_image_ref, orig_sys_metadata, bdms,
                          recreate=False, on_shared_storage=False, host=None,
-                         preserve_ephemeral=False, kwargs=None):
+                         preserve_ephemeral=False, request_spec=None,
+                         kwargs=None):
+        # NOTE(sbauza): Since Cells v1 is quite feature-freeze, we don't want
+        # to pass down request_spec to the manager and rather keep the
+        # cell conductor providing a new RequestSpec like the original
+        # behaviour
         cctxt = self.client.prepare(version='1.25')
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance, image_href=image_ref,
