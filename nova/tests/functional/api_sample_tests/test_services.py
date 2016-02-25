@@ -44,6 +44,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(ServicesJsonTest, self).setUp()
+        self.api.microversion = self.microversion
         self.stub_out("nova.db.service_get_all",
                       test_services.fake_db_api_service_get_all)
         self.stub_out("nova.db.service_get_by_host_and_binary",
@@ -54,8 +55,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_services_list(self):
         """Return a list of all agent builds."""
-        response = self._do_get('os-services',
-                                api_version=self.microversion)
+        response = self._do_get('os-services')
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -68,8 +68,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = {"host": "host1",
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/enable',
-                                'service-enable-put-req', subs,
-                                api_version=self.microversion)
+                                'service-enable-put-req', subs)
         self._verify_response('service-enable-put-resp', subs, response, 200)
 
     def test_service_disable(self):
@@ -77,8 +76,7 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = {"host": "host1",
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/disable',
-                                'service-disable-put-req', subs,
-                                api_version=self.microversion)
+                                'service-disable-put-req', subs)
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
     def test_service_disable_log_reason(self):
@@ -87,15 +85,13 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                 'binary': 'nova-compute',
                 'disabled_reason': 'test2'}
         response = self._do_put('os-services/disable-log-reason',
-                                'service-disable-log-put-req', subs,
-                                api_version=self.microversion)
+                                'service-disable-log-put-req', subs)
         self._verify_response('service-disable-log-put-resp',
                               subs, response, 200)
 
     def test_service_delete(self):
         """Delete an existing service."""
-        response = self._do_delete('os-services/1',
-                                   api_version=self.microversion)
+        response = self._do_delete('os-services/1')
         self.assertEqual(204, response.status_code)
         self.assertEqual("", response.content)
 
@@ -108,8 +104,7 @@ class ServicesV211JsonTest(ServicesJsonTest):
 
     def test_services_list(self):
         """Return a list of all agent builds."""
-        response = self._do_get('os-services',
-                                api_version=self.microversion)
+        response = self._do_get('os-services')
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -124,7 +119,6 @@ class ServicesV211JsonTest(ServicesJsonTest):
                 'binary': 'nova-compute',
                 'forced_down': 'true'}
         response = self._do_put('os-services/force-down',
-                                'service-force-down-put-req', subs,
-                                api_version=self.microversion)
+                                'service-force-down-put-req', subs)
         self._verify_response('service-force-down-put-resp', subs,
                               response, 200)

@@ -124,6 +124,7 @@ class TestOpenStackClient(object):
         self.auth_key = auth_key
         self.auth_uri = auth_uri
         self.project_id = project_id
+        self.microversion = None
 
     def request(self, url, method='GET', body=None, headers=None):
         _headers = {'Content-Type': 'application/json'}
@@ -167,6 +168,8 @@ class TestOpenStackClient(object):
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
+        if self.microversion:
+            headers['X-OpenStack-Nova-API-Version'] = self.microversion
 
         response = self.request(full_uri, **kwargs)
 

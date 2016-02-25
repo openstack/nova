@@ -30,6 +30,7 @@ class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
         """setUp method for server usage."""
         super(ServerMigrationsSampleJsonTest, self).setUp()
         self.uuid = self._post_server()
+        self.api.microversion = '2.22'
 
     @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
     @mock.patch.object(db, 'service_get_by_compute_host')
@@ -47,6 +48,5 @@ class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})
         response = self._do_post('servers/%s/migrations/%s/action'
-                                 % (self.uuid, '3'), 'force_complete',
-                                 {}, api_version='2.22')
+                                 % (self.uuid, '3'), 'force_complete', {})
         self.assertEqual(202, response.status_code)

@@ -23,6 +23,7 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
+    microversion = None
     extension_name = "os-remote-consoles"
 
     def _get_flags(self):
@@ -34,6 +35,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesSampleJsonTests, self).setUp()
+        self.api.microversion = self.microversion
         self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         self.flags(enabled=True, group='rdp')
@@ -96,8 +98,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
 
         body = {'protocol': 'vnc', 'type': 'novnc'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
-                                 'create-vnc-console-req', body,
-                                 api_version='2.6')
+                                 'create-vnc-console-req', body)
         subs = {"url": self.http_regex}
         self._verify_response('create-vnc-console-resp', subs, response, 200)
 
@@ -117,7 +118,6 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
 
         body = {'protocol': 'mks', 'type': 'webmks'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
-                                 'create-mks-console-req', body,
-                                 api_version='2.8')
+                                 'create-mks-console-req', body)
         subs = {"url": self.http_regex}
         self._verify_response('create-mks-console-resp', subs, response, 200)
