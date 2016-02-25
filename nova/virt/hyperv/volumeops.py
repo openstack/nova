@@ -234,6 +234,7 @@ class ISCSIVolumeDriver(object):
             data = connection_info['data']
             target_lun = data['target_lun']
             target_iqn = data['target_iqn']
+            serial = connection_info['serial']
 
             # Getting the mounted disk
             mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
@@ -254,7 +255,8 @@ class ISCSIVolumeDriver(object):
             self._vmutils.attach_volume_to_controller(instance_name,
                                                       ctrller_path,
                                                       slot,
-                                                      mounted_disk_path)
+                                                      mounted_disk_path,
+                                                      serial=serial)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE('Unable to attach volume to instance %s'),

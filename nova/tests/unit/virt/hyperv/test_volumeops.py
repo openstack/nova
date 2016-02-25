@@ -44,7 +44,8 @@ def get_fake_block_dev_info():
 
 
 def get_fake_connection_info(**kwargs):
-    return {'data': dict(connection_data, **kwargs)}
+    return {'data': dict(connection_data, **kwargs),
+            'serial': mock.sentinel.serial}
 
 
 class VolumeOpsTestCase(test_base.HyperVBaseTestCase):
@@ -274,13 +275,15 @@ class ISCSIVolumeDriverTestCase(test_base.HyperVBaseTestCase):
                 mock.sentinel.instance_name, 0)
             attach_vol.assert_called_once_with(mock.sentinel.instance_name,
                                                fake_ide_path, 0,
-                                               fake_mounted_disk_path)
+                                               fake_mounted_disk_path,
+                                               serial=mock.sentinel.serial)
         else:
             get_scsi_path.assert_called_once_with(mock.sentinel.instance_name)
             get_free_slot.assert_called_once_with(fake_scsi_path)
             attach_vol.assert_called_once_with(mock.sentinel.instance_name,
                                                fake_scsi_path, 1,
-                                               fake_mounted_disk_path)
+                                               fake_mounted_disk_path,
+                                               serial=mock.sentinel.serial)
 
     def test_attach_volume_ebs(self):
         self._check_attach_volume(ebs_root=True)
