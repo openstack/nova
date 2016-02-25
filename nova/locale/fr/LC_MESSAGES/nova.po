@@ -27,16 +27,17 @@
 # Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
+# Corinne Verheyde <cverheyd@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 12.0.1.dev70\n"
+"Project-Id-Version: nova 12.0.2.dev20\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-16 19:54+0000\n"
+"POT-Creation-Date: 2016-02-22 19:23+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-10-27 11:28+0000\n"
-"Last-Translator: Gael Rehault <gael01@gmail.com>\n"
+"PO-Revision-Date: 2016-02-22 11:03+0000\n"
+"Last-Translator: Corinne Verheyde <cverheyd@gmail.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -226,6 +227,10 @@ msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 "Aucun nom de modèle d'UC ne doit être défini lorsqu'un modèle d'UC hôte est "
 "demandé"
+
+#, python-format
+msgid "A NetworkModel is required in field %s"
+msgstr "Un Modèle Réseau est requis dans le champ %s"
 
 msgid ""
 "A unique ID given to each file system.  This is value is set in Glance and "
@@ -745,6 +750,10 @@ msgstr ""
 "Impossible de réduire le disque à une taille inférieure. Taille actuelle: "
 "%(curr_root_gb)s Go. Taille souhaitée: %(new_root_gb)s Go"
 
+msgid "Cannot run 'db sync' until 'db contract' is run"
+msgstr ""
+"Impossible d’exécuter 'db sync' tant que 'db contract' n'est pas exécuté"
+
 msgid "Cannot run any more instances of this type."
 msgstr "Impossible d'exécuter d'autres instances de ce type."
 
@@ -1077,6 +1086,9 @@ msgstr "%(records)d entrée supprimer de la table '%(table_name)s'."
 msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "La suppression par fixed_range n'est pas supportée avec NeutronManager"
 
+msgid "Dependency loop exists in database migrations"
+msgstr "Boucle de dépendance détectée dans les migrations de base de données"
+
 #, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
 msgstr "L'état à appliquer doit être spécifié. Les états valides sont : %s"
@@ -1100,6 +1112,10 @@ msgstr ""
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "Réseau local virtuel (VLAN) existant détecté avec l'ID %(vlan)d"
+
+#, python-format
+msgid "Device '%(device)s' not found."
+msgstr "Device '%(device)s' introuvable."
 
 #, python-format
 msgid ""
@@ -1349,6 +1365,14 @@ msgstr ""
 "attendue"
 
 #, python-format
+msgid "Failed to access port %(port_id)s: %(reason)s"
+msgstr "Échec lors de l'accès au port %(port_id)s: %(reason)s"
+
+#, python-format
+msgid "Failed to add bridge: %s"
+msgstr "Échec lors de l'ajout du bridge: %s"
+
+#, python-format
 msgid ""
 "Failed to add deploy parameters on node %(node)s when provisioning the "
 "instance %(instance)s"
@@ -1548,6 +1572,12 @@ msgstr "Nom du fichier contenant la racine de l'autorité de certification"
 
 msgid "Filename of root Certificate Revocation List"
 msgstr "Nom du fichier de la liste de révocation du Certificat Racine"
+
+#, python-format
+msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
+msgstr ""
+"L'IP fixe %(ip)s n'est pas une adresse IP valide pour le réseau "
+"%(network_id)s."
 
 #, python-format
 msgid "Fixed IP %s has been deleted"
@@ -3467,6 +3497,14 @@ msgid "Quota could not be found"
 msgstr "Le quota ne peut pas être trouvé"
 
 #, python-format
+msgid ""
+"Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)s "
+"of %(allowed)s %(overs)s"
+msgstr ""
+"Quota dépassé pour %(overs)s: Demandé %(req)s, mais déjà utilisé %(used)s "
+"sur %(allowed)s %(overs)s"
+
+#, python-format
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr "Quota dépassé pour les ressources : %(overs)s"
 
@@ -3852,6 +3890,10 @@ msgstr "La définition du mot de passe admin n'est pas supportée"
 msgid "Shadow table with name %(name)s already exists."
 msgstr "La table fantôme avec le nom %(name)s existe déjà."
 
+#, python-format
+msgid "Share '%s' is not supported"
+msgstr "Partager '%s' n'est pas supporté"
+
 msgid "Should we use a CA for each project?"
 msgstr "Doit-on utiliser une autorité de certification pour chaque projet ?"
 
@@ -4046,6 +4088,10 @@ msgstr "Le filtre de pare-feu de %s n'existe pas"
 msgid "The floating IP request failed with a BadRequest"
 msgstr "La demande d'IP flottante a échouée avec l'erreur Mauvaise Requête"
 
+#, python-format
+msgid "The group %(group_name)s must be configured with an id."
+msgstr "Le groupe %(group_name)s doit être configuré avec un id."
+
 msgid "The input is not a string or unicode"
 msgstr "L'entrée n'est pas une chaine de caractère ou au format unicode"
 
@@ -4106,6 +4152,10 @@ msgstr ""
 "La plage de réseaux n'est pas suffisante pour %(num_networks)s réseaux. La "
 "taille de réseau est %(network_size)s"
 
+#, python-format
+msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
+msgstr "Le nombre de ports définis: %(ports)d dépasse la limite: %(quota)d"
+
 msgid "The only partition should be partition 1."
 msgstr "La seule partition doit être la partition 1."
 
@@ -4146,6 +4196,10 @@ msgid ""
 msgstr ""
 "Le service du pilote groupe de service %(driver)s est temporairement "
 "indisponible."
+
+#, python-format
+msgid "The specified cluster '%s' was not found in vCenter"
+msgstr "Le cluster indiqué '%s' n'a pas été trouvé sur le vCenter"
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "
