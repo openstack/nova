@@ -1270,6 +1270,15 @@ class _TestInstanceObject(object):
         mock_get.assert_called_once_with(self.context, inst)
         self.assertEqual(fake_secgroups, secgroups)
 
+    @mock.patch('nova.objects.PciDeviceList.get_by_instance_uuid')
+    def test_load_pci_devices(self, mock_get):
+        fake_pci_devices = pci_device.PciDeviceList()
+        mock_get.return_value = fake_pci_devices
+        inst = objects.Instance(context=self.context, uuid=uuids.pci_devices)
+        pci_devices = inst.pci_devices
+        mock_get.assert_called_once_with(self.context, uuids.pci_devices)
+        self.assertEqual(fake_pci_devices, pci_devices)
+
     def test_get_with_extras(self):
         pci_requests = objects.InstancePCIRequests(requests=[
             objects.InstancePCIRequest(count=123, spec=[])])
