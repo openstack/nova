@@ -283,7 +283,13 @@ class Service(service.Service):
         return service_obj
 
     def kill(self):
-        """Destroy the service object in the datastore."""
+        """Destroy the service object in the datastore.
+
+        NOTE: Although this method is not used anywhere else than tests, it is
+        convenient to have it here, so the tests might easily and in clean way
+        stop and remove the service_ref.
+
+        """
         self.stop()
         try:
             self.service_ref.destroy()
