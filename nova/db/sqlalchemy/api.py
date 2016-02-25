@@ -574,56 +574,8 @@ def service_update(context, service_id, values):
 
 ###################
 
-@main_context_manager.reader
-def compute_node_get(context, compute_id):
-    result = model_query(context, models.ComputeNode).\
-            filter_by(id=compute_id).\
-            first()
 
-    if not result:
-        raise exception.ComputeHostNotFound(host=compute_id)
-
-    return result
-
-
-@main_context_manager.reader
-def compute_nodes_get_by_service_id(context, service_id):
-    result = model_query(context, models.ComputeNode, read_deleted='no').\
-        filter_by(service_id=service_id).\
-        all()
-
-    if not result:
-        raise exception.ServiceNotFound(service_id=service_id)
-
-    return result
-
-
-@main_context_manager.reader
-def compute_node_get_by_host_and_nodename(context, host, nodename):
-    result = model_query(context, models.ComputeNode, read_deleted='no').\
-        filter_by(host=host, hypervisor_hostname=nodename).\
-        first()
-
-    if not result:
-        raise exception.ComputeHostNotFound(host=host)
-
-    return result
-
-
-@main_context_manager.reader.allow_async
-def compute_node_get_all_by_host(context, host):
-    result = model_query(context, models.ComputeNode, read_deleted='no').\
-        filter_by(host=host).\
-        all()
-
-    if not result:
-        raise exception.ComputeHostNotFound(host=host)
-
-    return result
-
-
-@main_context_manager.reader
-def compute_node_get_all(context):
+def _compute_node_select(context, filters=None):
     # NOTE(jaypipes): With the addition of the resource-providers database
     # schema, inventory and allocation information for various resources
     # on a compute node are to be migrated from the compute_nodes and
@@ -693,6 +645,9 @@ def compute_node_get_all(context):
     #   ) AS disk_usage
     #     ON disk_inv.resource_provider_id = disk_usage.resource_provider_id
     # WHERE cn.deleted = 0;
+    if filters is None:
+        filters = {}
+
     RAM_MB = fields.ResourceClass.index(fields.ResourceClass.MEMORY_MB)
     VCPU = fields.ResourceClass.index(fields.ResourceClass.VCPU)
     DISK_GB = fields.ResourceClass.index(fields.ResourceClass.DISK_GB)
@@ -768,15 +723,77 @@ def compute_node_get_all(context):
     cols_in_output.extend(inv_cols)
 
     select = sa.select(cols_in_output).select_from(disk_join)
-    select = select.where(cn_tbl.c.deleted == 0)
+
+    if context.read_deleted == "no":
+        select = select.where(cn_tbl.c.deleted == 0)
+    if "compute_id" in filters:
+        select = select.where(cn_tbl.c.id == filters["compute_id"])
+    if "service_id" in filters:
+        select = select.where(cn_tbl.c.service_id == filters["service_id"])
+    if "host" in filters:
+        select = select.where(cn_tbl.c.host == filters["host"])
+    if "hypervisor_hostname" in filters:
+        hyp_hostname = filters["hypervisor_hostname"]
+        select = select.where(cn_tbl.c.hypervisor_hostname == hyp_hostname)
+
     engine = get_engine(context)
     conn = engine.connect()
 
     results = conn.execute(select).fetchall()
+
     # Callers expect dict-like objects, not SQLAlchemy RowProxy objects...
     results = [dict(r) for r in results]
     conn.close()
     return results
+
+
+@main_context_manager.reader
+def compute_node_get(context, compute_id):
+    results = _compute_node_select(context, {"compute_id": compute_id})
+    if not results:
+        raise exception.ComputeHostNotFound(host=compute_id)
+    return results[0]
+
+
+@main_context_manager.reader
+def compute_node_get_model(context, compute_id):
+    # TODO(edleafe): remove once the compute node resource provider migration
+    # is complete, and this distinction is no longer necessary.
+    result = model_query(context, models.ComputeNode).\
+            filter_by(id=compute_id).\
+            first()
+    if not result:
+        raise exception.ComputeHostNotFound(host=compute_id)
+    return result
+
+
+@main_context_manager.reader
+def compute_nodes_get_by_service_id(context, service_id):
+    results = _compute_node_select(context, {"service_id": service_id})
+    if not results:
+        raise exception.ServiceNotFound(service_id=service_id)
+    return results
+
+
+@main_context_manager.reader
+def compute_node_get_by_host_and_nodename(context, host, nodename):
+    results = _compute_node_select(context,
+            {"host": host, "hypervisor_hostname": nodename})
+    if not results:
+        raise exception.ComputeHostNotFound(host=host)
+    return results[0]
+
+
+@main_context_manager.reader.allow_async
+def compute_node_get_all_by_host(context, host):
+    results = _compute_node_select(context, {"host": host})
+    if not results:
+        raise exception.ComputeHostNotFound(host=host)
+    return results
+
+
+def compute_node_get_all(context):
+    return _compute_node_select(context)
 
 
 @main_context_manager.reader
@@ -806,7 +823,7 @@ def compute_node_create(context, values):
 def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
 
-    compute_ref = compute_node_get(context, compute_id)
+    compute_ref = compute_node_get_model(context, compute_id)
     # Always update this, even if there's going to be no other
     # changes in data.  This ensures that we invalidate the
     # scheduler cache of compute node data in case of races.
