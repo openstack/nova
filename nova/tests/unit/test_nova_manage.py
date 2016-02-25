@@ -459,17 +459,16 @@ class DBCommandsTestCase(test.NoDBTestCase):
         self.commands.sync(version=4)
         sqla_sync.assert_called_once_with(version=4, database='main')
 
-    def _fake_db_command(self):
-        mock_mig_1 = mock.MagicMock(__name__="mock_mig_1")
-        mock_mig_2 = mock.MagicMock(__name__="mock_mig_2")
-        mock_mig_1.return_value = (5, 4)
-        mock_mig_2.return_value = (6, 6)
+    def _fake_db_command(self, migrations=None):
+        if migrations is None:
+            mock_mig_1 = mock.MagicMock(__name__="mock_mig_1")
+            mock_mig_2 = mock.MagicMock(__name__="mock_mig_2")
+            mock_mig_1.return_value = (5, 4)
+            mock_mig_2.return_value = (6, 6)
+            migrations = (mock_mig_1, mock_mig_2)
 
         class _CommandSub(manage.DbCommands):
-            online_migrations = (
-                mock_mig_1,
-                mock_mig_2,
-            )
+            online_migrations = migrations
 
         return _CommandSub
 
@@ -481,11 +480,22 @@ class DBCommandsTestCase(test.NoDBTestCase):
         command_cls.online_migrations[1].assert_called_once_with(6)
 
     def test_online_migrations_no_max_count(self):
-        command_cls = self._fake_db_command()
+        total = [120]
+        batches = [50, 40, 30, 0]
+        runs = []
+
+        def fake_migration(count):
+            runs.append(count)
+            count = batches.pop(0)
+            total[0] -= count
+            return total[0], count
+
+        command_cls = self._fake_db_command((fake_migration,))
         command = command_cls()
         command.online_data_migrations(None)
-        command_cls.online_migrations[0].assert_called_once_with(None)
-        command_cls.online_migrations[1].assert_called_once_with(None)
+        self.assertEqual([], batches)
+        self.assertEqual(0, total[0])
+        self.assertEqual([50, 50, 50, 50], runs)
 
 
 class ApiDbCommandsTestCase(test.NoDBTestCase):
