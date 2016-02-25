@@ -24,7 +24,8 @@ def upgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
 
-    # Add a new column metrics to save metrics info for compute nodes
+    # Add a new column extra_resources to save extra_resources info for
+    # compute nodes
     compute_nodes = Table('compute_nodes', meta, autoload=True)
     shadow_compute_nodes = Table('shadow_compute_nodes', meta, autoload=True)
 
