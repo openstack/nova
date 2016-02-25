@@ -1792,6 +1792,11 @@ def aggregate_get_by_host(context, host, key=None):
     return IMPL.aggregate_get_by_host(context, host, key)
 
 
+def aggregate_get_by_uuid(context, uuid):
+    """Get a specific aggregate by uuid."""
+    return IMPL.aggregate_get_by_uuid(context, uuid)
+
+
 def aggregate_metadata_get_by_host(context, host, key=None):
     """Get metadata for all aggregates that host belongs to.
 

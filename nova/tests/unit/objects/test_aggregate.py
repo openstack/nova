@@ -192,6 +192,14 @@ class _TestAggregateObject(object):
             self.assertEqual(uuid, obj.uuid)
             mock_save.assert_called_once_with()
 
+    @mock.patch('nova.db.aggregate_get_by_uuid')
+    def test_get_by_uuid(self, get_by_uuid):
+        get_by_uuid.return_value = fake_aggregate
+        agg = aggregate.Aggregate.get_by_uuid(self.context,
+                                              uuidsentinel.fake_aggregate)
+        self.assertEqual(uuidsentinel.fake_aggregate, agg.uuid)
+        self.assertEqual(fake_aggregate['id'], agg.id)
+
     def test_create(self):
         self.mox.StubOutWithMock(db, 'aggregate_create')
         db.aggregate_create(self.context, {'name': 'foo',
