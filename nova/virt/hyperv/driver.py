@@ -115,7 +115,7 @@ class HyperVDriver(driver.ComputeDriver):
     def _check_minimum_windows_version(self):
         if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
             # the version is of Windows is older than Windows Server 2012 R2.
-            # Log an error, lettingusers know that this version is not
+            # Log an error, letting users know that this version is not
             # supported any longer.
             LOG.error(_LE('You are running nova-compute on an unsupported '
                           'version of Windows (older than Windows / Hyper-V '
