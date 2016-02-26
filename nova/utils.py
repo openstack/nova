@@ -829,25 +829,12 @@ def check_string_length(value, name=None, min_length=0, max_length=None):
     :param min_length: the min_length of the string
     :param max_length: the max_length of the string
     """
-    if not isinstance(value, six.string_types):
-        if name is None:
-            msg = _("The input is not a string or unicode")
-        else:
-            msg = _("%s is not a string or unicode") % name
-        raise exception.InvalidInput(message=msg)
-
-    if name is None:
-        name = value
-
-    if len(value) < min_length:
-        msg = _("%(name)s has a minimum character requirement of "
-                "%(min_length)s.") % {'name': name, 'min_length': min_length}
-        raise exception.InvalidInput(message=msg)
-
-    if max_length and len(value) > max_length:
-        msg = _("%(name)s has more than %(max_length)s "
-                "characters.") % {'name': name, 'max_length': max_length}
-        raise exception.InvalidInput(message=msg)
+    try:
+        strutils.check_string_length(value, name=name,
+                                     min_length=min_length,
+                                     max_length=max_length)
+    except (ValueError, TypeError) as exc:
+        raise exception.InvalidInput(message=exc.args[0])
 
 
 def validate_integer(value, name, min_value=None, max_value=None):
