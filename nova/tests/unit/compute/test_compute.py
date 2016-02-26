@@ -10476,6 +10476,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[14]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+        aggr4 = self.api.create_aggregate(self.context, 'fake_aggregate', None)
+        metadata = {'availability_zone': ""}
+        self.assertRaises(exception.InvalidAggregateActionUpdate,
+                          self.api.update_aggregate, self.context,
+                          aggr4.id, metadata)
 
     def test_update_aggregate_az_fails_with_nova_az(self):
         # Ensure aggregate's availability zone can't be updated,
@@ -10619,6 +10624,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[14]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+        aggr4 = self.api.create_aggregate(self.context, 'fake_aggregate', None)
+        metadata = {'availability_zone': ""}
+        self.assertRaises(exception.InvalidAggregateActionUpdateMeta,
+                          self.api.update_aggregate_metadata, self.context,
+                          aggr4.id, metadata)
 
     def test_delete_aggregate(self):
         # Ensure we can delete an aggregate.
