@@ -831,8 +831,9 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
     else:
         # Straightforward to pin to available cpus when there is no
         # hyperthreading on the host
+        free_cpus = [set([cpu]) for cpu in host_cell.free_cpus]
         return _pack_instance_onto_cores(
-            [host_cell.free_cpus], instance_cell, host_cell.id)
+            free_cpus, instance_cell, host_cell.id)
 
 
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
