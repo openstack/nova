@@ -994,14 +994,15 @@ class DbCommands(object):
             try:
                 found, done = migration_meth(count)
             except Exception:
-                print("Error attempting to run %(meth)s" % migration_meth)
+                print(_("Error attempting to run %(method)s") % dict(
+                      method=migration_meth))
                 found = done = 0
 
             if found:
                 print(_('%(total)i rows matched query %(meth)s, %(done)i '
-                        'migrated'), {'total': found,
-                                      'meth': migration_meth.__name__,
-                                      'done': done})
+                        'migrated') % {'total': found,
+                                       'meth': migration_meth.__name__,
+                                       'done': done})
             if max_count is not None:
                 ran += done
                 if ran >= max_count:

@@ -497,6 +497,13 @@ class DBCommandsTestCase(test.NoDBTestCase):
         self.assertEqual(0, total[0])
         self.assertEqual([50, 50, 50, 50], runs)
 
+    def test_online_migrations_error(self):
+        fake_migration = mock.MagicMock()
+        fake_migration.side_effect = Exception
+        command_cls = self._fake_db_command((fake_migration,))
+        command = command_cls()
+        command.online_data_migrations(None)
+
 
 class ApiDbCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
