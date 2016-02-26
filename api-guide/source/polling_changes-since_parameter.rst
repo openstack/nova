@@ -26,4 +26,3 @@ servers contain a ``DELETED`` status that indicates that the resource
 has been removed. Implementations are not required to keep track of
 deleted resources indefinitely, so sending a changes since time in the
 distant past may miss deletions.
-

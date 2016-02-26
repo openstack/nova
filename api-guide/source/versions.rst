@@ -35,7 +35,7 @@ header and a URI, the URI takes precedence.
 Permanent Links
 ~~~~~~~~~~~~~~~
 
-The MIME type versioning approach allows for the creating of permanent
+The MIME type versioning approach allows for creating of permanent
 links, because the version scheme is not specified in the URI path:
 https://api.servers.openstack.org/224532/servers/123.
 
@@ -111,3 +111,4 @@ The detailed version response contains pointers to both a human-readable
 and a machine-processable description of the API service. The
 machine-processable description is written in the Web Application
 Description Language (WADL).
+

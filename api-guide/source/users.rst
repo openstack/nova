@@ -48,8 +48,8 @@ a lists of servers for a specific tenant but is not able to perform any
 actions on any of them.
 
 Note: this is not attempting to be an exhaustive set of personas that consider
-various facets of the different users, but instead aims to be a minimal set of
-users, such that we use a consistent terminology throughout this document.
+various facets of the different users but instead aims to be a minimal set of
+users such that we use a consistent terminology throughout this document.
 
 TODO - could assign names to these users, or similar, to make it more "real".
 

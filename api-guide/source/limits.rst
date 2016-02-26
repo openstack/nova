@@ -8,7 +8,7 @@ two kinds of limits: *rate limits* and *absolute limits*. Rate limits
 are thresholds that are reset after a certain amount of time passes.
 Absolute limits are fixed. Limits are configured by operators and may
 differ from one deployment of the OpenStack Compute service to
-another.  Please contact your provider to determine the limits that
+another. Please contact your provider to determine the limits that
 apply to your account. Your provider may be able to adjust your
 account's limits if they are too low. Also see the API Reference for
 `*Limits* <http://developer.openstack.org/api-ref-compute-v2.html#compute_limits>`__.
@@ -58,7 +58,7 @@ Absolute limits
 
 Absolute limits are specified as name/value pairs. The name of the
 absolute limit uniquely identifies the limit within a deployment. Please
-consult your provider for an exhaustive list of absolute value names. An
+consult your provider for an exhaustive list of absolute limits names. An
 absolute limit value is always specified as an integer. The name of the
 absolute limit determines the unit type of the integer value. For
 example, the name maxServerMeta implies that the value is in terms of
