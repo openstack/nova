@@ -68,6 +68,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.23 - Add index/show API for server migrations.
              Also add migration_type for /os-migrations and add ref link for it
              when the migration is an in progress live migration.
+    * 2.24 - Add API to cancel a running live migration
+
 """
 
 # The minimum and maximum versions of the API supported
@@ -76,7 +78,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.23"
+_MAX_API_VERSION = "2.24"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

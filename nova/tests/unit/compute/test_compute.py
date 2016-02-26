@@ -5849,6 +5849,30 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('error', migration.status)
         migration.save.assert_called_once_with()
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    def test_rollback_live_migration_set_migration_status(self, mock_bdms):
+        c = context.get_admin_context()
+        instance = mock.MagicMock()
+        migration = mock.MagicMock()
+        migrate_data = {'migration': migration}
+
+        mock_bdms.return_value = []
+
+        @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
+        @mock.patch.object(self.compute, 'network_api')
+        def _test(mock_nw_api, mock_lmcf):
+            mock_lmcf.return_value = False, False
+            self.compute._rollback_live_migration(c, instance, 'foo',
+                                                  False,
+                                                  migrate_data=migrate_data,
+                                                  migration_status='fake')
+            mock_nw_api.setup_networks_on_host.assert_called_once_with(
+                c, instance, self.compute.host)
+        _test()
+
+        self.assertEqual('fake', migration.status)
+        migration.save.assert_called_once_with()
+
     def test_rollback_live_migration_at_destination_correctly(self):
         # creating instance testdata
         c = context.get_admin_context()

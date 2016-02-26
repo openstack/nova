@@ -326,6 +326,7 @@ class ComputeAPI(object):
                  pre_live_migration.
         * ...  - Remove refresh_provider_fw_rules()
         * 4.9  - Add live_migration_force_complete()
+        * 4.10  - Add live_migration_abort()
     '''
 
     VERSION_ALIASES = {
@@ -643,6 +644,13 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'live_migration_force_complete', instance=instance,
                    migration_id=migration_id)
+
+    def live_migration_abort(self, ctxt, instance, migration_id):
+        version = '4.10'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        cctxt.cast(ctxt, 'live_migration_abort', instance=instance,
+                migration_id=migration_id)
 
     def pause_instance(self, ctxt, instance):
         version = '4.0'

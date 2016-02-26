@@ -205,3 +205,10 @@ user documentation.
   Add migration_type for old /os-migrations API, also add ref link to the
   /servers/{uuid}/migrations/{id} for it when the migration is an in-progress
   live-migration.
+
+2.24
+---
+
+  A new API call to cancel a running live migration::
+
+    DELETE /servers/<uuid>/migrations/<id>

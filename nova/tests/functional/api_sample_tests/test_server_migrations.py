@@ -158,3 +158,54 @@ class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
         self._verify_response('migrations-index',
                               {"server_uuid_1": self.UUID_1},
                               response, 200)
+
+
+class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
+    ADMIN_API = True
+    extension_name = "server-migrations"
+    scenarios = [('v2_24', {'api_major_version': 'v2.1'})]
+    extra_extensions_to_load = ["os-migrate-server", "os-access-ips"]
+
+    def setUp(self):
+        """setUp method for server usage."""
+        super(ServerMigrationsSampleJsonTestV2_24, self).setUp()
+        self.uuid = self._post_server()
+        self.context = context.RequestContext('fake', 'fake')
+        fake_migration = {
+            'source_node': self.compute.host,
+            'dest_node': 'node10',
+            'source_compute': 'compute1',
+            'dest_compute': 'compute12',
+            'migration_type': 'live-migration',
+            'instance_uuid': self.uuid,
+            'status': 'running'}
+
+        self.migration = objects.Migration(context=self.context,
+                                           **fake_migration)
+        self.migration.create()
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
+    def test_live_migrate_abort(self, _live_migrate):
+        self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
+                      {'hostname': self.compute.host})
+        uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
+        response = self._do_delete(uri, api_version='2.24')
+        self.assertEqual(202, response.status_code)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
+    def test_live_migrate_abort_migration_not_found(self, _live_migrate):
+        self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
+                      {'hostname': self.compute.host})
+        uri = 'servers/%s/migrations/%s' % (self.uuid, '45')
+        response = self._do_delete(uri, api_version='2.24')
+        self.assertEqual(404, response.status_code)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
+    def test_live_migrate_abort_migration_not_running(self, _live_migrate):
+        self.migration.status = 'completed'
+        self.migration.save()
+        self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
+                      {'hostname': self.compute.host})
+        uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
+        response = self._do_delete(uri, api_version='2.24')
+        self.assertEqual(400, response.status_code)

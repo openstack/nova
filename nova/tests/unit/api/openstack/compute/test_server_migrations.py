@@ -261,6 +261,67 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                                                want_objects=True)
 
 
+class ServerMigrationsTestsV224(ServerMigrationsTestsV21):
+    wsgi_api_version = '2.24'
+
+    def setUp(self):
+        super(ServerMigrationsTestsV224, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version,
+                                           use_admin_context=True)
+        self.context = self.req.environ['nova.context']
+
+    def test_cancel_live_migration_succeeded(self):
+        @mock.patch.object(self.compute_api, 'live_migrate_abort')
+        @mock.patch.object(self.compute_api, 'get')
+        def _do_test(mock_get, mock_abort):
+            self.controller.delete(self.req, 'server-id', 'migration-id')
+            mock_abort.assert_called_once_with(self.context,
+                                               mock_get(),
+                                               'migration-id')
+        _do_test()
+
+    def _test_cancel_live_migration_failed(self, fake_exc, expected_exc):
+        @mock.patch.object(self.compute_api, 'live_migrate_abort',
+                           side_effect=fake_exc)
+        @mock.patch.object(self.compute_api, 'get')
+        def _do_test(mock_get, mock_abort):
+            self.assertRaises(expected_exc,
+                              self.controller.delete,
+                              self.req,
+                              'server-id',
+                              'migration-id')
+        _do_test()
+
+    def test_cancel_live_migration_invalid_state(self):
+        self._test_cancel_live_migration_failed(
+                exception.InstanceInvalidState(instance_uuid='',
+                                               state='',
+                                               attr='',
+                                               method=''),
+                webob.exc.HTTPConflict)
+
+    def test_cancel_live_migration_migration_not_found(self):
+        self._test_cancel_live_migration_failed(
+                exception.MigrationNotFoundForInstance(migration_id='',
+                                                       instance_id=''),
+                webob.exc.HTTPNotFound)
+
+    def test_cancel_live_migration_invalid_migration_state(self):
+        self._test_cancel_live_migration_failed(
+                exception.InvalidMigrationState(migration_id='',
+                                                instance_uuid='',
+                                                state='',
+                                                method=''),
+                webob.exc.HTTPBadRequest)
+
+    def test_cancel_live_migration_instance_not_found(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete,
+                          self.req,
+                          'server-id',
+                          'migration-id')
+
+
 class ServerMigrationsPolicyEnforcementV21(test.NoDBTestCase):
     wsgi_api_version = '2.22'
 
@@ -308,3 +369,19 @@ class ServerMigrationsPolicyEnforcementV223(
                                 fakes.FAKE_UUID, 1)
         self.assertEqual("Policy doesn't allow %s to be performed." %
                          rule_name, exc.format_message())
+
+
+class ServerMigrationsPolicyEnforcementV224(
+                ServerMigrationsPolicyEnforcementV223):
+
+    wsgi_api_version = '2.24'
+
+    def setUp(self):
+        super(ServerMigrationsPolicyEnforcementV224, self).setUp()
+
+    def test_migrate_delete_failed(self):
+        rule_name = "os_compute_api:servers:migrations:delete"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.delete, self.req,
+                          fakes.FAKE_UUID, '10')

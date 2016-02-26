@@ -135,6 +135,25 @@ class ServerMigrationsController(wsgi.Controller):
 
         return {'migration': output(migration)}
 
+    @wsgi.Controller.api_version("2.24")
+    @wsgi.response(202)
+    @extensions.expected_errors((400, 404, 409))
+    def delete(self, req, server_id, id):
+        """Abort an in progress migration of an instance."""
+        context = req.environ['nova.context']
+        authorize(context, action="delete")
+
+        instance = common.get_instance(self.compute_api, context, server_id)
+        try:
+            self.compute_api.live_migrate_abort(context, instance, id)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(
+                    state_error, "abort live migration", server_id)
+        except exception.MigrationNotFoundForInstance as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidMigrationState as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
 
 class ServerMigrations(extensions.V21APIExtensionBase):
     """Server Migrations API."""

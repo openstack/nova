@@ -3266,6 +3266,47 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.live_migrate_force_complete,
                           self.context, instance, '1')
 
+    def _get_migration(self, migration_id, status, migration_type):
+        migration = objects.Migration()
+        migration.id = migration_id
+        migration.status = status
+        migration.migration_type = migration_type
+        return migration
+
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'live_migration_abort')
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def test_live_migrate_abort_succeeded(self,
+                                          mock_get_migration,
+                                          mock_lm_abort,
+                                          mock_rec_action):
+        instance = self._create_instance_obj()
+        instance.task_state = task_states.MIGRATING
+        migration = self._get_migration(21, 'running', 'live-migration')
+        mock_get_migration.return_value = migration
+
+        self.compute_api.live_migrate_abort(self.context,
+                                            instance,
+                                            migration.id)
+        mock_rec_action.assert_called_once_with(self.context,
+                                    instance,
+                                    instance_actions.LIVE_MIGRATION_CANCEL)
+        mock_lm_abort.called_once_with(self.context, instance, migration.id)
+
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def test_live_migration_abort_wrong_migration_status(self,
+                                                         mock_get_migration):
+        instance = self._create_instance_obj()
+        instance.task_state = task_states.MIGRATING
+        migration = self._get_migration(21, 'completed', 'live-migration')
+        mock_get_migration.return_value = migration
+
+        self.assertRaises(exception.InvalidMigrationState,
+                          self.compute_api.live_migrate_abort,
+                          self.context,
+                          instance,
+                          migration.id)
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

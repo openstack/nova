@@ -837,6 +837,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def live_migration_abort(self, instance):
+        """Abort an in-progress live migration.
+
+        :param instance: instance that is live migrating
+
+        """
+        raise NotImplementedError()
+
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
                                                block_device_info,
