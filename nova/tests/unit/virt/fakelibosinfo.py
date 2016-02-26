@@ -107,7 +107,7 @@ class Os(object):
         return new_list
 
     def get_name(self):
-        self.name
+        return self.name
 
 
 class DeviceList(object):
