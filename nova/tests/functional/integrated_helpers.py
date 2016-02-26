@@ -21,9 +21,9 @@ import random
 import string
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 import nova.image.glance
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -31,9 +31,8 @@ from nova.tests.unit import cast_as_call
 import nova.tests.unit.image.fake
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-CONF.import_opt('manager', 'nova.cells.opts', group='cells')
 
 
 def generate_random_alphanumeric(length):
