@@ -1339,7 +1339,7 @@ def _set_device_mtu(dev, mtu=None):
                       check_exit_code=[0, 2, 254])
 
 
-def _create_veth_pair(dev1_name, dev2_name):
+def _create_veth_pair(dev1_name, dev2_name, mtu=None):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
     """
@@ -1352,7 +1352,7 @@ def _create_veth_pair(dev1_name, dev2_name):
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
         utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
                       run_as_root=True)
-        _set_device_mtu(dev)
+        _set_device_mtu(dev, mtu)
 
 
 def _ovs_vsctl(args):
@@ -1365,7 +1365,7 @@ def _ovs_vsctl(args):
         raise exception.AgentError(method=full_args)
 
 
-def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
+def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id, mtu=None):
     _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
                 'add-port', bridge, dev,
                 '--', 'set', 'Interface', dev,
@@ -1373,7 +1373,7 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
                 'external-ids:iface-status=active',
                 'external-ids:attached-mac=%s' % mac,
                 'external-ids:vm-uuid=%s' % instance_id])
-    _set_device_mtu(dev)
+    _set_device_mtu(dev, mtu)
 
 
 def delete_ovs_vif_port(bridge, dev, delete_dev=True):

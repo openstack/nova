@@ -2470,7 +2470,8 @@ class TestNeutronv2(TestNeutronv2Base):
             'binding:vif_type': vif_type,
             }
         fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant',
+                      'mtu': 9000}]
         api = neutronapi.API()
         self.mox.ReplayAll()
         neutronapi.get_client('fake')
@@ -2480,6 +2481,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual('net-id', net['id'])
         self.assertEqual('foo', net['label'])
         self.assertEqual('tenant', net.get_meta('tenant_id'))
+        self.assertEqual(9000, net.get_meta('mtu'))
         self.assertEqual(CONF.flat_injected, net.get_meta('injected'))
         return net, iid
 
