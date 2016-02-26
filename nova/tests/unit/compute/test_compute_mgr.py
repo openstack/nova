@@ -4346,18 +4346,20 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_rollback_live_migration_handles_dict(self):
         compute = manager.ComputeManager()
 
-        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch.object(compute, '_live_migration_cleanup_flags')
         @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
         def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi):
             mock_bdm.return_value = []
             mock_lmcf.return_value = False, False
-            self.compute._rollback_live_migration(self.context,
-                                                  mock.MagicMock(),
-                                                  'foo', False, {})
+            compute._rollback_live_migration(self.context,
+                                             mock.MagicMock(),
+                                             'foo', False, {})
             self.assertIsInstance(mock_lmcf.call_args_list[0][0][1],
                                   migrate_data_obj.LiveMigrateData)
+
+        _test()
 
     def test_live_migration_force_complete_succeeded(self):
 
@@ -4403,6 +4405,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertRaises(exception.InvalidMigrationState,
                               self.compute.live_migration_force_complete,
                               self.context, instance, migration.id)
+        _do_test()
 
     def test_post_live_migration_at_destination_success(self):
 
