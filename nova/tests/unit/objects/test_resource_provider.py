@@ -44,6 +44,14 @@ _INVENTORY_DB = {
     'step_size': 1,
     'allocation_ratio': 1.0,
 }
+_ALLOCATION_ID = 2
+_ALLOCATION_DB = {
+    'id': _ALLOCATION_ID,
+    'resource_provider_id': _RESOURCE_PROVIDER_ID,
+    'resource_class_id': _RESOURCE_CLASS_ID,
+    'consumer_id': uuids.fake_instance,
+    'used': 8,
+}
 
 
 class _TestResourceProviderNoDB(object):
@@ -426,3 +434,68 @@ class TestInventory(test_objects._LocalTest):
             fields.ResourceClass.VCPU))
         self.assertIsNotNone(found)
         self.assertEqual(24, found.total)
+
+
+class _TestAllocationNoDB(object):
+    @mock.patch('nova.objects.Allocation._create_in_db',
+                return_value=_ALLOCATION_DB)
+    def test_create(self, mock_db_create):
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=uuids.resource_provider)
+        obj = objects.Allocation(context=self.context,
+                                 resource_provider=rp,
+                                 resource_class=_RESOURCE_CLASS_NAME,
+                                 consumer_id=uuids.fake_instance,
+                                 used=8)
+        obj.create()
+        self.assertEqual(_ALLOCATION_ID, obj.id)
+        expected = dict(_ALLOCATION_DB)
+        expected.pop('id')
+        mock_db_create.assert_called_once_with(self.context, expected)
+
+    def test_create_with_id_fails(self):
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=uuids.resource_provider)
+        obj = objects.Allocation(context=self.context,
+                                 id=99,
+                                 resource_provider=rp,
+                                 resource_class=_RESOURCE_CLASS_NAME,
+                                 consumer_id=uuids.fake_instance,
+                                 used=8)
+        self.assertRaises(exception.ObjectActionError, obj.create)
+
+
+class TestAllocationNoDB(test_objects._LocalTest,
+                         _TestAllocationNoDB):
+    USES_DB = False
+
+
+class TestRemoteAllocationNoDB(test_objects._RemoteTest,
+                               _TestAllocationNoDB):
+    USES_DB = False
+
+
+class _TestAllocationListNoDB(object):
+
+    @mock.patch('nova.objects.AllocationList._get_allocations_from_db',
+                return_value=[_ALLOCATION_DB])
+    def test_get_allocations(self, mock_get_allocations_from_db):
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=uuids.resource_provider)
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, rp.uuid)
+
+        self.assertEqual(1, len(allocations))
+        mock_get_allocations_from_db.assert_called_once_with(
+            self.context, uuids.resource_provider)
+        self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
+
+
+class TestAllocationListNoDB(test_objects._LocalTest,
+                         _TestAllocationListNoDB):
+    USES_DB = False
+
+
+class TestRemoteAllocationListNoDB(test_objects._RemoteTest,
+                               _TestAllocationListNoDB):
+    USES_DB = False
