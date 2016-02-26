@@ -16,7 +16,7 @@ import uuid
 
 import mock
 from oslo_config import cfg
-import unittest
+import testtools
 import webob
 
 from nova.api.openstack.compute import evacuate as evacuate_v21
@@ -335,19 +335,19 @@ class EvacuateTestV214(EvacuateTestV21):
 
         self.assertIsNone(res)
 
-    @unittest.skip('Password is not returned from Microversion 2.14')
+    @testtools.skip('Password is not returned from Microversion 2.14')
     def test_evacuate_disable_password_return(self):
         pass
 
-    @unittest.skip('Password is not returned from Microversion 2.14')
+    @testtools.skip('Password is not returned from Microversion 2.14')
     def test_evacuate_enable_password_return(self):
         pass
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     def test_evacuate_instance_with_invalid_on_shared_storage(self):
         pass
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     @mock.patch('nova.objects.Instance.save')
     def test_evacuate_not_shared_pass_generated(self, mock_save):
         pass
@@ -376,13 +376,13 @@ class EvacuateTestV214(EvacuateTestV21):
                           self.controller._evacuate,
                           self.req, self.UUID, body=body)
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     @mock.patch('nova.objects.Instance.save')
     def test_evacuate_shared_and_pass(self, mock_save):
         pass
 
-    @unittest.skip('from Microversion 2.14 it is covered with '
-                   'test_evacuate_pass_generated')
+    @testtools.skip('from Microversion 2.14 it is covered with '
+                    'test_evacuate_pass_generated')
     def test_evacuate_instance_with_target(self):
         pass
 

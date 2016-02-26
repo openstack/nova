@@ -188,6 +188,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             config.trace_filter = pycallgraph.GlobbingFilter(exclude=[
                 'pycallgraph.*',
                 'unittest.*',
+                'testtools.*',
                 'nova.tests.unit.*',
             ])
             graphviz = output.GraphvizOutput(output_file='scheduler.png')
@@ -206,10 +207,10 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 if __name__ == '__main__':
     # A handy tool to help profile the schedulers performance
     ENABLE_PROFILER = True
-    import unittest
-    suite = unittest.TestSuite()
+    import testtools
+    suite = testtools.ConcurrentTestSuite()
     test = "test_performance_check_select_destination"
     test_case = CachingSchedulerTestCase(test)
     suite.addTest(test_case)
-    runner = unittest.TextTestRunner()
+    runner = testtools.TextTestResult.TextTestRunner()
     runner.run(suite)

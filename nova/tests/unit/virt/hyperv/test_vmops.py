@@ -22,7 +22,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import units
 import six
-import unittest2
+import testtools
 
 from nova import exception
 from nova import objects
@@ -986,7 +986,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
         fake_iothread.return_value.start.assert_called_once_with()
 
-    @unittest2.skip('mock_open in 1.2 read only works once 1475661')
+    @testtools.skip('mock_open in 1.2 read only works once 1475661')
     @mock.patch("os.path.exists")
     def test_get_console_output(self, fake_path_exists):
         mock_instance = fake_instance.fake_instance_obj(self.context)
