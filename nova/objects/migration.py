@@ -157,7 +157,9 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
     #              Migration <= 1.1
     # Version 1.1: Added use_slave to get_unconfirmed_by_dest_compute
     # Version 1.2: Migration version 1.2
-    VERSION = '1.2'
+    # Version 1.3: Added a new function to get in progress migrations
+    #              for an instance.
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
@@ -188,5 +190,13 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters):
         db_migrations = db.migration_get_all_by_filters(context, filters)
+        return base.obj_make_list(context, cls(context), objects.Migration,
+                                  db_migrations)
+
+    @base.remotable_classmethod
+    def get_in_progress_by_instance(cls, context, instance_uuid,
+                                    migration_type=None):
+        db_migrations = db.migration_get_in_progress_by_instance(
+            context, instance_uuid, migration_type)
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)

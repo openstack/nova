@@ -10179,6 +10179,26 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
 
+    @mock.patch("nova.db.migration_get_in_progress_by_instance")
+    def test_get_migrations_in_progress_by_instance(self, mock_get):
+        migration = test_migration.fake_db_migration(instance_uuid="1234")
+        mock_get.return_value = [migration]
+        db.migration_get_in_progress_by_instance(self.context, "1234")
+        migrations = self.compute_api.get_migrations_in_progress_by_instance(
+                self.context, "1234")
+        self.assertEqual(1, len(migrations))
+        self.assertEqual(migrations[0].id, migration['id'])
+
+    @mock.patch("nova.db.migration_get_by_id_and_instance")
+    def test_get_migration_by_id_and_instance(self, mock_get):
+        migration = test_migration.fake_db_migration(instance_uuid="1234")
+        mock_get.return_value = migration
+        db.migration_get_by_id_and_instance(
+                self.context, migration['id'], uuid)
+        res = self.compute_api.get_migration_by_id_and_instance(
+                self.context, migration['id'], "1234")
+        self.assertEqual(res.id, migration['id'])
+
 
 class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
     '''Verifies the IP filtering in the compute API.'''

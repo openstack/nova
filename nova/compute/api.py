@@ -3394,6 +3394,18 @@ class API(base.Base):
         """Get all migrations for the given filters."""
         return objects.MigrationList.get_by_filters(context, filters)
 
+    def get_migrations_in_progress_by_instance(self, context, instance_uuid,
+                                               migration_type=None):
+        """Get all migrations of an instance in progress."""
+        return objects.MigrationList.get_in_progress_by_instance(
+                context, instance_uuid, migration_type)
+
+    def get_migration_by_id_and_instance(self, context,
+                                         migration_id, instance_uuid):
+        """Get the migration of an instance by id."""
+        return objects.Migration.get_by_id_and_instance(
+                context, migration_id, instance_uuid)
+
     @wrap_check_policy
     def volume_snapshot_create(self, context, volume_id, create_info):
         bdm = objects.BlockDeviceMapping.get_by_volume(

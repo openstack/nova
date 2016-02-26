@@ -82,6 +82,20 @@ class _TestMigrationObject(object):
             ctxt, fake_migration['id'], 'migrating')
         self.compare_obj(mig, fake_migration)
 
+    @mock.patch('nova.db.migration_get_in_progress_by_instance')
+    def test_get_in_progress_by_instance(self, m_get_mig):
+        ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
+        db_migrations = [fake_migration, dict(fake_migration, id=456)]
+
+        m_get_mig.return_value = db_migrations
+        migrations = migration.MigrationList.get_in_progress_by_instance(
+            ctxt, fake_migration['instance_uuid'])
+
+        self.assertEqual(2, len(migrations))
+        for index, db_migration in enumerate(db_migrations):
+            self.compare_obj(migrations[index], db_migration)
+
     def test_create(self):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()

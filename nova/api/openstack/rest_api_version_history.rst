@@ -195,3 +195,13 @@ user documentation.
     {
       "force_complete": null
     }
+
+2.23
+----
+
+  From this version of the API users can get the migration summary list by
+  index API or the information of a specific migration by get API.
+  And the old top-level resource `/os-migrations` won't be extended anymore.
+  Add migration_type for old /os-migrations API, also add ref link to the
+  /servers/{uuid}/migrations/{id} for it when the migration is an in-progress
+  live-migration.

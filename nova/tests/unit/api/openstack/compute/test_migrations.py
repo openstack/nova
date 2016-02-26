@@ -13,6 +13,7 @@
 #    under the License.
 
 import datetime
+import mock
 
 from oslotest import moxstubout
 
@@ -25,21 +26,23 @@ from nova import objects
 from nova.objects import base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 fake_migrations = [
+    # in-progress live migration
     {
-        'id': 1234,
+        'id': 1,
         'source_node': 'node1',
         'dest_node': 'node2',
         'source_compute': 'compute1',
         'dest_compute': 'compute2',
         'dest_host': '1.2.3.4',
-        'status': 'Done',
-        'instance_uuid': 'instance_id_123',
+        'status': 'running',
+        'instance_uuid': uuids.instance1,
         'old_instance_type_id': 1,
         'new_instance_type_id': 2,
-        'migration_type': 'resize',
+        'migration_type': 'live-migration',
         'hidden': False,
         'memory_total': 123456,
         'memory_processed': 12345,
@@ -52,15 +55,66 @@ fake_migrations = [
         'deleted_at': None,
         'deleted': False
     },
+    # non in-progress live migration
     {
-        'id': 5678,
+        'id': 2,
+        'source_node': 'node1',
+        'dest_node': 'node2',
+        'source_compute': 'compute1',
+        'dest_compute': 'compute2',
+        'dest_host': '1.2.3.4',
+        'status': 'error',
+        'instance_uuid': uuids.instance1,
+        'old_instance_type_id': 1,
+        'new_instance_type_id': 2,
+        'migration_type': 'live-migration',
+        'hidden': False,
+        'memory_total': 123456,
+        'memory_processed': 12345,
+        'memory_remaining': 120000,
+        'disk_total': 234567,
+        'disk_processed': 23456,
+        'disk_remaining': 230000,
+        'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+        'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+        'deleted_at': None,
+        'deleted': False
+    },
+    # in-progress resize
+    {
+        'id': 4,
         'source_node': 'node10',
         'dest_node': 'node20',
         'source_compute': 'compute10',
         'dest_compute': 'compute20',
         'dest_host': '5.6.7.8',
-        'status': 'Done',
-        'instance_uuid': 'instance_id_456',
+        'status': 'migrating',
+        'instance_uuid': uuids.instance2,
+        'old_instance_type_id': 5,
+        'new_instance_type_id': 6,
+        'migration_type': 'resize',
+        'hidden': False,
+        'memory_total': 456789,
+        'memory_processed': 56789,
+        'memory_remaining': 45000,
+        'disk_total': 96789,
+        'disk_processed': 6789,
+        'disk_remaining': 96000,
+        'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+        'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+        'deleted_at': None,
+        'deleted': False
+    },
+    # non in-progress resize
+    {
+        'id': 5,
+        'source_node': 'node10',
+        'dest_node': 'node20',
+        'source_compute': 'compute10',
+        'dest_compute': 'compute20',
+        'dest_host': '5.6.7.8',
+        'status': 'error',
+        'instance_uuid': uuids.instance2,
         'old_instance_type_id': 5,
         'new_instance_type_id': 6,
         'migration_type': 'resize',
@@ -94,23 +148,26 @@ class FakeRequest(object):
 class MigrationsTestCaseV21(test.NoDBTestCase):
     migrations = migrations_v21
 
+    def _migrations_output(self):
+        return self.controller._output(self.req, migrations_obj)
+
     def setUp(self):
         """Run before each test."""
         super(MigrationsTestCaseV21, self).setUp()
         self.controller = self.migrations.MigrationsController()
-        self.req = FakeRequest()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.context = self.req.environ['nova.context']
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
 
     def test_index(self):
-        migrations_in_progress = {
-            'migrations': self.migrations.output(migrations_obj)}
+        migrations_in_progress = {'migrations': self._migrations_output()}
 
         for mig in migrations_in_progress['migrations']:
             self.assertIn('id', mig)
             self.assertNotIn('deleted', mig)
             self.assertNotIn('deleted_at', mig)
+            self.assertNotIn('links', mig)
 
         filters = {'host': 'host1', 'status': 'migrating',
                    'cell_name': 'ChildCell'}
@@ -129,9 +186,11 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
 class MigrationsTestCaseV2(MigrationsTestCaseV21):
     migrations = migrations_v2
 
+    def _migrations_output(self):
+        return self.migrations.output(migrations_obj)
+
     def setUp(self):
         super(MigrationsTestCaseV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.context = self.req.environ['nova.context']
 
     def test_index_needs_authorization(self):
@@ -144,6 +203,40 @@ class MigrationsTestCaseV2(MigrationsTestCaseV21):
 
         self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
                           self.req)
+
+
+class MigrationsTestCaseV223(MigrationsTestCaseV21):
+    wsgi_api_version = '2.23'
+
+    def setUp(self):
+        """Run before each test."""
+        super(MigrationsTestCaseV223, self).setUp()
+        self.req = fakes.HTTPRequest.blank(
+            '', version=self.wsgi_api_version, use_admin_context=True)
+
+    def test_index(self):
+        migrations = {'migrations': self.controller._output(
+                                        self.req, migrations_obj, True)}
+
+        for i, mig in enumerate(migrations['migrations']):
+            # first item is in-progress live migration
+            if i == 0:
+                self.assertIn('links', mig)
+            else:
+                self.assertNotIn('links', mig)
+
+            self.assertIn('migration_type', mig)
+            self.assertIn('id', mig)
+            self.assertNotIn('deleted', mig)
+            self.assertNotIn('deleted_at', mig)
+
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations') as m_get:
+            m_get.return_value = migrations_obj
+            response = self.controller.index(self.req)
+            self.assertEqual(migrations, response)
+            self.assertIn('links', response['migrations'][0])
+            self.assertIn('migration_type', response['migrations'][0])
 
 
 class MigrationsPolicyEnforcement(test.NoDBTestCase):
@@ -161,3 +254,11 @@ class MigrationsPolicyEnforcement(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class MigrationsPolicyEnforcementV223(MigrationsPolicyEnforcement):
+    wsgi_api_version = '2.23'
+
+    def setUp(self):
+        super(MigrationsPolicyEnforcementV223, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
