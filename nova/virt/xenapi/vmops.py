@@ -2292,6 +2292,13 @@ class VMOps(object):
         """unpack xapi specific parameters, and call a live migrate command."""
         destination_sr_ref = migrate_data.destination_sr_ref
         migrate_send_data = migrate_data.migrate_send_data
+        # NOTE(coreywright): though a nullable object field, migrate_send_data
+        # is required for XenAPI live migration commands
+        if not migrate_send_data:
+            raise exception.InvalidParameterValue(
+                'XenAPI requires destination migration data')
+        # NOTE(coreywright): convert to xmlrpc marshallable type
+        migrate_send_data = dict(migrate_send_data)
 
         vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
 
