@@ -29,7 +29,7 @@ class ExactRamFilter(filters.BaseHostFilter):
         if requested_ram != host_state.free_ram_mb:
             LOG.debug("%(host_state)s does not have exactly "
                       "%(requested_ram)s MB usable RAM, it has "
-                      "%(usable_ram)s.",
+                      "%(usable_ram)s MB.",
                       {'host_state': host_state,
                        'requested_ram': requested_ram,
                        'usable_ram': host_state.free_ram_mb})
