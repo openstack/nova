@@ -14,14 +14,18 @@
 from oslo_db.sqlalchemy import models
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Index
 from sqlalchemy import Integer
+from sqlalchemy import orm
 from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
+
+from nova.db.sqlalchemy import types
 
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
@@ -134,3 +138,36 @@ class FlavorProjects(API_BASE):
     id = Column(Integer, primary_key=True)
     flavor_id = Column(Integer, ForeignKey('flavors.id'), nullable=False)
     project_id = Column(String(255), nullable=False)
+
+
+class BuildRequest(API_BASE):
+    """Represents the information passed to the scheduler."""
+
+    __tablename__ = 'build_requests'
+    __table_args__ = (
+        Index('build_requests_project_id_idx', 'project_id'),
+        schema.UniqueConstraint('request_spec_id',
+            name='uniq_build_requests0request_spec_id')
+        )
+
+    id = Column(Integer, primary_key=True)
+    request_spec_id = Column(Integer, ForeignKey('request_specs.id'),
+            nullable=False)
+    request_spec = orm.relationship(RequestSpec,
+            foreign_keys=request_spec_id,
+            primaryjoin=request_spec_id == RequestSpec.id)
+    project_id = Column(String(255), nullable=False)
+    user_id = Column(String(255), nullable=False)
+    display_name = Column(String(255))
+    instance_metadata = Column(Text)
+    progress = Column(Integer)
+    vm_state = Column(String(255))
+    task_state = Column(String(255))
+    image_ref = Column(String(255))
+    access_ip_v4 = Column(types.IPAddress())
+    access_ip_v6 = Column(types.IPAddress())
+    info_cache = Column(Text)
+    security_groups = Column(Text, nullable=False)
+    config_drive = Column(Boolean, default=False, nullable=False)
+    key_name = Column(String(255))
+    locked_by = Column(Enum('owner', 'admin'))
