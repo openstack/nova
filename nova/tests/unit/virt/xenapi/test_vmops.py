@@ -1212,6 +1212,54 @@ class XenstoreCallsTestCase(VMOpsTestBase):
                                                ignore_missing_path='False')
 
 
+class LiveMigrateTestCase(VMOpsTestBase):
+
+    @mock.patch.object(vmops.VMOps, '_ensure_host_in_aggregate')
+    def _test_check_can_live_migrate_destination_shared_storage(
+                                                self,
+                                                shared,
+                                                mock_ensure_host):
+        fake_instance = {"name": "fake_instance", "host": "fake_host"}
+        block_migration = None
+        disk_over_commit = False
+        ctxt = 'ctxt'
+
+        with mock.patch.object(self._session, 'get_rec') as fake_sr_rec:
+            fake_sr_rec.return_value = {'shared': shared}
+            migrate_data_ret = self.vmops.check_can_live_migrate_destination(
+                ctxt, fake_instance, block_migration, disk_over_commit)
+
+        if shared:
+            self.assertFalse(migrate_data_ret.block_migration)
+        else:
+            self.assertTrue(migrate_data_ret.block_migration)
+
+    def test_check_can_live_migrate_destination_shared_storage(self):
+        self._test_check_can_live_migrate_destination_shared_storage(True)
+
+    def test_check_can_live_migrate_destination_shared_storage_false(self):
+        self._test_check_can_live_migrate_destination_shared_storage(False)
+
+    @mock.patch.object(vmops.VMOps, '_ensure_host_in_aggregate',
+                       side_effect=exception.MigrationPreCheckError(reason=""))
+    def test_check_can_live_migrate_destination_block_migration(
+                                                self,
+                                                mock_ensure_host):
+        fake_instance = {"name": "fake_instance", "host": "fake_host"}
+        block_migration = None
+        disk_over_commit = False
+        ctxt = 'ctxt'
+
+        migrate_data_ret = self.vmops.check_can_live_migrate_destination(
+            ctxt, fake_instance, block_migration, disk_over_commit)
+
+        self.assertTrue(migrate_data_ret.block_migration)
+        self.assertEqual(vm_utils.safe_find_sr(self._session),
+                         migrate_data_ret.destination_sr_ref)
+        self.assertEqual({'value': 'fake_migrate_data'},
+                         migrate_data_ret.migrate_send_data)
+
+
 class LiveMigrateFakeVersionTestCase(VMOpsTestBase):
     @mock.patch.object(vmops.VMOps, '_pv_device_reported')
     @mock.patch.object(vmops.VMOps, '_pv_driver_version_reported')
