@@ -204,6 +204,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
             self._bdms_from_legacy(pre_result)
         LOG.debug('Converted object: %s' % self)
 
+    def is_on_shared_storage(self):
+        return self.is_shared_block_storage or self.is_shared_instance_path
+
 
 @obj_base.NovaObjectRegistry.register
 class XenapiLiveMigrateData(LiveMigrateData):

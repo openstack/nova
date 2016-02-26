@@ -6296,7 +6296,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          "image_type": 'default',
                          "block_migration": False,
                          "disk_over_commit": False,
-                         "disk_available_mb": None,
+                         "disk_available_mb": 409600,
                          "is_volume_backed": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
@@ -6312,7 +6312,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         instance_ref.vcpu_model.model = None
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'cpu_info': 'asdf'}
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
         result = drvr.check_can_live_migrate_destination(
             self.context, instance_ref, compute_info, compute_info)
         result.is_volume_backed = False
@@ -6321,7 +6321,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            "image_type": CONF.libvirt.images_type,
                            "block_migration": False,
                            "disk_over_commit": False,
-                           "disk_available_mb": None,
+                           "disk_available_mb": 1024,
                            "is_volume_backed": False}
         self.assertDictEqual(expected_result, result.to_legacy_dict())
 
@@ -6338,7 +6338,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "features": ["sse3"],
             "model": "Opteron_G3",
             "topology": {"cores": 2, "threads": 1, "sockets": 4}
-        })}
+        }), 'disk_available_least': 1}
         filename = "file"
 
         # _check_cpu_match
@@ -6354,7 +6354,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          "image_type": 'default',
                          "block_migration": False,
                          "disk_over_commit": False,
-                         "disk_available_mb": None,
+                         "disk_available_mb": 1024,
                          "is_volume_backed": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
@@ -6364,7 +6364,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'cpu_info': 'asdf'}
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
 
         mock_cpu.side_effect = exception.InvalidCPUInfo(reason='foo')
         self.assertRaises(exception.InvalidCPUInfo,
@@ -6616,29 +6616,77 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 'get_instance_disk_info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_is_shared_block_storage', return_value=False)
+                '_is_shared_block_storage')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_check_shared_storage_test_file', return_value=False)
-    def test_check_can_live_migrate_source_block_migration_with_bdm_success(
-            self, mock_check, mock_shared_block, mock_get_bdi,
-            mock_booted_from_volume, mock_has_local, mock_enough,
-            mock_min_version):
+                '_check_shared_storage_test_file')
+    def _test_check_can_live_migrate_source_block_migration_none(
+            self, block_migrate, is_shared_instance_path, is_share_block,
+            mock_check, mock_shared_block, mock_get_bdi,
+            mock_booted_from_volume, mock_has_local, mock_enough, mock_verson):
 
-        bdi = {'block_device_mapping': ['bdm']}
+        mock_check.return_value = is_shared_instance_path
+        mock_shared_block.return_value = is_share_block
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        migrate_data = objects.LibvirtLiveMigrateData(
-            disk_over_commit=False,
+        dest_check_data = objects.LibvirtLiveMigrateData(
             filename='file',
-            disk_available_mb=100,
             image_type='default',
-            block_migration=True)
+            disk_over_commit=False,
+            disk_available_mb=100)
+        dest_check_data_ret = drvr.check_can_live_migrate_source(
+                          self.context, instance, dest_check_data)
+        self.assertEqual(block_migrate, dest_check_data_ret.block_migration)
 
-        return_value = drvr.check_can_live_migrate_source(
-            self.context, instance, migrate_data, block_device_info=bdi)
+    def test_check_can_live_migrate_source_block_migration_none_shared1(self):
+        self._test_check_can_live_migrate_source_block_migration_none(
+            False,
+            True,
+            False)
 
-        self.assertEqual(migrate_data, return_value)
+    def test_check_can_live_migrate_source_block_migration_none_shared2(self):
+        self._test_check_can_live_migrate_source_block_migration_none(
+            False,
+            False,
+            True)
+
+    def test_check_can_live_migrate_source_block_migration_none_no_share(self):
+        self._test_check_can_live_migrate_source_block_migration_none(
+            True,
+            False,
+            False)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_assert_dest_node_has_enough_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_assert_dest_node_has_enough_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_has_local_disk')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_booted_from_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                'get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_is_shared_block_storage')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_check_shared_storage_test_file')
+    def test_check_can_live_migration_source_disk_over_commit_none(self,
+            mock_check, mock_shared_block, mock_get_bdi,
+            mock_booted_from_volume, mock_has_local,
+            mock_enough, mock_disk_check):
+
+        mock_check.return_value = False
+        mock_shared_block.return_value = False
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            filename='file',
+            image_type='default',
+            disk_available_mb=100)
+
+        drvr.check_can_live_migrate_source(
+            self.context, instance, dest_check_data)
+
+        self.assertFalse(mock_disk_check.called)
 
     def _is_shared_block_storage_test_create_mocks(self, disks):
         # Test data
