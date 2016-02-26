@@ -13,7 +13,7 @@
             "disabled_reason": null,
             "report_count": 1,
             "forced_down": false,
-            "version": 8
+            "version": %(current_service_version)s
         }
     },
     "event_type": "service.update",
