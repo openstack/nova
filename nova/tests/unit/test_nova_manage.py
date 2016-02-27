@@ -383,6 +383,10 @@ class DBCommandsTestCase(test.NoDBTestCase):
     def test_archive_deleted_rows_negative(self):
         self.assertEqual(1, self.commands.archive_deleted_rows(-1))
 
+    def test_archive_deleted_rows_large_number(self):
+        large_number = '1' * 100
+        self.assertEqual(1, self.commands.archive_deleted_rows(large_number))
+
     @mock.patch.object(db, 'archive_deleted_rows',
                        return_value=dict(instances=10, consoles=5))
     def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
