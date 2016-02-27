@@ -50,21 +50,24 @@ glance_opts = [
                default='$my_ip',
                # TODO(sdague): remove in N
                deprecated_for_removal=True,
-               help='Glance server hostname or IP address'),
+               help='DEPRECATED: Glance server hostname or IP address. '
+                    'Use the "api_servers" option instead.'),
     cfg.IntOpt('port',
                default=9292,
                min=1,
                max=65535,
                # TODO(sdague): remove in N
                deprecated_for_removal=True,
-               help='Glance server port'),
+               help='DEPRECATED: Glance server port. Use the "api_servers" '
+                    'option instead.'),
     cfg.StrOpt('protocol',
                 default='http',
                 choices=('http', 'https'),
                 # TODO(sdague): remove in N
                 deprecated_for_removal=True,
-                help='Protocol to use when connecting to glance. '
-                     'Set to https for SSL.'),
+                help='DEPRECATED: Protocol to use when connecting to glance. '
+                     'Set to https for SSL. Use the "api_servers" option '
+                     'instead.'),
     cfg.ListOpt('api_servers',
                 help='''
 A list of the glance api servers endpoints available to nova. These
