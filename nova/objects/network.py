@@ -31,7 +31,9 @@ network_opts = [
                      'share the same dhcp address. The same IP address used '
                      'for DHCP will be added on each nova-network node which '
                      'is only visible to the vms on the same host.'),
+    # NOTE(mriedem): Remove network_device_mtu in Newton.
     cfg.IntOpt('network_device_mtu',
+               deprecated_for_removal=True,
                help='DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE '
                     'NETWORK. MTU setting for network interface.'),
 ]
