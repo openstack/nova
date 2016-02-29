@@ -207,7 +207,7 @@ user documentation.
   live-migration.
 
 2.24
----
+----
 
   A new API call to cancel a running live migration::
 
