@@ -68,6 +68,10 @@ class InstanceMapping(API_BASE):
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
             nullable=True)
     project_id = Column(String(255), nullable=False)
+    cell_mapping = orm.relationship('CellMapping',
+            backref=backref('instance_mapping', uselist=False),
+            foreign_keys=cell_id,
+            primaryjoin=('InstanceMapping.cell_id == CellMapping.id'))
 
 
 class HostMapping(API_BASE):
