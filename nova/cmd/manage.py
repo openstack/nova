@@ -991,12 +991,12 @@ class DbCommands(object):
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
 
-    def _run_migration(self, max_count):
+    def _run_migration(self, ctxt, max_count):
         ran = 0
         for migration_meth in self.online_migrations:
             count = max_count - ran
             try:
-                found, done = migration_meth(count)
+                found, done = migration_meth(ctxt, count)
             except Exception:
                 print(_("Error attempting to run %(method)s") % dict(
                       method=migration_meth))
@@ -1016,6 +1016,7 @@ class DbCommands(object):
     @args('--max-count', metavar='<number>', dest='max_count',
           help='Maximum number of objects to consider')
     def online_data_migrations(self, max_count=None):
+        ctxt = context.get_admin_context()
         if max_count is not None:
             max_count = int(max_count)
             unlimited = False
@@ -1029,7 +1030,7 @@ class DbCommands(object):
 
         ran = None
         while ran is None or ran != 0:
-            ran = self._run_migration(max_count)
+            ran = self._run_migration(ctxt, max_count)
             if not unlimited:
                 break
 
