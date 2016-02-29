@@ -7002,11 +7002,46 @@ class LibvirtDriver(driver.ComputeDriver):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         disk_over_committed_size = 0
-        for guest in self._host.list_guests():
+        instance_domains = self._host.list_instance_domains()
+        if not instance_domains:
+            return disk_over_committed_size
+
+        # Get all instance uuids
+        instance_uuids = [dom.UUIDString() for dom in instance_domains]
+        ctx = nova_context.get_admin_context()
+        # Get instance object list by uuid filter
+        filters = {'uuid': instance_uuids}
+        # NOTE(ankit): objects.InstanceList.get_by_filters method is
+        # getting called twice one is here and another in the
+        # _update_available_resource method of resource_tracker. Since
+        # _update_available_resource method is synchronized, there is a
+        # possibility the instances list retrieved here to calculate
+        # disk_over_committed_size would differ to the list you would get
+        # in _update_available_resource method for calculating usages based
+        # on instance utilization.
+        local_instance_list = objects.InstanceList.get_by_filters(
+            ctx, filters, use_slave=True)
+        # Convert instance list to dictionary with instace uuid as key.
+        local_instances = {inst.uuid: inst for inst in local_instance_list}
+
+        # Get bdms by instance uuids
+        bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
+            ctx, instance_uuids)
+
+        for dom in instance_domains:
             try:
+                guest = libvirt_guest.Guest(dom)
                 xml = guest.get_xml_desc()
 
-                disk_infos = self._get_instance_disk_info(guest.name, xml)
+                block_device_info = None
+                if guest.uuid in local_instances:
+                    # Get block device info for instance
+                    block_device_info = driver.get_block_device_info(
+                        local_instances[guest.uuid], bdms[guest.uuid])
+
+                disk_infos = self._get_instance_disk_info(guest.name, xml,
+                                 block_device_info=block_device_info)
+
                 for info in disk_infos:
                     disk_over_committed_size += int(
                         info['over_committed_disk_size'])

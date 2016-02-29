@@ -10725,11 +10725,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._undefine_domain(instance)
 
     @mock.patch.object(host.Host, "list_instance_domains")
-    def test_disk_over_committed_size_total(self, mock_list):
+    @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
+    @mock.patch.object(objects.InstanceList, "get_by_filters")
+    def test_disk_over_committed_size_total(self, mock_get, mock_bdms,
+                                            mock_list):
         # Ensure destroy calls managedSaveRemove for saved instance.
         class DiagFakeDomain(object):
             def __init__(self, name):
                 self._name = name
+                self._uuid = str(uuid.uuid4())
 
             def ID(self):
                 return 1
@@ -10738,14 +10742,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return self._name
 
             def UUIDString(self):
-                return "19479fee-07a5-49bb-9138-d3738280d63c"
+                return self._uuid
 
             def XMLDesc(self, flags):
                 return "<domain/>"
 
-        mock_list.return_value = [
+        instance_domains = [
             DiagFakeDomain("instance0000001"),
             DiagFakeDomain("instance0000002")]
+        mock_list.return_value = instance_domains
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -10765,21 +10770,39 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def get_info(instance_name, xml, **kwargs):
             return fake_disks.get(instance_name)
 
+        instance_uuids = [dom.UUIDString() for dom in instance_domains]
+        instances = [objects.Instance(
+            uuid=instance_uuids[0],
+            root_device_name='/dev/vda'),
+            objects.Instance(
+            uuid=instance_uuids[1],
+            root_device_name='/dev/vdb')
+        ]
+        mock_get.return_value = instances
+
         with mock.patch.object(drvr,
                                "_get_instance_disk_info") as mock_info:
             mock_info.side_effect = get_info
 
             result = drvr._get_disk_over_committed_size_total()
             self.assertEqual(result, 10653532160)
-            mock_list.assert_called_with(only_guests=True, only_running=True)
-            self.assertTrue(mock_info.called)
+            mock_list.assert_called_once_with()
+            self.assertEqual(2, mock_info.call_count)
+
+        filters = {'uuid': instance_uuids}
+        mock_get.assert_called_once_with(mock.ANY, filters, use_slave=True)
+        mock_bdms.assert_called_with(mock.ANY, instance_uuids)
 
     @mock.patch.object(host.Host, "list_instance_domains")
-    def test_disk_over_committed_size_total_eperm(self, mock_list):
+    @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
+    @mock.patch.object(objects.InstanceList, "get_by_filters")
+    def test_disk_over_committed_size_total_eperm(self, mock_get, mock_bdms,
+                                                  mock_list):
         # Ensure destroy calls managedSaveRemove for saved instance.
         class DiagFakeDomain(object):
             def __init__(self, name):
                 self._name = name
+                self._uuid = str(uuid.uuid4())
 
             def ID(self):
                 return 1
@@ -10788,14 +10811,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return self._name
 
             def UUIDString(self):
-                return "19479fee-07a5-49bb-9138-d3738280d63c"
+                return self._uuid
 
             def XMLDesc(self, flags):
                 return "<domain/>"
 
-        mock_list.return_value = [
+        instance_domains = [
             DiagFakeDomain("instance0000001"),
             DiagFakeDomain("instance0000002")]
+        mock_list.return_value = instance_domains
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -10812,24 +10836,46 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'disk_size': '10737418240',
                         'over_committed_disk_size': '21474836480'}]}
 
-        def side_effect(name, dom):
+        def side_effect(name, dom, block_device_info):
             if name == 'instance0000001':
+                self.assertEqual('/dev/vda',
+                                 block_device_info['root_device_name'])
                 raise OSError(errno.EACCES, 'Permission denied')
             if name == 'instance0000002':
+                self.assertEqual('/dev/vdb',
+                                 block_device_info['root_device_name'])
                 return fake_disks.get(name)
         get_disk_info = mock.Mock()
         get_disk_info.side_effect = side_effect
         drvr._get_instance_disk_info = get_disk_info
 
+        instance_uuids = [dom.UUIDString() for dom in instance_domains]
+        instances = [objects.Instance(
+            uuid=instance_uuids[0],
+            root_device_name='/dev/vda'),
+            objects.Instance(
+            uuid=instance_uuids[1],
+            root_device_name='/dev/vdb')
+        ]
+        mock_get.return_value = instances
+
         result = drvr._get_disk_over_committed_size_total()
         self.assertEqual(21474836480, result)
-        mock_list.assert_called_with(only_guests=True, only_running=True)
+        mock_list.assert_called_once_with()
+        self.assertEqual(2, get_disk_info.call_count)
+        filters = {'uuid': instance_uuids}
+        mock_get.assert_called_once_with(mock.ANY, filters, use_slave=True)
+        mock_bdms.assert_called_with(mock.ANY, instance_uuids)
 
     @mock.patch.object(host.Host, "list_instance_domains",
                        return_value=[mock.MagicMock(name='foo')])
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_instance_disk_info",
                        side_effect=exception.VolumeBDMPathNotFound(path='bar'))
+    @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
+    @mock.patch.object(objects.InstanceList, "get_by_filters")
     def test_disk_over_committed_size_total_bdm_not_found(self,
+                                                          mock_get,
+                                                          mock_bdms,
                                                           mock_get_disk_info,
                                                           mock_list_domains):
         # Tests that we handle VolumeBDMPathNotFound gracefully.
