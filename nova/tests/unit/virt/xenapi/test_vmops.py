@@ -17,6 +17,11 @@ from eventlet import greenthread
 import mock
 import uuid
 
+try:
+    import xmlrpclib
+except ImportError:
+    import six.moves.xmlrpc_client as xmlrpclib
+
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import context
@@ -1355,6 +1360,33 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
             mock_connect.assert_called_once_with("c_info")
             mock_session.assert_called_once_with("SR.get_by_uuid",
                                                  "sr_uuid")
+
+    def _call_live_migrate_command_with_migrate_send_data(self,
+                                                          migrate_send_data):
+        command_name = 'test_command'
+        vm_ref = None
+        dest_check_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref=None,
+            migrate_send_data=migrate_send_data)
+
+        def side_effect(method, *args):
+            xmlrpclib.dumps(args, method, allow_none=1)
+
+        with mock.patch.object(self.vmops,
+                               "_generate_vdi_map") as mock_gen_vdi_map, \
+                mock.patch.object(self.vmops._session,
+                                  'call_xenapi') as mock_call_xenapi:
+            mock_gen_vdi_map.return_value = {}
+            mock_call_xenapi.side_effect = side_effect
+            self.vmops._call_live_migrate_command(command_name,
+                                                  vm_ref, dest_check_data)
+
+    def test_call_live_migrate_command_with_migrate_send_data_dict(self):
+        self._call_live_migrate_command_with_migrate_send_data({'foo': 'bar'})
+
+    def test_call_live_migrate_command_with_migrate_send_data_null(self):
+        self.assertRaises(exception.InvalidParameterValue,
+                self._call_live_migrate_command_with_migrate_send_data, None)
 
 
 class RollbackLiveMigrateDestinationTestCase(VMOpsTestBase):

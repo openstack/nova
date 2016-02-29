@@ -3467,7 +3467,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                            'is_volume_backed': False,
                            'migrate_data': {
                             'destination_sr_ref': None,
-                            'migrate_send_data': None
+                            'migrate_send_data': {'key': 'value'}
                            }}
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
@@ -3494,7 +3494,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             block_migration=True,
             is_volume_backed=True,
             destination_sr_ref=None,
-            migrate_send_data=None)
+            migrate_send_data={'key': 'value'})
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
                                                          dest_check_data)
@@ -3533,7 +3533,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                            'is_volume_backed': True,
                            'migrate_data': {
                             'destination_sr_ref': None,
-                            'migrate_send_data': None
+                            'migrate_send_data': {'key': 'value'}
                            }}
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_source,
