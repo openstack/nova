@@ -16,6 +16,7 @@ import os
 
 from oslo_serialization import jsonutils
 
+from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
@@ -85,6 +86,8 @@ class NotificationSampleTestBase(test.TestCase):
 
         with open(self._get_notification_sample(sample_file_name)) as sample:
             sample_data = sample.read()
+            sample_data = sample_data % {
+                "current_service_version": service_obj.SERVICE_VERSION}
 
         sample_obj = jsonutils.loads(sample_data)
         self._apply_replacements(replacements, sample_obj)
