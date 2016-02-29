@@ -34,7 +34,7 @@
         },
         {
             "alias": "OS-EXT-IPS",
-            "description": "",
+            "description": "Adds type parameter to the ip list.",
             "links": [],
             "name": "ExtendedIps",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -42,7 +42,7 @@
         },
         {
             "alias": "OS-EXT-IPS-MAC",
-            "description": "",
+            "description": "Adds mac address parameter to the ip list.",
             "links": [],
             "name": "ExtendedIpsMac",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -58,7 +58,7 @@
         },
         {
             "alias": "OS-EXT-STS",
-            "description": "",
+            "description": "Extended Status support.",
             "links": [],
             "name": "ExtendedStatus",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -66,7 +66,7 @@
         },
         {
             "alias": "OS-EXT-VIF-NET",
-            "description": "",
+            "description": "Adds network id parameter to the virtual interface list.",
             "links": [],
             "name": "ExtendedVIFNet",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -74,7 +74,7 @@
         },
         {
             "alias": "OS-FLV-DISABLED",
-            "description": "",
+            "description": "Support to show the disabled status of a flavor.",
             "links": [],
             "name": "FlavorDisabled",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -82,7 +82,7 @@
         },
         {
             "alias": "OS-FLV-EXT-DATA",
-            "description": "",
+            "description": "Provide additional data for flavors.",
             "links": [],
             "name": "FlavorExtraData",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -170,7 +170,7 @@
         },
         {
             "alias": "os-baremetal-ext-status",
-            "description": "",
+            "description": "Add extended status in Baremetal Nodes v2 API.",
             "links": [],
             "name": "BareMetalExtStatus",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -194,7 +194,7 @@
         },
         {
             "alias": "os-block-device-mapping-v2-boot",
-            "description": "",
+            "description": "Allow boot with the new BDM data format.",
             "links": [],
             "name": "BlockDeviceMappingV2Boot",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -202,7 +202,7 @@
         },
         {
             "alias": "os-cell-capacities",
-            "description": "",
+            "description": "Adding functionality to get cell capacities.",
             "links": [],
             "name": "CellCapacities",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -234,7 +234,7 @@
         },
         {
             "alias": "os-cloudpipe-update",
-            "description": "",
+            "description": "Adds the ability to set the vpn ip/port for cloudpipe instances.",
             "links": [],
             "name": "CloudpipeUpdate",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -282,7 +282,7 @@
         },
         {
             "alias": "os-create-server-ext",
-            "description": "",
+            "description": "Extended support to the Create Server v1.1 API.",
             "links": [],
             "name": "Createserverext",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -306,7 +306,7 @@
         },
         {
             "alias": "os-extended-evacuate-find-host",
-            "description": "",
+            "description": "Enables server evacuation without target host. Scheduler will select one to target.",
             "links": [],
             "name": "ExtendedEvacuateFindHost",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -314,7 +314,7 @@
         },
         {
             "alias": "os-extended-floating-ips",
-            "description": "",
+            "description": "Adds optional fixed_address to the add floating IP command.",
             "links": [],
             "name": "ExtendedFloatingIps",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -322,7 +322,7 @@
         },
         {
             "alias": "os-extended-hypervisors",
-            "description": "",
+            "description": "Extended hypervisors support.",
             "links": [],
             "name": "ExtendedHypervisors",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -330,7 +330,7 @@
         },
         {
             "alias": "os-extended-networks",
-            "description": "",
+            "description": "Adds additional fields to networks.",
             "links": [],
             "name": "ExtendedNetworks",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -338,7 +338,7 @@
         },
         {
             "alias": "os-extended-quotas",
-            "description": "",
+            "description": "Adds ability for admins to delete quota and optionally force the update Quota command.",
             "links": [],
             "name": "ExtendedQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -346,7 +346,7 @@
         },
         {
             "alias": "os-extended-rescue-with-image",
-            "description": "",
+            "description": "Allow the user to specify the image to use for rescue.",
             "links": [],
             "name": "ExtendedRescueWithImage",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -354,7 +354,7 @@
         },
         {
             "alias": "os-extended-services",
-            "description": "",
+            "description": "Extended services support.",
             "links": [],
             "name": "ExtendedServices",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -362,7 +362,7 @@
         },
         {
             "alias": "os-extended-services-delete",
-            "description": "",
+            "description": "Extended services deletion support.",
             "links": [],
             "name": "ExtendedServicesDelete",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -426,7 +426,7 @@
         },
         {
             "alias": "os-flavor-swap",
-            "description": "",
+            "description": "Support to show the swap status of a flavor.",
             "links": [],
             "name": "FlavorSwap",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -490,7 +490,7 @@
         },
         {
             "alias": "os-hypervisor-status",
-            "description": "",
+            "description": "Show hypervisor status.",
             "links": [],
             "name": "HypervisorStatus",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -658,7 +658,7 @@
         },
         {
             "alias": "os-server-group-quotas",
-            "description": "",
+            "description": "Adds quota support to server groups.",
             "links": [],
             "name": "ServerGroupQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -674,7 +674,7 @@
         },
         {
             "alias": "os-server-list-multi-status",
-            "description": "",
+            "description": "Allow to filter the servers by a set of status values.",
             "links": [],
             "name": "ServerListMultiStatus",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -690,7 +690,7 @@
         },
         {
             "alias": "os-server-sort-keys",
-            "description": "",
+            "description": "Add sorting support in get Server v2 API.",
             "links": [],
             "name": "ServerSortKeys",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -698,7 +698,7 @@
         },
         {
             "alias": "os-server-start-stop",
-            "description": "",
+            "description": "Start/Stop instance compute API support.",
             "links": [],
             "name": "ServerStartStop",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -754,7 +754,7 @@
         },
         {
             "alias": "os-used-limits-for-admin",
-            "description": "",
+            "description": "Provide data to admin on limited resources used by other tenants.",
             "links": [],
             "name": "UsedLimitsForAdmin",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -770,7 +770,7 @@
         },
         {
             "alias": "os-user-quotas",
-            "description": "",
+            "description": "Project user quota support.",
             "links": [],
             "name": "UserQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -786,7 +786,7 @@
         },
         {
             "alias": "os-volume-attachment-update",
-            "description": "",
+            "description": "Support for updating a volume attachment.",
             "links": [],
             "name": "VolumeAttachmentUpdate",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",

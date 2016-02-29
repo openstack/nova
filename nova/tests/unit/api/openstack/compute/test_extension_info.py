@@ -158,23 +158,32 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
         del expected_output['images']
         del expected_output['servers']
         expected_output['os-cell-capacities'] = fake_extension(
-            'CellCapacities', 'os-cell-capacities', '', -1)
+            'CellCapacities', 'os-cell-capacities', 'Adding functionality'
+            ' to get cell capacities.', -1)
         expected_output['os-server-sort-keys'] = fake_extension(
-            'ServerSortKeys', 'os-server-sort-keys', '', -1)
+            'ServerSortKeys', 'os-server-sort-keys', 'Add sorting'
+            ' support in get Server v2 API.', -1)
         expected_output['os-user-quotas'] = fake_extension(
-            'UserQuotas', 'os-user-quotas', '', -1)
+            'UserQuotas', 'os-user-quotas', 'Project user quota support.', -1)
         expected_output['os-extended-quotas'] = fake_extension(
-            'ExtendedQuotas', 'os-extended-quotas', '', -1)
+            'ExtendedQuotas', 'os-extended-quotas', 'Adds ability for'
+            ' admins to delete quota and optionally force the update'
+            ' Quota command.', -1)
         expected_output['os-create-server-ext'] = fake_extension(
-            'Createserverext', 'os-create-server-ext', '', -1)
+            'Createserverext', 'os-create-server-ext', 'Extended support to'
+            ' the Create Server v1.1 API.', -1)
         expected_output['OS-EXT-IPS'] = fake_extension(
-            'ExtendedIps', 'OS-EXT-IPS', '', -1)
+            'ExtendedIps', 'OS-EXT-IPS', 'Adds type parameter to the'
+            ' ip list.', -1)
         expected_output['OS-EXT-IPS-MAC'] = fake_extension(
-            'ExtendedIpsMac', 'OS-EXT-IPS-MAC', '', -1)
+            'ExtendedIpsMac', 'OS-EXT-IPS-MAC', 'Adds mac address parameter'
+            ' to the ip list.', -1)
         expected_output['os-server-list-multi-status'] = fake_extension(
-            'ServerListMultiStatus', 'os-server-list-multi-status', '', -1)
+            'ServerListMultiStatus', 'os-server-list-multi-status',
+            'Allow to filter the servers by a set of status values.', -1)
         expected_output['os-server-start-stop'] = fake_extension(
-            'ServerStartStop', 'os-server-start-stop', '', -1)
+            'ServerStartStop', 'os-server-start-stop', 'Start/Stop instance'
+            ' compute API support.', -1)
 
         # NOTE(sdague): filter the extension list by only ones that
         # are the fake alias names, otherwise we get errors as we
