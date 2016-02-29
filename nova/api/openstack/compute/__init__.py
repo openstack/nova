@@ -161,25 +161,3 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
     @property
     def loaded_extension_info(self):
         return self._loaded_extension_info
-
-
-# NOTE(oomichi): Now v3 API tests use APIRouterV3. After moving all v3
-# API extensions to v2.1 API, we can remove this class.
-class APIRouterV3(nova.api.openstack.APIRouterV21):
-    """Routes requests on the OpenStack API to the appropriate controller
-    and method.
-    """
-    def __init__(self, init_only=None):
-        LOG.warning(_LW(
-            "Deprecated: The v3 API was deprecated. The v2.1 API replaces it "
-            "as the Nova API, please refer Nova api-paste.ini sample file for "
-            "how to configure v2.1 API."))
-        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
-        super(APIRouterV3, self).__init__(init_only, v3mode=True)
-
-    def _register_extension(self, ext):
-        return self.loaded_extension_info.register_extension(ext.obj)
-
-    @property
-    def loaded_extension_info(self):
-        return self._loaded_extension_info
