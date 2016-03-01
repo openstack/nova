@@ -1450,10 +1450,16 @@ class ResourceProvider(BASE, models.ModelBase):
         Index('resource_providers_uuid_idx', 'uuid'),
         schema.UniqueConstraint('uuid',
             name='uniq_resource_providers0uuid'),
-        )
+        Index('resource_providers_name_idx', 'name'),
+        schema.UniqueConstraint('name',
+            name='uniq_resource_providers0name')
+    )
 
     id = Column(Integer, primary_key=True, nullable=False)
     uuid = Column(String(36), nullable=False)
+    name = Column(Unicode(200), nullable=True)
+    generation = Column(Integer, default=0)
+    can_host = Column(Integer, default=0)
 
 
 class Inventory(BASE, models.ModelBase):
@@ -1465,6 +1471,10 @@ class Inventory(BASE, models.ModelBase):
               'resource_provider_id'),
         Index('inventories_resource_class_id_idx',
               'resource_class_id'),
+        Index('inventories_resource_provider_resource_class_idx',
+              'resource_provider_id', 'resource_class_id'),
+        schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
+            name='uniq_inventories0resource_provider_resource_class')
     )
 
     id = Column(Integer, primary_key=True, nullable=False)
@@ -1488,8 +1498,9 @@ class Allocation(BASE, models.ModelBase):
 
     __tablename__ = "allocations"
     __table_args__ = (
-        Index('allocations_resource_provider_class_id_idx',
-              'resource_provider_id', 'resource_class_id'),
+        Index('allocations_resource_provider_class_used_idx',
+              'resource_provider_id', 'resource_class_id',
+              'used'),
         Index('allocations_resource_class_id_idx',
               'resource_class_id'),
         Index('allocations_consumer_id_idx', 'consumer_id')
@@ -1500,3 +1511,16 @@ class Allocation(BASE, models.ModelBase):
     consumer_id = Column(String(36), nullable=False)
     resource_class_id = Column(Integer, nullable=False)
     used = Column(Integer, nullable=False)
+
+
+class ResourceProviderAggregate(BASE, models.ModelBase):
+    """Assocate a resource provider with an aggregate."""
+
+    __tablename__ = 'resource_provider_aggregates'
+    __table_args__ = (
+        Index('resource_provider_aggregates_aggregate_id_idx',
+              'aggregate_id'),
+    )
+
+    resource_provider_id = Column(Integer, primary_key=True, nullable=False)
+    aggregate_id = Column(Integer, primary_key=True, nullable=False)
