@@ -121,6 +121,7 @@ class _FakeDriverBackendTestCase(object):
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None,
                    snapshots_directory='./',
+                   sysinfo_serial='none',
                    group='libvirt')
 
         def fake_extend(image, size):
