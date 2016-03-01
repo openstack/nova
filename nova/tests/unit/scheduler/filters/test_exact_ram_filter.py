@@ -23,13 +23,17 @@ class TestRamFilter(test.NoDBTestCase):
 
     def test_exact_ram_filter_passes(self):
         filter_properties = {'instance_type': {'memory_mb': 1024}}
-        host = self._get_host({'free_ram_mb': 1024})
+        ram_mb = 1024
+        host = self._get_host({'free_ram_mb': ram_mb,
+                               'total_usable_ram_mb': ram_mb})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(host.limits.get('memory_mb'), ram_mb)
 
     def test_exact_ram_filter_fails(self):
         filter_properties = {'instance_type': {'memory_mb': 512}}
         host = self._get_host({'free_ram_mb': 1024})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
+        self.assertNotIn('memory_mb', host.limits)
 
     def _get_host(self, host_attributes):
         return fakes.FakeHostState('host1', 'node1', host_attributes)
