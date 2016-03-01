@@ -79,3 +79,13 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
                                  'live-migrate-server',
                                  {'hostname': self.compute.host})
         self.assertEqual(202, response.status_code)
+
+
+class MigrateServerSamplesJsonTestV225(MigrateServerSamplesJsonTest):
+    extension_name = "os-migrate-server"
+    microversion = '2.25'
+    scenarios = [('v2_25', {'api_major_version': 'v2.1'})]
+
+    def test_post_migrate(self):
+        # no changes for migrate-server
+        pass
