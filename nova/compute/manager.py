@@ -581,6 +581,9 @@ class InstanceEvents(object):
         return _clear_events()
 
     def cancel_all_events(self):
+        if self._events is None:
+            LOG.debug('Unexpected attempt to cancel events during shutdown.')
+            return
         our_events = self._events
         # NOTE(danms): Block new events
         self._events = None
