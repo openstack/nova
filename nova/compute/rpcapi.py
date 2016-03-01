@@ -327,6 +327,7 @@ class ComputeAPI(object):
         * ...  - Remove refresh_provider_fw_rules()
         * 4.9  - Add live_migration_force_complete()
         * 4.10  - Add live_migration_abort()
+        * 4.11 - Allow block_migration and disk_over_commit be None
     '''
 
     VERSION_ALIASES = {
@@ -435,7 +436,18 @@ class ComputeAPI(object):
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        version = '4.0'
+        version = '4.11'
+        if not self.client.can_send_version(version):
+            # NOTE(eliqiao): This is a new feature that is only available
+            # once all compute nodes support at least version 4.11.
+            # This means the new REST API that supports this needs to handle
+            # this exception correctly. This can all be removed when we bump
+            # the major version of this RPC API.
+            if block_migration is None or disk_over_commit is None:
+                raise exception.LiveMigrationWithOldNovaNotSupported()
+            else:
+                version = '4.0'
+
         cctxt = self.client.prepare(server=destination, version=version)
         result = cctxt.call(ctxt, 'check_can_live_migrate_destination',
                             instance=instance,

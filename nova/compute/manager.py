@@ -673,7 +673,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.10')
+    target = messaging.Target(version='4.11')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5050,7 +5050,9 @@ class ComputeManager(manager.Manager):
         :param context: security context
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
+                                if None, calculate it in driver
         :param disk_over_commit: if true, allow disk over commit
+                                 if None, ignore disk usage checking
         :returns: a dict containing migration info
         """
         return self._do_check_can_live_migrate_destination(ctxt, instance,

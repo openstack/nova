@@ -1857,6 +1857,11 @@ class LiveMigrationWithOldNovaNotSafe(NovaException):
                 "Upgrade Nova on %(server)s and try again.")
 
 
+class LiveMigrationWithOldNovaNotSupported(NovaException):
+    msg_fmt = _("Live migration with API v2.25 requires all the Mitaka "
+                "upgrade to be complete before it is available.")
+
+
 class LiveMigrationURINotAvailable(NovaException):
     msg_fmt = _('No live migration URI configured and no default available '
                 'for "%(virt_type)s" hypervisor virtualization type.')
