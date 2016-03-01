@@ -37,6 +37,68 @@ class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
 API_BASE = declarative_base(cls=_NovaAPIBase)
 
 
+class AggregateHost(API_BASE):
+    """Represents a host that is member of an aggregate."""
+    __tablename__ = 'aggregate_hosts'
+    __table_args__ = (schema.UniqueConstraint(
+        "host", "aggregate_id",
+         name="uniq_aggregate_hosts0host0aggregate_id"
+        ),
+    )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    host = Column(String(255))
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+
+
+class AggregateMetadata(API_BASE):
+    """Represents a metadata key/value pair for an aggregate."""
+    __tablename__ = 'aggregate_metadata'
+    __table_args__ = (
+        schema.UniqueConstraint("aggregate_id", "key",
+            name="uniq_aggregate_metadata0aggregate_id0key"
+            ),
+        Index('aggregate_metadata_key_idx', 'key'),
+    )
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=False)
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+
+
+class Aggregate(API_BASE):
+    """Represents a cluster of hosts that exists in this zone."""
+    __tablename__ = 'aggregates'
+    __table_args__ = (Index('aggregate_uuid_idx', 'uuid'),
+                      schema.UniqueConstraint(
+                      "name", name="uniq_aggregate0name")
+        )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36))
+    name = Column(String(255))
+    _hosts = orm.relationship(AggregateHost,
+                    primaryjoin='Aggregate.id == AggregateHost.aggregate_id')
+    _metadata = orm.relationship(AggregateMetadata,
+                primaryjoin='Aggregate.id == AggregateMetadata.aggregate_id')
+
+    @property
+    def _extra_keys(self):
+        return ['hosts', 'metadetails', 'availability_zone']
+
+    @property
+    def hosts(self):
+        return [h.host for h in self._hosts]
+
+    @property
+    def metadetails(self):
+        return {m.key: m.value for m in self._metadata}
+
+    @property
+    def availability_zone(self):
+        if 'availability_zone' not in self.metadetails:
+            return None
+        return self.metadetails['availability_zone']
+
+
 class CellMapping(API_BASE):
     """Contains information on communicating with a cell"""
     __tablename__ = 'cell_mappings'
