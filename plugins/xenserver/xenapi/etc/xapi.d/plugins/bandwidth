@@ -29,8 +29,16 @@ pluginlib_nova.configure_logging('bandwidth')
 
 
 def _read_proc_net():
-    devs = [l.strip() for l in open('/proc/net/dev', 'r').readlines()]
-    # Ignore headers
+    f = open('/proc/net/dev', 'r')
+    try:
+        return f.readlines()
+    finally:
+        f.close()
+
+
+def _get_bandwitdth_from_proc():
+    devs = [l.strip() for l in _read_proc_net()]
+    # ignore headers
     devs = devs[2:]
     dlist = [d.split(':', 1) for d in devs if d.startswith('vif')]
     devmap = dict()
@@ -46,7 +54,7 @@ def _read_proc_net():
 
 
 def fetch_all_bandwidth(session):
-    return _read_proc_net()
+    return _get_bandwitdth_from_proc()
 
 
 if __name__ == '__main__':
