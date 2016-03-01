@@ -5347,54 +5347,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(uuids[3], vm4.UUIDString())
         mock_list.assert_called_with(only_guests=True, only_running=False)
 
-    @mock.patch.object(host.Host, "list_instance_domains")
-    def test_get_all_block_devices(self, mock_list):
-        xml = [
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                        </disk>
-                        <disk type='block'>
-                            <source dev='/path/to/dev/1'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                        </disk>
-                        <disk type='block'>
-                            <source dev='/path/to/dev/3'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-        ]
-
-        mock_list.return_value = [
-            FakeVirtDomain(xml[0], id=3, name="instance00000001"),
-            FakeVirtDomain(xml[1], id=1, name="instance00000002"),
-            FakeVirtDomain(xml[2], id=5, name="instance00000003")]
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        devices = drvr._get_all_block_devices()
-        self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
-        mock_list.assert_called_with(only_guests=True, only_running=True)
-
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
     def test_get_host_vcpus(self, get_online_cpus):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -15343,29 +15295,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(uuid='fake-uuid', id=1)
         self.assertTrue(drvr.instance_on_disk(instance))
-
-    def test_get_interfaces(self):
-        dom_xml = """
-              <domain type="qemu">
-                  <devices>
-                      <interface type="ethernet">
-                          <mac address="fe:eb:da:ed:ef:ac"/>
-                          <model type="virtio"/>
-                          <target dev="eth0"/>
-                      </interface>
-                      <interface type="bridge">
-                          <mac address="ca:fe:de:ad:be:ef"/>
-                          <model type="virtio"/>
-                          <target dev="br0"/>
-                      </interface>
-                  </devices>
-              </domain>"""
-
-        list_interfaces = ['eth0', 'br0']
-
-        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        self.assertEqual(list_interfaces, drv._get_interfaces(dom_xml))
 
     def test_get_disk_xml(self):
         dom_xml = """
