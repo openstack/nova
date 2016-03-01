@@ -3687,7 +3687,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
-    def _get_guest_numa_config(self, instance_numa_topology, flavor, pci_devs,
+    def _get_guest_numa_config(self, instance_numa_topology, flavor,
                                allowed_cpus=None, image_meta=None):
         """Returns the config objects for the guest NUMA specs.
 
@@ -4299,7 +4299,7 @@ class LibvirtDriver(driver.ComputeDriver):
         pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
 
         guest_numa_config = self._get_guest_numa_config(
-            instance.numa_topology, flavor, pci_devs, allowed_cpus, image_meta)
+            instance.numa_topology, flavor, allowed_cpus, image_meta)
 
         guest.cpuset = guest_numa_config.cpuset
         guest.cputune = guest_numa_config.cputune
