@@ -5980,8 +5980,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if 'graphics_listen_addr_spice' in migrate_data:
                 listen_addrs['spice'] = str(
                     migrate_data.graphics_listen_addr_spice)
-            serial_listen_addr = migrate_data.serial_listen_addr
-            if migrate_data.target_connect_addr is not None:
+            serial_listen_addr = (migrate_data.serial_listen_addr if
+                'serial_listen_addr' in migrate_data else None)
+            if ('target_connect_addr' in migrate_data and
+                    migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr
 
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
