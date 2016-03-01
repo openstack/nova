@@ -20,12 +20,12 @@ from oslo_config import cfg
 from oslo_db import options
 from oslo_log import log
 
+from nova.common import config
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import debugger
 from nova import paths
 from nova import rpc
 from nova import version
-
 
 CONF = cfg.CONF
 
@@ -57,6 +57,8 @@ def parse_args(argv, default_config_files=None, configure_db=True,
     rpc.set_defaults(control_exchange='nova')
     cache.configure(CONF)
     debugger.register_cli_opts()
+    config.set_middleware_defaults()
+
     CONF(argv[1:],
          project='nova',
          version=version.version_string(),
