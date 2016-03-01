@@ -679,6 +679,27 @@ class HostTestCase(test.NoDBTestCase):
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
+    def test_get_capabilities_no_host_cpu_model(self):
+        """Tests that cpu features are not retrieved when the host cpu model
+        is not in the capabilities.
+        """
+        fake_caps_xml = '''
+<capabilities>
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <vendor>Intel</vendor>
+    </cpu>
+  </host>
+</capabilities>'''
+        with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
+                               return_value=fake_caps_xml):
+            caps = self.host.get_capabilities()
+            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
+            self.assertIsNone(caps.host.cpu.model)
+            self.assertEqual(0, len(caps.host.cpu.features))
+
     @mock.patch.object(fakelibvirt.virConnect, "getHostname")
     def test_get_hostname_caching(self, mock_hostname):
         mock_hostname.return_value = "foo"

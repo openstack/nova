@@ -766,7 +766,10 @@ class Host(object):
             LOG.info(_LI("Libvirt host capabilities %s"), xmlstr)
             self._caps = vconfig.LibvirtConfigCaps()
             self._caps.parse_str(xmlstr)
-            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
+            # NOTE(mriedem): Don't attempt to get baseline CPU features
+            # if libvirt can't determine the host cpu model.
+            if (hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
+                and self._caps.host.cpu.model is not None):
                 try:
                     features = self.get_connection().baselineCPU(
                         [self._caps.host.cpu.to_xml()],
