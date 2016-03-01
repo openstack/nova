@@ -7869,7 +7869,8 @@ class ComputeAPITestCase(BaseTestCase):
 
             self.assertEqual(ref[0]['hostname'], hostname)
 
-    def test_instance_create_adds_to_instance_group(self):
+    @mock.patch('nova.compute.api.API._get_requested_instance_group')
+    def test_instance_create_adds_to_instance_group(self, get_group_mock):
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
 
@@ -7878,11 +7879,13 @@ class ComputeAPITestCase(BaseTestCase):
         group.project_id = self.context.project_id
         group.user_id = self.context.user_id
         group.create()
+        get_group_mock.return_value = group
 
         inst_type = flavors.get_default_flavor()
         (refs, resv_id) = self.compute_api.create(
             self.context, inst_type, self.fake_image['id'],
             scheduler_hints={'group': group.uuid})
+        self.assertEqual(len(refs), len(group.members))
 
         group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
         self.assertIn(refs[0]['uuid'], group.members)
