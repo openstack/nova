@@ -732,3 +732,21 @@ class HackingTestCase(test.NoDBTestCase):
         \"\"\")
         """
         self._assert_has_no_errors(code9, checks.cfg_help_with_enough_text)
+
+    def test_no_os_popen(self):
+        code = """
+               import os
+
+               foobar_cmd = "foobar -get -beer"
+               answer = os.popen(foobar_cmd).read()
+
+               if answer == nok":
+                   try:
+                       os.popen(os.popen('foobar -beer -please')).read()
+
+                   except ValueError:
+                       go_home()
+               """
+        errors = [(4, 0, 'N348'), (8, 8, 'N348')]
+        self._assert_has_errors(code, checks.no_os_popen,
+                                expected_errors=errors)
