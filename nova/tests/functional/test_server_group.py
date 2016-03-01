@@ -176,8 +176,6 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
         # NOTE(gibi): start a second compute host to be able to test affinity
         self.compute2 = self.start_service('compute', host='host2')
-        self.addCleanup(self.compute.kill)
-        self.addCleanup(self.compute2.kill)
         fake_network.set_stub_network_methods(self)
 
     def test_get_no_groups(self):
@@ -345,7 +343,7 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
     def test_migrate_with_anti_affinity(self):
         # Start additional host to test migration with anti-affinity
-        compute3 = self.start_service('compute', host='host3')
+        self.start_service('compute', host='host3')
 
         created_group = self.api.post_server_groups(self.anti_affinity)
         servers = self._boot_servers_to_group(created_group)
@@ -357,8 +355,6 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
         self.assertNotEqual(servers[0]['OS-EXT-SRV-ATTR:host'],
                             migrated_server['OS-EXT-SRV-ATTR:host'])
-
-        compute3.kill()
 
     def _get_compute_service_by_host_name(self, host_name):
         host = None
@@ -386,7 +382,7 @@ class ServerGroupTestV2(ServerGroupTestBase):
         time.sleep(self._service_down_time)
 
         # Start additional host to test evacuation
-        compute3 = self.start_service('compute', host='host3')
+        self.start_service('compute', host='host3')
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -395,7 +391,6 @@ class ServerGroupTestV2(ServerGroupTestBase):
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
 
-        compute3.kill()
         host.start()
 
     def test_evacuate_with_anti_affinity_no_valid_host(self):
