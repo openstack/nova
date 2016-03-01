@@ -1122,6 +1122,7 @@ object_data = {
     'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
     'FloatingIPList': '1.11-7f2ba670714e1b7bab462ab3290f7159',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
+    'HyperVLiveMigrateData': '1.0-0b868dd6228a09c3f3e47016dddf6a1c',
     'HVSpec': '1.2-db672e73304da86139086d003f3977e7',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.12-6a132dee47931447bf86c03c7006d96c',

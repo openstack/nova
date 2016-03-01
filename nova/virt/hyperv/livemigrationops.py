@@ -93,7 +93,7 @@ class LiveMigrationOps(object):
                                            block_migration=False,
                                            disk_over_commit=False):
         LOG.debug("check_can_live_migrate_destination called", instance_ref)
-        return migrate_data_obj.LiveMigrateData()
+        return migrate_data_obj.HyperVLiveMigrateData()
 
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):

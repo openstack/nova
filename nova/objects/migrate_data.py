@@ -252,3 +252,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
         if 'pre_live_migration_result' in legacy:
             self.sr_uuid_map = \
                 legacy['pre_live_migration_result']['sr_uuid_map']
+
+
+@obj_base.NovaObjectRegistry.register
+class HyperVLiveMigrateData(LiveMigrateData):
+    VERSION = '1.0'
