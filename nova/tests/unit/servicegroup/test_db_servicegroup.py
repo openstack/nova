@@ -37,6 +37,7 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         service = objects.Service(
             host='fake-host',
             topic='compute',
+            binary='nova-compute',
             created_at=now,
             updated_at=now,
             last_seen_up=now,

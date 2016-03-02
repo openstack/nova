@@ -75,9 +75,11 @@ class DbDriver(base.Driver):
         elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
         is_up = abs(elapsed) <= self.service_down_time
         if not is_up:
-            LOG.debug('Seems service is down. Last heartbeat was %(lhb)s. '
-                      'Elapsed time is %(el)s',
-                      {'lhb': str(last_heartbeat), 'el': str(elapsed)})
+            LOG.debug('Seems service %(binary)s on host %(host)s is down. '
+                      'Last heartbeat was %(lhb)s. Elapsed time is %(el)s',
+                      {'binary': service_ref.get('binary'),
+                       'host': service_ref.get('host'),
+                       'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
 
     def _report_state(self, service):

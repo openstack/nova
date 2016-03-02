@@ -92,7 +92,8 @@ def _fake_service_get_all_by_binary_nodedown(cls, context, binary):
         return objects.Service(host=host,
                                disabled=False,
                                forced_down=False,
-                               last_seen_up=last_seen)
+                               last_seen_up=last_seen,
+                               binary=binary)
 
     return [_service(*fake) for fake in FAKE_SERVICES]
 
