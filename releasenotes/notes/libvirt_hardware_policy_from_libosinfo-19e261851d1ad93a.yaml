@@ -1,0 +1,9 @@
+---
+features:
+  - For the libvirt driver, by default hardware properties will be retrieved
+    from the Glance image and if such haven't been provided, it will use
+    a libosinfo database to get those values. If users want to force a specific
+    guest OS ID for the image, they can now use a new glance image property
+    ``os_distro`` (eg. ``--property os_distro=fedora21``). In order to use
+    the libosinfo database, you need to separately install the related native
+    package provided for your operating system distribution.
