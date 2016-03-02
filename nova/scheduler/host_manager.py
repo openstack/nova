@@ -310,9 +310,13 @@ class HostState(object):
         self.num_io_ops += 1
 
     def __repr__(self):
-        return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s" %
-                (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb,
-                 self.num_io_ops, self.num_instances))
+        return ("(%(host)s, %(node)s) ram: %(free_ram)sMB "
+                "disk: %(free_disk)sMB io_ops: %(num_io_ops)s "
+                "instances: %(num_instances)s" %
+                {'host': self.host, 'node': self.nodename,
+                 'free_ram': self.free_ram_mb, 'free_disk': self.free_disk_mb,
+                 'num_io_ops': self.num_io_ops,
+                 'num_instances': self.num_instances})
 
 
 class HostManager(object):
