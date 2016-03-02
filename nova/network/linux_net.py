@@ -1599,7 +1599,13 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """
         if not device_exists(bridge):
             LOG.debug('Starting Bridge %s', bridge)
-            _execute('brctl', 'addbr', bridge, run_as_root=True)
+            out, err = _execute('brctl', 'addbr', bridge,
+                                check_exit_code=False, run_as_root=True)
+            if (err and err != "device %s already exists; can't create "
+                               "bridge with the same name\n" % (bridge)):
+                msg = _('Failed to add bridge: %s') % err
+                raise exception.NovaException(msg)
+
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
             _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
