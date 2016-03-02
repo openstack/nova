@@ -161,6 +161,8 @@ VALID_OS_TYPES = set([
     'solaris7Guest',
     'solaris8Guest',
     'solaris9Guest',
+    'suse64Guest',
+    'suseGuest',
     'turboLinux64Guest',
     'turboLinuxGuest',
     'ubuntu64Guest',
