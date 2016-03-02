@@ -863,6 +863,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             objects.MigrationContext._destroy(self._context, self.uuid)
             self.migration_context = None
 
+    def clear_numa_topology(self):
+        numa_topology = self.numa_topology
+        if numa_topology is not None:
+            self.numa_topology = numa_topology.clear_host_pinning()
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(

@@ -1227,6 +1227,20 @@ class _TestInstanceObject(object):
                           inst.migration_context.new_numa_topology)
         self.assertIs(numa_topology, inst.numa_topology)
 
+    def test_clear_numa_topology(self):
+        numa_topology = (test_instance_numa_topology.
+                            fake_obj_numa_topology.obj_clone())
+        numa_topology.cells[0].id = 42
+        numa_topology.cells[1].id = 43
+
+        inst = instance.Instance(context=self.context, uuid=uuids.instance,
+                                 numa_topology=numa_topology)
+        inst.obj_reset_changes()
+        inst.clear_numa_topology()
+        self.assertIn('numa_topology', inst.obj_what_changed())
+        self.assertEqual(-1, numa_topology.cells[0].id)
+        self.assertEqual(-1, numa_topology.cells[1].id)
+
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_load_generic(self, mock_get):
         inst2 = instance.Instance(metadata={'foo': 'bar'})
