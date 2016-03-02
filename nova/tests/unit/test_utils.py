@@ -1165,13 +1165,6 @@ class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
         self.assertNotEqual({}, properties)
 
 
-class ConstantTimeCompareTestCase(test.NoDBTestCase):
-    def test_constant_time_compare(self):
-        self.assertTrue(utils.constant_time_compare("abcd1234", "abcd1234"))
-        self.assertFalse(utils.constant_time_compare("abcd1234", "a"))
-        self.assertFalse(utils.constant_time_compare("abcd1234", "ABCD234"))
-
-
 class ResourceFilterTestCase(test.NoDBTestCase):
     def _assert_filtering(self, res_list, filts, expected_tags):
         actual_tags = utils.filter_and_format_resource_metadata('instance',

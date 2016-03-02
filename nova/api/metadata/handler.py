@@ -21,6 +21,7 @@ import os
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import secretutils as secutils
 import six
 import webob.dec
 import webob.exc
@@ -33,7 +34,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.network.neutronv2 import api as neutronapi
-from nova import utils
 from nova import wsgi
 
 CONF = cfg.CONF
@@ -290,7 +290,7 @@ class MetadataRequestHandler(wsgi.Application):
             CONF.neutron.metadata_proxy_shared_secret,
             requestor_id, hashlib.sha256).hexdigest()
 
-        if not utils.constant_time_compare(expected_signature, signature):
+        if not secutils.constant_time_compare(expected_signature, signature):
             if requestor_id:
                 LOG.warning(_LW('X-Instance-ID-Signature: %(signature)s does '
                                 'not match the expected value: '

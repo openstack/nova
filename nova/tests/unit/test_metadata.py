@@ -842,7 +842,7 @@ class MetadataHandlerTestCase(test.TestCase):
                                 headers=None)
         self.assertEqual(response.status_int, 500)
 
-    @mock.patch('nova.utils.constant_time_compare')
+    @mock.patch('oslo_utils.secretutils.constant_time_compare')
     def test_by_instance_id_uses_constant_time_compare(self, mock_compare):
         mock_compare.side_effect = test.TestingException
 
