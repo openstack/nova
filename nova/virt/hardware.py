@@ -632,6 +632,9 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
     :param host_cell: host cell to fit the instance cell onto
     :param inst_cell: instance cell we want to fit
 
+    :raises: exception.MemoryPageSizeNotSupported if custom page
+             size not supported in host cell.
+
     :returns: The page size able to be handled by host_cell
     """
     avail_pagesize = [page.size_kb for page in host_cell.mempages]
@@ -1225,8 +1228,14 @@ def numa_fit_instance_to_host(
             cells = []
             for host_cell, instance_cell in zip(
                     host_cell_perm, instance_topology.cells):
-                got_cell = _numa_fit_instance_cell(
-                    host_cell, instance_cell, limits)
+                try:
+                    got_cell = _numa_fit_instance_cell(
+                        host_cell, instance_cell, limits)
+                except exception.MemoryPageSizeNotSupported:
+                    # This exception will been raised if instance cell's
+                    # custom pagesize is not supported with host cell in
+                    # _numa_cell_supports_pagesize_request function.
+                    break
                 if got_cell is None:
                     break
                 cells.append(got_cell)

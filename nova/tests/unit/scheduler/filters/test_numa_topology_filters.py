@@ -193,3 +193,33 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 fields.CPUThreadAllocationPolicy.ISOLATE]:
             self._do_test_numa_topology_filter_cpu_policy(
                 numa_topology, cpu_policy, cpu_thread_policy, True)
+
+    def test_numa_topology_filter_pass_mempages(self):
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([3]),
+                                            memory=128, pagesize=4),
+                   objects.InstanceNUMACell(id=1, cpuset=set([1]),
+                                            memory=128, pagesize=16)
+            ])
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology)
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 16.0,
+                                    'ram_allocation_ratio': 1.5})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_numa_topology_filter_fail_mempages(self):
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([3]),
+                                            memory=128, pagesize=8),
+                   objects.InstanceNUMACell(id=1, cpuset=set([1]),
+                                            memory=128, pagesize=16)
+               ])
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology)
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None,
+                                    'cpu_allocation_ratio': 16.0,
+                                    'ram_allocation_ratio': 1.5})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
