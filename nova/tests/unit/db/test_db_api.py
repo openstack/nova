@@ -7407,12 +7407,12 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         new_stats = jsonutils.loads(node['stats'])
         self.assertEqual(self.stats, new_stats)
 
-    def test_compute_node_get_all_provider_schema(self):
+    def test_compute_node_select_schema(self):
         # We here test that compute nodes that have inventory and allocation
         # entries under the new resource-providers schema return non-None
         # values for the inv_* fields in the returned list of dicts from
-        # compute_node_get_all().
-        nodes = db.compute_node_get_all(self.ctxt)
+        # _compute_node_select().
+        nodes = sqlalchemy_api._compute_node_select(self.ctxt)
         self.assertEqual(1, len(nodes))
         node = nodes[0]
         self.assertIsNone(node['inv_memory_mb'])
@@ -7502,6 +7502,12 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(16, node['inv_vcpus'])
         self.assertEqual(2, node['inv_vcpus_used'])
 
+    def test_compute_node_exec(self):
+        results = sqlalchemy_api._compute_node_select(self.ctxt)
+        self.assertIsInstance(results, list)
+        self.assertEqual(1, len(results))
+        self.assertIsInstance(results[0], dict)
+
     def test_compute_node_get_all_deleted_compute_node(self):
         # Create a service and compute node and ensure we can find its stats;
         # delete the service and compute node when done and loop again
@@ -7576,9 +7582,11 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         node = db.compute_node_create(self.ctxt, compute_node_another_host)
 
         result = db.compute_node_get_all_by_host(self.ctxt, 'host1')
-        self._assertEqualListsOfObjects([self.item], result)
+        self._assertEqualListsOfObjects([self.item], result,
+                ignored_keys=self._ignored_temp_resource_providers_keys)
         result = db.compute_node_get_all_by_host(self.ctxt, 'host2')
-        self._assertEqualListsOfObjects([node], result)
+        self._assertEqualListsOfObjects([node], result,
+                ignored_keys=self._ignored_temp_resource_providers_keys)
 
     def test_compute_node_get_all_by_host_with_same_host(self):
         # Create another node on top of the same service
@@ -7593,8 +7601,9 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         self.ctxt, 'host1'),
                         key=lambda n: n['hypervisor_hostname'])
 
+        ignored = ['stats'] + self._ignored_temp_resource_providers_keys
         self._assertEqualListsOfObjects(expected, result,
-                                        ignored_keys=['stats'])
+                                        ignored_keys=ignored)
 
     def test_compute_node_get_all_by_host_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound,
@@ -7605,8 +7614,9 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.compute_nodes_get_by_service_id(
             self.ctxt, self.service['id'])
 
+        ignored = ['stats'] + self._ignored_temp_resource_providers_keys
         self._assertEqualListsOfObjects(expected, result,
-                                        ignored_keys=['stats'])
+                                        ignored_keys=ignored)
 
     def test_compute_nodes_get_by_service_id_multiple_results(self):
         # Create another node on top of the same service
@@ -7621,8 +7631,9 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         self.ctxt, self.service['id']),
                         key=lambda n: n['hypervisor_hostname'])
 
+        ignored = ['stats'] + self._ignored_temp_resource_providers_keys
         self._assertEqualListsOfObjects(expected, result,
-                                        ignored_keys=['stats'])
+                                        ignored_keys=ignored)
 
     def test_compute_nodes_get_by_service_id_not_found(self):
         self.assertRaises(exception.ServiceNotFound,
@@ -7641,7 +7652,10 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.compute_node_get_by_host_and_nodename(
             self.ctxt, 'host1', 'node_2')
 
-        self._assertEqualObjects(expected, result)
+        self._assertEqualObjects(expected, result,
+                    ignored_keys=self._ignored_keys +
+                                 self._ignored_temp_resource_providers_keys +
+                                 ['stats', 'service'])
 
     def test_compute_node_get_by_host_and_nodename_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound,
@@ -7652,7 +7666,9 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         compute_node_id = self.item['id']
         node = db.compute_node_get(self.ctxt, compute_node_id)
         self._assertEqualObjects(self.compute_node_dict, node,
-                        ignored_keys=self._ignored_keys + ['stats', 'service'])
+                ignored_keys=self._ignored_keys +
+                             ['stats', 'service'] +
+                             self._ignored_temp_resource_providers_keys)
         new_stats = jsonutils.loads(node['stats'])
         self.assertEqual(self.stats, new_stats)
 
@@ -7775,7 +7791,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_service_destroy_with_compute_node(self):
         db.service_destroy(self.ctxt, self.service['id'])
         self.assertRaises(exception.ComputeHostNotFound,
-                          db.compute_node_get, self.ctxt,
+                          db.compute_node_get_model, self.ctxt,
                           self.item['id'])
 
     def test_service_destroy_with_old_compute_node(self):
@@ -7790,8 +7806,33 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         db.service_destroy(self.ctxt, self.service['id'])
         self.assertRaises(exception.ComputeHostNotFound,
-                          db.compute_node_get, self.ctxt,
+                          db.compute_node_get_model, self.ctxt,
                           item_old['id'])
+
+    @mock.patch("nova.db.sqlalchemy.api.compute_node_get_model")
+    def test_dbapi_compute_node_get_model(self, mock_get_model):
+        cid = self.item["id"]
+        db.api.compute_node_get_model(self.ctxt, cid)
+        mock_get_model.assert_called_once_with(self.ctxt, cid)
+
+    @mock.patch("nova.db.sqlalchemy.api.model_query")
+    def test_compute_node_get_model(self, mock_model_query):
+
+        class FakeFiltered(object):
+            def first(self):
+                return mock.sentinel.first
+
+        fake_filtered_cn = FakeFiltered()
+
+        class FakeModelQuery(object):
+            def filter_by(self, id):
+                return fake_filtered_cn
+
+        mock_model_query.return_value = FakeModelQuery()
+        result = sqlalchemy_api.compute_node_get_model(self.ctxt,
+                                                       self.item["id"])
+        self.assertEqual(result, mock.sentinel.first)
+        mock_model_query.assert_called_once_with(self.ctxt, models.ComputeNode)
 
 
 class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):

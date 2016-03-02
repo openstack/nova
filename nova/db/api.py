@@ -189,6 +189,21 @@ def compute_node_get(context, compute_id):
     return IMPL.compute_node_get(context, compute_id)
 
 
+# TODO(edleafe): remove once the compute node resource provider migration is
+# complete, and this distinction is no longer necessary.
+def compute_node_get_model(context, compute_id):
+    """Get a compute node sqlalchemy model object by its id.
+
+    :param context: The security context
+    :param compute_id: ID of the compute node
+
+    :returns: Sqlalchemy model object containing properties of the compute node
+
+    Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
+    """
+    return IMPL.compute_node_get_model(context, compute_id)
+
+
 def compute_nodes_get_by_service_id(context, service_id):
     """Get a list of compute nodes by their associated service id.
 
