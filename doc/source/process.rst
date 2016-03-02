@@ -108,7 +108,7 @@ http://specs.openstack.org/openstack/nova-specs/specs/liberty/approved/
 New in Liberty, we will keep the backlog open for submission at all
 times. Note: the focus is on accepting and agreeing problem statements
 as being in scope, rather than queueing up work items for the next
-release. We are still working on a new lightweight process to get our of
+release. We are still working on a new lightweight process to get out of
 the backlog and approved for a particular release. For more details on
 backlog specs, please see:
 http://specs.openstack.org/openstack/nova-specs/specs/backlog/index.html
