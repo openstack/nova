@@ -24,12 +24,12 @@ import os
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
+from oslo_utils import imageutils
 
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LE
 from nova import image
-from nova.openstack.common import imageutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
