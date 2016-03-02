@@ -441,49 +441,31 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             return '%s/%s' % (self._get_host(), self.api_major_version)
 
     def _get_response(self, url, method, body=None, strip_version=False,
-                      api_version=None, headers=None):
+                      headers=None):
         headers = headers or {}
         headers['Content-Type'] = 'application/json'
         headers['Accept'] = 'application/json'
-        if api_version:
-            headers['X-OpenStack-Nova-API-Version'] = api_version
         return self.api.api_request(url, body=body, method=method,
                 headers=headers, strip_version=strip_version)
 
-    def _do_options(self, url, strip_version=False, api_version=None,
-                    headers=None):
+    def _do_options(self, url, strip_version=False, headers=None):
         return self._get_response(url, 'OPTIONS', strip_version=strip_version,
-                                  api_version=(api_version or
-                                               self.microversion),
                                   headers=headers)
 
-    def _do_get(self, url, strip_version=False, api_version=None,
-                headers=None):
+    def _do_get(self, url, strip_version=False, headers=None):
         return self._get_response(url, 'GET', strip_version=strip_version,
-                                  api_version=(api_version or
-                                               self.microversion),
                                   headers=headers)
 
-    def _do_post(self, url, name, subs, method='POST', api_version=None,
-                 headers=None):
+    def _do_post(self, url, name, subs, method='POST', headers=None):
         self.subs = subs
         body = self._read_template(name) % self.subs
         sample = self._get_sample(name, self.microversion)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
-        return self._get_response(url, method, body,
-                                  api_version=(api_version or
-                                               self.microversion),
-                                  headers=headers)
+        return self._get_response(url, method, body, headers=headers)
 
-    def _do_put(self, url, name, subs, api_version=None, headers=None):
-        return self._do_post(url, name, subs, method='PUT',
-                             api_version=(api_version or
-                                          self.microversion),
-                             headers=headers)
+    def _do_put(self, url, name, subs, headers=None):
+        return self._do_post(url, name, subs, method='PUT', headers=headers)
 
-    def _do_delete(self, url, api_version=None, headers=None):
-        return self._get_response(url, 'DELETE',
-                                  api_version=(api_version or
-                                               self.microversion),
-                                  headers=headers)
+    def _do_delete(self, url, headers=None):
+        return self._get_response(url, 'DELETE', headers=headers)

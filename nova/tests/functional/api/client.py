@@ -196,35 +196,26 @@ class TestOpenStackClient(object):
             resp.body = jsonutils.loads(response.content)
         return resp
 
-    def api_get(self, relative_uri, api_version=None, **kwargs):
+    def api_get(self, relative_uri, **kwargs):
         kwargs.setdefault('check_response_status', [200])
-        if api_version:
-            headers = kwargs.setdefault('headers', {})
-            headers['X-OpenStack-Nova-API-Version'] = api_version
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
-    def api_post(self, relative_uri, body, api_version=None, **kwargs):
+    def api_post(self, relative_uri, body, **kwargs):
         kwargs['method'] = 'POST'
         if body:
             headers = kwargs.setdefault('headers', {})
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = jsonutils.dumps(body)
 
-        if api_version:
-            headers['X-OpenStack-Nova-API-Version'] = api_version
-
         kwargs.setdefault('check_response_status', [200, 202])
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
-    def api_put(self, relative_uri, body, api_version=None, **kwargs):
+    def api_put(self, relative_uri, body, **kwargs):
         kwargs['method'] = 'PUT'
         if body:
             headers = kwargs.setdefault('headers', {})
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = jsonutils.dumps(body)
-
-        if api_version:
-            headers['X-OpenStack-Nova-API-Version'] = api_version
 
         kwargs.setdefault('check_response_status', [200, 202, 204])
         return APIResponse(self.api_request(relative_uri, **kwargs))
@@ -358,14 +349,13 @@ class TestOpenStackClient(object):
         return self.api_get('/os-server-groups/%s' %
                             group_id).body['server_group']
 
-    def post_server_groups(self, group, api_version=None):
-        response = self.api_post('/os-server-groups', {"server_group": group},
-                                 api_version)
+    def post_server_groups(self, group):
+        response = self.api_post('/os-server-groups', {"server_group": group})
         return response.body['server_group']
 
     def delete_server_group(self, group_id):
         self.api_delete('/os-server-groups/%s' % group_id)
 
-    def get_instance_actions(self, server_id, api_version=None):
+    def get_instance_actions(self, server_id):
         return self.api_get('/servers/%s/os-instance-actions' %
-                            (server_id), api_version).body['instanceActions']
+                            (server_id)).body['instanceActions']

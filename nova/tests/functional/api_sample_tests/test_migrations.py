@@ -179,6 +179,7 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(MigrationsSamplesJsonTestV2_23, self).setUp()
+        self.api.microversion = self.microversion
         fake_context = context.RequestContext('fake', 'fake')
 
         for mig in self.fake_migrations:

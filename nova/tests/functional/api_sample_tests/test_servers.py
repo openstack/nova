@@ -25,6 +25,7 @@ CONF.import_opt('osapi_compute_extension',
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     extra_extensions_to_load = ["os-access-ips"]
+    microversion = None
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -64,14 +65,14 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             self.__class__._use_common_server_api_samples = orig_value
             self.__class__.sample_dir = orig_sample_dir
 
+    def setUp(self):
+        super(ServersSampleBase, self).setUp()
+        self.api.microversion = self.microversion
+
 
 class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     microversion = None
-
-    def setUp(self):
-        super(ServersSampleJsonTest, self).setUp()
-        self.api.microversion = self.microversion
 
     def _get_flags(self):
         f = super(ServersSampleBase, self)._get_flags()
