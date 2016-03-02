@@ -1973,6 +1973,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.NUMATopologyUnsupported,
             None)
 
+    def test_get_guest_config_numa_old_version_libvirt_ppc(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        self._test_get_guest_config_numa_unsupported(
+            versionutils.convert_version_to_int(
+                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION_PPC) - 1,
+            versionutils.convert_version_to_int(
+                libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
+            host.HV_DRIVER_QEMU,
+            arch.PPC64LE,
+            exception.NUMATopologyUnsupported,
+            None)
+
     def test_get_guest_config_numa_bad_version_libvirt(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -2022,13 +2035,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.PPC64,
+            arch.S390,
             exception.NUMATopologyUnsupported,
             None)
 
     def test_get_guest_config_numa_xen(self):
         self.flags(virt_type='xen', group='libvirt')
-
         self._test_get_guest_config_numa_unsupported(
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),

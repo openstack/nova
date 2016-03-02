@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Enables NUMA topology reporting on PowerPC architecture
+    from the libvirt driver in Nova but with a caveat as mentioned below.
+    NUMA cell affinity and dedicated cpu pinning
+    code assumes that the host operating system is exposed to threads.
+    PowerPC based hosts use core based scheduling for processes.
+    Due to this, the cores on the PowerPC architecture are treated as
+    threads. Since cores are always less than or equal
+    to the threads on a system, this leads to non-optimal resource usage
+    while pinning. This feature is supported from libvirt version 1.2.19
+    for PowerPC.
+
