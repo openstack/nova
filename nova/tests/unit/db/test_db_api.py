@@ -7338,6 +7338,22 @@ class S3ImageTestCase(test.TestCase):
 class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
+    # TODO(jaypipes): Remove once the compute node inventory migration has
+    # been completed and the scheduler uses the inventories and allocations
+    # tables directly.
+    _ignored_temp_resource_providers_keys = [
+        'inv_memory_mb',
+        'inv_memory_mb_reserved',
+        'inv_ram_allocation_ratio',
+        'inv_memory_mb_used',
+        'inv_vcpus',
+        'inv_cpu_allocation_ratio',
+        'inv_vcpus_used',
+        'inv_local_gb',
+        'inv_local_gb_reserved',
+        'inv_disk_allocation_ratio',
+        'inv_local_gb_used',
+    ]
 
     def setUp(self):
         super(ComputeNodeTestCase, self).setUp()
@@ -7385,10 +7401,106 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(1, len(nodes))
         node = nodes[0]
         self._assertEqualObjects(self.compute_node_dict, node,
-                                 ignored_keys=self._ignored_keys +
-                                              ['stats', 'service'])
+                    ignored_keys=self._ignored_keys +
+                                 self._ignored_temp_resource_providers_keys +
+                                 ['stats', 'service'])
         new_stats = jsonutils.loads(node['stats'])
         self.assertEqual(self.stats, new_stats)
+
+    def test_compute_node_get_all_provider_schema(self):
+        # We here test that compute nodes that have inventory and allocation
+        # entries under the new resource-providers schema return non-None
+        # values for the inv_* fields in the returned list of dicts from
+        # compute_node_get_all().
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self.assertIsNone(node['inv_memory_mb'])
+        self.assertIsNone(node['inv_memory_mb_used'])
+
+        RAM_MB = fields.ResourceClass.index(fields.ResourceClass.MEMORY_MB)
+        VCPU = fields.ResourceClass.index(fields.ResourceClass.VCPU)
+        DISK_GB = fields.ResourceClass.index(fields.ResourceClass.DISK_GB)
+
+        @sqlalchemy_api.main_context_manager.writer
+        def create_resource_provider(context):
+            rp = models.ResourceProvider()
+            rp.uuid = node['uuid']
+            rp.save(context.session)
+            return rp.id
+
+        @sqlalchemy_api.main_context_manager.writer
+        def create_inventory(context, provider_id, resource_class, total):
+            inv = models.Inventory()
+            inv.resource_provider_id = provider_id
+            inv.resource_class_id = resource_class
+            inv.total = total
+            inv.reserved = 0
+            inv.allocation_ratio = 1.0
+            inv.min_unit = 1
+            inv.max_unit = 1
+            inv.step_size = 1
+            inv.save(context.session)
+
+        @sqlalchemy_api.main_context_manager.writer
+        def create_allocation(context, provider_id, resource_class, used):
+            alloc = models.Allocation()
+            alloc.resource_provider_id = provider_id
+            alloc.resource_class_id = resource_class
+            alloc.consumer_id = 'xyz'
+            alloc.used = used
+            alloc.save(context.session)
+
+        # Now add an inventory record for memory and check there is a non-None
+        # value for the inv_memory_mb field. Don't yet add an allocation record
+        # for RAM_MB yet so ensure inv_memory_mb_used remains None.
+        rp_id = create_resource_provider(self.ctxt)
+        create_inventory(self.ctxt, rp_id, RAM_MB, 4096)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self.assertEqual(4096, node['inv_memory_mb'])
+        self.assertIsNone(node['inv_memory_mb_used'])
+
+        # Now add an allocation record for an instance consuming some memory
+        # and check there is a non-None value for the inv_memory_mb_used field.
+        create_allocation(self.ctxt, rp_id, RAM_MB, 64)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self.assertEqual(4096, node['inv_memory_mb'])
+        self.assertEqual(64, node['inv_memory_mb_used'])
+
+        # Because of the complex join conditions, it's best to also test the
+        # other two resource classes and ensure that the joins are correct.
+        self.assertIsNone(node['inv_vcpus'])
+        self.assertIsNone(node['inv_vcpus_used'])
+        self.assertIsNone(node['inv_local_gb'])
+        self.assertIsNone(node['inv_local_gb_used'])
+
+        create_inventory(self.ctxt, rp_id, VCPU, 16)
+        create_allocation(self.ctxt, rp_id, VCPU, 2)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self.assertEqual(16, node['inv_vcpus'])
+        self.assertEqual(2, node['inv_vcpus_used'])
+        # Check to make sure the other resources stayed the same...
+        self.assertEqual(4096, node['inv_memory_mb'])
+        self.assertEqual(64, node['inv_memory_mb_used'])
+
+        create_inventory(self.ctxt, rp_id, DISK_GB, 100)
+        create_allocation(self.ctxt, rp_id, DISK_GB, 20)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self.assertEqual(100, node['inv_local_gb'])
+        self.assertEqual(20, node['inv_local_gb_used'])
+        # Check to make sure the other resources stayed the same...
+        self.assertEqual(4096, node['inv_memory_mb'])
+        self.assertEqual(64, node['inv_memory_mb_used'])
+        self.assertEqual(16, node['inv_vcpus'])
+        self.assertEqual(2, node['inv_vcpus_used'])
 
     def test_compute_node_get_all_deleted_compute_node(self):
         # Create a service and compute node and ensure we can find its stats;
@@ -7448,7 +7560,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         key=lambda n: n['hypervisor_hostname'])
 
         self._assertEqualListsOfObjects(expected, result,
-                                        ignored_keys=['stats'])
+                    ignored_keys=self._ignored_temp_resource_providers_keys +
+                                 ['stats'])
 
     def test_compute_node_get_all_by_host_with_distinct_hosts(self):
         # Create another service with another node
