@@ -50,7 +50,8 @@ metadata_opts = [
                     'config drive'),
     cfg.StrOpt('vendordata_driver',
                default='nova.api.metadata.vendordata_json.JsonFileVendorData',
-               help='Driver to use for vendor data'),
+               help='DEPRECATED: Driver to use for vendor data',
+               deprecated_for_removal=True),
 ]
 
 CONF = cfg.CONF
