@@ -269,6 +269,26 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                                   'fake-cluster')
         self.assertEqual(fake_network_obj, network_ref)
 
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    def test_get_neutron_network_dvs_vif_details(self, mock_network_name):
+        fake_network_obj = {'type': 'DistributedVirtualPortgroup',
+                            'dvpg': 'pg1',
+                            'dvsw': 'fake-props'}
+        mock_network_name.return_value = fake_network_obj
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                                  details={'dvs_port_key': 'key1',
+                                           'dvs_port_group_name': 'pg1'},
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)])[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        mock_network_name.assert_called_once_with('fake-session',
+                                                  'pg1',
+                                                  'fake-cluster')
+        self.assertEqual(fake_network_obj, network_ref)
+
     @mock.patch.object(network_util, 'get_network_with_the_name',
                        return_value=None)
     def test_get_neutron_network_dvs_no_match(self, mock_network_name):
