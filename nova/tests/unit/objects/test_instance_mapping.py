@@ -87,6 +87,11 @@ class _TestInstanceMappingObject(object):
         mapping_obj.destroy()
         destroy_in_db.assert_called_once_with(self.context, uuid)
 
+    def test_cell_id_nullable(self):
+        mapping_obj = objects.InstanceMapping(self.context)
+        # Just ensure this doesn't raise an exception
+        mapping_obj.cell_id = None
+
 
 class TestInstanceMappingObject(test_objects._LocalTest,
                                 _TestInstanceMappingObject):

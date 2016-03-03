@@ -257,6 +257,18 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertEqual(['id'], fk['referred_columns'])
         self.assertEqual(['request_spec_id'], fk['constrained_columns'])
 
+    def _check_007(self, engine, data):
+        map_table = db_utils.get_table(engine, 'instance_mappings')
+        self.assertTrue(map_table.columns['cell_id'].nullable)
+
+        # Ensure the foreign key still exists
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('instance_mappings')[0]
+        self.assertEqual('cell_mappings', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['cell_id'], fk['constrained_columns'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

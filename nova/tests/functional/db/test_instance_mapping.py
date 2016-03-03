@@ -72,6 +72,10 @@ class InstanceMappingTestCase(test.NoDBTestCase):
                 self.mapping_obj._get_by_instance_uuid_from_db, self.context,
                 mapping['instance_uuid'])
 
+    def test_cell_id_nullable(self):
+        # Just ensure this doesn't raise
+        create_mapping(cell_id=None)
+
 
 class InstanceMappingListTestCase(test.NoDBTestCase):
     def setUp(self):

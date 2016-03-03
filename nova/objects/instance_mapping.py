@@ -30,7 +30,7 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
     fields = {
         'id': fields.IntegerField(read_only=True),
         'instance_uuid': fields.UUIDField(),
-        'cell_id': fields.IntegerField(),
+        'cell_id': fields.IntegerField(nullable=True),
         'project_id': fields.StringField(),
         }
 
