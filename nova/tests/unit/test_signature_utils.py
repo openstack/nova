@@ -79,7 +79,7 @@ class FakeCryptoCertificate(object):
                  not_valid_before=(timeutils.utcnow() -
                                    datetime.timedelta(hours=1)),
                  not_valid_after=(timeutils.utcnow() +
-                                  datetime.timedelta(hours=1))):
+                                  datetime.timedelta(hours=2))):
         self.pub_key = pub_key
         self.cert_not_valid_before = not_valid_before
         self.cert_not_valid_after = not_valid_after
