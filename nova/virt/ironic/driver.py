@@ -678,13 +678,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             content=files, extra_md=extra_md, network_info=network_info)
 
         with tempfile.NamedTemporaryFile() as uncompressed:
-            try:
-                with configdrive.ConfigDriveBuilder(instance_md=i_meta) as cdb:
-                    cdb.make_drive(uncompressed.name)
-            except Exception as e:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("Creating config drive failed with "
-                                  "error: %s"), e, instance=instance)
+            with configdrive.ConfigDriveBuilder(instance_md=i_meta) as cdb:
+                cdb.make_drive(uncompressed.name)
 
             with tempfile.NamedTemporaryFile() as compressed:
                 # compress config drive
@@ -766,9 +761,17 @@ class IronicDriver(virt_driver.ComputeDriver):
             if admin_password:
                 extra_md['admin_pass'] = admin_password
 
-            configdrive_value = self._generate_configdrive(
-                instance, node, network_info, extra_md=extra_md,
-                files=injected_files)
+            try:
+                configdrive_value = self._generate_configdrive(
+                    instance, node, network_info, extra_md=extra_md,
+                    files=injected_files)
+            except Exception as e:
+                with excutils.save_and_reraise_exception():
+                    msg = (_LE("Failed to build configdrive: %s") %
+                           six.text_type(e))
+                    LOG.error(msg, instance=instance)
+                    self._cleanup_deploy(context, node, instance, network_info,
+                                         flavor=flavor)
 
             LOG.info(_LI("Config drive for instance %(instance)s on "
                          "baremetal node %(node)s created."),
