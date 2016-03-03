@@ -2098,3 +2098,7 @@ class RealtimeMaskNotFoundOrInvalid(Invalid):
 class OsInfoNotFound(NotFound):
     msg_fmt = _("No configuration information found for operating system "
                 "%(os_name)s")
+
+
+class BuildRequestNotFound(NotFound):
+    msg_fmt = _("BuildRequest not found for instance %(uuid)s")
