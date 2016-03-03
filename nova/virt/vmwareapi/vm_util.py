@@ -453,6 +453,8 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None):
                     'ns0:DistributedVirtualSwitchPortConnection')
         portgroup.switchUuid = network_ref['dvsw']
         portgroup.portgroupKey = network_ref['dvpg']
+        if 'dvs_port_key' in network_ref:
+            portgroup.portKey = network_ref['dvs_port_key']
         backing.port = portgroup
     else:
         backing = client_factory.create(
