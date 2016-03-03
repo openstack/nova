@@ -867,6 +867,9 @@ class ExpectedArgsTestCase(test.NoDBTestCase):
         def func(foo, bar, baz="lol"):
             pass
 
+        # Call to ensure nothing errors
+        func(None, None)
+
     def test_raises(self):
         @utils.expects_func_args('foo', 'baz')
         def dec(f):
@@ -885,6 +888,9 @@ class ExpectedArgsTestCase(test.NoDBTestCase):
         @dec
         def func(bar, *args, **kwargs):
             pass
+
+        # Call to ensure nothing errors
+        func(None)
 
     def test_more_layers(self):
         @utils.expects_func_args('foo', 'baz')

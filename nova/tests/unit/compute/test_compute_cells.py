@@ -113,9 +113,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         def _fake_validate_cell(*args, **kwargs):
             return
 
-        def _nop_update(context, instance, **kwargs):
-            return instance
-
         self.compute_api = compute_cells_api.ComputeCellsAPI()
         self.stubs.Set(self.compute_api, '_validate_cell',
                 _fake_validate_cell)
