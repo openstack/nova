@@ -75,7 +75,7 @@ Related options:
     cfg.StrOpt('manager',
                default='nova.cells.manager.CellsManager',
                help="""
-Manager for cells
+DEPRECATED: Manager for cells
 
 The nova-cells manager class. This class defines RPC methods that
 the local cell may call. This class is NOT used for messages coming
@@ -102,7 +102,9 @@ Services which consume this:
 Related options:
 
 * None
-"""),
+""",
+        deprecated_for_removal=True
+    ),
     cfg.StrOpt('name',
                 default='nova',
                 help="""
