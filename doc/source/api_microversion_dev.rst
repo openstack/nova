@@ -281,9 +281,14 @@ used to modify behavior based on its value::
         <common code>
 
         req_version = req.api_version_request
-        if req_version.matches("2.1", "2.5"):
+        req1_min = api_version_request.APIVersionRequest("2.1")
+        req1_max = api_version_request.APIVersionRequest("2.5")
+        req2_min = api_version_request.APIVersionRequest("2.6")
+        req2_max = api_version_request.APIVersionRequest("2.10")
+
+        if req_version.matches(req1_min, req1_max):
             ....stuff....
-        elif req_version.matches("2.6", "2.10"):
+        elif req_version.matches(req2min, req2_max):
             ....other stuff....
         elif req_version > api_version_request.APIVersionRequest("2.10"):
             ....more stuff.....
