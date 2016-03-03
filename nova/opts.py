@@ -63,7 +63,6 @@ def list_opts():
              [nova.servicegroup.api.servicegroup_driver_opt],
              nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
-             nova.cmd.spicehtml5proxy.opts,
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
              nova.console.xvp.xvp_opts,
