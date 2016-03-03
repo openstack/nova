@@ -16,6 +16,9 @@
 """Decorator and config option definitions for adding custom code (hooks)
 around callables.
 
+NOTE: as of Nova 13.0 hooks are DEPRECATED and will be removed in the
+near future. You should not build any new code using this facility.
+
 Any method may have the 'add_hook' decorator applied, which yields the
 ability to invoke Hook objects before or after the method. (i.e. pre and
 post)
@@ -47,7 +50,7 @@ import functools
 from oslo_log import log as logging
 import stevedore
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 
 LOG = logging.getLogger(__name__)
 NS = 'nova.hooks'
@@ -82,6 +85,8 @@ class HookManager(stevedore.hook.HookManager):
             obj = e.obj
             hook_method = getattr(obj, method_type, None)
             if hook_method:
+                LOG.warning(_LW("Hooks are deprecated as of Nova 13.0 and "
+                                "will be removed in a future release"))
                 LOG.debug("Running %(name)s %(type)s-hook: %(obj)s",
                           {'name': name, 'type': method_type, 'obj': obj})
                 try:

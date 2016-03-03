@@ -1,0 +1,7 @@
+---
+deprecations:
+  - Deprecate the use of nova.hooks. This facility used to let
+    arbitrary out of tree code be executed around certain internal
+    actions, but is unsuitable for having a well maintained
+    API. Anyone using this facility should bring forward their use
+    cases in the Newton cycle as nova-specs.
