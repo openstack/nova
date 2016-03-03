@@ -7697,12 +7697,12 @@ class ComputeAPITestCase(BaseTestCase):
         instance.update(base_options)
         inst_type = flavors.get_flavor_by_name("m1.tiny")
         instance = self.compute_api._populate_instance_for_create(
-                                                    self.context,
-                                                    instance,
-                                                    self.fake_image,
-                                                    1,
-                                                    security_groups=None,
-                                                    instance_type=inst_type)
+                                self.context,
+                                instance,
+                                self.fake_image,
+                                1,
+                                security_groups=objects.SecurityGroupList(),
+                                instance_type=inst_type)
         self.assertEqual(str(base_options['image_ref']),
                          instance['system_metadata']['image_base_image_ref'])
         self.assertEqual(vm_states.BUILDING, instance['vm_state'])
