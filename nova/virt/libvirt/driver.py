@@ -2609,16 +2609,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # and available before we attempt to start the instance.
         self._hard_reboot(context, instance, network_info, block_device_info)
 
-    def inject_nmi(self, instance):
+    def trigger_crash_dump(self, instance):
 
-        """Inject an NMI to the specified instance."""
+        """Trigger crash dump by injecting an NMI to the specified instance."""
         try:
             self._host.get_guest(instance).inject_nmi()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
 
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                raise exception.NMINotSupported()
+                raise exception.TriggerCrashDumpNotSupported()
             elif error_code == libvirt.VIR_ERR_OPERATION_INVALID:
                 raise exception.InstanceNotRunning(instance_id=instance.uuid)
 

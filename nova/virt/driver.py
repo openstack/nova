@@ -740,14 +740,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def inject_nmi(self, instance):
-        """Inject an non-maskable interruption (NMI) into the given instance.
+    def trigger_crash_dump(self, instance):
+        """Trigger crash dump mechanism on the given instance.
 
         Stalling instances can be triggered to dump the crash data. How the
         guest OS reacts in details, depends on the configuration of it.
 
         :param nova.objects.instance.Instance instance:
-            The instance where the NMI should be injected to.
+            The instance where the crash dump should be triggered.
 
         :return: None
         """

@@ -1207,7 +1207,7 @@ class ServersController(wsgi.Controller):
                 'trigger_crash_dump', id)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except exception.NMINotSupported as e:
+        except exception.TriggerCrashDumpNotSupported as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
 
