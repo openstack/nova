@@ -18,10 +18,11 @@ import oslo_config.cfg
 from oslo_utils import importutils
 
 _volume_opts = [
-    oslo_config.cfg.StrOpt('volume_api_class',
-                                     default='nova.volume.cinder.API',
-                                     help='The full class name of the '
-                                          'volume API class to use'),
+    oslo_config.cfg.StrOpt(
+        'volume_api_class',
+        default='nova.volume.cinder.API',
+        help='DEPRECATED: The full class name of the volume API class to use',
+        deprecated_for_removal=True)
 ]
 
 oslo_config.cfg.CONF.register_opts(_volume_opts)

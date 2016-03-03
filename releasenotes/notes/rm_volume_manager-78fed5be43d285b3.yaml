@@ -1,0 +1,15 @@
+---
+upgrade:
+
+  - A new ``use_neutron`` option is introduced which replaces the
+    obtuse ``network_api_class`` option. This defaults to 'False' to
+    match existing defaults, however if ``network_api_class`` is set
+    to the known Neutron value Neutron networking will still be used
+    as before.
+
+deprecations:
+
+  - Deprecate ``volume_api_class`` and ``network_api_class`` config
+    options. We only have one sensible backend for either of
+    these. These options will be removed and turned into constants in
+    Newton.
