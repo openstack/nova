@@ -80,7 +80,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import flavor as flavor_obj
-from nova.openstack.common import cliutils
 from nova import quota
 from nova import rpc
 from nova import servicegroup
@@ -961,8 +960,8 @@ class DbCommands(object):
         table_to_rows_archived = db.archive_deleted_rows(max_rows)
         if verbose:
             if table_to_rows_archived:
-                cliutils.print_dict(table_to_rows_archived, _('Table'),
-                                    dict_value=_('Number of Rows Archived'))
+                utils.print_dict(table_to_rows_archived, _('Table'),
+                                 dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
 
@@ -1557,15 +1556,14 @@ def main():
 
     # call the action with the remaining arguments
     # check arguments
-    try:
-        cliutils.validate_args(fn, *fn_args, **fn_kwargs)
-    except cliutils.MissingArgs as e:
+    missing = utils.validate_args(fn, *fn_args, **fn_kwargs)
+    if missing:
         # NOTE(mikal): this isn't the most helpful error message ever. It is
         # long, and tells you a lot of things you probably don't want to know
         # if you just got a single arg wrong.
         print(fn.__doc__)
         CONF.print_help()
-        print(e)
+        print(_("Missing arguments: %s") % ", ".join(missing))
         return(1)
     try:
         ret = fn(*fn_args, **fn_kwargs)
