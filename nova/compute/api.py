@@ -3782,6 +3782,7 @@ class AggregateAPI(base.Base):
                                   action_name=AGGREGATE_ACTION_UPDATE)
         if values:
             aggregate.update_metadata(values)
+            aggregate.updated_at = timeutils.utcnow()
         self.scheduler_client.update_aggregates(context, [aggregate])
         # If updated values include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
@@ -3801,6 +3802,7 @@ class AggregateAPI(base.Base):
         # which stored availability_zones and host need to be reset
         if metadata and metadata.get('availability_zone'):
             availability_zones.reset_cache()
+        aggregate.updated_at = timeutils.utcnow()
         return aggregate
 
     @wrap_exception()
