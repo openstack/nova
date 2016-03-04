@@ -227,8 +227,8 @@ timeout_opts = [
                     "Set to 0 to disable."),
     cfg.IntOpt("resize_confirm_window",
                default=0,
-               help="Automatically confirm resizes after N seconds. "
-                    "Set to 0 to disable."),
+               help="Automatically confirm resizes and cold migrations "
+                    "after N seconds. Set to 0 to disable."),
     cfg.IntOpt("shutdown_timeout",
                default=60,
                help="Total amount of time to wait in seconds for an instance "
