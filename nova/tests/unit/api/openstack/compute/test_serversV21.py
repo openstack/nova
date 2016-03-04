@@ -2434,6 +2434,11 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_password_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
+    def test_create_instance_with_none_value_port(self):
+        self.body['server'] = {'networks': [{'port': None, 'uuid': FAKE_UUID}]}
+        self.body['server']['name'] = 'test'
+        self._test_create_instance()
+
     def test_create_instance_private_flavor(self):
         values = {
             'name': 'fake_name',

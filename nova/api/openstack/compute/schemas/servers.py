@@ -35,8 +35,8 @@ base_create = {
                         'properties': {
                             'fixed_ip': parameter_types.ip_address,
                             'port': {
-                                'type': ['string', 'null'],
-                                'format': 'uuid'
+                                'oneOf': [{'type': 'string', 'format': 'uuid'},
+                                          {'type': 'null'}]
                             },
                             'uuid': {'type': 'string'},
                         },
