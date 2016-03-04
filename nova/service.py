@@ -76,7 +76,8 @@ service_opts = [
                     'will be the number of CPUs available.'),
     cfg.StrOpt('metadata_manager',
                default='nova.api.manager.MetadataManager',
-               help='OpenStack metadata service manager'),
+               help='DEPRECATED: OpenStack metadata service manager',
+               deprecated_for_removal=True),
     cfg.StrOpt('metadata_listen',
                default="0.0.0.0",
                help='The IP address on which the metadata API will listen.'),
@@ -88,24 +89,36 @@ service_opts = [
     cfg.IntOpt('metadata_workers',
                help='Number of workers for metadata service. The default will '
                     'be the number of CPUs available.'),
+    # NOTE(sdague): Ironic is still using this facility for their HA
+    # manager. Ensure they are sorted before removing this.
     cfg.StrOpt('compute_manager',
                default='nova.compute.manager.ComputeManager',
-               help='Full class name for the Manager for compute'),
+               help='DEPRECATED: Full class name for the Manager for compute',
+               deprecated_for_removal=True),
     cfg.StrOpt('console_manager',
                default='nova.console.manager.ConsoleProxyManager',
-               help='Full class name for the Manager for console proxy'),
+               help='DEPRECATED: Full class name for the Manager for '
+                   'console proxy',
+               deprecated_for_removal=True),
     cfg.StrOpt('consoleauth_manager',
                default='nova.consoleauth.manager.ConsoleAuthManager',
-               help='Manager for console auth'),
+               help='DEPRECATED: Manager for console auth',
+               deprecated_for_removal=True),
     cfg.StrOpt('cert_manager',
                default='nova.cert.manager.CertManager',
-               help='Full class name for the Manager for cert'),
+               help='DEPRECATED: Full class name for the Manager for cert',
+               deprecated_for_removal=True),
+    # NOTE(sdague): the network_manager has a bunch of different in
+    # tree classes that are still legit options. In Newton we should
+    # turn this into a selector.
     cfg.StrOpt('network_manager',
                default='nova.network.manager.VlanManager',
                help='Full class name for the Manager for network'),
     cfg.StrOpt('scheduler_manager',
                default='nova.scheduler.manager.SchedulerManager',
-               help='Full class name for the Manager for scheduler'),
+               help='DEPRECATED: Full class name for the Manager for '
+                   'scheduler',
+               deprecated_for_removal=True),
     cfg.IntOpt('service_down_time',
                default=60,
                help='Maximum time since last check-in for up service'),
