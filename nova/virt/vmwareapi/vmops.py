@@ -1244,12 +1244,79 @@ class VMwareVMOps(object):
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
-    def power_off(self, instance):
+    def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.
 
         :param instance: nova.objects.instance.Instance
+        :param timeout: How long to wait in seconds for the instance to
+                        shutdown
+        :param retry_interval: Interval to check if instance is already
+                               shutdown in seconds.
         """
+        if timeout and self._clean_shutdown(instance,
+                                            timeout,
+                                            retry_interval):
+            return
+
         vm_util.power_off_instance(self._session, instance)
+
+    def _clean_shutdown(self, instance, timeout, retry_interval):
+        """Perform a soft shutdown on the VM.
+        :param instance: nova.objects.instance.Instance
+        :param timeout: How long to wait in seconds for the instance to
+                        shutdown
+        :param retry_interval: Interval to check if instance is already
+                               shutdown in seconds.
+           :return: True if the instance was shutdown within time limit,
+                    False otherwise.
+        """
+        LOG.debug("Performing Soft shutdown on instance",
+                 instance=instance)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+
+        props = self._get_instance_props(vm_ref)
+
+        if props.get("runtime.powerState") != "poweredOn":
+            LOG.debug("Instance not in poweredOn state.",
+                      instance=instance)
+            return False
+
+        if ((props.get("summary.guest.toolsStatus") == "toolsOk") and
+            (props.get("summary.guest.toolsRunningStatus") ==
+             "guestToolsRunning")):
+
+            LOG.debug("Soft shutdown instance, timeout: %d",
+                     timeout, instance=instance)
+            self._session._call_method(self._session.vim,
+                                       "ShutdownGuest",
+                                       vm_ref)
+
+            while timeout > 0:
+                wait_time = min(retry_interval, timeout)
+                props = self._get_instance_props(vm_ref)
+
+                if props.get("runtime.powerState") == "poweredOff":
+                    LOG.info("Soft shutdown succeeded.",
+                             instance=instance)
+                    return True
+
+                time.sleep(wait_time)
+                timeout -= retry_interval
+
+            LOG.warning("Timed out while waiting for soft shutdown.",
+                        instance=instance)
+        else:
+            LOG.debug("VMware Tools not running", instance=instance)
+
+        return False
+
+    def _get_instance_props(self, vm_ref):
+        lst_properties = ["summary.guest.toolsStatus",
+                          "runtime.powerState",
+                          "summary.guest.toolsRunningStatus"]
+        return self._session._call_method(vutil,
+                                          "get_object_properties_dict",
+                                          vm_ref, lst_properties)
 
     def power_on(self, instance):
         vm_util.power_on_instance(self._session, instance)

@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
+
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -515,6 +517,108 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                vm_ref)
             _volumeops.detach_disk_from_vm.assert_called_once_with(
                 vm_ref, self._instance, mock.ANY, destroy_disk=True)
+
+    @mock.patch.object(time, 'sleep')
+    def _test_clean_shutdown(self, mock_sleep,
+                             timeout, retry_interval,
+                             returns_on, returns_off,
+                             vmware_tools_status,
+                             succeeds):
+        """Test the _clean_shutdown method
+
+        :param timeout: timeout before soft shutdown is considered a fail
+        :param retry_interval: time between rechecking instance power state
+        :param returns_on: how often the instance is reported as poweredOn
+        :param returns_off: how often the instance is reported as poweredOff
+        :param vmware_tools_status: Status of vmware tools
+        :param succeeds: the expected result
+        """
+        instance = self._instance
+        vm_ref = mock.Mock()
+        return_props = []
+        expected_methods = ['get_object_properties_dict']
+        props_on = {'runtime.powerState': 'poweredOn',
+                   'summary.guest.toolsStatus': vmware_tools_status,
+                   'summary.guest.toolsRunningStatus': 'guestToolsRunning'}
+        props_off = {'runtime.powerState': 'poweredOff',
+                    'summary.guest.toolsStatus': vmware_tools_status,
+                    'summary.guest.toolsRunningStatus': 'guestToolsRunning'}
+
+        # initialize expected instance methods and returned properties
+        if vmware_tools_status == "toolsOk":
+            if returns_on > 0:
+                expected_methods.append('ShutdownGuest')
+                for x in range(returns_on + 1):
+                    return_props.append(props_on)
+                for x in range(returns_on):
+                    expected_methods.append('get_object_properties_dict')
+            for x in range(returns_off):
+                return_props.append(props_off)
+                if returns_on > 0:
+                    expected_methods.append('get_object_properties_dict')
+        else:
+            return_props.append(props_off)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            expected_method = expected_methods.pop(0)
+            self.assertEqual(expected_method, method)
+            if expected_method == 'get_object_properties_dict':
+                props = return_props.pop(0)
+                return props
+            elif expected_method == 'ShutdownGuest':
+                return
+
+        with test.nested(
+                mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
+                mock.patch.object(self._session, '_call_method',
+                                  side_effect=fake_call_method)
+        ) as (mock_get_vm_ref, mock_call_method):
+            result = self._vmops._clean_shutdown(instance, timeout,
+                                                 retry_interval)
+
+        self.assertEqual(succeeds, result)
+        mock_get_vm_ref.assert_called_once_with(self._session,
+                                                self._instance)
+
+    def test_clean_shutdown_first_time(self):
+        self._test_clean_shutdown(timeout=10,
+                                  retry_interval=3,
+                                  returns_on=1,
+                                  returns_off=1,
+                                  vmware_tools_status="toolsOk",
+                                  succeeds=True)
+
+    def test_clean_shutdown_second_time(self):
+        self._test_clean_shutdown(timeout=10,
+                                  retry_interval=3,
+                                  returns_on=2,
+                                  returns_off=1,
+                                  vmware_tools_status="toolsOk",
+                                  succeeds=True)
+
+    def test_clean_shutdown_timeout(self):
+        self._test_clean_shutdown(timeout=10,
+                                  retry_interval=3,
+                                  returns_on=4,
+                                  returns_off=0,
+                                  vmware_tools_status="toolsOk",
+                                  succeeds=False)
+
+    def test_clean_shutdown_already_off(self):
+        self._test_clean_shutdown(timeout=10,
+                                  retry_interval=3,
+                                  returns_on=0,
+                                  returns_off=1,
+                                  vmware_tools_status="toolsOk",
+                                  succeeds=False)
+
+    def test_clean_shutdown_no_vwaretools(self):
+        self._test_clean_shutdown(timeout=10,
+                                  retry_interval=3,
+                                  returns_on=1,
+                                  returns_off=0,
+                                  vmware_tools_status="toolsNotOk",
+                                  succeeds=False)
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):
         with test.nested(
