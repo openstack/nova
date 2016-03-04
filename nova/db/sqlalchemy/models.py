@@ -212,6 +212,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
               'host', 'node', 'deleted'),
         Index('instances_host_deleted_cleaned_idx',
               'host', 'deleted', 'cleaned'),
+        Index('instances_deleted_created_at_idx',
+              'deleted', 'created_at'),
         schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
