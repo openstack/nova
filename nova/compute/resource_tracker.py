@@ -48,7 +48,9 @@ resource_tracker_opts = [
                help='Amount of memory in MB to reserve for the host'),
     cfg.StrOpt('compute_stats_class',
                default='nova.compute.stats.Stats',
-               help='Class that will manage stats for the local compute host'),
+               help='DEPRECATED: Class that will manage stats for the '
+                   'local compute host',
+               deprecated_for_removal=True),
     cfg.ListOpt('compute_resources',
                 default=[],
                 help='DEPRECATED: The names of the extra resources to track. '
