@@ -4932,44 +4932,6 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.resume()
         return guest
 
-    def _get_all_block_devices(self):
-        """Return all block devices in use on this node."""
-        devices = []
-        for guest in self._host.list_guests():
-            try:
-                doc = etree.fromstring(guest.get_xml_desc())
-            except libvirt.libvirtError as e:
-                LOG.warn(_LW("couldn't obtain the XML from domain:"
-                             " %(uuid)s, exception: %(ex)s") %
-                         {"uuid": guest.id, "ex": e})
-                continue
-            except Exception:
-                continue
-            sources = doc.findall("./devices/disk[@type='block']/source")
-            for source in sources:
-                devices.append(source.get('dev'))
-        return devices
-
-    def _get_interfaces(self, xml):
-        """Note that this function takes a domain xml.
-
-        Returns a list of all network interfaces for this instance.
-        """
-        doc = None
-
-        try:
-            doc = etree.fromstring(xml)
-        except Exception:
-            return []
-
-        interfaces = []
-
-        nodes = doc.findall('./devices/interface/target')
-        for target in nodes:
-            interfaces.append(target.get('dev'))
-
-        return interfaces
-
     def _get_vcpu_total(self):
         """Get available vcpu number of physical computer.
 
