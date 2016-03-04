@@ -219,7 +219,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             compute['supported_hv_specs'] = hv_specs
 
         pci_stats = db_compute.get('pci_stats')
-        compute.pci_device_pools = pci_device_pool.from_pci_stats(pci_stats)
+        if pci_stats is not None:
+            pci_stats = pci_device_pool.from_pci_stats(pci_stats)
+        compute.pci_device_pools = pci_stats
         compute._context = context
 
         # Make sure that we correctly set the host field depending on either
@@ -299,9 +301,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     def _convert_pci_stats_to_db_format(updates):
-        pools = updates.pop('pci_device_pools', None)
-        if pools:
-            updates['pci_stats'] = jsonutils.dumps(pools.obj_to_primitive())
+        if 'pci_device_pools' in updates:
+            pools = updates.pop('pci_device_pools')
+            if pools is not None:
+                pools = jsonutils.dumps(pools.obj_to_primitive())
+            updates['pci_stats'] = pools
 
     @base.remotable
     def create(self):
