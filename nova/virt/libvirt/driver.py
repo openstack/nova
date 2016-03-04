@@ -6915,6 +6915,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
         image_meta = objects.ImageMeta.from_dict(image_meta)
 
+        block_disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                  instance,
+                                                  image_meta,
+                                                  block_device_info)
+        # assume _create_image does nothing if a target file exists.
+        # NOTE: This has the intended side-effect of fetching a missing
+        # backing file.
+        self._create_image(context, instance, block_disk_info['mapping'],
+                           network_info=network_info,
+                           block_device_info=None, inject_files=False,
+                           fallback_from_host=migration.source_compute)
+
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
@@ -6926,17 +6938,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if info['type'] == 'raw' and CONF.use_cow_images:
                 self._disk_raw_to_qcow2(info['path'])
 
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance,
-                                            image_meta,
-                                            block_device_info)
-        # assume _create_image do nothing if a target file exists.
-        self._create_image(context, instance, disk_info['mapping'],
-                           network_info=network_info,
-                           block_device_info=None, inject_files=False,
-                           fallback_from_host=migration.source_compute)
-        xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta,
+        xml = self._get_guest_xml(context, instance, network_info,
+                                  block_disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         # NOTE(mriedem): vifs_already_plugged=True here, regardless of whether
@@ -6945,7 +6948,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # L2 agent (or neutron server) so neutron may not know that the VIF was
         # unplugged in the first place and never send an event.
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        disk_info,
+                                        block_disk_info,
                                         block_device_info=block_device_info,
                                         power_on=power_on,
                                         vifs_already_plugged=True)
