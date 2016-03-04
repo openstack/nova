@@ -4301,7 +4301,11 @@ def security_group_get_all(context):
 @require_context
 @main_context_manager.reader
 def security_group_get(context, security_group_id, columns_to_join=None):
-    query = _security_group_get_query(context, project_only=True).\
+    join_rules = columns_to_join and 'rules' in columns_to_join
+    if join_rules:
+        columns_to_join.remove('rules')
+    query = _security_group_get_query(context, project_only=True,
+                                      join_rules=join_rules).\
                     filter_by(id=security_group_id)
 
     if columns_to_join is None:

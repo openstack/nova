@@ -4099,13 +4099,16 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
     def get(self, context, name=None, id=None, map_exception=False):
         self.ensure_default(context)
+        cols = ['rules']
         try:
             if name:
                 return self.db.security_group_get_by_name(context,
                                                           context.project_id,
-                                                          name)
+                                                          name,
+                                                          columns_to_join=cols)
             elif id:
-                return self.db.security_group_get(context, id)
+                return self.db.security_group_get(context, id,
+                                                  columns_to_join=cols)
         except exception.NotFound as exp:
             if map_exception:
                 msg = exp.format_message()
