@@ -5523,6 +5523,7 @@ class ComputeManager(manager.Manager):
                 instance.power_state = current_power_state
                 instance.task_state = None
                 instance.node = node_name
+                instance.progress = 0
                 instance.save(expected_task_state=task_states.MIGRATING)
 
         # NOTE(tr3buchet): tear down networks on source host
@@ -5554,6 +5555,7 @@ class ComputeManager(manager.Manager):
 
         """
         instance.task_state = None
+        instance.progress = 0
         instance.save(expected_task_state=[task_states.MIGRATING])
 
         if isinstance(migrate_data, dict):
