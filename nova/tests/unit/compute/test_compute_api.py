@@ -3173,7 +3173,7 @@ class _ComputeAPIUnitTestMixIn(object):
                       vm_states.SHELVED_OFFLOADED]:
             self._test_detach_interface_invalid_state(state)
 
-    def test_check_and_transform_bdm(self):
+    def _test_check_and_transform_bdm(self, block_device_mapping):
         instance_type = self._create_flavor()
         base_options = {'uuid': uuids.bdm_instance,
                         'image_ref': 'fake_image_ref',
@@ -3184,18 +3184,35 @@ class _ComputeAPIUnitTestMixIn(object):
                       'container_format': 'bare',
                       'id': 'image_id'}
         legacy_bdm = False
+        block_device_mapping = block_device_mapping
+        self.assertRaises(exception.InvalidRequest,
+                          self.compute_api._check_and_transform_bdm,
+                          self.context, base_options, instance_type,
+                          image_meta, 1, 1, block_device_mapping, legacy_bdm)
+
+    def test_check_and_transform_bdm_source_volume(self):
         block_device_mapping = [{'boot_index': 0,
                                  'device_name': None,
                                  'image_id': 'image_id',
                                  'source_type': 'image'},
                                 {'device_name': '/dev/vda',
                                  'source_type': 'volume',
+                                 'destination_type': 'volume',
                                  'device_type': None,
                                  'volume_id': 'volume_id'}]
-        self.assertRaises(exception.InvalidRequest,
-                          self.compute_api._check_and_transform_bdm,
-                          self.context, base_options, instance_type,
-                          image_meta, 1, 1, block_device_mapping, legacy_bdm)
+        self._test_check_and_transform_bdm(block_device_mapping)
+
+    def test_check_and_transform_bdm_source_snapshot(self):
+        block_device_mapping = [{'boot_index': 0,
+                                 'device_name': None,
+                                 'image_id': 'image_id',
+                                 'source_type': 'image'},
+                                {'device_name': '/dev/vda',
+                                 'source_type': 'snapshot',
+                                 'destination_type': 'volume',
+                                 'device_type': None,
+                                 'volume_id': 'volume_id'}]
+        self._test_check_and_transform_bdm(block_device_mapping)
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceAction, 'action_start')
