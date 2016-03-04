@@ -115,7 +115,8 @@ class InterfaceAttachmentController(wsgi.Controller):
         try:
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
-        except (exception.NetworkDuplicated,
+        except (exception.InterfaceAttachFailedNoNetwork,
+                exception.NetworkDuplicated,
                 exception.NetworkAmbiguous,
                 exception.NoMoreFixedIps,
                 exception.PortNotUsable) as e:

@@ -1553,6 +1553,11 @@ class InterfaceAttachFailed(Invalid):
                 "%(instance_uuid)s")
 
 
+class InterfaceAttachFailedNoNetwork(InterfaceAttachFailed):
+    msg_fmt = _("No specific network was requested and none are available "
+                "for project '%(project_id)s'.")
+
+
 class InterfaceDetachFailed(Invalid):
     msg_fmt = _("Failed to detach network adapter device from "
                 "%(instance_uuid)s")
