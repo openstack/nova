@@ -556,7 +556,7 @@ Server actions
    Trigger crash dump usually utilized by either administrator or the server's
    owner, it will dump the memory image as dump file into the given server,
    and then reboot the kernel again. And this feature depends on the setting
-   about the NMI in the server.
+   about the trigger (e.g. NMI) in the server.
 
 Server passwords
 ~~~~~~~~~~~~~~~~
