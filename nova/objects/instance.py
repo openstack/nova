@@ -814,6 +814,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.security_groups = objects.SecurityGroupList.get_by_instance(
             self._context, self)
 
+    def _load_pci_devices(self):
+        self.pci_devices = objects.PciDeviceList.get_by_instance_uuid(
+            self._context, self.uuid)
+
     def _load_migration_context(self, db_context=_NO_DATA_SENTINEL):
         if db_context is _NO_DATA_SENTINEL:
             try:
@@ -900,6 +904,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_migration_context()
         elif attrname == 'security_groups':
             self._load_security_groups()
+        elif attrname == 'pci_devices':
+            self._load_pci_devices()
         elif 'flavor' in attrname:
             self._load_flavor()
         else:
