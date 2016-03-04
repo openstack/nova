@@ -4987,7 +4987,6 @@ class ComputeManager(manager.Manager):
         # Update bdm
         values = {
             'connection_info': jsonutils.dumps(new_cinfo),
-            'delete_on_termination': False,
             'source_type': 'volume',
             'destination_type': 'volume',
             'snapshot_id': None,
