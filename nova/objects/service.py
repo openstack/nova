@@ -378,7 +378,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.15: Service version 1.17
     # Version 1.16: Service version 1.18
     # Version 1.17: Service version 1.19
-    VERSION = '1.17'
+    # Version 1.18: Added include_disabled parameter to get_by_binary()
+    VERSION = '1.18'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -390,9 +391,12 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
+    # NOTE(paul-carlton2): In v2.0 of the object the include_disabled flag
+    # will be removed so both enabled and disabled hosts are returned
     @base.remotable_classmethod
-    def get_by_binary(cls, context, binary):
-        db_services = db.service_get_all_by_binary(context, binary)
+    def get_by_binary(cls, context, binary, include_disabled=False):
+        db_services = db.service_get_all_by_binary(
+            context, binary, include_disabled=include_disabled)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
