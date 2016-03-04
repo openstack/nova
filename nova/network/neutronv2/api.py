@@ -91,13 +91,12 @@ def list_opts():
     # the config options for a few common ones
     plugins = ['password', 'v2password', 'v3password']
     for name in plugins:
-        for plugin_option in ks_loading.get_plugin_loader(name).get_options():
-            found = False
+        plugin = ks_loading.get_plugin_loader(name)
+        for plugin_option in ks_loading.get_auth_plugin_conf_options(plugin):
             for option in opts:
                 if option.name == plugin_option.name:
-                    found = True
                     break
-            if not found:
+            else:
                 opts.append(plugin_option)
     opts.sort(key=lambda x: x.name)
     return [(NEUTRON_GROUP, opts)]
