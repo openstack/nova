@@ -465,8 +465,10 @@ class ResourceTracker(object):
         for monitor in self.monitors:
             try:
                 monitor.add_metrics_to_list(metrics)
-            except Exception:
-                LOG.warning(_LW("Cannot get the metrics from %s."), monitor)
+            except Exception as exc:
+                LOG.warning(_LW("Cannot get the metrics from %(mon)s; "
+                                "error: %(exc)s"),
+                            {'mon': monitor, 'exc': exc})
         # TODO(jaypipes): Remove this when compute_node.metrics doesn't need
         # to be populated as a JSON-ified string.
         metrics = metrics.to_list()
