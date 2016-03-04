@@ -56,6 +56,7 @@ from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
+import nova.network
 from nova import safe_utils
 
 notify_decorator = 'nova.notifications.notify_decorator'
@@ -153,7 +154,6 @@ Then this is a good place for your workaround.
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
-CONF.import_opt('network_api_class', 'nova.network')
 CONF.register_opts(workarounds_opts, group='workarounds')
 
 LOG = logging.getLogger(__name__)
@@ -1199,14 +1199,10 @@ def is_neutron():
     if _IS_NEUTRON is not None:
         return _IS_NEUTRON
 
-    try:
-        cls_name = CONF.network_api_class
-        from nova.network.neutronv2 import api as neutron_api
-        _IS_NEUTRON = issubclass(importutils.import_class(cls_name),
-                                 neutron_api.API)
-    except ImportError:
-        _IS_NEUTRON = False
-
+    # TODO(sdague): As long as network_api_class is importable
+    # is_neutron can return None to mean we have no idea what their
+    # class is.
+    _IS_NEUTRON = (nova.network.is_neutron() is True)
     return _IS_NEUTRON
 
 

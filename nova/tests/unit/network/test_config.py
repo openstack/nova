@@ -16,6 +16,11 @@ import nova.network
 import nova.test
 
 
+class FileATicket(object):
+    def __init__(self, **kwargs):
+        pass
+
+
 class NetworkAPIConfigTest(nova.test.NoDBTestCase):
     """Test the transition from legacy to use_neutron config options."""
 
@@ -39,3 +44,10 @@ class NetworkAPIConfigTest(nova.test.NoDBTestCase):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         netapi = nova.network.API()
         self.assertIsInstance(netapi, nova.network.neutronv2.api.API)
+
+    def test_legacy_custom_class(self):
+        """use neutron even if config is false because of legacy option."""
+        self.flags(network_api_class=
+                   'nova.tests.unit.network.test_config.FileATicket')
+        netapi = nova.network.API()
+        self.assertIsInstance(netapi, FileATicket)

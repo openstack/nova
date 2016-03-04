@@ -115,7 +115,7 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FloatingIpTestNeutronV21, self).setUp()
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         self.controller = self.floating_ips.FloatingIPController()
 
     def test_floatingip_delete(self):
