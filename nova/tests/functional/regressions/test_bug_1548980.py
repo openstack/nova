@@ -83,6 +83,9 @@ class TestServerGet(test.TestCase):
                 break
         else:
             self.fail('Timed out waiting to delete server: %s' % server['id'])
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.admin_api.get_servers,
-                          search_opts={'deleted': 1})
+        servers = self.admin_api.get_servers(search_opts={'deleted': 1})
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server['id'], servers[0]['id'])
+        # host_status is returned in the 2.16 microversion and since the server
+        # is deleted it should be the empty string
+        self.assertEqual(0, len(servers[0]['host_status']))

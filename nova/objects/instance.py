@@ -908,6 +908,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_pci_devices()
         elif 'flavor' in attrname:
             self._load_flavor()
+        elif attrname == 'services' and self.deleted:
+            # NOTE(mriedem): The join in the data model for instances.services
+            # filters on instances.deleted == 0, so if the instance is deleted
+            # don't attempt to even load services since we'll fail.
+            self.services = objects.ServiceList(self._context)
         else:
             # FIXME(comstud): This should be optimized to only load the attr.
             self._load_generic(attrname)
