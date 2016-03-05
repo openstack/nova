@@ -32,7 +32,6 @@ from oslo_vmware import vim
 from oslo_vmware import vim_util
 
 from nova.compute import task_states
-from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
@@ -417,9 +416,6 @@ class VMwareVCDriver(driver.ComputeDriver):
             # plugging. Hence we need to power off the instance and update
             # the instance state.
             self._vmops.power_off(instance)
-            # TODO(garyk): update the volumeops to read the state from the
-            # VM instead of relying on an instance flag
-            instance.vm_state = vm_states.STOPPED
             for disk in block_device_mapping:
                 connection_info = disk['connection_info']
                 try:

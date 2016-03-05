@@ -129,8 +129,11 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(vm_util, 'get_vm_ref'),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info)
-        ) as (get_vm_ref, get_volume_ref, get_vmdk_info):
+                              return_value=vmdk_info),
+            mock.patch.object(vm_util, 'get_vm_state',
+                              return_value='PoweredOn')
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_info,
+              get_vm_state):
             self.assertRaises(exception.Invalid,
                 self._volumeops._attach_volume_vmdk, connection_info,
                 instance)
@@ -140,6 +143,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_volume_ref.assert_called_once_with(
                 connection_info['data']['volume'])
             self.assertTrue(get_vmdk_info.called)
+            get_vm_state.assert_called_once_with(self._volumeops._session,
+                                                 instance)
 
     @mock.patch.object(vm_util, 'get_vm_extra_config_spec',
                        return_value=mock.sentinel.extra_config)
@@ -283,9 +288,11 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(self._volumeops,
                               '_get_vmdk_backed_disk_device'),
             mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info)
+                              return_value=vmdk_info),
+            mock.patch.object(vm_util, 'get_vm_state',
+                              return_value='PoweredOn')
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
-              get_vmdk_info):
+              get_vmdk_info, get_vm_state):
             self.assertRaises(exception.Invalid,
                 self._volumeops._detach_volume_vmdk, connection_info,
                 instance)
@@ -297,6 +304,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
+            get_vm_state.assert_called_once_with(self._volumeops._session,
+                                                 instance)
 
     @mock.patch.object(vm_util, 'get_vm_ref')
     @mock.patch.object(vm_util, 'get_rdm_disk')
@@ -400,15 +409,21 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                      device)
         adapter_type = adapter_type or default_adapter_type
 
+        if adapter_type == constants.ADAPTER_TYPE_IDE:
+            vm_state = 'PoweredOff'
+        else:
+            vm_state = 'PoweredOn'
         with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
             mock.patch.object(self._volumeops, 'attach_disk_to_vm'),
-            mock.patch.object(self._volumeops, '_update_volume_details')
+            mock.patch.object(self._volumeops, '_update_volume_details'),
+            mock.patch.object(vm_util, 'get_vm_state',
+                              return_value=vm_state)
         ) as (get_vm_ref, get_volume_ref, get_vmdk_info, attach_disk_to_vm,
-              update_volume_details):
+              update_volume_details, get_vm_state):
             self._volumeops.attach_volume(connection_info, self._instance,
                                           adapter_type)
 
@@ -422,6 +437,11 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path')
             update_volume_details.assert_called_once_with(
                 vm_ref, connection_info['data']['volume_id'], disk_uuid)
+            if adapter_type == constants.ADAPTER_TYPE_IDE:
+                get_vm_state.assert_called_once_with(self._volumeops._session,
+                                                     self._instance)
+            else:
+                self.assertFalse(get_vm_state.called)
 
     def _test_attach_volume_iscsi(self, adapter_type=None):
         connection_info = {'driver_volume_type': constants.DISK_FORMAT_ISCSI,
