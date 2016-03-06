@@ -52,7 +52,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.10 - Allow admins to query, create and delete keypairs owned by any
              user.
     * 2.11 - Exposes forced_down attribute for os-services
-    * 2.12 - Exposes VIF net-id in os-virtual-interfaces
+    * 2.12 - Exposes VIF net_id in os-virtual-interfaces
     * 2.13 - Add project id and user id information for os-server-groups API
     * 2.14 - Remove onSharedStorage from evacuate request body and remove
              adminPass from the response body
