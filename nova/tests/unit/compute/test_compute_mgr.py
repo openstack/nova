@@ -4370,12 +4370,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migration.status = 'running'
         migration.id = 0
 
+        @mock.patch.object(compute_utils.EventReporter, '__enter__')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(objects.Migration, 'get_by_id',
                            return_value=migration)
         @mock.patch.object(self.compute.driver,
                            'live_migration_force_complete')
-        def _do_test(force_complete, get_by_id, _notify_about_instance_usage):
+        def _do_test(force_complete, get_by_id, _notify_about_instance_usage,
+                     enter_event_reporter):
             self.compute.live_migration_force_complete(
                 self.context, instance, migration.id)
 
@@ -4389,6 +4391,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             ]
 
             _notify_about_instance_usage.assert_has_calls(_notify_usage_calls)
+            enter_event_reporter.assert_called_once_with()
 
         _do_test()
 

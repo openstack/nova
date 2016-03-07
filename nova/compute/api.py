@@ -3383,6 +3383,9 @@ class API(base.Base):
                                                   state=migration.status,
                                                   method='force complete')
 
+        self._record_action_start(
+            context, instance, instance_actions.LIVE_MIGRATION_FORCE_COMPLETE)
+
         self.compute_rpcapi.live_migration_force_complete(
             context, instance, migration.id)
 

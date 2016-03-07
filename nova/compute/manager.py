@@ -5260,6 +5260,7 @@ class ComputeManager(manager.Manager):
                       migrate_data)
 
     @wrap_exception()
+    @wrap_instance_event
     @wrap_instance_fault
     def live_migration_force_complete(self, context, instance, migration_id):
         """Force live migration to complete.
