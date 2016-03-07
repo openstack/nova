@@ -444,3 +444,8 @@ class ComputeTaskAPI(object):
                    recreate=recreate, on_shared_storage=on_shared_storage,
                    preserve_ephemeral=preserve_ephemeral,
                    host=host)
+
+    def colo_deploy(self, ctxt, primary_instance, host=None):
+        cctxt = self.client.prepare(version='1.9')
+        cctxt.cast(ctxt, 'colo_deploy', primary_instance=primary_instance,
+                   host=host)

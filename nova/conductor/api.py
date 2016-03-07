@@ -237,11 +237,11 @@ class LocalComputeTaskAPI(object):
             None, None, reservations)
 
     def live_migrate_instance(self, context, instance, host_name,
-                              block_migration, disk_over_commit):
+                              block_migration, disk_over_commit, colo=False):
         scheduler_hint = {'host': host_name}
         self._manager.migrate_server(
             context, instance, scheduler_hint, True, False, None,
-            block_migration, disk_over_commit, None)
+            block_migration, disk_over_commit, None, colo=colo)
 
     def build_instances(self, context, instances, image,
             filter_properties, admin_password, injected_files,
@@ -348,11 +348,11 @@ class ComputeTaskAPI(object):
             None, None, reservations)
 
     def live_migrate_instance(self, context, instance, host_name,
-                              block_migration, disk_over_commit):
+                              block_migration, disk_over_commit, colo=False):
         scheduler_hint = {'host': host_name}
         self.conductor_compute_rpcapi.migrate_server(
             context, instance, scheduler_hint, True, False, None,
-            block_migration, disk_over_commit, None)
+            block_migration, disk_over_commit, None, colo=colo)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
@@ -388,11 +388,6 @@ class ComputeTaskAPI(object):
                 preserve_ephemeral=preserve_ephemeral,
                 host=host)
 
-    def colo_migrate_instance(self, context, instance, host_name):
-        scheduler_hint = {'host': host_name}
-        block_migration=True
-        # NOTE(ORBIT): Let the scheduler decide disk overcommitment
-        disk_over_commit=True
-        self.conductor_compute_rpcapi.migrate_server(
-            context, instance, scheduler_hint, True, False, None,
-            block_migration, disk_over_commit, None, colo=True)
+    def colo_deploy(self, context, primary_instance, host=None):
+        self.conductor_compute_rpcapi.colo_deploy(context, primary_instance,
+                                                  host=host)

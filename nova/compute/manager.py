@@ -2090,6 +2090,35 @@ class ComputeManager(manager.Manager):
                     e, sys.exc_info())
             self._set_instance_error_state(context, instance)
 
+    def _colo_migrate(self, context, secondary_instance):
+        try:
+            relation = objects.FaultToleranceRelation.\
+                       get_by_secondary_instance_uuid(context,
+                                                      secondary_instance.uuid)
+        except exception.FaultToleranceRelationBySecondaryNotFound:
+            # TODO(ORBIT): Fix race
+            LOG.error("Conductor wasn't able to create the relation in time.",
+                      secondary_instance=secondary_instance)
+            return
+
+        primary_instance = self.compute_api.get(context,
+                                                relation.primary_instance_uuid,
+                                                want_objects=True)
+
+        LOG.debug("Going to initiate a COLO migration for %s", relation)
+
+        secondary_instance.vm_state = vm_states.ACTIVE
+        secondary_instance.task_state = task_states.MIGRATING
+        secondary_instance.save(expected_task_state=[None])
+
+        self.compute_api.live_migrate(context, primary_instance,
+                                      block_migration=True,
+                                      # NOTE(ORBIT): Let the scheduler decide
+                                      #              disk overcommitment
+                                      disk_over_commit=True,
+                                      host_name=self.host,
+                                      colo=True)
+
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
             block_device_mapping, node, limits, filter_properties):
@@ -2107,10 +2136,12 @@ class ComputeManager(manager.Manager):
                 self._validate_instance_group_policy(context, instance,
                         filter_properties)
 
-                # TODO(ORBIT): Temporary solution to only claim the secondary
-                #              instance, not spawn it.
-                #              (Might not be necessary)
+                # NOTE(ORBIT): After the secondary instance has been claimed
+                #              we can start the COLO migration.
                 if utils.ft_secondary(instance):
+                    self._colo_migrate(context, instance)
+                    # NOTE(ORBIT): The secondary instance is created through
+                    #              the migration process.
                     return
 
                 with self._build_resources(context, instance,
@@ -2199,6 +2230,13 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
                     'create.end', fault=e)
+
+        if ft:
+            scheduler_hints = filter_properties.get('scheduler_hints') or {}
+            if 'ft_secondary_hosts' in scheduler_hints:
+                # NOTE(ORBIT): Only one secondary instance supported for now
+                secondary_host = scheduler_hints['ft_secondary_hosts'][0]
+                self.compute_api.colo_deploy(context, instance, secondary_host)
 
         self._notify_about_instance_usage(context, instance, 'create.end',
                 extra_usage_info={'message': _('Success')},

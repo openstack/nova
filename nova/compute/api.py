@@ -763,11 +763,15 @@ class API(base.Base):
 
         self._check_requested_secgroups(context, security_groups)
 
-        # Note:  max_count is the number of instances requested by the user,
-        # max_network_count is the maximum number of instances taking into
-        # account any network quotas
-        max_network_count = self._check_requested_networks(context,
-                                     requested_networks, max_count)
+        # TODO(ORBIT): Might be a better solution for this
+        if 'ft:secondary' in instance_type['extra_specs']:
+            max_network_count = 1
+        else:
+            # Note:  max_count is the number of instances requested by the user,
+            # max_network_count is the maximum number of instances taking into
+            # account any network quotas
+            max_network_count = self._check_requested_networks(context,
+                                         requested_networks, max_count)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, boot_meta)
@@ -3176,7 +3180,7 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host_name):
+                     disk_over_commit, host_name, colo=False):
         """Migrate a server lively to a new host."""
         LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
@@ -3186,7 +3190,8 @@ class API(base.Base):
 
         self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
+                disk_over_commit=disk_over_commit,
+                colo=colo)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
@@ -3281,18 +3286,12 @@ class API(base.Base):
             self.compute_rpcapi.external_instance_event(
                 context, instances_by_host[host], events_by_host[host])
 
-    @check_instance_lock
-    # @check_instance_cell TODO(ORBIT)
-    @check_instance_state(vm_state=[vm_states.ACTIVE])
-    def colo_migrate(self, context, instance, host):
-        """Start a COLO migration."""
-        LOG.debug("Going to try to initiate a COLO migration to %s",
-                  host or "another host", instance=instance)
+    def colo_deploy(self, context, primary_instance, host=None):
+        if not utils.ft_enabled(primary_instance):
+            raise exception.InstanceNotFaultTolerant(
+                instance_uuid=primary_instance.uuid)
 
-        instance.task_state = task_states.MIGRATING
-        instance.save(expected_task_state=[None])
-
-        self.compute_task_api.colo_migrate_instance(context, instance, host)
+        self.compute_task_api.colo_deploy(context, primary_instance, host=host)
 
     def colo_failover(self, context, instance):
         self.compute_rpcapi.colo_failover(context, instance)

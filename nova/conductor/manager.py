@@ -441,10 +441,6 @@ class ConductorManager(manager.Manager):
     def object_backport(self, context, objinst, target_version):
         return objinst.obj_to_primitive(target_version=target_version)
 
-    def ft_failover(self, context, instance_uuid):
-        ft_tasks = fault_tolerance.FaultToleranceTasks()
-        ft_tasks.failover(context, instance_uuid)
-
 
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
@@ -599,6 +595,14 @@ class ComputeTaskManager(base.Base):
                        exc_info=True)
             raise exception.MigrationError(reason=ex)
 
+    def colo_deploy(self, context, primary_instance, host=None):
+        if not host:
+            # schedule
+            raise NotImplementedError("secondary scheduling")
+
+        ft_tasks = fault_tolerance.FaultToleranceTasks()
+        ft_tasks.create_secondary_instance(context, primary_instance, host)
+
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping=None, legacy_bdm=True):
@@ -643,6 +647,11 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
+            if utils.ft_enabled(instance) and 'ft_secondary_hosts' in host:
+                scheduler_hints = local_filter_props.get('scheduler_hints') or {}
+                scheduler_hints['ft_secondary_hosts'] = host['ft_secondary_hosts']
+                local_filter_props['scheduler_hints'] = scheduler_hints
+
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,
                     request_spec=request_spec,
@@ -653,33 +662,6 @@ class ComputeTaskManager(base.Base):
                     security_groups=security_groups,
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
-
-            if utils.ft_enabled(instance) and 'ft_secondary_hosts' in host:
-                ft_tasks = fault_tolerance.FaultToleranceTasks()
-                for ft_secondary_host in host['ft_secondary_hosts']:
-                    ft_secondary_instance = ft_tasks.create_secondary_instance(
-                        context, instance.uuid,
-                        host=ft_secondary_host['host'],
-                        node=ft_secondary_host['nodename'],
-                        limits=ft_secondary_host['limits'],
-                        image=image['id'],
-                        request_spec=request_spec,
-                        filter_properties=filter_properties,
-                        admin_password=admin_password,
-                        injected_files=injected_files,
-                        requested_networks=requested_networks,
-                        security_groups=security_groups,
-                        block_device_mapping=block_device_mapping,
-                        legacy_bdm=legacy_bdm)
-
-                    # TODO(ORBIT): Some or all of the actions below should
-                    #              probably be moved.
-                    ft_tasks.wait_for_ready(instance)
-                    ft_secondary_instance.vm_state = vm_states.ACTIVE
-                    ft_secondary_instance.task_state = task_states.MIGRATING
-                    ft_secondary_instance.save(expected_task_state=[None])
-                    compute_api.API().colo_migrate(context, instance,
-                                                   ft_secondary_host["host"])
 
     def _delete_image(self, context, image_id):
         return self.image_api.delete(context, image_id)
