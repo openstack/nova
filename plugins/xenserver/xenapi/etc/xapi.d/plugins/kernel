@@ -21,6 +21,8 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 """Handle the manipulation of kernel images."""
 
 import errno
@@ -119,7 +121,7 @@ def create_kernel_ramdisk(session, args):
 def _remove_file(filepath):
     try:
         os.remove(filepath)
-    except OSError, exc:
+    except OSError, exc:  # noqa
         if exc.errno != errno.ENOENT:
             raise
 
