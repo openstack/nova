@@ -13578,6 +13578,37 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self._test_get_guest_config_parallels_volume(vm_mode.EXE, 4)
         self._test_get_guest_config_parallels_volume(vm_mode.HVM, 6)
 
+    def _test_prepare_domain_for_snapshot(self, live_snapshot, state):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = objects.Instance(**self.test_instance)
+        with mock.patch.object(drvr, "suspend") as mock_suspend:
+            drvr._prepare_domain_for_snapshot(
+                self.context, live_snapshot, state, instance_ref)
+            return mock_suspend.called
+
+    def test_prepare_domain_for_snapshot(self):
+        # Ensure that suspend() is only called on RUNNING or PAUSED instances
+        for test_power_state in power_state.STATE_MAP.keys():
+            if test_power_state in (power_state.RUNNING, power_state.PAUSED):
+                self.assertTrue(self._test_prepare_domain_for_snapshot(
+                    False, test_power_state))
+            else:
+                self.assertFalse(self._test_prepare_domain_for_snapshot(
+                    False, test_power_state))
+
+    def test_prepare_domain_for_snapshot_lxc(self):
+        self.flags(virt_type='lxc', group='libvirt')
+        # Ensure that suspend() is never called with LXC
+        for test_power_state in power_state.STATE_MAP.keys():
+            self.assertFalse(self._test_prepare_domain_for_snapshot(
+                False, test_power_state))
+
+    def test_prepare_domain_for_snapshot_live_snapshots(self):
+        # Ensure that suspend() is never called for live snapshots
+        for test_power_state in power_state.STATE_MAP.keys():
+            self.assertFalse(self._test_prepare_domain_for_snapshot(
+                True, test_power_state))
+
 
 class HostStateTestCase(test.NoDBTestCase):
 
