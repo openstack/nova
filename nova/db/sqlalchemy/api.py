@@ -6407,6 +6407,43 @@ def pcidevice_online_data_migration(context, max_count):
     return count_all, count_hit
 
 
+@main_context_manager.writer
+def aggregate_uuids_online_data_migration(context, max_count):
+    from nova.objects import aggregate
+
+    count_all = 0
+    count_hit = 0
+
+    results = model_query(context, models.Aggregate).filter_by(
+        uuid=None).limit(max_count)
+    for db_agg in results:
+        count_all += 1
+        agg = aggregate.Aggregate._from_db_object(context,
+                                                  aggregate.Aggregate(),
+                                                  db_agg)
+        if 'uuid' in agg:
+            count_hit += 1
+    return count_all, count_hit
+
+
+@main_context_manager.writer
+def computenode_uuids_online_data_migration(context, max_count):
+    from nova.objects import compute_node
+
+    count_all = 0
+    count_hit = 0
+
+    results = model_query(context, models.ComputeNode).filter_by(
+        uuid=None).limit(max_count)
+    for db_cn in results:
+        count_all += 1
+        cn = compute_node.ComputeNode._from_db_object(
+            context, compute_node.ComputeNode(), db_cn)
+        if 'uuid' in cn:
+            count_hit += 1
+    return count_all, count_hit
+
+
 ####################
 
 
