@@ -159,8 +159,8 @@ libvirt_opts = [
                 help='Sync virtual and real mouse cursors in Windows VMs'),
     cfg.StrOpt('live_migration_inbound_addr',
                help='Live migration target ip or hostname '
-                    '(if this option is set to be None,'
-                    'the hostname of the migration target'
+                    '(if this option is set to None, which is the default, '
+                    'the hostname of the migration target '
                     'compute node will be used)'),
     cfg.StrOpt('live_migration_uri',
                help='Override the default libvirt live migration target URI '
