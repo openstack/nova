@@ -1061,6 +1061,40 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                flavor=flavor)
 
     @mock.patch.object(configdrive, 'required_by')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(FAKE_CLIENT, 'node')
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
+    @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
+    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
+    def test_spawn_node_configdrive_fail(self, mock_cleanup_deploy,
+                                         mock_pvifs, mock_sf, mock_configdrive,
+                                         mock_node, mock_save,
+                                         mock_required_by):
+        mock_required_by.return_value = True
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        flavor = ironic_utils.get_test_flavor()
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
+        mock_node.get.return_value = node
+        mock_node.validate.return_value = ironic_utils.get_test_validation()
+        image_meta = ironic_utils.get_test_image_meta()
+
+        class TestException(Exception):
+            pass
+
+        mock_configdrive.side_effect = TestException()
+        self.assertRaises(TestException, self.driver.spawn,
+                          self.ctx, instance, image_meta, [], None)
+
+        mock_node.get.assert_called_once_with(
+                node_uuid, fields=ironic_driver._NODE_FIELDS)
+        mock_node.validate.assert_called_once_with(node_uuid)
+        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance, None,
+                                               flavor=flavor)
+
+    @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
