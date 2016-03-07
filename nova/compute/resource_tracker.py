@@ -131,9 +131,6 @@ def _instance_in_resize_state(instance):
     return False
 
 
-_REMOVED_STATES = (vm_states.DELETED, vm_states.SHELVED_OFFLOADED)
-
-
 class ResourceTracker(object):
     """Compute helper class for keeping track of resource usage as instances
     are built and destroyed.
@@ -326,31 +323,33 @@ class ResourceTracker(object):
         migration.status = 'pre-migrating'
         migration.save()
 
-    def _set_instance_host_and_node(self, instance, clear=False):
+    def _set_instance_host_and_node(self, instance):
         """Tag the instance as belonging to this host.  This should be done
         while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
         """
-        instance.host = None if clear else self.host
-        if not clear:
-            instance.launched_on = self.host
-        instance.node = None if clear else self.nodename
+        instance.host = self.host
+        instance.launched_on = self.host
+        instance.node = self.nodename
+        instance.save()
+
+    def _unset_instance_host_and_node(self, instance):
+        """Untag the instance so it no longer belongs to the host.
+
+        This should be done while the COMPUTE_RESOURCES_SEMAPHORE is held so
+        the resource claim will not be lost if the audit process starts.
+        """
+        instance.host = None
+        instance.node = None
         instance.save()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def abort_instance_claim(self, context, instance):
         """Remove usage from the given instance."""
-        # flag the instance as deleted to revert the resource usage
-        # and associated stats:
-        real_vm_state = instance.vm_state
-        instance.vm_state = vm_states.DELETED
-        try:
-            self._update_usage_from_instance(context, instance)
-        finally:
-            instance.vm_state = real_vm_state
+        self._update_usage_from_instance(context, instance, is_removed=True)
 
         instance.clear_numa_topology()
-        self._set_instance_host_and_node(instance, clear=True)
+        self._unset_instance_host_and_node(instance)
 
         self._update(context.elevated())
 
@@ -868,12 +867,14 @@ class ResourceTracker(object):
                                 "migration."), instance_uuid=uuid)
                 continue
 
-    def _update_usage_from_instance(self, context, instance):
+    def _update_usage_from_instance(self, context, instance, is_removed=False):
         """Update usage for a single instance."""
 
         uuid = instance['uuid']
         is_new_instance = uuid not in self.tracked_instances
-        is_removed_instance = instance['vm_state'] in _REMOVED_STATES
+        is_removed_instance = (
+                is_removed or
+                instance['vm_state'] in vm_states.ALLOW_RESOURCE_REMOVAL)
 
         if is_new_instance:
             self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
@@ -883,7 +884,7 @@ class ResourceTracker(object):
             self.tracked_instances.pop(uuid)
             sign = -1
 
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(instance, is_removed_instance)
 
         # if it's a new or deleted instance:
         if is_new_instance or is_removed_instance:
@@ -925,7 +926,7 @@ class ResourceTracker(object):
                                                    self.driver)
 
         for instance in instances:
-            if instance.vm_state not in _REMOVED_STATES:
+            if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance)
 
     def _find_orphaned_instances(self):

@@ -741,11 +741,11 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertEqual(self.tracker.nodename, inst.node)
         self.assertEqual(self.tracker.host, inst.launched_on)
 
-    def test_set_instance_host_and_node_clear(self):
+    def test_unset_instance_host_and_node(self):
         inst = objects.Instance()
         with mock.patch.object(inst, 'save') as mock_save:
             self.tracker._set_instance_host_and_node(inst)
-            self.tracker._set_instance_host_and_node(inst, clear=True)
+            self.tracker._unset_instance_host_and_node(inst)
             self.assertEqual(2, mock_save.call_count)
         self.assertIsNone(inst.host)
         self.assertIsNone(inst.node)
