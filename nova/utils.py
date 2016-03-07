@@ -408,11 +408,6 @@ def trycmd(*args, **kwargs):
     return processutils.trycmd(*args, **kwargs)
 
 
-def novadir():
-    import nova
-    return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
-
-
 def generate_uid(topic, size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
     choices = [random.choice(characters) for _x in range(size)]
@@ -747,15 +742,6 @@ def monkey_patch():
                 func = importutils.import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,
                     decorator("%s.%s" % (module, key), func))
-
-
-def convert_to_list_dict(lst, label):
-    """Convert a value or list into a list of dicts."""
-    if not lst:
-        return None
-    if not isinstance(lst, list):
-        lst = [lst]
-    return [{label: x} for x in lst]
 
 
 def make_dev_path(dev, partition=None, base='/dev'):
