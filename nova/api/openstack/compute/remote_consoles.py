@@ -178,7 +178,8 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except (exception.ConsoleTypeUnavailable,
+        except (exception.ConsoleTypeInvalid,
+                exception.ConsoleTypeUnavailable,
                 exception.ImageSerialPortNumberInvalid,
                 exception.ImageSerialPortNumberExceedFlavorValue,
                 exception.SocketPortRangeExhaustedException) as e:

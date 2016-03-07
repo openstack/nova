@@ -572,6 +572,16 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, fakes.FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_invalid_type(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = (
+            exception.ConsoleTypeInvalid(console_type='invalid_type'))
+        self.controller.handlers['serial'] = mock_handler
+        body = {'remote_console': {'protocol': 'serial', 'type': 'xvpvnc'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
 
 class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
     def setUp(self):
