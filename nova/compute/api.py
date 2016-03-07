@@ -3837,6 +3837,11 @@ class AggregateAPI(base.Base):
 
         """
         if 'availability_zone' in metadata:
+            if not metadata['availability_zone']:
+                msg = _("Aggregate %s does not support empty named "
+                        "availability zone") % aggregate.name
+                self._raise_invalid_aggregate_exc(action_name, aggregate.id,
+                                                  msg)
             _hosts = hosts or aggregate.hosts
             host_aggregates = objects.AggregateList.get_by_metadata_key(
                 context, 'availability_zone', hosts=_hosts)
