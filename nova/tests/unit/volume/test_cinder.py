@@ -289,15 +289,22 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
 
-    def test_initialize_connection(self):
-        cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
-        self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'initialize_connection',
-                                 use_mock_anything=True)
-        self.cinderclient.volumes.initialize_connection('id1', 'connector')
-        self.mox.ReplayAll()
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_initialize_connection(self, mock_cinderclient):
+        connection_info = {'foo': 'bar'}
+        mock_cinderclient.return_value.volumes. \
+            initialize_connection.return_value = connection_info
 
-        self.api.initialize_connection(self.ctx, 'id1', 'connector')
+        volume_id = 'fake_vid'
+        connector = {'host': 'fakehost1'}
+        actual = self.api.initialize_connection(self.ctx, volume_id, connector)
+
+        expected = connection_info
+        expected['connector'] = connector
+        self.assertEqual(expected, actual)
+
+        mock_cinderclient.return_value.volumes. \
+            initialize_connection.assert_called_once_with(volume_id, connector)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_initialize_connection_rollback(self, mock_cinderclient):
