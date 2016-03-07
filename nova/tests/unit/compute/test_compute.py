@@ -6817,6 +6817,46 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertNotEqual(0, instance.deleted)
 
+    def test_terminate_instance_updates_tracker(self):
+        rt = self.compute._get_resource_tracker(NODENAME)
+        admin_context = context.get_admin_context()
+
+        self.assertEqual(0, rt.compute_node.vcpus_used)
+        instance = self._create_fake_instance_obj()
+        instance.vcpus = 1
+
+        rt.instance_claim(admin_context, instance)
+        self.assertEqual(1, rt.compute_node.vcpus_used)
+
+        self.compute.terminate_instance(admin_context, instance, [], [])
+        self.assertEqual(0, rt.compute_node.vcpus_used)
+
+    @mock.patch('nova.compute.manager.ComputeManager'
+                '._notify_about_instance_usage')
+    @mock.patch('nova.objects.Quotas.reserve')
+    # NOTE(cdent): At least in this test destroy() on the instance sets it
+    # state back to active, meaning the resource tracker won't
+    # update properly.
+    @mock.patch('nova.objects.Instance.destroy')
+    def test_init_deleted_instance_updates_tracker(self, noop1, noop2, noop3):
+        rt = self.compute._get_resource_tracker(NODENAME)
+        admin_context = context.get_admin_context()
+
+        self.assertEqual(0, rt.compute_node.vcpus_used)
+        instance = self._create_fake_instance_obj()
+        instance.vcpus = 1
+
+        self.assertEqual(0, rt.compute_node.vcpus_used)
+
+        rt.instance_claim(admin_context, instance)
+        self.compute._init_instance(admin_context, instance)
+        self.assertEqual(1, rt.compute_node.vcpus_used)
+
+        instance.vm_state = vm_states.DELETED
+        self.compute._init_instance(admin_context, instance)
+
+        self.assertEqual(0, rt.compute_node.vcpus_used)
+
     def test_init_instance_for_partial_deletion(self):
         admin_context = context.get_admin_context()
         instance = objects.Instance(admin_context)

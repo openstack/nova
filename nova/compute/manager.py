@@ -918,6 +918,7 @@ class ComputeManager(manager.Manager):
         for bdm in bdms:
             bdm.destroy()
 
+        self._update_resource_tracker(context, instance)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
@@ -2433,7 +2434,6 @@ class ComputeManager(manager.Manager):
             instance.power_state = power_state.NOSTATE
             instance.terminated_at = timeutils.utcnow()
             instance.save()
-            self._update_resource_tracker(context, instance)
             system_meta = instance.system_metadata
             instance.destroy()
         except Exception:
