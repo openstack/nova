@@ -880,6 +880,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             'inventories_resource_provider_resource_class_idx',
             ['resource_provider_id', 'resource_class_id'])
 
+    def _check_319(self, engine, data):
+        self.assertIndexMembers(engine, 'instances',
+                                'instances_deleted_created_at_idx',
+                                ['deleted', 'created_at'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
