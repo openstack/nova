@@ -249,6 +249,37 @@ class Database(fixtures.Fixture):
         self.addCleanup(self.cleanup)
 
 
+class DatabaseAtVersion(fixtures.Fixture):
+    def __init__(self, version, database='main'):
+        """Create a database fixture.
+
+        :param version: Max version to sync to (or None for current)
+        :param database: The type of database, 'main' or 'api'
+        """
+        super(DatabaseAtVersion, self).__init__()
+        self.database = database
+        self.version = version
+        if database == 'main':
+            self.get_engine = session.get_engine
+        elif database == 'api':
+            self.get_engine = session.get_api_engine
+
+    def cleanup(self):
+        engine = self.get_engine()
+        engine.dispose()
+
+    def reset(self):
+        engine = self.get_engine()
+        engine.dispose()
+        engine.connect()
+        migration.db_sync(version=self.version, database=self.database)
+
+    def setUp(self):
+        super(DatabaseAtVersion, self).setUp()
+        self.reset()
+        self.addCleanup(self.cleanup)
+
+
 class RPCFixture(fixtures.Fixture):
     def __init__(self, *exmods):
         super(RPCFixture, self).__init__()
