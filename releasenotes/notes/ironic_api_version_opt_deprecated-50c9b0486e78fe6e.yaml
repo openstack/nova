@@ -1,0 +1,10 @@
+---
+deprecations:
+  -  The configuration option ``api_version`` in the ``ironic`` group was
+     marked as deprecated and will be removed in the future. The only
+     possible value for that configuration was "1" (because Ironic only has 1
+     API version) and the Ironic team came to an agreement that setting the API
+     version via configuration option should not be supported anymore. As the
+     Ironic driver in Nova requests the Ironic v1.8 API, that means that
+     Nova 13.0.0 ("Mitaka") requires Ironic 4.0.0 ("Liberty") or newer if
+     you want to use the Ironic driver.
