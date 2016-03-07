@@ -2608,7 +2608,8 @@ class LibvirtDriver(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, network_info=None, block_device_info=None,
+              stay_paused=False):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             block_device_info,
@@ -2624,16 +2625,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, disk_info=disk_info)
+                                        block_device_info, disk_info=disk_info,
+                                        stay_paused=stay_paused)
         LOG.debug("Instance is running", instance=instance)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
             state = self.get_info(instance)['state']
 
-            # TODO(ORBIT): The instance is not going to be resumed until the
-            #              COLO migration has started.
-            if ((utils.ft_enabled(instance) and state == power_state.PAUSED) or
+            if ((stay_paused and state == power_state.PAUSED) or
                     state == power_state.RUNNING):
                 LOG.info(_LI("Instance spawned successfully."),
                          instance=instance)
@@ -4423,7 +4423,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
                                    reboot=False, vifs_already_plugged=False,
-                                   disk_info=None):
+                                   disk_info=None, stay_paused=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -4460,11 +4460,8 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             events = []
 
-        ft = utils.ft_enabled(instance)
-        # NOTE(ORBIT): We always want to launch the fault tolerant instances
-        #              paused so that it has time to do the initial
-        #              synchronization.
-        launch_flags = (events or ft) and libvirt.VIR_DOMAIN_START_PAUSED or 0
+        launch_flags = ((events or stay_paused) and
+                        libvirt.VIR_DOMAIN_START_PAUSED or 0)
 
         domain = None
         try:
@@ -4505,9 +4502,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.VirtualInterfaceCreateException()
 
         # Resume only if domain has been paused
-        # NOTE(ORBIT): Fault tolerant instances will be resumed after they have
-        #              done the initial synchronization.
-        if launch_flags & libvirt.VIR_DOMAIN_START_PAUSED and not ft:
+        if launch_flags & libvirt.VIR_DOMAIN_START_PAUSED and not stay_paused:
             domain.resume()
         return domain
 

@@ -2095,6 +2095,7 @@ class ComputeManager(manager.Manager):
             block_device_mapping, node, limits, filter_properties):
 
         image_name = image.get('name')
+        ft = utils.ft_enabled(instance)
         self._notify_about_instance_usage(context, instance, 'create.start',
                 extra_usage_info={'image_name': image_name})
         try:
@@ -2122,10 +2123,18 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
+
+                    # NOTE(ORBIT): We always want to launch a fault tolerant
+                    #              instance paused so that it has time to
+                    #              execute initial synchronization before being
+                    #              resumed.
+                    stay_paused = True if ft else False
+
                     self.driver.spawn(context, instance, image,
                                       injected_files, admin_password,
                                       network_info=network_info,
-                                      block_device_info=block_device_info)
+                                      block_device_info=block_device_info,
+                                      stay_paused=stay_paused)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
