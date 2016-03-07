@@ -887,6 +887,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                 'instances_deleted_created_at_idx',
                                 ['deleted', 'created_at'])
 
+    def _check_330(self, engine, data):
+        # Just a sanity-check migration
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
