@@ -239,7 +239,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # Tests that if port is specified there is only one instance booting
         # (i.e max_count == 1) as we can't share the same port across multiple
         # instances.
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
         min_count = 1
@@ -274,7 +274,7 @@ class _ComputeAPIUnitTestMixIn(object):
             requested_networks)
 
     def test_specified_ip_and_multiple_instances_neutronv2(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
         requested_networks = objects.NetworkRequestList(

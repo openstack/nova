@@ -982,7 +982,7 @@ class ValidateNeutronConfiguration(test.NoDBTestCase):
         self.assertFalse(utils.is_neutron())
 
     def test_neutron(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         self.assertTrue(utils.is_neutron())
 
 

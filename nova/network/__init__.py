@@ -44,19 +44,36 @@ Defaults to False (indicating Nova network). Set to True to use neutron.
 oslo_config.cfg.CONF.register_opts(_network_opts)
 
 
-def API(skip_policy_check=False):
+def is_neutron():
+    """Does this configuration mean we're neutron.
+
+    This logic exists as a separate config option
+    """
     legacy_class = oslo_config.cfg.CONF.network_api_class
     use_neutron = oslo_config.cfg.CONF.use_neutron
 
-    if legacy_class == NEUTRON_NET_API and not use_neutron:
+    if legacy_class not in (NEUTRON_NET_API, NOVA_NET_API):
+        # Someone actually used this option, this gets a pass for now,
+        # but will just go away once deleted.
+        return None
+    elif legacy_class == NEUTRON_NET_API and not use_neutron:
         # If they specified neutron via class, we should respect that
-        network_api_class = legacy_class
         LOG.warn(_LW("Config mismatch. The network_api_class specifies %s, "
                      "however use_neutron is not set to True. Using Neutron "
                      "networking for now, however please set use_neutron to "
                      "True in your configuration as network_api_class is "
                      "deprecated and will be removed."), legacy_class)
+        return True
     elif use_neutron:
+        return True
+    else:
+        return False
+
+
+def API(skip_policy_check=False):
+    if is_neutron() is None:
+        network_api_class = oslo_config.cfg.CONF.network_api_class
+    elif is_neutron():
         network_api_class = NEUTRON_NET_API
     else:
         network_api_class = NOVA_NET_API

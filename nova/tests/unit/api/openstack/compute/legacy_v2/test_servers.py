@@ -47,7 +47,6 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.image import glance
 from nova.network import manager
-from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import policy
@@ -151,11 +150,6 @@ class Base64ValidationTest(test.TestCase):
         self.assertIsNone(result)
 
 
-class NeutronV2Subclass(neutron_api.API):
-    """Used to ensure that API handles subclasses properly."""
-    pass
-
-
 class ControllerTest(test.TestCase):
 
     def setUp(self):
@@ -200,21 +194,21 @@ class ServersControllerTest(ControllerTest):
         self.assertIn((uuid, None), res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_port(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_network(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(network, None, None, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_network_and_port(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
@@ -232,7 +226,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_requested_networks_with_neutronv2_and_duplicate_networks(self):
         # duplicate networks are allowed only for nova neutron v2.0
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}, {'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
@@ -248,19 +242,10 @@ class ServersControllerTest(ControllerTest):
             requested_networks)
 
     def test_requested_networks_api_enabled_with_v2_subclass(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
-        res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(None, None, port, None)], res.as_tuples())
-
-    def test_requested_networks_neutronv2_subclass_with_port(self):
-        cls = ('nova.tests.unit.api.openstack.compute.legacy_v2'
-               '.test_servers.NeutronV2Subclass')
-        self.flags(network_api_class=cls)
-        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
@@ -2183,7 +2168,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra({'security_groups': [{'name': group}]})
 
     def test_create_instance_with_non_unique_secgroup_name(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network}]
         params = {'networks': requested_networks,
@@ -2197,7 +2182,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     def test_create_instance_sg_with_leading_trailing_spaces(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network}]
         params = {'networks': requested_networks,
@@ -2213,7 +2198,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_port_with_no_fixed_ips(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         port_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port_id}]
         params = {'networks': requested_networks}
@@ -2252,7 +2237,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, self.body)
 
     def test_create_instance_with_network_with_no_subnet(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network}]
         params = {'networks': requested_networks}
@@ -2726,7 +2711,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_neutronv2_port_in_use(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
@@ -2740,7 +2725,7 @@ class ServersControllerCreateTest(test.TestCase):
                                           self._test_create_extra, params)
 
     def test_create_instance_with_neutronv2_not_found_network(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         params = {'networks': requested_networks}
@@ -2753,7 +2738,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     def test_create_instance_with_neutronv2_port_not_found(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
@@ -2782,7 +2767,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     def test_create_multiple_instance_with_neutronv2_port(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.body['server']['max_count'] = 2
@@ -2800,7 +2785,7 @@ class ServersControllerCreateTest(test.TestCase):
                                         self._test_create_extra, params)
 
     def test_create_instance_with_networks_disabled_neutronv2(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]
         params = {'networks': requested_networks}
@@ -3016,7 +3001,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_with_neutronv2_fixed_ip_already_in_use(self,
             create_mock):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.2.3'
         requested_networks = [{'uuid': network, 'fixed_ip': address}]
@@ -3031,7 +3016,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_with_neutronv2_invalid_fixed_ip(self,
                                                              create_mock):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '999.0.2.3'
         requested_networks = [{'uuid': network, 'fixed_ip': address}]

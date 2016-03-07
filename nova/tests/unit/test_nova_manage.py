@@ -294,7 +294,7 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
 class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NeutronV2NetworkCommandsTestCase, self).setUp()
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.flags(use_neutron=True)
         self.commands = manage.NetworkCommands()
 
     def test_create(self):
