@@ -488,6 +488,7 @@ class VMwareVMOps(object):
                 self._tmp_folder, uuidutils.generate_uuid())
         tmp_image_ds_loc = tmp_dir_loc.join(
                 vi.ii.image_id, "tmp-sparse.vmdk")
+        ds_util.mkdir(self._session, tmp_image_ds_loc.parent, vi.dc_info.ref)
         return tmp_dir_loc, tmp_image_ds_loc
 
     def _prepare_flat_image(self, vi):
