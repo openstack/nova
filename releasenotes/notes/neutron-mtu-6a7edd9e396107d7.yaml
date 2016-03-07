@@ -1,0 +1,13 @@
+---
+deprecations:
+  - The ``network_device_mtu`` option in Nova is deprecated for removal since
+    network MTU should be specified when creating the network with
+    nova-network. With Neutron networks, the MTU value comes from the
+    ``segment_mtu`` configuration option in Neutron.
+other:
+  - The Neutron network MTU value is now used when plugging virtual interfaces
+    in nova-compute. If the value is 0, which is the default value for the
+    ``segment_mtu`` configuration option in Neutron before Mitaka, then the
+    (deprecated) ``network_device_mtu`` configuration option in Nova is used,
+    which defaults to not setting an MTU value.
+
