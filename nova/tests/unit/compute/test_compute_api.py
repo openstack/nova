@@ -204,6 +204,37 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 self.fail("Exception not raised")
 
+    def _test_create_max_net_count(self, max_net_count, min_count, max_count):
+        with test.nested(
+            mock.patch.object(self.compute_api, '_get_image',
+                              return_value=(None, {})),
+            mock.patch.object(self.compute_api, '_check_auto_disk_config'),
+            mock.patch.object(self.compute_api,
+                              '_validate_and_build_base_options',
+                              return_value=({}, max_net_count))
+        ) as (
+            get_image,
+            check_auto_disk_config,
+            validate_and_build_base_options
+        ):
+            self.assertRaises(exception.PortLimitExceeded,
+                self.compute_api.create, self.context, 'fake_flavor',
+                'image_id', min_count=min_count, max_count=max_count)
+
+    def test_max_net_count_zero(self):
+        # Test when max_net_count is zero.
+        max_net_count = 0
+        min_count = 2
+        max_count = 3
+        self._test_create_max_net_count(max_net_count, min_count, max_count)
+
+    def test_max_net_count_less_than_min_count(self):
+        # Test when max_net_count is nonzero but less than min_count.
+        max_net_count = 1
+        min_count = 2
+        max_count = 3
+        self._test_create_max_net_count(max_net_count, min_count, max_count)
+
     def test_specified_port_and_multiple_instances_neutronv2(self):
         # Tests that if port is specified there is only one instance booting
         # (i.e max_count == 1) as we can't share the same port across multiple
