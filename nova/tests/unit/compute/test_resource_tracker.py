@@ -1211,7 +1211,7 @@ class ComputeMonitorTestCase(BaseTestCase):
         metrics = self.tracker._get_host_metrics(self.context,
                                                  self.node_name)
         mock_LOG_warning.assert_called_once_with(
-            u'Cannot get the metrics from %s.', mock.ANY)
+            u'Cannot get the metrics from %(mon)s; error: %(exc)s', mock.ANY)
         self.assertEqual(0, len(metrics))
 
     def test_get_host_metrics(self):
