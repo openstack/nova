@@ -1294,8 +1294,15 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(0, self.rt.compute_node.memory_mb_used)
         self.assertEqual(0, self.rt.compute_node.running_vms)
 
-        @mock.patch.object(self.instance, 'save')
-        def _doit(mock_save):
+        mock_save = mock.MagicMock()
+        mock_clear_numa = mock.MagicMock()
+
+        @mock.patch.object(self.instance, 'save', mock_save)
+        @mock.patch.object(self.instance, 'clear_numa_topology',
+                           mock_clear_numa)
+        @mock.patch.object(objects.Instance, 'obj_clone',
+                           return_value=self.instance)
+        def _doit(mock_clone):
             with self.rt.instance_claim(self.ctx, self.instance, None):
                 # Raise an exception. Just make sure below that the abort()
                 # method of the claim object was called (and the resulting
@@ -1303,6 +1310,10 @@ class TestInstanceClaim(BaseTestCase):
                 raise test.TestingException()
 
         self.assertRaises(test.TestingException, _doit)
+        self.assertEqual(2, mock_save.call_count)
+        mock_clear_numa.assert_called_once_with()
+        self.assertIsNone(self.instance.host)
+        self.assertIsNone(self.instance.node)
 
         # Assert that the resources claimed by the Claim() constructor
         # are returned to the resource tracker due to the claim's abort()
@@ -1317,15 +1328,32 @@ class TestInstanceClaim(BaseTestCase):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
 
-        with mock.patch.object(self.instance, 'save'):
-            claim = self.rt.instance_claim(self.ctx, self.instance, None)
+        @mock.patch.object(objects.Instance, 'obj_clone',
+                           return_value=self.instance)
+        @mock.patch.object(self.instance, 'save')
+        def _claim(mock_save, mock_clone):
+            return self.rt.instance_claim(self.ctx, self.instance, None)
 
+        claim = _claim()
         self.assertEqual(disk_used, self.rt.compute_node.local_gb_used)
         self.assertEqual(self.instance.memory_mb,
                          self.rt.compute_node.memory_mb_used)
         self.assertEqual(1, self.rt.compute_node.running_vms)
 
-        claim.abort()
+        mock_save = mock.MagicMock()
+        mock_clear_numa = mock.MagicMock()
+
+        @mock.patch.object(self.instance, 'save', mock_save)
+        @mock.patch.object(self.instance, 'clear_numa_topology',
+                           mock_clear_numa)
+        def _abort():
+            claim.abort()
+
+        _abort()
+        mock_save.assert_called_once_with()
+        mock_clear_numa.assert_called_once_with()
+        self.assertIsNone(self.instance.host)
+        self.assertIsNone(self.instance.node)
 
         self.assertEqual(0, self.rt.compute_node.local_gb_used)
         self.assertEqual(0, self.rt.compute_node.memory_mb_used)
