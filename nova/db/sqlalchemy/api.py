@@ -1949,6 +1949,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
     model_query(context, models.InstanceSystemMetadata).\
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
+    model_query(context, models.InstanceGroupMember).\
+            filter_by(instance_id=instance_uuid).\
+            soft_delete()
     # NOTE(snikitin): We can't use model_query here, because there is no
     # column 'deleted' in 'tags' table.
     context.session.query(models.Tag).filter_by(
