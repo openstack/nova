@@ -244,6 +244,8 @@ class TestCase(testtools.TestCase):
 
         openstack_driver.DRIVER_CACHE = {}
 
+        self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
+
     def _restore_obj_registry(self):
         objects_base.NovaObjectRegistry._registry._obj_classes = \
                 self._base_test_obj_backup
