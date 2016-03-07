@@ -169,10 +169,12 @@ class FakeSessionForVMTests(fake.SessionBase):
                                   "# Completed on Sun Nov  6 22:49:02 2011\n")
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
+        plugin = plugin.rstrip('.py')
+
         if plugin == 'glance' and method in ('download_vhd2'):
             root_uuid = _make_fake_vdi()
             return pickle.dumps(dict(root=dict(uuid=root_uuid)))
-        elif (plugin, method) == ("xenhost", "iptables_config"):
+        elif (plugin, method) == ('xenhost', 'iptables_config'):
             return fake.as_json(out=self._fake_iptables_save_output,
                                 err='')
         else:
@@ -214,11 +216,13 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
         self._test_case = test_case
 
     def host_call_plugin(self, _1, _2, plugin, method, args):
-        """Mock method four host_call_plugin to be used in unit tests
+        """Mock method for host_call_plugin to be used in unit tests
            for the dom0 iptables Firewall drivers for XenAPI
 
         """
-        if plugin == "xenhost" and method == "iptables_config":
+        plugin = plugin.rstrip('.py')
+
+        if plugin == 'xenhost' and method == 'iptables_config':
             # The command to execute is a json-encoded list
             cmd_args = args.get('cmd_args', None)
             cmd = jsonutils.loads(cmd_args)

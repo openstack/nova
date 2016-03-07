@@ -508,4 +508,5 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         args = {'cmd': cmd,
                 'args': cmd_args
                }
-        self._session.call_plugin_serialized('xenhost', 'network_config', args)
+        self._session.call_plugin_serialized(
+            'xenhost.py', 'network_config', args)

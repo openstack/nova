@@ -769,7 +769,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                    group='xenserver')
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
         self.conn._session.call_plugin_serialized(
-            'ipxe', 'inject', '/sr/path', mox.IgnoreArg(),
+            'ipxe.py', 'inject', '/sr/path', mox.IgnoreArg(),
             'http://boot.example.com', '192.168.1.100', '255.255.255.0',
             '192.168.1.1', '192.168.1.3', '/root/mkisofs')
         self.conn._session.call_plugin_serialized('partition_utils.py',
@@ -4076,7 +4076,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         session.PLUGIN_REQUIRED_VERSION = '2.4'
 
         self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
                             ).AndReturn("2.4")
 
         self.mox.ReplayAll()
@@ -4089,11 +4089,22 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         session.PLUGIN_REQUIRED_VERSION = '2.4'
 
         self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
                             ).AndReturn("2.5")
 
         self.mox.ReplayAll()
         session._verify_plugin_version()
+
+    def test_verify_plugin_version_python_extensions(self):
+        """Validate that 2.0 is equivalent to 1.8."""
+        session = self._get_mock_xapisession({})
+        session.XenAPI = xenapi_fake.FakeXenAPI()
+
+        session.PLUGIN_REQUIRED_VERSION = '2.0'
+
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               return_value='1.8'):
+            session._verify_plugin_version()
 
     def test_verify_plugin_version_bad_maj(self):
         session = self._get_mock_xapisession({})
@@ -4102,7 +4113,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         session.PLUGIN_REQUIRED_VERSION = '2.4'
 
         self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
                             ).AndReturn("3.0")
 
         self.mox.ReplayAll()
@@ -4115,7 +4126,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         session.PLUGIN_REQUIRED_VERSION = '2.4'
 
         self.mox.StubOutWithMock(session, 'call_plugin_serialized')
-        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+        session.call_plugin_serialized('nova_plugin_version.py', 'get_version',
                             ).AndReturn("2.3")
 
         self.mox.ReplayAll()
@@ -4127,7 +4138,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         # Import the plugin to extract its version
         path = os.path.dirname(__file__)
         rel_path_elem = "../../../../../plugins/xenserver/xenapi/etc/xapi.d/" \
-            "plugins/nova_plugin_version"
+            "plugins/nova_plugin_version.py"
         for elem in rel_path_elem.split('/'):
             path = os.path.join(path, elem)
         path = os.path.realpath(path)

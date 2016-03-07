@@ -81,7 +81,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                        lambda *a, **kw: ['uuid1'])
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance', 'download_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'download_vhd2',
                                             **params)
         self.mox.ReplayAll()
 
@@ -102,22 +102,22 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.flags(num_retries=2, group='glance')
 
         params.pop("endpoint")
-        calls = [mock.call('glance', 'download_vhd2',
+        calls = [mock.call('glance.py', 'download_vhd2',
                            endpoint='http://10.0.1.1:9292',
                            **params),
-                 mock.call('glance', 'download_vhd2',
+                 mock.call('glance.py', 'download_vhd2',
                            endpoint='http://10.0.0.1:9293',
                            **params)]
         log_calls = [mock.call(mock.ANY,
                                {'callback_result': 'http://10.0.1.1:9292',
                                 'attempts': 3, 'attempt': 1,
                                 'fn': 'download_vhd2',
-                                'plugin': 'glance'}),
+                                'plugin': 'glance.py'}),
                      mock.call(mock.ANY,
                                {'callback_result': 'http://10.0.0.1:9293',
                                 'attempts': 3, 'attempt': 2,
                                 'fn': 'download_vhd2',
-                                'plugin': 'glance'})]
+                                'plugin': 'glance.py'})]
 
         glance_api_servers = ['10.0.1.1:9292',
                               'http://10.0.0.1:9293']
@@ -149,7 +149,8 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         params = self._get_upload_params(auto_disk_config, expected_os_type)
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance', 'upload_vhd2', **params)
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
+                                            **params)
 
         self.mox.ReplayAll()
         self.store.upload_image(self.context, self.session, self.instance,
@@ -176,7 +177,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(RuntimeError)
         self.mox.ReplayAll()
 
@@ -194,21 +195,21 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "", "RetryableError", ""]
         error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                                                   error, (fake.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(0.5)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                                                   error, (fake.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(1)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                                                   error, (fake.Failure,
@@ -231,7 +232,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "task signaled", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                                                   error, (fake.Failure,
@@ -241,14 +242,14 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         # Note(johngarbutt) XenServer 6.1 and later has this error
         error_details = ["", "signal: SIGTERM", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params).AndRaise(error)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                                                   error, (fake.Failure,
                                                           error,
                                                           mox.IgnoreArg()))
         time.sleep(1)
-        self.session.call_plugin_serialized('glance', 'upload_vhd2',
+        self.session.call_plugin_serialized('glance.py', 'upload_vhd2',
                                             **params)
         self.mox.ReplayAll()
 

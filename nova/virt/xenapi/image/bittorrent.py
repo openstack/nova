@@ -72,7 +72,7 @@ class BittorrentStore(object):
         params['torrent_url'] = lookup_fn(image_id)
 
         vdis = session.call_plugin_serialized(
-                'bittorrent', 'download_vhd', **params)
+                'bittorrent.py', 'download_vhd', **params)
 
         return vdis
 

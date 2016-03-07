@@ -169,7 +169,7 @@ class ResourcePool(object):
                     'master_addr': self._host_addr,
                     'master_user': CONF.xenserver.connection_username,
                     'master_pass': CONF.xenserver.connection_password, }
-            self._session.call_plugin('xenhost', 'host_join', args)
+            self._session.call_plugin('xenhost.py', 'host_join', args)
         except self._session.XenAPI.Failure as e:
             LOG.error(_LE("Pool-Join failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,

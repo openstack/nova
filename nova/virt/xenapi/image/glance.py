@@ -51,7 +51,8 @@ class GlanceStore(object):
         cb = functools.partial(retry_cb, context, instance)
 
         return session.call_plugin_serialized_with_retry(
-            'glance', fn, CONF.glance.num_retries, pick_glance, cb, **params)
+            'glance.py', fn, CONF.glance.num_retries, pick_glance, cb,
+            **params)
 
     def _make_params(self, context, session, image_id):
         return {'image_id': image_id,

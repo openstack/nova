@@ -68,7 +68,7 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.session.call_plugin_serialized(
-                'bittorrent', 'download_vhd', **params)
+                'bittorrent.py', 'download_vhd', **params)
         self.mox.ReplayAll()
 
         self.store.download_image(self.context, self.session,

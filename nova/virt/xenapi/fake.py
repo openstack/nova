@@ -779,16 +779,17 @@ class SessionBase(object):
         return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
-        return pickle.dumps("1.7")
+        return pickle.dumps("1.8")
 
     def _plugin_xenhost_query_gc(self, method, args):
         return pickle.dumps("False")
 
-    def _plugin_partition_utils_dot_py_make_partition(self, method, args):
+    def _plugin_partition_utils_make_partition(self, method, args):
         return pickle.dumps(None)
 
     def host_call_plugin(self, _1, _2, plugin, method, args):
-        plugin = plugin.replace('.', '_dot_')
+        plugin = plugin.rstrip('.py')
+
         func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)
         if not func:
             raise Exception('No simulation in host_call_plugin for %s,%s' %

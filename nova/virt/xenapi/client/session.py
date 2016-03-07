@@ -73,7 +73,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.7'
+    PLUGIN_REQUIRED_VERSION = '1.8'
 
     def __init__(self, url, user, pw):
         version_string = version.version_string_with_package()
@@ -107,7 +107,12 @@ class XenAPISession(object):
     def _verify_plugin_version(self):
         requested_version = self.PLUGIN_REQUIRED_VERSION
         current_version = self.call_plugin_serialized(
-            'nova_plugin_version', 'get_version')
+            'nova_plugin_version.py', 'get_version')
+
+        # v2.0 is the same as v1.8, with no version bumps. Remove this once
+        # Ocata is released
+        if requested_version == '2.0' and current_version == '1.8':
+            return
 
         if not versionutils.is_compatible(requested_version, current_version):
             raise self.XenAPI.Failure(
@@ -201,6 +206,17 @@ class XenAPISession(object):
         # NOTE(armando): pass the host uuid along with the args so that
         # the plugin gets executed on the right host when using XS pools
         args['host_uuid'] = self.host_uuid
+
+        # TODO(sfinucan): Once the required plugin version is bumped to v2.0,
+        # we can assume that all files will have a '.py' extension. Until then,
+        # handle hosts without this extension by rewriting all calls to plugins
+        # to exclude the '.py' extension. This is made possible through the
+        # temporary inclusion of symlinks to plugins.
+        # NOTE(sfinucan): 'partition_utils.py' was the only plugin with a '.py'
+        # extension before this change was enacted, hence this plugin is
+        # excluded
+        if not plugin == 'partition_utils.py':
+            plugin = plugin.rstrip('.py')
 
         with self._get_session() as session:
             return self._unwrap_plugin_exceptions(

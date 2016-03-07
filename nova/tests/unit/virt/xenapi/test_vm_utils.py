@@ -249,7 +249,11 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.StubOutWithMock(
                 self.session, 'call_plugin_serialized_with_retry')
         func = self.session.call_plugin_serialized_with_retry(
-                'glance', 'download_vhd2', 0, mox.IgnoreArg(), mox.IgnoreArg(),
+                'glance.py',
+                'download_vhd2',
+                0,
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
                 extra_headers={'X-Auth-Token': 'auth_token',
                                'X-Roles': '',
                                'X-Tenant-Id': None,
@@ -268,7 +272,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.StubOutWithMock(
                 self.session, 'call_plugin_serialized')
         func = self.session.call_plugin_serialized(
-            'bittorrent', 'download_vhd',
+            'bittorrent.py', 'download_vhd',
             image_id='image_id',
             uuid_stack=["uuid_stack"],
             sr_path='sr_path',
@@ -1373,14 +1377,14 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
         uuid.uuid4().AndReturn("fake_uuid1")
-        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_kernel).AndReturn("k")
 
         args_ramdisk = {}
         args_ramdisk['cached-image'] = ramdisk_id
         args_ramdisk['new-image-uuid'] = "fake_uuid2"
         uuid.uuid4().AndReturn("fake_uuid2")
-        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_ramdisk).AndReturn("r")
 
         self.mox.ReplayAll()
@@ -1396,7 +1400,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
         uuid.uuid4().AndReturn("fake_uuid1")
-        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+        self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_kernel).AndReturn("")
 
         kernel = {"kernel": {"file": "k"}}
@@ -1419,7 +1423,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
 
         if cache_images == 'all':
             uuid.uuid4().AndReturn("fake_uuid1")
-            self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+            self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                      args_kernel).AndReturn("cached_image")
         else:
             kernel = {"kernel": {"file": "new_image", "uuid": None}}
@@ -2034,7 +2038,7 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         expected = {'uuid': "a", 'ref': "vdi_ref"}
         self.assertEqual(expected, result)
         mock_get_sr_path.assert_called_once_with(session)
-        session.call_plugin_serialized.assert_called_once_with('migration',
+        session.call_plugin_serialized.assert_called_once_with('migration.py',
                 'move_vhds_into_sr', instance_uuid='chain_label',
                 sr_path='sr_path', uuid_stack=mock.ANY)
         mock_scan_sr.assert_called_once_with(session)
@@ -2055,8 +2059,8 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
 class MigrateVHDTestCase(VMUtilsTestBase):
     def _assert_transfer_called(self, session, label):
         session.call_plugin_serialized.assert_called_once_with(
-                'migration', 'transfer_vhd', instance_uuid=label, host="dest",
-                vdi_uuid="vdi_uuid", sr_path="sr_path", seq_num=2)
+            'migration.py', 'transfer_vhd', instance_uuid=label, host="dest",
+            vdi_uuid="vdi_uuid", sr_path="sr_path", seq_num=2)
 
     def test_migrate_vhd_root(self):
         session = mock.Mock()
