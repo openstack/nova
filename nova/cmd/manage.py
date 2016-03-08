@@ -925,6 +925,8 @@ class DbCommands(object):
 
     online_migrations = (
         db.pcidevice_online_data_migration,
+        db.computenode_uuids_online_data_migration,
+        db.aggregate_uuids_online_data_migration,
     )
 
     def __init__(self):
