@@ -208,6 +208,11 @@ class AggregateController(wsgi.Controller):
 
     def _build_aggregate_items(self, aggregate):
         keys = aggregate.obj_fields
+        # NOTE(rlrossit): Within the compute API, metadata will always be
+        # set on the aggregate object (at a minimum to {}). Because of this,
+        # we can freely use getattr() on keys in obj_extra_fields (in this
+        # case it is only ['availability_zone']) without worrying about
+        # lazy-loading an unset variable
         for key in keys:
             # NOTE(danms): Skip the uuid field because we have no microversion
             # to expose it

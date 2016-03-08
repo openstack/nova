@@ -10845,7 +10845,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                       map(lambda x: x.availability_zone, aggregate_list))
         self.assertIn('fake_zone2',
                       map(lambda x: x.availability_zone, aggregate_list))
-        test_agg_meta = getattr(aggregate_list[1], 'metadata', None)
+        test_agg_meta = aggregate_list[1].metadata
         self.assertIn('foo_key1', test_agg_meta)
         self.assertIn('foo_key2', test_agg_meta)
         self.assertEqual('foo_value1', test_agg_meta['foo_key1'])
@@ -10861,7 +10861,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                        values[0][1][0])
         aggregate_list = self.api.get_aggregate_list(self.context)
         aggregate = aggregate_list[0]
-        self.assertIn(values[0][1][0], getattr(aggregate, 'hosts', None))
+        hosts = aggregate.hosts if 'hosts' in aggregate else None
+        self.assertIn(values[0][1][0], hosts)
 
 
 class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
