@@ -317,6 +317,18 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.controller.uptime, req,
                           self.TEST_HYPERS_OBJ[0].id)
 
+    def test_uptime_hypervisor_down(self):
+        def fake_get_host_uptime(context, hyp):
+            raise exception.ComputeServiceUnavailable(host='dummy')
+
+        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
+                       fake_get_host_uptime)
+
+        req = self._get_request(True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.uptime, req,
+                          self.TEST_HYPERS_OBJ[0].id)
+
     def test_search(self):
         req = self._get_request(True)
         result = self.controller.search(req, 'hyper')
