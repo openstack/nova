@@ -2904,18 +2904,23 @@ def instance_info_cache_update(context, instance_uuid, values):
     info_cache = model_query(context, models.InstanceInfoCache).\
                      filter_by(instance_uuid=instance_uuid).\
                      first()
+    needs_create = False
     if info_cache and info_cache['deleted']:
         raise exception.InstanceInfoCacheNotFound(
                 instance_uuid=instance_uuid)
     elif not info_cache:
         # NOTE(tr3buchet): just in case someone blows away an instance's
         #                  cache entry, re-create it.
-        info_cache = models.InstanceInfoCache()
         values['instance_uuid'] = instance_uuid
+        info_cache = models.InstanceInfoCache(**values)
+        needs_create = True
 
     try:
         with main_context_manager.writer.savepoint.using(context):
-            info_cache.update(values)
+            if needs_create:
+                info_cache.save(context.session)
+            else:
+                info_cache.update(values)
     except db_exc.DBDuplicateEntry:
         # NOTE(sirp): Possible race if two greenthreads attempt to
         # recreate the instance cache entry at the same time. First one
