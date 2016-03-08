@@ -1499,6 +1499,6 @@ def main():
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)
-    except Exception:
-        print(_("Command failed, please check log for more info"))
-        raise
+    except Exception as ex:
+        print(_("error: %s") % ex)
+        return(1)
