@@ -40,7 +40,7 @@ class FixedIpTest(test_servers.ServersSampleBase):
         super(FixedIpTest, self).setUp()
         self.api.microversion = self.microversion
         instance = dict(test_utils.get_test_instance(),
-                        hostname='openstack', host='host')
+                        hostname='compute.host.pvt', host='host')
         fake_fixed_ips = [{'id': 1,
                    'address': '192.168.1.1',
                    'network_id': 1,
@@ -103,7 +103,7 @@ class FixedIpTest(test_servers.ServersSampleBase):
         # Return data about the given fixed ip.
         response = self._do_get('os-fixed-ips/192.168.1.1')
         project = {'cidr': '192.168.1.0/24',
-                   'hostname': 'openstack',
+                   'hostname': 'compute.host.pvt',
                    'host': 'host',
                    'address': '192.168.1.1'}
         project.update(**kwargs)

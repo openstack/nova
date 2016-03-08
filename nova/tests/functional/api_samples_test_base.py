@@ -22,6 +22,8 @@ import six
 from nova import test
 from nova.tests.functional import integrated_helpers
 
+PROJECT_ID = "6f70656e737461636b20342065766572"
+
 
 class NoMatch(test.TestingException):
     pass
@@ -304,17 +306,17 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _update_links(self, sample_data):
         """Process sample data and update version specific links."""
         # replace version urls
-        url_re = self._get_host() + "/v(2|2\.1)/openstack"
+        url_re = self._get_host() + "/v(2|2\.1)/" + PROJECT_ID
         new_url = self._get_host() + "/" + self.api_major_version
         if self._project_id:
-            new_url += "/openstack"
+            new_url += "/" + PROJECT_ID
         updated_data = re.sub(url_re, new_url, sample_data)
 
         # replace unversioned urls
-        url_re = self._get_host() + "/openstack"
+        url_re = self._get_host() + "/" + PROJECT_ID
         new_url = self._get_host()
         if self._project_id:
-            new_url += "/openstack"
+            new_url += "/" + PROJECT_ID
         updated_data = re.sub(url_re, new_url, updated_data)
         return updated_data
 
@@ -427,7 +429,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         # NOTE(sdague): "openstack" is stand in for project_id, it
         # should be more generic in future.
         if self._project_id:
-            return '%s/%s' % (self._get_host(), 'openstack')
+            return '%s/%s' % (self._get_host(), PROJECT_ID)
         else:
             return self._get_host()
 
@@ -436,7 +438,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         # should be more generic in future.
         if self._project_id:
             return '%s/%s/%s' % (self._get_host(), self.api_major_version,
-                                 'openstack')
+                                 PROJECT_ID)
         else:
             return '%s/%s' % (self._get_host(), self.api_major_version)
 

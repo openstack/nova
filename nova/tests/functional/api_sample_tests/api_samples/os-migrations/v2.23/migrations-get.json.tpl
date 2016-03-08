@@ -9,11 +9,11 @@
             "instance_uuid": "%(instance_1)s",
             "links": [
                 {
-                    "href": "%(host)s/v2.1/openstack/servers/%(instance_1)s/migrations/1",
+                    "href": "%(host)s/v2.1/6f70656e737461636b20342065766572/servers/%(instance_1)s/migrations/1",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/openstack/servers/%(instance_1)s/migrations/1",
+                    "href": "%(host)s/6f70656e737461636b20342065766572/servers/%(instance_1)s/migrations/1",
                     "rel": "bookmark"
                 }
             ],

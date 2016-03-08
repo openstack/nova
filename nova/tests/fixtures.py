@@ -336,7 +336,8 @@ class OSAPIFixture(fixtures.Fixture):
 
     """
 
-    def __init__(self, api_version='v2', project_id='openstack'):
+    def __init__(self, api_version='v2',
+                 project_id='6f70656e737461636b20342065766572'):
         """Constructor
 
         :param api_version: the API version that we're interested in

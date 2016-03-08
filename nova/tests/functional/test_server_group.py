@@ -31,6 +31,9 @@ import nova.tests.unit.image.fake
 
 CONF = cfg.CONF
 
+# An alternate project id
+PROJECT_ID_ALT = "616c6c796f7572626173656172656f73"
+
 
 class ServerGroupTestBase(test.TestCase):
     REQUIRES_LOCKING = True
@@ -203,7 +206,7 @@ class ServerGroupTestV2(ServerGroupTestBase):
         # additional API server. Should be addressed in the future.
         api_openstack1 = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version=self.api_major_version,
-            project_id='openstack1')).api
+            project_id=PROJECT_ID_ALT)).api
         api_openstack1.microversion = self.microversion
 
         # Create a server group in project 'openstack'

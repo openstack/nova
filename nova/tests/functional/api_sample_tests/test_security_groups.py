@@ -16,6 +16,7 @@
 from oslo_config import cfg
 
 from nova.tests.functional.api_sample_tests import test_servers
+import nova.tests.functional.api_samples_test_base as astb
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
@@ -27,7 +28,7 @@ def fake_get(*args, **kwargs):
     nova_group['id'] = 1
     nova_group['description'] = 'default'
     nova_group['name'] = 'default'
-    nova_group['project_id'] = 'openstack'
+    nova_group['project_id'] = astb.PROJECT_ID
     nova_group['rules'] = []
     return nova_group
 

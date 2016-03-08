@@ -41,7 +41,7 @@
             },
             "id": "%(uuid)s",
             "OS-SRV-USG:terminated_at": null,
-            "tenant_id": "openstack",
+            "tenant_id": "6f70656e737461636b20342065766572",
             "progress": 0,
             "flavor": {
                 "id": "1",
