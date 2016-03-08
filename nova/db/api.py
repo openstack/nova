@@ -1969,6 +1969,10 @@ def archive_deleted_rows(max_rows=None):
     return IMPL.archive_deleted_rows(max_rows=max_rows)
 
 
+def pcidevice_online_data_migration(context, max_count):
+    return IMPL.pcidevice_online_data_migration(context, max_count)
+
+
 ####################
 
 
