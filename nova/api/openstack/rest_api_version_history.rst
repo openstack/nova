@@ -127,8 +127,8 @@ user documentation.
 2.12 (Maximum in Liberty)
 -------------------------
 
-  Exposes VIF ``net-id`` attribute in ``os-virtual-interfaces``.
-  User will be able to get Virtual Interfaces ``net-id`` in Virtual Interfaces
+  Exposes VIF ``net_id`` attribute in ``os-virtual-interfaces``.
+  User will be able to get Virtual Interfaces ``net_id`` in Virtual Interfaces
   list and can determine in which network a Virtual Interface is plugged into.
 
 2.13
