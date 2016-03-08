@@ -142,7 +142,14 @@ class NetworkAPI(base.Base):
         raise NotImplementedError()
 
     def get_vifs_by_instance(self, context, instance):
-        """Get vifs by instance."""
+        """Get vifs by instance.
+
+        :param context: nova.context.RequestContext
+        :param instance: nova.objects.instance.Instance
+        :returns: nova.objects.virtual_interface.VirtualInterfaceList; the
+        fields address, uuid and net_uuid should be set for each VIF object
+        in the returned list.
+        """
         raise NotImplementedError()
 
     def get_vif_by_mac_address(self, context, mac_address):
