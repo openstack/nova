@@ -208,10 +208,8 @@ Services which consume this:
 
 Interdependencies to other options:
 
-* ``network_api_class``: This must be set to ``nova.network.api.API`` to
-  enable ``nova-network`` networking
-* ``security_group_api``: This must be set to ``nova`` to enable
-  ``nova-network`` networking
+* ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
+  networking
 """)
 
 allow_same_net_traffic = cfg.BoolOpt(
@@ -241,10 +239,8 @@ Services which consume this:
 
 Interdependencies to other options:
 
-* ``network_api_class``: This must be set to ``nova.network.api.API`` to
-  enable ``nova-network`` networking
-* ``security_group_api``: This must be set to ``nova`` to enable
-  ``nova-network`` networking
+* ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
+  networking
 * ``firewall_driver``: This must be set to
   ``nova.virt.libvirt.firewall.IptablesFirewallDriver`` to ensure the
   libvirt firewall driver is enabled.
