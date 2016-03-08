@@ -5846,6 +5846,7 @@ class ComputeTestCase(BaseTestCase):
         _test()
 
         self.assertEqual('error', migration.status)
+        self.assertEqual(0, instance.progress)
         migration.save.assert_called_once_with()
 
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')

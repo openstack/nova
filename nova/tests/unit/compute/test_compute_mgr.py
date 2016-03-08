@@ -4560,6 +4560,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual(self.compute.host, self.instance.host)
             self.assertEqual('test_host', self.instance.node)
             self.assertEqual(1, self.instance.power_state)
+            self.assertEqual(0, self.instance.progress)
             self.assertIsNone(self.instance.task_state)
             save.assert_called_once_with(
                 expected_task_state=task_states.MIGRATING)
