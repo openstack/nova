@@ -469,8 +469,7 @@ def destroy_vdi(session, vdi_ref):
     try:
         session.call_xenapi('VDI.destroy', vdi_ref)
     except session.XenAPI.Failure:
-        msg = "Unable to destroy VDI %s" % vdi_ref
-        LOG.debug(msg, exc_info=True)
+        LOG.debug("Unable to destroy VDI %s", vdi_ref, exc_info=True)
         msg = _("Unable to destroy VDI %s") % vdi_ref
         LOG.error(msg)
         raise exception.StorageError(reason=msg)
@@ -482,8 +481,7 @@ def safe_destroy_vdis(session, vdi_refs):
         try:
             destroy_vdi(session, vdi_ref)
         except exception.StorageError:
-            msg = "Ignoring error while destroying VDI: %s" % vdi_ref
-            LOG.debug(msg)
+            LOG.debug("Ignoring error while destroying VDI: %s", vdi_ref)
 
 
 def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
@@ -683,7 +681,7 @@ def _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref):
     # ensure garbage collector has been run
     _scan_sr(session, sr_ref)
 
-    LOG.info(_LI("Deleted %s snapshots.") % number_of_snapshots,
+    LOG.info(_LI("Deleted %s snapshots."), number_of_snapshots,
              instance=instance)
 
 
@@ -2108,7 +2106,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                        'good_parent_uuids': good_parent_uuids},
                       instance=instance)
         else:
-            LOG.debug("Coalesce detected, because parent is: %s" % parent_uuid,
+            LOG.debug("Coalesce detected, because parent is: %s", parent_uuid,
                       instance=instance)
             return
 

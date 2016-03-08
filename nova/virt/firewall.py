@@ -392,7 +392,7 @@ class IptablesFirewallDriver(FirewallDriver):
         if not self.iptables.ipv4['filter'].has_chain(chain_name):
             LOG.info(
                 _LI('instance chain %s disappeared during refresh, '
-                    'skipping') % chain_name,
+                    'skipping'), chain_name,
                 instance=instance)
             return
         self.remove_filters_for_instance(instance)

@@ -123,7 +123,7 @@ class Guest(object):
             domain = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a domain with XML: %s') %
+                LOG.error(_LE('Error defining a domain with XML: %s'),
                           encodeutils.safe_decode(xml))
         return cls(domain)
 
@@ -138,7 +138,7 @@ class Guest(object):
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE('Error launching a defined domain '
-                              'with XML: %s') %
+                              'with XML: %s'),
                           self._encoded_xml, errors='ignore')
 
     def poweroff(self):
@@ -166,7 +166,7 @@ class Guest(object):
                     check_exit_code=[0, 1])
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error enabling hairpin mode with XML: %s') %
+                LOG.error(_LE('Error enabling hairpin mode with XML: %s'),
                           self._encoded_xml, errors='ignore')
 
     def get_interfaces(self):

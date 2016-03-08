@@ -226,7 +226,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
 
 def _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun):
     if vdi_uuid:
-        LOG.debug("vdi_uuid: %s" % vdi_uuid)
+        LOG.debug("vdi_uuid: %s", vdi_uuid)
         return session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
     elif target_lun:
         vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)

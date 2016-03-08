@@ -1707,7 +1707,7 @@ class VMOps(object):
 
         if instances_info["instance_count"] > 0:
             LOG.info(_LI("Found %(instance_count)d hung reboots "
-                         "older than %(timeout)d seconds") % instances_info)
+                         "older than %(timeout)d seconds"), instances_info)
 
         for instance in instances:
             LOG.info(_LI("Automatically hard rebooting"), instance=instance)

@@ -255,7 +255,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 {'name': name, 'e': e})
             u = uuid.uuid4().hex
 
-        LOG.debug("UUID for filter '%s' is '%s'" % (name, u))
+        LOG.debug("UUID for filter '%s' is '%s'", name, u)
         return u
 
     def _define_filter(self, xml):

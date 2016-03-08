@@ -633,15 +633,15 @@ class ResourceTracker(object):
         vcpus = resources['vcpus']
         if vcpus:
             free_vcpus = vcpus - resources['vcpus_used']
-            LOG.debug("Hypervisor: free VCPUs: %s" % free_vcpus)
+            LOG.debug("Hypervisor: free VCPUs: %s", free_vcpus)
         else:
             free_vcpus = 'unknown'
             LOG.debug("Hypervisor: VCPU information unavailable")
 
         if ('pci_passthrough_devices' in resources and
                 resources['pci_passthrough_devices']):
-            LOG.debug("Hypervisor: assignable PCI devices: %s" %
-                resources['pci_passthrough_devices'])
+            LOG.debug("Hypervisor: assignable PCI devices: %s",
+                      resources['pci_passthrough_devices'])
 
         pci_devices = resources.get('pci_passthrough_devices')
 
@@ -762,7 +762,7 @@ class ResourceTracker(object):
             return
 
         uuid = migration.instance_uuid
-        LOG.info(_LI("Updating from migration %s") % uuid)
+        LOG.info(_LI("Updating from migration %s"), uuid)
 
         incoming = (migration.dest_compute == self.host and
                     migration.dest_node == self.nodename)

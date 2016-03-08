@@ -891,7 +891,7 @@ class Host(object):
             return secret
         except libvirt.libvirtError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a secret with XML: %s') % xml)
+                LOG.error(_LE('Error defining a secret with XML: %s'), xml)
 
     def delete_secret(self, usage_type, usage_id):
         """Delete a secret.
@@ -942,7 +942,7 @@ class Host(object):
                     dom_mem = int(guest._get_domain_info(self)[2])
                 except libvirt.libvirtError as e:
                     LOG.warn(_LW("couldn't obtain the memory from domain:"
-                                 " %(uuid)s, exception: %(ex)s") %
+                                 " %(uuid)s, exception: %(ex)s"),
                              {"uuid": guest.uuid, "ex": e})
                     continue
                 # skip dom0

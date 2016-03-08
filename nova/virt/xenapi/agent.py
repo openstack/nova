@@ -165,11 +165,11 @@ def _wait_for_new_dom_id(session, vm_ref, old_dom_id, method):
         dom_id = session.VM.get_domid(vm_ref)
 
         if dom_id and dom_id != -1 and dom_id != old_dom_id:
-            LOG.debug("Found new dom_id %s" % dom_id)
+            LOG.debug("Found new dom_id %s", dom_id)
             return
 
         if time.time() > expiration:
-            LOG.debug("Timed out waiting for new dom_id %s" % dom_id)
+            LOG.debug("Timed out waiting for new dom_id %s", dom_id)
             raise exception.AgentTimeout(method=method)
 
         time.sleep(1)
