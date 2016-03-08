@@ -279,14 +279,18 @@ class TestCompareResult(test.NoDBTestCase):
             [
                 {
                     u'href':
-                        (u'http://openstack.example.com/v2/openstack/server/'
-                            '858f295a-8543-45fa-804a-08f8356d616d'),
+                        (u'http://openstack.example.com/v2/%s/server/'
+                            '858f295a-8543-45fa-804a-08f8356d616d' %
+                         api_samples_test_base.PROJECT_ID
+                        ),
                     u'rel': u'self'
                 },
                 {
                     u'href':
-                        (u'http://openstack.example.com/openstack/servers/'
-                            '858f295a-8543-45fa-804a-08f8356d616d'),
+                        (u'http://openstack.example.com/%s/servers/'
+                            '858f295a-8543-45fa-804a-08f8356d616d' %
+                         api_samples_test_base.PROJECT_ID
+                        ),
                     u'rel': u'bookmark'
                 }
             ]

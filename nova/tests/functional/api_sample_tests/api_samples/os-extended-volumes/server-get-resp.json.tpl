@@ -49,7 +49,7 @@
         "name": "new-server-test",
         "progress": 0,
         "status": "ACTIVE",
-        "tenant_id": "openstack",
+        "tenant_id": "6f70656e737461636b20342065766572",
         "updated": "%(isotime)s",
         "user_id": "fake",
         "os-extended-volumes:volumes_attached": [

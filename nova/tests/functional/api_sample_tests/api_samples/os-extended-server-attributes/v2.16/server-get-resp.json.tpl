@@ -62,7 +62,7 @@
         "progress": 0,
         "status": "ACTIVE",
         "host_status": "UP",
-        "tenant_id": "openstack",
+        "tenant_id": "6f70656e737461636b20342065766572",
         "user_id": "fake",
         "key_name": null
     }

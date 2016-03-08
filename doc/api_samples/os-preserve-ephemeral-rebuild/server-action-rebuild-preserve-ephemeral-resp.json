@@ -16,7 +16,7 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/1",
                     "rel": "bookmark"
                 }
             ]
@@ -27,18 +27,18 @@
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
         },
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
                 "rel": "bookmark"
             }
         ],
@@ -48,7 +48,7 @@
         "name": "foobar",
         "progress": 0,
         "status": "ACTIVE",
-        "tenant_id": "openstack",
+        "tenant_id": "6f70656e737461636b20342065766572",
         "updated": "2013-12-30T12:28:15Z",
         "user_id": "fake"
     }

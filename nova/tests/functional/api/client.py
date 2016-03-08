@@ -117,13 +117,16 @@ class TestOpenStackClient(object):
     """
 
     def __init__(self, auth_user, auth_key, auth_uri,
-                 project_id='openstack'):
+                 project_id=None):
         super(TestOpenStackClient, self).__init__()
         self.auth_result = None
         self.auth_user = auth_user
         self.auth_key = auth_key
         self.auth_uri = auth_uri
-        self.project_id = project_id
+        if project_id is None:
+            self.project_id = "6f70656e737461636b20342065766572"
+        else:
+            self.project_id = project_id
         self.microversion = None
 
     def request(self, url, method='GET', body=None, headers=None):

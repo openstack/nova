@@ -9,11 +9,11 @@
             "instance_uuid": "8600d31b-d1a1-4632-b2ff-45c2be1a70ff",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2.1/openstack/servers/8600d31b-d1a1-4632-b2ff-45c2be1a70ff/migrations/1",
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/8600d31b-d1a1-4632-b2ff-45c2be1a70ff/migrations/1",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/servers/8600d31b-d1a1-4632-b2ff-45c2be1a70ff/migrations/1",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/8600d31b-d1a1-4632-b2ff-45c2be1a70ff/migrations/1",
                     "rel": "bookmark"
                 }
             ],
