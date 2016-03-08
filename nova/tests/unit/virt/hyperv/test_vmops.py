@@ -65,13 +65,28 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._pathutils = mock.MagicMock()
         self._vmops._hostutils = mock.MagicMock()
 
+    @mock.patch('nova.network.is_neutron')
     @mock.patch('nova.virt.hyperv.vmops.importutils.import_object')
-    def test_load_vif_driver_class(self, mock_import_object):
+    def test_load_vif_driver_neutron(self, mock_import_object, is_neutron):
+        is_neutron.return_value = True
         self._vmops._load_vif_driver_class()
         mock_import_object.assert_called_once_with(
-            self._vmops._vif_driver_class_map[CONF.network_api_class])
-        self.assertEqual(self._vmops._vif_driver,
-                         mock_import_object.return_value)
+            vmops.NEUTRON_VIF_DRIVER)
+
+    @mock.patch('nova.network.is_neutron')
+    @mock.patch('nova.virt.hyperv.vmops.importutils.import_object')
+    def test_load_vif_driver_nova(self, mock_import_object, is_neutron):
+        is_neutron.return_value = False
+        self._vmops._load_vif_driver_class()
+        mock_import_object.assert_called_once_with(
+            vmops.NOVA_VIF_DRIVER)
+
+    @mock.patch('nova.network.is_neutron')
+    def test_load_vif_driver_unknown(self, is_neutron):
+        # TODO(sdague): delete once network_api_class is removed from
+        # config.
+        is_neutron.return_value = None
+        self.assertRaises(TypeError, self._vmops._load_vif_driver_class)
 
     @mock.patch('nova.virt.hyperv.vmops.importutils.import_object')
     def test_load_vif_driver_class_error(self, mock_import_object):

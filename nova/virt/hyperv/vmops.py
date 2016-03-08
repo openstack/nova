@@ -90,7 +90,6 @@ hyperv_opts = [
 
 CONF = nova.conf.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
-CONF.import_opt('network_api_class', 'nova.network')
 
 SHUTDOWN_TIME_INCREMENT = 5
 REBOOT_TYPE_SOFT = 'SOFT'
@@ -116,15 +115,22 @@ def check_admin_permissions(function):
         return function(self, *args, **kwds)
     return wrapper
 
+NEUTRON_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNeutronVIFDriver'
+NOVA_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver'
+
+
+def get_network_driver():
+    """"Return the correct network module"""
+    if nova.network.is_neutron() is None:
+        # this is an unknown network type, not neutron or nova
+        raise KeyError()
+    elif nova.network.is_neutron():
+        return NEUTRON_VIF_DRIVER
+    else:
+        return NOVA_VIF_DRIVER
+
 
 class VMOps(object):
-    _vif_driver_class_map = {
-        'nova.network.neutronv2.api.API':
-        'nova.virt.hyperv.vif.HyperVNeutronVIFDriver',
-        'nova.network.api.API':
-        'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
-    }
-
     # The console log is stored in two files, each should have at most half of
     # the maximum console log size.
     _MAX_CONSOLE_LOG_FILE_SIZE = units.Mi / 2
@@ -143,7 +149,7 @@ class VMOps(object):
 
     def _load_vif_driver_class(self):
         try:
-            class_name = self._vif_driver_class_map[CONF.network_api_class]
+            class_name = get_network_driver()
             self._vif_driver = importutils.import_object(class_name)
         except KeyError:
             raise TypeError(_("VIF driver not found for "
