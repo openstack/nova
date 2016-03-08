@@ -20,6 +20,7 @@ Handles all requests relating to volumes + cinder.
 
 import collections
 import copy
+import functools
 import sys
 
 from cinderclient import client as cinder_client
@@ -223,6 +224,28 @@ def _untranslate_snapshot_summary_view(context, snapshot):
     return d
 
 
+def translate_cinder_exception(method):
+    """Transforms a cinder exception but keeps its traceback intact."""
+    @functools.wraps(method)
+    def wrapper(self, ctx, *args, **kwargs):
+        try:
+            res = method(self, ctx, *args, **kwargs)
+        except (cinder_exception.ConnectionError,
+                keystone_exception.ConnectionError):
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.CinderConnectionFailed(
+                reason=six.text_type(exc_value))
+            six.reraise(exc_value, None, exc_trace)
+        except (keystone_exception.BadRequest,
+                cinder_exception.BadRequest):
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.InvalidInput(
+                reason=six.text_type(exc_value))
+            six.reraise(exc_value, None, exc_trace)
+        return res
+    return wrapper
+
+
 def translate_volume_exception(method):
     """Transforms the exception for the volume but keeps its traceback intact.
     """
@@ -235,19 +258,9 @@ def translate_volume_exception(method):
             if isinstance(exc_value, (keystone_exception.NotFound,
                                       cinder_exception.NotFound)):
                 exc_value = exception.VolumeNotFound(volume_id=volume_id)
-            elif isinstance(exc_value, (keystone_exception.BadRequest,
-                                        cinder_exception.BadRequest)):
-                exc_value = exception.InvalidInput(
-                    reason=six.text_type(exc_value))
-            six.reraise(exc_value, None, exc_trace)
-        except (cinder_exception.ConnectionError,
-                keystone_exception.ConnectionError):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            exc_value = exception.CinderConnectionFailed(
-                reason=six.text_type(exc_value))
             six.reraise(exc_value, None, exc_trace)
         return res
-    return wrapper
+    return translate_cinder_exception(wrapper)
 
 
 def translate_snapshot_exception(method):
@@ -264,14 +277,8 @@ def translate_snapshot_exception(method):
                                       cinder_exception.NotFound)):
                 exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
             six.reraise(exc_value, None, exc_trace)
-        except (cinder_exception.ConnectionError,
-                keystone_exception.ConnectionError):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            reason = six.text_type(exc_value)
-            exc_value = exception.CinderConnectionFailed(reason=reason)
-            six.reraise(exc_value, None, exc_trace)
         return res
-    return wrapper
+    return translate_cinder_exception(wrapper)
 
 
 class API(object):
@@ -282,6 +289,7 @@ class API(object):
         item = cinderclient(context).volumes.get(volume_id)
         return _untranslate_volume_summary_view(context, item)
 
+    @translate_cinder_exception
     def get_all(self, context, search_opts=None):
         search_opts = search_opts or {}
         items = cinderclient(context).volumes.list(detailed=True,
@@ -428,11 +436,13 @@ class API(object):
         return cinderclient(context).volumes.terminate_connection(volume_id,
                                                                   connector)
 
+    @translate_cinder_exception
     def migrate_volume_completion(self, context, old_volume_id, new_volume_id,
                                   error=False):
         return cinderclient(context).volumes.migrate_volume_completion(
             old_volume_id, new_volume_id, error)
 
+    @translate_cinder_exception
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
                availability_zone=None):
@@ -463,9 +473,6 @@ class API(object):
             return _untranslate_volume_summary_view(context, item)
         except cinder_exception.OverLimit:
             raise exception.OverQuota(overs='volumes')
-        except (cinder_exception.BadRequest,
-                keystone_exception.BadRequest) as e:
-            raise exception.InvalidInput(reason=e)
 
     @translate_volume_exception
     def delete(self, context, volume_id):
@@ -480,6 +487,7 @@ class API(object):
         item = cinderclient(context).volume_snapshots.get(snapshot_id)
         return _untranslate_snapshot_summary_view(context, item)
 
+    @translate_cinder_exception
     def get_all_snapshots(self, context):
         items = cinderclient(context).volume_snapshots.list(detailed=True)
         rvals = []
@@ -510,6 +518,7 @@ class API(object):
     def delete_snapshot(self, context, snapshot_id):
         cinderclient(context).volume_snapshots.delete(snapshot_id)
 
+    @translate_cinder_exception
     def get_volume_encryption_metadata(self, context, volume_id):
         return cinderclient(context).volumes.get_encryption_metadata(volume_id)
 
