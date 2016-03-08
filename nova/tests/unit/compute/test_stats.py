@@ -185,7 +185,7 @@ class StatsTestCase(test.NoDBTestCase):
     def test_update_stats_for_instance_deleted(self):
         instance = self._create_instance()
         self.stats.update_stats_for_instance(instance)
-        self.assertEqual(1, self.stats["num_proj_1234"])
+        self.assertEqual(1, self.stats.num_instances_for_project("1234"))
 
         instance["vm_state"] = vm_states.DELETED
         self.stats.update_stats_for_instance(instance)
@@ -198,7 +198,7 @@ class StatsTestCase(test.NoDBTestCase):
     def test_update_stats_for_instance_offloaded(self):
         instance = self._create_instance()
         self.stats.update_stats_for_instance(instance)
-        self.assertEqual(1, self.stats["num_proj_1234"])
+        self.assertEqual(1, self.stats.num_instances_for_project("1234"))
 
         instance["vm_state"] = vm_states.SHELVED_OFFLOADED
         self.stats.update_stats_for_instance(instance)
