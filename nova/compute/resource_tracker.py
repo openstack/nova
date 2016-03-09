@@ -365,7 +365,7 @@ class ResourceTracker(object):
                 instance_type = self._get_instance_type(ctxt, instance, prefix,
                                                         migration)
 
-            if (instance_type is not None and instance_type.id == itype['id']):
+            if instance_type is not None and instance_type.id == itype['id']:
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
                 usage = self._get_usage_dict(
@@ -505,8 +505,7 @@ class ResourceTracker(object):
         # We want the 'cpu_info' to be None from the POV of the
         # virt driver, but the DB requires it to be non-null so
         # just force it to empty string
-        if ("cpu_info" not in resources or
-            resources["cpu_info"] is None):
+        if "cpu_info" not in resources or resources["cpu_info"] is None:
             resources["cpu_info"] = ''
 
         self._verify_resources(resources)
