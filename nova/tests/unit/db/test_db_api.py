@@ -9723,3 +9723,12 @@ class TestInstanceInfoCache(test.TestCase):
         self.assertEqual(network_info1, info_cache1.network_info)
         info_cache2 = db.instance_info_cache_get(self.context, instance2.uuid)
         self.assertEqual(network_info2, info_cache2.network_info)
+
+    def test_instance_info_cache_create_using_update(self):
+        network_info = 'net'
+        instance_uuid = uuidutils.generate_uuid()
+        db.instance_info_cache_update(self.context, instance_uuid,
+                                      {'network_info': network_info})
+        info_cache = db.instance_info_cache_get(self.context, instance_uuid)
+        self.assertEqual(network_info, info_cache.network_info)
+        self.assertEqual(instance_uuid, info_cache.instance_uuid)
