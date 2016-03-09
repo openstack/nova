@@ -772,7 +772,8 @@ class Replication(Image):
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
                      extra_specs, hypervisor_version):
         info = super(Replication, self).libvirt_info(disk_bus, disk_dev,
-                                                     device_type, cache_mode,
+                                                     #device_type, cache_mode,
+                                                     device_type, 'writeback',
                                                      extra_specs,
                                                      hypervisor_version)
         info.driver_format = 'replication'
