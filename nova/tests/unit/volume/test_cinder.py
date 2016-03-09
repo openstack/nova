@@ -472,6 +472,16 @@ class CinderApiTestCase(test.NoDBTestCase):
             keystone_exception.BadRequest,
             exception.InvalidInput)
 
+    def test_translate_cinder_exception_cinder_forbidden(self):
+        self._do_translate_cinder_exception_test(
+            cinder_exception.Forbidden(''),
+            exception.Forbidden)
+
+    def test_translate_cinder_exception_keystone_forbidden(self):
+        self._do_translate_cinder_exception_test(
+            keystone_exception.Forbidden,
+            exception.Forbidden)
+
     def _do_translate_cinder_exception_test(self, raised_exc, expected_exc):
         my_func = mock.Mock()
         my_func.__name__ = 'my_func'
