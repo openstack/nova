@@ -6338,6 +6338,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
 
+            on_execute = lambda process: \
+                self.job_tracker.add_job(instance, process.pid)
+            on_completion = lambda process: \
+                self.job_tracker.remove_job(instance, process.pid)
+
             active_flavor = instance.get_flavor()
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
@@ -6356,11 +6361,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     # We will not copy over the swap disk here, and rely on
                     # finish_migration/_create_image to re-create it for us.
                     continue
-
-                on_execute = lambda process: self.job_tracker.add_job(
-                    instance, process.pid)
-                on_completion = lambda process: self.job_tracker.remove_job(
-                    instance, process.pid)
 
                 if info['type'] == 'qcow2' and info['backing_file']:
                     tmp_path = from_path + "_rbase"
@@ -6384,10 +6384,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # Ensure disk.info is written to the new path to avoid disks being
             # reinspected and potentially changing format.
             src_disk_info_path = os.path.join(inst_base_resize, 'disk.info')
-            dst_disk_info_path = os.path.join(inst_base, 'disk.info')
-            libvirt_utils.copy_image(src_disk_info_path, dst_disk_info_path,
-                                     host=dest, on_execute=on_execute,
-                                     on_completion=on_completion)
+            if os.path.exists(src_disk_info_path):
+                dst_disk_info_path = os.path.join(inst_base, 'disk.info')
+                libvirt_utils.copy_image(src_disk_info_path,
+                                         dst_disk_info_path,
+                                         host=dest, on_execute=on_execute,
+                                         on_completion=on_completion)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,

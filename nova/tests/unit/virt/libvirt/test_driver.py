@@ -11671,12 +11671,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_path.return_value = instance_base
         mock_shared.return_value = False
 
-        self.drvr.migrate_disk_and_power_off(context.get_admin_context(),
-                                             instance, mock.sentinel,
-                                             flavor_obj, None)
-
         src_disk_info_path = os.path.join(instance_base + '_resize',
                                           'disk.info')
+
+        with mock.patch.object(os.path, 'exists', autospec=True) \
+                as mock_exists:
+            # disk.info exists on the source
+            mock_exists.side_effect = \
+                lambda path: path == src_disk_info_path
+            self.drvr.migrate_disk_and_power_off(context.get_admin_context(),
+                                                 instance, mock.sentinel,
+                                                 flavor_obj, None)
+            self.assertTrue(mock_exists.called)
+
         dst_disk_info_path = os.path.join(instance_base, 'disk.info')
         mock_copy.assert_any_call(src_disk_info_path, dst_disk_info_path,
                                   host=mock.sentinel, on_execute=mock.ANY,
