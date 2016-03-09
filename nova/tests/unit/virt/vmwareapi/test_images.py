@@ -26,6 +26,7 @@ from nova import exception
 from nova import objects
 from nova import test
 import nova.tests.unit.image.fake
+from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
@@ -53,7 +54,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         write_file_handle = mock.MagicMock()
         read_iter = mock.MagicMock()
         instance = objects.Instance(id=1,
-                                    uuid='fake-uuid',
+                                    uuid=uuidsentinel.foo,
                                     image_ref=image_data['id'])
 
         def fake_read_handle(read_iter):

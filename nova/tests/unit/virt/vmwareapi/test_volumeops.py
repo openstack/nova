@@ -24,6 +24,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util
@@ -44,7 +45,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         self._image_id = image_fake.get_valid_image_id()
         self._instance_values = {
             'name': 'fake_name',
-            'uuid': 'fake_uuid',
+            'uuid': uuidsentinel.foo,
             'vcpus': 1,
             'memory_mb': 512,
             'image_ref': self._image_id,
