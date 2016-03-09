@@ -39,6 +39,7 @@ from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 CONF.import_opt('scheduler_tracks_instance_changes',
@@ -256,6 +257,22 @@ class HostManagerTestCase(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result)
 
+    def test_get_filtered_hosts_with_ignore_case_insensitive(self):
+        fake_properties = objects.RequestSpec(
+            instance_uuids=uuids.fakehost,
+            ignore_hosts=['FAKE_HOST1', 'FaKe_HoSt3', 'Fake_Multihost'],
+            force_hosts=[],
+            force_nodes=[])
+
+        # [1] and [3] are host2 and host4
+        info = {'expected_objs': [self.fake_hosts[1], self.fake_hosts[3]],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
+
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                fake_properties)
+        self._verify_result(info, result)
+
     def test_get_filtered_hosts_with_force_hosts(self):
         fake_properties = objects.RequestSpec(
             instance_uuid='fake-uuid1',
@@ -265,6 +282,24 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         # [0] and [2] are host1 and host3
         info = {'expected_objs': [self.fake_hosts[0], self.fake_hosts[2]],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
+
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                fake_properties)
+        self._verify_result(info, result, False)
+
+    def test_get_filtered_hosts_with_force_case_insensitive(self):
+        fake_properties = objects.RequestSpec(
+            instance_uuids=uuids.fakehost,
+            ignore_hosts=[],
+            force_hosts=['FAKE_HOST1', 'FaKe_HoSt3', 'fake_host4',
+                         'faKe_host5'],
+            force_nodes=[])
+
+        # [1] and [3] are host2 and host4
+        info = {'expected_objs': [self.fake_hosts[0], self.fake_hosts[2],
+                                  self.fake_hosts[3]],
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
