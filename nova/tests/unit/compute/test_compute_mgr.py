@@ -3068,6 +3068,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                             'hosts': [[self.compute.host,
                                                        'fake-node']]}}
 
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '1.2.3.4'}])
 
@@ -3080,8 +3082,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
                     self.compute.driver, self.node)
         self.compute._resource_tracker_dict[self.node] = fake_rt
-
-        self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
     def _do_build_instance_update(self, reschedule_update=False):
         self.mox.StubOutWithMock(self.instance, 'save')
@@ -3652,7 +3652,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     side_effect=[self.instance, self.instance, self.instance]),
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
-                    return_value=network_model.NetworkInfo()),
+                    return_value=self.network_info),
                 mock.patch.object(self.compute,
                     '_notify_about_instance_usage'),
                 mock.patch.object(self.compute,
@@ -3696,7 +3696,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,
-                    self.requested_networks, try_deallocate_networks=True)
+                    self.requested_networks, try_deallocate_networks=False)
 
     def test_reschedule_on_resources_unavailable(self):
         reason = 'resource unavailable'
@@ -3851,7 +3851,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
-                        network_model.NetworkInfo([{'address': '1.2.3.4'}]))
+                        self.network_info)
         self.compute._shutdown_instance(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)

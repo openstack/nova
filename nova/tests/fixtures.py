@@ -460,15 +460,41 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.addCleanup(self.cleanup)
 
 
+class _FakeGreenThread(object):
+    def __init__(self, func, *args, **kwargs):
+        self._result = func(*args, **kwargs)
+
+    def cancel(self, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def kill(self, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def link(self, func, *args, **kwargs):
+        func(self, *args, **kwargs)
+
+    def unlink(self, func, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def wait(self):
+        return self._result
+
+
 class SpawnIsSynchronousFixture(fixtures.Fixture):
     """Patch and restore the spawn_n utility method to be synchronous"""
 
     def setUp(self):
         super(SpawnIsSynchronousFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))
+            'nova.utils.spawn_n', _FakeGreenThread))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn', lambda f, *a, **k: f(*a, **k)))
+            'nova.utils.spawn', _FakeGreenThread))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):
