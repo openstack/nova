@@ -315,8 +315,7 @@ class MoveClaim(Claim):
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
         self.tracker.drop_move_claim(
             self.context,
-            self.instance, instance_type=self.instance_type,
-            image_meta=self.image_meta)
+            self.instance, instance_type=self.instance_type)
 
     def create_migration_context(self):
         if not self.migration:
