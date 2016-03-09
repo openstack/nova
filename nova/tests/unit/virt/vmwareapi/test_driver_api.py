@@ -150,6 +150,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
+    def _create_service(self, **kwargs):
+        service_ref = {'host': kwargs.get('host', 'dummy'),
+                       'disabled': kwargs.get('disabled', False),
+                       'binary': 'nova-compute',
+                       'topic': 'compute',
+                       'report_count': 0,
+                       'forced_down': kwargs.get('forced_down', False)}
+        return objects.Service(**service_ref)
+
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
     def setUp(self, mock_register):
         super(VMwareAPIVMTestCase, self).setUp()
@@ -171,7 +180,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         stubs.set_stubs(self)
         vmwareapi_fake.reset()
         nova.tests.unit.image.fake.stub_out_image_service(self)
+        service = self._create_service(host='test_url')
+
         self.conn = driver.VMwareVCDriver(None, False)
+        self.assertFalse(service.disabled)
         self._set_exception_vars()
         self.node_name = self.conn._nodename
         self.ds = 'ds1'
@@ -2288,3 +2300,34 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 version_arg_found = True
                 break
         self.assertTrue(version_arg_found)
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_host_state_service_disabled(self, mock_service):
+        service = self._create_service(disabled=False, host='fake-mini')
+        mock_service.return_value = service
+
+        fake_stats = {'vcpus': 4, 'mem': {'total': '8194', 'free': '2048'}}
+        with test.nested(
+            mock.patch.object(vm_util, 'get_stats_from_cluster',
+                              side_effect=[vexc.VimConnectionException('fake'),
+                                           fake_stats, fake_stats]),
+            mock.patch.object(service, 'save')) as (mock_stats,
+                                                    mock_save):
+            self.conn._vc_state.update_status()
+            self.assertEqual(1, mock_save.call_count)
+            self.assertTrue(service.disabled)
+            self.assertTrue(self.conn._vc_state._auto_service_disabled)
+
+            # ensure the service is enabled again when there is no connection
+            # exception
+            self.conn._vc_state.update_status()
+            self.assertEqual(2, mock_save.call_count)
+            self.assertFalse(service.disabled)
+            self.assertFalse(self.conn._vc_state._auto_service_disabled)
+
+            # ensure objects.Service.save method is not called more than once
+            # after the service is enabled
+            self.conn._vc_state.update_status()
+            self.assertEqual(2, mock_save.call_count)
+            self.assertFalse(service.disabled)
+            self.assertFalse(self.conn._vc_state._auto_service_disabled)
