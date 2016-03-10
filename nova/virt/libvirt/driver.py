@@ -7342,6 +7342,40 @@ class LibvirtDriver(driver.ComputeDriver):
                 image = imgmodel.LocalFileImage(info['path'],
                                                 info['type'])
                 self._disk_resize(image, size)
+
+            # NOTE(mdbooth): The 2 lines below look wrong, but are actually
+            # required to prevent a security hole when migrating from a host
+            # with use_cow_images=False to one with use_cow_images=True.
+            # Imagebackend uses use_cow_images to select between the
+            # atrociously-named-Raw and Qcow2 backends. The Qcow2 backend
+            # writes to disk.info, but does not read it as it assumes qcow2.
+            # Therefore if we don't convert raw to qcow2 here, a raw disk will
+            # be incorrectly assumed to be qcow2, which is a severe security
+            # flaw. The reverse is not true, because the atrociously-named-Raw
+            # backend supports both qcow2 and raw disks, and will choose
+            # appropriately between them as long as disk.info exists and is
+            # correctly populated, which it is because Qcow2 writes to
+            # disk.info.
+            #
+            # In general, we do not yet support format conversion during
+            # migration. For example:
+            #   * Converting from use_cow_images=True to use_cow_images=False
+            #     isn't handled. This isn't a security bug, but is almost
+            #     certainly buggy in other cases, as the 'Raw' backend doesn't
+            #     expect a backing file.
+            #   * Converting to/from lvm and rbd backends is not supported.
+            #
+            # This behaviour is inconsistent, and therefore undesirable for
+            # users. It is tightly-coupled to implementation quirks of 2
+            # out of 5 backends in imagebackend and defends against a severe
+            # security flaw which is not at all obvious without deep analysis,
+            # and is therefore undesirable to developers. It also introduces a
+            # bug, as it converts all disks to qcow2 regardless of their
+            # intended format (config disks are always supposed to be raw). We
+            # should aim to remove it. This will not be possible, though, until
+            # we can represent the storage layout of a specific instance
+            # independent of the default configuration of the local compute
+            # host.
             if info['type'] == 'raw' and CONF.use_cow_images:
                 self._disk_raw_to_qcow2(info['path'])
 
