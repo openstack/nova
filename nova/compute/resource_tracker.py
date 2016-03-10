@@ -968,7 +968,7 @@ class ResourceTracker(object):
 
     def _get_instance_type(self, context, instance, prefix, migration):
         """Get the instance type from instance."""
-        stashed_flavors = migration.migration_type in ('resize')
+        stashed_flavors = migration.migration_type in ('resize',)
         if stashed_flavors:
             return getattr(instance, '%sflavor' % prefix)
         else:
