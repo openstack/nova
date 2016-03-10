@@ -16,11 +16,13 @@ import copy
 import re
 
 import fixtures
+from jsonschema import exceptions as jsonschema_exc
 import six
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api import validation
 from nova.api.validation import parameter_types
+from nova.api.validation import validators
 from nova import exception
 from nova import test
 
@@ -36,7 +38,7 @@ class FakeRequest(object):
 
 class ValidationRegex(test.NoDBTestCase):
     def test_cell_names(self):
-        cellre = re.compile(parameter_types.valid_cell_name_regex)
+        cellre = re.compile(parameter_types.valid_cell_name_regex.regex)
         self.assertTrue(cellre.search('foo'))
         self.assertFalse(cellre.search('foo.bar'))
         self.assertFalse(cellre.search('foo@bar'))
@@ -106,6 +108,33 @@ class APIValidationTestCase(test.NoDBTestCase):
             self.fail('An unexpected exception happens: %s' % ex)
         else:
             self.fail('Any exception does not happen.')
+
+
+class FormatCheckerTestCase(test.NoDBTestCase):
+
+    def test_format_checker_failed(self):
+        format_checker = validators.FormatChecker()
+        exc = self.assertRaises(jsonschema_exc.FormatError,
+                                format_checker.check, "   ", "name")
+        self.assertIsInstance(exc.cause, exception.InvalidName)
+        self.assertEqual("An invalid 'name' value was provided. The name must "
+                         "be: printable characters. "
+                         "Can not start or end with whitespace.",
+                         exc.cause.format_message())
+
+    def test_format_checker_failed_with_non_string(self):
+        checks = ["name", "name_with_leading_trailing_spaces",
+                  "cell_name", "cell_name_with_leading_trailing_spaces"]
+        format_checker = validators.FormatChecker()
+
+        for check in checks:
+            exc = self.assertRaises(jsonschema_exc.FormatError,
+                                    format_checker.check, None, "name")
+            self.assertIsInstance(exc.cause, exception.InvalidName)
+            self.assertEqual("An invalid 'name' value was provided. The name "
+                             "must be: printable characters. "
+                             "Can not start or end with whitespace.",
+                             exc.cause.format_message())
 
 
 class MicroversionsSchemaTestCase(APIValidationTestCase):
@@ -668,6 +697,122 @@ class HostnameIPaddressTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class CellNameTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(CellNameTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.cell_name,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(req, body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_name(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'abc'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my server'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434'}, req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434\u2006\ufffd'},
+                                   req=FakeRequest()))
+
+    def test_validate_name_fails(self):
+        error = ("An invalid 'name' value was provided. The name must be: "
+                 "printable characters except !, ., @. "
+                 "Can not start or end with whitespace.")
+
+        should_fail = (' ',
+                       ' server',
+                       'server ',
+                       u'a\xa0',  # trailing unicode space
+                       u'\uffff',  # non-printable unicode
+                       'abc!def',
+                       'abc.def',
+                       'abc@def')
+
+        for item in should_fail:
+            self.check_validation_error(self.post, body={'foo': item},
+                                    expected_detail=error)
+
+        # four-byte unicode, if supported by this python build
+        try:
+            self.check_validation_error(self.post, body={'foo': u'\U00010000'},
+                                        expected_detail=error)
+        except ValueError:
+            pass
+
+
+class CellNameLeadingTrailingSpacesTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(CellNameLeadingTrailingSpacesTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.cell_name_leading_trailing_spaces,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(req, body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_name(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'abc'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my server'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434'}, req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434\u2006\ufffd'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '  my server'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my server  '},
+                                   req=FakeRequest()))
+
+    def test_validate_name_fails(self):
+        error = ("An invalid 'name' value was provided. The name must be: "
+                 "printable characters except !, ., @, "
+                 "with at least one non space character")
+
+        should_fail = (
+            ' ',
+            u'\uffff',  # non-printable unicode
+            'abc!def',
+            'abc.def',
+            'abc@def')
+
+        for item in should_fail:
+            self.check_validation_error(self.post, body={'foo': item},
+                                    expected_detail=error)
+
+        # four-byte unicode, if supported by this python build
+        try:
+            self.check_validation_error(self.post, body={'foo': u'\U00010000'},
+                                        expected_detail=error)
+        except ValueError:
+            pass
+
+
 class NameTestCase(APIValidationTestCase):
 
     def setUp(self):
@@ -701,54 +846,25 @@ class NameTestCase(APIValidationTestCase):
                                    req=FakeRequest()))
 
     def test_validate_name_fails(self):
-        detail = (u"Invalid input for field/attribute foo. Value:  ."
-                  " ' ' does not match .*")
-        self.check_validation_error(self.post, body={'foo': ' '},
-                                    expected_detail=detail)
+        error = ("An invalid 'name' value was provided. The name must be: "
+                 "printable characters. "
+                 "Can not start or end with whitespace.")
 
-        detail = ("Invalid input for field/attribute foo. Value:  server."
-                  " ' server' does not match .*")
-        self.check_validation_error(self.post, body={'foo': ' server'},
-                                    expected_detail=detail)
+        should_fail = (' ',
+                       ' server',
+                       'server ',
+                       u'a\xa0',  # trailing unicode space
+                       u'\uffff',  # non-printable unicode
+                       )
 
-        detail = ("Invalid input for field/attribute foo. Value: server ."
-                  " 'server ' does not match .*")
-        self.check_validation_error(self.post, body={'foo': 'server '},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value:  a."
-                  " ' a' does not match .*")
-        self.check_validation_error(self.post, body={'foo': ' a'},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value: a ."
-                  " 'a ' does not match .*")
-        self.check_validation_error(self.post, body={'foo': 'a '},
-                                    expected_detail=detail)
-
-        # NOTE(stpierre): Quoting for the unicode values in the error
-        # messages below gets *really* messy, so we just wildcard it
-        # out. (e.g., '.* does not match'). In practice, we don't
-        # particularly care about that part of the error message.
-
-        # trailing unicode space
-        detail = (u"Invalid input for field/attribute foo. Value: a\xa0."
-                  u' .* does not match .*')
-        self.check_validation_error(self.post, body={'foo': u'a\xa0'},
-                                    expected_detail=detail)
-
-        # non-printable unicode
-        detail = (u"Invalid input for field/attribute foo. Value: \uffff."
-                  u" .* does not match .*")
-        self.check_validation_error(self.post, body={'foo': u'\uffff'},
-                                    expected_detail=detail)
+        for item in should_fail:
+            self.check_validation_error(self.post, body={'foo': item},
+                                    expected_detail=error)
 
         # four-byte unicode, if supported by this python build
         try:
-            detail = (u"Invalid input for field/attribute foo. Value: "
-                      u"\U00010000. .* does not match .*")
             self.check_validation_error(self.post, body={'foo': u'\U00010000'},
-                                        expected_detail=detail)
+                                        expected_detail=error)
         except ValueError:
             pass
 
@@ -799,34 +915,23 @@ class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
                                    req=FakeRequest()))
 
     def test_validate_name_fails(self):
-        detail = (u"Invalid input for field/attribute foo. Value:  ."
-                  u" ' ' does not match .*")
-        self.check_validation_error(self.post, body={'foo': ' '},
-                                    expected_detail=detail)
+        error = ("An invalid 'name' value was provided. The name must be: "
+                 "printable characters with at least one non space character")
 
-        # NOTE(stpierre): Quoting for the unicode values in the error
-        # messages below gets *really* messy, so we just wildcard it
-        # out. (e.g., '.* does not match'). In practice, we don't
-        # particularly care about that part of the error message.
+        should_fail = (
+            ' ',
+            u'\xa0',  # unicode space
+            u'\uffff',  # non-printable unicode
+        )
 
-        # unicode space
-        detail = (u"Invalid input for field/attribute foo. Value: \xa0."
-                  u' .* does not match .*')
-        self.check_validation_error(self.post, body={'foo': u'\xa0'},
-                                    expected_detail=detail)
-
-        # non-printable unicode
-        detail = (u"Invalid input for field/attribute foo. Value: \uffff."
-                  u" .* does not match .*")
-        self.check_validation_error(self.post, body={'foo': u'\uffff'},
-                                    expected_detail=detail)
+        for item in should_fail:
+            self.check_validation_error(self.post, body={'foo': item},
+                                    expected_detail=error)
 
         # four-byte unicode, if supported by this python build
         try:
-            detail = (u"Invalid input for field/attribute foo. Value: "
-                      u"\U00010000. .* does not match .*")
             self.check_validation_error(self.post, body={'foo': u'\U00010000'},
-                                        expected_detail=detail)
+                                        expected_detail=error)
         except ValueError:
             pass
 
@@ -1193,7 +1298,7 @@ class Ipv6TestCase(APIValidationTestCase):
         detail = ("Invalid input for field/attribute foo. Value: localhost."
                   " 'localhost' is not a 'ipv6'")
         self.check_validation_error(self.post, body={'foo': 'localhost'},
-                                    expected_detail=detail)
+                                        expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo."
                   " Value: 192.168.0.100. '192.168.0.100' is not a 'ipv6'")
