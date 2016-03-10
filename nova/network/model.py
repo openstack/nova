@@ -464,17 +464,6 @@ class NetworkInfo(list):
     def json(self):
         return jsonutils.dumps(self)
 
-    def wait(self, do_raise=True):
-        """Return this NetworkInfo
-
-        This is useful to avoid type checking when it's not clear if you have a
-        NetworkInfo or NetworkInfoAsyncWrapper. It's also useful when
-        utils.spawn in NetworkInfoAsyncWrapper is patched to return a
-        NetworkInfo rather than a GreenThread and wait() should return the same
-        thing for both cases.
-        """
-        return self
-
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
     """Wrapper around NetworkInfo that allows retrieving NetworkInfo
