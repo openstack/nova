@@ -355,7 +355,7 @@ class ResourceTracker(object):
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def drop_move_claim(self, context, instance, instance_type=None,
-                        image_meta=None, prefix='new_'):
+                        prefix='new_'):
         """Remove usage for an incoming/outgoing migration."""
         if instance['uuid'] in self.tracked_migrations:
             migration, itype = self.tracked_migrations.pop(instance['uuid'])
@@ -364,13 +364,6 @@ class ResourceTracker(object):
                 ctxt = context.elevated()
                 instance_type = self._get_instance_type(ctxt, instance, prefix,
                                                         migration)
-
-            if image_meta is None:
-                image_meta = objects.ImageMeta.from_instance(instance)
-            # TODO(jaypipes): Remove when image_meta is always passed
-            # as an objects.ImageMeta
-            elif not isinstance(image_meta, objects.ImageMeta):
-                image_meta = objects.ImageMeta.from_dict(image_meta)
 
             if (instance_type is not None and instance_type.id == itype['id']):
                 numa_topology = self._get_migration_context_resource(
