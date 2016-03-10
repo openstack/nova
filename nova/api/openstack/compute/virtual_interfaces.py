@@ -15,11 +15,14 @@
 
 """The virtual interfaces extension."""
 
+import webob
+
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.i18n import _
 from nova import network
 
 
@@ -57,12 +60,17 @@ class ServerVirtualInterfaceController(wsgi.Controller):
         authorize(context)
         instance = common.get_instance(self.compute_api, context, server_id)
 
-        vifs = self.network_api.get_vifs_by_instance(context, instance)
+        try:
+            vifs = self.network_api.get_vifs_by_instance(context, instance)
+        except NotImplementedError:
+            msg = _('Listing virtual interfaces is not supported by this '
+                    'cloud.')
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         limited_list = common.limited(vifs, req)
         res = [entity_maker(req, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
-    @extensions.expected_errors((404))
+    @extensions.expected_errors((400, 404))
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
         return self._items(req, server_id,
