@@ -10,9 +10,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -128,10 +128,6 @@ msgstr "无法删除条目 |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr "不能销毁实例，操作超时"
 
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "不能从%s获取计量。"
-
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
 "this platform. "
@@ -216,14 +212,6 @@ msgstr ""
 "废弃：从Liberty版本开始，V2 API废弃，缺省为V2.1 API。为了v2.1 API平滑切换，"
 "Nova也支持v2.1的兼容遗产v2模式。如何配置v2.1API 和遗产v2 兼容模式的更多信息，"
 "请参看Nova api-paste.ini 样例文件。"
-
-msgid ""
-"Deprecated: The v3 API was deprecated. The v2.1 API replaces it as the Nova "
-"API, please refer Nova api-paste.ini sample file for how to configure v2.1 "
-"API."
-msgstr ""
-"废弃：v3 API 废弃。v2.1 替换它做为Nova API，请参考 Nova api-paste.ini 样例文"
-"件了解如何配置v2.1 API。"
 
 #, python-format
 msgid ""
@@ -400,10 +388,6 @@ msgstr "加载扩展%(ext_name)s:%(exc)s失败"
 
 msgid "Failed to power off instance"
 msgstr "关闭实例失败"
-
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "未能为 VM %s 除去快照"
 
 msgid "Failed to resume instance"
 msgstr "未能恢复实例"
@@ -1012,16 +996,6 @@ msgid ""
 msgstr "Tenant_id %(tenant_id)s 不匹配实例的 tenant_id %(instance_id)s."
 
 msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Openstack项目没有测试Nova中的ZooKeeper服务组驱动，因此它的质量不能保证。这个"
-"状态将来会有所改变，但是当前部署者应该保持谨慎，现在把它用到生产环节是有风险"
-"的。"
-
-msgid ""
 "The cells feature of Nova is considered experimental by the OpenStack "
 "project because it receives much less testing than the rest of Nova. This "
 "may change in the future, but current deployers should be aware that the use "
@@ -1306,10 +1280,6 @@ msgstr "_migrate_disk_resizing_up 回归失败：%s"
 msgid ""
 "attach interface failed , try to deallocate port %(port_id)s, reason: %(msg)s"
 msgstr "绑定接口失败，尝试取消分配端口%(port_id)s，原因是：%(msg)s"
-
-#, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "不能从域 %(uuid)s 获取XML，异常：%(ex)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"

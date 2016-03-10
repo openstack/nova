@@ -26,22 +26,27 @@
 # Olivier Buisson <olivier@openkumo.fr>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
+# Gérald LONLAS <g.lonlas@gmail.com>, 2016. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:38+0000\n"
+"POT-Creation-Date: 2016-03-10 03:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-02-02 09:55+0000\n"
-"Last-Translator: Tom Cocozzello <tjcocozz@us.ibm.com>\n"
+"PO-Revision-Date: 2016-03-07 09:19+0000\n"
+"Last-Translator: Gérald LONLAS <g.lonlas@gmail.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: French\n"
+
+#, python-format
+msgid "%(address)s is not a valid IP address."
+msgstr "%(address)s n'est pas une adresse IP valide."
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -57,6 +62,10 @@ msgid ""
 msgstr ""
 "%(binary)s a tenté un accès direct à la base de données qui n'est pas "
 "autorisé par la stratégie"
+
+#, python-format
+msgid "%(cidr)s is not a valid IP network."
+msgstr "%(cidr)s n'est pas une adresse IP réseau valide."
 
 #, python-format
 msgid ""
@@ -170,6 +179,10 @@ msgstr "Le format %s n'est pas supporté"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s n'est pas une chaîne ou unicode"
+
+#, python-format
+msgid "%s is not a valid IP network"
+msgstr "%s n'est pas une IP valide"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
@@ -522,6 +535,10 @@ msgstr ""
 "La construction de l'instance %(instance_uuid)s a été reprogrammée : "
 "%(reason)s"
 
+#, python-format
+msgid "BuildRequest not found for instance %(uuid)s"
+msgstr "BuildRequest introuvable pour l'instance %(uuid)s."
+
 msgid "CIDR is malformed."
 msgstr "Le format du routage CIDR est incorrect."
 
@@ -641,11 +658,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "Impossible de connecter un ou plusieurs volumes à plusieurs instances"
 
 #, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr ""
-"Impossible de bloquer l'instance de migration %s avec des volumes mappés"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Pas d'appel de %(method)s sur un objet %(objtype)s orphelin"
 
@@ -701,6 +713,14 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Impossible de sauver une instance volume"
+
+#, python-format
+msgid ""
+"Cannot resize the root disk to a smaller size. Current size: "
+"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
+msgstr ""
+"Impossible de réduire le disque à une taille inférieure. Taille actuelle: "
+"%(curr_root_gb)s Go. Taille souhaitée: %(new_root_gb)s Go."
 
 msgid "Cannot run any more instances of this type."
 msgstr "Impossible d'exécuter d'autres instances de ce type."
@@ -785,9 +805,6 @@ msgstr ""
 "Commande non supportée. Veuillez utiliser la commande Ironic %(cmd)s pour "
 "réaliser cette action."
 
-msgid "Command failed, please check log for more info"
-msgstr "Échec de la commande, vérifiez les logs pour plus d'information."
-
 #, python-format
 msgid "Compute host %(host)s could not be found."
 msgstr "L'hôte de calcul %(host)s ne peut pas être trouvé."
@@ -843,6 +860,10 @@ msgstr "Politiques contradictoires configurées!"
 #, python-format
 msgid "Connection to cinder host failed: %(reason)s"
 msgstr "La connexion à l'hôte cinder a échoué : %(reason)s"
+
+#, python-format
+msgid "Connection to glance host %(server)s failed: %(reason)s"
+msgstr "La connexion à l'hôte Glance %(server)s a échoué : %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -1016,6 +1037,10 @@ msgstr ""
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "Réseau local virtuel (VLAN) existant détecté avec l'ID %(vlan)d"
+
+#, python-format
+msgid "Device '%(device)s' not found."
+msgstr "Device '%(device)s' introuvable."
 
 #, python-format
 msgid ""
@@ -1229,10 +1254,6 @@ msgstr "Colonne supplémentaire %(table)s.%(column)s dans la table image"
 msgid "Extracting vmdk from OVA failed."
 msgstr "Echec de l'extraction de vmdk à partir d'OVA."
 
-#, python-format
-msgid "Fail to clean up node %s parameters"
-msgstr "Echec du nettoyage des paramètres du noeud %s"
-
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr ""
 "Échec à valider les clés de spécifications supplémentaires fournies. Chaîne "
@@ -1272,6 +1293,10 @@ msgstr "Echec de connexion à l'interface"
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "Impossible de connecter la carte réseau avec %(instance_uuid)s"
+
+#, python-format
+msgid "Failed to create vif %s"
+msgstr "Échec de création du vif %s"
 
 #, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
@@ -1396,6 +1421,10 @@ msgstr "Échec à suspendre l'instance : %(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Échec à terminer l'instance : %(reason)s"
 
+#, python-format
+msgid "Failed to unplug vif %s"
+msgstr "Impossible de déconnecter le vif %s"
+
 msgid "Failure prepping block device."
 msgstr "Echec de préparation de l'unité par bloc."
 
@@ -1423,6 +1452,10 @@ msgstr "Nom du fichier contenant la racine de l'autorité de certification"
 
 msgid "Filename of root Certificate Revocation List"
 msgstr "Nom du fichier de la liste de révocation du Certificat Racine"
+
+#, python-format
+msgid "Fixed IP %(address)s already exists."
+msgstr "L'adresse IP fixe %(address)s existe déjà."
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -1467,6 +1500,10 @@ msgstr ""
 #, python-format
 msgid "Fixed IP associate failed for network: %(net)s."
 msgstr "L'association de l'IP fixe a échoué pour le réseau: %(net)s."
+
+#, python-format
+msgid "Fixed IP not found for address %(address)s."
+msgstr "Pas d'IP fixe trouvée pour l'adresse %(address)s."
 
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
@@ -1551,11 +1588,35 @@ msgid "Flavor's memory is too small for requested image."
 msgstr "La mémoire du type d'instance est trop petite pour l'image demandée."
 
 #, python-format
+msgid "Floating IP %(address)s already exists."
+msgstr "L'adresse IP flottante %(address)s existe déjà."
+
+#, python-format
 msgid "Floating IP %(address)s association has failed."
 msgstr "L'association de l'IP floattante %(address)s a échoué."
 
+#, python-format
+msgid "Floating IP %(address)s is not associated with instance %(id)s."
+msgstr ""
+"L'adresse IP flottante %(address)s n'est pas associée à l'instance %(id)s."
+
 msgid "Floating IP allocate failed."
 msgstr "L'allocation de l'IP flottante a échoué"
+
+msgid "Floating IP is not associated"
+msgstr "L'adresse IP flottante n'est pas associée"
+
+#, python-format
+msgid "Floating IP not found for ID %(id)s."
+msgstr "Aucune IP dynamique trouvée pour l'id %(id)s."
+
+#, python-format
+msgid "Floating IP not found for address %(address)s."
+msgstr "Aucune IP dynamique trouvée pour l'adresse %(address)s."
+
+#, python-format
+msgid "Floating IP not found for host %(host)s."
+msgstr "Aucune IP dynamique trouvée pour l'hôte %(host)s."
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1756,6 +1817,13 @@ msgstr ""
 "La propriété d'image 'hw_cpu_policy' ne peut pas remplacer la règle de "
 "réservation d'unité centrale définie sur la version"
 
+msgid ""
+"Image property 'hw_cpu_thread_policy' is not permitted to override CPU "
+"thread pinning policy set against the flavor"
+msgstr ""
+"La propriété d'image 'hw_cpu_thread_policy' ne peut pas remplacer la règle "
+"de réservation de CPU définie sur la version"
+
 msgid "Image that the instance was started with could not be found."
 msgstr "L'image par laquelle l'instance a été démarrée est introuvable."
 
@@ -1865,6 +1933,14 @@ msgid "Instance %(instance_uuid)s does not specify a migration context."
 msgstr "L'instance %(instance_uuid)s ne spécifie pas de contexte de migration."
 
 #, python-format
+msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
+msgstr "L'instance %(instance_uuid)s n'a pas d'adresse IP fixe '%(ip)s'."
+
+#, python-format
+msgid "Instance %(instance_uuid)s has zero fixed IPs."
+msgstr "L'instance %(instance_uuid)s ne comporte aucune adresse IP fixe."
+
+#, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
 "the instance is in this state."
@@ -1955,6 +2031,14 @@ msgstr "Retour-arrière de l'instance réalisé du à: %s"
 
 msgid "Instance snapshots are not permitted at this time."
 msgstr "Instantanés d'instance non autorisés pour l'instant."
+
+#, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)d bytes required by volume %(lv)s."
+msgstr ""
+"Espace insuffisant sur le groupe de volumes %(vg)s. Seulement "
+"%(free_space)db disponibles, mais %(size)db requis par volume %(lv)s."
 
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
@@ -2143,10 +2227,6 @@ msgid "Invalid input received: %(reason)s"
 msgstr "Entrée invalide reçue : %(reason)s"
 
 #, python-format
-msgid "Invalid input value \"%s\"."
-msgstr "Valeur en entrée \"%s\" non valide."
-
-#, python-format
 msgid "Invalid instance id %s in request"
 msgstr "ID instance %s non valide dans la demande"
 
@@ -2241,6 +2321,10 @@ msgstr "Nom de groupe de sécurité non valide : %(name)s."
 
 msgid "Invalid service catalog json."
 msgstr "json de catalogue de service non valide."
+
+#, python-format
+msgid "Invalid signature key type: %s"
+msgstr "Type de clé invalide : %s"
 
 msgid "Invalid source_type field."
 msgstr "Champ source_type invalide."
@@ -2408,6 +2492,9 @@ msgstr ""
 msgid "Limit"
 msgstr "Limite"
 
+msgid "Limits only supported from vCenter 6.0 and above"
+msgstr "Limites seulement supportées sur vCenter 6.0 et supérieur"
+
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
 msgstr "Ligne %(linenum)d: %(line)s"
@@ -2429,10 +2516,6 @@ msgid ""
 msgstr ""
 "La migration active ne peut pas être utilisée sans stockage partagé excepté "
 "lors d'un amorçage depuis une machine virtuelle de volume sans disque local."
-
-msgid "Live migration is supported starting with Hyper-V Server 2012"
-msgstr ""
-"La migration active est prise en charge, démarrage avec Hyper-V Server 2012"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2603,6 +2686,11 @@ msgstr "Paramètre dict manquant"
 msgid "Missing tenant parameter"
 msgstr "Paramètre tenant manquant"
 
+#, python-format
+msgid ""
+"More than one instance is associated with fixed IP address '%(address)s'."
+msgstr "Plusieurs instances sont associées à l'adresse IP fixe '%(address)s'."
+
 msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
 "one(s) to connect to."
@@ -2628,6 +2716,10 @@ msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 "Plusieurs correspondances de pools d'adresses IP flottantes trouvées pour le "
 "nom '%s'"
+
+#, python-format
+msgid "Multiple floating IPs are found for address %(address)s."
+msgstr "Plusieurs adresses IP flottantes trouvées pour l'adresse %(address)s."
 
 msgid ""
 "Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
@@ -2670,6 +2762,9 @@ msgid ""
 msgstr ""
 "Il faut indiquer host_ip, host_username et host_password pour utiliser "
 "vmwareapi.VMwareVCDriver"
+
+msgid "Must supply a positive value for max_number"
+msgstr "Veuillez fournir une valeur positive pour max_number"
 
 msgid "Must supply a positive value for max_rows"
 msgstr "Veuillez fournir une valeur positive pour max_rows"
@@ -2725,6 +2820,11 @@ msgstr "Aucun réseau trouvé avec le cidr %(cidr)s."
 
 msgid "Network driver does not support this function."
 msgstr "Le pilote de réseau ne prend pas en charge cette fonction."
+
+#, python-format
+msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
+msgstr ""
+"Le réseau hôte %(host)s n'a aucunes IPs fixes dans le réseau %(network_id)s."
 
 msgid "Network label is required"
 msgstr "Libellé de réseau obligatoire"
@@ -2833,6 +2933,9 @@ msgstr "Pas d'adresse IP fixe associée avec l'id %(id)s."
 msgid "No fixed IP found."
 msgstr "Pas d'IP fixe trouvé."
 
+msgid "No fixed IPs associated to instance"
+msgstr "Aucune adresse IP fixe associée à l'instance"
+
 msgid "No floating IP addresses have been defined."
 msgstr "Aucune adresses IP flottantes n'ont été définies. "
 
@@ -2866,6 +2969,13 @@ msgstr "Aucun ID correspondant pour l'URL %s n'a été trouvé."
 
 msgid "No more available networks."
 msgstr "Plus de réseaux disponibles."
+
+msgid "No more floating IPs available."
+msgstr "Plus d'adresses IP flottantes disponibles."
+
+#, python-format
+msgid "No more floating IPs in pool %s."
+msgstr "Plus d'adresses IP flottantes disponibles dans le pool %s."
 
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
@@ -3053,6 +3163,10 @@ msgid "PCI device %(id)s not found"
 msgstr "Périphérique PCI %(id)s introuvable"
 
 #, python-format
+msgid "PCI device request %(requests)s failed"
+msgstr "La requête %(requests)s au périphérique PCI a échoué."
+
+#, python-format
 msgid ""
 "PCS doesn't support images in %s format. You should either set "
 "force_raw_images=True in config or upload an image in ploop or raw format."
@@ -3097,10 +3211,6 @@ msgstr ""
 #, python-format
 msgid "Path %s must be LVM logical volume"
 msgstr "Le chemin %s doit être un volume logique LVM."
-
-#, python-format
-msgid "Path does not exist %(path)s"
-msgstr "Le chemin n'existe pas %(path)s"
 
 msgid "Paused"
 msgstr "En pause"
@@ -3413,6 +3523,14 @@ msgstr ""
 "libvirt version %s"
 
 #, python-format
+msgid ""
+"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
+"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
+msgstr ""
+"L'exécution de Nova avec virt_type qemu/kvm sur %(arch)s requiert la version "
+"libvirt %(libvirt_ver)s et la version qemu %(qemu_ver)s, ou ultérieures"
+
+#, python-format
 msgid "Running cmd (subprocess): %s"
 msgstr "Exécution de la commande (sous-processus): %s"
 
@@ -3603,9 +3721,6 @@ msgstr ""
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Le snapshot %(snapshot_id)s n'a pas été trouvé."
 
-msgid "Snapshot list encountered but no header found!"
-msgstr "Liste d'instantanés trouvée mais aucun en-tête trouvé !"
-
 msgid "Some fields are invalid."
 msgstr "Des champs sont invalides."
 
@@ -3678,6 +3793,9 @@ msgstr ""
 
 msgid "Swap only supports host devices"
 msgstr "La permutation prend uniquement en charge les périphériques hôtes"
+
+msgid "Table"
+msgstr "Tableau"
 
 #, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
@@ -3851,13 +3969,6 @@ msgid "The requested functionality is not supported."
 msgstr "La fonctionnalité demandée n'est pas suportée"
 
 #, python-format
-msgid ""
-"The service from servicegroup driver %(driver)s is temporarily unavailable."
-msgstr ""
-"Le service du pilote groupe de service %(driver)s est temporairement "
-"indisponible."
-
-#, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Le cluster spécifié, '%s', est introuvable dans vCenter"
 
@@ -4023,8 +4134,27 @@ msgid "Type and Code must be integers for ICMP protocol type"
 msgstr ""
 "Le type et le code doivent être des entiers pour le type de protocole ICMP"
 
+msgid "UEFI is not supported"
+msgstr "UEFI n'est pas supporté"
+
 msgid "UUID is required to delete Neutron Networks"
 msgstr "UUID est demandée pour supprimer les réseaux Neutron"
+
+#, python-format
+msgid ""
+"Unable to associate floating IP %(address)s to any fixed IPs for instance "
+"%(id)s. Instance has no fixed IPv4 addresses to associate."
+msgstr ""
+"Impossible d'assigner l'IP flottante %(address)s à une IP fixe de l'instance "
+"%(id)s. L'instance n'a pas d'IPv4 fixe."
+
+#, python-format
+msgid ""
+"Unable to associate floating IP %(address)s to fixed IP %(fixed_address)s "
+"for instance %(id)s. Error: %(error)s"
+msgstr ""
+"Incapable d'associer une IP flottante %(address)s à une IP fixe "
+"%(fixed_address)s pour l'instance %(id)s. Erreur : %(error)s"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Impossible d'authentifier le client Ironic."
@@ -4575,6 +4705,10 @@ msgstr ""
 "requis."
 
 #, python-format
+msgid "WARNING: fixed IP %s allocated to missing instance"
+msgstr "AVERTISSEMENT : l'IP fixe %s est allouée à une instance manquante"
+
+#, python-format
 msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
@@ -4670,6 +4804,9 @@ msgstr ""
 "active fonctionne correctement, vous devez configurer les adresses d'écoute "
 "des graphiques (VNC et/ou SPICE) en tant qu'adresse fourre-tout (0.0.0.0 "
 "ou ::) ou qu'adresse locale (127.0.0.1 ou ::1)."
+
+msgid "Zero fixed IPs could be found."
+msgstr "Aucunes IPs fixes trouvées."
 
 msgid "Zone"
 msgstr "Zone"
@@ -4777,6 +4914,12 @@ msgstr "Échec dans la génération de l'empreinte"
 msgid "filename cannot be None"
 msgstr "Nom de fichier ne peut pas etre \"vide\""
 
+msgid "floating IP is already associated"
+msgstr "L'adresse IP flottante est déjà associée"
+
+msgid "floating IP not found"
+msgstr "Adresse IP flottante non trouvée"
+
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s sauvegardé par : %(backing_file)s"
@@ -4860,6 +5003,9 @@ msgstr "noyau"
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key n'est pas défini"
 
+msgid "l3driver call to add floating IP failed"
+msgstr "Échec de l'ajout d'une adresse IP flottant par l'appel l3driver"
+
 msgid "launched"
 msgstr "lancé"
 
@@ -4880,6 +5026,10 @@ msgstr "Erreur de libvirt lors de la demande des informations de blockjob."
 #, python-format
 msgid "marker [%s] not found"
 msgstr "le marqueur [%s] est introuvable"
+
+#, python-format
+msgid "max rows must be <= %(max_value)d"
+msgstr "Le nombre maximum doit être <= %(max_value)d"
 
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "max_count ne peut être supérieur à 1 si un fixed_ip est spécifié."
@@ -5065,6 +5215,10 @@ msgstr "vg %s doit être un groupe de volumes LVM"
 #, python-format
 msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr "vhostuser_sock_path absent de vif_détails pour le vif %(vif_id)s"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "Type vif %s non pris en charge"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr ""

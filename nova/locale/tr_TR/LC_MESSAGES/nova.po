@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:38+0000\n"
+"POT-Creation-Date: 2016-03-10 03:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -541,10 +541,6 @@ msgstr ""
 "Bir ya da daha fazla mantıksal sürücü birden fazla sunucuya eklenemiyor"
 
 #, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "Sunucu %s göçü eşleşen mantıksal sürücülerle engellenemez"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Artık %(objtype)s objesi üzerinde %(method)s çağrılamaz"
 
@@ -663,10 +659,6 @@ msgid ""
 msgstr ""
 "Komut desteklenmiyor. Lütfen bu eylemi gerçekleştirmek için %(cmd)s Ironic "
 "komutunu kullanın."
-
-msgid "Command failed, please check log for more info"
-msgstr ""
-"Komut başarısız oldu, lütfen daha fazla bilgi için kayıtları kontrol edin"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -1059,10 +1051,6 @@ msgstr "Gölge tabloda ek sütun %(table)s.%(column)s"
 
 msgid "Extracting vmdk from OVA failed."
 msgstr "OVA'dan vmdk çıkarma başarısız."
-
-#, python-format
-msgid "Fail to clean up node %s parameters"
-msgstr "Düğüm %s parametreleri temizlenemedi"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr "Sağlanan ek özellikler doğrulanamadı. Karakter dizisi beklendi"
@@ -1913,10 +1901,6 @@ msgid "Invalid input received: %(reason)s"
 msgstr "Geçersiz girdi alındı: %(reason)s"
 
 #, python-format
-msgid "Invalid input value \"%s\"."
-msgstr "Geçersiz girdi değeri \"%s\"."
-
-#, python-format
 msgid "Invalid instance id %s in request"
 msgstr "İstekte geçersiz sunucu id'si %s"
 
@@ -2185,9 +2169,6 @@ msgid ""
 msgstr ""
 "Bu dosyada image_file_url:<list entry name> kısımlarında yapılandırılmış "
 "dosya sistemleri listesi"
-
-msgid "Live migration is supported starting with Hyper-V Server 2012"
-msgstr "Canlı göç Hiper-V sunucu 2012 ile başlayarak destekleniyor"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2817,10 +2798,6 @@ msgstr "Sayfa boyutu %(pagesize)s '%(against)s' e karşı yasaklı"
 msgid "Path %s must be LVM logical volume"
 msgstr "Yol %s LVM mantıksal sürücüsü olmalı"
 
-#, python-format
-msgid "Path does not exist %(path)s"
-msgstr "Yol mevcut değil %(path)s"
-
 msgid "Paused"
 msgstr "Durduruldu"
 
@@ -3291,9 +3268,6 @@ msgstr ""
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s sistem anlık görüntüsü bulunamadı."
 
-msgid "Snapshot list encountered but no header found!"
-msgstr "Anlık görüntü listesi ile karşılaşıldı ama başlık bulunamadı!"
-
 msgid "Some fields are invalid."
 msgstr "Bazı alanlar geçersiz."
 
@@ -3504,12 +3478,6 @@ msgstr "İstenen konsol türü deteayları erişilebilir değil"
 
 msgid "The requested functionality is not supported."
 msgstr "İstenen işlevsellik desteklenmiyor"
-
-#, python-format
-msgid ""
-"The service from servicegroup driver %(driver)s is temporarily unavailable."
-msgstr ""
-"servis grup sürücüsü %(driver)s dan gelen servis geçici olarak kullanılamaz."
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "

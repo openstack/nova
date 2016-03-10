@@ -10,9 +10,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -130,10 +130,6 @@ msgstr "No se puede suprimir la entrada |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr ""
 "No se puede destruir intsancia, tiempo de espera agotado para la operación"
-
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "No se pueden obtener las métricas de %s."
 
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
@@ -381,10 +377,6 @@ msgstr "Fallo al cargar extensión %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Fallo al apagar la instancia"
-
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "No se ha podido eliminar la instantánea para VM %s"
 
 msgid "Failed to resume instance"
 msgstr "No se ha podido reanudar la instancia"
@@ -993,17 +985,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s no coincide con tenant_id de la instancia "
 "%(instance_id)s."
 
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"El proyecto OpenStack no ha probado el controlador del grupo de servicio "
-"ZooKeeper en Nova por lo cual, no se puede asegurar su calidad. Esto puede "
-"cambiar en el futuro, pero los implementadores actuales deben estar "
-"conscientes que su uso en producción puede ser riesgoso en este momento."
-
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -1273,10 +1254,6 @@ msgid ""
 msgstr ""
 "Ha fallado la conexión de interfaz, intente desasignar puerto  %(port_id)s, "
 "razón: %(msg)s"
-
-#, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "no se pudo obtener el XML del dominio: %(uuid)s, excepción: %(ex)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"

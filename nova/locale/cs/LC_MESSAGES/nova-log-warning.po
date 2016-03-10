@@ -8,9 +8,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:39+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -132,10 +132,6 @@ msgstr "Nelze smazat položku |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr "Nelze zničit instanci, operaci vypršel časový limit"
 
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "Nelze získat metriky pro %s."
-
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
 "this platform. "
@@ -238,15 +234,6 @@ msgstr ""
 "součást API v2.1 pro snadný přechod na API v2.1. Pro další informace o "
 "nastavení tohoto režimu si prosím prohlédněte vzorový soubor api-paste.ini v "
 "Nova."
-
-msgid ""
-"Deprecated: The v3 API was deprecated. The v2.1 API replaces it as the Nova "
-"API, please refer Nova api-paste.ini sample file for how to configure v2.1 "
-"API."
-msgstr ""
-"Zastaralé. API v3 je zastaralé. API v2.1 ji nahrazuje jako výchozí Nova API, "
-"prosím prohlédněte si soubor api-paste.ini v Nova pro informace jak toto API "
-"nastavit."
 
 #, python-format
 msgid ""
@@ -448,10 +435,6 @@ msgstr "Nelze načíst rozšíření %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Nelze vypnout instanci"
-
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "Nelze odstranit snímek pro VM %s"
 
 msgid "Failed to resume instance"
 msgstr "Nelze obnovit instanci"
@@ -1041,14 +1024,6 @@ msgid "Power state %s not found."
 msgstr "Stav napájení %s nebyl nalezen."
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)d seconds"
-msgstr ""
-"Problém při získávání seznamu potomků %(path)r v rámci daného časového "
-"limitu=%(timeout)d vteřin"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Překročena kvóta pro %s, pokus o přidělení plovoucí IP adresy"
 
@@ -1198,17 +1173,6 @@ msgstr ""
 "mi části Nova. Toto se v budoucnu může změnit, ale v současnosti by si "
 "správci měli být vědomi, že použití této funkce v ostrých provozech může být "
 "riskantní."
-
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Ovladač skupiny služeb ZooKeeper v Nova nebyl testován projektem Openstack a "
-"proto nemůže být jeho kvalita zajištěna. Toto se v budoucnu může změnit, ale "
-"v současnosti by si správci měli být vědomi, že použití této funkce v "
-"ostrých provozech může být riskantní. "
 
 msgid ""
 "The cells feature of Nova is considered experimental by the OpenStack "
@@ -1568,10 +1532,6 @@ msgid ""
 msgstr ""
 "připojení rozhraní selhalo, zkuste zrušit přidělení portu %(port_id)s, důvod "
 "%(msg)s"
-
-#, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "Nelze získat XML z domény: %(uuid)s, výjimka: %(ex)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
