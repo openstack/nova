@@ -60,6 +60,24 @@ def get_test_port(**kw):
                 'updated_at': kw.get('updated_at')})()
 
 
+def get_test_vif(**kw):
+    return {
+        'profile': kw.get('profile', {}),
+        'ovs_interfaceid': kw.get('ovs_interfaceid'),
+        'preserve_on_delete': kw.get('preserve_on_delete', False),
+        'network': kw.get('network', {}),
+        'devname': kw.get('devname', 'tapaaaaaaaa-00'),
+        'vnic_type': kw.get('vnic_type', 'baremetal'),
+        'qbh_params': kw.get('qbh_params'),
+        'meta': kw.get('meta', {}),
+        'details': kw.get('details', {}),
+        'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
+        'active': kw.get('active', True),
+        'type': kw.get('type', 'ironic'),
+        'id': kw.get('id', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
+        'qbg_params': kw.get('qbg_params')}
+
+
 def get_test_flavor(**kw):
     default_extra_specs = {'baremetal:deploy_kernel_id':
                                        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',

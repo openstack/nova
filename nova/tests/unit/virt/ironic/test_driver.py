@@ -1322,7 +1322,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
     def test_plug_vifs_with_port(self, mock_uvifs, mock_port_udt, mock_lp):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(uuid=node_uuid)
-        port = ironic_utils.get_test_port()
+        # make the address be consistent with network_info's
+        port = ironic_utils.get_test_port(address='fake')
 
         mock_lp.return_value = [port]
 
@@ -1355,6 +1356,46 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(node_uuid)
         mock__plug_vifs.assert_called_once_with(node, instance, network_info)
+
+    @mock.patch.object(FAKE_CLIENT.port, 'update')
+    @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
+    @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
+    def test_plug_vifs_multiple_ports(self, mock_uvifs, mock_lp,
+                                       mock_port_udt):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = ironic_utils.get_test_node(uuid=node_uuid)
+        first_ironic_port_uuid = 'aaaaaaaa-bbbb-1111-dddd-eeeeeeeeeeee'
+        first_port = ironic_utils.get_test_port(uuid=first_ironic_port_uuid,
+                                                node_uuid=node_uuid,
+                                                address='11:FF:FF:FF:FF:FF')
+        second_ironic_port_uuid = 'aaaaaaaa-bbbb-2222-dddd-eeeeeeeeeeee'
+        second_port = ironic_utils.get_test_port(uuid=second_ironic_port_uuid,
+                                                 node_uuid=node_uuid,
+                                                 address='22:FF:FF:FF:FF:FF')
+        mock_lp.return_value = [second_port, first_port]
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node_uuid)
+        first_vif_id = 'aaaaaaaa-vv11-cccc-dddd-eeeeeeeeeeee'
+        second_vif_id = 'aaaaaaaa-vv22-cccc-dddd-eeeeeeeeeeee'
+        first_vif = ironic_utils.get_test_vif(
+                                            address='22:FF:FF:FF:FF:FF',
+                                            id=second_vif_id)
+        second_vif = ironic_utils.get_test_vif(
+                                            address='11:FF:FF:FF:FF:FF',
+                                            id=first_vif_id)
+        network_info = [first_vif, second_vif]
+        self.driver._plug_vifs(node, instance, network_info)
+
+        # asserts
+        mock_uvifs.assert_called_once_with(node, instance, network_info)
+        mock_lp.assert_called_once_with(node_uuid)
+        calls = (mock.call(first_ironic_port_uuid,
+                           [{'op': 'add', 'path': '/extra/vif_port_id',
+                             'value': first_vif_id}]),
+                 mock.call(second_ironic_port_uuid,
+                           [{'op': 'add', 'path': '/extra/vif_port_id',
+                             'value': second_vif_id}]))
+        mock_port_udt.assert_has_calls(calls, any_order=True)
 
     @mock.patch.object(FAKE_CLIENT.port, 'update')
     @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
