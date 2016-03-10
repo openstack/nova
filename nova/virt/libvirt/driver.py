@@ -1663,13 +1663,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if state == power_state.SHUTDOWN:
             live_snapshot = False
 
-        # NOTE(dkang): managedSave does not work for LXC
-        if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
-            if state == power_state.RUNNING or state == power_state.PAUSED:
-                self._detach_pci_devices(guest,
-                    pci_manager.get_instance_pci_devs(instance))
-                self._detach_sriov_ports(context, instance, guest)
-                guest.save_memory_state()
+        self._prepare_domain_for_snapshot(context, live_snapshot, state,
+                                          instance)
 
         snapshot_backend = self.image_backend.snapshot(instance,
                 disk_path,
@@ -1747,6 +1742,13 @@ class LibvirtDriver(driver.ComputeDriver):
                         ignore_errors=True)
 
         LOG.info(_LI("Snapshot image upload complete"), instance=instance)
+
+    def _prepare_domain_for_snapshot(self, context, live_snapshot, state,
+                                     instance):
+        # NOTE(dkang): managedSave does not work for LXC
+        if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
+            if state == power_state.RUNNING or state == power_state.PAUSED:
+                self.suspend(context, instance)
 
     def _snapshot_domain(self, context, live_snapshot, virt_dom, state,
                          instance):
