@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.i18n import _
@@ -84,7 +83,7 @@ class Stats(dict):
         key = "num_os_type_%s" % os_type
         return self.get(key, 0)
 
-    def update_stats_for_instance(self, instance):
+    def update_stats_for_instance(self, instance, is_removed=False):
         """Update stats after an instance is changed."""
 
         uuid = instance['uuid']
@@ -106,10 +105,9 @@ class Stats(dict):
         (vm_state, task_state, os_type, project_id) = \
                 self._extract_state_from_instance(instance)
 
-        if vm_state in resource_tracker._REMOVED_STATES:
+        if is_removed or vm_state in vm_states.ALLOW_RESOURCE_REMOVAL:
             self._decrement("num_instances")
             self.states.pop(uuid)
-
         else:
             self._increment("num_vm_%s" % vm_state)
             self._increment("num_task_%s" % task_state)
