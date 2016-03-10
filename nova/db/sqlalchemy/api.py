@@ -545,11 +545,12 @@ def service_get_by_host_and_topic(context, host, topic):
 
 
 @pick_context_manager_reader
-def service_get_all_by_binary(context, binary):
-    return model_query(context, models.Service, read_deleted="no").\
-                filter_by(disabled=False).\
-                filter_by(binary=binary).\
-                all()
+def service_get_all_by_binary(context, binary, include_disabled=False):
+    query = model_query(context, models.Service, read_deleted="no").\
+                    filter_by(binary=binary)
+    if not include_disabled:
+        query = query.filter_by(disabled=False)
+    return query.all()
 
 
 @pick_context_manager_reader

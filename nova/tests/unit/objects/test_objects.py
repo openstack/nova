@@ -1181,7 +1181,7 @@ object_data = {
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
     'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
     'Service': '1.19-8914320cbeb4ec29f252d72ce55d07e1',
-    'ServiceList': '1.17-b767102cba7cbed290e396114c3f86b3',
+    'ServiceList': '1.18-6c52cb616621c1af2415dcc11faf5c1a',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServiceStatusPayload': '1.0-a5e7b4fd6cc5581be45b31ff1f3a3f7f',
     'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',

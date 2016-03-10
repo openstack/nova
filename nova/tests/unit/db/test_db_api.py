@@ -3456,6 +3456,19 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         real = db.service_get_all_by_binary(self.ctxt, 'b1')
         self._assertEqualListsOfObjects(expected, real)
 
+    def test_service_get_all_by_binary_include_disabled(self):
+        values = [
+            {'host': 'host1', 'binary': 'b1'},
+            {'host': 'host2', 'binary': 'b1'},
+            {'disabled': True, 'binary': 'b1'},
+            {'host': 'host3', 'binary': 'b2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        expected = services[:3]
+        real = db.service_get_all_by_binary(self.ctxt, 'b1',
+                                            include_disabled=True)
+        self._assertEqualListsOfObjects(expected, real)
+
     def test_service_get_all_by_host(self):
         values = [
             {'host': 'host1', 'topic': 't11', 'binary': 'b11'},

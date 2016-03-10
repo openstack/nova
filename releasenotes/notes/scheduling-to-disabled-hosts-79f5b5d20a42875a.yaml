@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The FilterScheduler is now including disabled hosts.
+    Make sure you include the ComputeFilter in the
+    ``scheduler_default_filters`` config option to avoid
+    placing instances on disabled hosts.

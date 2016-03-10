@@ -141,9 +141,13 @@ def service_get_all_by_topic(context, topic):
     return IMPL.service_get_all_by_topic(context, topic)
 
 
-def service_get_all_by_binary(context, binary):
-    """Get all services for a given binary."""
-    return IMPL.service_get_all_by_binary(context, binary)
+def service_get_all_by_binary(context, binary, include_disabled=False):
+    """Get services for a given binary.
+
+    Includes disabled services if 'include_disabled' parameter is True
+    """
+    return IMPL.service_get_all_by_binary(context, binary,
+                                          include_disabled=include_disabled)
 
 
 def service_get_all_by_host(context, host):

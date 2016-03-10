@@ -30,22 +30,29 @@ from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)
-fake_service = {
-    'created_at': NOW,
-    'updated_at': None,
-    'deleted_at': None,
-    'deleted': False,
-    'id': 123,
-    'host': 'fake-host',
-    'binary': 'nova-fake',
-    'topic': 'fake-service-topic',
-    'report_count': 1,
-    'forced_down': False,
-    'disabled': False,
-    'disabled_reason': None,
-    'last_seen_up': None,
-    'version': service.SERVICE_VERSION,
-    }
+
+
+def _fake_service(**kwargs):
+    fake_service = {
+        'created_at': NOW,
+        'updated_at': None,
+        'deleted_at': None,
+        'deleted': False,
+        'id': 123,
+        'host': 'fake-host',
+        'binary': 'nova-fake',
+        'topic': 'fake-service-topic',
+        'report_count': 1,
+        'forced_down': False,
+        'disabled': False,
+        'disabled_reason': None,
+        'last_seen_up': None,
+        'version': service.SERVICE_VERSION,
+        }
+    fake_service.update(kwargs)
+    return fake_service
+
+fake_service = _fake_service()
 
 OPTIONAL = ['availability_zone', 'compute_node']
 
@@ -188,7 +195,32 @@ class _TestServiceObject(object):
         services = service.ServiceList.get_by_binary(self.context,
                                                      'fake-binary')
         self.assertEqual(1, len(services))
-        mock_get.assert_called_once_with(self.context, 'fake-binary')
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=False)
+
+    @mock.patch('nova.db.service_get_all_by_binary')
+    def test_get_by_binary_disabled(self, mock_get):
+        mock_get.return_value = [_fake_service(disabled=True)]
+        services = service.ServiceList.get_by_binary(self.context,
+                                                     'fake-binary',
+                                                     include_disabled=True)
+        self.assertEqual(1, len(services))
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=True)
+
+    @mock.patch('nova.db.service_get_all_by_binary')
+    def test_get_by_binary_both(self, mock_get):
+        mock_get.return_value = [_fake_service(),
+                                 _fake_service(disabled=True)]
+        services = service.ServiceList.get_by_binary(self.context,
+                                                     'fake-binary',
+                                                     include_disabled=True)
+        self.assertEqual(2, len(services))
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=True)
 
     def test_get_by_host(self):
         self.mox.StubOutWithMock(db, 'service_get_all_by_host')
