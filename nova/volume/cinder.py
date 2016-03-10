@@ -242,6 +242,11 @@ def translate_cinder_exception(method):
             exc_value = exception.InvalidInput(
                 reason=six.text_type(exc_value))
             six.reraise(exc_value, None, exc_trace)
+        except (keystone_exception.Forbidden,
+                cinder_exception.Forbidden):
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.Forbidden(message=six.text_type(exc_value))
+            six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
 
