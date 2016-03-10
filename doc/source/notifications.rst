@@ -38,11 +38,10 @@ Nova code uses the nova.rpc.get_notifier call to get a configured
 oslo.messaging Notifier object and it uses the oslo provided functions on the
 Notifier object to emit notifications. The configuration of the returned
 Notifier object depends on the parameters of the get_notifier call and the
-value of the oslo.messaging configuration options `notification_driver` and
-`notification_topics`. There are notification configuration options in Nova
-which are specific for certain notification types like
-`notify_on_state_change`, `notify_api_faults`, `default_notification_level`,
-etc.
+value of the oslo.messaging configuration options `driver` and `topics`.
+There are notification configuration options in Nova which are specific for
+certain notification types like `notify_on_state_change`,
+`notify_api_faults`, `default_notification_level`, etc.
 
 The structure of the payload of the unversioned notifications is defined in the
 code that emits the notification and no documentation or enforced backward
