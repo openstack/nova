@@ -48,6 +48,7 @@ from nova import quota
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_volume
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
@@ -333,6 +334,58 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertIsNone(result.device_name)
         self.assertEqual(result.volume_id, bdm.volume_id)
         self.assertTrue(bdm_create.called)
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_attach_volume(self, mock_attach, mock_reserve):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'])
+            mock_v_api.check_attach.assert_called_once_with(self.context,
+                                                            volume,
+                                                            instance=instance)
+            mock_v_api.reserve_volume.assert_called_once_with(self.context,
+                                                              volume['id'])
+            mock_attach.assert_called_once_with(self.context,
+                                                instance, fake_bdm)
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_attach_volume_reserve_fails(self, mock_attach, mock_reserve):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            mock_v_api.reserve_volume.side_effect = test.TestingException()
+            self.assertRaises(test.TestingException,
+                              self.compute_api.attach_volume,
+                              self.context, instance, volume['id'])
+            mock_v_api.check_attach.assert_called_once_with(self.context,
+                                                            volume,
+                                                            instance=instance)
+            mock_v_api.reserve_volume.assert_called_once_with(self.context,
+                                                              volume['id'])
+            self.assertEqual(0, mock_attach.call_count)
+            fake_bdm.destroy.assert_called_once_with()
 
     def test_suspend(self):
         # Ensure instance can be suspended.
@@ -3510,6 +3563,28 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
                                                      None,
                                                      None)
         self.assertIsNone(result, None)
+
+    @mock.patch.object(compute_cells_api.ComputeCellsAPI, '_call_to_cells')
+    def test_attach_volume(self, mock_attach):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'])
+            mock_v_api.check_attach.assert_called_once_with(self.context,
+                                                          volume,
+                                                          instance=instance)
+            mock_attach.assert_called_once_with(self.context, instance,
+                                                'attach_volume', volume['id'],
+                                                None, None, None)
+
+    def test_attach_volume_reserve_fails(self):
+        self.skipTest("Reserve is never done in the API cell.")
 
 
 class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
