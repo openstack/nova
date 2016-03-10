@@ -14,6 +14,7 @@
 #    under the License.
 
 from cinderclient import exceptions as cinder_exception
+from keystoneclient import exceptions as keystone_exception
 import mock
 
 from nova import context
@@ -439,3 +440,43 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.api.get_volume_encryption_metadata(self.ctx,
                                                 {'encryption_key_id':
                                                  'fake_key'})
+
+    def test_translate_cinder_exception_no_error(self):
+        my_func = mock.Mock()
+        my_func.__name__ = 'my_func'
+        my_func.return_value = 'foo'
+
+        res = cinder.translate_cinder_exception(my_func)('fizzbuzz',
+                                                         'bar', 'baz')
+
+        self.assertEqual('foo', res)
+        my_func.assert_called_once_with('fizzbuzz', 'bar', 'baz')
+
+    def test_translate_cinder_exception_cinder_connection_error(self):
+        self._do_translate_cinder_exception_test(
+            cinder_exception.ConnectionError,
+            exception.CinderConnectionFailed)
+
+    def test_translate_cinder_exception_keystone_connection_error(self):
+        self._do_translate_cinder_exception_test(
+            keystone_exception.ConnectionError,
+            exception.CinderConnectionFailed)
+
+    def test_translate_cinder_exception_cinder_bad_request(self):
+        self._do_translate_cinder_exception_test(
+            cinder_exception.BadRequest(''),
+            exception.InvalidInput)
+
+    def test_translate_cinder_exception_keystone_bad_request(self):
+        self._do_translate_cinder_exception_test(
+            keystone_exception.BadRequest,
+            exception.InvalidInput)
+
+    def _do_translate_cinder_exception_test(self, raised_exc, expected_exc):
+        my_func = mock.Mock()
+        my_func.__name__ = 'my_func'
+        my_func.side_effect = raised_exc
+
+        self.assertRaises(expected_exc,
+                          cinder.translate_cinder_exception(my_func),
+                          'foo', 'bar', 'baz')
