@@ -510,7 +510,7 @@ def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
     # NOTE(clayg): remove this when xenapi is setting default_root_device
     if root_device_name is None:
-        if driver.compute_driver_matches('xenapi.XenAPIDriver'):
+        if driver.is_xenapi():
             root_device_name = '/dev/xvda'
         else:
             return _DEFAULT_MAPPINGS

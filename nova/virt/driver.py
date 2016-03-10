@@ -1626,5 +1626,5 @@ def load_compute_driver(virtapi, compute_driver=None):
         sys.exit(1)
 
 
-def compute_driver_matches(match):
-    return CONF.compute_driver and CONF.compute_driver.endswith(match)
+def is_xenapi():
+    return CONF.compute_driver == 'xenapi.XenAPIDriver'

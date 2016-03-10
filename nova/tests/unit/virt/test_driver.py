@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import fixture as fixture_config
+
 from nova import test
 from nova.virt import driver
 
@@ -56,3 +58,24 @@ class ToDriverRegistryTestCase(test.NoDBTestCase):
             drvs['key2'],
             FakeDriver2, 'arg1', 'arg2', param1='value1',
             param2='value2')
+
+
+class DriverMethodTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(DriverMethodTestCase, self).setUp()
+        self.CONF = self.useFixture(fixture_config.Config()).conf
+
+    def test_is_xenapi_true(self):
+        self.CONF.set_override('compute_driver', 'xenapi.XenAPIDriver',
+                               enforce_type=True)
+        self.assertTrue(driver.is_xenapi())
+
+    def test_is_xenapi_false(self):
+        driver_names = ('libvirt.LibvirtDriver', 'fake.FakeDriver',
+                        'ironic.IronicDriver', 'vmwareapi.VMwareVCDriver',
+                        'hyperv.HyperVDriver', None)
+        for driver_name in driver_names:
+            self.CONF.set_override('compute_driver', driver_name,
+                                   enforce_type=True)
+            self.assertFalse(driver.is_xenapi())

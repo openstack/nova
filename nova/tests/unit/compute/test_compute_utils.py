@@ -48,7 +48,7 @@ import nova.tests.unit.image.fake
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
 from nova.tests import uuidsentinel as uuids
-from nova.virt import driver
+
 
 CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
@@ -288,19 +288,9 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.root_device_name = '/dev/vda'
         self.update_called = False
 
-        def fake_driver_matches(driver_string):
-            if driver_string == 'libvirt.LibvirtDriver':
-                return self.is_libvirt
-            return False
-
         self.patchers = []
         self.patchers.append(
                 mock.patch.object(objects.BlockDeviceMapping, 'save'))
-        self.patchers.append(
-                mock.patch.object(driver,
-                                  'compute_driver_matches',
-                                  new=mock.Mock(
-                                      side_effect=fake_driver_matches)))
         for patcher in self.patchers:
             patcher.start()
 
