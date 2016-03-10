@@ -49,9 +49,8 @@ class Personality(extensions.V21APIExtensionBase):
     # server_update & server_rebuild
     def server_create(self, server_dict, create_kwargs,
                       body_deprecated_param=None):
-        if 'personality' in server_dict:
-            create_kwargs['injected_files'] = self._get_injected_files(
-                                                  server_dict['personality'])
+        create_kwargs['injected_files'] = self._get_injected_files(
+            server_dict.get('personality', []))
 
     def server_rebuild(self, server_dict, create_kwargs,
                       body_deprecated_param=None):
