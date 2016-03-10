@@ -43,6 +43,7 @@ IntegerField = fields.IntegerField
 UUIDField = fields.UUIDField
 FloatField = fields.FloatField
 StringField = fields.StringField
+SensitiveStringField = fields.SensitiveStringField
 EnumField = fields.EnumField
 DateTimeField = fields.DateTimeField
 DictOfStringsField = fields.DictOfStringsField

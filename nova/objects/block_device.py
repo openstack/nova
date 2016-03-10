@@ -80,7 +80,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         'volume_size': fields.IntegerField(nullable=True),
         'image_id': fields.StringField(nullable=True),
         'no_device': fields.BooleanField(default=False),
-        'connection_info': fields.StringField(nullable=True),
+        'connection_info': fields.SensitiveStringField(nullable=True),
     }
 
     @staticmethod
