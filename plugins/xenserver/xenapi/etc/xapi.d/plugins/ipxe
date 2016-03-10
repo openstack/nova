@@ -17,16 +17,19 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 """Inject network configuration into iPXE ISO for boot."""
 
+import logging
 import os
 import shutil
 
 import utils
 
-#FIXME(sirp): should this use pluginlib from 5.6?
-from pluginlib_nova import *
-configure_logging('ipxe')
+# FIXME(sirp): should this use pluginlib from 5.6?
+import pluginlib_nova
+pluginlib_nova.configure_logging('ipxe')
 
 
 ISOLINUX_CFG = """SAY iPXE ISO boot image
@@ -96,7 +99,7 @@ def _create_iso(mkisofs_cmd, filename, path):
     orig_dir = os.getcwd()
     os.chdir(path)
     try:
-        utils.run_command([mkisofs_cmd, '-quiet', '-l',  '-o',  filename,
+        utils.run_command([mkisofs_cmd, '-quiet', '-l', '-o', filename,
                            '-c', 'boot.cat', '-b', 'isolinux.bin',
                            '-no-emul-boot', '-boot-load-size', '4',
                            '-boot-info-table', '.'])

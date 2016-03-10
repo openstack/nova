@@ -21,6 +21,8 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 """Handle the uploading and downloading of images via Glance."""
 
 try:
@@ -28,7 +30,7 @@ try:
 except ImportError:
     from six.moves import http_client as httplib
 
-import md5
+import md5  # noqa
 import socket
 import urllib2
 from urlparse import urlparse
@@ -58,11 +60,11 @@ def _download_tarball_and_verify(request, staging_path):
 
     try:
         response = urllib2.urlopen(request)
-    except urllib2.HTTPError, error:
+    except urllib2.HTTPError, error:  # noqa
         raise RetryableError(error)
-    except urllib2.URLError, error:
+    except urllib2.URLError, error:  # noqa
         raise RetryableError(error)
-    except httplib.HTTPException, error:
+    except httplib.HTTPException, error:  # noqa
         # httplib.HTTPException and derivatives (BadStatusLine in particular)
         # don't have a useful __repr__ or __str__
         raise RetryableError('%s: %s' % (error.__class__.__name__, error))
@@ -80,7 +82,7 @@ def _download_tarball_and_verify(request, staging_path):
     try:
         try:
             utils.extract_tarball(response, staging_path, callback=update_md5)
-        except Exception, error:
+        except Exception, error:  # noqa
             raise RetryableError(error)
     finally:
         bytes_read = callback_data['bytes_read']
@@ -151,9 +153,11 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     _upload_tarball_by_url(staging_path, image_id, url,
                           extra_headers, properties)
 
+
 def _upload_tarball_by_url(staging_path, image_id, glance_endpoint,
                            extra_headers, properties):
-    """
+    """Upload an image to Glance.
+
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
     """
@@ -182,7 +186,7 @@ def _upload_tarball_by_url(staging_path, image_id, glance_endpoint,
         else:
             conn = httplib.HTTPConnection(parts[1])
         conn.connect()
-    except Exception, error:
+    except Exception, error:  # noqa
         logging.exception('Failed to connect %(url)s' % {'url': url})
         raise RetryableError(error)
 
@@ -217,14 +221,14 @@ def _upload_tarball_by_url(staging_path, image_id, glance_endpoint,
 
             headers.update(**extra_headers)
 
-            for key, value in properties.iteritems():
+            for key, value in properties.items():
                 header_key = "x-image-meta-property-%s" % key.replace('_', '-')
                 headers[header_key] = str(value)
 
-            for header, value in headers.iteritems():
+            for header, value in headers.items():
                 conn.putheader(header, value)
             conn.endheaders()
-        except Exception, error:
+        except Exception, error:  # noqa
             logging.exception('Failed to upload %(url)s' % {'url': url})
             raise RetryableError(error)
 
@@ -235,7 +239,7 @@ def _upload_tarball_by_url(staging_path, image_id, glance_endpoint,
             callback_data['bytes_written'] += chunk_len
             try:
                 conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
-            except Exception, error:
+            except Exception, error:  # noqa
                 logging.exception('Failed to upload when sending chunks')
                 raise RetryableError(error)
 
@@ -343,7 +347,7 @@ def validate_image_status_before_upload(conn, url, extra_headers):
         else:
             head_resp.read()
 
-    except Exception, error:
+    except Exception, error:  # noqa
         logging.exception('Failed to HEAD the image %(image_id)s while '
                           'checking image status before attempting to '
                           'upload %(url)s' % {'image_id': image_id,

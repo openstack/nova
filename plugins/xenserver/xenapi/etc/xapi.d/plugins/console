@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -13,6 +14,8 @@
 
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
+
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
 
 """
 To configure this plugin, you must set the following xenstore key:
@@ -50,7 +53,7 @@ SEEK_END = 2
 def _last_bytes(file_like_object):
     try:
         file_like_object.seek(-MAX_CONSOLE_BYTES, SEEK_END)
-    except IOError, e:
+    except IOError, e:  # noqa
         if e.errno == 22:
             file_like_object.seek(0, SEEK_SET)
         else:
@@ -72,7 +75,7 @@ def get_console_log(session, arg_dict):
     try:
         try:
             log_content = _last_bytes(logfile)
-        except IOError, e:
+        except IOError, e:  # noqa
             msg = "Error reading console: %s" % e
             logging.debug(msg)
             raise pluginlib_nova.PluginError(msg)
