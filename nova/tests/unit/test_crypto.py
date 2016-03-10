@@ -32,8 +32,9 @@ from nova import test
 from nova import utils
 
 
-class X509Test(test.TestCase):
-    def test_can_generate_x509(self):
+class X509Test(test.NoDBTestCase):
+    @mock.patch('nova.db.certificate_create')
+    def test_can_generate_x509(self, mock_create):
         with utils.tempdir() as tmpdir:
             self.flags(ca_path=tmpdir)
             crypto.ensure_ca_filesystem()
