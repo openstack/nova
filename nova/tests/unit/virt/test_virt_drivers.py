@@ -31,6 +31,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import utils as test_utils
@@ -657,13 +658,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         network_info = test_utils.get_test_network_info()
         self.connection.unfilter_instance(instance_ref, network_info)
 
-    @catch_notimplementederror
     def test_live_migration(self):
         instance_ref, network_info = self._get_running_instance()
         fake_context = context.RequestContext('fake', 'fake')
         migration = objects.Migration(context=fake_context, id=1)
         migrate_data = objects.LibvirtLiveMigrateData(
-            migration=migration)
+            migration=migration, bdms=[])
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
                                        lambda *a: None, lambda *a: None,
                                        migrate_data=migrate_data)
@@ -836,6 +836,10 @@ class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
         self.driver_module = "nova.virt.driver.ComputeDriver"
         super(AbstractDriverTestCase, self).setUp()
 
+    def test_live_migration(self):
+        self.skipTest('Live migration is not implemented in the base '
+                      'virt driver.')
+
 
 class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
@@ -870,6 +874,9 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.get_admin_context',
             self._fake_admin_context))
+        # This is needed for the live migration tests which spawn off the
+        # operation for monitoring.
+        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
 
     def _fake_admin_context(self, *args, **kwargs):
         return self.ctxt
