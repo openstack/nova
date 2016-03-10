@@ -6456,9 +6456,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 break
             except Exception:
                 pass
-            if target_brp:
+
+        if target_brp:
+            for i in six.moves.range(2):
                 try:
                     utils.execute('mv', target_brp, target_del)
+                    break
                 except Exception:
                     pass
 
