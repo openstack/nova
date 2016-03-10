@@ -241,23 +241,25 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_console_output_works(self):
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
         self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
-        instance = {"name": "dummy"}
         self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
         self.mox.ReplayAll()
 
         self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
 
-    def test_get_console_output_throws_nova_exception(self):
+    def test_get_console_output_not_available(self):
         self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
-        instance = {"name": "dummy"}
+        ctxt = context.RequestContext('user', 'project')
+        instance = fake_instance.fake_instance_obj(ctxt)
         # dom_id=0 used to trigger exception in fake XenAPI
         self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(0)
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.NovaException,
+        self.assertRaises(exception.ConsoleNotAvailable,
                 self.vmops.get_console_output, instance)
 
     def test_get_dom_id_works(self):

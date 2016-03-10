@@ -1173,6 +1173,10 @@ class ConsoleNotFoundForInstance(ConsoleNotFound):
     msg_fmt = _("Console for instance %(instance_uuid)s could not be found.")
 
 
+class ConsoleNotAvailable(NotFound):
+    msg_fmt = _("Guest does not have a console available.")
+
+
 class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
     msg_fmt = _("Console for instance %(instance_uuid)s "
                 "in pool %(pool_id)s could not be found.")

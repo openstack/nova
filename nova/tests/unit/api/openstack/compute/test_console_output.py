@@ -15,6 +15,7 @@
 
 import string
 
+import mock
 import webob
 
 from nova.api.openstack.compute import console_output \
@@ -143,6 +144,13 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
     def test_get_console_output_with_boolean_length(self):
         body = {'os-getConsoleOutput': {'length': True}}
         self._check_console_output_failure(self.validation_error, body)
+
+    @mock.patch.object(compute_api.API, 'get_console_output',
+                       side_effect=exception.ConsoleNotAvailable(
+                           instance_uuid='fake_uuid'))
+    def test_get_console_output_not_available(self, mock_get_console_output):
+        body = {'os-getConsoleOutput': {}}
+        self._check_console_output_failure(webob.exc.HTTPNotFound, body)
 
 
 class ConsoleOutputExtensionTestV2(ConsoleOutputExtensionTestV21):

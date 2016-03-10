@@ -4420,6 +4420,7 @@ class ComputeManager(manager.Manager):
         self._inject_network_info(context, instance, network_info)
 
     @messaging.expected_exceptions(NotImplementedError,
+                                   exception.ConsoleNotAvailable,
                                    exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
