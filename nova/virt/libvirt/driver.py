@@ -6814,6 +6814,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
 
+            on_execute = lambda process: \
+                self.job_tracker.add_job(instance, process.pid)
+            on_completion = lambda process: \
+                self.job_tracker.remove_job(instance, process.pid)
+
             active_flavor = instance.get_flavor()
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
@@ -6832,10 +6837,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not (fname == 'disk.swap' and
                     active_flavor.get('swap', 0) != flavor.get('swap', 0)):
 
-                    on_execute = lambda process: self.job_tracker.add_job(
-                        instance, process.pid)
-                    on_completion = lambda process: self.job_tracker.\
-                        remove_job(instance, process.pid)
                     compression = info['type'] not in NO_COMPRESSION_TYPES
                     libvirt_utils.copy_image(from_path, img_path, host=dest,
                                              on_execute=on_execute,
@@ -6845,11 +6846,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # Ensure disk.info is written to the new path to avoid disks being
             # reinspected and potentially changing format.
             src_disk_info_path = os.path.join(inst_base_resize, 'disk.info')
-            dst_disk_info_path = os.path.join(inst_base, 'disk.info')
-            libvirt_utils.copy_image(src_disk_info_path, dst_disk_info_path,
-                                     host=dest, on_execute=on_execute,
-                                     on_completion=on_completion,
-                                     compression=compression)
+            if os.path.exists(src_disk_info_path):
+                dst_disk_info_path = os.path.join(inst_base, 'disk.info')
+                libvirt_utils.copy_image(src_disk_info_path,
+                                         dst_disk_info_path,
+                                         host=dest, on_execute=on_execute,
+                                         on_completion=on_completion)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
