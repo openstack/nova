@@ -484,9 +484,9 @@ def expected_errors(errors):
                         t_errors = errors
                     if exc.code in t_errors:
                         raise
-                elif isinstance(exc, exception.PolicyNotAuthorized):
+                elif isinstance(exc, exception.Forbidden):
                     # Note(cyeoh): Special case to handle
-                    # PolicyNotAuthorized exceptions so every
+                    # Forbidden exceptions so every
                     # extension method does not need to wrap authorize
                     # calls. ResourceExceptionHandler silently
                     # converts NotAuthorized to HTTPForbidden
