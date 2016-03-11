@@ -326,6 +326,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                     virtual_size)
         self.stubs.Set(vm_utils, '_safe_copy_vdi', fake_safe_copy_vdi)
 
+        def fake_unpause_and_wait(self, vm_ref, instance, power_on):
+            self._update_last_dom_id(vm_ref)
+        self.stubs.Set(vmops.VMOps, '_unpause_and_wait',
+                       fake_unpause_and_wait)
+
     def tearDown(self):
         fake_image.FakeImageService_reset()
         super(XenAPIVMTestCase, self).tearDown()
@@ -1688,6 +1693,11 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
             pass
         self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
+
+        def fake_unpause_and_wait(self, vm_ref, instance, power_on):
+            pass
+        self.stubs.Set(vmops.VMOps, '_unpause_and_wait',
+                       fake_unpause_and_wait)
 
     def _create_instance(self, **kw):
         values = self.instance_values.copy()
