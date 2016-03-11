@@ -3437,8 +3437,9 @@ class _ComputeAPIUnitTestMixIn(object):
                              host_statuses[instance.uuid])
 
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_live_migrate_force_complete_succeeded(
-            self, get_by_id_and_instance):
+            self, action_start, get_by_id_and_instance):
 
         if self.cell_type == 'api':
             # cell api has not been implemented.
@@ -3461,6 +3462,9 @@ class _ComputeAPIUnitTestMixIn(object):
             lm_force_complete.assert_called_once_with(self.context,
                                                       instance,
                                                       0)
+            action_start.assert_called_once_with(
+                self.context, instance.uuid, 'live_migration_force_complete',
+                want_result=False)
 
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     def test_live_migrate_force_complete_invalid_migration_state(
