@@ -626,7 +626,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                callret=None,
                                calltype='cast')
 
-    def test_pre_live_migration_converts_objects(self):
+    @mock.patch('nova.objects.migrate_data.LiveMigrateData.from_legacy_dict')
+    def test_pre_live_migration_converts_objects(self, mock_fld):
         obj = migrate_data_obj.LiveMigrateData()
         result = self._test_simple_call('pre_live_migration',
                                         inargs={'instance': 'foo',
@@ -639,6 +640,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                                   'disk': None,
                                                   'migrate_data': {}},
                                         callret=obj)
+        self.assertFalse(mock_fld.called)
         self.assertEqual(obj, result)
         result = self._test_simple_call('pre_live_migration',
                                         inargs={'instance': 'foo',
@@ -651,6 +653,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                                   'disk': None,
                                                   'migrate_data': {}},
                                         callret={'foo': 'bar'})
+        mock_fld.assert_called_once_with(
+            {'pre_live_migration_result': {'foo': 'bar'}})
         self.assertIsInstance(result, migrate_data_obj.LiveMigrateData)
 
     def test_rollback_live_migration_at_destination_converts_objects(self):
