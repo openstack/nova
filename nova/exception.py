@@ -2116,3 +2116,9 @@ class OsInfoNotFound(NotFound):
 
 class BuildRequestNotFound(NotFound):
     msg_fmt = _("BuildRequest not found for instance %(uuid)s")
+
+
+class InvalidReservedMemoryPagesOption(Invalid):
+    msg_fmt = _("The format of the option 'reserved_memory_pages' is invalid. "
+                "(found '%(conf)s') Please refer to the nova "
+                "config-reference.")
