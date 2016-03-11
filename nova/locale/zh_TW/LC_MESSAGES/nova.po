@@ -9,22 +9,27 @@
 # Pellaeon Lin <nfsmwlin@gmail.com>, 2013
 # Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Jennifer <cristxu@tw.ibm.com>, 2016. #zanata
 # Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:38+0000\n"
+"POT-Creation-Date: 2016-03-10 03:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-02-03 07:15+0000\n"
-"Last-Translator: Lucas Palm <lapalm@us.ibm.com>\n"
+"PO-Revision-Date: 2016-03-08 07:15+0000\n"
+"Last-Translator: Jennifer <cristxu@tw.ibm.com>\n"
 "Language: zh-TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Chinese (Taiwan)\n"
+
+#, python-format
+msgid "%(address)s is not a valid IP address."
+msgstr "%(address)s 不是有效的 IP 位址。"
 
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
@@ -38,6 +43,10 @@ msgstr "%(address)s 不在 %(cidr)s 內。"
 msgid ""
 "%(binary)s attempted direct database access which is not allowed by policy"
 msgstr "%(binary)s 嘗試直接存取資料庫，但原則不容許這樣做"
+
+#, python-format
+msgid "%(cidr)s is not a valid IP network."
+msgstr "%(cidr)s 不是有效的 IP 網路。"
 
 #, python-format
 msgid ""
@@ -56,6 +65,14 @@ msgstr ""
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid ""
+"%(event_type)s is not a versioned notification and not whitelisted. See ./"
+"doc/source/notification.rst"
+msgstr ""
+"%(event_type)s 不是版本化通知，且未列入白名單。請參閱 ./doc/source/"
+"notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -100,6 +117,10 @@ msgstr "%(path)s 不在共用儲存體上：%(reason)s"
 #, python-format
 msgid "%(req)s is required to create a network."
 msgstr "需要 %(req)s 才能建立網路。"
+
+#, python-format
+msgid "%(total)i rows matched query %(meth)s, %(done)i migrated"
+msgstr "%(total)i 列與查詢 %(meth)s 相符，已移轉 %(done)i"
 
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
@@ -148,6 +169,10 @@ msgstr "不支援 %s 格式"
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr "%s 不是字串或 Unicode"
+
+#, python-format
+msgid "%s is not a valid IP network"
+msgstr "%s 不是有效的 IP 網路"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
@@ -292,6 +317,10 @@ msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "聚集 %(aggregate_name)s 已存在。"
 
 #, python-format
+msgid "Aggregate %s does not support empty named availability zone"
+msgstr "聚集 %s 不支援空白命名的可用區域"
+
+#, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "找不到主機 %(host)s 計數的聚集。"
 
@@ -414,11 +443,21 @@ msgstr "空白磁區（來源：'blank'，目的地：'volume'）需要具有非
 msgid "Block Device %(id)s is not bootable."
 msgstr "區塊裝置 %(id)s 不可啟動。"
 
+#, python-format
+msgid ""
+"Block Device Mapping %(volume_id)s is a multi-attach volume and is not valid "
+"for this operation."
+msgstr "「區塊裝置對映」%(volume_id)s 是一個多重連接磁區，且不適用於此作業。"
+
 msgid "Block Device Mapping cannot be converted to legacy format. "
 msgstr "無法將「區塊裝置對映」轉換為舊式格式。"
 
 msgid "Block Device Mapping is Invalid."
 msgstr "「區塊裝置對映」無效。"
+
+#, python-format
+msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
+msgstr "「區塊裝置對映」無效：%(auth_method)s 不受支援。"
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -459,6 +498,10 @@ msgstr "建置實例 %(instance_uuid)s 已中止：%(reason)s"
 #, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
 msgstr "建置實例 %(instance_uuid)s 已重新排定：%(reason)s"
+
+#, python-format
+msgid "BuildRequest not found for instance %(uuid)s"
+msgstr "找不到實例 %(uuid)s 的 BuildRequest"
 
 msgid "CIDR is malformed."
 msgstr "CIDR 的格式不正確。"
@@ -566,8 +609,12 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "無法將一個以上的磁區連接至多個實例"
 
 #, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "無法封鎖具有已對映磁區的移轉實例 %s"
+msgid ""
+"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
+"device migration feature requires libvirt version %(libvirt_ver)s"
+msgstr ""
+"無法封鎖具有已對映磁區的移轉實例 %(uuid)s。選擇性區塊裝置移轉功能需要 "
+"libvirt %(libvirt_ver)s 版"
 
 #, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
@@ -580,6 +627,15 @@ msgstr ""
 "如果沒有 xenserver.torrent_base_url 配置選項集，則無法建立預設 bittorrent "
 "URL。"
 
+#, python-format
+msgid ""
+"Cannot determine the parent storage pool for %s; cannot determine where to "
+"store images"
+msgstr "無法判定 %s 的母項儲存區；無法判定用來儲存映像檔的位置"
+
+msgid "Cannot disassociate auto assigned floating IP"
+msgstr "無法斷開與自動指派之浮動 IP 的關聯"
+
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr "無法執行 /sbin/mount.sofs"
 
@@ -591,6 +647,16 @@ msgstr "找不到「儲存體儲存庫 (SR)」來讀寫 VDI。"
 
 msgid "Cannot find image for rebuild"
 msgstr "找不到要重建的映像檔"
+
+#, python-format
+msgid ""
+"Cannot load host manager from configuration scheduler_host_manager = "
+"%(conf)s."
+msgstr "無法從配置 scheduler_host_manager = %(conf)s 載入主機管理程式。"
+
+#, python-format
+msgid "Cannot load scheduler driver from configuration %(conf)s."
+msgstr "無法從配置 %(conf)s 載入排程器驅動程式。"
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "無法裝載 Scality SOFS，請檢查系統日誌以找出錯誤"
@@ -619,12 +685,27 @@ msgstr "無法從聚集 %(aggregate_id)s 移除主機。原因：%(reason)s。"
 msgid "Cannot rescue a volume-backed instance"
 msgstr "無法救援以磁區為基礎的實例"
 
+#, python-format
+msgid ""
+"Cannot resize the root disk to a smaller size. Current size: "
+"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
+msgstr ""
+"無法將根磁碟調小。現行大小：%(curr_root_gb)s GB。所要求的大小："
+"%(new_root_gb)s GB。"
+
 msgid "Cannot run any more instances of this type."
 msgstr "無法執行更多這類型的實例。"
+
+msgid ""
+"Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
+msgstr "無法在非專用 CPU 固定原則中設定 CPU 執行緒固定原則"
 
 #, python-format
 msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
 msgstr "無法在聚集 %(id)s 中設定 meta 資料 %(metadata)s"
+
+msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
+msgstr "無法在非專用 CPU 固定原則中設定即時原則"
 
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -676,6 +757,14 @@ msgid "Cell with name %(name)s already exists."
 msgstr "名稱為 %(name)s 的 Cell 已存在。"
 
 #, python-format
+msgid "Certificate is not valid after: %s UTC"
+msgstr "在世界標準時間 %s 之後，憑證無效"
+
+#, python-format
+msgid "Certificate is not valid before: %s UTC"
+msgstr "在世界標準時間 %s 之前，憑證無效"
+
+#, python-format
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "變更會使下列資源的用量小於 0：%(unders)s"
@@ -692,9 +781,6 @@ msgid ""
 "Command Not supported. Please use Ironic command %(cmd)s to perform this "
 "action."
 msgstr "指令不受支援。請使用 Ironic 指令 %(cmd)s 來執行此動作。"
-
-msgid "Command failed, please check log for more info"
-msgstr "指令失敗，請檢查日誌，以取得相關資訊"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -715,6 +801,10 @@ msgstr "%(host)s 的計算服務仍在使用中。"
 #, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
 msgstr "此時無法使用 %(host)s 的計算服務。"
+
+#, python-format
+msgid "Config drive format '%(format)s' is not supported."
+msgstr "不支援配置磁碟機格式 '%(format)s'。"
 
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr "配置已要求自訂 CPU 型號，但沒有提供型號名稱"
@@ -747,6 +837,10 @@ msgid "Connection to cinder host failed: %(reason)s"
 msgstr "連線 Cinder 主機失敗：%(reason)s"
 
 #, python-format
+msgid "Connection to glance host %(server)s failed: %(reason)s"
+msgstr "與 Glance 主機 %(server)s 的連線失敗：%(reason)s"
+
+#, python-format
 msgid "Connection to libvirt lost: %s"
 msgstr "libVirt 連線已中斷：%s"
 
@@ -767,6 +861,12 @@ msgid ""
 "Console for instance %(instance_uuid)s in pool %(pool_id)s could not be "
 "found."
 msgstr "在儲存區 %(pool_id)s 中找不到實例 %(instance_uuid)s 的主控台。"
+
+#, python-format
+msgid ""
+"Console log output could not be retrieved for instance %(instance_id)s. "
+"Reason: %(reason)s"
+msgstr "無法擷取實例 %(instance_id)s 的主控台日誌輸出。原因：%(reason)s"
 
 #, python-format
 msgid "Console pool %(pool_id)s could not be found."
@@ -906,6 +1006,14 @@ msgid "Detected existing vlan with id %(vlan)d"
 msgstr "已偵測到 ID 為 %(vlan)d 的現有 VLAN"
 
 #, python-format
+msgid "Device '%(device)s' not found."
+msgstr "找不到裝置 '%(device)s'。"
+
+#, python-format
+msgid "Device detach failed for %(device)s: %(reason)s)"
+msgstr "分離裝置 %(device)s 失敗：%(reason)s"
+
+#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr "Hypervisor 版本 %(version)s 不支援所指定的裝置 ID %(id)s"
@@ -915,6 +1023,10 @@ msgstr "裝置名稱包含空格。"
 
 msgid "Device name empty or too long."
 msgstr "裝置名稱為空，或者太長。"
+
+#, python-format
+msgid "Device type mismatch for alias '%s'"
+msgstr "別名 '%s' 的裝置類型不符"
 
 #, python-format
 msgid ""
@@ -985,6 +1097,10 @@ msgstr "網路 UUID %(network_uuid)s 不存在，或者未指派給專案 %(proj
 
 msgid "Ephemeral disks requested are larger than the instance type allows."
 msgstr "所要求的暫時磁碟，大於實例類型所容許的容量。"
+
+#, python-format
+msgid "Error attempting to run %(method)s"
+msgstr "嘗試執行 %(method)s 時發生錯誤"
 
 #, python-format
 msgid ""
@@ -1058,6 +1174,9 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "裝載具有 libguestfs (%(e)s) 的 %(image)s 時發生錯誤"
 
+msgid "Error occurred while creating the verifier"
+msgstr "建立驗證器時發生錯誤"
+
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "建立資源監視器 %(monitor)s 時發生錯誤"
@@ -1071,6 +1190,14 @@ msgstr "找不到動作識別碼 %(action_id)s 的事件 %(event)s"
 
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr "事件必須是 nova.virt.event.Event 的實例"
+
+#, python-format
+msgid ""
+"Exceeded max scheduling attempts %(max_attempts)d for instance "
+"%(instance_uuid)s. Last exception: %(exc_reason)s"
+msgstr ""
+"已超出實例 %(instance_uuid)s 的排程嘗試次數上限 %(max_attempts)d。前次異常狀"
+"況：%(exc_reason)s"
 
 #, python-format
 msgid ""
@@ -1098,10 +1225,6 @@ msgstr "備份副本表格中存在額外直欄 %(table)s.%(column)s"
 
 msgid "Extracting vmdk from OVA failed."
 msgstr "從 OVA 擷取 VMDK 失敗。"
-
-#, python-format
-msgid "Fail to clean up node %s parameters"
-msgstr "無法清除節點 %s 參數"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr "無法驗證所提供的額外規格金鑰。預期為字串"
@@ -1137,6 +1260,10 @@ msgstr "無法連接介面"
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "無法將網路配接卡裝置連接至 %(instance_uuid)s"
+
+#, python-format
+msgid "Failed to create vif %s"
+msgstr "無法建立 VIF %s"
 
 #, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
@@ -1253,6 +1380,10 @@ msgstr "無法懸置實例：%(reason)s"
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "無法終止實例：%(reason)s"
 
+#, python-format
+msgid "Failed to unplug vif %s"
+msgstr "無法拔除 VIF %s"
+
 msgid "Failure prepping block device."
 msgstr "準備區塊裝置時失敗。"
 
@@ -1278,6 +1409,10 @@ msgstr "主要 CA 的檔名"
 
 msgid "Filename of root Certificate Revocation List"
 msgstr "主要憑證撤銷清冊的檔名"
+
+#, python-format
+msgid "Fixed IP %(address)s already exists."
+msgstr "固定 IP %(address)s 已經存在。"
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -1318,6 +1453,10 @@ msgid "Fixed IP associate failed for network: %(net)s."
 msgstr "網路 %(net)s 的固定 IP 關聯失敗。"
 
 #, python-format
+msgid "Fixed IP not found for address %(address)s."
+msgstr "找不到位址 %(address)s 的固定 IP。"
+
+#, python-format
 msgid "Flavor %(flavor_id)s could not be found."
 msgstr "找不到特性 %(flavor_id)s。"
 
@@ -1328,6 +1467,12 @@ msgstr "特性 %(flavor_id)s 沒有索引鍵為 %(extra_specs_key)s 的額外規
 #, python-format
 msgid "Flavor %(flavor_id)s has no extra specs with key %(key)s."
 msgstr "特性 %(flavor_id)s 沒有索引鍵為 %(key)s 的額外規格。"
+
+#, python-format
+msgid ""
+"Flavor %(id)s extra spec cannot be updated or created after %(retries)d "
+"retries."
+msgstr "在嘗試 %(retries)d 次之後，無法更新或建立特性 %(id)s 額外規格。"
 
 #, python-format
 msgid ""
@@ -1387,11 +1532,49 @@ msgid "Flavor's memory is too small for requested image."
 msgstr "特性的記憶體太小，裝不下所要求的映像檔。"
 
 #, python-format
+msgid "Floating IP %(address)s already exists."
+msgstr "浮動 IP %(address)s 已經存在。"
+
+#, python-format
 msgid "Floating IP %(address)s association has failed."
 msgstr "浮動 IP %(address)s 關聯失敗。"
 
+#, python-format
+msgid "Floating IP %(address)s is associated."
+msgstr "已與浮動 IP %(address)s 產生關聯。"
+
+#, python-format
+msgid "Floating IP %(address)s is not associated with instance %(id)s."
+msgstr "浮動 IP %(address)s 未與實例 %(id)s 產生關聯。"
+
+#, python-format
+msgid "Floating IP %(address)s is not associated."
+msgstr "未與浮動 IP %(address)s 產生關聯。"
+
 msgid "Floating IP allocate failed."
 msgstr "浮動 IP 配置失敗。"
+
+msgid "Floating IP is not associated"
+msgstr "未與浮動 IP 產生關聯"
+
+#, python-format
+msgid "Floating IP not found for ID %(id)s."
+msgstr "找不到 ID %(id)s 的浮動 IP。"
+
+#, python-format
+msgid "Floating IP not found for ID %s"
+msgstr "找不到 ID %s 的浮動 IP"
+
+#, python-format
+msgid "Floating IP not found for address %(address)s."
+msgstr "找不到位址 %(address)s 的浮動 IP。"
+
+#, python-format
+msgid "Floating IP not found for host %(host)s."
+msgstr "找不到主機 %(host)s 的浮動 IP。"
+
+msgid "Floating IP pool not found."
+msgstr "找不到浮動 IP 儲存區。"
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1573,6 +1756,12 @@ msgid ""
 msgstr ""
 "不允許使用映像檔內容 'hw_cpu_policy' 來置換針對特性所設定的 CPU 固定原則"
 
+msgid ""
+"Image property 'hw_cpu_thread_policy' is not permitted to override CPU "
+"thread pinning policy set against the flavor"
+msgstr ""
+"針對該特性，不允許映像檔內容 'hw_cpu_thread_policy' 置換 CPU 執行緒固定原則集"
+
 msgid "Image that the instance was started with could not be found."
 msgstr "找不到已用來啟動實例的映像檔。"
 
@@ -1609,6 +1798,10 @@ msgstr "使用中"
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "處於狀態 %(vm_state)s/%(task_state)s，而不是 RESIZED/None"
+
+#, python-format
+msgid "In-progress live migration %(id)s is not found for server %(uuid)s."
+msgstr "找不到伺服器 %(uuid)s 的進行中即時移轉 %(id)s。"
 
 msgid ""
 "Incompatible settings: ephemeral storage encryption is supported only for "
@@ -1675,6 +1868,14 @@ msgid "Instance %(instance_uuid)s does not specify a migration context."
 msgstr "實例 %(instance_uuid)s 未指定移轉環境定義。"
 
 #, python-format
+msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
+msgstr "實例 %(instance_uuid)s 沒有固定 IP '%(ip)s'。"
+
+#, python-format
+msgid "Instance %(instance_uuid)s has zero fixed IPs."
+msgstr "實例 %(instance_uuid)s 具有 0 個固定 IP。"
+
+#, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
 "the instance is in this state."
@@ -1685,6 +1886,11 @@ msgstr ""
 #, python-format
 msgid "Instance %(instance_uuid)s is locked"
 msgstr "已鎖定實例 %(instance_uuid)s"
+
+#, python-format
+msgid ""
+"Instance %(instance_uuid)s requires config drive, but it does not exist."
+msgstr "實例 %(instance_uuid)s 需要配置磁碟機，但該磁碟機不存在。"
 
 #, python-format
 msgid "Instance %(name)s already exists."
@@ -1742,6 +1948,10 @@ msgid "Instance has not been resized."
 msgstr "尚未調整實例大小。"
 
 #, python-format
+msgid "Instance hostname %(hostname)s is not a valid DNS name"
+msgstr "實例主機名 %(hostname)s 不是有效的 DNS 名稱"
+
+#, python-format
 msgid "Instance is already in Rescue Mode: %s"
 msgstr "實例已處於救援模式：%s"
 
@@ -1763,6 +1973,14 @@ msgstr "已執行實例回復作業，原因：%s"
 
 msgid "Instance snapshots are not permitted at this time."
 msgstr "此時不接受實例 Snapshot。"
+
+#, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)d bytes required by volume %(lv)s."
+msgstr ""
+"磁區群組 %(vg)s 上的空間不足。僅 %(free_space)db 可用，但磁區 %(lv)s 需要 "
+"%(size)d 位元組。"
 
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
@@ -1829,6 +2047,10 @@ msgstr "要求中的屬性無效"
 #, python-format
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "broker_hosts 值 %s 無效。它應為 hostname:port 格式"
+
+#, python-format
+msgid "Invalid certificate format: %s"
+msgstr "無效的憑證格式：%s"
 
 msgid "Invalid changes-since value"
 msgstr "無效的 changes-since 值"
@@ -1942,10 +2164,6 @@ msgid "Invalid input received: %(reason)s"
 msgstr "收到的輸入無效：%(reason)s"
 
 #, python-format
-msgid "Invalid input value \"%s\"."
-msgstr "無效的輸入值 \"%s\"。"
-
-#, python-format
 msgid "Invalid instance id %s in request"
 msgstr "要求中的實例 ID %s 無效"
 
@@ -2020,6 +2238,10 @@ msgid "Invalid proxy request signature."
 msgstr "無效的 Proxy 要求簽章。"
 
 #, python-format
+msgid "Invalid public key type for signature key type: %s"
+msgstr "簽章金鑰類型的公開金鑰類型無效：%s"
+
+#, python-format
 msgid "Invalid range expression %r"
 msgstr "無效的範圍表示式 %r"
 
@@ -2040,6 +2262,14 @@ msgstr "安全群組名稱 %(name)s 無效。"
 
 msgid "Invalid service catalog json."
 msgstr "無效的服務型錄 JSON。"
+
+#, python-format
+msgid "Invalid signature hash method: %s"
+msgstr "無效的簽章雜湊方法：%s"
+
+#, python-format
+msgid "Invalid signature key type: %s"
+msgstr "無效的簽章金鑰類型：%s"
 
 msgid "Invalid source_type field."
 msgstr "無效的 source_type 欄位。"
@@ -2191,6 +2421,9 @@ msgstr "需要 Libvirt '%s' 或更新版本，才能線上刪除磁區 Snapshot�
 msgid "Limit"
 msgstr "限制"
 
+msgid "Limits only supported from vCenter 6.0 and above"
+msgstr "只有 vCenter 6.0 及更高版本中的限制才受支援"
+
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
 msgstr "第 %(linenum)d 行：%(line)s"
@@ -2204,14 +2437,18 @@ msgid ""
 "<list entry name> sections"
 msgstr "檔案系統清單，配置於此檔案的 image_file_url:<清單項目名稱> 區段中"
 
+msgid "Listing virtual interfaces is not supported by this cloud."
+msgstr "這個雲端不支援列出虛擬介面。"
+
+#, python-format
+msgid "Live migration %(id)s for server %(uuid)s is not in progress."
+msgstr "伺服器 %(uuid)s 的即時移轉 %(id)s 不在進行中。"
+
 msgid ""
 "Live migration can not be used without shared storage except a booted from "
 "volume VM which does not have a local disk."
 msgstr ""
 "在沒有共用儲存體的情況下，無法使用即時移轉，不含沒有本端磁碟的啟動磁區 VM。"
-
-msgid "Live migration is supported starting with Hyper-V Server 2012"
-msgstr "從 Hyper-V Server 2012 開始，支援即時移轉"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2227,6 +2464,12 @@ msgid ""
 msgstr ""
 "含配置驅動之實例的即時移轉在 libVirt 中不受支援，除非 libVirt 實例路徑及驅動"
 "資料在計算節點之間是共用的。"
+
+msgid ""
+"Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
+"before it is available."
+msgstr ""
+"使用 API V2.25 進行的即時移轉需要先完成所有 Mitaka 升級，然後才可供使用。"
 
 msgid "Malformed createBackup entity"
 msgstr "createBackup 實體的格式不正確"
@@ -2264,6 +2507,12 @@ msgstr "找不到標記 %(marker)s。"
 
 msgid "Maximum allowed length for 'label' is 255."
 msgstr "'label' 的容許長度上限為 255。"
+
+msgid "Maximum number of fixed IPs exceeded"
+msgstr "超過了固定 IP 數目上限"
+
+msgid "Maximum number of floating IPs exceeded"
+msgstr "超過了浮動 IP 數目上限"
 
 msgid "Maximum number of key pairs exceeded"
 msgstr "已超出金鑰組數目上限"
@@ -2303,8 +2552,24 @@ msgid "Migrate Send failed"
 msgstr "移轉傳送失敗"
 
 #, python-format
+msgid "Migration %(id)s for server %(uuid)s is not live-migration."
+msgstr "伺服器 %(uuid)s 的移轉 %(id)s 不是即時移轉。"
+
+#, python-format
 msgid "Migration %(migration_id)s could not be found."
 msgstr "找不到移轉 %(migration_id)s。"
+
+#, python-format
+msgid "Migration %(migration_id)s not found for instance %(instance_id)s"
+msgstr "找不到實例 %(instance_id)s 的移轉 %(migration_id)s"
+
+#, python-format
+msgid ""
+"Migration %(migration_id)s state of instance %(instance_uuid)s is %(state)s. "
+"Cannot %(method)s while the migration is in this state."
+msgstr ""
+"實例 %(instance_uuid)s 的移轉 %(migration_id)s 狀態為 %(state)s。當移轉處於這"
+"種狀態時，無法執行 %(method)s。"
 
 #, python-format
 msgid "Migration error: %(reason)s"
@@ -2321,6 +2586,10 @@ msgstr "找不到實例 %(instance_id)s（狀態為 %(status)s）的移轉。"
 #, python-format
 msgid "Migration pre-check error: %(reason)s"
 msgstr "移轉事先檢查發生錯誤：%(reason)s"
+
+#, python-format
+msgid "Migration select destinations error: %(reason)s"
+msgstr "移轉選取目的地錯誤：%(reason)s"
 
 msgid "Missing 'address' argument for removeFixedIp"
 msgstr "removeFixedIp 遺漏了 'address' 引數"
@@ -2371,6 +2640,11 @@ msgstr "遺漏了參數字典"
 msgid "Missing tenant parameter"
 msgstr "遺漏了承租人參數"
 
+#, python-format
+msgid ""
+"More than one instance is associated with fixed IP address '%(address)s'."
+msgstr "有多個實例與固定 IP 位址 '%(address)s' 相關聯。"
+
 msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
 "one(s) to connect to."
@@ -2392,6 +2666,10 @@ msgstr "在要求中發現多個 X-Tenant-ID 標頭。"
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "找到名稱 '%s' 的多個浮動 IP 儲存區相符項"
+
+#, python-format
+msgid "Multiple floating IPs are found for address %(address)s."
+msgstr "找到位址 %(address)s 的多個浮動 IP。"
 
 msgid ""
 "Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
@@ -2430,6 +2708,9 @@ msgid ""
 msgstr ""
 "必須指定 host_ip、host_username 及 host_password，才能使用vmwareapi."
 "VMwareVCDriver"
+
+msgid "Must supply a positive value for max_number"
+msgstr "必須為 max_number 提供一個正值"
 
 msgid "Must supply a positive value for max_rows"
 msgstr "必須為 max_rows 提供正值"
@@ -2483,6 +2764,10 @@ msgstr "找不到 CIDR 為 %(cidr)s 的網路。"
 
 msgid "Network driver does not support this function."
 msgstr "網路驅動程式不支援此函數。"
+
+#, python-format
+msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
+msgstr "網路主機 %(host)s 在網路 %(network_id)s 中具有 0 個固定 IP。"
 
 msgid "Network label is required"
 msgstr "需要網路標籤"
@@ -2557,6 +2842,10 @@ msgid "No compute host specified"
 msgstr "未指定計算主機"
 
 #, python-format
+msgid "No configuration information found for operating system %(os_name)s"
+msgstr "找不到作業系統 %(os_name)s 的配置資訊"
+
+#, python-format
 msgid "No device with MAC address %s exists on the VM"
 msgstr "VM 上不存在 MAC 位址為 %s 的裝置"
 
@@ -2581,6 +2870,9 @@ msgstr "ID %(id)s 沒有相關聯的固定 IP。"
 
 msgid "No fixed IP found."
 msgstr "找不到固定 IP。"
+
+msgid "No fixed IPs associated to instance"
+msgstr "沒有固定 IP 與實例相關聯"
 
 msgid "No floating IP addresses have been defined."
 msgstr "尚未定義浮動 IP 位址。"
@@ -2610,11 +2902,26 @@ msgid "No instances found for any event"
 msgstr "找不到任何事件的實例"
 
 #, python-format
+msgid ""
+"No live migration URI configured and no default available for \"%(virt_type)s"
+"\" hypervisor virtualization type."
+msgstr ""
+"未配置任何即時移轉 URI，且 \"%(virt_type)s\" Hypervisor 虛擬化類型無法使用任"
+"何預設值。"
+
+#, python-format
 msgid "No matching ID for the URL %s was found."
 msgstr "找不到 URL %s 的相符 ID。"
 
 msgid "No more available networks."
 msgstr "已無其他網路可用。"
+
+msgid "No more floating IPs available."
+msgstr "沒有更多的浮動 IP 可供使用。"
+
+#, python-format
+msgid "No more floating IPs in pool %s."
+msgstr "儲存區 %s 中沒有更多的浮動 IP。"
 
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
@@ -2645,6 +2952,12 @@ msgstr "沒有要求內文"
 
 msgid "No root disk defined."
 msgstr "未定義根磁碟。"
+
+#, python-format
+msgid ""
+"No specific network was requested and none are available for project "
+"'%(project_id)s'."
+msgstr "未要求任何特定網路，且專案 '%(project_id)s' 無法使用任何網路。"
 
 msgid "No suitable network for migrate"
 msgstr "沒有適合於移轉的網路"
@@ -2679,6 +2992,11 @@ msgstr "無法獲得 %(host)s 的可用埠"
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "無法連結 %(host)s:%(port)d，%(error)s"
 
+#, python-format
+msgid ""
+"Not all Virtual Functions of PF %(compute_node_id)s:%(address)s are free."
+msgstr "並非 PF %(compute_node_id)s:%(address)s 的所有虛擬函數都可用。"
+
 msgid "Not an rbd snapshot"
 msgstr "不是 rbd Snapshot"
 
@@ -2702,9 +3020,15 @@ msgstr "未在 Windows 上實作"
 msgid "Not stored in rbd"
 msgstr "未儲存在 rbd 中"
 
+msgid "Nothing was archived."
+msgstr "未保存任何內容。"
+
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova 需要 libVirt %s 版或更高版本。"
+
+msgid "Number of Rows Archived"
+msgstr "已保存的列數"
 
 #, python-format
 msgid "Number of retries to plugin (%(num_retries)d) exceeded."
@@ -2795,6 +3119,10 @@ msgid "PCI device %(id)s not found"
 msgstr "找不到 PCI 裝置 %(id)s"
 
 #, python-format
+msgid "PCI device request %(requests)s failed"
+msgstr "PCI 裝置要求 %(requests)s 失敗"
+
+#, python-format
 msgid ""
 "PCS doesn't support images in %s format. You should either set "
 "force_raw_images=True in config or upload an image in ploop or raw format."
@@ -2838,10 +3166,6 @@ msgstr ""
 msgid "Path %s must be LVM logical volume"
 msgstr "路徑 %s 必須是 LVM 邏輯磁區"
 
-#, python-format
-msgid "Path does not exist %(path)s"
-msgstr "路徑 %(path)s 不存在"
-
 msgid "Paused"
 msgstr "已暫停"
 
@@ -2860,6 +3184,14 @@ msgstr "已超出特質檔案限制"
 
 msgid "Personality file path too long"
 msgstr "特質檔案路徑太長"
+
+#, python-format
+msgid ""
+"Physical Function %(compute_node_id)s:%(address)s, related to VF "
+"%(compute_node_id)s:%(vf_address)s is %(status)s instead of %(hopestatus)s"
+msgstr ""
+"與  VF %(compute_node_id)s:%(vf_address)s 相關的實體函數 %(compute_node_id)s:"
+"%(address)s 處於 %(status)s 狀態，而不是 %(hopestatus)s 狀態"
 
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
@@ -2890,6 +3222,15 @@ msgstr "埠 %(port_id)s 仍在使用中。"
 #, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
 msgstr "埠 %(port_id)s 不適用於實例 %(instance)s。"
+
+#, python-format
+msgid ""
+"Port %(port_id)s not usable for instance %(instance)s. Value %(value)s "
+"assigned to dns_name attribute does not match instance's hostname "
+"%(hostname)s"
+msgstr ""
+"實例 %(instance)s 無法使用埠 %(port_id)s。指派給 dns_name 屬性的值 %(value)s "
+"與實例的主機名 %(hostname)s 不符"
 
 #, python-format
 msgid "Port %(port_id)s requires a FixedIP in order to be used."
@@ -3026,6 +3367,16 @@ msgstr "找不到專案 %(project_id)s 的配額用量。"
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "嘗試拔除 VBD %s 時達到了重試次數上限"
 
+msgid ""
+"Realtime policy needs vCPU(s) mask configured with at least 1 RT vCPU and 1 "
+"ordinary vCPU. See hw:cpu_realtime_mask or hw_cpu_realtime_mask"
+msgstr ""
+"即時原則需要使用至少 1 個 RT vCPU 和 1 個普通 vCPU 進行配置的 vCPU 遮罩。請參"
+"閱 hw:cpu_realtime_mask 或 hw_cpu_realtime_mask"
+
+msgid "Realtime policy not supported by hypervisor"
+msgstr "Hypervisor 不支援即時原則"
+
 #, python-format
 msgid ""
 "Relative blockcommit support was not detected. Libvirt '%s' or later is "
@@ -3046,6 +3397,17 @@ msgstr "要求太大。"
 msgid ""
 "Request must include either Timestamp or Expires, but cannot contain both"
 msgstr "要求必須包含「時間戳記」或「到期」，但不能兩者都包含"
+
+#, python-format
+msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
+msgstr "映像檔 %(image_id)s 的要求取得 BadRequest 回應：%(response)s"
+
+#, python-format
+msgid "RequestSpec not found for instance %(instance_uuid)s"
+msgstr "找不到實例 %(instance_uuid)s 的 RequestSpec"
+
+msgid "Requested CPU control policy not supported by host"
+msgstr "主機不支援所要求的 CPU 控制原則"
 
 #, python-format
 msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
@@ -3079,6 +3441,12 @@ msgid ""
 msgstr ""
 "所要求的 vCPU 限制 %(sockets)d:%(cores)d:%(threads)d 無法滿足 vCPU 計數 "
 "%(vcpus)d"
+
+#, python-format
+msgid ""
+"Required image properties for signature verification do not exist. Cannot "
+"verify signature. Missing property: %s"
+msgstr "簽章驗證所需的映像檔內容不存在。無法驗證簽章。遺漏了內容：%s"
 
 #, python-format
 msgid "Rescue device does not exist for instance %s"
@@ -3127,6 +3495,18 @@ msgstr "規則已存在於群組中：%(rule)s"
 #, python-format
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
 msgstr "執行 virt_type 為 parallels 的 Nova 需要 libVirt %s 版"
+
+#, python-format
+msgid ""
+"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
+"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
+msgstr ""
+"在 %(arch)s 上使用 qemu/kvm virt_type 執行 Nova 需要 libvirt %(libvirt_ver)s "
+"版和 qemu %(qemu_ver)s 版，或者更高版本"
+
+#, python-format
+msgid "Running batches of %i until complete"
+msgstr "正在執行 %i 的各個批次，直到完成為止"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
@@ -3242,6 +3622,12 @@ msgstr "未配置 ServerGroupAffinityFilter"
 msgid "ServerGroupAntiAffinityFilter not configured"
 msgstr "未配置 ServerGroupAntiAffinityFilter"
 
+msgid "ServerGroupSoftAffinityWeigher not configured"
+msgstr "未配置 ServerGroupSoftAffinityWeigher"
+
+msgid "ServerGroupSoftAntiAffinityWeigher not configured"
+msgstr "未配置 ServerGroupSoftAntiAffinityWeigher"
+
 #, python-format
 msgid "Service %(service)s on host %(host)s disabled."
 msgstr "已在主機 %(host)s 上停用服務 %(service)s。"
@@ -3298,17 +3684,26 @@ msgstr ""
 "使用 resize2fs 來縮小檔案系統時失敗，請檢查磁碟上是否具有足夠的可用空間。"
 
 #, python-format
+msgid "Signature verification for the image failed: %(reason)s."
+msgstr "映像檔的簽章驗證失敗：%(reason)s。"
+
+#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "找不到 Snapshot %(snapshot_id)s。"
-
-msgid "Snapshot list encountered but no header found!"
-msgstr "發現 Snapshot 清單，但找不到標頭！"
 
 msgid "Some fields are invalid."
 msgstr "部分欄位無效。"
 
 msgid "Some required fields are missing"
 msgstr "遺漏了部分必要欄位"
+
+#, python-format
+msgid ""
+"Something went wrong when deleting a volume snapshot: rebasing a "
+"%(protocol)s network disk using qemu-img has not been fully tested"
+msgstr ""
+"刪除磁區 Snapshot 時發生問題：尚未完全測試使用 qemu-img 來重設 %(protocol)s "
+"網路磁碟的基線"
 
 msgid "Sort direction size exceeds sort key size"
 msgstr "排序方向大小超過排序鍵大小"
@@ -3371,6 +3766,9 @@ msgstr "所要求的交換磁碟機，大於實例類型所容許的容量。"
 
 msgid "Swap only supports host devices"
 msgstr "交換功能僅支援主機裝置"
+
+msgid "Table"
+msgstr "表格"
 
 #, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
@@ -3521,10 +3919,8 @@ msgstr "無法存取所要求的主控台類型詳細資料"
 msgid "The requested functionality is not supported."
 msgstr "所要求的功能不受支援。"
 
-#, python-format
-msgid ""
-"The service from servicegroup driver %(driver)s is temporarily unavailable."
-msgstr "來自 ServiceGroup 驅動程式 %(driver)s 的服務暫時無法使用。"
+msgid "The signature data was not properly encoded using base64"
+msgstr "簽章資料未使用 base64 進行正確編碼"
 
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
@@ -3628,6 +4024,12 @@ msgstr "下載模組 %(module)s 發生錯誤。%(reason)s"
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "找不到 instance_uuid 為空值的記錄。"
 
+#, python-format
+msgid ""
+"This compute node's hypervisor is older than the minimum supported version: "
+"%(version)s."
+msgstr "這部電腦節點的 Hypervisor 版本低於所支援的版本下限：%(version)s。"
+
 msgid "This default rule already exists."
 msgstr "此預設規則已存在。"
 
@@ -3640,12 +4042,26 @@ msgstr "此驅動程式僅支援類型 'a'"
 msgid "This driver only supports type 'a' entries."
 msgstr "此驅動程式僅支援類型 'a' 項目。"
 
+msgid ""
+"This method needs to be called with either networks=None and port_ids=None "
+"or port_ids and networks as not none."
+msgstr ""
+"需要在 networks=None 且 port_ids=None 或者 port_ids 及 networks 都不為 None "
+"時，呼叫此方法。"
+
 msgid "This request was rate-limited."
 msgstr "此要求存在頻率限制。"
 
 #, python-format
 msgid "This rule already exists in group %s"
 msgstr "此規則已存在於群組 %s 中"
+
+#, python-format
+msgid ""
+"This service is older (v%(thisver)i) than the minimum (v%(minver)i) version "
+"of the rest of the deployment. Unable to continue."
+msgstr ""
+"此服務的版本 (v%(thisver)i) 低於其餘部署的版本下限 (v%(minver)i)。無法繼續。"
 
 #, python-format
 msgid "Timeout waiting for device %s to be created"
@@ -3670,11 +4086,33 @@ msgid ""
 "number generated."
 msgstr "將產生太多的 IP 位址。請增大 /%s 以減少所產生的數目。"
 
+msgid "Triggering crash dump is not supported"
+msgstr "不支援觸發損毀傾出"
+
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP 通訊協定類型的類型及代碼必須是整數"
 
+msgid "UEFI is not supported"
+msgstr "不支援 UEFI"
+
 msgid "UUID is required to delete Neutron Networks"
 msgstr "需要 UUID 才能刪除「Neutron 網路」"
+
+#, python-format
+msgid ""
+"Unable to associate floating IP %(address)s to any fixed IPs for instance "
+"%(id)s. Instance has no fixed IPv4 addresses to associate."
+msgstr ""
+"無法將浮動 IP %(address)s 關聯至實例 %(id)s 的任何固定 IP。該實例沒有固定 "
+"IPv4 位址與其相關聯。"
+
+#, python-format
+msgid ""
+"Unable to associate floating IP %(address)s to fixed IP %(fixed_address)s "
+"for instance %(id)s. Error: %(error)s"
+msgstr ""
+"無法將浮動 IP %(address)s 關聯至實例 %(id)s 的固定 IP %(fixed_address)s。錯"
+"誤：%(error)s"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "無法鑑別 Ironic 用戶端。"
@@ -3687,6 +4125,17 @@ msgstr "無法要求 VPN 實例的 IP，請確保它不在執行中，並在幾�
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
 msgstr "無法聯絡來賓代理程式。下列呼叫已逾時：%(method)s"
+
+#, python-format
+msgid "Unable to convert image to %(format)s: %(exp)s"
+msgstr "無法將映像檔轉換為 %(format)s：%(exp)s"
+
+#, python-format
+msgid "Unable to convert image to raw: %(exp)s"
+msgstr "無法將映像檔轉換為原始格式：%(exp)s"
+
+msgid "Unable to create Barbican Client without project_id."
+msgstr "無法建立不含 project_id 的 Barbican 用戶端。"
 
 msgid "Unable to create dns domain"
 msgstr "無法建立 DNS 網域"
@@ -3714,6 +4163,9 @@ msgstr "無法毀損 VBD %s"
 #, python-format
 msgid "Unable to destroy VDI %s"
 msgstr "無法毀損 VDI %s"
+
+msgid "Unable to detach from guest transient domain."
+msgstr "無法從訪客暫時網域分離"
 
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
@@ -3870,6 +4322,10 @@ msgstr "無法剖析 meta 資料鍵值組。"
 msgid "Unable to resize disk down."
 msgstr "無法將磁碟大小調小。"
 
+#, python-format
+msgid "Unable to retrieve certificate with ID: %s"
+msgstr "無法擷取 ID 為 %s 的憑證"
+
 msgid "Unable to set password on instance"
 msgstr "無法在實例上設定密碼"
 
@@ -3901,6 +4357,13 @@ msgstr "不可接受的參數值"
 #, python-format
 msgid "Unavailable console type %(console_type)s."
 msgstr "無法使用的主控台類型 %(console_type)s。"
+
+msgid ""
+"Undefined Block Device Mapping root: BlockDeviceMappingList contains Block "
+"Device Mappings from multiple instances."
+msgstr ""
+"未定義的「區塊裝置對映」根：BlockDeviceMappingList 包含來自多個實例的「區塊裝"
+"置對映」。"
 
 #, python-format
 msgid ""
@@ -3942,6 +4405,10 @@ msgstr "不明的引數：埠"
 
 msgid "Unknown argument: port"
 msgstr "不明引數：埠"
+
+#, python-format
+msgid "Unknown auth plugin: %s"
+msgstr "不明鑑別外掛程式：%s"
 
 #, python-format
 msgid "Unknown chain: %r"
@@ -4141,6 +4608,10 @@ msgid "VlanID"
 msgstr "VlanID"
 
 #, python-format
+msgid "Volume %(volume_id)s could not be attached. Reason: %(reason)s"
+msgstr "無法連接磁區 %(volume_id)s。原因：%(reason)s"
+
+#, python-format
 msgid "Volume %(volume_id)s could not be found."
 msgstr "找不到磁區 %(volume_id)s。"
 
@@ -4192,6 +4663,10 @@ msgid ""
 msgstr ""
 "磁區設定了捨棄選項，但卻需要 libVirt %(libvirt)s 或更新版本，需要 qemu "
 "%(qemu)s 或更新版本。"
+
+#, python-format
+msgid "WARNING: fixed IP %s allocated to missing instance"
+msgstr "警告：與固定 IP %s 相關聯的實例遺失"
 
 #, python-format
 msgid ""
@@ -4275,6 +4750,15 @@ msgstr ""
 "不支援擷取接聽位址。如果讓即時移轉正常運作，您必須將圖形（VNC 及/或 SPICE）接"
 "聽位址配置成捕捉所有位址（0.0.0.0 或 ::）或者本端位址（127.0.0.1 或 ::1）。"
 
+msgid "Zero fixed IPs could be found."
+msgstr "可以找到 0 個固定 IP。"
+
+msgid "Zero floating IPs available."
+msgstr "有 0 個浮動 IP 可供使用。"
+
+msgid "Zero floating IPs exist."
+msgstr "存在 0 個浮動 IP。"
+
 msgid "Zone"
 msgstr "區域"
 
@@ -4343,6 +4827,9 @@ msgstr "createImage 實體需要名稱屬性"
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr "目的地是 %(target_cell)s，但 routing_path 是 %(routing_path)s"
 
+msgid "direct_snapshot() is not implemented"
+msgstr "未實作 direct_snapshot()"
+
 msgid "disk"
 msgstr "磁碟"
 
@@ -4378,6 +4865,12 @@ msgstr "無法產生指紋"
 
 msgid "filename cannot be None"
 msgstr "檔名不能為 None"
+
+msgid "floating IP is already associated"
+msgstr "已與浮動 IP 產生關聯"
+
+msgid "floating IP not found"
+msgstr "找不到浮動 IP"
 
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
@@ -4448,6 +4941,10 @@ msgstr "實例已關閉電源，無法暫停。"
 msgid "instance_id %s could not be found as device id on any ports"
 msgstr "找不到 instance_id %s 來作為任何埠上的裝置 ID"
 
+#, python-format
+msgid "invalid %(property)s %(attr)s"
+msgstr "無效的 %(property)s %(attr)s"
+
 msgid "is_public must be a boolean"
 msgstr "is_public 必須是布林值"
 
@@ -4456,6 +4953,9 @@ msgstr "核心"
 
 msgid "keymgr.fixed_key not defined"
 msgstr "未定義 keymgr.fixed_key"
+
+msgid "l3driver call to add floating IP failed"
+msgstr "l3driver 呼叫以新增浮動 IP 失敗"
 
 msgid "launched"
 msgstr "已啟動"
@@ -4477,6 +4977,10 @@ msgstr "要求 blockjob 資訊時發生 libVirt 錯誤。"
 #, python-format
 msgid "marker [%s] not found"
 msgstr "找不到標記 [%s]"
+
+#, python-format
+msgid "max rows must be <= %(max_value)d"
+msgstr "列數上限必須小於或等於 %(max_value)d"
 
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "如果指定了 fixed_ip，則 max_count 不得大於 1。"
@@ -4510,6 +5014,14 @@ msgstr "沒有要移除的主機"
 msgid "no match found for %s"
 msgstr "找不到 %s 的相符項"
 
+#, python-format
+msgid "no usable parent snapshot for volume %s"
+msgstr "磁區 %s 沒有可使用的母項 Snapshot"
+
+#, python-format
+msgid "no write permission on storage pool %s"
+msgstr "對儲存區 %s 沒有寫入權"
+
 msgid "node"
 msgstr "節點"
 
@@ -4525,6 +5037,9 @@ msgstr ""
 "nova-idmapshift 是一個工具，用來適當地設定檔案系統的所有權，以與 Linux 使用者"
 "名稱空間搭配使用。此工具只能與 Linuxlxc 儲存器搭配使用。如需詳細資料，請參閱"
 "線上指令說明。"
+
+msgid "old style configuration can use only dictionary or memcached backends"
+msgstr "舊樣式配置只能使用字典或 Memcached 後端"
 
 msgid "onSharedStorage must be specified."
 msgstr "必須指定 onSharedStorage。"
@@ -4548,6 +5063,10 @@ msgstr "vmwareapi 不支援暫停"
 
 msgid "project"
 msgstr "專案"
+
+#, python-format
+msgid "qemu-img failed to execute on %(path)s : %(exp)s"
+msgstr "qemu-img 無法在 %(path)s 上執行：%(exp)s"
 
 #, python-format
 msgid "qemu-nbd error: %s"
@@ -4643,6 +5162,9 @@ msgstr ""
 "包含埠群組 %(bridge)s 的 vSwitch 未與需要的實體配接卡產生關聯。需要的 "
 "vSwitch 為 %(expected)s，但相關聯的 vSwitch 為 %(actual)s。"
 
+msgid "vcpu"
+msgstr "vcpu"
+
 msgid "version should be an integer"
 msgstr "版本應該是整數"
 
@@ -4653,6 +5175,10 @@ msgstr "磁區群組 %s 必須是 LVM 磁區群組"
 #, python-format
 msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr "vhostuser_sock_path 未出現在 VIF %(vif_id)s 的 vif_details 中"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "VIF 類型 %s 不受支援"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "此 vif_driver 實作的 vif_type 參數必須存在"

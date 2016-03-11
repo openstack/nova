@@ -13,9 +13,9 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:38+0000\n"
+"POT-Creation-Date: 2016-03-10 03:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -627,10 +627,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "Impossibile collegare uno o più volume a più istanze"
 
 #, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "Impossibile migrare l'istanza %s con volumi associati"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Impossibile chiamare %(method)s su oggetto orfano %(objtype)s"
 
@@ -767,9 +763,6 @@ msgid ""
 msgstr ""
 "Comando non supportato. Utilizzare il comando Ironic %(cmd)s per eseguire "
 "questa azione."
-
-msgid "Command failed, please check log for more info"
-msgstr "Comando non riuscito, controllare il log per ulteriori informazioni"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -1210,10 +1203,6 @@ msgstr "Colonna supplementare %(table)s.%(column)s nella tabella cronologica"
 
 msgid "Extracting vmdk from OVA failed."
 msgstr "Estrazione di vmdk da OVA non riuscita."
-
-#, python-format
-msgid "Fail to clean up node %s parameters"
-msgstr "Impossibile ripulire i parametri del nodo %s"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr ""
@@ -2123,10 +2112,6 @@ msgid "Invalid input received: %(reason)s"
 msgstr "Input ricevuto non valido: %(reason)s"
 
 #, python-format
-msgid "Invalid input value \"%s\"."
-msgstr "Valore di input \"%s\" non valido."
-
-#, python-format
 msgid "Invalid instance id %s in request"
 msgstr "Id istanza non valido %s nella richiesta"
 
@@ -2409,9 +2394,6 @@ msgid ""
 msgstr ""
 "La migrazione live non può essere utilizzata senza memoria condivisa eccetto "
 "se avviata dalla VM volume che non ha un disco locale."
-
-msgid "Live migration is supported starting with Hyper-V Server 2012"
-msgstr "La migrazione attiva è supportata a partire dal Hyper-V Server 2012"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -3068,10 +3050,6 @@ msgstr ""
 msgid "Path %s must be LVM logical volume"
 msgstr "Il percorso %s deve essere un volume logico LVM"
 
-#, python-format
-msgid "Path does not exist %(path)s"
-msgstr "Il percorso non esiste %(path)s"
-
 msgid "Paused"
 msgstr "In pausa"
 
@@ -3578,9 +3556,6 @@ msgstr ""
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Impossibile trovare l'istantanea %(snapshot_id)s."
 
-msgid "Snapshot list encountered but no header found!"
-msgstr "Elenco istantanee rilevato ma nessuna intestazione è stata trovata!"
-
 msgid "Some fields are invalid."
 msgstr "Alcuni campi non sono validi."
 
@@ -3818,13 +3793,6 @@ msgstr "I dettagli del tipo di console richiesta non sono accessibili"
 
 msgid "The requested functionality is not supported."
 msgstr "La funzionalità richiesta non è supportata."
-
-#, python-format
-msgid ""
-"The service from servicegroup driver %(driver)s is temporarily unavailable."
-msgstr ""
-"Il servizio del driver servicegroup %(driver)s temporaneamente non è "
-"disponibile."
 
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"

@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -116,10 +116,6 @@ msgstr "Girdi silinemiyor |%s|"
 
 msgid "Cannot destroy instance, operation time out"
 msgstr "Sunucu silinemiyor, işlem zaman aşımına uğradı"
-
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "%s'den ölçüler alınamadı."
 
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
@@ -362,10 +358,6 @@ msgstr "%(ext_name)s:%(exc)s eklentisi yüklenemedi"
 
 msgid "Failed to power off instance"
 msgstr "Sunucu gücü kapatma başarısız"
-
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "%s VM'i için anlık görüntü silme başarısız"
 
 msgid "Failed to resume instance"
 msgstr "Sunucu sürdürülürken hata"
@@ -938,16 +930,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s %(instance_id)s sunucusunun tenant_id'si ile "
 "eşleşmiyor."
 
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Nova'daki ZooKeeper servis grup sürücüsü OpenStack  projesi tarafından test "
-"edilmedi ve kalitesinden emin olunamaz. Bu durum gelecekte değişebilir, ama "
-"şu an kurulum yapanlar üretimde kullanımının riskli olabileceğini bilmeliler."
-
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -1197,10 +1179,6 @@ msgid ""
 msgstr ""
 "arayüz ekleme başarısız, bağlantı noktası %(port_id)s ayrılmaya çalışılıyor, "
 "sebep: %(msg)s"
-
-#, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "Alandan XML elde edilemedi: %(uuid)s, istisna: %(ex)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"

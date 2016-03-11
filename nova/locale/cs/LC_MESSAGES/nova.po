@@ -12,9 +12,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:38+0000\n"
+"POT-Creation-Date: 2016-03-10 03:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -610,10 +610,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "Nelze připojit jeden nebo více svazků k mnoha instancím"
 
 #, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "Nelze blokově přesunout instanci %s s namapovanými svazky"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Nelze volat %(method)s na osiřelém objektu %(objtype)s"
 
@@ -769,9 +765,6 @@ msgid ""
 msgstr ""
 "Příkaz není podporován. Pro provedení této činnosti prosím použijte příkaz "
 "Ironic %(cmd)s."
-
-msgid "Command failed, please check log for more info"
-msgstr "Příkaz selhal, pro více informací prosím zkontrolujte záznam"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -1231,10 +1224,6 @@ msgstr "Sloupec %(table)s.%(column)s je ve stínové tabulce navíc"
 
 msgid "Extracting vmdk from OVA failed."
 msgstr "Extrahování vmdk z OVA selhalo."
-
-#, python-format
-msgid "Fail to clean up node %s parameters"
-msgstr "Nelze vyčistit parametry uzlu %s"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr "Nelze ověřit  zadané klíče dodatečné specifikace. Očekáván řetězec"
@@ -1838,9 +1827,6 @@ msgstr "Nesprávný formát těla požadavku"
 msgid "Info cache for instance %(instance_uuid)s could not be found."
 msgstr "Mezipaměť informaci instance %(instance_uuid)s nemohla být nalezena."
 
-msgid "Injecting NMI is not supported"
-msgstr "Vkládání NMI není podporováno"
-
 #, python-format
 msgid ""
 "Instance %(instance)s and volume %(vol)s are not in the same "
@@ -2190,10 +2176,6 @@ msgid "Invalid input received: %(reason)s"
 msgstr "Obdržen neplatný vstup: %(reason)s"
 
 #, python-format
-msgid "Invalid input value \"%s\"."
-msgstr "Neplatná vstupní hodnota \"%s\"."
-
-#, python-format
 msgid "Invalid instance id %s in request"
 msgstr "Neplatné Id instance %s v požadavku"
 
@@ -2480,9 +2462,6 @@ msgid ""
 msgstr ""
 "Přesunutí za provozu nemůže být použito bez sdíleného úložiště, kromě "
 "zavedení ze svazku VM, který nemá místní disk."
-
-msgid "Live migration is supported starting with Hyper-V Server 2012"
-msgstr "Přesunutí za provozu je podporováno počínaje Hyper-V Server 2012"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -3165,10 +3144,6 @@ msgstr ""
 msgid "Path %s must be LVM logical volume"
 msgstr "Cesta %s musí být logickým svazkem LVM"
 
-#, python-format
-msgid "Path does not exist %(path)s"
-msgstr "Cesta neexistuje %(path)s"
-
 msgid "Paused"
 msgstr "Pozastaveno"
 
@@ -3684,9 +3659,6 @@ msgstr "Selhalo ověření podpisu pro obraz: %(reason)s."
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Snímek %(snapshot_id)s nemohl být nalezen."
 
-msgid "Snapshot list encountered but no header found!"
-msgstr "Nalezen seznam snímků, ale nemá hlavičku!"
-
 msgid "Some fields are invalid."
 msgstr "Některá pole jsou neplatná."
 
@@ -3924,11 +3896,6 @@ msgstr "Požadované podrobnosti typu konzole nejsou přístupné"
 
 msgid "The requested functionality is not supported."
 msgstr "Požadovaná funkce není podporována."
-
-#, python-format
-msgid ""
-"The service from servicegroup driver %(driver)s is temporarily unavailable."
-msgstr "Služba ze skupiny ovladače %(driver)s je dočasně nedostupná."
 
 msgid "The signature data was not properly encoded using base64"
 msgstr "Data podpisu nebyla zakódována správně pomocí base64"

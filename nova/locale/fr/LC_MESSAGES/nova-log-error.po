@@ -10,16 +10,17 @@
 # Kevin Tibi <kodokuu@gmail.com>, 2015. #zanata
 # Maxime Coquerel <max.coquerel@gmail.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Gérald LONLAS <g.lonlas@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:39+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-11-27 05:04+0000\n"
-"Last-Translator: Maxime Coquerel <max.coquerel@gmail.com>\n"
+"PO-Revision-Date: 2016-03-07 09:22+0000\n"
+"Last-Translator: Gérald LONLAS <g.lonlas@gmail.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -70,11 +71,6 @@ msgstr "La fixation des périphériques PCI %(dev)s à %(dom)s a echoué."
 #, python-format
 msgid "Attaching network adapter failed. Exception: %s"
 msgstr "La fixation de l'adaptateur réseau a échoué. Exception: %s"
-
-#, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr ""
-"Impossible de bloquer l'instance de migration %s avec des volumes mappés"
 
 msgid "Cannot cleanup migration files"
 msgstr "Impossible de nettoyer les fichiers de migration"
@@ -434,19 +430,15 @@ msgid "Failed to attach volume at mountpoint: %s"
 msgstr "Échec d'attachement du volume au point de montage: %s"
 
 #, python-format
+msgid "Failed to cancel migration %s"
+msgstr "Échec de l'annulation de la migration %s"
+
+#, python-format
 msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
 msgstr "Échec à changer l'état de la vm de  %(instance_name)s à %(req_state)s"
 
 msgid "Failed to check if instance shared"
 msgstr "Échec pour vérifier si l'instance est partagée"
-
-#, python-format
-msgid ""
-"Failed to clean up the parameters on node %(node)s when unprovisioning the "
-"instance %(instance)s"
-msgstr ""
-"Échec à nettoyer les paramètres sur le nœud %(node)s lors de la fourniture "
-"de l'instance %(instance)s"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
@@ -533,6 +525,10 @@ msgstr ""
 "Erreur: %(error)s"
 
 #, python-format
+msgid "Failed to get metadata for IP: %s"
+msgstr "Impossible de récupérer les méta-donnérs pour l'IP : %s"
+
+#, python-format
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Echec d'obtention des métadonnées pour l'ID instance : %s"
 
@@ -592,6 +588,10 @@ msgid "Failed to remove %(base_file)s, error was %(error)s"
 msgstr "Echec du retrait de %(base_file)s, erreur %(error)s"
 
 #, python-format
+msgid "Failed to remove snapshot for VM %s"
+msgstr "Échec de la suppression de l'instantanée pour la VM %s"
+
+#, python-format
 msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
 msgstr ""
 "Échec de la demande Ironic pour la fourniture de l'instance  %(inst)s :  "
@@ -633,6 +633,9 @@ msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
 "Echec de définition du nom d'instance à l'aide du modèle "
 "multi_instance_display_name_template."
+
+msgid "Failed to snapshot image"
+msgstr "Échec de l'instantané de l'image"
 
 #, python-format
 msgid "Failed to start %(name)s on %(host)s:%(port)s with SSL support"
@@ -1033,15 +1036,6 @@ msgstr "Impossible d'introduire le VDI pour SR"
 
 msgid "Unable to introduce VDI on SR"
 msgstr "Impossible d'introduire VDI sur SR"
-
-msgid ""
-"Unable to join. It is possible that either another node exists with the same "
-"name, or this node just restarted. We will try again in a short while to "
-"make sure."
-msgstr ""
-"Impossible de joindre. Il se peut qu'un autre noeud existe avec le même nom "
-"ou que ce noeud vienne de redémarrer. Nouvelle tentative dans quelques "
-"instants pour vérifier."
 
 msgid "Unable to load the virtualization driver"
 msgstr "Incapable de charger le pilote de virtualisation"

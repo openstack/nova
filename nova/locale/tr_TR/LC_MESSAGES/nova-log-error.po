@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b3.dev339\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-08 05:39+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -61,10 +61,6 @@ msgstr "Ağ zulası tazelenirken bir hata oluştu."
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "%(dev)s PCI aygıtlarının %(dom)s e eklenmesi başarısız."
-
-#, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "Eşleşmiş mantıksal sürücülerle %s sunucu göçü engellenemez"
 
 msgid "Cannot cleanup migration files"
 msgstr "Göç dosyaları temizlenemiyor"
@@ -418,14 +414,6 @@ msgstr ""
 
 msgid "Failed to check if instance shared"
 msgstr "Sunucunun paylaşılıp paylaşılmadığı kontrolü yapılamadı"
-
-#, python-format
-msgid ""
-"Failed to clean up the parameters on node %(node)s when unprovisioning the "
-"instance %(instance)s"
-msgstr ""
-"%(instance)s sunucusu hazırlığı iptal edilirken %(node)s düğümündeki "
-"parametrelerin temizlenmesi başarısız"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
@@ -948,15 +936,6 @@ msgstr "VDI SR için tanıtılamadı"
 
 msgid "Unable to introduce VDI on SR"
 msgstr "VDI SR üzerinde tanıtılamadı"
-
-msgid ""
-"Unable to join. It is possible that either another node exists with the same "
-"name, or this node just restarted. We will try again in a short while to "
-"make sure."
-msgstr ""
-"Katılınamıyor. Aynı isimde başka bir düğümün olması, veya bu düğümün henüz "
-"yeniden başlatılmış olması olası. Emin olmak için birazdan tekrar "
-"deneyeceğiz."
 
 msgid "Unable to load the virtualization driver"
 msgstr "Sanallaştırma sürücüsü yüklenemiyor"

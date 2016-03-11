@@ -10,9 +10,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b2.dev725\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-01-21 04:19+0000\n"
+"POT-Creation-Date: 2016-03-10 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -102,10 +102,6 @@ msgstr "Impossible de supprimer l'entrée |%s|"
 
 msgid "Cannot destroy instance, operation time out"
 msgstr "Impossible de détruire l'instance, l'opération a expiré"
-
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "Impossible de récupérer les indicateurs depuis: %s"
 
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
@@ -332,10 +328,6 @@ msgstr "Echec de chargement de l'extension %(ext_name)s:%(exc)s"
 
 msgid "Failed to power off instance"
 msgstr "Echec de mise sous tension de l'instance"
-
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "Echec du retrait de l'instantané pour la machine virtuelle %s"
 
 msgid "Failed to resume instance"
 msgstr "Echec de la reprise de l'instance"
@@ -750,18 +742,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s ne correspond pas avec le tenant_id de l'instance "
 "%(instance_id)s."
 
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Le service de centralisation de driver ZooKeeper de Nova n'est pas testé par "
-"la communauté du projet OpenStack par conséquent la qualité de peut être "
-"assurée. Cette situation peut changer a l'avenir, mais les actuels "
-"utilisateurs doivent être averti que l'utilisation immédiate de ce service "
-"en production peut être risquée."
-
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -939,12 +919,6 @@ msgid ""
 msgstr ""
 "X-instance-ID est présent dans les en-têtes de requêtes. L'option 'service-"
 "metadata-proxy' doit être activée pour traiter ces en-têtes."
-
-#, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr ""
-"Impossible d'obtenir  de l'XML depuis le domaine : %(uuid)s, exception : "
-"%(ex)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
