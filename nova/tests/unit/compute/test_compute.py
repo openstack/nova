@@ -5545,7 +5545,8 @@ class ComputeTestCase(BaseTestCase):
                          'source_type': 'volume',
                          'destination_type': 'volume'}))
         ]
-        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data = migrate_data_obj.XenapiLiveMigrateData(
+            block_migration=True)
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver,

@@ -6889,7 +6889,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         self.mox.ReplayAll()
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
@@ -6926,7 +6927,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
             target_connect_addr=None,
-            bdms=[bdm])
+            bdms=[bdm],
+            block_migration=False)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         test_mock = mock.MagicMock()
@@ -6977,7 +6979,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
             target_connect_addr='127.0.0.2',
-            bdms=[bdm])
+            bdms=[bdm],
+            block_migration=False)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         test_mock = mock.MagicMock()
@@ -7186,7 +7189,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='9.0.0.12',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         dom = fakelibvirt.virDomain
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
@@ -7208,7 +7212,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         CONF.set_override("enabled", True, "serial_console")
         dom = fakelibvirt.virDomain
         migrate_data = objects.LibvirtLiveMigrateData(
-            serial_listen_addr='', target_connect_addr=None)
+            serial_listen_addr='', target_connect_addr=None,
+            block_migration=False)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.MigrationError,
@@ -7244,7 +7249,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         self.mox.ReplayAll()
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
@@ -7275,7 +7281,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         self.mox.ReplayAll()
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
@@ -7305,7 +7312,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
 
         dom = fakelibvirt.virDomain
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7337,7 +7345,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_vnc='1.2.3.4',
             graphics_listen_addr_spice='1.2.3.4',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None)
+            target_connect_addr=None,
+            block_migration=False)
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.MigrationError,
@@ -7384,7 +7393,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='127.0.0.1',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         self.mox.ReplayAll()
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
@@ -7431,7 +7441,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             graphics_listen_addr_spice='127.0.0.1',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
-            bdms=[])
+            bdms=[],
+            block_migration=False)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         self.mox.StubOutWithMock(
@@ -8019,7 +8030,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dom = fakelibvirt.Domain(drvr._get_connection(),
                                  "<domain><name>demo</name></domain>", True)
         guest = libvirt_guest.Guest(dom)
-        migrate_data = {}
+        migrate_data = objects.LibvirtLiveMigrateData(block_migration=True)
         disks_to_copy = (['/some/path/one', '/test/path/two'],
                          ['vda', 'vdb'])
         mock_copy_disk_path.return_value = disks_to_copy
