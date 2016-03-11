@@ -693,7 +693,8 @@ class ComputeAPI(object):
         if isinstance(result, migrate_data_obj.LiveMigrateData):
             return result
         elif migrate_data_orig and result:
-            migrate_data_orig.from_legacy_dict(result)
+            migrate_data_orig.from_legacy_dict(
+                {'pre_live_migration_result': result})
             return migrate_data_orig
         else:
             return result
