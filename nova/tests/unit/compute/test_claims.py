@@ -18,11 +18,9 @@
 import uuid
 
 import mock
-from oslo_serialization import jsonutils
 
 from nova.compute import claims
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova.pci import manager as pci_manager
@@ -60,8 +58,6 @@ class DummyTracker(object):
         self.pci_tracker = pci_manager.PciDevTracker(ctxt)
 
 
-@mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-            return_value=objects.InstancePCIRequests(requests=[]))
 class ClaimTestCase(test.NoDBTestCase):
 
     def setUp(self):
@@ -69,8 +65,11 @@ class ClaimTestCase(test.NoDBTestCase):
         self.context = context.RequestContext('fake-user', 'fake-project')
         self.resources = self._fake_resources()
         self.tracker = DummyTracker()
+        self.empty_requests = objects.InstancePCIRequests(
+            requests=[]
+        )
 
-    def _claim(self, limits=None, overhead=None, **kwargs):
+    def _claim(self, limits=None, overhead=None, requests=None, **kwargs):
         numa_topology = kwargs.pop('numa_topology', None)
         instance = self._fake_instance(**kwargs)
         if numa_topology:
@@ -78,18 +77,23 @@ class ClaimTestCase(test.NoDBTestCase):
                     'id': 1, 'created_at': None, 'updated_at': None,
                     'deleted_at': None, 'deleted': None,
                     'instance_uuid': instance.uuid,
-                    'numa_topology': numa_topology._to_json()
+                    'numa_topology': numa_topology._to_json(),
+                    'pci_requests': (requests or self.empty_requests).to_json()
                 }
         else:
             db_numa_topology = None
         if overhead is None:
             overhead = {'memory_mb': 0}
-        with mock.patch.object(
-                db, 'instance_extra_get_by_instance_uuid',
-                return_value=db_numa_topology):
+
+        @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                    return_value=requests or self.empty_requests)
+        @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                    return_value=db_numa_topology)
+        def get_claim(mock_extra_get, mock_pci_get):
             return claims.Claim(self.context, instance, self.tracker,
                                 self.resources, overhead=overhead,
                                 limits=limits)
+        return get_claim()
 
     def _fake_instance(self, **kwargs):
         instance = {
@@ -141,22 +145,22 @@ class ClaimTestCase(test.NoDBTestCase):
             resources.update(values)
         return resources
 
-    def test_memory_unlimited(self, mock_get):
+    def test_memory_unlimited(self):
         self._claim(memory_mb=99999999)
 
-    def test_disk_unlimited_root(self, mock_get):
+    def test_disk_unlimited_root(self):
         self._claim(root_gb=999999)
 
-    def test_disk_unlimited_ephemeral(self, mock_get):
+    def test_disk_unlimited_ephemeral(self):
         self._claim(ephemeral_gb=999999)
 
-    def test_memory_with_overhead(self, mock_get):
+    def test_memory_with_overhead(self):
         overhead = {'memory_mb': 8}
         limits = {'memory_mb': 2048}
         self._claim(memory_mb=2040, limits=limits,
                     overhead=overhead)
 
-    def test_memory_with_overhead_insufficient(self, mock_get):
+    def test_memory_with_overhead_insufficient(self):
         overhead = {'memory_mb': 9}
         limits = {'memory_mb': 2048}
 
@@ -164,27 +168,27 @@ class ClaimTestCase(test.NoDBTestCase):
                           self._claim, limits=limits, overhead=overhead,
                           memory_mb=2040)
 
-    def test_memory_oversubscription(self, mock_get):
+    def test_memory_oversubscription(self):
         self._claim(memory_mb=4096)
 
-    def test_memory_insufficient(self, mock_get):
+    def test_memory_insufficient(self):
         limits = {'memory_mb': 8192}
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           self._claim, limits=limits, memory_mb=16384)
 
-    def test_disk_oversubscription(self, mock_get):
+    def test_disk_oversubscription(self):
         limits = {'disk_gb': 60}
         self._claim(root_gb=10, ephemeral_gb=40,
                     limits=limits)
 
-    def test_disk_insufficient(self, mock_get):
+    def test_disk_insufficient(self):
         limits = {'disk_gb': 45}
         self.assertRaisesRegex(
                 exception.ComputeResourcesUnavailable,
                 "disk",
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40)
 
-    def test_disk_and_memory_insufficient(self, mock_get):
+    def test_disk_and_memory_insufficient(self):
         limits = {'disk_gb': 45, 'memory_mb': 8192}
         self.assertRaisesRegex(
                 exception.ComputeResourcesUnavailable,
@@ -192,78 +196,49 @@ class ClaimTestCase(test.NoDBTestCase):
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
                 memory_mb=16384)
 
-    @pci_fakes.patch_pci_whitelist
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_pci_pass(self, mock_get_by_instance, mock_get):
-        dev_dict = {
-            'compute_node_id': 1,
-            'address': 'a',
-            'product_id': 'p',
-            'vendor_id': 'v',
-            'numa_node': 0,
-            'dev_type': 'type-PCI',
-            'parent_addr': 'a1',
-            'status': 'available'}
-        self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker._set_hvdevs([dev_dict])
-        claim = self._claim()
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=True)
+    def test_pci_pass(self, mock_supports):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        mock_get.return_value = requests
-        mock_get_by_instance.return_value = requests
-        self.assertIsNone(claim._test_pci())
 
-    @pci_fakes.patch_pci_whitelist
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_pci_fail(self, mock_get_by_instance, mock_get):
-        dev_dict = {
-            'compute_node_id': 1,
-            'address': 'a',
-            'product_id': 'p',
-            'vendor_id': 'v1',
-            'numa_node': 1,
-            'dev_type': 'type-PCI',
-            'parent_addr': 'a1',
-            'status': 'available'}
-        self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker._set_hvdevs([dev_dict])
-        claim = self._claim()
+        # Claim.__init__() would raise ComputeResourcesUnavailable
+        # if Claim._test_pci() did not return None.
+        self._claim(requests=requests)
+        mock_supports.assert_called_once_with(requests.requests)
+
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=False)
+    def test_pci_fail(self, mock_supports):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        mock_get.return_value = requests
-        mock_get_by_instance.return_value = requests
-        claim._test_pci()
 
-    @pci_fakes.patch_pci_whitelist
-    def test_pci_pass_no_requests(self, mock_get):
-        dev_dict = {
-            'compute_node_id': 1,
-            'address': 'a',
-            'product_id': 'p',
-            'vendor_id': 'v',
-            'numa_node': 0,
-            'dev_type': 'type-PCI',
-            'parent_addr': 'a1',
-            'status': 'available'}
-        self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker._set_hvdevs([dev_dict])
-        claim = self._claim()
-        self.assertIsNone(claim._test_pci())
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, requests=requests)
+        mock_supports.assert_called_once_with(requests.requests)
 
-    def test_ext_resources(self, mock_get):
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=True)
+    def test_pci_pass_no_requests(self, mock_supports):
+        # Claim.__init__() would raise ComputeResourcesUnavailable
+        # if Claim._test_pci() did not return None.
+        self._claim()
+        self.assertFalse(mock_supports.called)
+
+    def test_ext_resources(self):
         self._claim()
         self.assertTrue(self.tracker.ext_resources_handler.test_called)
         self.assertFalse(self.tracker.ext_resources_handler.usage_is_itype)
 
-    def test_numa_topology_no_limit(self, mock_get):
+    def test_numa_topology_no_limit(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
         self._claim(numa_topology=huge_instance)
 
-    def test_numa_topology_fails(self, mock_get):
+    def test_numa_topology_fails(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2, 3, 4, 5]), memory=2048)])
@@ -274,7 +249,7 @@ class ClaimTestCase(test.NoDBTestCase):
                           limits={'numa_topology': limit_topo},
                           numa_topology=huge_instance)
 
-    def test_numa_topology_passes(self, mock_get):
+    def test_numa_topology_passes(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
@@ -285,7 +260,7 @@ class ClaimTestCase(test.NoDBTestCase):
 
     @pci_fakes.patch_pci_whitelist
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_numa_topology_with_pci(self, mock_get_by_instance, mock_get):
+    def test_numa_topology_with_pci(self, mock_get_by_instance):
         dev_dict = {
             'compute_node_id': 1,
             'address': 'a',
@@ -300,18 +275,17 @@ class ClaimTestCase(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        mock_get.return_value = requests
         mock_get_by_instance.return_value = requests
 
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
 
-        self._claim(numa_topology=huge_instance)
+        self._claim(requests=requests, numa_topology=huge_instance)
 
     @pci_fakes.patch_pci_whitelist
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_numa_topology_with_pci_fail(self, mock_get_by_instance, mock_get):
+    def test_numa_topology_with_pci_fail(self, mock_get_by_instance):
         dev_dict = {
             'compute_node_id': 1,
             'address': 'a',
@@ -336,7 +310,6 @@ class ClaimTestCase(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=2,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        mock_get.return_value = requests
         mock_get_by_instance.return_value = requests
 
         huge_instance = objects.InstanceNUMATopology(
@@ -345,13 +318,12 @@ class ClaimTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           self._claim,
+                          requests=requests,
                           numa_topology=huge_instance)
 
     @pci_fakes.patch_pci_whitelist
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
-    def test_numa_topology_with_pci_no_numa_info(self,
-                                                 mock_get_by_instance,
-                                                 mock_get):
+    def test_numa_topology_with_pci_no_numa_info(self, mock_get_by_instance):
         dev_dict = {
             'compute_node_id': 1,
             'address': 'a',
@@ -367,16 +339,15 @@ class ClaimTestCase(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        mock_get.return_value = requests
         mock_get_by_instance.return_value = requests
 
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
 
-        self._claim(numa_topology= huge_instance)
+        self._claim(requests=requests, numa_topology=huge_instance)
 
-    def test_abort(self, mock_get):
+    def test_abort(self):
         claim = self._abort()
         self.assertTrue(claim.tracker.icalled)
 
@@ -393,56 +364,60 @@ class ClaimTestCase(test.NoDBTestCase):
 
 class MoveClaimTestCase(ClaimTestCase):
 
-    def setUp(self):
-        super(MoveClaimTestCase, self).setUp()
-        self.instance = self._fake_instance()
-        self.get_numa_constraint_patch = None
-
-    def _claim(self, limits=None, overhead=None, **kwargs):
-        numa_constraint = kwargs.pop('numa_topology', None)
+    def _claim(self, limits=None, overhead=None, requests=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
+        numa_topology = kwargs.pop('numa_topology', None)
+        self.instance = self._fake_instance(**kwargs)
+        self.instance.numa_topology = None
+        if numa_topology:
+            self.db_numa_topology = {
+                    'id': 1, 'created_at': None, 'updated_at': None,
+                    'deleted_at': None, 'deleted': None,
+                    'instance_uuid': self.instance.uuid,
+                    'numa_topology': numa_topology._to_json(),
+                    'pci_requests': (requests or self.empty_requests).to_json()
+                }
+        else:
+            self.db_numa_topology = None
         if overhead is None:
             overhead = {'memory_mb': 0}
-        with mock.patch(
-                'nova.virt.hardware.numa_get_constraints',
-                return_value=numa_constraint):
+
+        @mock.patch('nova.objects.InstancePCIRequests.'
+                    'get_by_instance_uuid_and_newness',
+                    return_value=requests or self.empty_requests)
+        @mock.patch('nova.virt.hardware.numa_get_constraints',
+                    return_value=numa_topology)
+        @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                    return_value=self.db_numa_topology)
+        def get_claim(mock_extra_get, mock_numa_get, mock_pci_get):
             return claims.MoveClaim(self.context, self.instance, instance_type,
                                      {}, self.tracker, self.resources,
                                      overhead=overhead, limits=limits)
+        return get_claim()
 
-    def _set_pci_request(self, claim):
-        request = [{'count': 1,
-                       'spec': [{'vendor_id': 'v', 'product_id': 'p'}],
-                      }]
-        claim.instance.update(
-            system_metadata={'new_pci_requests': jsonutils.dumps(request)})
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    def test_ext_resources(self, mock_get):
+    def test_ext_resources(self):
         self._claim()
         self.assertTrue(self.tracker.ext_resources_handler.test_called)
         self.assertTrue(self.tracker.ext_resources_handler.usage_is_itype)
 
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    def test_abort(self, mock_get):
+    def test_abort(self):
         claim = self._abort()
         self.assertTrue(claim.tracker.rcalled)
 
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    def test_create_migration_context(self, mock_get):
+    def test_create_migration_context(self):
         numa_topology = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
-        self.instance.numa_topology = None
         claim = self._claim(numa_topology=numa_topology)
         migration = objects.Migration(context=self.context, id=42)
         claim.migration = migration
         fake_mig_context = mock.Mock(spec=objects.MigrationContext)
-        with mock.patch('nova.objects.MigrationContext',
-                        return_value=fake_mig_context) as ctxt_mock:
+
+        @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                    return_value=None)
+        @mock.patch('nova.objects.MigrationContext',
+                    return_value=fake_mig_context)
+        def _test(ctxt_mock, mock_get_extra):
             claim.create_migration_context()
             ctxt_mock.assert_called_once_with(
                 context=self.context, instance_uuid=self.instance.uuid,
@@ -451,3 +426,4 @@ class MoveClaimTestCase(ClaimTestCase):
             self.assertIsInstance(ctxt_mock.call_args[1]['new_numa_topology'],
                                   objects.InstanceNUMATopology)
             self.assertEqual(migration, claim.migration)
+        _test()
