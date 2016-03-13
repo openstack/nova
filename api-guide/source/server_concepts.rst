@@ -150,6 +150,7 @@ be used and interpreted by nova.
    and pagination.
 
 .. code::
+
    Precondition:
    there are 2 servers existing in cloud with following info:
 
@@ -168,6 +169,7 @@ be used and interpreted by nova.
    **Example: General user query server with administrator only options**
 
 .. code::
+
    Request with non-administrator context:
    GET /servers/detail?locked=1
    Note that 'locked' is not returned through API layer
@@ -189,6 +191,7 @@ be used and interpreted by nova.
    **Example: Administrator query server with administrator only options**
 
 .. code::
+
    Request with administrator context:
    GET /servers/detail?locked=1
 
@@ -213,6 +216,7 @@ be used and interpreted by nova.
    **Example: User query server using exact matching on host**
 
 .. code::
+
    Precondition:
    Request with administrator context:
    GET /servers/detail
@@ -248,10 +252,11 @@ be used and interpreted by nova.
        }
        ]
    }
-   
+
    **Example: Query server using regex matching on name**
 
 .. code::
+
    Precondition:
    Request with administrator context:
    GET /servers/detail
@@ -305,6 +310,7 @@ be used and interpreted by nova.
    regex matching on name**
 
 .. code::
+
    Precondition:
    Request with administrator context:
    GET /servers/detail
@@ -346,7 +352,7 @@ be used and interpreted by nova.
        ]
    }
 
--  **Speical keys are used to tweek the query**
+-  **Special keys are used to tweek the query**
    ``changes-since`` returns instances updated after the given time,
    ``deleted`` return (or exclude) deleted instances and ``soft_deleted``
    modify behavior of 'deleted' to either include or exclude instances whose
@@ -355,6 +361,7 @@ be used and interpreted by nova.
    **Example: User query server with special keys changes-since**
 
 .. code::
+
    Precondition:
    GET /servers/detail
 
@@ -371,7 +378,7 @@ be used and interpreted by nova.
            "updated": "2015-12-17T15:55:52Z"
            ...
        }
-   }    
+   }
 
    GET /servers/detail?changes-since='2015-12-16T15:55:52Z'
 
