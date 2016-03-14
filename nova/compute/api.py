@@ -4389,14 +4389,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             context, group_ids)
         self._refresh_instance_security_rules(context, instances)
 
-    def get_instance_security_groups(self, context, instance_uuid,
-                                     detailed=False):
+    def get_instance_security_groups(self, context, instance, detailed=False):
         if detailed:
             return self.db.security_group_get_by_instance(context,
-                                                          instance_uuid)
-        instance = objects.Instance(uuid=instance_uuid)
-        groups = objects.SecurityGroupList.get_by_instance(context, instance)
-        return [{'name': group.name} for group in groups]
+                                                          instance.uuid)
+        return [{'name': group.name} for group in instance.security_groups]
 
     def populate_security_groups(self, security_groups):
         if not security_groups:

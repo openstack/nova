@@ -327,7 +327,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
             instance = common.get_instance(self.compute_api, context,
                                            server_id)
             groups = self.security_group_api.get_instance_security_groups(
-                context, instance.uuid, True)
+                context, instance, True)
 
         result = [self._format_security_group(context, group)
                     for group in groups]
