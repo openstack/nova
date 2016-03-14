@@ -26,6 +26,7 @@ from nova.api.openstack.compute.legacy_v2 import extensions
 from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
+from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -242,10 +243,10 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(self.validation_error,
                           self._test_create, params)
 
-    def test_create_instance_with_invalid_size(self):
+    def _test_create_instance_with_size_error(self, size):
         bdm = [{'delete_on_termination': True,
                 'device_name': 'vda',
-                'volume_size': "hello world",
+                'volume_size': size,
                 'volume_id': '11111111-1111-1111-1111-111111111111'}]
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
@@ -257,6 +258,18 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.assertRaises(self.validation_error,
                           self._test_create, params)
+
+    def test_create_instance_with_invalid_size(self):
+        self._test_create_instance_with_size_error("hello world")
+
+    def test_create_instance_with_size_empty_string(self):
+        self._test_create_instance_with_size_error('')
+
+    def test_create_instance_with_size_zero(self):
+        self._test_create_instance_with_size_error("0")
+
+    def test_create_instance_with_size_greater_than_limit(self):
+        self._test_create_instance_with_size_error(db.MAX_INT + 1)
 
     def test_create_instance_with_bdm_delete_on_termination(self):
         bdm = [{'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,
@@ -394,3 +407,18 @@ class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
 
         params = {'block_device_mapping': bdm}
         self._test_create(params, override_controller=controller)
+
+    def test_create_instance_with_size_empty_string(self):
+        # Add a check whether the size is an empty string
+        # in V2.1 API only. So this test is skipped in V2.0 API
+        pass
+
+    def test_create_instance_with_size_zero(self):
+        # Add a check whether the size is zero in V2.1 API only.
+        # So this test is skipped in V2.0 API
+        pass
+
+    def test_create_instance_with_size_greater_than_limit(self):
+        # Add a check whether size is greater than the limit
+        # in V2.1 API only. So this test is skipped in V2.0 API
+        pass
