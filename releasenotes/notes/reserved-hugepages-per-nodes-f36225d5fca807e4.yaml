@@ -1,4 +1,0 @@
----
-features:
-  - Adds reserved_memory_pages option to reserve
-    amount of hugepages used by third part components.
