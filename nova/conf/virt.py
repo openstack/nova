@@ -299,29 +299,6 @@ timeout_nbd = cfg.IntOpt(
     help='Amount of time, in seconds, to wait for NBD '
     'device start up.')
 
-reserved_memory_pages = cfg.MultiStrOpt(
-    "reserved_memory_pages",
-    default=[],
-    help="""Reserves amount of huge pages per NUMA host cells
-
-Possible values:
-
-* A list of valid strings which reflect NUMA node ID, page size and
-  number of pages reserved separated by punctuation mark
-  colon. Default unit is KiB.
-
-    reserved_memory_pages = ["0:2MB:64", "1:1GB:1"]
-
-Services which consume this:
-
-* nova-compute
-* nova-scheduler
-
-Related options:
-
-* None""")
-
-
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
@@ -335,8 +312,7 @@ ALL_OPTS = [vcpu_pin_set,
             injected_network_template,
             virt_mkfs,
             resize_fs_using_block_device,
-            timeout_nbd,
-            reserved_memory_pages]
+            timeout_nbd]
 
 
 def register_opts(conf):

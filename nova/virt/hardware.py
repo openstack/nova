@@ -38,8 +38,6 @@ MEMPAGES_SMALL = -1
 MEMPAGES_LARGE = -2
 MEMPAGES_ANY = -3
 
-RESERVED_MEMORY_PAGES = None
-
 
 def get_vcpu_pin_set():
     """Parsing vcpu_pin_set config.
@@ -1250,36 +1248,6 @@ def numa_fit_instance_to_host(
                     return objects.InstanceNUMATopology(cells=cells)
 
 
-def _numa_reserved_memory_pages_from_cell(cell_id, pagesize):
-    global RESERVED_MEMORY_PAGES
-    try:
-        if CONF.reserved_memory_pages and not RESERVED_MEMORY_PAGES:
-            RESERVED_MEMORY_PAGES = collections.defaultdict(dict)
-            for cfg in CONF.reserved_memory_pages:
-                node, pagesize, reserved = cfg.split(":", 2)
-                node = int(node)
-                try:
-                    pagesize = int(pagesize)
-                except ValueError:
-                    pagesize = strutils.string_to_bytes(
-                        pagesize, return_int=True) / units.Ki
-                RESERVED_MEMORY_PAGES[int(node)][pagesize] = int(reserved)
-        if RESERVED_MEMORY_PAGES:
-            return RESERVED_MEMORY_PAGES.get(cell_id, {}).get(pagesize, 0)
-    except ValueError:
-        raise exception.InvalidReservedMemoryPagesOption(
-            conf=CONF.reserved_memory_pages)
-    return 0
-
-
-def _numa_reserved_memory_pages(hostcells):
-    for hostcell in hostcells:
-        for pages in hostcell.mempages:
-            pages.used = (
-                pages.used + _numa_reserved_memory_pages_from_cell(
-                    hostcell.id, pages.size_kb))
-
-
 def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
     topo = []
     for pages in hostcell.mempages:
@@ -1357,9 +1325,6 @@ def numa_usage_from_instances(host, instances, free=False):
             newcell.memory_usage = max(0, memory_usage)
 
         cells.append(newcell)
-
-    # Compute reserved memory pages
-    _numa_reserved_memory_pages(cells)
 
     return objects.NUMATopology(cells=cells)
 
