@@ -5258,7 +5258,8 @@ class ComputeManager(manager.Manager):
                     migrate_data)
 
         try:
-            if block_migration:
+            if ('block_migration' in migrate_data and
+                    migrate_data.block_migration):
                 block_device_info = self._get_instance_block_device_info(
                     context, instance)
                 disk = self.driver.get_instance_disk_info(
@@ -5372,7 +5373,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, 'live.migration.abort.end')
 
-    def _live_migration_cleanup_flags(self, block_migration, migrate_data):
+    def _live_migration_cleanup_flags(self, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after
         live migration (at source on success, at destination on rollback)
 
@@ -5383,22 +5384,26 @@ class ComputeManager(manager.Manager):
         newly created instance-xxx dir on the destination as a part of its
         rollback process
 
-        :param block_migration: if true, it was a block migration
         :param migrate_data: implementation specific data
         :returns: (bool, bool) -- do_cleanup, destroy_disks
         """
-        # NOTE(angdraug): block migration wouldn't have been allowed if either
-        #                 block storage or instance path were shared
-        is_shared_block_storage = not block_migration
-        is_shared_instance_path = not block_migration
+        # NOTE(pkoniszewski): block migration specific params are set inside
+        # migrate_data objects for drivers that expose block live migration
+        # information (i.e. Libvirt and Xenapi). For other drivers cleanup is
+        # not needed.
+        is_shared_block_storage = True
+        is_shared_instance_path = True
         if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
             is_shared_block_storage = migrate_data.is_shared_block_storage
             is_shared_instance_path = migrate_data.is_shared_instance_path
+        elif isinstance(migrate_data, migrate_data_obj.XenapiLiveMigrateData):
+            is_shared_block_storage = not migrate_data.block_migration
+            is_shared_instance_path = not migrate_data.block_migration
 
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
         # must be deleted for preparing next live migration w/o shared storage
-        do_cleanup = block_migration or not is_shared_instance_path
+        do_cleanup = not is_shared_instance_path
         destroy_disks = not is_shared_block_storage
 
         return (do_cleanup, destroy_disks)
@@ -5482,7 +5487,7 @@ class ComputeManager(manager.Manager):
                 instance, block_migration, dest)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
-                block_migration, migrate_data)
+                migrate_data)
 
         if do_cleanup:
             LOG.debug('Calling driver.cleanup from _post_live_migration',
@@ -5649,7 +5654,7 @@ class ComputeManager(manager.Manager):
                                           "live_migration._rollback.start")
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
-                block_migration, migrate_data)
+                migrate_data)
 
         if do_cleanup:
             self.compute_rpcapi.rollback_live_migration_at_destination(

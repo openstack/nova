@@ -5968,7 +5968,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = libvirt_guest.Guest(dom)
 
         try:
-            if block_migration:
+            if migrate_data.block_migration:
                 migration_flags = self._block_migration_flags
             else:
                 migration_flags = self._live_migration_flags
@@ -6460,7 +6460,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_paths = []
         device_names = []
-        if block_migration:
+        if migrate_data.block_migration:
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 

@@ -4503,7 +4503,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             compute._rollback_live_migration(self.context,
                                              mock.MagicMock(),
                                              'foo', False, {})
-            self.assertIsInstance(mock_lmcf.call_args_list[0][0][1],
+            self.assertIsInstance(mock_lmcf.call_args_list[0][0][0],
                                   migrate_data_obj.LiveMigrateData)
 
         _test()
@@ -4744,7 +4744,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             is_shared_block_storage=False,
             is_shared_instance_path=False)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            True, migrate_data)
+            migrate_data)
         self.assertTrue(do_cleanup)
         self.assertTrue(destroy_disks)
 
@@ -4753,7 +4753,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             is_shared_block_storage=True,
             is_shared_instance_path=False)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            False, migrate_data)
+            migrate_data)
         self.assertTrue(do_cleanup)
         self.assertFalse(destroy_disks)
 
@@ -4762,7 +4762,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             is_shared_block_storage=False,
             is_shared_instance_path=True)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            False, migrate_data)
+            migrate_data)
         self.assertFalse(do_cleanup)
         self.assertTrue(destroy_disks)
 
@@ -4771,27 +4771,27 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             is_shared_block_storage=True,
             is_shared_instance_path=True)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            False, migrate_data)
+            migrate_data)
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
     def test_live_migration_cleanup_flags_block_migrate_xenapi(self):
         migrate_data = objects.XenapiLiveMigrateData(block_migration=True)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            True, migrate_data)
+            migrate_data)
         self.assertTrue(do_cleanup)
         self.assertTrue(destroy_disks)
 
     def test_live_migration_cleanup_flags_live_migrate_xenapi(self):
         migrate_data = objects.XenapiLiveMigrateData(block_migration=False)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            False, migrate_data)
+            migrate_data)
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
     def test_live_migration_cleanup_flags_live_migrate(self):
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
-            False, {})
+            {})
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
