@@ -2638,6 +2638,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
     def test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa):
+        self.flags(reserved_huge_pages=[
+            {'node': 0, 'size': 2048, 'count': 128},
+            {'node': 1, 'size': 2048, 'count': 1},
+            {'node': 3, 'size': 2048, 'count': 64}])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_topology = objects.InstanceNUMATopology(
             cells=[
@@ -2657,6 +2661,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_caps.return_value = caps
 
         host_topology = drvr._get_host_numa_topology()
+        self.assertEqual(128, host_topology.cells[0].mempages[1].reserved)
+        self.assertEqual(1, host_topology.cells[1].mempages[1].reserved)
+        self.assertEqual(0, host_topology.cells[2].mempages[1].reserved)
+        self.assertEqual(64, host_topology.cells[3].mempages[1].reserved)
 
         self.assertTrue(drvr._wants_hugepages(host_topology,
                                               instance_topology))

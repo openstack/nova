@@ -373,6 +373,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self._live_migration_flags = self._block_migration_flags = 0
         self.active_migrations = {}
 
+        # Compute reserved hugepages from conf file at the very
+        # beginning to ensure any syntax error will be reported and
+        # avoid any re-calculation when computing resources.
+        self._reserved_hugepages = hardware.numa_get_reserved_huge_pages()
+
     def _get_volume_drivers(self):
         return libvirt_volume_drivers
 
@@ -5037,6 +5042,10 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             allowed_cpus = online_cpus
 
+        def _get_reserved_memory_for_cell(self, cell_id, page_size):
+            cell = self._reserved_hugepages.get(cell_id, {})
+            return cell.get(page_size, 0)
+
         for cell in topology.cells:
             cpuset = set(cpu.id for cpu in cell.cpus)
             siblings = sorted(map(set,
@@ -5055,7 +5064,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     objects.NUMAPagesTopology(
                         size_kb=pages.size,
                         total=pages.total,
-                        used=0)
+                        used=0,
+                        reserved=_get_reserved_memory_for_cell(
+                            self, cell.id, pages.size))
                     for pages in cell.mempages]
 
             cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
