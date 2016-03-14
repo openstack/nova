@@ -126,7 +126,7 @@ This acts conceptually like the "Accept" header. Semantically this means:
   acceptable to the microversion range that it understands at the time.
 
 This means that out of the box, an old client without any knowledge of
-microversions can work with an Openstack installation with microversions
+microversions can work with an OpenStack installation with microversions
 support.
 
 Two extra headers are always returned in the response:
