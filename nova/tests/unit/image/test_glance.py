@@ -415,6 +415,45 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         )
         sleep_mock.assert_called_once_with(1)
 
+    @mock.patch('random.shuffle')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_retry_works_with_generators(self, create_client_mock,
+                                         sleep_mock, shuffle_mock):
+        def some_generator(exception):
+            if exception:
+                raise glanceclient.exc.CommunicationError('Boom!')
+            yield 'something'
+
+        api_servers = [
+            'host1:9292',
+            'https://host2:9293',
+            'http://host3:9294'
+        ]
+        client_mock = mock.MagicMock()
+        images_mock = mock.MagicMock()
+        images_mock.list.side_effect = [
+            some_generator(exception=True),
+            some_generator(exception=False),
+        ]
+        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
+        create_client_mock.return_value = client_mock
+
+        self.flags(num_retries=1, group='glance')
+        self.flags(api_servers=api_servers, group='glance')
+
+        ctx = context.RequestContext('fake', 'fake')
+        client = glance.GlanceClientWrapper()
+        client.call(ctx, 1, 'list', 'meow')
+
+        create_client_mock.assert_has_calls(
+            [
+                mock.call(ctx, 'host1', 9292, False, 1),
+                mock.call(ctx, 'host2', 9293, True, 1),
+            ]
+        )
+        sleep_mock.assert_called_once_with(1)
+
     @mock.patch('oslo_service.sslutils.is_enabled')
     @mock.patch('glanceclient.Client')
     def test_create_glance_client_with_ssl(self, client_mock,
