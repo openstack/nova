@@ -1352,6 +1352,28 @@ class LiveMigrateTestCase(VMOpsTestBase):
         self.assertEqual({'value': 'fake_migrate_data'},
                          migrate_data_ret.migrate_send_data)
 
+    @mock.patch.object(vmops.objects.AggregateList, 'get_by_host')
+    def test_get_host_uuid_from_aggregate_no_aggr(self, mock_get_by_host):
+        mock_get_by_host.return_value = objects.AggregateList(objects=[])
+        context = "ctx"
+        hostname = "other_host"
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.vmops._get_host_uuid_from_aggregate,
+                          context, hostname)
+
+    @mock.patch.object(vmops.objects.AggregateList, 'get_by_host')
+    def test_get_host_uuid_from_aggregate_bad_aggr(self, mock_get_by_host):
+        context = "ctx"
+        hostname = "other_host"
+        fake_aggregate_obj = objects.Aggregate(hosts=['fake'],
+                                               metadata={'this': 'that'})
+        fake_aggr_list = objects.AggregateList(objects=[fake_aggregate_obj])
+        mock_get_by_host.return_value = fake_aggr_list
+
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.vmops._get_host_uuid_from_aggregate,
+                          context, hostname)
+
 
 class LiveMigrateFakeVersionTestCase(VMOpsTestBase):
     @mock.patch.object(vmops.VMOps, '_pv_device_reported')
