@@ -18,7 +18,6 @@
 
 import time
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -34,14 +33,7 @@ from nova import objects
 
 LOG = logging.getLogger(__name__)
 
-consoleauth_opts = [
-    cfg.IntOpt('console_token_ttl',
-               default=600,
-               help='How many seconds before deleting tokens')
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(consoleauth_opts)
 
 
 class ConsoleAuthManager(manager.Manager):

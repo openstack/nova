@@ -33,6 +33,7 @@ from nova.conf import compute
 from nova.conf import conductor
 # from nova.conf import configdrive
 # from nova.conf import console
+from nova.conf import consoleauth
 # from nova.conf import cors
 # from nova.conf import cors.subdomain
 # from nova.conf import crypto
@@ -93,6 +94,7 @@ compute.register_opts(CONF)
 conductor.register_opts(CONF)
 # configdrive.register_opts(CONF)
 # console.register_opts(CONF)
+consoleauth.register_opts(CONF)
 # cors.register_opts(CONF)
 # cors.subdomain.register_opts(CONF)
 # crypto.register_opts(CONF)

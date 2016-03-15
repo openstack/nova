@@ -15,13 +15,3 @@
 #    limitations under the License.
 
 """Module to authenticate Consoles."""
-
-from oslo_config import cfg
-
-
-consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
-        default='consoleauth',
-        help='The topic console auth proxy nodes listen on')
-
-CONF = cfg.CONF
-CONF.register_opt(consoleauth_topic_opt)
