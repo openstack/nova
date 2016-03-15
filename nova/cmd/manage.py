@@ -66,6 +66,7 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
+from oslo_utils import uuidutils
 import six
 
 from nova.api.ec2 import ec2utils
@@ -95,6 +96,7 @@ CONF.import_opt('vlan_start', 'nova.network.manager')
 CONF.import_opt('vpn_start', 'nova.network.manager')
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
+CONF.import_opt('connection', 'oslo_db.options', group='database')
 
 QUOTAS = quota.QUOTAS
 
@@ -1359,6 +1361,74 @@ class CellV2Commands(object):
         if instances:
             instance = instances[-1]
             print('Next marker: - %s' % instance.uuid)
+
+    # TODO(melwitt): Remove this when the oslo.messaging function
+    # for assembling a transport url from ConfigOpts is available
+    @args('--transport-url', metavar='<transport url>', required=True,
+          dest='transport_url',
+          help='The transport url for the cell message queue')
+    @args('--name', metavar='<name>', help='The name of the cell')
+    @args('--verbose', action='store_true',
+          help='Return and output the uuid of the created cell')
+    def map_cell_and_hosts(self, transport_url, name=None, verbose=False):
+        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
+
+        Users not dividing their cloud into multiple cells will be a single
+        cell v2 deployment and should specify:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
+
+        Users running multiple cells can add a cell v2 by specifying:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
+        """
+        ctxt = context.RequestContext()
+        cell_mapping_uuid = cell_mapping = None
+        # First, try to detect if a CellMapping has already been created
+        compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+        if not compute_nodes:
+            print(_('No hosts found to map to cell, exiting.'))
+            return(0)
+        missing_nodes = []
+        for compute_node in compute_nodes:
+            try:
+                host_mapping = objects.HostMapping.get_by_host(
+                    ctxt, compute_node.host)
+            except exception.HostMappingNotFound:
+                missing_nodes.append(compute_node)
+            else:
+                if verbose:
+                    print(_(
+                        'Host %(host)s is already mapped to cell %(uuid)s'
+                        ) % {'host': host_mapping.host,
+                             'uuid': host_mapping.cell_mapping.uuid})
+                # Re-using the existing UUID in case there is already a mapping
+                # NOTE(sbauza): There could be possibly multiple CellMappings
+                # if the operator provides another configuration file and moves
+                # the hosts to another cell v2, but that's not really something
+                # we should support.
+                cell_mapping_uuid = host_mapping.cell_mapping.uuid
+        if not missing_nodes:
+            print(_('All hosts are already mapped to cell(s), exiting.'))
+            return(0)
+        # Create the cell mapping in the API database
+        if cell_mapping_uuid is not None:
+            cell_mapping = objects.CellMapping.get_by_uuid(
+                ctxt, cell_mapping_uuid)
+        if cell_mapping is None:
+            cell_mapping_uuid = uuidutils.generate_uuid()
+            cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_mapping_uuid, name=name,
+                transport_url=transport_url,
+                database_connection=CONF.database.connection)
+            cell_mapping.create()
+        # Pull the hosts from the cell database and create the host mappings
+        for compute_node in missing_nodes:
+            host_mapping = objects.HostMapping(
+                ctxt, host=compute_node.host, cell_mapping=cell_mapping)
+            host_mapping.create()
+        if verbose:
+            print(cell_mapping_uuid)
 
 
 CATEGORIES = {
