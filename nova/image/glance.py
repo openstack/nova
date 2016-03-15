@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 
 import copy
+import inspect
 import itertools
 import random
 import sys
@@ -246,7 +247,12 @@ class GlanceClientWrapper(object):
             client = self.client or self._create_onetime_client(context,
                                                                 version)
             try:
-                return getattr(client.images, method)(*args, **kwargs)
+                result = getattr(client.images, method)(*args, **kwargs)
+                if inspect.isgenerator(result):
+                    # Convert generator results to a list, so that we can
+                    # catch any potential exceptions now and retry the call.
+                    return list(result)
+                return result
             except retry_excs as e:
                 if attempt < num_attempts:
                     extra = "retrying"
