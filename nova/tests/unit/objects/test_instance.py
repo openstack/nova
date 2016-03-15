@@ -920,6 +920,7 @@ class _TestInstanceObject(object):
         inst = objects.Instance(context=self.context)
         inst.create()
         self.assertEqual(self.fake_instance['id'], inst.id)
+        self.assertIsNotNone(inst.ec2_ids)
 
     def test_create_with_values(self):
         inst1 = objects.Instance(context=self.context,

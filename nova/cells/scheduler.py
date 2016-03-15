@@ -81,6 +81,9 @@ class CellsScheduler(base.Base):
         # is sending proper instance objects.
         instance_values.pop('pci_requests', None)
 
+        # FIXME(danms): Same for ec2_ids
+        instance_values.pop('ec2_ids', None)
+
         instances = []
         num_instances = len(instance_uuids)
         security_groups = (

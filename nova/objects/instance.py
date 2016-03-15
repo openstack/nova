@@ -464,6 +464,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
 
+        # NOTE(danms): The EC2 ids are created on their first load. In order
+        # to avoid them being missing and having to be loaded later, we
+        # load them once here on create now that the instance record is
+        # created.
+        self._load_ec2_ids()
+        self.obj_reset_changes(['ec2_ids'])
+
     @base.remotable
     def destroy(self):
         if not self.obj_attr_is_set('id'):
