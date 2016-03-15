@@ -17,12 +17,15 @@ from cinderclient import exceptions as cinder_exception
 from keystoneclient import exceptions as keystone_exception
 import mock
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova import test
 from nova.tests.unit.fake_instance import fake_instance_obj
 from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
+
+CONF = nova.conf.CONF
 
 
 class FakeCinderClient(object):
@@ -147,7 +150,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                side_effect=lambda context,
                                instance: 'zone1') as mock_get_instance_az:
 
-            cinder.CONF.set_override('cross_az_attach', False, group='cinder')
+            CONF.set_override('cross_az_attach', False, group='cinder')
             volume['availability_zone'] = 'zone1'
             self.assertIsNone(self.api.check_attach(self.ctx,
                                                     volume, instance))
@@ -168,7 +171,7 @@ class CinderApiTestCase(test.NoDBTestCase):
             self.assertRaises(exception.InvalidVolume,
                             self.api.check_attach, self.ctx, volume, instance)
             mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-            cinder.CONF.reset()
+            CONF.reset()
 
     def test_check_attach(self):
         volume = {'status': 'available'}
@@ -176,14 +179,14 @@ class CinderApiTestCase(test.NoDBTestCase):
         volume['availability_zone'] = 'zone1'
         volume['multiattach'] = False
         instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
-        cinder.CONF.set_override('cross_az_attach', False, group='cinder')
+        CONF.set_override('cross_az_attach', False, group='cinder')
 
         with mock.patch.object(cinder.az, 'get_instance_availability_zone',
                                side_effect=lambda context, instance: 'zone1'):
             self.assertIsNone(self.api.check_attach(
                 self.ctx, volume, instance))
 
-        cinder.CONF.reset()
+        CONF.reset()
 
     def test_check_detach(self):
         volume = {'id': 'fake', 'status': 'in-use',

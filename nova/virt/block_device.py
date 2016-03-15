@@ -16,21 +16,20 @@ import functools
 import itertools
 import operator
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 import six
 
 from nova import block_device
+import nova.conf
 from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.volume import encryptors
 
-CONF = cfg.CONF
-CONF.import_opt('cross_az_attach', 'nova.volume.cinder', group='cinder')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
