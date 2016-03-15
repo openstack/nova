@@ -3348,10 +3348,17 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.assertTrue(fake_live_migrate.called)
 
     def test_pre_live_migration(self):
-        # ensure method is present
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.conn.pre_live_migration(None, None, None, None, None)
+
+        with mock.patch.object(self.conn._vmops, "pre_live_migration") as pre:
+            pre.return_value = True
+
+            result = self.conn.pre_live_migration(
+                    "ctx", "inst", "bdi", "nw", "di", "data")
+
+            self.assertTrue(result)
+            pre.assert_called_with("ctx", "inst", "bdi", "nw", "di", "data")
 
     def test_post_live_migration_at_destination(self):
         # ensure method is present
