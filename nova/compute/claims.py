@@ -190,9 +190,8 @@ class Claim(NopClaim):
             self.context, self.instance.uuid)
 
         if pci_requests.requests:
-            devs = self.tracker.pci_tracker.claim_instance(self.context,
-                                                           self.instance)
-            if not devs:
+            stats = self.tracker.pci_tracker.stats
+            if not stats.support_requests(pci_requests.requests):
                 return _('Claim pci failed.')
 
     def _test_ext_resources(self, limits):

@@ -26,6 +26,7 @@ from nova.compute import vm_states
 from nova import exception as exc
 from nova import objects
 from nova.objects import base as obj_base
+from nova.pci import manager as pci_manager
 from nova import test
 
 _VIRT_DRIVER_AVAIL_RESOURCES = {
@@ -1282,6 +1283,49 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
             update_mock.assert_called_once_with(self.elevated)
+            self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                     self.rt.compute_node))
+
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=True)
+    @mock.patch('nova.pci.manager.PciDevTracker.claim_instance')
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_claim_with_pci(self, migr_mock, pci_mock,
+                            pci_manager_mock, pci_stats_mock):
+        # Test that a claim involving PCI requests correctly claims
+        # PCI devices on the host and sends an updated pci_device_pools
+        # attribute of the ComputeNode object.
+        self.assertFalse(self.rt.disabled)
+
+        # TODO(jaypipes): Remove once the PCI tracker is always created
+        # upon the resource tracker being initialized...
+        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+
+        pci_pools = objects.PciDevicePoolList()
+        pci_manager_mock.return_value = pci_pools
+
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[request])
+
+        disk_used = self.instance.root_gb + self.instance.ephemeral_gb
+        expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected.update({
+            'local_gb_used': disk_used,
+            'memory_mb_used': self.instance.memory_mb,
+            'free_disk_gb': expected['local_gb'] - disk_used,
+            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'running_vms': 1,
+            'vcpus_used': 1,
+            'pci_device_pools': pci_pools
+        })
+        with mock.patch.object(self.rt, '_update') as update_mock:
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, None)
+            update_mock.assert_called_once_with(self.elevated)
+            pci_manager_mock.assert_called_once_with(mock.ANY,  # context...
+                                                     self.instance)
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
 
