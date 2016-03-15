@@ -2336,23 +2336,26 @@ class VMOps(object):
 
     def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
         """unpack xapi specific parameters, and call a live migrate command."""
-        destination_sr_ref = migrate_data.destination_sr_ref
-        migrate_send_data = migrate_data.migrate_send_data
         # NOTE(coreywright): though a nullable object field, migrate_send_data
         # is required for XenAPI live migration commands
+        migrate_send_data = None
+        if 'migrate_send_data' in migrate_data:
+            migrate_send_data = migrate_data.migrate_send_data
         if not migrate_send_data:
             raise exception.InvalidParameterValue(
                 'XenAPI requires destination migration data')
         # NOTE(coreywright): convert to xmlrpc marshallable type
         migrate_send_data = dict(migrate_send_data)
 
+        destination_sr_ref = migrate_data.destination_sr_ref
         vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
 
         # Add destination SR refs for all of the VDIs that we created
         # as part of the pre migration callback
-        if 'pre_live_migration_result' in migrate_data:
-            pre_migrate_data = migrate_data['pre_live_migration_result']
-            sr_uuid_map = pre_migrate_data.get('sr_uuid_map', [])
+        sr_uuid_map = None
+        if "sr_uuid_map" in migrate_data:
+            sr_uuid_map = migrate_data.sr_uuid_map
+        if sr_uuid_map:
             for sr_uuid in sr_uuid_map:
                 # Source and destination SRs have the same UUID, so get the
                 # reference for the local SR
@@ -2365,6 +2368,16 @@ class VMOps(object):
         self._session.call_xenapi(command_name, vm_ref,
                                   migrate_send_data, True,
                                   vdi_map, vif_map, options)
+
+    def pre_live_migration(self, context, instance, block_device_info,
+                           network_info, disk_info, migrate_data):
+        if migrate_data is None:
+            raise exception.InvalidParameterValue(
+                    'XenAPI requires migrate data')
+
+        migrate_data.sr_uuid_map = self.connect_block_device_volumes(
+                block_device_info)
+        return migrate_data
 
     def live_migrate(self, context, instance, destination_hostname,
                      post_method, recover_method, block_migration,

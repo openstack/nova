@@ -34,7 +34,6 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _, _LE, _LW
-from nova import objects
 from nova.virt import driver
 from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
@@ -574,11 +573,8 @@ class XenAPIDriver(driver.ComputeDriver):
             at compute manager.
         :returns: a XenapiLiveMigrateData object
         """
-        # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
-        result = objects.XenapiLiveMigrateData()
-        result.sr_uuid_map = self._vmops.connect_block_device_volumes(
-            block_device_info)
-        return result
+        return self._vmops.pre_live_migration(context, instance,
+                block_device_info, network_info, disk_info, migrate_data)
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
