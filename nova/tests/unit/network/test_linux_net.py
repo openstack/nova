@@ -16,6 +16,7 @@
 import calendar
 import datetime
 import os
+import re
 import time
 
 import mock
@@ -655,7 +656,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.flags(fake_network=False)
 
         def fake_execute(*args, **kwargs):
-            raise processutils.ProcessExecutionError('error')
+            raise processutils.ProcessExecutionError('specific_error')
 
         def fake_device_exists(*args, **kwargs):
             return False
@@ -663,9 +664,16 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(linux_net, 'device_exists', fake_device_exists)
         driver = linux_net.LinuxOVSInterfaceDriver()
-        self.assertRaises(exception.AgentError,
-                          driver.plug, {'uuid': 'fake_network_uuid'},
-                          'fake_mac')
+
+        exc = self.assertRaises(exception.OvsConfigurationFailure,
+                                driver.plug,
+                                {'uuid': 'fake_network_uuid'}, 'fake_mac')
+        self.assertRegex(
+            str(exc),
+            re.compile("OVS configuration failed with: .*specific_error.*",
+                       re.DOTALL))
+        self.assertIsInstance(exc.kwargs['inner_exception'],
+                              processutils.ProcessExecutionError)
 
     def test_vlan_override(self):
         """Makes sure vlan_interface flag overrides network bridge_interface.

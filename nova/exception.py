@@ -832,6 +832,10 @@ class VifDetailsMissingMacvtapParameters(Invalid):
                 " correct.")
 
 
+class OvsConfigurationFailure(NovaException):
+    msg_fmt = _("OVS configuration failed with: %(inner_exception)s.")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 

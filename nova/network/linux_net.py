@@ -1362,7 +1362,7 @@ def _ovs_vsctl(args):
     except Exception as e:
         LOG.error(_LE("Unable to execute %(cmd)s. Exception: %(exception)s"),
                   {'cmd': full_args, 'exception': e})
-        raise exception.AgentError(method=full_args)
+        raise exception.OvsConfigurationFailure(inner_exception=e)
 
 
 def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id, mtu=None):
