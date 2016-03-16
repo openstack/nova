@@ -1,0 +1,17 @@
+---
+prelude: |
+    Nova 13.0.0 release is including a lot of new features and bugfixes. It can
+    be extremely hard to mention all the changes we introduced during that
+    release but we beg you to read at least the upgrade section which describes
+    the required modifications that you need to do for upgrading your cloud
+    from 12.0.0 (Liberty) to 13.0.0 (Mitaka).
+
+    That said, a few major changes are worth to notice here. This is not an
+    exhaustive list of things to notice, rather just important things you need
+    to know :
+
+        - Latest API microversion supported for Mitaka is v2.25
+        - Nova now requires a second database (called 'API DB').
+        - A new nova-manage script allows you to perform all online DB
+          migrations once you upgrade your cloud
+        - EC2 API support is fully removed.
