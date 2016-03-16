@@ -1,5 +1,5 @@
 ---
-upgrade:
+deprecations:
   - |
     The Zookeeper Service Group driver has been removed.
 
