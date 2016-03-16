@@ -74,11 +74,11 @@ class RemoteFSTestCase(test.NoDBTestCase):
         self.assertEqual(2, mock_execute.call_count)
         self.assertEqual(1, mock_mkdtemp.call_count)
 
-    @mock.patch('nova.utils.execute')
-    def test_remove_remote_file_ssh(self, mock_execute):
+    @mock.patch('nova.utils.ssh_execute')
+    def test_remove_remote_file_ssh(self, mock_ssh_execute):
         remotefs.SshDriver().remove_file('host', 'dest', None, None)
-        mock_execute.assert_called_once_with(
-            'ssh', 'host', 'rm', 'dest',
+        mock_ssh_execute.assert_called_once_with(
+            'host', 'rm', 'dest',
             on_completion=None, on_execute=None)
 
     @mock.patch('tempfile.mkdtemp', return_value='/tmp/Venus')
@@ -101,11 +101,11 @@ class RemoteFSTestCase(test.NoDBTestCase):
         self.assertEqual(3, mock_execute.call_count)
         self.assertEqual(1, mock_mkdtemp.call_count)
 
-    @mock.patch('nova.utils.execute')
-    def test_remove_remote_dir_ssh(self, mock_execute):
+    @mock.patch('nova.utils.ssh_execute')
+    def test_remove_remote_dir_ssh(self, mock_ssh_execute):
         remotefs.SshDriver().remove_dir('host', 'dest', None, None)
-        mock_execute.assert_called_once_with(
-            'ssh', 'host', 'rm', '-rf', 'dest', on_completion=None,
+        mock_ssh_execute.assert_called_once_with(
+            'host', 'rm', '-rf', 'dest', on_completion=None,
             on_execute=None)
 
     @mock.patch('tempfile.mkdtemp', return_value='/tmp/Mars')
@@ -128,13 +128,13 @@ class RemoteFSTestCase(test.NoDBTestCase):
         self.assertEqual(4, mock_execute.call_count)
         self.assertEqual(1, mock_mkdtemp.call_count)
 
-    @mock.patch('nova.utils.execute')
-    def test_create_remote_file_ssh(self, mock_execute):
+    @mock.patch('nova.utils.ssh_execute')
+    def test_create_remote_file_ssh(self, mock_ssh_execute):
         remotefs.SshDriver().create_file('host', 'dest_dir', None, None)
-        mock_execute.assert_called_once_with('ssh', 'host',
-                                             'touch', 'dest_dir',
-                                             on_completion=None,
-                                             on_execute=None)
+        mock_ssh_execute.assert_called_once_with('host', 'touch',
+                                                 'dest_dir',
+                                                 on_completion=None,
+                                                 on_execute=None)
 
     @mock.patch('tempfile.mkdtemp', return_value='/tmp/Jupiter')
     @mock.patch('nova.utils.execute')
@@ -153,13 +153,13 @@ class RemoteFSTestCase(test.NoDBTestCase):
         self.assertEqual(3, mock_execute.call_count)
         self.assertEqual(1, mock_mkdtemp.call_count)
 
-    @mock.patch('nova.utils.execute')
-    def test_create_remote_dir_ssh(self, mock_execute):
+    @mock.patch('nova.utils.ssh_execute')
+    def test_create_remote_dir_ssh(self, mock_ssh_execute):
         remotefs.SshDriver().create_dir('host', 'dest_dir', None, None)
-        mock_execute.assert_called_once_with('ssh', 'host', 'mkdir',
-                                             '-p', 'dest_dir',
-                                             on_completion=None,
-                                             on_execute=None)
+        mock_ssh_execute.assert_called_once_with('host', 'mkdir',
+                                                 '-p', 'dest_dir',
+                                                 on_completion=None,
+                                                 on_execute=None)
 
     @mock.patch('nova.utils.execute')
     def test_remote_copy_file_rsync(self, mock_execute):
