@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:25+0000\n"
+"POT-Creation-Date: 2016-03-15 22:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1384,9 +1384,6 @@ msgstr "Glance imajı %s öldürülmüş durumda"
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "Grup geçerli değil. Sebep: %(reason)s"
-
-msgid "Guest does not have a console available"
-msgstr "Konuk kullanılabilir bir konsola sahip değil"
 
 msgid "HOST"
 msgstr "İSTEMCİ"
