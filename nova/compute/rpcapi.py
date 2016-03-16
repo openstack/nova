@@ -328,6 +328,10 @@ class ComputeAPI(object):
         * 4.9  - Add live_migration_force_complete()
         * 4.10  - Add live_migration_abort()
         * 4.11 - Allow block_migration and disk_over_commit be None
+
+        ... Mitaka supports messaging version 4.11. So, any changes to
+        existing methods in 4.x after that point should be done so that they
+        can handle the version_cap being set to 4.11
     '''
 
     VERSION_ALIASES = {
@@ -335,6 +339,7 @@ class ComputeAPI(object):
         'juno': '3.35',
         'kilo': '4.0',
         'liberty': '4.5',
+        'mitaka': '4.11',
     }
 
     def __init__(self):
