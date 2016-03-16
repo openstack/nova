@@ -1,7 +1,7 @@
 ---
 deprecations:
-
-  - Nove used to support the concept that ``service managers`` were
+  - |
+    Nova used to support the concept that ``service managers`` were
     replaceable components. There are many config options where you can
     replace a manager by specifying a new class. This concept is
     deprecated in Mitaka as are the following config options.
