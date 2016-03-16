@@ -31,18 +31,19 @@
 # Daisy <guoyingc@cn.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
+# Daisy <guoyingc@cn.ibm.com>, 2016. #zanata
 # Linda <duleish@cn.ibm.com>, 2016. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:25+0000\n"
+"POT-Creation-Date: 2016-03-15 22:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-06 02:45+0000\n"
-"Last-Translator: Linda <duleish@cn.ibm.com>\n"
+"PO-Revision-Date: 2016-03-10 09:09+0000\n"
+"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -1616,9 +1617,6 @@ msgstr "Glance 镜像 %s 在被杀死的状态"
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "组无效。原因：%(reason)s"
-
-msgid "Guest does not have a console available"
-msgstr "Guest 没有控制台可用"
 
 msgid "HOST"
 msgstr "HOST"

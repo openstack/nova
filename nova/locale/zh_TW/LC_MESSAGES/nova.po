@@ -13,13 +13,13 @@
 # Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:25+0000\n"
+"POT-Creation-Date: 2016-03-15 22:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-08 07:15+0000\n"
+"PO-Revision-Date: 2016-03-11 01:29+0000\n"
 "Last-Translator: Jennifer <cristxu@tw.ibm.com>\n"
 "Language: zh-TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -327,6 +327,10 @@ msgstr "找不到主機 %(host)s 計數的聚集。"
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "聚集沒有 %s 動作"
+
+#, python-format
+msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
+msgstr "所提供的「名稱」值無效。名稱必須是：%(reason)s"
 
 msgid "An unexpected error has occurred."
 msgstr "發生非預期的錯誤。"
@@ -1616,8 +1620,8 @@ msgstr "Glance 映像檔 %s 處於已結束狀態"
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "群組無效。原因：%(reason)s"
 
-msgid "Guest does not have a console available"
-msgstr "來賓沒有可用的主控台"
+msgid "Guest does not have a console available."
+msgstr "訪客沒有主控台可用。"
 
 msgid "HOST"
 msgstr "主機"
@@ -5060,6 +5064,20 @@ msgstr "%s 不支援進行分割區搜尋"
 
 msgid "pause not supported for vmwareapi"
 msgstr "vmwareapi 不支援暫停"
+
+msgid ""
+"printable characters except !, ., @, with at least one non space character"
+msgstr "可列印字元預期 !、. 和 @，其中含有至少一個非空格字元"
+
+msgid ""
+"printable characters except !, ., @. Can not start or end with whitespace."
+msgstr "可列印字元預期 !、. 和 @。不能以空格開頭或結尾。"
+
+msgid "printable characters with at least one non space character"
+msgstr "含有至少一個非空格字元的可列印字元"
+
+msgid "printable characters. Can not start or end with whitespace."
+msgstr "可列印字元。不能以空格開頭或結尾。"
 
 msgid "project"
 msgstr "專案"
