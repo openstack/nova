@@ -90,7 +90,7 @@ On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
   sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel libvirt-devel graphviz sqlite-devel python3-devel python3 gettext
   sudo pip-python install tox
 
-On openSUSE-based distributions (SLES 12, openSUSE 13.1, Factory or Tumbleweed)::
+On openSUSE-based distributions (SLES 12, openSUSE Leap 42.1 or Tumbleweed)::
 
   sudo zypper in gcc git libffi-devel libmysqlclient-devel libvirt-devel libxslt-devel postgresql-devel python-devel python-pip python-tox python-virtualenv python3-devel python3 gettext-runtime
 
