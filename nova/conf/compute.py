@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from oslo_config import cfg
 
 compute_opts = [
@@ -74,10 +76,78 @@ compute_opts = [
                      '["cpu.virt_driver", "numa_mem_bw.virt_driver"]'),
 ]
 
+resource_tracker_opts = [
+    cfg.IntOpt('reserved_host_disk_mb',
+               default=0,
+               help='Amount of disk in MB to reserve for the host'),
+    cfg.IntOpt('reserved_host_memory_mb',
+               default=512,
+               help='Amount of memory in MB to reserve for the host'),
+    cfg.StrOpt('compute_stats_class',
+               default='nova.compute.stats.Stats',
+               help='DEPRECATED: Class that will manage stats for the '
+                    'local compute host',
+               deprecated_for_removal=True),
+    cfg.ListOpt('compute_resources',
+                default=[],
+                help='DEPRECATED:The names of the extra resources to track. '
+                     'The Extensible Resource Tracker is deprecated and will '
+                     'be removed in the 14.0.0 release. If you '
+                     'use this functionality and have custom resources that '
+                     'are managed by the Extensible Resource Tracker, please '
+                     'contact the Nova development team by posting to the '
+                     'openstack-dev mailing list. There is no future planned '
+                     'support for the tracking of custom resources.',
+                deprecated_for_removal=True),
+
+]
+
+allocation_ratio_opts = [
+    cfg.FloatOpt('cpu_allocation_ratio',
+        default=0.0,
+        help='Virtual CPU to physical CPU allocation ratio which affects '
+             'all CPU filters. This configuration specifies a global ratio '
+             'for CoreFilter. For AggregateCoreFilter, it will fall back to '
+             'this configuration value if no per-aggregate setting found. '
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 16.0'),
+    cfg.FloatOpt('ram_allocation_ratio',
+        default=0.0,
+        help='Virtual ram to physical ram allocation ratio which affects '
+             'all ram filters. This configuration specifies a global ratio '
+             'for RamFilter. For AggregateRamFilter, it will fall back to '
+             'this configuration value if no per-aggregate setting found. '
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 1.5'),
+    cfg.FloatOpt('disk_allocation_ratio',
+        default=0.0,
+        help='This is the virtual disk to physical disk allocation ratio used '
+             'by the disk_filter.py script to determine if a host has '
+             'sufficient disk space to fit a requested instance. A ratio '
+             'greater than 1.0 will result in over-subscription of the '
+             'available physical disk, which can be useful for more '
+             'efficiently packing instances created with images that do not '
+             'use the entire virtual disk,such as sparse or compressed '
+             'images. It can be set to a value between 0.0 and 1.0 in order '
+             'to preserve a percentage of the disk for uses other than '
+             'instances.'
+             'NOTE: This can be set per-compute, or if set to 0.0, the value '
+             'set on the scheduler node(s) will be used '
+             'and defaulted to 1.0'),
+]
+
+ALL_OPTS = itertools.chain(
+           compute_opts,
+           resource_tracker_opts,
+           allocation_ratio_opts
+           )
+
 
 def register_opts(conf):
-    conf.register_opts(compute_opts)
+    conf.register_opts(ALL_OPTS)
 
 
 def list_opts():
-    return {'DEFAULT': compute_opts}
+    return {'DEFAULT': ALL_OPTS}

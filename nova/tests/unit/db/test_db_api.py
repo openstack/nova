@@ -25,7 +25,7 @@ import uuid as stdlib_uuid
 import iso8601
 import mock
 import netaddr
-from oslo_config import cfg
+
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
@@ -53,6 +53,7 @@ from nova import block_device
 from nova.compute import arch
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqlalchemy_api
@@ -68,9 +69,7 @@ from nova.tests.unit import matchers
 from nova.tests import uuidsentinel
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('reserved_host_memory_mb', 'nova.compute.resource_tracker')
-CONF.import_opt('reserved_host_disk_mb', 'nova.compute.resource_tracker')
+CONF = nova.conf.CONF
 
 get_engine = sqlalchemy_api.get_engine
 

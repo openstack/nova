@@ -12,12 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
+import nova.conf
 from nova import db
 from nova import exception
 from nova import objects
@@ -25,10 +26,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import pci_device_pool
 
-CONF = cfg.CONF
-CONF.import_opt('cpu_allocation_ratio', 'nova.compute.resource_tracker')
-CONF.import_opt('ram_allocation_ratio', 'nova.compute.resource_tracker')
-CONF.import_opt('disk_allocation_ratio', 'nova.compute.resource_tracker')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
