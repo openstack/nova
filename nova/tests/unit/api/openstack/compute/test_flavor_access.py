@@ -125,6 +125,10 @@ class FakeResponse(object):
         pass
 
 
+def fake_get_flavor_projects_from_db(context, flavorid):
+    raise exception.FlavorNotFound(flavor_id=flavorid)
+
+
 class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
     FlavorAccessController = flavor_access_v21.FlavorAccessController
@@ -147,6 +151,9 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         # Simulate no API flavors right now
         self.stub_out('nova.objects.flavor._flavor_get_all_from_db',
                       lambda *a, **k: [])
+        self.stub_out('nova.objects.Flavor.in_api', False)
+        self.stub_out('nova.objects.flavor._get_projects_from_db',
+                      fake_get_flavor_projects_from_db)
 
         self.flavor_access_controller = self.FlavorAccessController()
         self.flavor_action_controller = self.FlavorActionController()

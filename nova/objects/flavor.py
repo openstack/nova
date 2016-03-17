@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
@@ -36,6 +37,44 @@ def _dict_with_extra_specs(flavor_model):
     extra_specs = {x['key']: x['value']
                    for x in flavor_model['extra_specs']}
     return dict(flavor_model, extra_specs=extra_specs)
+
+
+# NOTE(danms): There are some issues with the oslo_db context manager
+# decorators with static methods. We pull these out for now and can
+# move them back into the actual staticmethods on the object when those
+# issues are resolved.
+@db_api.api_context_manager.reader
+def _get_projects_from_db(context, flavorid):
+    db_flavor = context.session.query(api_models.Flavors).\
+                filter_by(flavorid=flavorid).\
+                options(joinedload('projects')).\
+                first()
+    if not db_flavor:
+        raise exception.FlavorNotFound(flavor_id=flavorid)
+    return [x['project_id'] for x in db_flavor['projects']]
+
+
+@db_api.api_context_manager.writer
+def _flavor_add_project(context, flavor_id, project_id):
+    project = api_models.FlavorProjects()
+    project.update({'flavor_id': flavor_id,
+                    'project_id': project_id})
+    try:
+        project.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        raise exception.FlavorAccessExists(flavor_id=flavor_id,
+                                           project_id=project_id)
+
+
+@db_api.api_context_manager.writer
+def _flavor_del_project(context, flavor_id, project_id):
+    result = context.session.query(api_models.FlavorProjects).\
+             filter_by(project_id=project_id).\
+             filter_by(flavor_id=flavor_id).\
+             delete()
+    if result == 0:
+        raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
+                                             project_id=project_id)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -68,6 +107,26 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         super(Flavor, self).__init__(*args, **kwargs)
         self._orig_extra_specs = {}
         self._orig_projects = []
+        self._in_api = False
+
+    @property
+    def in_api(self):
+        if self._in_api:
+            return True
+        else:
+            try:
+                if 'id' in self:
+                    self._flavor_get_from_db(self._context, self.id)
+                else:
+                    flavor = self._flavor_get_by_flavor_id_from_db(
+                        self._context,
+                        self.flavorid)
+                    # Fix us up so we can use our real id
+                    self.id = flavor['id']
+                self._in_api = True
+            except exception.FlavorNotFound:
+                pass
+            return self._in_api
 
     @staticmethod
     def _from_db_object(context, flavor, db_flavor, expected_attrs=None):
@@ -148,11 +207,19 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             raise exception.FlavorNotFound(flavor_id=flavor_id)
         return db_api._dict_with_extra_specs(result)
 
+    @staticmethod
+    def _get_projects_from_db(context, flavorid):
+        return _get_projects_from_db(context, flavorid)
+
     @base.remotable
     def _load_projects(self):
-        self.projects = [x['project_id'] for x in
-                         db.flavor_access_get_by_flavor_id(self._context,
-                                                           self.flavorid)]
+        try:
+            self.projects = self._get_projects_from_db(self._context,
+                                                       self.flavorid)
+        except exception.FlavorNotFound:
+            self.projects = [x['project_id'] for x in
+                             db.flavor_access_get_by_flavor_id(self._context,
+                                                               self.flavorid)]
         self.obj_reset_changes(['projects'])
 
     def obj_load_attr(self, attrname):
@@ -230,20 +297,40 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
+    @staticmethod
+    def _flavor_add_project(context, flavor_id, project_id):
+        return _flavor_add_project(context, flavor_id, project_id)
+
+    @staticmethod
+    def _flavor_del_project(context, flavor_id, project_id):
+        return _flavor_del_project(context, flavor_id, project_id)
+
+    def _add_access(self, project_id):
+        if self.in_api:
+            self._flavor_add_project(self._context, self.id, project_id)
+        else:
+            db.flavor_access_add(self._context, self.flavorid, project_id)
+
     @base.remotable
     def add_access(self, project_id):
         if 'projects' in self.obj_what_changed():
             raise exception.ObjectActionError(action='add_access',
                                               reason='projects modified')
-        db.flavor_access_add(self._context, self.flavorid, project_id)
+        self._add_access(project_id)
         self._load_projects()
+
+    def _remove_access(self, project_id):
+        if self.in_api:
+            self._flavor_del_project(self._context, self.id, project_id)
+        else:
+            db.flavor_access_remove(self._context, self.flavorid, project_id)
 
     @base.remotable
     def remove_access(self, project_id):
         if 'projects' in self.obj_what_changed():
             raise exception.ObjectActionError(action='remove_access',
                                               reason='projects modified')
-        db.flavor_access_remove(self._context, self.flavorid, project_id)
+        self._remove_access(project_id)
         self._load_projects()
 
     @base.remotable
@@ -273,9 +360,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         to_delete = to_delete if to_delete is not None else []
 
         for project_id in to_add:
-            db.flavor_access_add(self._context, self.flavorid, project_id)
+            self._add_access(project_id)
         for project_id in to_delete:
-            db.flavor_access_remove(self._context, self.flavorid, project_id)
+            self._remove_access(project_id)
         self.obj_reset_changes(['projects'])
 
     @base.remotable
