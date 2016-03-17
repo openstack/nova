@@ -127,6 +127,10 @@ class FlavorExtraSpecs(API_BASE):
     key = Column(String(255), nullable=False)
     value = Column(String(255))
     flavor_id = Column(Integer, ForeignKey('flavors.id'), nullable=False)
+    flavor = orm.relationship(Flavors, backref='extra_specs',
+                              foreign_keys=flavor_id,
+                              primaryjoin=(
+                                  'FlavorExtraSpecs.flavor_id == Flavors.id'))
 
 
 class FlavorProjects(API_BASE):
@@ -138,6 +142,10 @@ class FlavorProjects(API_BASE):
     id = Column(Integer, primary_key=True)
     flavor_id = Column(Integer, ForeignKey('flavors.id'), nullable=False)
     project_id = Column(String(255), nullable=False)
+    flavor = orm.relationship(Flavors, backref='projects',
+                              foreign_keys=flavor_id,
+                              primaryjoin=(
+                                  'FlavorProjects.flavor_id == Flavors.id'))
 
 
 class BuildRequest(API_BASE):

@@ -12,10 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 import mock
 
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception
+from nova import objects
 from nova.objects import flavor as flavor_obj
 from nova.tests.unit.objects import test_objects
 
@@ -41,10 +46,36 @@ fake_flavor = {
     }
 
 
+fake_api_flavor = {
+    'created_at': None,
+    'updated_at': None,
+    'id': 1,
+    'name': 'm1.foo',
+    'memory_mb': 1024,
+    'vcpus': 4,
+    'root_gb': 20,
+    'ephemeral_gb': 0,
+    'flavorid': 'm1.foo',
+    'swap': 0,
+    'rxtx_factor': 1.0,
+    'vcpu_weight': 1,
+    'disabled': False,
+    'is_public': True,
+    'extra_specs': {'foo': 'bar'},
+    }
+
+
 class _TestFlavor(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
+            # NOTE(danms): The datetimes on SQLA models are tz-unaware,
+            # but the object has tz-aware datetimes. If we're comparing
+            # a model to an object (as opposed to a fake dict), just
+            # ignore the datetimes in the comparison.
+            if (isinstance(db, api_models.API_BASE) and
+                  isinstance(value, datetime.datetime)):
+                continue
             test.assertEqual(db[field], obj[field])
 
     def test_get_by_id(self):
@@ -65,6 +96,60 @@ class _TestFlavor(object):
             flavor = flavor_obj.Flavor.get_by_flavor_id(self.context,
                                                         'm1.foo')
             self._compare(self, fake_flavor, flavor)
+
+    @mock.patch('nova.objects.Flavor._flavor_get_from_db')
+    def test_api_get_by_id_from_api(self, mock_get):
+        mock_get.return_value = fake_api_flavor
+        flavor = flavor_obj.Flavor.get_by_id(self.context, 1)
+        self._compare(self, fake_api_flavor, flavor)
+        mock_get.assert_called_once_with(self.context, 1)
+
+    @mock.patch('nova.objects.Flavor._flavor_get_by_name_from_db')
+    def test_get_by_name_from_api(self, mock_get):
+        mock_get.return_value = fake_api_flavor
+        flavor = flavor_obj.Flavor.get_by_name(self.context, 'm1.foo')
+        self._compare(self, fake_api_flavor, flavor)
+        mock_get.assert_called_once_with(self.context, 'm1.foo')
+
+    @mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db')
+    def test_get_by_flavor_id_from_api(self, mock_get):
+        mock_get.return_value = fake_api_flavor
+        flavor = flavor_obj.Flavor.get_by_flavor_id(self.context, 'm1.foo')
+        self._compare(self, fake_api_flavor, flavor)
+        mock_get.assert_called_once_with(self.context, 'm1.foo')
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_api_flavor(context):
+        fake_db_flavor = dict(fake_api_flavor)
+        del fake_db_flavor['extra_specs']
+        flavor = api_models.Flavors()
+        flavor.update(fake_db_flavor)
+        flavor.save(context.session)
+
+        fake_db_extra_spec = {'flavor_id': flavor['id'],
+                              'key': 'foo', 'value': 'bar'}
+        flavor_es = api_models.FlavorExtraSpecs()
+        flavor_es.update(fake_db_extra_spec)
+        flavor_es.save(context.session)
+
+        return flavor
+
+    def test_get_by_id_from_db(self):
+        db_flavor = self._create_api_flavor(self.context)
+        flavor = objects.Flavor.get_by_id(self.context, db_flavor['id'])
+        self._compare(self, db_flavor, flavor)
+
+    def test_get_by_name_from_db(self):
+        db_flavor = self._create_api_flavor(self.context)
+        flavor = objects.Flavor.get_by_name(self.context, db_flavor['name'])
+        self._compare(self, db_flavor, flavor)
+
+    def test_get_by_flavor_id_from_db(self):
+        db_flavor = self._create_api_flavor(self.context)
+        flavor = objects.Flavor.get_by_flavor_id(self.context,
+                                                 db_flavor['flavorid'])
+        self._compare(self, db_flavor, flavor)
 
     def test_add_access(self):
         elevated = self.context.elevated()
