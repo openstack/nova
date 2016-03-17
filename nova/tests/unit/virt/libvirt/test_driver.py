@@ -1999,7 +1999,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.NUMATopologyUnsupported,
             None)
 
-    @mock.patch.object(libvirt_driver.LOG, 'warn')
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_has_numa_support_bad_version_libvirt_log(self, mock_warn):
         # Tests that a warning is logged once and only once when there is a bad
         # BAD_LIBVIRT_NUMA_VERSIONS detected.
@@ -9755,7 +9755,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ip = drvr.get_host_ip_addr()
         self.assertEqual(ip, CONF.my_ip)
 
-    @mock.patch.object(libvirt_driver.LOG, 'warn')
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
     @mock.patch('nova.compute.utils.get_machine_ips')
     def test_get_host_ip_addr_failure(self, mock_ips, mock_log):
         mock_ips.return_value = ['8.8.8.8', '75.75.75.75']
