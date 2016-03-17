@@ -144,6 +144,9 @@ class FlavorAccessTestV21(test.NoDBTestCase):
                       fake_get_all_flavors_sorted_list)
         self.stub_out('nova.db.flavor_access_get_by_flavor_id',
                       fake_get_flavor_access_by_flavor_id)
+        # Simulate no API flavors right now
+        self.stub_out('nova.objects.flavor._flavor_get_all_from_db',
+                      lambda *a, **k: [])
 
         self.flavor_access_controller = self.FlavorAccessController()
         self.flavor_action_controller = self.FlavorActionController()
