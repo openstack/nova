@@ -13012,6 +13012,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         powered_on = power_on
         self.fake_create_domain_called = False
         self.fake_disk_resize_called = False
+        create_image_called = [False]
 
         def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
@@ -13027,6 +13028,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                               block_device_info=None, inject_files=True,
                               fallback_from_host=None):
             self.assertFalse(inject_files)
+            create_image_called[0] = True
 
         def fake_create_domain_and_network(
             context, xml, instance, network_info, disk_info,
@@ -13049,6 +13051,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
         def fake_disk_resize(image, size):
+            # Assert that _create_image is called before disk resize,
+            # otherwise we might be trying to resize a disk whose backing
+            # file hasn't been fetched, yet.
+            self.assertTrue(create_image_called[0])
             self.fake_disk_resize_called = True
 
         self.flags(use_cow_images=True)
