@@ -12,7 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
+from sqlalchemy.sql.expression import asc
+from sqlalchemy.sql import true
+
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy.api import require_context
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -20,6 +28,7 @@ from nova.objects import fields
 
 
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
+DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -61,10 +70,20 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         for name, field in flavor.fields.items():
             if name in OPTIONAL_FIELDS:
                 continue
+            if name in DEPRECATED_FIELDS and name not in db_flavor:
+                continue
             value = db_flavor[name]
             if isinstance(field, fields.IntegerField):
                 value = value if value is not None else 0
             flavor[name] = value
+
+        # NOTE(danms): This is to support processing the API flavor
+        # model, which does not have these deprecated fields. When we
+        # remove compatibility with the old InstanceType model, we can
+        # remove this as well.
+        if any(f not in db_flavor for f in DEPRECATED_FIELDS):
+            flavor.deleted_at = None
+            flavor.deleted = False
 
         if 'extra_specs' in expected_attrs:
             flavor.extra_specs = db_flavor['extra_specs']
@@ -74,6 +93,53 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
         flavor.obj_reset_changes()
         return flavor
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _flavor_get_query_from_db(context):
+        query = context.session.query(api_models.Flavors).\
+                options(joinedload('extra_specs'))
+        if not context.is_admin:
+            the_filter = [api_models.Flavors.is_public == true()]
+            the_filter.extend([
+                api_models.Flavors.projects.any(project_id=context.project_id)
+            ])
+            query = query.filter(or_(*the_filter))
+        return query
+
+    @staticmethod
+    @require_context
+    def _flavor_get_from_db(context, id):
+        """Returns a dict describing specific flavor."""
+        result = Flavor._flavor_get_query_from_db(context).\
+                        filter_by(id=id).\
+                        first()
+        if not result:
+            raise exception.FlavorNotFound(flavor_id=id)
+        return db_api._dict_with_extra_specs(result)
+
+    @staticmethod
+    @require_context
+    def _flavor_get_by_name_from_db(context, name):
+        """Returns a dict describing specific flavor."""
+        result = Flavor._flavor_get_query_from_db(context).\
+                            filter_by(name=name).\
+                            first()
+        if not result:
+            raise exception.FlavorNotFoundByName(flavor_name=name)
+        return db_api._dict_with_extra_specs(result)
+
+    @staticmethod
+    @require_context
+    def _flavor_get_by_flavor_id_from_db(context, flavor_id):
+        """Returns a dict describing specific flavor_id."""
+        result = Flavor._flavor_get_query_from_db(context).\
+                        filter_by(flavorid=flavor_id).\
+                        order_by(asc("id")).\
+                        first()
+        if not result:
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
+        return db_api._dict_with_extra_specs(result)
 
     @base.remotable
     def _load_projects(self):
@@ -130,20 +196,30 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable_classmethod
     def get_by_id(cls, context, id):
-        db_flavor = db.flavor_get(context, id)
+        try:
+            db_flavor = cls._flavor_get_from_db(context, id)
+        except exception.FlavorNotFound:
+            db_flavor = db.flavor_get(context, id)
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
     @base.remotable_classmethod
     def get_by_name(cls, context, name):
-        db_flavor = db.flavor_get_by_name(context, name)
+        try:
+            db_flavor = cls._flavor_get_by_name_from_db(context, name)
+        except exception.FlavorNotFoundByName:
+            db_flavor = db.flavor_get_by_name(context, name)
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
     @base.remotable_classmethod
     def get_by_flavor_id(cls, context, flavor_id, read_deleted=None):
-        db_flavor = db.flavor_get_by_flavor_id(context, flavor_id,
-                                               read_deleted)
+        try:
+            db_flavor = cls._flavor_get_by_flavor_id_from_db(context,
+                                                             flavor_id)
+        except exception.FlavorNotFound:
+            db_flavor = db.flavor_get_by_flavor_id(context, flavor_id,
+                                                   read_deleted)
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
