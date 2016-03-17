@@ -21,12 +21,12 @@ Leverages websockify.py by Joel Martin
 import socket
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from six.moves import http_cookies as Cookie
 import six.moves.urllib.parse as urlparse
 import websockify
 
+import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
@@ -34,14 +34,7 @@ from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-console_origin_opts = [
-    cfg.ListOpt('console_allowed_origins',
-                default=[],
-                help='Allowed Origin header hostnames for access to console '
-                     'proxy servers'),
-]
-CONF.register_opts(console_origin_opts)
+CONF = nova.conf.CONF
 
 
 class NovaProxyRequestHandlerBase(object):

@@ -29,7 +29,6 @@ from nova import objects
 from nova import test
 
 CONF = nova.conf.CONF
-CONF.import_opt('console_driver', 'nova.console.manager')
 
 
 class ConsoleTestCase(test.TestCase):

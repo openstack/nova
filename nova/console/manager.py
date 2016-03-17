@@ -15,34 +15,19 @@
 
 """Console Proxy Service."""
 
-import socket
-
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova import exception
 from nova.i18n import _LI
 from nova import manager
 from nova import utils
 
 
-console_manager_opts = [
-    cfg.StrOpt('console_driver',
-               default='nova.console.xvp.XVPConsoleProxy',
-               help='Driver to use for the console proxy'),
-    cfg.BoolOpt('stub_compute',
-                default=False,
-                help='Stub calls to compute worker for tests'),
-    cfg.StrOpt('console_public_hostname',
-               default=socket.gethostname(),
-               help='Publicly visible name for this console host'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(console_manager_opts)
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
