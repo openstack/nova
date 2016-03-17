@@ -89,5 +89,5 @@ class MemcachedDriver(base.Driver):
         except Exception:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.warn(_LW('Lost connection to memcache server '
+                LOG.warning(_LW('Lost connection to memcache server '
                              'for reporting service status.'))

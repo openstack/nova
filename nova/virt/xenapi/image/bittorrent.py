@@ -70,7 +70,7 @@ class BittorrentStore(object):
 
         if CONF.xenserver.torrent_base_url:
             if '/' not in CONF.xenserver.torrent_base_url:
-                LOG.warn(_LW('Value specified in conf file for'
+                LOG.warning(_LW('Value specified in conf file for'
                              ' xenserver.torrent_base_url does not contain a'
                              ' slash character, therefore it will not be used'
                              ' as part of the torrent URL. Specify a valid'

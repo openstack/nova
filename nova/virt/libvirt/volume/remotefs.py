@@ -61,7 +61,7 @@ def mount_share(mount_path, export_path,
         utils.execute(*mount_cmd, run_as_root=True)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
-            LOG.warn(_LW("%s is already mounted"), export_path)
+            LOG.warning(_LW("%s is already mounted"), export_path)
         else:
             raise
 

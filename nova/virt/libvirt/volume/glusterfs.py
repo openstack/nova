@@ -118,6 +118,6 @@ class LibvirtGlusterfsVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             utils.execute(*gluster_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in six.text_type(exc):
-                LOG.warn(_LW("%s is already mounted"), glusterfs_share)
+                LOG.warning(_LW("%s is already mounted"), glusterfs_share)
             else:
                 raise

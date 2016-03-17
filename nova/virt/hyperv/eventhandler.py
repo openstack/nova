@@ -112,7 +112,7 @@ class InstanceEventHandler(object):
         try:
             instance_uuid = self._vmutils.get_instance_uuid(instance_name)
             if not instance_uuid:
-                LOG.warn(_LW("Instance uuid could not be retrieved for "
+                LOG.warning(_LW("Instance uuid could not be retrieved for "
                              "instance %s. Instance state change event "
                              "will be ignored."),
                          instance_name)

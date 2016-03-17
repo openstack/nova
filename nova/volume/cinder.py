@@ -136,7 +136,7 @@ def cinderclient(context):
                   'release, and Nova is still configured to use it. '
                   'Enable the V2 API in Cinder and set '
                   'cinder.catalog_info in nova.conf to use it.')
-        LOG.warn(msg)
+        LOG.warning(msg)
         _V1_ERROR_RAISED = True
 
     return cinder_client.Client(version,

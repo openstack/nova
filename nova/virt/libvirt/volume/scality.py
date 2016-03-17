@@ -99,7 +99,7 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         config = CONF.libvirt.scality_sofs_config
         if not config:
             msg = _("Value required for 'scality_sofs_config'")
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
         # config can be a file path or a URL, check it
@@ -110,13 +110,13 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             urllib.request.urlopen(config, timeout=5).close()
         except urllib.error.URLError as e:
             msg = _("Cannot access 'scality_sofs_config': %s") % e
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
         # mount.sofs must be installed
         if not os.access('/sbin/mount.sofs', os.X_OK):
             msg = _("Cannot execute /sbin/mount.sofs")
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
     def _sofs_is_mounted(self):
@@ -141,5 +141,5 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
                           run_as_root=True)
             if not self._sofs_is_mounted():
                 msg = _("Cannot mount Scality SOFS, check syslog for errors")
-                LOG.warn(msg)
+                LOG.warning(msg)
                 raise exception.NovaException(msg)

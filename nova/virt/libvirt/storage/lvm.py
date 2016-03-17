@@ -75,7 +75,7 @@ def create_volume(vg, lv, size, sparse=False):
         preallocated_space = 64 * units.Mi
         check_size(vg, lv, preallocated_space)
         if free_space < size:
-            LOG.warn(_LW('Volume group %(vg)s will not be able'
+            LOG.warning(_LW('Volume group %(vg)s will not be able'
                          ' to hold sparse volume %(lv)s.'
                          ' Virtual volume size is %(size)d bytes,'
                          ' but free space on volume group is'
@@ -223,7 +223,7 @@ def clear_volume(path):
     try:
         volume_size = get_volume_size(path)
     except exception.VolumeBDMPathNotFound:
-        LOG.warn(_LW('ignoring missing logical volume %(path)s'),
+        LOG.warning(_LW('ignoring missing logical volume %(path)s'),
                  {'path': path})
         return
 

@@ -485,7 +485,7 @@ class Host(object):
                 self._event_lifecycle_callback,
                 self)
         except Exception as e:
-            LOG.warn(_LW("URI %(uri)s does not support events: %(error)s"),
+            LOG.warning(_LW("URI %(uri)s does not support events: %(error)s"),
                      {'uri': self._uri, 'error': e})
 
         try:
@@ -501,7 +501,7 @@ class Host(object):
             LOG.debug("The version of python-libvirt does not support "
                       "registerCloseCallback or is too old: %s", e)
         except libvirt.libvirtError as e:
-            LOG.warn(_LW("URI %(uri)s does not support connection"
+            LOG.warning(_LW("URI %(uri)s does not support connection"
                          " events: %(error)s"),
                      {'uri': self._uri, 'error': e})
 
@@ -799,7 +799,7 @@ class Host(object):
                 except libvirt.libvirtError as ex:
                     error_code = ex.get_error_code()
                     if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                        LOG.warn(_LW("URI %(uri)s does not support full set"
+                        LOG.warning(_LW("URI %(uri)s does not support full set"
                                      " of host capabilities: %(error)s"),
                                      {'uri': self._uri, 'error': ex})
                     else:
@@ -941,9 +941,9 @@ class Host(object):
                     # TODO(sahid): Use get_info...
                     dom_mem = int(guest._get_domain_info(self)[2])
                 except libvirt.libvirtError as e:
-                    LOG.warn(_LW("couldn't obtain the memory from domain:"
-                                 " %(uuid)s, exception: %(ex)s"),
-                             {"uuid": guest.uuid, "ex": e})
+                    LOG.warning(_LW("couldn't obtain the memory from domain:"
+                                    " %(uuid)s, exception: %(ex)s"),
+                                {"uuid": guest.uuid, "ex": e})
                     continue
                 # skip dom0
                 if guest.id != 0:

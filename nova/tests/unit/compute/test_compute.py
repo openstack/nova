@@ -6193,11 +6193,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.driver.set_bootable(inst1, False).AndRaise(
                 NotImplementedError)
-        compute_manager.LOG.warn(mox.IgnoreArg())
+        compute_manager.LOG.warning(mox.IgnoreArg())
         self.compute.driver.power_off(inst1)
         self.compute.driver.set_bootable(inst2, False).AndRaise(
                 NotImplementedError)
-        compute_manager.LOG.warn(mox.IgnoreArg())
+        compute_manager.LOG.warning(mox.IgnoreArg())
         self.compute.driver.power_off(inst2)
 
         self.mox.ReplayAll()
@@ -6214,11 +6214,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.driver.set_bootable(inst1, False)
         self.compute.driver.power_off(inst1).AndRaise(e)
-        compute_manager.LOG.warn(mox.IgnoreArg())
+        compute_manager.LOG.warning(mox.IgnoreArg())
 
         self.compute.driver.set_bootable(inst2, False)
         self.compute.driver.power_off(inst2).AndRaise(e)
-        compute_manager.LOG.warn(mox.IgnoreArg())
+        compute_manager.LOG.warning(mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(ctxt)

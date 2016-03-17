@@ -106,6 +106,6 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             utils.execute(*nfs_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in six.text_type(exc):
-                LOG.warn(_LW("%s is already mounted"), nfs_share)
+                LOG.warning(_LW("%s is already mounted"), nfs_share)
             else:
                 raise

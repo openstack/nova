@@ -193,7 +193,7 @@ def get_api_servers():
         if '//' not in api_server:
             api_server = 'http://' + api_server
             # NOTE(sdague): remove in N.
-            LOG.warn(
+            LOG.warning(
                 _LW("No protocol specified in for api_server '%s', "
                     "please update [glance] api_servers with fully "
                     "qualified url including scheme (http / https)"),
