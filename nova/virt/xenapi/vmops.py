@@ -2100,16 +2100,17 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = objects.AggregateList.get_by_host(
-            context, CONF.host, key=pool_states.POOL_FLAG)[0]
-        if not current_aggregate:
-            raise exception.AggregateHostNotFound(host=CONF.host)
-        try:
-            return current_aggregate.metadata[hostname]
-        except KeyError:
-            reason = _('Destination host:%s must be in the same '
-                       'aggregate as the source server') % hostname
+        aggregate_list = objects.AggregateList.get_by_host(
+            context, CONF.host, key=pool_states.POOL_FLAG)
+
+        reason = _('Destination host:%s must be in the same '
+                   'aggregate as the source server') % hostname
+        if len(aggregate_list) == 0:
             raise exception.MigrationPreCheckError(reason=reason)
+        if hostname not in aggregate_list[0].metadata:
+            raise exception.MigrationPreCheckError(reason=reason)
+
+        return aggregate_list[0].metadata[hostname]
 
     def _ensure_host_in_aggregate(self, context, hostname):
         self._get_host_uuid_from_aggregate(context, hostname)
