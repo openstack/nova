@@ -37,10 +37,10 @@ from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
-import nova.netconf
 from nova import objects
 from nova.objects import base
 from nova import quota

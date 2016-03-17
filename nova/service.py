@@ -46,7 +46,6 @@ from nova import wsgi
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 def _create_service_ref(this_service, context):

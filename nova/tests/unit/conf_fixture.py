@@ -24,8 +24,6 @@ from nova import ipv6
 from nova.tests.unit import utils
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('floating_ip_dns_manager', 'nova.network.floating_ips')
 CONF.import_opt('instance_dns_manager', 'nova.network.floating_ips')
 

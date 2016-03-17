@@ -28,7 +28,6 @@ import nova.conf
 from nova.network import model
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 def get_net_and_mask(cidr):

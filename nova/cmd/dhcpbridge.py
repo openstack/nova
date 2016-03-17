@@ -42,7 +42,6 @@ from nova.objects import base as objects_base
 from nova import rpc
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 

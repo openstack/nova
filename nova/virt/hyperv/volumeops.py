@@ -38,8 +38,6 @@ from nova.virt import driver
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class VolumeOps(object):

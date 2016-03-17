@@ -31,7 +31,6 @@ from nova import utils
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 

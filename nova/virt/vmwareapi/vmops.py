@@ -63,7 +63,6 @@ from nova.virt.vmwareapi import vm_util
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
 

@@ -64,7 +64,6 @@ LOG = logging.getLogger(__name__)
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,

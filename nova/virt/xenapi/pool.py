@@ -24,6 +24,7 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE
 from nova.virt.xenapi import pool_states
@@ -37,9 +38,8 @@ xenapi_pool_opts = [
                 help='To use for hosts with different CPUs'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(xenapi_pool_opts, 'xenserver')
-CONF.import_opt('host', 'nova.netconf')
 
 
 class ResourcePool(object):

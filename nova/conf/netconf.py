@@ -20,8 +20,6 @@ import socket
 from oslo_config import cfg
 from oslo_utils import netutils
 
-CONF = cfg.CONF
-
 
 netconf_opts = [
     cfg.StrOpt('my_ip',
@@ -42,4 +40,10 @@ netconf_opts = [
                 help='Use IPv6'),
 ]
 
-CONF.register_opts(netconf_opts)
+
+def register_opts(conf):
+    conf.register_opts(netconf_opts)
+
+
+def list_opts():
+    return {'DEFAULT': netconf_opts}

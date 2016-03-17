@@ -57,6 +57,7 @@ from nova.conf import mks
 # from nova.conf import matchmaker_redis
 # from nova.conf import metadata
 # from nova.conf import metrics
+from nova.conf import netconf
 from nova.conf import network
 from nova.conf import neutron
 from nova.conf import notifications
@@ -126,6 +127,7 @@ keymgr.register_opts(CONF)
 # matchmaker_redis.register_opts(CONF)
 # metadata.register_opts(CONF)
 # metrics.register_opts(CONF)
+netconf.register_opts(CONF)
 network.register_opts(CONF)
 neutron.register_opts(CONF)
 notifications.register_opts(CONF)

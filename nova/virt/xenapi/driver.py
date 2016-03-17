@@ -45,7 +45,6 @@ from nova.virt.xenapi import volumeops
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 OVERHEAD_BASE = 3
 OVERHEAD_PER_MB = 0.00781

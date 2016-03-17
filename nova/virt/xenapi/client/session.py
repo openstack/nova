@@ -46,9 +46,7 @@ from nova.virt.xenapi import pool_states
 
 LOG = logging.getLogger(__name__)
 
-
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 def apply_session_helpers(session):

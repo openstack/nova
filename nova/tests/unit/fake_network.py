@@ -13,12 +13,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_config import cfg
+
 from oslo_serialization import jsonutils
 from six.moves import range
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
+import nova.conf
 import nova.context
 from nova import db
 from nova import exception
@@ -36,8 +37,7 @@ from nova.tests import uuidsentinel as uuids
 
 
 HOST = "testhost"
-CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 class FakeModel(dict):

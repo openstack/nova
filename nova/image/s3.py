@@ -32,6 +32,7 @@ from oslo_log import log as logging
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
 from nova.compute import arch
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI
 from nova.image import glance
@@ -68,9 +69,8 @@ s3_opts = [
                     'when downloading from S3'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(s3_opts)
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class S3ImageService(object):

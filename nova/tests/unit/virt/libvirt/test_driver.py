@@ -108,8 +108,6 @@ libvirt_guest.libvirt = fakelibvirt
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 

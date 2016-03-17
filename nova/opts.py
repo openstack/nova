@@ -26,7 +26,6 @@ import nova.db.base
 import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
-import nova.netconf
 import nova.servicegroup.api
 import nova.volume
 import nova.volume.cinder
@@ -41,7 +40,6 @@ def list_opts():
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,
-             nova.netconf.netconf_opts,
              nova.volume._volume_opts,
          )),
         ('cinder', nova.volume.cinder.cinder_opts),

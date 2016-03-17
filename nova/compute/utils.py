@@ -19,13 +19,13 @@ import string
 import traceback
 
 import netifaces
-from oslo_config import cfg
 from oslo_log import log
 import six
 
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
+import nova.conf
 from nova import exception
 from nova.i18n import _LW
 from nova.network import model as network_model
@@ -35,8 +35,7 @@ from nova import rpc
 from nova import utils
 from nova.virt import driver
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 LOG = log.getLogger(__name__)
 
 

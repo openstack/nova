@@ -24,6 +24,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -43,9 +44,8 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces with KVM/QEMU'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(libvirt_vif_opts, 'libvirt')
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 # vhostuser queues support
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)

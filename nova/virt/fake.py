@@ -26,7 +26,6 @@ semantics of real hypervisor connections.
 import collections
 import contextlib
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -36,6 +35,7 @@ from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+import nova.conf
 from nova.console import type as ctype
 from nova import exception
 from nova.i18n import _LW
@@ -44,8 +44,7 @@ from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
