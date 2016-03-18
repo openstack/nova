@@ -2402,11 +2402,7 @@ class VMOps(object):
                 migrate_data.kernel_file = kernel
                 migrate_data.ramdisk_file = ramdisk
 
-            if block_migration:
-                if not migrate_data:
-                    raise exception.InvalidParameterValue('Block Migration '
-                                    'requires migrate data from destination')
-
+            if migrate_data is not None and migrate_data.block_migration:
                 iscsi_srs = self._get_iscsi_srs(context, instance)
                 try:
                     self._call_live_migrate_command(

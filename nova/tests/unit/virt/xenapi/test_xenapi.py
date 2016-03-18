@@ -3591,6 +3591,11 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
+        def fake_lookup_kernel_ramdisk(session, vm_ref):
+            return "kernel", "ramdisk"
+        self.stubs.Set(vm_utils, "lookup_kernel_ramdisk",
+                       fake_lookup_kernel_ramdisk)
+
         def fake_get_vm_opaque_ref(instance):
             return "fake_vm"
         self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
@@ -3604,8 +3609,13 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def post_method(context, instance, destination_hostname,
                         block_migration, migrate_data):
             post_method.called = True
+        migrate_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref="foo",
+            migrate_send_data={"bar": "baz"},
+            block_migration=False)
 
-        self.conn.live_migration(self.conn, None, None, post_method, None)
+        self.conn.live_migration(self.conn, None, None, post_method, None,
+                                 None, migrate_data)
 
         self.assertTrue(post_method.called, "post_method.called")
 
@@ -3631,9 +3641,14 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def recover_method(context, instance, destination_hostname,
                         block_migration):
             recover_method.called = True
+        migrate_data = objects.XenapiLiveMigrateData(
+            destination_sr_ref="foo",
+            migrate_send_data={"bar": "baz"},
+            block_migration=False)
 
         self.assertRaises(NotImplementedError, self.conn.live_migration,
-                          self.conn, None, None, None, recover_method)
+                          self.conn, None, None, None, recover_method,
+                          None, migrate_data)
         self.assertTrue(recover_method.called, "recover_method.called")
 
     def test_live_migration_calls_post_migration(self):
@@ -3649,7 +3664,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         # pass block_migration = True and migrate data
         migrate_data = objects.XenapiLiveMigrateData(
             destination_sr_ref="foo",
-            migrate_send_data={"bar": "baz"})
+            migrate_send_data={"bar": "baz"},
+            block_migration=True)
         self.conn.live_migration(self.conn, None, None, post_method, None,
                                  True, migrate_data)
         self.assertTrue(post_method.called, "post_method.called")
@@ -3676,27 +3692,13 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         migrate_data = objects.XenapiLiveMigrateData(
             destination_sr_ref="foo",
-            migrate_send_data={"bar": "baz"})
+            migrate_send_data={"bar": "baz"},
+            block_migration=True)
         self.conn.live_migration(self.conn, None, None, post_method, None,
                                  True, migrate_data)
 
         self.assertTrue(post_method.called, "post_method.called")
         self.assertTrue(fake_forget_sr.called, "forget_sr.called")
-
-    def test_live_migration_with_block_migration_raises_invalid_param(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-
-        self._add_default_live_migrate_stubs(self.conn)
-
-        def recover_method(context, instance, destination_hostname,
-                           block_migration):
-            recover_method.called = True
-        # pass block_migration = True and no migrate data
-        self.assertRaises(exception.InvalidParameterValue,
-                          self.conn.live_migration, self.conn,
-                          None, None, None, recover_method, True, None)
-        self.assertTrue(recover_method.called, "recover_method.called")
 
     def test_live_migration_with_block_migration_fails_migrate_send(self):
         stubs.stubout_session(self.stubs,
@@ -3711,7 +3713,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         # pass block_migration = True and migrate data
         migrate_data = objects.XenapiLiveMigrateData(
             destination_sr_ref='foo',
-            migrate_send_data={'bar': 'baz'})
+            migrate_send_data={'bar': 'baz'},
+            block_migration=True)
         self.assertRaises(exception.MigrationError,
                           self.conn.live_migration, self.conn,
                           None, None, None, recover_method, True, migrate_data)
@@ -3744,7 +3747,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         migrate_data = objects.XenapiLiveMigrateData(
             migrate_send_data={'SOMEDATA': 'SOMEVAL'},
-            destination_sr_ref='TARGET_SR_OPAQUE_REF')
+            destination_sr_ref='TARGET_SR_OPAQUE_REF',
+            block_migration=True)
         conn.live_migration(
             self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
@@ -3774,7 +3778,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         migrate_data = objects.XenapiLiveMigrateData(
             migrate_send_data={'foo': 'bar'},
-            destination_sr_ref='foo')
+            destination_sr_ref='foo',
+            block_migration=False)
         self.assertRaises(IOError, conn.live_migration,
             self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
