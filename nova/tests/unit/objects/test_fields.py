@@ -15,7 +15,6 @@
 import datetime
 
 import iso8601
-import netaddr
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
@@ -763,49 +762,6 @@ class TestDateTime(TestField):
                                   tzinfo=iso8601.iso8601.Utc())))
 
 
-class TestIPAddress(TestField):
-    def setUp(self):
-        super(TestIPAddress, self).setUp()
-        self.field = fields.IPAddressField()
-        self.coerce_good_values = [('1.2.3.4', netaddr.IPAddress('1.2.3.4')),
-                                   ('::1', netaddr.IPAddress('::1')),
-                                   (netaddr.IPAddress('::1'),
-                                    netaddr.IPAddress('::1'))]
-        self.coerce_bad_values = ['1-2', 'foo']
-        self.to_primitive_values = [(netaddr.IPAddress('1.2.3.4'), '1.2.3.4'),
-                                    (netaddr.IPAddress('::1'), '::1')]
-        self.from_primitive_values = [('1.2.3.4',
-                                       netaddr.IPAddress('1.2.3.4')),
-                                      ('::1',
-                                       netaddr.IPAddress('::1'))]
-
-
-class TestIPAddressV4(TestField):
-    def setUp(self):
-        super(TestIPAddressV4, self).setUp()
-        self.field = fields.IPV4AddressField()
-        self.coerce_good_values = [('1.2.3.4', netaddr.IPAddress('1.2.3.4')),
-                                   (netaddr.IPAddress('1.2.3.4'),
-                                    netaddr.IPAddress('1.2.3.4'))]
-        self.coerce_bad_values = ['1-2', 'foo', '::1']
-        self.to_primitive_values = [(netaddr.IPAddress('1.2.3.4'), '1.2.3.4')]
-        self.from_primitive_values = [('1.2.3.4',
-                                       netaddr.IPAddress('1.2.3.4'))]
-
-
-class TestIPAddressV6(TestField):
-    def setUp(self):
-        super(TestIPAddressV6, self).setUp()
-        self.field = fields.IPV6AddressField()
-        self.coerce_good_values = [('::1', netaddr.IPAddress('::1')),
-                                   (netaddr.IPAddress('::1'),
-                                    netaddr.IPAddress('::1'))]
-        self.coerce_bad_values = ['1.2', 'foo', '1.2.3.4']
-        self.to_primitive_values = [(netaddr.IPAddress('::1'), '::1')]
-        self.from_primitive_values = [('::1',
-                                       netaddr.IPAddress('::1'))]
-
-
 class TestDict(TestField):
     def setUp(self):
         super(TestDict, self).setUp()
@@ -973,48 +929,6 @@ class TestNetworkModel(TestField):
         networkinfo.append(network_model.VIF(id=456))
         self.assertEqual('NetworkModel(123,456)',
                          self.field.stringify(networkinfo))
-
-
-class TestIPNetwork(TestField):
-    def setUp(self):
-        super(TestIPNetwork, self).setUp()
-        self.field = fields.Field(fields.IPNetwork())
-        good = ['192.168.1.0/24', '0.0.0.0/0', '::1/128', '::1/64', '::1/0']
-        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
-        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
-                                  '::1/129', '192.168.0.0/-1']
-        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
-                                    for x in good]
-        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
-                                      for x in good]
-
-
-class TestIPV4Network(TestField):
-    def setUp(self):
-        super(TestIPV4Network, self).setUp()
-        self.field = fields.Field(fields.IPV4Network())
-        good = ['192.168.1.0/24', '0.0.0.0/0']
-        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
-        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
-                                  '::1/129', '192.168.0.0/-1']
-        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
-                                    for x in good]
-        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
-                                      for x in good]
-
-
-class TestIPV6Network(TestField):
-    def setUp(self):
-        super(TestIPV6Network, self).setUp()
-        self.field = fields.Field(fields.IPV6Network())
-        good = ['::1/128', '::1/64', '::1/0']
-        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
-        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
-                                  '::1/129', '192.168.0.0/-1']
-        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
-                                    for x in good]
-        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
-                                      for x in good]
 
 
 class TestNotificationPriority(TestField):
