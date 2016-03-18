@@ -204,6 +204,13 @@ nova.tests.unit.virt.vmwareapi.test_driver_api.VMwareAPIVMTestCase
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.SpawnTestCase
 
+##########################################################################
+# NOTE(cdent): The following test takes 10-15 minutes to run because
+# of eventlet lockups and can cause a gate run to timeout. See:
+# https://bugs.launchpad.net/nova/+bug/1558105
+##########################################################################
+nova.tests.unit.test_fixtures.TestOSAPIFixture.test_responds_to_version
+
 # The XenAPI plugins run in a Python 2.4 environment, so avoid attempting
 # to run their unit tests in a Python 3 environment.
 nova.tests.unit.virt.xenapi.plugins
