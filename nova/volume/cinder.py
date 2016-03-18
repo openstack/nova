@@ -340,8 +340,10 @@ class API(object):
     @translate_volume_exception
     def initialize_connection(self, context, volume_id, connector):
         try:
-            return cinderclient(context).volumes.initialize_connection(
-                volume_id, connector)
+            connection_info = cinderclient(
+                context).volumes.initialize_connection(volume_id, connector)
+            connection_info['connector'] = connector
+            return connection_info
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE('Initialize connection failed for volume '
