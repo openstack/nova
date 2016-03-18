@@ -7256,7 +7256,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise loopingcall.LoopingCallDone()
 
     @staticmethod
-    def _disk_size_from_instance(instance, info):
+    def _disk_size_from_instance(instance, disk_name):
         """Determines the disk size from instance properties
 
         Returns the disk size by using the disk name to determine whether it
@@ -7265,11 +7265,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         Returns 0 if the disk name not match (disk, disk.local).
         """
-        fname = os.path.basename(info['path'])
-        if fname == 'disk':
+        if disk_name == 'disk':
             size = instance.root_gb
-        elif fname == 'disk.local':
+        elif disk_name == 'disk.local':
             size = instance.ephemeral_gb
+        # N.B. We don't handle ephemeral disks named disk.ephN here,
+        # which is almost certainly a bug. It's not clear what this function
+        # should return if an instance has multiple ephemeral disks.
         else:
             size = 0
         return size * units.Gi
@@ -7342,16 +7344,22 @@ class LibvirtDriver(driver.ComputeDriver):
                            block_device_info=None, inject_files=False,
                            fallback_from_host=migration.source_compute)
 
-        # resize disks. only "disk" and "disk.local" are necessary.
+        # Resize root disk and a single ephemeral disk called disk.local
+        # Also convert raw disks to qcow2 if migrating to host which uses
+        # qcow2 from host which uses raw.
+        # TODO(mbooth): Handle resize of multiple ephemeral disks, and
+        #               ephemeral disks not called disk.local.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
-            size = self._disk_size_from_instance(instance, info)
+            path = info['path']
+            disk_name = os.path.basename(path)
+
+            size = self._disk_size_from_instance(instance, disk_name)
             if resize_instance:
-                image = imgmodel.LocalFileImage(info['path'],
-                                                info['type'])
+                image = imgmodel.LocalFileImage(path, info['type'])
                 self._disk_resize(image, size)
 
-            # NOTE(mdbooth): The 2 lines below look wrong, but are actually
+            # NOTE(mdbooth): The code below looks wrong, but is actually
             # required to prevent a security hole when migrating from a host
             # with use_cow_images=False to one with use_cow_images=True.
             # Imagebackend uses use_cow_images to select between the
@@ -7377,14 +7385,17 @@ class LibvirtDriver(driver.ComputeDriver):
             # users. It is tightly-coupled to implementation quirks of 2
             # out of 5 backends in imagebackend and defends against a severe
             # security flaw which is not at all obvious without deep analysis,
-            # and is therefore undesirable to developers. It also introduces a
-            # bug, as it converts all disks to qcow2 regardless of their
-            # intended format (config disks are always supposed to be raw). We
-            # should aim to remove it. This will not be possible, though, until
-            # we can represent the storage layout of a specific instance
+            # and is therefore undesirable to developers. We should aim to
+            # remove it. This will not be possible, though, until we can
+            # represent the storage layout of a specific instance
             # independent of the default configuration of the local compute
             # host.
-            if info['type'] == 'raw' and CONF.use_cow_images:
+
+            # Config disks are hard-coded to be raw even when
+            # use_cow_images=True (see _get_disk_config_image_type),so don't
+            # need to be converted.
+            if (disk_name != 'disk.config' and
+                        info['type'] == 'raw' and CONF.use_cow_images):
                 self._disk_raw_to_qcow2(info['path'])
 
         xml = self._get_guest_xml(context, instance, network_info,
