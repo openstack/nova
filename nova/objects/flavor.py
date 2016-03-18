@@ -125,6 +125,65 @@ def _flavor_extra_specs_del(context, flavor_id, key):
             extra_specs_key=key, flavor_id=flavor_id)
 
 
+@db_api.api_context_manager.writer
+def _flavor_create(context, values):
+    specs = values.get('extra_specs')
+    db_specs = []
+    if specs:
+        for k, v in specs.items():
+            db_spec = api_models.FlavorExtraSpecs()
+            db_spec['key'] = k
+            db_spec['value'] = v
+            db_specs.append(db_spec)
+
+    projects = values.get('projects')
+    db_projects = []
+    if projects:
+        for project in set(projects):
+            db_project = api_models.FlavorProjects()
+            db_project['project_id'] = project
+            db_projects.append(db_project)
+
+    values['extra_specs'] = db_specs
+    values['projects'] = db_projects
+    db_flavor = api_models.Flavors()
+    db_flavor.update(values)
+
+    try:
+        db_flavor.save(context.session)
+    except db_exc.DBDuplicateEntry as e:
+        if 'flavorid' in e.columns:
+            raise exception.FlavorIdExists(flavor_id=values['flavorid'])
+        raise exception.FlavorExists(name=values['name'])
+    except Exception as e:
+        raise db_exc.DBError(e)
+
+    return _dict_with_extra_specs(db_flavor)
+
+
+@db_api.api_context_manager.writer
+def _flavor_destroy(context, flavor_id=None, name=None):
+    query = context.session.query(api_models.Flavors)
+
+    if flavor_id is not None:
+        query = query.filter(api_models.Flavors.id == flavor_id)
+    else:
+        query = query.filter(api_models.Flavors.name == name)
+    result = query.first()
+
+    if not result:
+        if flavor_id is not None:
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
+        else:
+            raise exception.FlavorNotFoundByName(flavor_name=name)
+
+    context.session.query(api_models.FlavorProjects).\
+        filter_by(flavor_id=result.id).delete()
+    context.session.query(api_models.FlavorExtraSpecs).\
+        filter_by(flavor_id=result.id).delete()
+    context.session.delete(result)
+
+
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
 class Flavor(base.NovaPersistentObject, base.NovaObject,
@@ -203,7 +262,11 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             flavor.extra_specs = db_flavor['extra_specs']
 
         if 'projects' in expected_attrs:
-            flavor._load_projects()
+            if 'projects' in db_flavor:
+                flavor['projects'] = [x['project_id']
+                                      for x in db_flavor['projects']]
+            else:
+                flavor._load_projects()
 
         flavor.obj_reset_changes()
         return flavor
@@ -381,6 +444,10 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         self._remove_access(project_id)
         self._load_projects()
 
+    @staticmethod
+    def _flavor_create(context, updates):
+        return _flavor_create(context, updates)
+
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
@@ -391,8 +458,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         for attr in OPTIONAL_FIELDS:
             if attr in updates:
                 expected_attrs.append(attr)
-        projects = updates.pop('projects', [])
-        db_flavor = db.flavor_create(self._context, updates, projects=projects)
+        db_flavor = self._flavor_create(self._context, updates)
         self._from_db_object(self._context, self, db_flavor,
                              expected_attrs=expected_attrs)
 
@@ -480,9 +546,25 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         if added_projects or deleted_projects:
             self.save_projects(added_projects, deleted_projects)
 
+    @staticmethod
+    def _flavor_destroy(context, flavor_id=None, name=None):
+        return _flavor_destroy(context, flavor_id=flavor_id, name=name)
+
     @base.remotable
     def destroy(self):
-        db.flavor_destroy(self._context, self.name)
+        # NOTE(danms): Historically the only way to delete a flavor
+        # is via name, which is not very precise. We need to be able to
+        # support the light construction of a flavor object and subsequent
+        # delete request with only our name filled out. However, if we have
+        # our id property, we should instead delete with that since it's
+        # far more specific.
+        try:
+            if 'id' in self:
+                self._flavor_destroy(self._context, flavor_id=self.id)
+            else:
+                self._flavor_destroy(self._context, name=self.name)
+        except exception.FlavorNotFound:
+            db.flavor_destroy(self._context, self.name)
 
 
 @db_api.api_context_manager.reader

@@ -15,6 +15,7 @@
 import datetime
 
 import mock
+from oslo_db import exception as db_exc
 
 from nova import db
 from nova.db.sqlalchemy import api as db_api
@@ -194,42 +195,38 @@ class _TestFlavor(object):
         mock_api_del.assert_called_once_with(elevated, 12345, '456')
         self.assertFalse(mock_main_del.called)
 
-    def test_create(self):
+    @mock.patch('nova.objects.Flavor._flavor_create')
+    def test_create(self, mock_create):
+        mock_create.return_value = fake_api_flavor
+
         flavor = flavor_obj.Flavor(context=self.context)
         flavor.name = 'm1.foo'
         flavor.extra_specs = fake_flavor['extra_specs']
-
-        with mock.patch.object(db, 'flavor_create') as create:
-            create.return_value = fake_flavor
-            flavor.create()
+        flavor.create()
 
         self.assertEqual(self.context, flavor._context)
         # NOTE(danms): Orphan this to avoid lazy-loads
         flavor._context = None
         self._compare(self, fake_flavor, flavor)
 
-    def test_create_with_projects(self):
+    @mock.patch('nova.objects.Flavor._flavor_create')
+    def test_create_with_projects(self, mock_create):
         context = self.context.elevated()
         flavor = flavor_obj.Flavor(context=context)
         flavor.name = 'm1.foo'
         flavor.extra_specs = fake_flavor['extra_specs']
         flavor.projects = ['project-1', 'project-2']
 
-        db_flavor = dict(fake_flavor, projects=list(flavor.projects))
+        db_flavor = dict(fake_flavor,
+                         projects=[{'project_id': pid}
+                                   for pid in flavor.projects])
+        mock_create.return_value = db_flavor
+        flavor.create()
 
-        with mock.patch.multiple(db, flavor_create=mock.DEFAULT,
-                                 flavor_access_get_by_flavor_id=mock.DEFAULT
-                                 ) as methods:
-            methods['flavor_create'].return_value = db_flavor
-            methods['flavor_access_get_by_flavor_id'].return_value = [
-                {'project_id': 'project-1'},
-                {'project_id': 'project-2'}]
-            flavor.create()
-            methods['flavor_create'].assert_called_once_with(
-                context,
-                {'name': 'm1.foo',
-                 'extra_specs': fake_flavor['extra_specs']},
-                projects=['project-1', 'project-2'])
+        mock_create.assert_called_once_with(
+            context, {'name': 'm1.foo',
+                      'extra_specs': fake_flavor['extra_specs'],
+                      'projects': ['project-1', 'project-2']})
 
         self.assertEqual(context, flavor._context)
         # NOTE(danms): Orphan this to avoid lazy-loads
@@ -240,6 +237,14 @@ class _TestFlavor(object):
     def test_create_with_id(self):
         flavor = flavor_obj.Flavor(context=self.context, id=123)
         self.assertRaises(exception.ObjectActionError, flavor.create)
+
+    @mock.patch('nova.db.sqlalchemy.api_models.Flavors')
+    def test_create_duplicate(self, mock_flavors):
+        mock_flavors.return_value.save.side_effect = db_exc.DBDuplicateEntry
+        fields = dict(fake_api_flavor)
+        del fields['id']
+        flavor = objects.Flavor(self.context, **fields)
+        self.assertRaises(exception.FlavorExists, flavor.create)
 
     @mock.patch('nova.db.flavor_access_add')
     @mock.patch('nova.db.flavor_access_remove')
@@ -328,7 +333,7 @@ class _TestFlavor(object):
         self.assertEqual(['project-1', 'project-3'], flavor.projects)
         mock_add.assert_called_once_with(self.context, 123, 'project-3')
 
-    @mock.patch('nova.db.flavor_create')
+    @mock.patch('nova.objects.Flavor._flavor_create')
     @mock.patch('nova.db.flavor_extra_specs_delete')
     @mock.patch('nova.db.flavor_extra_specs_update_or_create')
     def test_save_deleted_extra_specs(self, mock_update, mock_delete,
@@ -350,10 +355,22 @@ class _TestFlavor(object):
         self.assertRaises(exception.ObjectActionError, flavor.save)
 
     def test_destroy(self):
-        flavor = flavor_obj.Flavor(context=self.context, id=123, name='foo')
+        flavor = flavor_obj.Flavor(context=self.context, name='foo')
         with mock.patch.object(db, 'flavor_destroy') as destroy:
             flavor.destroy()
             destroy.assert_called_once_with(self.context, flavor.name)
+
+    @mock.patch('nova.objects.Flavor._flavor_destroy')
+    def test_destroy_api_by_id(self, mock_destroy):
+        flavor = flavor_obj.Flavor(context=self.context, id=123)
+        flavor.destroy()
+        mock_destroy.assert_called_once_with(self.context, flavor_id=flavor.id)
+
+    @mock.patch('nova.objects.Flavor._flavor_destroy')
+    def test_destroy_api_by_name(self, mock_destroy):
+        flavor = flavor_obj.Flavor(context=self.context, name='foo')
+        flavor.destroy()
+        mock_destroy.assert_called_once_with(self.context, name=flavor.name)
 
     def test_load_projects(self):
         flavor = flavor_obj.Flavor(context=self.context, flavorid='foo')
@@ -370,6 +387,13 @@ class _TestFlavor(object):
         flavor = objects.Flavor(context=self.context, flavorid='m1.foo')
         self.assertEqual(['a', 'b'], flavor.projects)
         mock_get_projects.assert_called_once_with(self.context, 'm1.foo')
+
+    def test_from_db_loads_projects(self):
+        fake = dict(fake_api_flavor, projects=[{'project_id': 'foo'}])
+        obj = objects.Flavor._from_db_object(self.context, objects.Flavor(),
+                                             fake, expected_attrs=['projects'])
+        self.assertIn('projects', obj)
+        self.assertEqual(['foo'], obj.projects)
 
     def test_load_anything_else(self):
         flavor = flavor_obj.Flavor()

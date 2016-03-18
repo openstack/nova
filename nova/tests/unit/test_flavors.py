@@ -104,36 +104,6 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertIsInstance(fetched, objects.Flavor)
         self.assertEqual(default_instance_type.flavorid, fetched.flavorid)
 
-    def test_can_read_deleted_types_using_flavor_id(self):
-        # Ensure deleted flavors can be read when querying flavor_id.
-        inst_type_name = "test"
-        inst_type_flavor_id = "test1"
-
-        inst_type = flavors.create(inst_type_name, 256, 1, 120, 100,
-                inst_type_flavor_id)
-        self.assertEqual(inst_type_name, inst_type.name)
-
-        # NOTE(jk0): The deleted flavor will show up here because the context
-        # in get_flavor_by_flavor_id() is set to use read_deleted by
-        # default.
-        flavors.destroy(inst_type.name)
-        deleted_inst_type = flavors.get_flavor_by_flavor_id(
-                inst_type_flavor_id)
-        self.assertEqual(inst_type_name, deleted_inst_type.name)
-
-    def test_read_deleted_false_converting_flavorid(self):
-        """Ensure deleted flavors are not returned when not needed (for
-        example when creating a server and attempting to translate from
-        flavorid to instance_type_id.
-        """
-        flavors.create("instance_type1", 256, 1, 120, 100, "test1")
-        flavors.destroy("instance_type1")
-        flavors.create("instance_type1_redo", 256, 1, 120, 100, "test1")
-
-        instance_type = flavors.get_flavor_by_flavor_id(
-                "test1", read_deleted="no")
-        self.assertEqual("instance_type1_redo", instance_type.name)
-
     def test_get_all_flavors_sorted_list_sort(self):
         # Test default sort
         all_flavors = flavors.get_all_flavors_sorted_list()
@@ -464,7 +434,7 @@ class CreateInstanceTypeTest(test.TestCase):
 
         flavors.destroy('flavor')
         self.assertRaises(exception.FlavorNotFound,
-                          objects.Flavor.get_by_id, ctxt, flavor.id)
+                          objects.Flavor.get_by_name, ctxt, flavor.name)
 
         # Deleted instance should not be in list anymore
         new_list = objects.FlavorList.get_all(ctxt)

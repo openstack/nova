@@ -71,7 +71,7 @@ def fake_destroy(flavorname):
     pass
 
 
-def fake_create(context, kwargs, projects=None):
+def fake_create(context, kwargs):
     newflavor = fake_db_flavor()
 
     flavorid = kwargs.get('flavorid')
@@ -103,7 +103,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                        "get_flavor_by_flavor_id",
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
-        self.stub_out("nova.db.flavor_create", fake_create)
+        self.stub_out("nova.objects.flavor._flavor_create", fake_create)
 
         self.request_body = {
             "flavor": {
